@@ -532,8 +532,8 @@ func ProcessXMLfile(inputfile *bufio.Reader, outputfile *bufio.Writer) {
   timeToShuffleString := timeToShuffle.String();
   fmt.Println(" It took ",timeToShuffleString," to shuffle this file.");
   fmt.Println();
-  
-  
+
+
 /* Write the output file. */
   _,err = outputfile.WriteRune(tabchar);
   check(err," Starting to write the shuffled tracklist to the output file and got error: ");
