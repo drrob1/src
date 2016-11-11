@@ -16,8 +16,9 @@ package main
                 enough to make the expression evaluate to a negative value.
   20 Jan 92 -- First page now does not begin with a FF.
   9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
-                A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into
-                Excel.
+                A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
+ 10 Nov 16 -- First working version, based on Modula-2 code from 92.
+ 11 Nov 16 -- Working on code from January 2009 to import into Excel
 */
 
 
@@ -33,16 +34,10 @@ import (
   "tokenize"
 )
 
-  const LastCompiled = "10 Nov 16";
-  const LNSIZ      = 80;
-  const LNPPAG     = 60; // Used by PRMONTH proc.  Top 6 lines used by Month and day names.
-  const FF         = 12
-  const CR         = 13;
-  const ESC        = 27;
-//      NULL       = 0C;
+  const LastCompiled = "11 Nov 16";
   const BLANKCHR   = ' ';
-  const BOXCHRVERT = '|';
-  const BOXCHRHORZ = '_';
+  const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
+  const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
 
   const ( // MNenum, ie, month number enumeration from the old Modula-2 code
          JAN = iota
@@ -59,30 +54,30 @@ import (
          DEC
          NumOfMonthsInYear
         );
-  const DCM = DEC;  // These are now synonyms for December.  Month Number = 11, as Jan = 0.
+  const DCM = DEC;  // These are now synonyms for December Month Number = 11, as Jan = 0.
 
 
-//  LNTYP was = ARRAY [0..LNSIZ] OF CHAR in the old Modula-2 code.  IE, it's just a string.
   var OutputCal1,OutputCal12 os.File;
   var OutCal1file, OutCal12file *bufio.Writer;
   var PROMPT,ExtDefault,YEARSTR,BLANKSTR2,BLANKSTR3 string;
   var Cal1Filename,Cal12Filename string;
-  var DAYSNAMLONG, DAYSNAMSHORT, TOPLINE, BotLnWithMonth, BOTMLINE, MIDLINE, ANYLINE string;
+  var DAYSNAMLONG, DayNamesWithTabs, DAYSNAMSHORT string;
   var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
-// YearArray subscripts are [MN,W,DOW]
+// AllMonthsArray type subscripts are [MN] [W] [DOW]
+// I will attempt to use week slices after I get a working excel version, just to see if I can.
+// Then I won't need the WIM array.
   type WeekVector [7] string;
   type MonthMatrix [6] WeekVector;
   type AllMonthsArray [NumOfMonthsInYear] MonthMatrix;
   var EntireYear AllMonthsArray;
-//  var MONTH Was ARRAY [JAN..DCM],[1..6],[1..7] OF STR10TYP in Modula-2
+//                                          var MONTH Was ARRAY [JAN..DCM],[1..6],[1..7] OF STR10TYP in Modula-2
 
 
-  var year,DOW,W,JAN1DOW,FEBDAYS int // was CARDINAL in Modula-2
-  var DIM, WIM [NumOfMonthsInYear]int   // was ARRAY[JAN..DCM] OF CARDINAL in Modula-2
-  var CALSTATE int  // was CALMODE in Modula-2
-  var MONNAMSHORT [NumOfMonthsInYear]string;  // was ARRAY[JAN..DCM] OF STR10TYP in Modula-2
-  var MONNAMLONG  [NumOfMonthsInYear]string   // was ARRAY[JAN..DCM] OF LNTYP in Modula-2
+  var year,DOW,W,JAN1DOW,FEBDAYS int
+  var DIM, WIM [NumOfMonthsInYear]int
+  var MONNAMSHORT [NumOfMonthsInYear]string;
+  var MONNAMLONG  [NumOfMonthsInYear]string;
 
 // ------------------------------------------------------- DAY2STR  -------------------------------------
 func DAY2STR(DAY int) string {
@@ -137,7 +132,7 @@ OUTPUT TO  GBL VAR'S : MonthArray(MN,,), WIM(MN)
 
 
 // ----------------------------------------------------------- PRMONTH --------------------------------------
-func PRMONTH(MN int ) { // Intended to print one month per page.
+func PRMONTH(MN int ) { // Originally intended to print one month per page.
 
   s0 := fmt.Sprintf("%40s",MONNAMSHORT[MN]);
   s1 := fmt.Sprintf("%6s",YEARSTR);
@@ -155,7 +150,7 @@ func PRMONTH(MN int ) { // Intended to print one month per page.
   check(err,"");
   _, err = OutCal12file.WriteRune('\n');
   check(err,"");
-  for W := 0; W < WIM[MN]; W++ {
+  for W := 0; W <= WIM[MN]; W++ {
     _, err = OutCal12file.WriteString(" ");
     check(err,"");
     _, err = OutCal12file.WriteString(EntireYear[MN] [W] [0]); // write out Sunday
@@ -174,35 +169,61 @@ func PRMONTH(MN int ) { // Intended to print one month per page.
     _, err = OutCal12file.WriteString(EntireYear[MN] [W] [6]); // write out Saturday
     _, err = OutCal12file.WriteRune('\n');
     check(err,"");
-//                              I think this was a write over trick here               FWRSTR(OUTUN1,CR);
-/*
-    FOR J := 1 TO LNPPAG DIV WIM[MN] - 1 DO
-      FWRSTR(OUTUN1,ANYLINE);
-      FWRLN(OUTUN1);
-    END(*FOR*);
-    IF W = WIM[MN] THEN
-      BotLnWithMonth := BOTMLINE;
-      BotLnWithMonth[34] := ' ';
-      I := 35;
-      FOR J := 0 TO STRLENFNT(MONNAMSHORT[MN])-1 DO
-        BotLnWithMonth[I] := MONNAMSHORT[MN,J];
-        INC(I);
-      END(*FOR*);
-      BotLnWithMonth[I] := ' ';
-      INC(I);
-      FOR J := 0 TO STRLENFNT(YEARSTR)-1 DO
-        BotLnWithMonth[I] := YEARSTR[J];
-        INC(I);
-      END(*FOR*);
-      BotLnWithMonth[I] := ' ';
-      FWRSTR(OUTUN1,BotLnWithMonth);
-    ELSE
-      FWRSTR(OUTUN1,MIDLINE);
-    END(*IF*);
-    FWRLN(OUTUN1);
-*/
   } // ENDFOR W;
 } // END PRMONTH
+
+// ----------------------------------------------------------- PrMonthForXL --------------------------------------
+// Intended to print in a format that can be read by Excel as a call schedule template.
+func PrMonthForXL(MN int) {
+
+  s0 := fmt.Sprintf("%s",MONNAMSHORT[MN]);
+  s1 := fmt.Sprintf("\t%6s",YEARSTR);     // I'm going to add <tab> here to see if I like this effect
+  _, err := OutCal12file.WriteString(s0);
+                                       check(err,"Error while writing month name short for big calendar");
+  _, err = OutCal12file.WriteString(s1);
+                                                check(err,"Error while writing yearstr for big calendar");
+  _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+  _, err = OutCal12file.WriteString(DayNamesWithTabs);
+                                                check(err,"");
+  _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+
+  for W := 0; W <= WIM[MN]; W++ {
+    _, err = OutCal12file.WriteString(EntireYear[MN] [W] [0]); // write out Sunday
+                                                check(err,"");
+    err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to see if this works
+                                                check(err,"");
+
+    for I := 1; I < 6; I++ {                                  // write out Monday .. Friday
+
+      _, err = OutCal12file.WriteString(EntireYear[MN] [W] [I]);
+                                                check(err,"");
+      _, err = OutCal12file.WriteRune('\t'); // <tab>, or horizontal tab <HT>, to see if this works
+                                                check(err,"");
+
+
+    } // ENDFOR I
+
+    _, err = OutCal12file.WriteString(EntireYear[MN] [W] [6]); // write out Saturday
+                                                check(err,"");
+    _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+    _, err = OutCal12file.WriteString(BlankLineWithTabs);
+                                                check(err,"");
+    _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+    _, err = OutCal12file.WriteString(BlankLineWithTabs);
+                                                check(err,"");
+    _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+  } // ENDFOR W
+  _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+  _, err = OutCal12file.WriteRune('\n');
+                                                check(err,"");
+} // END PrMonthForXL
+
 
 /*
 --------------------- MAIN ---------------------------------------------
@@ -219,7 +240,8 @@ func main() {
 }
 
   PROMPT = " Enter Year : ";
-  ExtDefault = ".out";
+  Ext1Default := ".out";
+  Ext12Default := ".xls";
 
   commandline := getcommandline.GetCommandLineString();
   cleancommandline := filepath.Clean(commandline);
@@ -243,8 +265,8 @@ func main() {
 
 
   BaseFilename := YearToken.Str;
-  Cal1Filename = BaseFilename + "_cal1" + ExtDefault;
-  Cal12Filename = BaseFilename + "_cal12" + ExtDefault;
+  Cal1Filename = BaseFilename + "_cal1" + Ext1Default;
+  Cal12Filename = BaseFilename + "_cal12" + Ext12Default;
 
   fmt.Println(" Output Files are : ",Cal1Filename,Cal12Filename);
   fmt.Println();
@@ -267,7 +289,7 @@ func main() {
 
   MONNAMSHORT[JAN] = "JANUARY";
   MONNAMSHORT[FEB] = "FEBRUARY";
-  MONNAMSHORT[MAR] = "ARCH";
+  MONNAMSHORT[MAR] = "MARCH";
   MONNAMSHORT[APR] = "APRIL";
   MONNAMSHORT[MAY] = "MAY";
   MONNAMSHORT[JUN] = "JUNE";
@@ -292,6 +314,7 @@ func main() {
   MONNAMLONG[DCM] = "   D E C E M B E R       ";
 
   DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY";
+  DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY";
 
   DAYSNAMSHORT = "  S  M  T  W TH  F  S    ";
 
@@ -344,7 +367,7 @@ func main() {
 
 // WRITE 12 PAGE CALENDAR, ONE MONTH PER PAGE 
   for MN := JAN; MN <= DCM; MN++ {
-        PRMONTH(MN);
+        PrMonthForXL(MN);
   } // ENDFOR
 
 // Write one page calendar
@@ -357,12 +380,15 @@ func main() {
   for MN = JAN; MN <= DCM; MN += 3 {
     MN2 = MN + 1;
     MN3 = MN + 2;
+
     _, err = OutCal1file.WriteRune('\n');
     check(err,"Error while writing newline rune to Cal 1 file");
-    _, err = OutCal1file.WriteRune('\n');
-    check(err,"Error while writing newline rune to Cal 1 file");
-    _, err = OutCal1file.WriteRune('\n');
-    check(err,"Error while writing newline rune to Cal 1 file");
+    if MN > JAN {  // have fewer blank lines after year heading than btwn rows of months.
+      _, err = OutCal1file.WriteRune('\n');
+      check(err,"Error while writing newline rune to Cal 1 file");
+      _, err = OutCal1file.WriteRune('\n');
+      check(err,"Error while writing newline rune to Cal 1 file");
+    }
     _, err = OutCal1file.WriteString(MONNAMLONG[MN]);
     check(err,"Error writing first long month name to cal 1 file");
     _, err = OutCal1file.WriteString(MONNAMLONG[MN2]);
@@ -404,8 +430,6 @@ func main() {
       check(err,"Error while writing newline rune to Cal 1 file");
     } // ENDFOR W
   } // ENDFOR MN;
-  _, err = OutCal1file.WriteRune('\n');
-  check(err,"Error while writing newline rune to Cal 1 file");
   _, err = OutCal1file.WriteRune('\n');
   check(err,"Error while writing newline rune to Cal 1 file");
   _, err = OutCal1file.WriteString(s);
