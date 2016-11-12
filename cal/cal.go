@@ -19,7 +19,7 @@ package main
                 A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
  10 Nov 16 -- First working version, based on Modula-2 code from 92.
  11 Nov 16 -- Code from January 2009 to import into Excel is working.
- 12 Nov 16 -- Fixed bug in DATEASSIGN by not porting my own Modula-2 code correctly.
+ 12 Nov 16 -- Fixed bug in DATEASSIGN caused by not porting my own Modula-2 code correctly.
 */
 
 
