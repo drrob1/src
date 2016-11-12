@@ -196,11 +196,7 @@ func PrMonthForXL(MN int) {
   for W := 0; W <= WIM[MN]; W++ {
     _, err = OutCal12file.WriteString(EntireYear[MN] [W] [0]); // write out Sunday
                                                 check(err,"");
-<<<<<<< HEAD
     err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to confirm that this does work
-=======
-    err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to see if this works
->>>>>>> master
                                                 check(err,"");
 
     for I := 1; I < 6; I++ {                                  // write out Monday .. Friday
