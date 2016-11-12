@@ -1,4 +1,4 @@
-// cal.go
+// cal2.go
 // Copyright (C) 1987-2016  Robert Solomon MD.  All rights reserved.
 
 package main
@@ -18,8 +18,8 @@ package main
   9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
                 A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
  10 Nov 16 -- First working version, based on Modula-2 code from 92.
- 11 Nov 16 -- Code from January 2009 to import into Excel is working.
- 12 Nov 16 -- Fixed bug in DATEASSIGN by not porting my own Modula-2 code correctly.
+ 11 Nov 16 -- Code from January 2009 to import into Excel is working.  Now to try with week slices, and renamed to cal2.go
+ 12 Nov 16 -- Fixed bug in DATEASSIGN so first week in month is not skipped.
 */
 
 
@@ -28,6 +28,7 @@ import (
   "bufio"
   "fmt"
   "path/filepath"
+  "strings"
   "strconv"
 //
   "getcommandline"
@@ -68,9 +69,10 @@ import (
 // AllMonthsArray type subscripts are [MN] [W] [DOW]
 // I will attempt to use week slices after I get a working excel version, just to see if I can.
 // Then I won't need the WIM array.
-  type WeekVector [7] string;
-  type MonthMatrix [6] WeekVector;
-  type AllMonthsArray [NumOfMonthsInYear] MonthMatrix;
+  type WeekVector [7]string;
+//  type MonthMatrix [6]WeekVector;  This is the array syntax
+  type MonthMatrix []WeekVector;  // This is slice syntax, just to see if I can get this to work.
+  type AllMonthsArray [NumOfMonthsInYear]MonthMatrix;
   var EntireYear AllMonthsArray;
 //                                          var MONTH Was ARRAY [JAN..DCM],[1..6],[1..7] OF STR10TYP in Modula-2
 
@@ -83,13 +85,12 @@ import (
 // ------------------------------------------------------- DAY2STR  -------------------------------------
 func DAY2STR(DAY int) string {
 /*
-DAY TO STRING CONVERSION.
-THIS ROUTINE WILL CONVERT THE 2 DIGIT DAY INTO A 2 CHAR STRING.
-IF THE FIRST DIGIT IS ZERO, THEN THAT CHAR WILL BE BLANK.
+DAY TO STRING conversion.
+This routine will convert the DAY into a 3 char string.
+If the first digit is zero, then that char will be blank, too.
 */
 
 const digits = "0123456789"
-const ZERO = '0';
 
   bs := make([]byte,3);
 
@@ -108,73 +109,41 @@ const ZERO = '0';
 func DATEASSIGN(MN int) {
 /*
 --------------------------------------------------------- DATEASSIGN -------------------------------------------
-DATE ASSIGNMENT FOR MONTH.
-THIS ROUTINE WILL ASSIGN THE DATES FOR AN ENTIRE MONTH.  IT WILL PUT THE CHAR
-REPRESENTATIONS OF THE DATE IN THE FIRST 2 BYTES.  THE EXTRA BYTES CAN BE USED 
-LATER FOR SEPCIAL PRINTER CONTROL CODES.
+Date ASSIGNment for month.
+This routine will assign the dates for an entire month.  It will put the char
+representations of the date in the first 3 bytes.
 
 INPUT FROM GBL VAR'S : DIM(MN), DOW
-OUTPUT TO  GBL VAR'S : DOW, MonthArray(MN,,), WIM(MN)
+OUTPUT TO  GBL VAR'S : DOW, EntireYear[MN,,].  Formerly WIM(MN) but this is replaced by slices here now.
 
 */
+  var week WeekVector;
+  for w := range week {
+    week[w] = "   "; // 3 blanks.  This initialization now occurs here for entire week regardless of DOW.
+  }
+  EntireYear[MN] = make(MonthMatrix,0,6); // will need to append weeks as we go to each month-by-month
 
-  W := 0; // W is for Week number, IE, which week of the month is this.
-  for DATE := 1; DATE <= DIM[MN]; DATE++ {
+// No longer need a var like W to keep track of the # of weeks in a particular month.
+  for date := 1; date <= DIM[MN]; date++ {
     if DOW > 6 {  // DOW = 0 for Sunday.
-      W++
       DOW = 0;
-    } // ENDIF
-    DATESTR := DAY2STR(DATE);
-    EntireYear[MN] [W] [DOW] = DATESTR;
+      EntireYear[MN] = append(EntireYear[MN],week);
+      for w := range week {
+        week[w] = "   "; // Re-initialize entire week with 3 blanks per day.
+      } // endfor w
+    } // ENDIF DOW
+    DATESTR := DAY2STR(date);
+    week[DOW] = DATESTR;
     DOW++
-  } // ENDFOR;
-  WIM[MN] = W;  /* Return number of weeks in this month */
+  } // ENDFOR date;
+  if DOW > 0 {
+    EntireYear[MN] = append(EntireYear[MN],week);
+  }
   if DOW > 6 { // Don't return a DOW > 6, as that will make a blank first week for next month.
     DOW = 0;
   } // if DOW > 6
 } // END DATEASSIGN
 
-
-// ----------------------------------------------------------- PRMONTH --------------------------------------
-func PRMONTH(MN int ) { // Originally intended to print one month per page.
-
-  s0 := fmt.Sprintf("%40s",MONNAMSHORT[MN]);
-  s1 := fmt.Sprintf("%6s",YEARSTR);
-  _, err := OutCal12file.WriteString(s0);
-  check(err,"Error while writing month name short for big calendar");
-  _, err = OutCal12file.WriteString(s1);
-  check(err,"Error while writing yearstr for big calendar");
-  _, err = OutCal12file.WriteRune('\n');
-  check(err,"");
-  _, err = OutCal12file.WriteRune('\n');
-  check(err,"");
-  _, err = OutCal12file.WriteString(DAYSNAMLONG);
-  check(err,"");
-  _, err = OutCal12file.WriteRune('\n');
-  check(err,"");
-  _, err = OutCal12file.WriteRune('\n');
-  check(err,"");
-  for W := 0; W <= WIM[MN]; W++ {
-    _, err = OutCal12file.WriteString(" ");
-    check(err,"");
-    _, err = OutCal12file.WriteString(EntireYear[MN] [W] [0]); // write out Sunday
-    check(err,"");
-    _, err = OutCal12file.WriteString("      ");
-    check(err,"");
-    for I := 1; I < 6; I++ { // write out Monday .. Friday
-      _, err = OutCal12file.WriteString(" ");
-      check(err,"");
-      _, err = OutCal12file.WriteString(EntireYear[MN] [W] [I]);
-      _, err = OutCal12file.WriteString("        "); // FWRBL(OUTUN1,8);
-      check(err,"");
-    } // ENDFOR I
-    _, err = OutCal12file.WriteString(" ");
-    check(err,"");
-    _, err = OutCal12file.WriteString(EntireYear[MN] [W] [6]); // write out Saturday
-    _, err = OutCal12file.WriteRune('\n');
-    check(err,"");
-  } // ENDFOR W;
-} // END PRMONTH
 
 // ----------------------------------------------------------- PrMonthForXL --------------------------------------
 // Intended to print in a format that can be read by Excel as a call schedule template.
@@ -193,14 +162,10 @@ func PrMonthForXL(MN int) {
   _, err = OutCal12file.WriteRune('\n');
                                                 check(err,"");
 
-  for W := 0; W <= WIM[MN]; W++ {
+  for W := range EntireYear[MN] {
     _, err = OutCal12file.WriteString(EntireYear[MN] [W] [0]); // write out Sunday
                                                 check(err,"");
-<<<<<<< HEAD
-    err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to confirm that this does work
-=======
-    err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to see if this works
->>>>>>> master
+    err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to confirm that this works
                                                 check(err,"");
 
     for I := 1; I < 6; I++ {                                  // write out Monday .. Friday
@@ -357,17 +322,8 @@ func main() {
   } // ENDIF about leap year
   DIM[FEB] = FEBDAYS;
 
-// Initialize the calendar to all BLANKSTR3, for correct spacing
-  for m := JAN; m <= DEC; m++ { // month position
-    for wk := 0; wk < 6; wk++ { // week position
-      for dayofweek := 0; dayofweek < 7; dayofweek++ {
-        EntireYear[m] [wk] [dayofweek] = BLANKSTR3;
-      }
-    }
-  }
 
 // Time to make the calendar
-
   for MN := JAN; MN <= DCM; MN++ {
     DATEASSIGN(MN);
   } // ENDFOR;
@@ -388,7 +344,6 @@ func main() {
   for MN = JAN; MN <= DCM; MN += 3 {
     MN2 = MN + 1;
     MN3 = MN + 2;
-
     _, err = OutCal1file.WriteRune('\n');
     check(err,"Error while writing newline rune to Cal 1 file");
     if MN > JAN {  // have fewer blank lines after year heading than btwn rows of months.
@@ -417,33 +372,49 @@ func main() {
     check(err,"Error while writing day names to cal 1 file");
     _, err = OutCal1file.WriteRune('\n');
     check(err,"Error while writing newline rune to Cal 1 file");
+    blanks21 := strings.Repeat(" ",21);
     for W = 0; W < 6; W++ { // week number
-      for I := 0; I < 7; I++ { // day of week positions for 1st month
-        _, err = OutCal1file.WriteString(EntireYear[MN] [W] [I]);
-        check(err,"Error while writing date string to cal 1 file");
-      } // ENDFOR I
+      if W < len(EntireYear[MN]) {
+        for I := 0; I < 7; I++ { // day of week positions for 1st month
+          _, err = OutCal1file.WriteString(EntireYear[MN] [W] [I]);
+                                                   check(err,"Error while writing date string to cal 1 file");
+        }// endfor I
+      }else{
+        _, err = OutCal1file.WriteString(blanks21);
+                                                   check(err,"");
+      } // ENDIF W
       _,err = OutCal1file.WriteString("    ");
-      check(err,"");
-      for I := 0; I < 7; I++ { // day of week positions for 2nd month
-        _, err = OutCal1file.WriteString(EntireYear[MN2] [W] [I]);
-        check(err,"Error while writing date string to cal 1 file");
-      } // ENDFOR I
+                                                   check(err,"");
+      if W < len(EntireYear[MN2]) {
+        for I := 0; I < 7; I++ { // day of week positions for 2nd month
+          _, err = OutCal1file.WriteString(EntireYear[MN2] [W] [I]);
+                                                   check(err,"Error while writing date string to cal 1 file");
+        } // endfor I
+      }else{
+        _, err = OutCal1file.WriteString(blanks21);
+                                                   check(err,"");
+      } // ENDIF W
       _,err = OutCal1file.WriteString("    ");
-      check(err,"");
-      for I := 0; I < 7; I++ { // day of week position for 3rd month 
-        _, err = OutCal1file.WriteString(EntireYear[MN3] [W] [I]);
-        check(err,"Error while writing date string to cal 1 file");
-      } // ENDFOR I
+                                                   check(err,"");
+      if W < len(EntireYear[MN3]) {
+        for I := 0; I < 7; I++ { // day of week position for 3rd month 
+          _, err = OutCal1file.WriteString(EntireYear[MN3] [W] [I]);
+                                                   check(err,"Error while writing date string to cal 1 file");
+        } // endfor I
+      }else{
+        _, err = OutCal1file.WriteString(blanks21);
+                                                   check(err,"");
+      } // ENDIF W
       _, err = OutCal1file.WriteRune('\n');
-      check(err,"Error while writing newline rune to Cal 1 file");
+                                                   check(err,"Error while writing newline rune to Cal 1 file");
     } // ENDFOR W
   } // ENDFOR MN;
   _, err = OutCal1file.WriteRune('\n');
-  check(err,"Error while writing newline rune to Cal 1 file");
+                                                   check(err,"Error while writing newline rune to Cal 1 file");
   _, err = OutCal1file.WriteString(s);
-  check(err,"Error while writing YEARSTR to Cal 1 file");
+                                                   check(err,"Error while writing YEARSTR to Cal 1 file");
   _, err = OutCal1file.WriteRune('\n');
-  check(err,"Error while writing a newline rune to Cal 1 file");
+                                                   check(err,"Error while writing newline rune to Cal 1 file");
 } // end main func
 
 
