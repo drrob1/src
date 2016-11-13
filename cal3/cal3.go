@@ -21,6 +21,7 @@ package main
  11 Nov 16 -- Code from January 2009 to import into Excel is working.  Now to try with week slices, and renamed to cal2.go
  12 Nov 16 -- Fixed bug in DATEASSIGN so first week in month is not skipped.
  12 Nov 16 -- Changed logic again to not use global for EntireYear[,,], just to see how this goes.
+ 13 Nov 16 -- Testing idiomatic Go to init DIM.
 */
 
 
@@ -303,6 +304,8 @@ func main() {
 
 
 // DIM = Days In Month
+  DIM = [NumOfMonthsInYear]int{31,28,31,30,31,30,31,31,30,31,30,31};
+/*
   DIM[JAN] = 31;
   DIM[MAR] = 31;
   DIM[APR] = 30;
@@ -314,7 +317,7 @@ func main() {
   DIM[OCT] = 31;
   DIM[NOV] = 30;
   DIM[DCM] = 31;
-
+*/
   MN = JAN;
 
   JulDate := timlibg.JULIAN(1,1,year);
