@@ -21,7 +21,7 @@ package main
  11 Nov 16 -- Code from January 2009 to import into Excel is working.  Now to try with week slices, and renamed to cal2.go
  12 Nov 16 -- Fixed bug in DATEASSIGN so first week in month is not skipped.
  12 Nov 16 -- Changed logic again to not use global for EntireYear[,,], just to see how this goes.
- 13 Nov 16 -- Testing idiomatic Go to init DIM.
+ 13 Nov 16 -- Testing idiomatic Go to init DIM and MONNAMSHORT.  And removed DAYSNAMLONG as I don't use it.
 */
 
 
@@ -65,7 +65,7 @@ import (
   var OutCal1file, OutCal12file *bufio.Writer;
   var YEARSTR,BLANKSTR2,BLANKSTR3 string;
   var Cal1Filename,Cal12Filename string;
-  var DAYSNAMLONG, DayNamesWithTabs, DAYSNAMSHORT string;
+  var DayNamesWithTabs, DAYSNAMSHORT string;
 
 // AllMonthsArray type subscripts are [MN] [W] [DOW]
 // I will attempt to use week slices after I get a working excel version, just to see if I can.
@@ -78,8 +78,7 @@ import (
 //                                          var MONTH Was ARRAY [JAN..DCM],[1..6],[1..7] OF STR10TYP in Modula-2
 
 
-  var MONNAMSHORT [NumOfMonthsInYear]string;
-  var MONNAMLONG  [NumOfMonthsInYear]string;
+  var MONNAMSHORT, MONNAMLONG   [NumOfMonthsInYear]string;
 
 // ------------------------------------------------------- DAY2STR  -------------------------------------
 func DAY2STR(DAY int) string {
@@ -271,6 +270,9 @@ func main() {
   OutCal12file = bufio.NewWriter(OutCal12);
   defer OutCal12file.Flush();
 
+  MONNAMSHORT = [NumOfMonthsInYear]string{"JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY",
+                                          "AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"};
+/*
   MONNAMSHORT[JAN] = "JANUARY";
   MONNAMSHORT[FEB] = "FEBRUARY";
   MONNAMSHORT[MAR] = "MARCH";
@@ -283,7 +285,7 @@ func main() {
   MONNAMSHORT[OCT] = "OCTOBER";
   MONNAMSHORT[NOV] = "NOVEMBER";
   MONNAMSHORT[DCM] = "DECEMBER";
-
+*/
   MONNAMLONG[JAN] = "    J A N U A R Y        ";
   MONNAMLONG[FEB] = "   F E B R U A R Y       ";
   MONNAMLONG[MAR] = "      M A R C H          ";
@@ -297,7 +299,6 @@ func main() {
   MONNAMLONG[NOV] = "   N O V E M B E R       ";
   MONNAMLONG[DCM] = "   D E C E M B E R       ";
 
-  DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY";
   DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY";
 
   DAYSNAMSHORT = "  S  M  T  W TH  F  S    ";
