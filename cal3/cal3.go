@@ -38,7 +38,7 @@ import (
   "tokenize"
 )
 
-  const LastCompiled = "12 Nov 16";
+  const LastCompiled = "13 Nov 16";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
