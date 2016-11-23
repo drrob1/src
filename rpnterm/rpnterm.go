@@ -4,6 +4,7 @@ package main;
 
 import (
 "os"
+"os/exec"       // for the clear screen functions.
 "fmt"
 // "bufio"
 "log"
@@ -26,12 +27,13 @@ And having about on the command line does not work correctly.  Dont yet know why
 */
 
 
-const LastCompiled = "6 Nov 16";
+const LastCompiled = "23 Nov 16";
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
 var DisplayTape,stringslice []string;
 var Divider string;
+var clear map[string]func()
 
 var StartCol,StartRow,sigfig,MaxRow,MaxCol,TitleRow,StackRow,RegRow,OutputRow,DisplayCol,PromptRow,outputmode,n int;
 var BrightYellow,BrightCyan,Black termbox.Attribute;
@@ -93,6 +95,8 @@ func main () {
   31 Oct 16 -- Debugged GetInputString(x,y int) string
    4 Nov 16 -- Changed hpcalc.go to return a string slice for everything.  Added outputmodes.
    6 Nov 16 -- Windows returns <backspace> code of 8, which is std ASCII.  Seems linux does not do this.
+  23 Nov 16 -- Will clear screen before calling init termbox-go, to see if that helps some of the irregularities
+                 I've found with termbox-go.
 */
 
   var INBUF,HomeDir string;
@@ -107,6 +111,9 @@ func main () {
 
   var Stk hpcalc.StackType;  // used when time to write out the stack upon exit.
   var err error;
+
+  ClearScreen(); // ClearScreen before termbox.init fcn, to see if this helps. 
+
 
   termerr := termbox.Init();
   if termerr != nil {
@@ -442,8 +449,20 @@ func check(err error) {
 }
 
 // ------------------------------------------------------- init -----------------------------------
-//func init() {         // start termbox in the init code doesn't work.  Don't know why.
-//}
+func init() {  // start termbox in the init code doesn't work.  Don't know why.  But this init does work.
+  clear = make(map[string]func());
+  clear["linux"] = func() {  // this is a closure, or an anonymous function
+    cmd := exec.Command("clear");
+    cmd.Stdout = os.Stdout;
+    cmd.Run();
+  }
+
+  clear["windows"] = func() {  // this is a closure, or an anonymous function
+    cmd := exec.Command("cmd","/c","cls");
+    cmd.Stdout = os.Stdout;
+    cmd.Run();
+  }
+}
 
 
 // --------------------------------------------------- Cap -----------------------------------------
@@ -720,6 +739,17 @@ func RepaintScreen(x int) {
   }
   WriteDisplayTapeToScreen(DisplayCol,StackRow);
   Printf_tb(x,MaxRow-1,BrightCyan,Black,Divider);
+}
+
+
+// ---------------------------------------------------- ClearScreen ------------------------------------
+func ClearScreen() {
+  clearfunc, ok := clear[runtime.GOOS]
+  if ok {
+    clearfunc();
+  }else{  // unsupported platform
+    panic(" The ClearScreen platform is only supported on linux or windows, at the moment");
+  }
 }
 
 // ---------------------------------------------------- End rpnterm.go ------------------------------
