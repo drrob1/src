@@ -112,7 +112,12 @@ func main () {
   var Stk hpcalc.StackType;  // used when time to write out the stack upon exit.
   var err error;
 
-  ClearScreen(); // ClearScreen before termbox.init fcn, to see if this helps. 
+  ClearScreen(); // ClearScreen before termbox.init fcn, to see if this helps.
+  fmt.Println();
+  fmt.Println("  I hope this helps.  But it likely won't.  ");
+  fmt.Println();
+  fmt.Println();
+
 
 
   termerr := termbox.Init();
