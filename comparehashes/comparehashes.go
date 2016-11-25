@@ -27,9 +27,11 @@ import (
   19 Sep 16 -- Finished conversion to Go, that was started 13 Sep 16.  Added the removed of '*' which is part of a std linux formated hash file.  And I forgot that
                  the routine allowed either order in the file.  If the token has a '.' I assume it is a filename, else it is a hash value.
   21 Sep 16 -- Fixed the case issue in tokenize.GetToken.  Edited code here to correspond to this fix.
+  25 Nov 16 -- Need to not panic when target file is not found, only panic when hash file is not found.
+                 And added a LastCompiled message and string.
 */
 
-
+const LastCompiled = "25 Nov 2016";
 //* ************************* MAIN ***************************************************************
 func main() {
 
@@ -86,12 +88,12 @@ func main() {
 
   fmt.Println();
   fmt.Println(" GOOS =",runtime.GOOS,".  ARCH=",runtime.GOARCH);
-  fmt.Println();
-  fmt.Println();
-  fmt.Println();
+//  fmt.Println();
+//  fmt.Println();
+//  fmt.Println();
 
-  fmt.Print(" Testing determining hash type by file extension.");
-  fmt.Println("  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
+  fmt.Println(" Last compiled ",LastCompiled);
+//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
   fmt.Println();
 
 
@@ -159,7 +161,15 @@ func main() {
 */
     /* Create Hash Section */
     TargetFile,err := os.Open(TargetFilename);
-    check(err," Error opening TargetFilename.");
+//    exists := true;
+    if os.IsNotExist(err) {
+//      exists = false;
+      fmt.Println(TargetFilename," does not exist.");
+      continue;
+    }else{  // we know that the file exists
+      check(err," Error opening TargetFilename.");
+    }
+
     defer TargetFile.Close();
 
     switch WhichHash {     // Initialing case switch on WhichHash
@@ -192,12 +202,12 @@ func main() {
     HashValueComputedStr = hex.EncodeToString(hasher.Sum(nil));
 
 // I got the idea to use the different base64 versions and my own hex converter code, just to see.
-// And I can also use sfprintf with the %x verb.  base64 versions and not useful as they use a larger
+// And I can also use sfprintf with the %x verb.  base64 versions are not useful as they use a larger
 // character set than hex.  I deleted all references to the base64 versions.  And the hex encoded and
 // sprintf using %x were the same, so I removed the sprintf code.
 //    HashValueComputedSprintf := fmt.Sprintf("%x",hasher.Sum(nil));
 
-    fmt.Println(" Filename  = ",TargetFilename,", FileSize = ",FileSize,", ",HashName[WhichHash]," computed hash string, followed by hash string in the file are : ");
+    fmt.Println(" Filename  = ",TargetFilename,", FileSize = ",FileSize,", ",HashName[WhichHash]," computed hash string -- ");
     fmt.Println("       Read From File:",HashValueReadFromFile);
     fmt.Println(" Computed hex encoded:",HashValueComputedStr);
 //    fmt.Println(" Computed sprintf:",HashValueComputedSprintf);

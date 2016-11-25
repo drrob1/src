@@ -54,6 +54,7 @@ import (
                So I added FetchToken which takes a param of true for cap and false for preserving case.  
    9 Oct 16 -- Will allow "0x" as prefix for hex, as well as "H" suffix.  An 'x' anywhere in the number will
                 be a hex number.  I will not force it to be the 2nd character.
+  25 Nov 16 -- The TKNMAXSIZ was too small for sha512, so I increased it.
 */
 
   type FSATYP int;
@@ -82,7 +83,7 @@ import (
 // *********************************************************************
 
 
-  const TKNMAXSIZ = 80;
+  const TKNMAXSIZ = 180;
   const OpMaxSize = 2;
   const Dgt0 = '0';
   const Dgt9 = '9';
