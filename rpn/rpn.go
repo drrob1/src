@@ -1,4 +1,4 @@
-// (C) 1990-2016.  Robert W. Solomon.  All rights reserved.
+// (C) 1990-2016.  Robert W Solomon.  All rights reserved.
 // rpn.go
 package main;
 import (
@@ -13,14 +13,14 @@ import (
 //
 "hpcalc"
 "getcommandline"
-"holidaycalc"
-"timlibg"
 "makesubst"
-//                                                                                                     "tokenize"
-//                                                                                                      "timlibg"
+//                                                                                          "holidaycalc"
+//                                                                                              "timlibg"
+//                                                                                             "tokenize"
+//                                                                                              "timlibg"
 )
 
-const LastCompiled = "29 Aug 16";
+const LastCompiled = "28 Nov 16";
 
 func main () {
 /*
@@ -53,13 +53,16 @@ func main () {
    8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
   22 Aug 16 -- Started conversion to Go.
   28 Aug 16 -- added makesubst capability for substitutions = -> + and ; -> *
+  28 Nov 16 -- Backported stringslice return of hpcalc so can use the new, improved hpcalc.
 */
 
   var R float64;
-  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
-  var INBUF,ans,line string;
+  var INBUF,ans string;
   const StackFileName = "RPNStack.sav";
-  var Holidays holidaycalc.HolType;
+//                                                                      var Y,NYD,July4,VetD,ChristmasD int; 
+//                                                                                var INBUF,ans,line string;
+//                                                                         var Holidays holidaycalc.HolType;
+  var stringslice []string;
 
 
   var Stk hpcalc.StackType;  // used when time to write out the stack upon exit.
@@ -70,11 +73,12 @@ func main () {
   StackFileExists := true;
   InputByteSlice := make([]byte,8*hpcalc.StackSize);  // I hope this is a slice of 64 bytes, ie, 8*8.
 
+
   if InputByteSlice, err = ioutil.ReadFile(StackFileName); err != nil {
     fmt.Errorf(" Error from ioutil.ReadFile.  Probably because no Stack File found: %v\n", err);
     StackFileExists = false;
   }
-  if StackFileExists {  // i'll read all into memory.  I just have to lookup how
+  if StackFileExists {  // I'll read all into memory.
     for i := 0; i < hpcalc.StackSize*8; i=i+8 {
       buf := bytes.NewReader(InputByteSlice[i:i+8]);
       err := binary.Read(buf,binary.LittleEndian, &R);
@@ -113,7 +117,8 @@ func main () {
   hpcalc.PushMatrixStacks();
 
   for len(INBUF) > 0 {
-    R,Holidays = hpcalc.GetResult(INBUF);
+    R,stringslice = hpcalc.GetResult(INBUF);
+//                                                                  R,Holidays = hpcalc.GetResult(INBUF);
     ans = strconv.FormatFloat(R,'g',-1,64);
     ans = hpcalc.CropNStr(ans);
     if R > 10000 {
@@ -121,8 +126,15 @@ func main () {
     }
     fmt.Println();
     fmt.Println();
+    for _,ss := range stringslice {
+      fmt.Println(ss);
+    }
+
     if strings.ToLower(INBUF) == "about" {
       fmt.Println(" Last compiled rpn.go ",LastCompiled);
+    }
+
+/* supplanted by the stringslice return from hpcalc.
     }else if Holidays.Valid {
       fmt.Println(" For year ",Holidays.Year,":");
       Y = Holidays.Year;
@@ -143,11 +155,19 @@ func main () {
       fmt.Println(line);
       Holidays.Valid = false;
     }
+*/
+    INBUF = strings.ToUpper(INBUF);
+    if !strings.HasPrefix(INBUF,"DUMP") {  // don't DUMP again if just did it.
+      _,stringslice = hpcalc.GetResult("DUMP");   // discard result.  Only need stack dump general executed.
+      for _,ss := range stringslice {
+        fmt.Println(ss);
+      }
+    }
+
     fmt.Println();
     fmt.Print("                                                               Result = ");
     hpcalc.OutputFixedOrFloat(R);
     fmt.Println("         |    ",ans);
-    hpcalc.GetResult("DUMP");   // discard result.  Only need stack dump general executed.
     fmt.Print(" Enter calculation, HELP or Enter to exit: ");
     scanner.Scan();
     INBUF = scanner.Text();
@@ -182,7 +202,6 @@ func main () {
 //    fmt.Println(" Length of OutByteSlice after append operation ",len(OutputByteSlice));
 //    buf.Reset();
   }
-//                      err = ioutil.WriteFile(StackFileName,OutputByteSlice,os.ModePerm);   // os.ModePerm = 0777
   err = ioutil.WriteFile(StackFileName,buf.Bytes(),os.ModePerm);   // os.ModePerm = 0777
   if err != nil {
     fmt.Errorf(" ioutil.WriteFile failed with error %v \n",err);

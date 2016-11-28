@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "4 Nov 16";
+const compiledDateTime = "28 Nov 16";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -53,13 +53,15 @@ const compiledDateTime = "4 Nov 16";
   18 Aug 16 -- Started conversion to Go
   29 Aug 16 -- Added Prime command and support function IsPrime.  And PWRI came back into use.
    5 Sep 16 -- Changed output format verb params in fixed and general format.
-  11 Sep 16 -- Had to fix help text now that PWI is used.  No longer do Abs(Y) before calling PWRI.
+  11 Sep 16 -- Had to fix help text now that PWRI is used.  No longer do Abs(Y) before calling PWRI.
    7 Oct 16 -- Added the adjust command so that amounts are not .9999997 or something silly like that.  And trying NextAfter.
                  Noticed that math.Cbrt exists, and removed Abs(Y) from ** operator implemented by a call to math.Pow();
                  Added SigFig or Fix command for the strconv.FormatFloat fcn call.  
    8 Oct 16 -- Fixed help by adding trunc command.  Seems I never added it to help when I added the command.
    3 Nov 16 -- This rtn will now return a string when it needs to, instead of doing its own output.  This is so that termbox-go is as smooth as rpng.
    4 Nov 16 -- Changed how DOW is handled.  It now returns its answer in stringslice.
+  28 Nov 16 -- Decided that the approximation for vol command was not necessary, and will use more exact formula not assuming pi = 3.
+                 And added piover6 command.  And added CHS (change sign) command which also allows underscore, _, as the symbol for this command.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -404,7 +406,7 @@ func GetResult(s string) (float64, []string) {
   var Token tokenize.TokenType;
   var EOL bool;
   var Holiday holidaycalc.HolType;
-  ss := make([]string,0,35);  // stringslice is too long to keep having to type, esp in the help section.
+  ss := make([]string,0,40);  // stringslice is too long to keep having to type, esp in the help section.
 
   tokenize.INITKN(s);
   for { //  UNTIL reached EOL
@@ -493,11 +495,13 @@ func GetResult(s string) (float64, []string) {
                     } else if Token.Str == "VOL" {
                       LastX = Stack[X];
                       PushMatrixStacks();
-                      Stack[X] = math.Exp(math.Log(2.0*Stack[X])/3.0);
-                    } else if Token.Str == "HELP" {  // I'm getting cute with procedure variables
+                      Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
+//                                                                           Stack[X] = math.Exp(math.Log(2.0*Stack[X])/3.0);
+                    } else if Token.Str == "HELP" {
                       ss = append(ss," SQRT,SQR -- X = sqrt(X) or sqr(X) register.");
                       ss = append(ss," CURT -- X = cuberoot(X).");
                       ss = append(ss," RECIP -- X = 1/X.");
+                      ss = append(ss," CHS,_ -- Change Sign,  X = -1 * X.");
                       ss = append(ss," VOL -- X = estimated diameter for a given volume, assuming a sphere.");
                       ss = append(ss," STO,RCL  -- store/recall the X register to/from the memory register.");
                       ss = append(ss," `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.");
@@ -508,7 +512,7 @@ func GetResult(s string) (float64, []string) {
                       ss = append(ss," EXP,LN -- evaluate exp(X) or ln(X) and put result back into X.");
                       ss = append(ss," ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X");
                       ss = append(ss," **  -- ABS(Y) to the X power, put result in X and pop stack 1 reg.");
-                      ss = append(ss," INT, TRUNC, ROUND, CEIL, FRAC, PI -- do what their names suggest.");
+                      ss = append(ss," INT, TRUNC, ROUND, CEIL, FRAC, PI, PIOVER6 -- do what their names suggest.");
                       ss = append(ss," MOD -- evaluate Y MOD X, put result in X and pop stack 1 reg.");
 		      ss = append(ss," %   -- does XY/100, places result in X.  Leaves Y alone.");
                       ss = append(ss," SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.");
@@ -694,6 +698,13 @@ func GetResult(s string) (float64, []string) {
                     }else if Token.Str == "PI" {
                       PushMatrixStacks();
                       PUSHX(PI);
+                    }else if Token.Str == "PIOVER6" { // sphere V = pi_over_6 * d^3
+                      PushMatrixStacks();
+                      PUSHX(PI/6);
+                    }else if Token.Str == "CHS" || Token.Str == "_" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = -1 * Stack[X];
                     }else if Token.Str == "HOL" {
                       PushMatrixStacks();
                       year = int(Round(Stack[X]));
