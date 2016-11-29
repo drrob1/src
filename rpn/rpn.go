@@ -20,7 +20,7 @@ import (
 //                                                                                              "timlibg"
 )
 
-const LastCompiled = "28 Nov 16";
+const LastCompiled = "29 Nov 16";
 
 func main () {
 /*
@@ -134,30 +134,8 @@ func main () {
       fmt.Println(" Last compiled rpn.go ",LastCompiled);
     }
 
-/* supplanted by the stringslice return from hpcalc.
-    }else if Holidays.Valid {
-      fmt.Println(" For year ",Holidays.Year,":");
-      Y = Holidays.Year;
-      NYD = (timlibg.JULIAN(1,1,Y) % 7);
-      line = fmt.Sprintf("New Years Day is a %s, MLK Day is January %d, Pres Day is February %d, Easter Sunday is %s %d, Mother's Day is May %d",
-        timlibg.DayNames[NYD],Holidays.MLK.D,Holidays.Pres.D,timlibg.MonthNames[Holidays.Easter.M],Holidays.Easter.D,Holidays.Mother.D);
-      fmt.Println(line);
-
-      July4 = (timlibg.JULIAN(7,4,Y) % 7);
-      line = fmt.Sprintf("Memorial Day is May %d, Father's Day is June %d, July 4 is a %s, Labor Day is Septempber %d, Columbus Day is October %d",
-        Holidays.Memorial.D,Holidays.Father.D,timlibg.DayNames[July4],Holidays.Labor.D,Holidays.Columbus.D);
-      fmt.Println(line);
-
-      VetD = (timlibg.JULIAN(11,11,Y) % 7);
-      ChristmasD = (timlibg.JULIAN(12,25,Y) % 7);
-      line = fmt.Sprintf("Election Day is November %d, Veteran's Day is a %s, Thanksgiving is November %d, and Christmas Day is a %s.",
-        Holidays.Election.D,timlibg.DayNames[VetD],Holidays.Thanksgiving.D,timlibg.DayNames[ChristmasD]);
-      fmt.Println(line);
-      Holidays.Valid = false;
-    }
-*/
     INBUF = strings.ToUpper(INBUF);
-    if !strings.HasPrefix(INBUF,"DUMP") {  // don't DUMP again if just did it.
+    if ! (strings.HasPrefix(INBUF,"DUMP") || INBUF == "HELP") {  // don't DUMP again if just did it, or if HELP called to not scroll help off screen.
       _,stringslice = hpcalc.GetResult("DUMP");   // discard result.  Only need stack dump general executed.
       for _,ss := range stringslice {
         fmt.Println(ss);
@@ -165,7 +143,7 @@ func main () {
     }
 
     fmt.Println();
-    fmt.Print("                                                               Result = ");
+    fmt.Print("                                            Result = ");
     hpcalc.OutputFixedOrFloat(R);
     fmt.Println("         |    ",ans);
     fmt.Print(" Enter calculation, HELP or Enter to exit: ");

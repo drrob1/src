@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "28 Nov 16";
+const compiledDateTime = "29 Nov 16";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -62,6 +62,8 @@ const compiledDateTime = "28 Nov 16";
    4 Nov 16 -- Changed how DOW is handled.  It now returns its answer in stringslice.
   28 Nov 16 -- Decided that the approximation for vol command was not necessary, and will use more exact formula not assuming pi = 3.
                  And added piover6 command.  And added CHS (change sign) command which also allows underscore, _, as the symbol for this command.
+  29 Nov 16 -- Decided to reorder the statements in the main if statement of GetResults to optimize for probability of usage.  Mostly, the trig,
+                 log and exp functions were moved to the bottom, and I combined conditions into compound OR conditionals for clarity of function.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -334,7 +336,7 @@ it uses the optimized algorithm as discussed in PIM-2, V.  2.
         R = R*R;
         I = I / 2;
     }
-    if NEGFLAG { Z = 1.0 / Z }
+    if NEGFLAG { Z = 1 / Z }
     return Z;
 } // PWRI
 
@@ -452,7 +454,7 @@ func GetResult(s string) (float64, []string) {
                  } // opcode value condition
                  break;
     case tokenize.ALLELSE :
-                    if false { /* do nothing */
+                    if false { // do nothing but allow all conditions to be in the else if form
                     } else if Token.Str == "DUMP" {
                       ss = append(ss,DumpStackGeneral()...);
                     } else if strings.HasPrefix(Token.Str,"DUMPFIX") {  // intended to allow dumpfix or dumpfixed.
@@ -474,19 +476,11 @@ func GetResult(s string) (float64, []string) {
                       sigfig = GetRegIdx(ch);
 		      if sigfig > 9 { // If sigfig greater than this max value, make it -1 again.  
                         sigfig = -1;
-		      }
-                    } else if Token.Str == "SQR" {
-                      LastX = Stack[X];
-                      PushMatrixStacks();
-                      Stack[X] *= Stack[X];
-                    } else if Token.Str == "SQRT" {
-                      LastX = Stack[X];
-                      PushMatrixStacks();
-                      Stack[X] = math.Sqrt(Stack[X]);
+                      }
                     } else if Token.Str == "RECIP" {
                       LastX = Stack[X];
                       PushMatrixStacks();
-                      Stack[X] = 1.0/Stack[X];
+                      Stack[X] = 1/Stack[X];
                     } else if Token.Str == "CURT" {
                       LastX = Stack[X];
                       PushMatrixStacks();
@@ -540,45 +534,22 @@ func GetResult(s string) (float64, []string) {
                       UndoMatrixStacks();
                     }else if Token.Str == "REDO" {
                       RedoMatrixStacks();
-                    }else if Token.Str == "SWAP" {
+                    }else if Token.Str == "SWAP" || Token.Str == "SWAPXY" || Token.Str == "~" || Token.Str == "`" {  // that's a back tick
                       PushMatrixStacks();
                       SWAPXY();
-                    }else if Token.Str == "SWAPXY" {
-                      PushMatrixStacks();
-                      SWAPXY();
-                    }else if Token.Str == "LASTX" {
+                    }else if Token.Str == "LASTX" || Token.Str == "@" {
                       PushMatrixStacks();
                       PUSHX(LastX);
-                    }else if Token.Str == "ROLLDN" {
-                      PushMatrixStacks();
-                      STACKROLLDN();
-                    }else if Token.Str == "DN" {
+                    }else if Token.Str == "ROLLDN" {  // StackRolldn(), not StackDn
                       PushMatrixStacks();
                       STACKROLLDN();
                     }else if Token.Str == "," || Token.Str == "UP" {
                       PushMatrixStacks();
                       STACKUP();
-                    }else if Token.Str == "!" {
+                    }else if Token.Str == "!" || Token.Str == "DN" {  // StackDn(), not StackRolldn
                       PushMatrixStacks();
                       Stack[X] = Stack[Y];
                       STACKDN();
-                    }else if Token.Str == "`" {
-                      PushMatrixStacks();
-                      SWAPXY();
-                    }else if Token.Str == "~" {
-                      PushMatrixStacks();
-                      SWAPXY();
-                    }else if Token.Str == "@" {
-                      PushMatrixStacks();
-                      PUSHX(LastX);
-                    }else if Token.Str == "EXP" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Exp(Stack[X]);
-                    }else if Token.Str == "LN" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Log(math.Abs(Stack[X]));
                     }else if Token.Str == "INT" {
                       PushMatrixStacks();
                       LastX = Stack[X];
@@ -628,38 +599,6 @@ func GetResult(s string) (float64, []string) {
                       LastX = Stack[X];
                       Stack[X] = math.Mod(Round(Stack[Y]), Round(Stack[X]));
                       STACKDN();
-                    }else if Token.Str == "SIN" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Sin(Stack[X]*PI/180.0);
-                    }else if Token.Str == "COS" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Cos(Stack[X]*PI/180.0);
-                    }else if Token.Str == "TAN" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Tan(Stack[X]*PI/180.0);
-                    }else if Token.Str == "ARCTAN" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Atan(Stack[X])*180.0/PI;
-                    }else if Token.Str == "ARCSIN" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Asin(LastX)*180.0/PI;
-                    }else if Token.Str == "ARCCOS" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] = math.Acos(LastX)*180.0/PI;
-                    }else if Token.Str == "D2R" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] *= PI/180.0;
-                    }else if Token.Str == "R2D" {
-                      PushMatrixStacks();
-                      LastX = Stack[X];
-                      Stack[X] *= 180.0/PI;
                     }else if Token.Str == "JUL" {
                       PushMatrixStacks();
                       LastX = Stack[X];
@@ -732,7 +671,55 @@ func GetResult(s string) (float64, []string) {
                                                                                         Holiday.Election.D,timlibg.DayNames[VetD],Holiday.Thanksgiving.D,timlibg.DayNames[ChristmasD]));
                       }
                     }else if Token.Str == "ABOUT" {
-                      ss = append(ss,fmt.Sprintf(" last compiled hpcalc %s",compiledDateTime));
+                      ss = append(ss,fmt.Sprintf(" last compiled hpcalc.go %s",compiledDateTime));
+                    } else if Token.Str == "SQR" {
+                      LastX = Stack[X];
+                      PushMatrixStacks();
+                      Stack[X] *= Stack[X];
+                    } else if Token.Str == "SQRT" {
+                      LastX = Stack[X];
+                      PushMatrixStacks();
+                      Stack[X] = math.Sqrt(Stack[X]);
+                    }else if Token.Str == "EXP" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Exp(Stack[X]);
+                    }else if Token.Str == "LN" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Log(math.Abs(Stack[X]));
+                    }else if Token.Str == "SIN" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Sin(Stack[X]*PI/180.0);
+                    }else if Token.Str == "COS" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Cos(Stack[X]*PI/180.0);
+                    }else if Token.Str == "TAN" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Tan(Stack[X]*PI/180.0);
+                    }else if Token.Str == "ARCTAN" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Atan(Stack[X])*180.0/PI;
+                    }else if Token.Str == "ARCSIN" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Asin(LastX)*180.0/PI;
+                    }else if Token.Str == "ARCCOS" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] = math.Acos(LastX)*180.0/PI;
+                    }else if Token.Str == "D2R" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] *= PI/180.0;
+                    }else if Token.Str == "R2D" {
+                      PushMatrixStacks();
+                      LastX = Stack[X];
+                      Stack[X] *= 180.0/PI;
                     } else {
                       ss = append(ss,fmt.Sprintf(" %s is an unrecognized command.",Token.Str));
                     }  // main text command selection if statement
