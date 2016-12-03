@@ -55,6 +55,7 @@ import (
    9 Oct 16 -- Will allow "0x" as prefix for hex, as well as "H" suffix.  An 'x' anywhere in the number will
                 be a hex number.  I will not force it to be the 2nd character.
   25 Nov 16 -- The TKNMAXSIZ was too small for sha512, so I increased it.
+   3 Dec 16 -- Decided to change how the UpperCase flag is handled in GetToken.
 */
 
   type FSATYP int;
@@ -493,10 +494,13 @@ ExitForLoop:
   } //LOOP to process characters
 
 //  ExitLoop:
-  TOKEN.Str = string(tokenByteSlice);  // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
+//  TOKEN.Str = string(tokenByteSlice);  // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
 
   if UpperCase {
-    TOKEN.Str = strings.ToUpper(TOKEN.Str);
+    TOKEN.Str = strings.ToUpper(string(tokenByteSlice));
+//                                                                          TOKEN.Str = strings.ToUpper(TOKEN.Str);
+  }else{
+    TOKEN.Str = string(tokenByteSlice);  // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
   }
   TOKEN.DelimCH    = CHAR.Ch;
   TOKEN.DelimState = CHAR.State;
