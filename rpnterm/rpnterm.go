@@ -27,7 +27,7 @@ And having about on the command line does not work correctly.  Dont yet know why
 */
 
 
-const LastCompiled = "23 Nov 16";
+const LastCompiled = "11 Dec 16";
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
@@ -96,7 +96,8 @@ func main () {
    4 Nov 16 -- Changed hpcalc.go to return a string slice for everything.  Added outputmodes.
    6 Nov 16 -- Windows returns <backspace> code of 8, which is std ASCII.  Seems linux does not do this.
   23 Nov 16 -- Will clear screen before calling init termbox-go, to see if that helps some of the irregularities
-                 I've found with termbox-go.
+                 I've found with termbox-go.  It doesn't help.
+  11 Dec 16 -- Fixed bug in GetRegIdx when out of range char is passed in.
 */
 
   var INBUF,HomeDir string;
@@ -381,13 +382,14 @@ func main () {
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
 func GetRegIdx(chr byte) (int) {
-                                            /* Return 0..35 w/ A = 10 and Z = 35 */
-
+                                            // Return 0..35 w/ A = 10 and Z = 35
   ch := tokenize.CAP(chr);
   if (ch >= '0') && (ch <= '9') {
     ch = ch - '0';
   }else if (ch >= 'A') && (ch <= 'Z') {
-    ch  = ch - 'A' + 10;
+    ch = ch - 'A' + 10;
+  }else{                                    // added 12/11/2016 to fix bug
+    ch = 0
   }
   return int(ch);
 } // GetRegIdx

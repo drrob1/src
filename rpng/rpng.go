@@ -20,7 +20,7 @@ import (
 // "holidaycalc"  Supplanted by stringslice
 )
 
-const LastCompiled = "6 Nov 16";
+const LastCompiled = "11 Dec 16";
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
 var DisplayTape,stringslice []string;
@@ -80,6 +80,7 @@ func main () {
    4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
    5 Nov 16 -- Added SuppressDump map code
    6 Nov 16 -- Added blank lines before writing output from hpcalc.
+  11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
 */
 
 //  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
@@ -318,13 +319,14 @@ func main () {
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
 func GetRegIdx(chr byte) (int) {
-                                            /* Return 0..35 w/ A = 10 and Z = 35 */
-
+                                            // Return 0..35 with A = 10 and Z = 35
   ch := tokenize.CAP(chr);
   if (ch >= '0') && (ch <= '9') {
     ch = ch - '0';
   }else if (ch >= 'A') && (ch <= 'Z') {
-    ch  = ch - 'A' + 10;
+    ch = ch - 'A' + 10;
+  }else{                                    // added 12/11/2016 to fix bug
+    ch = 0;
   }
   return int(ch);
 } // GetRegIdx
