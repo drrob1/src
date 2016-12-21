@@ -1,2 +1,6 @@
 *.swp
 github.com/derekparker/
+*.def
+*.DEF
+*.mod
+*.MOD
