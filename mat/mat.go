@@ -22,21 +22,21 @@ package mat;
 
 
 import (
-  "os"
-  "bufio"
+//  "os"
+//  "bufio"
+//  "path/filepath"
+//  "strings"
   "fmt"
-  "path/filepath"
-  "strings"
   "strconv"
   "math"
   "math/cmplx"
   "math/rand"
   "time"
 //
-  "getcommandline"
-  "timlibg"
-  "tokenize"
   "vec"
+//  "getcommandline"
+//  "timlibg"
+//  "tokenize"
 )
 
 const small = 1.0E-15;
@@ -53,6 +53,8 @@ type Permutation []int
 //TYPE subscript = [0..8191];
 //type Permutation = POINTER TO ARRAY subscript OF subscript;  array [0..8191] OF subrange of integer.  
 //I'm going to ignore this subrange of integer called subscript, and just make it int.
+
+type LongComplexSlice []complex128;  // using Modula-2 name for this type as a userdefined type
 
 func init() {
   rand.Seed(time.Now().UnixNano());
@@ -133,7 +135,7 @@ func Copy (Src,Dest Matrix2D) Matrix2D {
 
 //  PROCEDURE Add (A, B : ARRAY OF ARRAY OF EltType;  r, c: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func Add(A,B Matrix2D) Matrix2D {
-// Computes C := A + B.
+// Computes C = A + B.
   var C Matrix2D;
 
   for i := range A {
@@ -146,7 +148,7 @@ func Add(A,B Matrix2D) Matrix2D {
 
 //   PROCEDURE Sub (A, B: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func Sub(A,B Matrix2D) Matrix2D {
-// Computes C := A - B.
+// Computes C = A - B.
   var C Matrix2D;
 
   for i := range A {
@@ -160,7 +162,7 @@ func Sub(A,B Matrix2D) Matrix2D {
 
 //   PROCEDURE Mul (A, B: ARRAY OF ARRAY OF EltType;  r, c1, c2: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func Mul(A,B Matrix2D) Matrix2D {
-// Computes C := A x B.  It will panic if the dimensions are not correct
+// Computes C = A x B.  Using std linear algebra rules.  It will panic if the dimensions are not correct
   var C Matrix2D;
   var temp float64;
 
@@ -188,7 +190,7 @@ func Mul(A,B Matrix2D) Matrix2D {
 
 //  PROCEDURE ScalarMul (A: EltType;  B: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func ScalarMul(a EltType, B Matrix2D) Matrix2D {
-// Computes C := a*B, where a is the scalar and B is the matrix.
+// Computes C = a*B, where a is the scalar and B is the matrix.
   var C Matrix2D;
 
   for i := range B {
@@ -746,8 +748,8 @@ func Hessenberg (A Matrix2D) Matrix2D {
 
 /************************************************************************/
 
-PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX;
-                                             N: CARDINAL);
+//                        PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX; N: CARDINAL);
+func QR (A Matrix2D) LongComplexSlice {
     /* Finds all the eigenvalues of an upper Hessenberg matrix.         *)
     (* On return W contains the eigenvalues.                            *)
 
@@ -758,96 +760,109 @@ PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX;
         z, y, x, w, v, u, shift, s, r, q, p, anorm: LONGREAL;
 
     /********************************************************************/
+    var shift,w,x,y,z,p,q,r,s float64;
 
-    BEGIN
         /* Compute matrix norm.  This looks wrong to me, but it seems   *)
         (* to be giving satisfactory results.                           */
 
-        anorm := ABS(A[0,0]);
-        FOR i := 1 TO N-1 DO
-            FOR j := i-1 TO N-1 DO
-// compiler flagged this line w/ an assign range error.  I think is a note to self comment I did years
-// ago.
-            anorm := anorm + ABS(A[i,j]);
-            END (*FOR*);
-        END (*FOR*);
+        anorm := math.Abs(A[0][0]);      // first element in first row
+        N := len(A);
+        W = make(LongComplexSlice,N);
+        for i := 1; i < N; i++ {                                             //  FOR i := 1 TO N-1 DO
+            for j := i-1; j < N; j++ {                                      //  FOR j := i-1 TO N-1 DO
+              anorm += math.Abs(A[i][j]);
+            } // END FOR j
+        } // END FOR i from 1 to N-1
 
-        last  := N-1;  shift := 0.0;
+        last := N-1;
+        shift = 0.0;
         its := 0;
 
-        LOOP
-
+        MainOuterLOOP: for {
             /* Find, if possible, an L such that A[L,L-1] is zero to    *)
             (* machine accuracy.  If we succeed then A is now block     *)
             (* diagonal, and we can work independently on the final     *)
             (* block (rows and columns L to last).                      */
 
             L := last;
-            LOOP
-                IF L = 0 THEN EXIT(*LOOP*) END(*IF*);
-                s := ABS(A[L-1,L-1]) + ABS(A[L,L]);
-                IF s = 0.0 THEN s := anorm END(*IF*);
-                IF ABS(A[L,L-1]) + s = s THEN
-                    EXIT (*LOOP*);
-                END (*IF*);
-                DEC (L);
-            END (*LOOP*);
+            innerLOOP: for {
+                if L == 0 {
+                  break innerLOOP;
+                } //ENDIF
+                s := math.Abs(A[L-1][L-1]) + math.Abs(A[L][L]);
+                iF s == 0.0 {
+                  s = anorm;
+                } // ENDIF
+                if math.Abs(A[L][L-1]) + s == s {
+                    break innerLOOP;
+                } //END IF
+                L--
+            } // END innerLOOP
 
-            x := A[last,last];
-            IF L = last THEN
+            x := A[last][last];
+            if L == last {
 
-                (* One eigenvalue found. *)
+                // One eigenvalue found.
 
-                W[last] := CMPLX (x+shift, 0.0);
-                IF last > 0 THEN DEC (last);  its := 0;
-                ELSE EXIT (*LOOP*);
-                END (*IF*);
+                W[last] = complex(x+shift, 0.0);
+                if last > 0 {
+                  last--
+                  its = 0;
+                }else{
+                  break MainOuterLOOP;
+                } // END IF
 
-            ELSE
-                y := A[last-1,last-1];
-                w := A[last,last-1]*A[last-1,last];
-                IF L = last-1 THEN
+            }else{
+                y = A[last-1][last-1];
+                w = A[last][last-1]*A[last-1][last];
+                if L == last-1 {
 
-                    /* We're down to a 2x2 submatrix, so can work out   *)
-                    (* the eigenvalues directly.                        */
+                    // We're down to a 2x2 submatrix, so can work out the eigenvalues directly.
 
-                    p := 0.5*(y-x);  q := p*p + w;
-                    z := Sqrt(ABS(q));  x := x + shift;
-                    IF q >= 0.0 THEN
-                        IF p < 0.0 THEN z := p - z;
-                        ELSE z := p + z;
-                        END (*IF*);
-                        W[last-1] := CMPLX (x+z, 0.0);
-                        IF z = 0.0 THEN
-                            W[last] := CMPLX (x, 0.0);
-                        ELSE
-                            W[last] := CMPLX (x - w/z, 0.0);
-                        END (*IF*);
-                    ELSE
-                        W[last-1] := CMPLX (x+p, z);
-                        W[last] := conj (W[last-1]);
-                    END (*IF*);
-                    IF last >= 2 THEN DEC (last, 2);  its := 0;
-                    ELSE EXIT (*LOOP*)
-                    END (*IF*);
+                    p = 0.5*(y-x);
+                    q = p*p + w;
+                    z = imath.Sqrt(math.Abs(q));
+                    x += shift;
+                    if q >= 0.0 {
+                        if p < 0.0 {
+                          z = p - z;
+                        }else{
+                          z = p + z;
+                        } // END IF
+                        W[last-1] = complex(x+z, 0.0);
+                        if z == 0.0 {
+                            W[last] = complex(x, 0.0);
+                        }else{
+                            W[last] = complex(x - w/z, 0.0);
+                        } // END IF z is 0
+                    }else{
+                        W[last-1] = complex(x+p, z);
+                        W[last] = cmplx.Conj(W[last-1]);
+                    } // END IF q >=0
+                    if last >= 2 {
+                      last -= 2
+                      its = 0;
+                    }else{
+                      break MainOuterLOOP;
+                    } // END IF 
 
-                ELSE
+                }else{
 
-                    IF its < 10 THEN
-                        INC (its);
-                    ELSE
-                        /* If we're converging too slowly,      *)
-                        (* modify the shift.                    */
+                    if its < 10 {
+                        its++
+                    }else{
+                        // If we're converging too slowly, modify the shift.
 
-                        shift := shift + x;
-                        FOR i := 0 TO last DO
-                            A[i,i] := A[i,i] - x;
-                        END (*FOR*);
-                        s := ABS(A[last,last-1]) + ABS(A[last-1,last-2]);
-                        x := 0.75*s;
-                        y := x;  w := -0.4375*s*s;
-                        its := 0;
-                    END (*IF*);
+                        shift += x;
+                        for i := 0; i <= last; i++ {
+                            A[i][i] -= x;
+                        } // END FOR
+                        s = math.Abs(A[last][last-1]) + math.Abs(A[last-1][last-2]);
+                        x = 0.75*s;
+                        y = x;
+                        w = -0.4375*s*s;
+                        its = 0;
+                    } // END IF its<10
 
                     /* We're now working on a sub-array [L..last] of    *)
                     (* size 3x3 or greater.  Our goal is to transform   *)
@@ -861,92 +876,110 @@ PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX;
                     (* we're even better off.                           */
 
                     m := last-2;
-                    LOOP
-                        z := A[m,m];  r := x-z;  s := y-z;
-                        p := (r*s-w)/A[m+1,m] + A[m,m+1];
-                        q := A[m+1,m+1] - z - r - s;
-                        r := A[m+2,m+1];
-                        s := ABS(p) + ABS(q) + ABS(r);
-                        p := p/s;  q := q/s;  r := r/s;
-                        IF m = L THEN EXIT(*LOOP*) END(*IF*);
+                    anotherInnerLOOP: for {
+                        z = A[m][m];
+                        r = x-z;
+                        s = y-z;
+                        p = (r*s-w)/A[m+1][m] + A[m][m+1];
+                        q = A[m+1][m+1] - z - r - s;
+                        r = A[m+2][m+1];
+                        s = math.Abs(p) + math.Abs(q) + math.Abs(r);
+                        p = p/s;
+                        q = q/s;
+                        r = r/s;
+                        if m == L {
+                          break anotherInnerLOOP;
+                        } // ENDIF
                         u := ABS(A[m,m-1]) * (ABS(q) + ABS(r));
                         v := ABS(p) * (ABS(A[m-1,m-1]) + ABS(z)
                                         + ABS(A[m+1,m+1]));
-                        IF u+v = v THEN EXIT(*LOOP*) END(*IF*);
-                        DEC (m);
-                    END (*LOOP*);
+                        if u+v == v {
+                          break anotherInnerLOOP;
+                        } // ENDIF
+                        m--
+                    } // END anotherInnerLOOP
 
-                    A[m+2,m] := 0.0;
-                    FOR i := m+3 TO last DO
-                        A[i,i-2] := 0.0;
-                        A[i,i-3] := 0.0;
-                    END (*FOR*);
+                    A[m+2][m] = 0.0;
+                    for i := m+3; i <= last; i++ {
+                        A[i][i-2] = 0.0;
+                        A[i][i-3] = 0.0;
+                    } //END FOR
 
-                    /* Apply row and column transformations that should *)
-                    (* reduce the magnitudes of subdiagonal elements.   */
+                    // Apply row and column transformations that should reduce the magnitudes of subdiagonal elements.
 
-                    FOR k := m TO last-1 DO
-                        IF k <> m THEN
-                            p := A[k,k-1];  q := A[k+1,k-1];
-                            r := 0.0;
-                            IF k <> last-1 THEN
-                                r := A[k+2,k-1];
-                            END (*IF*);
-                            x := ABS(p) + ABS(q) + ABS(r);
-                            IF x <> 0.0 THEN
-                                p := p/x;  q := q/x;  r := r/x;
-                            END (*IF*);
-                        END (*IF*);
-                        s := Sqrt(p*p + q*q + r*r);
-                        IF p < 0.0 THEN s := -s END(*IF*);
-                        IF s <> 0.0 THEN
-                            IF k = m THEN
-                                IF L <> m THEN
-                                    A[k,k-1] := -A[k,k-1];
-                                END(*IF*);
-                            ELSE
-                                A[k,k-1] := -s*x;
-                            END (*IF*);
-                            p := p + s;  x := p/s;  y := q/s;  z := r/s;
-                            q := q/p;  r := r/p;
+                    for k := m; k < last; k++ {
+                        if k != m {
+                            p = A[k][k-1];
+                            q = A[k+1][k-1];
+                            r = 0.0;
+                            if k != last-1 {
+                                r = A[k+2][k-1];
+                            } // END IF
+                            x = math.Abs(p) + math.Abs(q) + math.Abs(r);
+                            if x != 0.0 {
+                                p = p/x;
+                                q := q/x;
+                                r := r/x;
+                            } // END IF
+                        } // END IF
+                        s = math.Sqrt(p*p + q*q + r*r);
+                        if p < 0.0 {
+                          s = -s;
+                        } // ENDIF
+                        if s != 0.0 {
+                            if k == m {
+                                if L != m {
+                                    A[k][k-1] = -A[k][k-1];
+                                } // ENDIF
+                            }else{
+                                A[k][k-1] = -s*x;
+                            } // END IF
+                            p += s;
+                            x = p/s;
+                            y = q/s;
+                            z = r/s;
+                            q /= p;
+                            r /= p;
 
-                            (* Row transformation. *)
+                            // Row transformation.
 
-                            FOR j := k TO last DO
-(* access violation this line *)p := A[k,j] + q * A[k+1,j];
-                                IF k <> last-1 THEN
-                                    p := p + r * A[k+2,j];
-                                    A[k+2,j] := A[k+2,j] - p*z;
-                                END (*IF*);
-                                A[k+1,j] := A[k+1,j] - p*y;
-                                A[k,j] := A[k,j] - p*x;
-                            END (*FOR*);
+                            for j := k; j <= last; j++ {
+                                p = A[k][j] + q * A[k+1][j];
+                                if k != last-1 {
+                                    p += r * A[k+2][j];
+                                    A[k+2][j] -= p*z;
+                                } // END IF
+                                A[k+1][j] -= p*y;
+                                A[k][j] -= p*x;
+                            } // END FOR
 
-                            (* Column transformation. *)
+                            // Column transformation.
 
                             imax := k+3;
-                            IF last < imax THEN imax := last END(*IF*);
-                            FOR i := L TO imax DO
-                                p := x * A[i,k] + y * A[i,k+1];
-                                IF k <> last-1 THEN
-                                    p := p + z * A[i,k+2];
-                                    A[i,k+2] := A[i,k+2] - p*r;
-                                END (*IF*);
-                                A[i,k+1] := A[i,k+1] - p*q;
-                                A[i,k] := A[i,k] - p;
-                            END (*FOR*);
+                            if last < imax {
+                              imax = last
+                            } // ENDIF
+                            for i := L; i <= imax; i++ {
+                                p = x * A[i][k]  +  y * A[i][k+1];
+                                if k != last-1 {
+                                    p += z * A[i][k+2];
+                                    A[i][k+2] -= p*r;
+                                } // END IF
+                                A[i][k+1] -= p*q;
+                                A[i][k] -= p;
+                            } // END FOR
 
-                        END (*IF s <> 0.0 *);
+                        } // END IF s <> 0.0
 
-                    END (*FOR k := m TO last-1 *);
+                    } //END FOR k := m TO last-1
 
-                END (*IF test for 2x2 or bigger *);
+                } // END IF test for 2x2 or bigger
 
-            END (*IF test for 1x1 *);
+            } // END IF test for 1x1
 
-        END (* main loop *);
+        } // END  main loop
 
-    END QR;
+} // END QR;
 
 /************************************************************************)
 (*                           EIGENVALUES                                *)
@@ -954,28 +987,25 @@ PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX;
 
 // ----------------------------------------------------------------------------- Eigenvalues -----------------------
 
-PROCEDURE Eigenvalues (A: ARRAY OF ARRAY OF EltType;
-                          VAR OUT W: ARRAY OF LONGCOMPLEX;
-                          N: CARDINAL);
+//           PROCEDURE Eigenvalues (A: ARRAY OF ARRAY OF EltType; VAR OUT W: ARRAY OF LONGCOMPLEX; N: CARDINAL);
+func Eigenvalues (A Matrix2D) LongComplexSlice {
 
-    (* Finds all the eigenvalues of an NxN matrix.    *)
-    (* This procedure does not modify A.              *)
+    // Finds all the eigenvalues of an NxN matrix.  This procedure does not modify A.
 
-    VAR Acopy: ArrayPtr;
+    var Acopy Matrix2D;                                                    //            VAR Acopy: ArrayPtr;
+    var W LongComplexSlice;
 
-    BEGIN
-        IF N > 0 THEN
-            Acopy := NewMatrix (N, N);
-            Copy (A, N, N, Acopy^);
-            Balance (Acopy^, N);
-            Hessenberg (Acopy^, N);
-            QR (Acopy^, W, N);
-            DisposeArray (Acopy, N, N);
-        END (*IF*);
-    END Eigenvalues;
-
-
-}
+        N := len(A);
+        if N > 0 {
+            Acopy = NewMatrix (N, N);
+            Copy(A,Acopy);                                                 //            Copy (A, N, N, Acopy^);
+            Acopy = Balance(Acopy);                                        //            Balance (Acopy^, N);
+            Acopy = Hessenberg(Acopy);                                     //           Hessenberg (Acopy^, N);
+            W = QR(Acopy);                                                 //    QR (Acopy^, W, N);
+                                                     // not needed in Go            DisposeArray (Acopy, N, N);
+        } // END IF
+        return W;
+} // END Eigenvalues;
 
 
 /************************************************************************)
@@ -984,24 +1014,26 @@ PROCEDURE Eigenvalues (A: ARRAY OF ARRAY OF EltType;
 
 // ------------------------------------------------------------------------------ Write ----------------------------
 
-PROCEDURE Write (M: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL;  places: CARDINAL);
+                         //  PROCEDURE Write (M: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL;  places: CARDINAL);
+func Write (M Matrix2D, places int) []string {
 
     /* Writes the r x c matrix M to the screen, where each column *)
     (* occupies a field "places" characters wide.               */
 
-    VAR i, j: CARDINAL;
+//    VAR i, j: CARDINAL;
 
-    BEGIN
-        FOR i := 0 TO r-1 DO
-            FOR j := 0 TO c-1 DO
-                WriteString ("  ");
-                WriteLongReal (M[i,j], places);
-            END (*FOR*);
-            WriteLn;
-        END (*FOR*);
-    END Write;
-
-}
+        OutputStringSlice := make([]string,0,500);
+        for i := range M {           // FOR i := 0 TO r-1 DO
+            for j := range M[i] {    //   FOR j := 0 TO c-1 DO
+                ss := strconv.FormatFloat(M[i][j],'G',places,64)
+                OutputStringSlice = append(OutputStringSlice,fmt.Sprintf("  %s",ss);
+                                                                               //WriteLongReal (M[i,j], places);
+            } // END FOR j
+            OutputStringSlice = append(OutputStringSlice,"\n");
+        } // END FOR i
+        OutputStringSlice = append(OutputStringSlice,"\n");
+       return OutputStringSlice;
+}  // END Write
 
 // END Mat.
 

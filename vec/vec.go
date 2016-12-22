@@ -22,31 +22,25 @@ package vec;
 // 20 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
 
 import (
-  "os"
-  "bufio"
+//  "os"
+//  "bufio"
   "fmt"
-  "path/filepath"
-  "strings"
-  "strconv"
+//  "path/filepath"
+//  "strings"
+//  "strconv"
   "math"
   "math/cmplx"
   "math/rand"
   "time"
 //
-  "getcommandline"
-  "timlibg"
-  "tokenize"
+//  "getcommandline"
+//  "timlibg"
+//  "tokenize"
 )
 
-FROM Storage IMPORT
-    (* proc *)  ALLOCATE, DEALLOCATE;
-
-FROM MiscM2 IMPORT
-    (* proc *)  WriteLn, WriteString, WriteLongReal;
-
 type EltType float64;
-type VectorPtr []EltType;
-// TYPE VectorPtr = POINTER TO ARRAY OF EltType;
+type VectorPtr []EltType;                                       // TYPE VectorPtr = POINTER TO ARRAY OF EltType;
+
 /************************************************************************/
 
 /************************************************************************)
@@ -58,8 +52,6 @@ func NewVector (N int ) VectorPtr {
 
 /* Creates a vector of N elements. */
 // old code basically did this: VAR result: VetorcPtr; NEW (result, N-1); RETURN result;
-
-    VAR result: VectorPtr;
 
     vector := make(VectorPtr,N);
     return vector;
@@ -78,104 +70,113 @@ PROCEDURE DisposeVector (VAR (*INOUT*) V: VectorPtr;  N: CARDINAL);
 (*                          COPYING A VECTOR                            *)
 (************************************************************************/
 
-PROCEDURE Copy (A: ARRAY OF EltType;  N: CARDINAL;
-                         VAR (*OUT*) B: ARRAY OF EltType);
+//                          PROCEDURE Copy (A: ARRAY OF EltType;  N: CARDINAL; VAR (*OUT*) B: ARRAY OF EltType);
+func Copy(A VectorPtr) VectorPtr {
 
-    (* Copies an N-element vector A to B. *)
+    // Copies an N-element vector A to B.
+    var B VectorPtr;
 
-    VAR i: CARDINAL;
+        for i := range A {   // FOR i := 0 TO N-1 DO
+            B[i] = A[i];
+        } //END FOR
+        return B;
+} //    END Copy;
 
-    BEGIN
-        FOR i := 0 TO N-1 DO
-            B[i] := A[i];
-        END (*FOR*);
-    END Copy;
-
-(************************************************************************)
+/************************************************************************)
 (*                          VECTOR ARITHMETIC                           *)
-(************************************************************************)
+(************************************************************************/
 
-PROCEDURE Add (A, B: ARRAY OF EltType;  elts: CARDINAL;
-                      VAR (*OUT*) C: ARRAY OF EltType);
+//                     PROCEDURE Add (A, B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
+func Add(A, B VectorPtr) VectorPtr {
 
-    (* Computes C := A + B.  All vectors have elts elements. *)
+    // Computes C = A + B.
 
-    VAR i: CARDINAL;
+    var C VectorPtr;
 
-    BEGIN
-        FOR i := 0 TO elts-1 DO
-            C[i] := A[i] + B[i];
-        END (*FOR*);
-    END Add;
+        if len(A) != len(B) {
+          panic(" Vector Add and lengths of Vector A and Vector B are not the same.");
+        }
 
-(************************************************************************)
+        for i := range A {
+            C[i] = A[i] + B[i];
+        }
+        return C;
+}
 
-PROCEDURE Sub (A, B: ARRAY OF EltType;  elts: CARDINAL;
-                      VAR (*OUT*) C: ARRAY OF EltType);
+/************************************************************************/
 
-    (* Computes C := A - B.  All vectors have elts elements.  *)
+//                     PROCEDURE Sub (A, B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
+func Sub(A, B VectorPtr) VectorPtr {
 
-    VAR i: CARDINAL;
+    // Computes C = A - B.  All vectors have elts elements.
 
-    BEGIN
-        FOR i := 0 TO elts-1 DO
+    var C VectorPtr;
+
+        if len(A) != len(B) {
+          panic(" Vector Sub and lengths of Vector A and Vector B are not the same.");
+        }
+
+        for i := range A {
             C[i] := A[i] - B[i];
-        END (*FOR*);
-    END Sub;
+        }
+        return C;
+}
 
-(************************************************************************)
+/************************************************************************/
 
-PROCEDURE Mul (A: ARRAY OF ARRAY OF EltType;  B: ARRAY OF EltType;
-                      N1, N2: CARDINAL;
-                      VAR (*OUT*) C: ARRAY OF EltType);
+//PROCEDURE Mul(A:ARRAY OF ARRAY OF EltType;B:ARRAY OF EltType;N1,N2: CARDINAL;VAR(*OUT*)C: ARRAY OF EltType);
+func Mul(A []VectorPtr, B VectorPtr) VectorPtr {
 
-    (* Computes C := A*B, where A is N1xN2 and B is N2x1. *)
+    // Computes C = A*B, where A is N1xN2 and B is N2x1.
+    // C = A*B, where A is a 2D matrix, and B is a column vector, so result must also be a column vector
 
-    VAR i, j: CARDINAL;  sum: EltType;
+    var sum EltType;
+    var C VectorPtr;
 
-    BEGIN
-        FOR i := 0 TO N1-1 DO
-            sum := 0.0;
-            FOR j := 0 TO N2-1 DO
-                sum := sum + A[i,j]*B[j];
-            END (*FOR*);
-            C[i] := sum;
-        END (*FOR*);
+        for i := range A {          // FOR i := 0 TO N1-1 DO  range over the 2D matrix
+            sum = 0;
+            for j := range B {      //   FOR j := 0 TO N2-1 DO  range over the column vector
+                sum += A[i][j]*B[j];
+            } // END FOR j
+            C[i] = sum;
+        } // END FOR i
+        return C;
     END Mul;
 
-(************************************************************************)
+/************************************************************************/
 
-PROCEDURE ScalarMul (A: EltType;  B: ARRAY OF EltType;  elts: CARDINAL;
-                                  VAR (*OUT*) C: ARRAY OF EltType);
+// PROCEDURE ScalarMul (A: EltType;  B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
+func ScalarMul(A EltType, B VectorPtr) VectorPtr {
 
-    (* Computes C := A*B, where A is scalar and B has elts elements. *)
+    // Computes C = A*B, where A is scalar and B is a vector
 
-    VAR i: CARDINAL;
+    var C VectorPtr;
 
-    BEGIN
-        FOR i := 0 TO elts-1 DO
-            C[i] := A * B[i];
-        END (*FOR*);
-    END ScalarMul;
+        for i := range B { // FOR i := 0 TO elts-1 DO  range over the B vector
+            C[i] = A * B[i];
+        } // END FOR i
+} //    END ScalarMul;
 
-(************************************************************************)
+/************************************************************************)
 (*                              OUTPUT                                  *)
-(************************************************************************)
+(************************************************************************/
 
-PROCEDURE Write (V: ARRAY OF EltType;  N: CARDINAL;  places: CARDINAL);
+//                                      PROCEDURE Write (V: ARRAY OF EltType;  N: CARDINAL;  places: CARDINAL);
+func Write(V VectorPtr, places int) []string {
 
-    (* Writes the N-element vector V to the screen, where each  *)
-    (* column occupies a field "places" characters wide.        *)
+    /* Writes the N-element vector V to the screen, where each  *)
+    (* column occupies a field "places" characters wide.        */
 
     VAR i: CARDINAL;
 
-    BEGIN
-        FOR i := 0 TO N-1 DO
-            WriteString ("  ");
-            WriteLongReal (V[i], places-2);
-        END (*FOR*);
-        WriteLn;
-    END Write;
+        OutputStringSlice := make([]string,0,20);
+        for i := range V {
+            ss := strconv.FormatFloat(V[i],'G',places,64)
+            OutputStringSlice = append(OutputStringSlice,fmt.Sprintf("  %s",ss);
+        }
+        OutputStringSlice = append(OutputStringSlice,"\n");
+        return OutputStringSlice;
+} //    END Write;
 
 (************************************************************************)
 
