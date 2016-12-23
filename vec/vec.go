@@ -27,19 +27,19 @@ import (
   "fmt"
 //  "path/filepath"
 //  "strings"
-//  "strconv"
-  "math"
-  "math/cmplx"
-  "math/rand"
-  "time"
+  "strconv"
+//  "math"
+//  "math/cmplx"
+//  "math/rand"
+//  "time"
 //
 //  "getcommandline"
 //  "timlibg"
 //  "tokenize"
 )
 
-type EltType float64;
-type VectorPtr []EltType;                                       // TYPE VectorPtr = POINTER TO ARRAY OF EltType;
+// type EltType float64;
+type VectorPtr []float64;                                       // TYPE VectorPtr = POINTER TO ARRAY OF EltType;
 
 /************************************************************************/
 
@@ -117,7 +117,7 @@ func Sub(A, B VectorPtr) VectorPtr {
         }
 
         for i := range A {
-            C[i] := A[i] - B[i];
+            C[i] = A[i] - B[i];
         }
         return C;
 }
@@ -130,7 +130,7 @@ func Mul(A []VectorPtr, B VectorPtr) VectorPtr {
     // Computes C = A*B, where A is N1xN2 and B is N2x1.
     // C = A*B, where A is a 2D matrix, and B is a column vector, so result must also be a column vector
 
-    var sum EltType;
+    var sum float64;
     var C VectorPtr;
 
         for i := range A {          // FOR i := 0 TO N1-1 DO  range over the 2D matrix
@@ -141,12 +141,12 @@ func Mul(A []VectorPtr, B VectorPtr) VectorPtr {
             C[i] = sum;
         } // END FOR i
         return C;
-    END Mul;
+} //    END Mul;
 
 /************************************************************************/
 
 // PROCEDURE ScalarMul (A: EltType;  B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
-func ScalarMul(A EltType, B VectorPtr) VectorPtr {
+func ScalarMul(A float64, B VectorPtr) VectorPtr {
 
     // Computes C = A*B, where A is scalar and B is a vector
 
@@ -155,6 +155,7 @@ func ScalarMul(A EltType, B VectorPtr) VectorPtr {
         for i := range B { // FOR i := 0 TO elts-1 DO  range over the B vector
             C[i] = A * B[i];
         } // END FOR i
+        return C;
 } //    END ScalarMul;
 
 /************************************************************************)
@@ -167,18 +168,16 @@ func Write(V VectorPtr, places int) []string {
     /* Writes the N-element vector V to the screen, where each  *)
     (* column occupies a field "places" characters wide.        */
 
-    VAR i: CARDINAL;
+    // VAR i: CARDINAL;
 
         OutputStringSlice := make([]string,0,20);
         for i := range V {
-            ss := strconv.FormatFloat(V[i],'G',places,64)
-            OutputStringSlice = append(OutputStringSlice,fmt.Sprintf("  %s",ss);
+            ss := strconv.FormatFloat(float64(V[i]),'G',places,64)
+            OutputStringSlice = append(OutputStringSlice,fmt.Sprintf("  %s",ss));
         }
         OutputStringSlice = append(OutputStringSlice,"\n");
         return OutputStringSlice;
 } //    END Write;
 
-(************************************************************************)
-
-END Vec.
+// END Vec.
 

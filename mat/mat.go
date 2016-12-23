@@ -44,11 +44,12 @@ const SubscriptDim = 8192
 const SizeFudgeFactor = 20  // decided to not use this in NewMatrix
 
 // type EltType float64;  This is what it was
-type EltType vec.EltType;  // just imports and renames the type as defined in vec.go
-type Matrix2D [][]EltType;     // Array of Array of EltType;  Nevermind that it's a slice of slice
+// type EltType vec.EltType;  // just imports and renames the type as defined in vec.go
+// type Matrix2D [][]EltType;     // Array of Array of EltType;  Nevermind that it's a slice of slice
 //  type VectorPtr []EltType;  Defined in vec.go
 //  type ArrayPtr *EltType2Dim; //POINTER TO ARRAY OF ARRAY OF EltType;  Don't think I need this anyway.
 
+type Matrix2D [][]float64;
 type Permutation []int
 //TYPE subscript = [0..8191];
 //type Permutation = POINTER TO ARRAY subscript OF subscript;  array [0..8191] OF subrange of integer.  
@@ -67,9 +68,12 @@ func NewMatrix (R, C int) Matrix2D { // I think row, column makes more sense tha
 // Creates an NxM matrix.
 // old code basically did this: NEW (result, N-1, M-1); RETURN result;
 
+  if (R > SubscriptDim) || (C > SubscriptDim) {
+    return nil;
+  }
   matrix := make(Matrix2D,R);
   for i := range matrix {
-    matrix[i] = make([]EltType,C)
+    matrix[i] = make([]float64,C)
   }
   return matrix;
 }
@@ -86,7 +90,7 @@ func Zero(matrix Matrix2D) Matrix2D {
     // It zeros an already defined r by c matrix.  I'm not sure this is needed in Go, but here it is.
 
   for r := range matrix {
-    for c := range matrix(r) {
+    for c := range matrix[r] {
       matrix[r][c] = 0
     }
   }
@@ -109,7 +113,7 @@ func Random (matrix Matrix2D) Matrix2D {
 
   for r := range matrix {
     for c := range matrix[r] {
-      matrix[r][c] = rand.Intn(100);
+      matrix[r][c] = float64(rand.Intn(100));
     }
   }
   return matrix;
@@ -133,10 +137,20 @@ func Copy (Src,Dest Matrix2D) Matrix2D {
 (*                      THE BASIC MATRIX OPERATIONS                     *)
 (************************************************************************/
 
+// ----------------------------------------------------------------------------- Add -------------------
+
 //  PROCEDURE Add (A, B : ARRAY OF ARRAY OF EltType;  r, c: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func Add(A,B Matrix2D) Matrix2D {
 // Computes C = A + B.
   var C Matrix2D;
+
+  Arows := len(A);
+  Acols := len(A[0]);
+  Brows := len(B);
+  Bcols := len(B[0]);
+  if (Arows != Brows) || (Acols != Bcols) {
+    return nil;
+  }
 
   for i := range A {
     for j := range A[i] {
@@ -146,10 +160,20 @@ func Add(A,B Matrix2D) Matrix2D {
   return C;
 }
 
+// ----------------------------------------------------------------------------- Sub -------------------
+
 //   PROCEDURE Sub (A, B: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func Sub(A,B Matrix2D) Matrix2D {
 // Computes C = A - B.
   var C Matrix2D;
+
+  Arows := len(A);
+  Acols := len(A[0]);
+  Brows := len(B);
+  Bcols := len(B[0]);
+  if (Arows != Brows) || (Acols != Bcols) {
+    return nil;
+  }
 
   for i := range A {
     for j := range A[i] {
@@ -159,6 +183,7 @@ func Sub(A,B Matrix2D) Matrix2D {
   return C;
 }
 
+// -------------------------------------------------------------------------------- MUL -------------------
 
 //   PROCEDURE Mul (A, B: ARRAY OF ARRAY OF EltType;  r, c1, c2: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
 func Mul(A,B Matrix2D) Matrix2D {
@@ -166,14 +191,15 @@ func Mul(A,B Matrix2D) Matrix2D {
   var C Matrix2D;
   var temp float64;
 
-  NumRowA := len(A);
+//  NumRowA := len(A);
   NumColA := len(A[0]); // all rows have same number of columns
 
   NumRowB := len(B)
-  NumColB := len(B[0]); // all rows have same number of columns
+//  NumColB := len(B[0]); // all rows have same number of columns
 
   if NumColA != NumRowB { // error.  I guess I'll panic as I cannot think of anything better to do
-    panic(" matrix mult panic because NumColA not equal to NumRowB");
+// nevermind. I don't want to panic anymore.    panic(" matrix mult panic because NumColA not equal to NumRowB");
+    return nil;
   }
 
   for i := range A { // ranging over number of rows of A
@@ -182,14 +208,14 @@ func Mul(A,B Matrix2D) Matrix2D {
       for k := range B[i] { // ranging over number of columns of B
         temp += A[i][j] * B[j][k];
       }
-      C[i][k] = temp;
+      C[i][j] = temp;
     }
   }
   return C;
 }
 
 //  PROCEDURE ScalarMul (A: EltType;  B: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL; VAR (*OUT*) C: ARRAY OF ARRAY OF EltType);
-func ScalarMul(a EltType, B Matrix2D) Matrix2D {
+func ScalarMul(a float64, B Matrix2D) Matrix2D {
 // Computes C = a*B, where a is the scalar and B is the matrix.
   var C Matrix2D;
 
@@ -213,23 +239,20 @@ func ScalarMul(a EltType, B Matrix2D) Matrix2D {
 //          PROCEDURE LUFactor (VAR (*INOUT*) A: ARRAY OF ARRAY OF EltType;  N: CARDINAL; perm: Permutation;  VAR (*OUT*) oddswaps: BOOLEAN);
 func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {
 
-    /* LU decomposition of a square matrix.  We express A in the form   *)
-    (* P*L*U, where P is a permutation matrix, L is lower triangular    *)
-    (* with unit diagonal elements, and U is upper triangular.  This is *)
-    (* an in-place computation, where on exit U occupies the upper      *)
-    (* triangle of A, and L (not including its diagonal entries) is in  *)
-    (* the lower triangle.  The permutation information is returned in  *)
-    (* perm.  Output parameter oddswaps is TRUE iff an odd number of    *)
-    (* row interchanges were done by the permutation.  (We need to know *)
-    (* this only if we are going to go on to calculate a determinant.)  *)
+/*
+ LU decomposition of a square matrix.  We express A in the form P*L*U, where P is a permutation matrix, 
+ L is lower triangular with unit diagonal elements, and U is upper triangular.  This is an in-place 
+ computation, where on exit U occupies the upper triangle of A, and L (not including its diagonal entries) 
+ is in the lower triangle.  The permutation information is returned in  perm.  Output parameter oddswaps 
+ is TRUE iff an odd number of row interchanges were done by the permutation.  
+ (We need to know this only if we are going to go on to calculate a determinant.)
 
-    (* The precise relationship between the implied permutation matrix  *)
-    (* P and the output parameter perm is somewhat obscure.  The vector *)
-    (* perm^ is not simply a permutation of the subscripts [0..N-1]; it *)
-    (* does, however, have the property that we can recreate P by       *)
-    (* walking through perm^ from start to finish, in the order used    *)
-    (* by procedure LUSolve.                                            *)
-    (* Sample use, as see in Solve below is: LU,s = LUFactor(LU,N,perm) */
+ The precise relationship between the implied permutation matrix P and the output parameter perm is somewhat 
+ obscure.  The vector perm^ is not simply a permutation of the subscripts [0..N-1]; it does, however, have 
+ the property that we can recreate P by walking through perm^ from start to finish, in the order used by 
+ procedure LUSolve.                                        
+ Sample use, as see in Solve below is: LU,s = LUFactor(LU,N,perm) 
+*/
 
     var pivotrow int;
     var sum, temp, maxval float64;
@@ -238,8 +261,7 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {
         VV := vec.NewVector(N);  // I anticipate this will return a slice, not a pointer.  So dereferencing syntax is not needed.
         oddswaps := false;
 
-        /* Start by collecting (in VV), the maximum absolute value in   *)
-        (* each row; we'll use this for pivoting decisions.             */
+// Start by collecting (in VV), the maximum absolute value in each row; we'll use this for pivoting decisions.
 
         for row := range A {
             maxval = 0;
@@ -260,9 +282,7 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {
 
         for col := range A {
 
-            /* Upper triangular component of this column - except for   *)
-            (* the diagonal element, which we leave until after we've   *)
-            (* selected a pivot from on or below the diagonal.          */
+/* Upper triangular component of this column - except for the diagonal element, which we leave until after we've   selected a pivot from on or below the diagonal.          */
 
             if col > 0 {
                 for row := 0; row < col; row++ {  // FOR row 0 .. col-1
@@ -272,14 +292,11 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {
                            sum -= A[row][k] * A[k][col];
                         }  // END FOR k 0 to row-1;
                     } // END IF;
-                    A[row,col] = sum;
+                    A[row][col] = sum;
                 } // END for row 0 to col-1
             } // END if col > 0
 
-            /* Lower triangular component in this column.  The results  *)
-            (* we get in this loop will not be correct until we've      *)
-            (* divided by the pivot; but we work out the pivot location *)
-            (* as we go, and come back later for this division.         */
+// Lower triangular component in this column.  The results we get in this loop will not be correct until we've divided by the pivot; but we work out the pivot location as we go, and come back later for this division.
 
             maxval = 0;
             pivotrow = col;
@@ -290,7 +307,7 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {
                        sum -= A[row][k] * A[k][col];
                     }  //END FOR k from 0 to col-1
                 } // END IF col>0
-                A[row,col] = sum;
+                A[row][col] = sum;
                 temp := VV[row] * math.Abs(sum);                        // temp := VV^[row] * ABS(sum);
                 if temp >= maxval {
                     maxval = temp;
@@ -298,44 +315,38 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {
                 } // END IF temp>=maxval
             } // END FOR row from col to N-1
 
-            /* If pivot element was not already on the diagonal, do a   *)
-            (* row swap.                                                */
+// If pivot element was not already on the diagonal, do a row swap.
 
             if pivotrow != col {
-                FOR k := 0; k < N; k++ {      //  k from 0 to N-1
+                for k := 0; k < N; k++ {      //  k from 0 to N-1
                     temp = A[pivotrow][k];
                     A[pivotrow][k] = A[col][k];
-                    A[col][k] = temp;
+                    A[col][k] = temp;       // A[col][k],A[pivotrow][k] = A[pivotrow][k],A[col][k];
                 } // END FOR k from 0 to N-1
                 oddswaps = ! oddswaps;
                 VV[pivotrow] = VV[col];                                  // VV^[pivotrow] := VV^[col];
 
-                /* We don't bother updating VV^[col] here, because      */
-                /* its value will never be used again.                  */
+// We don't bother updating VV^[col] here, because its value will never be used again.
 
-            } // END IF pivitrow != col
+            } // END IF pivotrow != col
             perm[col] = pivotrow;                                    //        perm^[col] := pivotrow;
 
-            /* Finish off the calculation of the lower triangular part  *)
-            (* for this column by scaling by the pivot A[col,col].      *)
+//* Finish off the calculation of the lower triangular part for this column by scaling by the pivot A[col,col].
 
-            (* Remark: if the pivot is still zero at this stage, then   *)
-            (* all the elements below it are also zero.  The LU         *)
-            (* decomposition in this case is not unique - the original  *)
-            (* matrix is singular, therefore U will also be singular -  *)
-            (* but one solution is to leave all those elements zero.    */
+// Remark: if the pivot is still zero at this stage, then all the elements below it are also zero.  The LU
+// decomposition in this case is not unique - the original matrix is singular, therefore U will also be 
+// singular -- but one solution is to leave all those elements zero. 
 
             temp = A[col][col];
             if (col != N-1) && (temp != 0.0) {
                 temp = 1/temp;
                 for row := col+1; row < N; row++ {                   // row from col+1 to N-1
-                    A[row][col] := temp*A[row][col];
+                    A[row][col] = temp*A[row][col];
                 } // END FOR row from col+1 to N-1
             } // END IF col != N-1
 
         }  // END FOR col range A
 
-//          PROCEDURE LUFactor (VAR (*INOUT*) A: ARRAY OF ARRAY OF EltType;  N: CARDINAL; perm: Permutation;  VAR (*OUT*) oddswaps: BOOLEAN);
         return A, oddswaps;
 }
 
@@ -377,7 +388,7 @@ func LUSolve (LU, B Matrix2D, N, M int, perm Permutation) Matrix2D {
                         sum -= LU[i][k] * B[k][j];
                     } // END FOR k from 0 to i-1
                 } // END IF i>0
-                B[i,j] = sum;
+                B[i][j] = sum;
             } // END FOR j from 0 to M-1
         } // END FOR i from 0 to N-1
 
@@ -406,36 +417,37 @@ func LUSolve (LU, B Matrix2D, N, M int, perm Permutation) Matrix2D {
 // -------------------------------------------------------------------------------- GaussJ ----------------------------
 
 //        PROCEDURE GaussJ (A, B: ARRAY OF ARRAY OF EltType; VAR (*OUT*) X: ARRAY OF ARRAY OF EltType; N, M: CARDINAL);
-func GaussJ (A, B Matrix2D, N, M: CARDINAL) Matrix2D {
+func GaussJ (A, B Matrix2D, N, M int) Matrix2D {
 
-    /* Solves the equation AX = B by Gauss-Jordan elimination.  In the  *)
-    (* present version A must be square and nonsingular.                *)
-    (* This approach to solving the equation is not the best available  *)
-    (* - see below - but is included here anyway since it is popular.   *)
-    (* Dimensions: A is NxN, B is NxM.                                  */
+/*
+ Solves the equation AX = B by Gauss-Jordan elimination.  In the present version A must be square and 
+ nonsingular.
+ This approach to solving the equation is not the best available -- see below -- but is included here 
+ anyway since it is popular.
+ Dimensions: A is NxN, B is NxM.                                  
+*/
 
 //    VAR W: ArrayPtr;  i, j, k, prow: CARDINAL;
 //        pivot, scale, temp: EltType;
 //var W Matrix2D;
-  var pivot EltType;
+  var pivot float64;
   var X Matrix2D;
 
         W := NewMatrix (N, N);
         Copy(A,W);                            //        Copy (A, N, N, W^);
         Copy(B,X);                            //        Copy (B, N, M, X);
 
-        /* Remark: we are going to use elementary row operations to     *)
-        (* turn W into a unit matrix.  However we don't bother to store *)
-        (* the new 1.0 and 0.0 entries, because those entries will      *)
-        (* never be fetched again.  We simply base our calculations on  *)
-        (* the assumption that those values have been stored.           *)
+/*
+ Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't 
+ bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.  
+ We simply base our calculations on the assumption that those values have been stored.        
 
-        (* Pass 1: by elementary row operations, make W into an upper   *)
-        (* triangular matrix.                                           */
+ Pass 1: by elementary row operations, make W into an upper triangular matrix.
+*/
 
         prow := 0;
-        for i := 0, i < N; i++ {                            // FOR i := 0 TO N-1 DO
-            pivot := 0.0;
+        for i := 0; i < N; i++ {                            // FOR i := 0 TO N-1 DO
+            pivot = 0.0;
             for j := i; i < N; j++ {         // FOR j := i TO N-1 DO
                 temp := W[j][i];             // temp := W^[j,i];
                 if math.Abs(temp) > math.Abs(pivot) {
@@ -471,7 +483,7 @@ func GaussJ (A, B Matrix2D, N, M: CARDINAL) Matrix2D {
 
             // Implicitly reduce the sub-column below W[i,i] to zero.
 
-            for k := i+1; j < N; j++ {                     // FOR k := i+1 TO N-1 DO
+            for k := i+1; k < N; k++ {                     // FOR k := i+1 TO N-1 DO
                 scale := W[k][i];
                 for j := i+1; j < N; j++ {       //  FOR j := i+1 TO N-1 DO
                     W[k][j] -= scale*W[i][j];   // W was dereferenced in M-2 code
@@ -479,7 +491,7 @@ func GaussJ (A, B Matrix2D, N, M: CARDINAL) Matrix2D {
                 for j := 0; j < M; j++ {           // FOR j := 0 TO M-1 DO
                     X[k][j] -= scale*X[i][j];
                 } // END FOR j from 0 to M-1
-            } // END FOR j from i+1 to N-1
+            } // END FOR k from i+1 to N-1
 
         } // END FOR i from 0 to N-1
 
@@ -490,8 +502,8 @@ func GaussJ (A, B Matrix2D, N, M: CARDINAL) Matrix2D {
             // Implicitly reduce the sub-column above W[i,i] to zero.
 
             for k := 0; k < i; k++ {            // FOR k := 0 TO i-1 DO
-                scale := W[k][i];              // W was dereferenced in M-2 code
-                for j := 0; j < M; j++ {    //  FOR j := 0 TO M-1 DO
+                scale := W[k][i];
+                for j := 0; j < M; j++ {      //     FOR j := 0 TO M-1 DO
                     X[k][j] -= scale*X[i][j];
                 } // END FOR j from 0 to M-1
             } // END FOR k from 0 to i-1
@@ -516,7 +528,7 @@ func Solve (A, B Matrix2D, N, M int) Matrix2D {
 
 //    VAR LU, error, product: ArrayPtr;
 //        perm: Permutation;
-        var s bool;
+//        var s bool;   I don't know why they use s for a bool.  But they did.
         var X Matrix2D;
 
         LU := NewMatrix(N, N);
@@ -524,7 +536,7 @@ func Solve (A, B Matrix2D, N, M int) Matrix2D {
         Copy(B,X);
                                              //  Copy (A, N, N, LU^);  Copy (B, N, M, X);
         perm := make(Permutation,N*2);       //  ALLOCATE (perm, N*SIZE(subscript));
-        LU, s = LUFactor (LU, N, perm);
+        LU,_ = LUFactor (LU, perm);
         X = LUSolve (LU, X, N, M, perm);
 
         /* For better accuracy, apply one step of iterative     *)
@@ -549,14 +561,14 @@ func Solve (A, B Matrix2D, N, M int) Matrix2D {
 // --------------------------------------------------------------------------------- Invert -------------------------
 
 //    PROCEDURE Invert (A: ARRAY OF ARRAY OF EltType; VAR (*OUT*) X: ARRAY OF ARRAY OF EltType; N: CARDINAL);
-func Invert (A Matrix2D, N int) Matrix2D {
-    // Inverts an NxN nonsingular matrix.
+func Invert (A Matrix2D, N int) Matrix2D { // Inverts an NxN nonsingular matrix.
     var X Matrix2D;
                                               // VAR I: ArrayPtr;
         I := NewMatrix (N, N);
-        I = Unit(I, N);
+        I = Unit(I);
         X = Solve(A,I,N,N);                   // Solve (A, I^, X, N, N);
                                               // DisposeArray (I, N, N);
+        return X;
 }  // END Invert;
 
 
@@ -567,10 +579,11 @@ func Invert (A Matrix2D, N int) Matrix2D {
 //                                    PROCEDURE Balance (VAR INOUT A: ARRAY OF ARRAY OF EltType;  N: CARDINAL);
 func Balance (A Matrix2D) Matrix2D {
 
-    /* Replaces A by a better-balanced matrix with the same eigenvalues.*)
-    (* There is no effect on symmetrical matrices.  To minimize the     *)
-    (* effect of rounding, we scale only by a restricted set of scaling *)
-    (* factors derived from the machine's radix.                        */
+/*
+ Replaces A by a better-balanced matrix with the same eigenvalues.  There is no effect on symmetrical matrices.
+ To minimize the effect of rounding, we scale only by a restricted set of scaling factors derived from the 
+ machine's radix.                       
+*/
 
 
 //    VAR row, j: CARDINAL;
@@ -581,7 +594,7 @@ func Balance (A Matrix2D) Matrix2D {
 
     var  c, r, f, g, s float64;
 
-        N := len(A);
+//        N := len(A);
 
         for {                            // REPEAT
             done := true;
@@ -589,7 +602,7 @@ func Balance (A Matrix2D) Matrix2D {
                 c = 0;
                 r = 0;
                 for j := range A {       //  FOR j := 0 TO N-1 DO
-                    IF j != row {
+                    if j != row {
                         c += math.Abs(A[j][row]);
                         r += math.Abs(A[row][j]);
                     } // END IF j != row
@@ -626,7 +639,8 @@ func Balance (A Matrix2D) Matrix2D {
             }  // END (* FOR row := 0 TO N-1 *);
 
             if done { break } // behaves as the UNTIL done statement in M-2
-        }                     // This was the UNTIL done statement from M-2
+        } // This was the UNTIL done statement from M-2
+        return A;
 
 } // END Balance;
 
@@ -684,9 +698,9 @@ func Hessenberg (A Matrix2D) Matrix2D {
                 (* necessary this time.  We simply replace all of the   *)
                 (* "approximately zero" entries by 0.0.                 */
 
-                FOR i := pos TO N-1 DO
-                    A[i,pos-1] := 0.0;
-                END (*FOR*);
+                for i := pos; i < N; i++ {                     //  i := pos TO N-1 DO
+                    A[i][pos-1] = 0.0;
+                }
 
             }else{
 
@@ -700,9 +714,9 @@ func Hessenberg (A Matrix2D) Matrix2D {
                         A[pos][j] = temp;   //not yet: A[pos][j],A[pivotrow][j] = A[pivotrow][j],A[pos][,j];
                     } //END FOR j from pos-1 to N-1
                     for i := range A {                 // FOR i := 0 TO N-1 DO
-                        temp := A[i,pivotrow];
-                        A[i,pivotrow] = A[i,pos];
-                        A[i,pos] = temp;    // not yet: A[i][pos],A[i][pivotrow] = A[i][pivotrow],A[i][pos];
+                        temp := A[i][pivotrow];
+                        A[i][pivotrow] = A[i][pos];
+                        A[i][pos] = temp;    // not yet: A[i][pos],A[i][pivotrow] = A[i][pivotrow],A[i][pos];
                     } // END FOR i range A
 
                 } // END IF pivotrow != pos
@@ -713,37 +727,38 @@ func Hessenberg (A Matrix2D) Matrix2D {
                 (* for i < pos, and V[pos] = 1.0.  We don't bother      *)
                 (* storing those fixed elements explicitly.             */
 
-                FOR i := pos+1 TO N-1 DO
-                    V^[i] := -A[i,pos-1] / pivot;
-                END (*FOR*);
+                for i := pos+1; i < N; i++ {   // FOR i := pos+1 TO N-1 DO
+                    V[i] = -A[i][pos-1] / pivot;
+                }
 
                 /* Premultiplication of A by T.  Because of the special *)
                 (* structure of T, this affects only rows [pos+1..N].   *)
                 (* We also know that some of the results will be zero.  */
 
-                FOR i := pos+1 TO N-1 DO
-                    A[i,pos-1] := 0.0;
-                    FOR j := pos TO N-1 DO
-                        A[i,j] := A[i,j] + V^[i] * A[pos,j];
-                    END (*FOR*);
-                END (*FOR*);
+                for i := pos+1; i < N; i++ {        // FOR i := pos+1 TO N-1 DO
+                    A[i][pos-1] = 0.0;
+                    for j := pos; j < N; j++ {      //   FOR j := pos TO N-1 DO
+                        A[i][j] += V[i] * A[pos][j];
+                    }
+                }
 
                 /* Postmultiplication by the inverse of T.  This affects*)
                 (* only column pos.                                     */
 
-                FOR i := 0 TO N-1 DO
+                for i := range A {    // FOR i := 0 TO N-1 DO
                     temp := 0.0;
-                    FOR j := pos+1 TO N-1 DO
-                        temp := temp + A[i,j] * V^[j];
-                    END (*FOR*);
-                    A[i,pos] := A[i,pos] - temp;
-                END (*FOR*);
+                    for j := pos+1; j < N; j++ {   //  FOR j := pos+1 TO N-1 DO
+                        temp += A[i][j] * V[j];
+                    }
+                    A[i][pos] -= temp;
+                } //END FOR range A
 
             } // END IF pivot < small
 
         } // END FOR pos from 2 to N-2
 
                                                       // DisposeVector (V, N); not needed in Go.
+        return A;
 } // END Hessenberg;
 
 /************************************************************************/
@@ -756,8 +771,8 @@ func QR (A Matrix2D) LongComplexSlice {
     (* Source: this is an adaption of code from "Numerical Recipes"     *)
     (* by Press, Flannery, Teutolsky, and Vetterling.                   */
 
-    VAR last, m, j, k, L, its, i, imax: CARDINAL;
-        z, y, x, w, v, u, shift, s, r, q, p, anorm: LONGREAL;
+//    VAR last, m, j, k, L, its, i, imax: CARDINAL;
+//        z, y, x, w, v, u, shift, s, r, q, p, anorm: LONGREAL;
 
     /********************************************************************/
     var shift,w,x,y,z,p,q,r,s float64;
@@ -767,7 +782,7 @@ func QR (A Matrix2D) LongComplexSlice {
 
         anorm := math.Abs(A[0][0]);      // first element in first row
         N := len(A);
-        W = make(LongComplexSlice,N);
+        W := make(LongComplexSlice,N);
         for i := 1; i < N; i++ {                                             //  FOR i := 1 TO N-1 DO
             for j := i-1; j < N; j++ {                                      //  FOR j := i-1 TO N-1 DO
               anorm += math.Abs(A[i][j]);
@@ -790,7 +805,7 @@ func QR (A Matrix2D) LongComplexSlice {
                   break innerLOOP;
                 } //ENDIF
                 s := math.Abs(A[L-1][L-1]) + math.Abs(A[L][L]);
-                iF s == 0.0 {
+                if s == 0.0 {
                   s = anorm;
                 } // ENDIF
                 if math.Abs(A[L][L-1]) + s == s {
@@ -799,7 +814,7 @@ func QR (A Matrix2D) LongComplexSlice {
                 L--
             } // END innerLOOP
 
-            x := A[last][last];
+            x = A[last][last];
             if L == last {
 
                 // One eigenvalue found.
@@ -821,7 +836,7 @@ func QR (A Matrix2D) LongComplexSlice {
 
                     p = 0.5*(y-x);
                     q = p*p + w;
-                    z = imath.Sqrt(math.Abs(q));
+                    z = math.Sqrt(math.Abs(q));
                     x += shift;
                     if q >= 0.0 {
                         if p < 0.0 {
@@ -890,9 +905,8 @@ func QR (A Matrix2D) LongComplexSlice {
                         if m == L {
                           break anotherInnerLOOP;
                         } // ENDIF
-                        u := ABS(A[m,m-1]) * (ABS(q) + ABS(r));
-                        v := ABS(p) * (ABS(A[m-1,m-1]) + ABS(z)
-                                        + ABS(A[m+1,m+1]));
+                        u := math.Abs(A[m][m-1]) * (math.Abs(q) + math.Abs(r));
+                        v := math.Abs(p) * (math.Abs(A[m-1][m-1]) + math.Abs(z) + math.Abs(A[m+1][m+1]));
                         if u+v == v {
                           break anotherInnerLOOP;
                         } // ENDIF
@@ -905,7 +919,7 @@ func QR (A Matrix2D) LongComplexSlice {
                         A[i][i-3] = 0.0;
                     } //END FOR
 
-                    // Apply row and column transformations that should reduce the magnitudes of subdiagonal elements.
+          // Apply row and column transformations that should reduce the magnitudes of subdiagonal elements.
 
                     for k := m; k < last; k++ {
                         if k != m {
@@ -917,9 +931,9 @@ func QR (A Matrix2D) LongComplexSlice {
                             } // END IF
                             x = math.Abs(p) + math.Abs(q) + math.Abs(r);
                             if x != 0.0 {
-                                p = p/x;
-                                q := q/x;
-                                r := r/x;
+                              p /= x;               //  p = p/x;
+                              q /= x;               //  q = q/x;
+                              r /= x;               //  r = r/x;
                             } // END IF
                         } // END IF
                         s = math.Sqrt(p*p + q*q + r*r);
@@ -978,7 +992,7 @@ func QR (A Matrix2D) LongComplexSlice {
             } // END IF test for 1x1
 
         } // END  main loop
-
+        return W;
 } // END QR;
 
 /************************************************************************)
@@ -1026,7 +1040,7 @@ func Write (M Matrix2D, places int) []string {
         for i := range M {           // FOR i := 0 TO r-1 DO
             for j := range M[i] {    //   FOR j := 0 TO c-1 DO
                 ss := strconv.FormatFloat(M[i][j],'G',places,64)
-                OutputStringSlice = append(OutputStringSlice,fmt.Sprintf("  %s",ss);
+                OutputStringSlice = append(OutputStringSlice,fmt.Sprintf("  %s",ss));
                                                                                //WriteLongReal (M[i,j], places);
             } // END FOR j
             OutputStringSlice = append(OutputStringSlice,"\n");
