@@ -69,7 +69,7 @@ func NewMatrix (R, C int) Matrix2D { // I think row, column makes more sense tha
 // Creates an NxM matrix.
 // old code basically did this: NEW (result, N-1, M-1); RETURN result;
 
-  if (R > SubscriptDim) || (C > SubscriptDim) {
+  if (R > SubscriptDim) || (C > SubscriptDim) || R < 1 || C < 1 {
     return nil;
   }
   matrix := make(Matrix2D,R);
