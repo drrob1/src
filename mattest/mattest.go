@@ -41,7 +41,7 @@ func BasicTest() {
     A = make([][]float64,Arows);
 
     B = make([][]float64,Brows);
-    C = make([][]float64,Brows);
+//    C = make([][]float64,Brows);
 
     D = make([][]float64,Arows);
     E = make([][]float64,Arows);
@@ -54,7 +54,7 @@ func BasicTest() {
 
     for i := range B {
       B[i] = make([]float64,Bcols);
-      C[i] = make([]float64,Bcols);
+//      C[i] = make([]float64,Bcols);
     }
         F = mat.NewMatrix(Brows,Bcols);  // testing NewMatrix, not in original code
         G := mat.NewMatrix(Arows,Acols);//  testing NewMatrix, not in original code
@@ -67,8 +67,8 @@ func BasicTest() {
 
         A = mat.Random(A);                                            //        Random (A, Arows, Acols);
         fmt.Println(" Matrix A is:");
-	ss := mat.Write (A, 5);                                                         // Write (A, Arows, Acols, 5);
-	for s := range ss {
+	ss := mat.Write (A, 5);                                       //        Write (A, Arows, Acols, 5);
+	for _,s := range ss {
           fmt.Print(s);
 	}
 	fmt.Println();
@@ -78,7 +78,7 @@ func BasicTest() {
         B = mat.Random (B);                                              // Random (B, Brows, Bcols);
         fmt.Println(" Matrix B is:");
 	ss = mat.Write (B, 5);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 	fmt.Println();
@@ -91,7 +91,7 @@ func BasicTest() {
 	}else{
 		fmt.Println(" Trying to add A+B, which should fail.  It seems to have worked.  C is:");
 		ss = mat.Write(C,5);
-	        for s := range ss {
+	        for _,s := range ss {
                   fmt.Print(s);
 	        }
 	        fmt.Println();
@@ -102,7 +102,7 @@ func BasicTest() {
         C = mat.Mul(A, B);
         fmt.Println("C = A*B is");
 	ss = mat.Write (C, 5);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 	fmt.Println();
@@ -113,7 +113,7 @@ func BasicTest() {
         D = mat.Random(D);
         fmt.Println("Matrix D is");
         ss = mat.Write(D, 5);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 	fmt.Println();
@@ -124,47 +124,95 @@ func BasicTest() {
         E = mat.Add(A, D);
         fmt.Println("E = A+D is");
         ss = mat.Write (E, 5);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 	fmt.Println();
-
+        pause();
 // My new test code
 	F = mat.Add(D,E); //   should fail
 	fmt.Println(" F = D + E;");
 	if F != nil {
           ss = mat.Write (F, 5);
-	  for s := range ss {
+	  for _,s := range ss {
             fmt.Print(s);
 	  }
 	  fmt.Println();
         }else{
+         fmt.Println(" F = D + E failed");
 	 F = mat.Random(F);
 	}
-
-	G = mat.Add(E,F)  //   should fail
-        fmt.Println(" G = E + F;");
+        pause();
+	G = mat.Sub(F,E)  //   should fail
+        fmt.Println(" G = F - E;");
 	if G != nil {
           ss = mat.Write (G, 5);
-	  for s := range ss {
+	  for _,s := range ss {
             fmt.Print(s);
 	  }
 	  fmt.Println();
-	}
-
-	C = mat.Mul(G,F);  // should work
-	fmt.Println( "C = G*F:");
-	if C != nil {
-          ss = mat.Write (C, 5);
-	  for s := range ss {
+	}else{
+          fmt.Print(" E - F failed ");
+          G = mat.Random(G);
+        }
+        pause();
+        ss = mat.Write(D,4);
+        for _,s := range ss {
+          fmt.Print(s);
+        }
+        fmt.Println();
+        ss = mat.Write(E,4);
+        for _,s := range ss {
+          fmt.Print(s);
+        }
+        pause();
+	H := mat.Mul(D,B);  // should work
+	fmt.Println( "H = G*F, well, now D*B:");
+        pause();
+	if H != nil {
+          ss := mat.Write (H, 5);
+	  for _,s := range ss {
             fmt.Print(s);
 	  }
 	  fmt.Println();
         }else{
-	  fmt.Println(" C = G*F did not work.");
+	  fmt.Println(" H = G*F did not work, well, now D*B.");
 	}
 
+        Q := mat.Sub(A,A);
+        fmt.Println(" Q = A - A");
+        if Q != nil {
+          ss = mat.Write(Q,4);
+          for _,s := range ss{
+            fmt.Print(s);
+          }
+          fmt.Println();
+        }else{
+          fmt.Println(" Q = A - A did not work.");
+        }
+        pause();
 
+        K := mat.NewMatrix(2,2);
+        K = mat.Random(K);
+        L := mat.NewMatrix(2,2);
+        L = mat.Random(L);
+        fmt.Println();
+        fmt.Println(" K and then L, and then K*L");
+        ss = mat.Write(K,4);
+        for _,s := range ss{
+          fmt.Print(s);
+        }
+        ss = mat.Write(L,4);
+        for _,s := range ss{
+          fmt.Print(s);
+        }
+
+        L = mat.Mul(K,L);
+
+        ss = mat.Write(L,4);
+        for _,s := range ss{
+          fmt.Print(s);
+        }
 } //    END BasicTest;
 
 //************************************************************************
@@ -205,7 +253,7 @@ func SolveTest() {
         A = mat.Random (A);
         fmt.Println ("Matrix A is");
 	ss := mat.Write (A, 4);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 
@@ -214,27 +262,27 @@ func SolveTest() {
         B = mat.Random(B);
         fmt.Println ("Matrix B is");
         ss = mat.Write (B, 4);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 
 
         // Solve the equation AX = B.
 
-        X = mat.Solve(A, B, Arows, Bcols);
-	Y := mat.GaussJ(A, B, Arows, Bcols);
+        X = mat.Solve(A,B);   // X = mat.Solve(A, B, Arows, Bcols);
+	Y := mat.GaussJ(A,B);  //  Y := mat.GaussJ(A, B, Arows, Bcols);
 
         // Write the solution.
 
 	fmt.Println ("The solution X to AX = B is: X");
         ss = mat.Write (X, 4);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 
 	fmt.Println ("The solution X to AX = B is: Y");
         ss = mat.Write (Y, 4);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 
@@ -246,7 +294,7 @@ func SolveTest() {
         D = mat.Sub(B,C);                            // Sub (B, C, Brows, Bcols, D);
         fmt.Println ("As a check, AX-B evaluates to");
         ss = mat.Write(D,4);                     // Write (D, Brows, Bcols, 4);
-	for s := range ss {
+	for _,s := range ss {
           fmt.Print(s);
 	}
 
@@ -285,7 +333,7 @@ func SingularTest() {
         A[2][2] = 4.0;
         fmt.Println ("Matrix A is:");
         ss := mat.Write (A, 4);
-        for s := range ss {
+        for _,s := range ss {
           fmt.Print(s);
         }
         fmt.Println()
@@ -295,7 +343,7 @@ func SingularTest() {
         B = mat.Random(B);
         fmt.Println ("Matrix B is:");
         ss = mat.Write(B, 4);
-        for s := range ss {
+        for _,s := range ss {
           fmt.Print(s);
         }
         fmt.Println()
@@ -303,7 +351,7 @@ func SingularTest() {
 
         // Try to solve the equation AX = B.
 
-        X = mat.Solve(A, B,Arows, Bcols);
+        X = mat.Solve(A,B);   // X = mat.Solve(A, B,Arows, Bcols);
 
         fmt.Println ("The equation AX = B could not be solved");
 
@@ -332,21 +380,21 @@ func InversionTest() {
         A = mat.Random(A);  // Random (A, N, N);
         fmt.Println ("Matrix A is");
         ss := mat.Write(A, 4);
-        for s := range ss {
+        for _,s := range ss {
           fmt.Print(s);
         }
         fmt.Println();
 
         // Invert it.
 
-        X = mat.Invert(A, N);
+        X = mat.Invert(A);   //  X = mat.Invert(A, N);
 
         // Write the solution.
 
         fmt.Println();
         fmt.Println ("The inverse of A is");
         ss = mat.Write (X, 4);
-        for s := range ss {
+        for _,s := range ss {
           fmt.Print(s);
         }
         fmt.Println();
@@ -358,7 +406,7 @@ func InversionTest() {
         fmt.Println();
         fmt.Println ("As a check, the product evaluates to");
         ss = mat.Write (B, 4);
-        for s := range ss {
+        for _,s := range ss {
           fmt.Print(s);
         }
         fmt.Println();
