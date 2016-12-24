@@ -19,6 +19,7 @@ package mat;
 // REVISION HISTORY
 // ================
 // 19 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
+// 24 Dec 2016 -- Passed mattest.
 
 
 import (
@@ -39,7 +40,7 @@ import (
 //  "tokenize"
 )
 
-const small = 1.0E-15;
+const small = 1.0E-12;
 const SubscriptDim = 8192
 const SizeFudgeFactor = 20  // decided to not use this in NewMatrix
 
@@ -96,6 +97,19 @@ func Zero(matrix Matrix2D) Matrix2D {
   }
   return matrix;
 }
+
+
+func BelowSmallMakeZero(matrix Matrix2D) Matrix2D {
+  for r := range matrix {
+    for c := range matrix[r] {
+      if math.Abs(matrix[r][c]) < small {
+        matrix[r][c] = 0
+      }
+    }
+  }
+  return matrix;
+}
+
 
 //                                     PROCEDURE Unit (VAR (*OUT*) M: ARRAY OF ARRAY OF EltType;  N: CARDINAL);
 func Unit (matrix Matrix2D) Matrix2D {
@@ -306,7 +320,7 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {  // A is an InO
                     maxval = math.Abs(A[row][col]);
                 }
             }
-            if maxval == 0 {  // Go treats 0 as an abstract number that will match the type at runtime.
+            if maxval == 0 {           // Go treats 0 as an abstract number that will match the type at runtime.
                 // An all-zero row can never contribute pivot elements.
                 VV[row] = 0;                                          //              VV^[row] := 0.0;
             }else{
@@ -324,7 +338,7 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {  // A is an InO
                 for row := 0; row < col; row++ {  // FOR row 0 .. col-1
                     sum = A[row][col];
                     if row > 0 {
-                        for k := 0; k < row; row++ { // for k is 0 TO row-1 DO
+                        for k := 0; k < row; k++ { // for k is 0 TO row-1 DO
                            sum -= A[row][k] * A[k][col];
                         }  // END FOR k 0 to row-1;
                     } // END IF;
@@ -384,7 +398,7 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {  // A is an InO
         }  // END FOR col range A
 
         return A, oddswaps;
-}
+} // END LUFactor
 
 
 /************************************************************************/
@@ -588,28 +602,32 @@ func Solve (A, B Matrix2D) Matrix2D {  // return X
 	N := len(A);
 	M := len(B[0]);
 
-        LU := NewMatrix(N, N);
+        LU := NewMatrix(N,N);
         Copy2(A,LU);
+
+        X = NewMatrix(N,M);
         X = Copy(B);
                                               //  Copy (A, N, N, LU^);  Copy (B, N, M, X);
-        perm := make(Permutation,N*2);       //  ALLOCATE (perm, N*SIZE(subscript));
+        perm := make(Permutation,N*4);       //  ALLOCATE (perm, N*SIZE(subscript));
         LU,_ = LUFactor (LU, perm);
         X = LUSolve (LU, X, perm);          // X = LUSolve (LU, X, N, M, perm);
 
-        /* For better accuracy, apply one step of iterative improvement.   Two or three steps might be better;   *)
-        (* but they might even make things worse, because we're still stuck with the rounding errors in LUFactor.    */
+//  For better accuracy, apply one step of iterative improvement.   Two or three steps might be better;
+//  but they might even make things worse, because we're still stuck with the rounding errors in LUFactor.
 
-        ERROR := NewMatrix (N, M);
-        product := NewMatrix (N, M);
-        product = Mul(A,X);                        // Mul (A, X, N, N, M, product);
-        ERROR = Sub(B,product);                   //  Sub (B, product^, N, M, error^);
-        ERROR = LUSolve(LU,ERROR,perm);          //   LUSolve (LU^, error^, N, M, perm);
-        X = Add(X,ERROR);                       //    Add (X, error^, N, M, X);
+        if X != nil { // if the LUSolve failed, like because of a singular matrix, X is returned as nil
+          ERROR := NewMatrix (N, M);
+          product := NewMatrix (N, M);
+          product = Mul(A,X);                        // Mul (A, X, N, N, M, product);
+          ERROR = Sub(B,product);                   //  Sub (B, product^, N, M, error^);
+          ERROR = LUSolve(LU,ERROR,perm);          //   LUSolve (LU^, error^, N, M, perm);
+          X = Add(X,ERROR);                       //    Add (X, error^, N, M, X);
                                                //     DisposeArray (product, N, M);
                                               //      DisposeArray (error, N, M);
                                              //       DEALLOCATE (perm, N*SIZE(subscript));
                                             //        DisposeArray (LU, N, N);
-        return X;
+        }
+        return X;                          // If X is nil, return it anyway as nil.
 } //    END Solve;
 
 
@@ -624,8 +642,10 @@ func Invert (A Matrix2D) Matrix2D { // Inverts an N x N nonsingular matrix.
                                               // VAR I: ArrayPtr;
 
         N := len(A);
-        I := NewMatrix (N, N);
+        I := NewMatrix(N, N);
         I = Unit(I);
+
+        X = NewMatrix(N,N);
         X = Solve(A,I);                       // Solve (A, I^, X, N, N);
                                               // DisposeArray (I, N, N);
         return X;
@@ -707,7 +727,7 @@ func Balance (A Matrix2D) Matrix2D {
 /************************************************************************/
 
 //                                PROCEDURE Hessenberg (VAR INOUT A: ARRAY OF ARRAY OF EltType;  N: CARDINAL);
-func Hessenberg (A Matrix2D) Matrix2D {
+func Hessenberg (A Matrix2D) Matrix2D { // A is an InOut matrix.
 
     /* Transforms an NxN matrix into upper Hessenberg form, i.e. all    *)
     (* entries below the diagonal zero except for the first subdiagonal.*)
@@ -823,7 +843,7 @@ func Hessenberg (A Matrix2D) Matrix2D {
 
 /************************************************************************/
 
-//                        PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX; N: CARDINAL);
+//                  PROCEDURE QR ( A: ARRAY OF ARRAY OF EltType;  VAR OUT W: ARRAY OF LONGCOMPLEX; N: CARDINAL);
 func QR (A Matrix2D) LongComplexSlice {
     /* Finds all the eigenvalues of an upper Hessenberg matrix.         *)
     (* On return W contains the eigenvalues.                            *)
@@ -837,8 +857,7 @@ func QR (A Matrix2D) LongComplexSlice {
     /********************************************************************/
     var shift,w,x,y,z,p,q,r,s float64;
 
-        /* Compute matrix norm.  This looks wrong to me, but it seems   *)
-        (* to be giving satisfactory results.                           */
+// Compute matrix norm.  This looks wrong to me, but it seems to be giving satisfactory results.
 
         anorm := math.Abs(A[0][0]);      // first element in first row
         N := len(A);
@@ -1072,10 +1091,12 @@ func Eigenvalues (A Matrix2D) LongComplexSlice {
         N := len(A);
         if N > 0 {
             Acopy = NewMatrix (N, N);
-            Copy2(A,Acopy);                                                //            Copy (A, N, N, Acopy^);
-            Acopy = Balance(Acopy);                                        //            Balance (Acopy^, N);
+            Copy2(A,Acopy);                                                //           Copy (A, N, N, Acopy^);
+            Acopy = Balance(Acopy);                                        //           Balance (Acopy^, N);
             Acopy = Hessenberg(Acopy);                                     //           Hessenberg (Acopy^, N);
-            W = QR(Acopy);                                                 //    QR (Acopy^, W, N);
+
+            W = make(LongComplexSlice,N);
+            W = QR(Acopy);                                                 //           QR (Acopy^, W, N);
                                                      // not needed in Go            DisposeArray (Acopy, N, N);
         } // END IF
         return W;
@@ -1091,8 +1112,7 @@ func Eigenvalues (A Matrix2D) LongComplexSlice {
                          //  PROCEDURE Write (M: ARRAY OF ARRAY OF EltType;  r, c: CARDINAL;  places: CARDINAL);
 func Write (M Matrix2D, places int) []string {
 
-    /* Writes the r x c matrix M to the screen, where each column *)
-    (* occupies a field "places" characters wide.               */
+// Writes the r x c matrix M to the screen, where each column occupies a field "places" characters wide.
 
 //    VAR i, j: CARDINAL;
 

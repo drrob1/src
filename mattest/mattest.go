@@ -13,6 +13,7 @@ package main;
 // REVISION HISTORY
 // ================
 // 21 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
+// 24 Dec 2016 -- Seems to work.
 
 import (
   "fmt"
@@ -128,7 +129,7 @@ func BasicTest() {
           fmt.Print(s);
 	}
 	fmt.Println();
-        pause();
+
 // My new test code
 	F = mat.Add(D,E); //   should fail
 	fmt.Println(" F = D + E;");
@@ -142,7 +143,7 @@ func BasicTest() {
          fmt.Println(" F = D + E failed");
 	 F = mat.Random(F);
 	}
-        pause();
+
 	G = mat.Sub(F,E)  //   should fail
         fmt.Println(" G = F - E;");
 	if G != nil {
@@ -155,7 +156,7 @@ func BasicTest() {
           fmt.Print(" E - F failed ");
           G = mat.Random(G);
         }
-        pause();
+
         ss = mat.Write(D,4);
         for _,s := range ss {
           fmt.Print(s);
@@ -165,10 +166,10 @@ func BasicTest() {
         for _,s := range ss {
           fmt.Print(s);
         }
-        pause();
+        
 	H := mat.Mul(D,B);  // should work
 	fmt.Println( "H = G*F, well, now D*B:");
-        pause();
+
 	if H != nil {
           ss := mat.Write (H, 5);
 	  for _,s := range ss {
@@ -190,7 +191,7 @@ func BasicTest() {
         }else{
           fmt.Println(" Q = A - A did not work.");
         }
-        pause();
+       
 
         K := mat.NewMatrix(2,2);
         K = mat.Random(K);
@@ -292,11 +293,18 @@ func SolveTest() {
 
         C = mat.Mul(A,X);                            // Mul (A, X, Arows, Acols, Bcols, C);
         D = mat.Sub(B,C);                            // Sub (B, C, Brows, Bcols, D);
-        fmt.Println ("As a check, AX-B evaluates to");
-        ss = mat.Write(D,4);                     // Write (D, Brows, Bcols, 4);
+        fmt.Println ("As a check, AX-B evaluates to zero");
+        ss = mat.Write(D,4);                         // Write (D, Brows, Bcols, 4);
 	for _,s := range ss {
           fmt.Print(s);
 	}
+        fmt.Println();
+        D = mat.BelowSmallMakeZero(D);
+        ss = mat.Write(D,4);
+	for _,s := range ss {
+          fmt.Print(s);
+	}
+        fmt.Println();
 
 } //    END SolveTest;
 
@@ -327,10 +335,10 @@ func SingularTest() {
 
         // Give a value to the A matrix.
 
-        A[1][1] = 1.0;
-        A[1][2] = 2.0;
-        A[2][1] = 2.0;
-        A[2][2] = 4.0;
+        A[0][0] = 1.0;
+        A[0][1] = 2.0;
+        A[1][0] = 2.0;
+        A[1][1] = 4.0;
         fmt.Println ("Matrix A is:");
         ss := mat.Write (A, 4);
         for _,s := range ss {
@@ -353,7 +361,9 @@ func SingularTest() {
 
         X = mat.Solve(A,B);   // X = mat.Solve(A, B,Arows, Bcols);
 
-        fmt.Println ("The equation AX = B could not be solved");
+        if X == nil { // it should be nil, as A is singular
+          fmt.Println ("The equation AX = B could not be solved");
+        }
 
 } //    END SingularTest;
 
@@ -404,11 +414,19 @@ func InversionTest() {
 
         B = mat.Mul(A,X)            // Mul(A, X, N, N, N, B);
         fmt.Println();
-        fmt.Println ("As a check, the product evaluates to");
+        fmt.Println ("As a check, the product evaluates to the identity matrix");
         ss = mat.Write (B, 4);
         for _,s := range ss {
           fmt.Print(s);
         }
+        fmt.Println();
+        fmt.Println();
+        B = mat.BelowSmallMakeZero(B);
+        ss = mat.Write (B, 4);
+        for _,s := range ss {
+          fmt.Print(s);
+        }
+        fmt.Println();
         fmt.Println();
 
         pause();
@@ -461,7 +479,7 @@ func main() {
 
 func pause() {
   scanner := bufio.NewScanner(os.Stdin)
-  fmt.Print(" pausing ...");
+  fmt.Print(" pausing ... hit <enter>");
   scanner.Scan();
   answer := scanner.Text();
   if err := scanner.Err(); err != nil {
