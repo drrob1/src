@@ -9,7 +9,7 @@ MODULE Solve;
    3 Mar 05 -- Made version 2 write lines like eqn w/o =.
    4 Mar 05 -- Don't need N as 1st line now.
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
-  24 Dec 16 -- Started conversion to Go.
+  24 Dec 16 -- Converted to Go.
 */
 
 import (
@@ -24,7 +24,7 @@ import (
   "tokenize"
 )
 
-const LastCompiled = "25 Dec 16";
+const LastCompiled = "24 Dec 16";
 const MaxN = 9;
 
 //                          MaxRealArray is not square because the B column vector is in last column of IM
@@ -84,7 +84,7 @@ func main () {
           break CountLinesLoop;
         }
       }
-      fmt.Println(" inputline from the file is: ",inputline);
+
       tokenize.INITKN(inputline);
       col := 0;
       EOL := false;
@@ -92,7 +92,6 @@ func main () {
         token,EOL := tokenize.GETTKNREAL();
         if EOL { break }
         if (token.State == tokenize.DGT) {
-          fmt.Println(" R= ",token.Str,token.Rsum," lines,col: ",lines,col);
           IM[lines][col] = token.Rsum;  // remember that IM is Input Matrix
           col++
         } // ENDIF token.state=DGT
@@ -103,7 +102,6 @@ func main () {
     } // END for n 
   } // END reading loop
   N := lines; // Note: lines is 0 origin
-  fmt.Println(" lines, N are : ",lines,N);
 
 // Now need to create A and B matrices
 
@@ -122,7 +120,6 @@ func main () {
     fmt.Print(s);
   }
   fmt.Println();
-  fmt.Println();
 
   fmt.Println(" Right hand side vector matrix B is:");
   ss = mat.Write(B,5);
@@ -138,7 +135,6 @@ func main () {
   for _,s := range ss {
     fmt.Print(s);
   }
-  fmt.Println();
 
   ans2 := mat.NewMatrix(N,N);
   ans2 = mat.GaussJ(A,B);                                            // Solve (ra1, ra2, ans, N, 1);
@@ -149,7 +145,7 @@ func main () {
   }
   fmt.Println();
 
-  pause();
+//  pause();
 
 // Check that the solution looks right.
 
@@ -158,20 +154,20 @@ func main () {
   C = mat.Mul(A,ans);                                          // Mul (ra1, ans, N, N, 1, ra3);
   D = mat.Sub(B,C);                                           //  Sub (ra3, ra2, N, 1, ra4);
 
-  fmt.Println("As a check, AX-B evaluates to");
+  fmt.Println("As a check, AX-B should be 0, and evaluates to");
   ss = mat.Write(D,5);                                      //    Write (ra4, N, 1, 4);
   for _,s := range ss {
     fmt.Print(s);
   }
-  fmt.Println();
 
   D = mat.BelowSmallMakeZero(D);
 
-  fmt.Println("As a check, AX-B should be all zeros.  It evaluates to");
+  fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to");
   ss = mat.Write(D,5);
   for _,s := range ss {
     fmt.Print(s);
   }
+  fmt.Println();
   fmt.Println();
 
 }// END Solve.
