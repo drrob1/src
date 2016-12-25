@@ -24,7 +24,7 @@ import (
   "tokenize"
 )
 
-const LastCompiled = "24 Dec 16";
+const LastCompiled = "25 Dec 16";
 const MaxN = 9;
 
 //                          MaxRealArray is not square because the B column vector is in last column of IM

@@ -18,8 +18,9 @@ package mat;
 
 // REVISION HISTORY
 // ================
-// 19 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
-// 24 Dec 2016 -- Passed mattest.
+// 19 Dec 16 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
+// 24 Dec 16 -- Passed mattest.
+// 25 Dec 16 -- Changed the code to use the Go swapping idiom
 
 
 import (
@@ -369,9 +370,8 @@ func LUFactor (A Matrix2D,  perm Permutation) (Matrix2D, bool) {  // A is an InO
 
             if pivotrow != col {
                 for k := 0; k < N; k++ {      //  k from 0 to N-1
-                    temp = A[pivotrow][k];
-                    A[pivotrow][k] = A[col][k];
-                    A[col][k] = temp;       // A[col][k],A[pivotrow][k] = A[pivotrow][k],A[col][k];
+                                          // temp = A[pivotrow][k]; A[pivotrow][k] = A[col][k]; A[col][k] = temp;
+                    A[col][k],A[pivotrow][k] = A[pivotrow][k],A[col][k];  // use the go idiom for swap
                 } // END FOR k from 0 to N-1
                 oddswaps = ! oddswaps;
                 VV[pivotrow] = VV[col];                                  // VV^[pivotrow] := VV^[col];
@@ -434,9 +434,9 @@ func LUSolve (LU, B Matrix2D, perm Permutation) Matrix2D {  // B is an InOut par
 //	M = len(B[0];  Not used, it turns out, after I use the range syntax.  Looks like this is translated from C, because even classic M-2 does not need the size of the array to be passed as a separate
 //	param.
 
-        for i := range B {        // for i := 0; i <  N; i++ {     // for i from 0 to N-1
-            ip := perm[i];                                                    //             ip := perm^[i];
-	    for j := range B[i] {      // for j := 0; j < M; j++ {  // for j from 0 to M-1
+        for i := range B {                                                            // for i from 0 to N-1
+            ip := perm[i];                                                           //    ip := perm^[i];
+	    for j := range B[i] {                                                   //     for j from 0 to M-1
                 sum = B[ip][j];
                 B[ip][j] = B[i][j];
                 if i > 0 {
@@ -450,15 +450,15 @@ func LUSolve (LU, B Matrix2D, perm Permutation) Matrix2D {  // B is an InOut par
 
         // Pass 2: solve the equation U*X = Y.
 
-        for i := N-1; i >= 0; i-- { // for i from N-1 to 0 by -1
+        for i := N-1; i >= 0; i-- {                                        // for i from N-1 to 0 by -1
             scale = LU[i][i];
             if scale == 0 {
                //  Matrix is singular.  Aborting.
 	       return nil;
             } //END IF scale == 0
-	    for j := range B[i] {     // for j := 0; j < M; j++ { // for j from 0 to M-1
+	    for j := range B[i] {                                           // for j from 0 to M-1
                 sum = B[i][j];
-                for k := i+1; k < N; k++ { // for K from i+1 to N-1
+                for k := i+1; k < N; k++ {                                  // for K from i+1 to N-1
                     sum -= LU[i][k] * B[k][j];
                 } // END FOR k from i+1 to N-1
                 B[i][j] = sum/scale;
@@ -509,31 +509,29 @@ func GaussJ (A, B Matrix2D) Matrix2D {  // X is the output matrix
 */
 
         prow := 0;
-        for i := range W {                         // for i := 0; i < N; i++ {  // FOR i := 0 TO N-1 DO
+        for i := range W {                                    // FOR i := 0 TO N-1 DO
             pivot = 0.0;
-            for j := i; j < N; j++ {         // FOR j := i TO N-1 DO
-                temp := W[j][i];             // temp := W^[j,i];
+            for j := i; j < N; j++ {                            // FOR j := i TO N-1 DO
+                temp := W[j][i];                                 // temp := W^[j,i];
                 if math.Abs(temp) > math.Abs(pivot) {
                     pivot = temp;
                     prow = j;
                 } // END IF temp > pivot
             } // END FOR j from i to N-1
-            if math.Abs(pivot) < small {
-                panic("Coefficient matrix is singular.  Aborting,");
+            if math.Abs(pivot) < small { // Coefficient matrix is singular.  Aborting,
+                return nil;
             } // END IF pivot < small
 
             // Swap rows i and prow.
 
             for j := i; j < N; j++ {                    // FOR j := i TO N-1 DO
-                temp := W[i][j];             //  W[i][j],W[prow][j]=W[prow][j],W[i][j]
-                W[i][j] = W[prow][j];        // but after I make sure the code works.
-                W[prow][j] = temp;
+                                                 // temp := W[i][j]; W[i][j] = W[prow][j]; W[prow][j] = temp;
+                W[i][j],W[prow][j]=W[prow][j],W[i][j]  // Go swapping idiom.
             } // END FOR j from i to N-1
 
-            for j := range X[i] {       //  for j := 0; j < M; j++ {   // FOR j := 0 TO M-1 DO
-                temp := X[i][j];
-                X[i][j] = X[prow][j];            //  X[i][j],X[prow][j]=X[prow][j],X[i][j] 
-                X[prow][j] = temp;               // but not yet
+            for j := range X[i] {                                // FOR j := 0 TO M-1 DO
+                                                      // temp := X[i][j]; X[i][j] = X[prow][j]; X[prow][j] = temp;
+                X[i][j],X[prow][j]=X[prow][j],X[i][j];  // Go swapping idiom
             } // END FOR j from 0 to M-1
 
             // Scale the i'th row of both W and X.
@@ -541,7 +539,7 @@ func GaussJ (A, B Matrix2D) Matrix2D {  // X is the output matrix
             for j := i+1; j < N; j++ {      // FOR j := i+1 TO N-1 DO
                W[i][j] = W[i][j]/pivot;    //  W^[i,j] := W^[i][j]/pivot;
             } // END FOR j from i+1 to N-1
-	    for j := range X[i] {         //   for j := 0; j < M; j++ {   // FOR j := 0 TO M-1 DO
+	    for j := range X[i] {         // FOR j := 0 TO M-1 DO
                 X[i][j] = X[i][j]/pivot;
             } // END FOR j from 0 to M-1
 
@@ -549,10 +547,10 @@ func GaussJ (A, B Matrix2D) Matrix2D {  // X is the output matrix
 
             for k := i+1; k < N; k++ {                     // FOR k := i+1 TO N-1 DO
                 scale := W[k][i];
-                for j := i+1; j < N; j++ {       //  FOR j := i+1 TO N-1 DO
-                    W[k][j] -= scale*W[i][j];   // W was dereferenced in M-2 code
+                for j := i+1; j < N; j++ {                  //  FOR j := i+1 TO N-1 DO
+                    W[k][j] -= scale*W[i][j];              // W was dereferenced in M-2 code
                 } // END FOR j from i+1 to N-1
-		for j := range X[i] {          //   for j := 0; j < M; j++ {  // FOR j := 0 TO M-1 DO
+		for j := range X[i] {                        // FOR j := 0 TO M-1 DO
                     X[k][j] -= scale*X[i][j];
                 } // END FOR j from 0 to M-1
             } // END FOR k from i+1 to N-1
@@ -567,7 +565,7 @@ func GaussJ (A, B Matrix2D) Matrix2D {  // X is the output matrix
 
             for k := 0; k < i; k++ {            // FOR k := 0 TO i-1 DO
                 scale := W[k][i];
-                for j := range X[i] {    // for j := 0; j < M; j++ { // FOR j := 0 TO M-1 DO
+                for j := range X[i] {             // FOR j := 0 TO M-1 DO
                     X[k][j] -= scale*X[i][j];
                 } // END FOR j from 0 to M-1
             } // END FOR k from 0 to i-1
@@ -588,14 +586,11 @@ func GaussJ (A, B Matrix2D) Matrix2D {  // X is the output matrix
 
 func Solve (A, B Matrix2D) Matrix2D {  // return X
 
-    /* Solves the equation AX = B.  In the present version A must be    *)
-    (* square and nonsingular.                                          *)
+// Solves the equation AX = B.  In the present version A must be square and nonsingular.
 
-    (* Dimensions: A is N x N, B is N x M.                              */
+// Dimensions: A is N x N, B is N x M.
 
-//    VAR LU, error, product: ArrayPtr;
-//        perm: Permutation;
-//        var s bool;   I don't know why they use s for a bool.  But they did.
+//                                            var s bool;   I don't know why they use s for a bool.  But they did.
         var X Matrix2D;
 
 
@@ -789,14 +784,12 @@ func Hessenberg (A Matrix2D) Matrix2D { // A is an InOut matrix.
                 // Swap rows pos and pivotrow, and then swap the corresponding columns.
 
                     for j := pos-1; j < N; j++ {       // FOR j := pos-1 TO N-1 DO
-                        temp := A[pivotrow][j];
-                        A[pivotrow][j] = A[pos][j];
-                        A[pos][j] = temp;   //not yet: A[pos][j],A[pivotrow][j] = A[pivotrow][j],A[pos][,j];
+                                          // temp := A[pivotrow][j]; A[pivotrow][j] = A[pos][j]; A[pos][j] = temp;
+                        A[pos][j],A[pivotrow][j] = A[pivotrow][j],A[pos][j];  // Go swapping idiom
                     } //END FOR j from pos-1 to N-1
                     for i := range A {                 // FOR i := 0 TO N-1 DO
-                        temp := A[i][pivotrow];
-                        A[i][pivotrow] = A[i][pos];
-                        A[i][pos] = temp;    // not yet: A[i][pos],A[i][pivotrow] = A[i][pivotrow],A[i][pos];
+                                          // temp := A[i][pivotrow]; A[i][pivotrow] = A[i][pos]; A[i][pos] = temp;
+                        A[i][pos],A[i][pivotrow] = A[i][pivotrow],A[i][pos];  // Go swapping idiom
                     } // END FOR i range A
 
                 } // END IF pivotrow != pos
