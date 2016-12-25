@@ -40,7 +40,7 @@ import (
 //  "tokenize"
 )
 
-const small = 1.0E-12;
+const small = 1.0E-10;
 const SubscriptDim = 8192
 const SizeFudgeFactor = 20  // decided to not use this in NewMatrix
 
