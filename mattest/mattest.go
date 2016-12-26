@@ -444,19 +444,16 @@ func InversionTest() {
         }
         fmt.Println();
         for _,w := range W {  // just to see if this also works
-          fmt.Printf("  %9G",w);
+          fmt.Printf("  %5G\n",w);
         }
         fmt.Println();
 
-        pause();
         fmt.Println ("The eigenvalues of its inverse are");
         W = mat.Eigenvalues (X);  // Eigenvalues (X, W, N);
         for _,w := range W {   // FOR j := 1 TO N DO
-          fmt.Printf("  %9G",w);       //  fmt.Println ("    ");  WriteCx (W[j], 5);  WriteLn;
+          fmt.Printf("  %5G\n",w);       //  fmt.Println ("    ");  WriteCx (W[j], 5);  WriteLn;
         }
         fmt.Println();
-
-        pause();
 
 } //    END InversionTest;
 
