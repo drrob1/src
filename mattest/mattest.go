@@ -14,6 +14,7 @@ package main;
 // ================
 // 21 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
 // 24 Dec 2016 -- Seems to work.
+// 29 Dec 2016 -- Tweaked Write field size values
 
 import (
   "fmt"
@@ -166,12 +167,12 @@ func BasicTest() {
         for _,s := range ss {
           fmt.Print(s);
         }
-        
+
 	H := mat.Mul(D,B);  // should work
 	fmt.Println( "H = G*F, well, now D*B:");
 
 	if H != nil {
-          ss := mat.Write (H, 5);
+          ss := mat.Write (H, 6);
 	  for _,s := range ss {
             fmt.Print(s);
 	  }
@@ -191,7 +192,7 @@ func BasicTest() {
         }else{
           fmt.Println(" Q = A - A did not work.");
         }
-       
+
 
         K := mat.NewMatrix(2,2);
         K = mat.Random(K);
@@ -199,7 +200,7 @@ func BasicTest() {
         L = mat.Random(L);
         fmt.Println();
         fmt.Println(" K and then L, and then K*L");
-        ss = mat.Write(K,4);
+        ss = mat.Write(K,6);
         for _,s := range ss{
           fmt.Print(s);
         }
