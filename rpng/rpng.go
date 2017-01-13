@@ -20,7 +20,7 @@ import (
 // "holidaycalc"  Supplanted by stringslice
 )
 
-const LastCompiled = "11 Dec 16";
+const LastCompiled = "13 Jan 17";
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
 var DisplayTape,stringslice []string;
@@ -81,6 +81,7 @@ func main () {
    5 Nov 16 -- Added SuppressDump map code
    6 Nov 16 -- Added blank lines before writing output from hpcalc.
   11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
+  13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
 */
 
 //  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
@@ -276,7 +277,7 @@ func main () {
     fmt.Print(" Enter calculation, HELP or (Q)uit to exit: ");
     scanner.Scan();
     INBUF = strings.ToUpper(scanner.Text());
-    if len(INBUF) == 0 || strings.HasPrefix(INBUF,"Q") || INBUF == "EXIT" || INBUF == "STOP" {
+    if len(INBUF) == 0 || strings.HasPrefix(INBUF,"Q") || INBUF == "EXIT" {
       fmt.Println();
       break;
     }

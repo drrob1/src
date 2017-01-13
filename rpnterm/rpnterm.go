@@ -17,8 +17,6 @@ import (
 "hpcalc"
 "getcommandline"
 "tokenize"
-//"timlibg"  Not needed after DOW processed by hpcalc and it's new stringslice
-//"holidaycalc"  Not needed after hpcalc returns a stringslice
 )
 
 /*
@@ -27,7 +25,7 @@ And having about on the command line does not work correctly.  Dont yet know why
 */
 
 
-const LastCompiled = "11 Dec 16";
+const LastCompiled = "13 Jan 16";
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
@@ -98,6 +96,7 @@ func main () {
   23 Nov 16 -- Will clear screen before calling init termbox-go, to see if that helps some of the irregularities
                  I've found with termbox-go.  It doesn't help.
   11 Dec 16 -- Fixed bug in GetRegIdx when out of range char is passed in.
+  13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
 */
 
   var INBUF,HomeDir string;
@@ -347,7 +346,7 @@ func main () {
     termbox.SetCursor(x,PromptRow);
     ans := GetInputString(x,PromptRow);
     INBUF = strings.ToUpper(ans);
-    if len(INBUF) == 0 || strings.HasPrefix(INBUF,"Q") || INBUF == "EXIT" || INBUF == "STOP" {
+    if len(INBUF) == 0 || strings.HasPrefix(INBUF,"Q") || INBUF == "EXIT" {
       fmt.Println();
       break;
     }
