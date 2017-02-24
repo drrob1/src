@@ -29,10 +29,7 @@ func main () {
 */
 
   var INBUF string;
-  const StackFileName = "RPNStack.sav";
-  var PD = [...]int {2,3,5,7,11,13,17,19,23,29};  // Prime divisors array
 
-  PrimeFactors := make([]int,0,10);
   fmt.Println(" Prime Factoring Program.  Last compiled ",LastCompiled);
   fmt.Println();
 
@@ -60,6 +57,23 @@ func main () {
     os.Exit(1);
   }
 
+
+  PrimeFactors := PrimeFactorization(N);
+
+  fmt.Print(" Prime factors for ",N," are :");
+  for _,pf := range PrimeFactors {
+    fmt.Print(pf,"  ");
+  }
+
+  fmt.Println();
+} // end of main
+
+func PrimeFactorization(N int) []int {
+
+  var PD = [...]int {2,3,5,7,11,13,17,19,23,29};  // Prime divisors array
+
+  PrimeFactors := make([]int,0,10);
+
   n := N
   for i := 0; i < len(PD); i++ {  // outer loop to sequentially test the prime divisors
     for n > 0 && n % PD[i] == 0 {
@@ -71,15 +85,9 @@ func main () {
       break;
     }
   }
+  return PrimeFactors;
 
-  fmt.Print(" Prime factors for ",N," are :");
-  for _,pf := range PrimeFactors {
-    fmt.Print(pf,"  ");
-  }
-
-  fmt.Println();
-
-} // main in primes.go
+} // PrimeFactorization
 
 
 
