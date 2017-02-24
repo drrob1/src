@@ -25,7 +25,7 @@ And having about on the command line does not work correctly.  Dont yet know why
 */
 
 
-const LastCompiled = "13 Jan 16";
+const LastCompiled = "23 Feb 17";
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
@@ -97,6 +97,7 @@ func main () {
                  I've found with termbox-go.  It doesn't help.
   11 Dec 16 -- Fixed bug in GetRegIdx when out of range char is passed in.
   13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
+  23 Feb 17 -- Added "?" as equivalent to "help"
 */
 
   var INBUF,HomeDir string;
@@ -295,7 +296,7 @@ func main () {
         sigfig = -1;
       }
       _,_ = hpcalc.GetResult(INBUF);  // Have to send this into hpcalc also
-    }else if INBUF == "HELP" {
+    }else if INBUF == "HELP" || INBUF == "?" {
       WriteHelp(StartCol+2,StackRow);
     }else if strings.HasPrefix(INBUF,"DUMP"){
       // do nothing, but don't send it into hpcalc.GetResult

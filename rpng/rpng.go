@@ -20,7 +20,7 @@ import (
 // "holidaycalc"  Supplanted by stringslice
 )
 
-const LastCompiled = "13 Jan 17";
+const LastCompiled = "23 Feb 17";
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
 var DisplayTape,stringslice []string;
@@ -82,6 +82,7 @@ func main () {
    6 Nov 16 -- Added blank lines before writing output from hpcalc.
   11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
   13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
+  23 Feb 17 -- Made "?" equivalent to "help"
 */
 
 //  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
@@ -261,7 +262,7 @@ func main () {
       AllowDumpFlag = false;
     }else if strings.HasPrefix(INBUF,"DUMP") {
        AllowDumpFlag = false;
-    }else if INBUF == "HELP" { // have more help lines to print
+    }else if INBUF == "HELP" || INBUF == "?" { // have more help lines to print
       fmt.Println(" NO,OFF,YES,ON -- Manually change a Dump flag for commands like PRIME and HEX.");
       AllowDumpFlag = false;
     }else if INBUF == "HOL" {

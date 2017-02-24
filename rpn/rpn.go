@@ -20,7 +20,7 @@ import (
 //                                                                                              "timlibg"
 )
 
-const LastCompiled = "29 Nov 16";
+const LastCompiled = "23 Feb 17";
 
 func main () {
 /*
@@ -54,6 +54,7 @@ func main () {
   22 Aug 16 -- Started conversion to Go.
   28 Aug 16 -- added makesubst capability for substitutions = -> + and ; -> *
   28 Nov 16 -- Backported stringslice return of hpcalc so can use the new, improved hpcalc.
+  23 Feb 17 -- Made "?" equivalent to "help"
 */
 
   var R float64;
@@ -135,7 +136,7 @@ func main () {
     }
 
     INBUF = strings.ToUpper(INBUF);
-    if ! (strings.HasPrefix(INBUF,"DUMP") || INBUF == "HELP") {  // don't DUMP again if just did it, or if HELP called to not scroll help off screen.
+    if ! (strings.HasPrefix(INBUF,"DUMP") || INBUF == "HELP" || INBUF == "?") {  // don't DUMP again if just did it, or if HELP called to not scroll help off screen.
       _,stringslice = hpcalc.GetResult("DUMP");   // discard result.  Only need stack dump general executed.
       for _,ss := range stringslice {
         fmt.Println(ss);
