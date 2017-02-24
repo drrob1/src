@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "29 Nov 16";
+const compiledDateTime = "23 Feb 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -64,6 +64,7 @@ const compiledDateTime = "29 Nov 16";
                  And added piover6 command.  And added CHS (change sign) command which also allows underscore, _, as the symbol for this command.
   29 Nov 16 -- Decided to reorder the statements in the main if statement of GetResults to optimize for probability of usage.  Mostly, the trig,
                  log and exp functions were moved to the bottom, and I combined conditions into compound OR conditionals for clarity of function.
+  23 Feb 17 -- Removed a redundant line in the help command.  Changed ! to | so I can implement factorial.  Help can now be called by ?.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -491,7 +492,7 @@ func GetResult(s string) (float64, []string) {
                       PushMatrixStacks();
                       Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
 //                                                                           Stack[X] = math.Exp(math.Log(2.0*Stack[X])/3.0);
-                    } else if Token.Str == "HELP" {
+                    } else if Token.Str == "HELP" || Token.Str == "?" {
                       ss = append(ss," SQRT,SQR -- X = sqrt(X) or sqr(X) register.");
                       ss = append(ss," CURT -- X = cuberoot(X).");
                       ss = append(ss," RECIP -- X = 1/X.");
@@ -500,8 +501,8 @@ func GetResult(s string) (float64, []string) {
                       ss = append(ss," STO,RCL  -- store/recall the X register to/from the memory register.");
                       ss = append(ss," `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.");
                       ss = append(ss," @, LastX -- put the value of the LASTX register back into the X register.");
-                      ss = append(ss," !,DN,ROLLDN -- roll the stack down one register.  X goes to T1.");
-                      ss = append(ss," , or UP -- stack up.  ! or DN -- stack down.");
+//                                                                    ss = append(ss," !,DN,ROLLDN -- roll the stack down one register.  X goes to T1.");
+                      ss = append(ss," , or UP -- stack up.  | or DN -- stack down.");
                       ss = append(ss," Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.");
                       ss = append(ss," EXP,LN -- evaluate exp(X) or ln(X) and put result back into X.");
                       ss = append(ss," ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X");
@@ -546,7 +547,7 @@ func GetResult(s string) (float64, []string) {
                     }else if Token.Str == "," || Token.Str == "UP" {
                       PushMatrixStacks();
                       STACKUP();
-                    }else if Token.Str == "!" || Token.Str == "DN" {  // StackDn(), not StackRolldn
+                    }else if Token.Str == "|" || Token.Str == "DN" {  // StackDn(), not StackRolldn
                       PushMatrixStacks();
                       Stack[X] = Stack[Y];
                       STACKDN();
