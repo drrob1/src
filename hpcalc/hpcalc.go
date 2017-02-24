@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "23 Feb 17";
+const compiledDateTime = "24 Feb 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -65,6 +65,7 @@ const compiledDateTime = "23 Feb 17";
   29 Nov 16 -- Decided to reorder the statements in the main if statement of GetResults to optimize for probability of usage.  Mostly, the trig,
                  log and exp functions were moved to the bottom, and I combined conditions into compound OR conditionals for clarity of function.
   23 Feb 17 -- Removed a redundant line in the help command.  Changed ! to | so I can implement factorial.  Help can now be called by ?.
+  24 Feb 17 -- Added PrimeFactorization
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -316,7 +317,56 @@ func IsPrime(real float64) bool {  // The real input is to allow from stack.
   return true;
 } // IsPrime
 
+// ------------------------------------------------- PrimeFactorization ---------------------------------
+func PrimeFactorization(N int) []int {
+  var PD = [...]int {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47};  // Prime divisors array
 
+  PrimeFactors := make([]int,0,10);
+
+  n := N
+  for i := 0; i < len(PD); i++ {  // outer loop to sequentially test the prime divisors
+    for n > 0 && n % PD[i] == 0 {
+      PrimeFactors = append(PrimeFactors,PD[i]);
+      n = n/PD[i];
+    }
+    if n == 0 || IsPrimeInt(n) {
+      PrimeFactors = append(PrimeFactors,n);
+      break;
+    }
+  }
+  return PrimeFactors;
+
+} // PrimeFactorization
+
+
+// ------------------------------------------------- IsPrimeInt -----------------
+func IsPrimeInt(n int) bool {
+
+  var t uint64 = 3;
+
+  Uint := uint64(n);
+
+  if Uint == 0 || Uint == 1 || Uint %2 == 0 {
+    return false
+  } else if Uint == 2 || Uint == 3 {
+    return true
+  }
+
+
+  sqrt := math.Sqrt(float64(Uint));
+  UintSqrt := uint64(sqrt);
+
+  for t <= UintSqrt {
+    if Uint % t == 0 {
+      return false;
+    }
+    t += 2;
+  }
+  return true;
+} // IsPrimeInt
+
+
+// ---------------------------------------- PWRI -------------------------------------------------
 func PWRI(R float64, I int) float64 {
 /*
 -------------------------- PWRI -----------------------------------
@@ -380,7 +430,7 @@ func RedoMatrixStacks() {     // RollUp uperation for main stack
 //--------------------------------------------------------
 //--------------------------------------------------------
 
-//-------------------------------------------------------- HCF
+//-------------------------------------------------------- HCF -------------------------------------
 func HCF(a,b int) int {
 // a = bt + r, then hcf(a,b) = hcf(b,r)
   var r,a1,b1 int;
@@ -521,7 +571,7 @@ func GetResult(s string) (float64, []string) {
                       ss = append(ss," HCF -- Push HCF(Y,X) onto stack without removing Y or X.");
                       ss = append(ss," HOL -- Display holidays.");
                       ss = append(ss," UNDO, REDO -- entire stack.  More comprehensive than lastx.");
-                      ss = append(ss," Prime -- evaluates X.");
+                      ss = append(ss," Prime, PrimeFactors -- evaluates X.");
                       ss = append(ss," Adjust -- X reg *100, Round, /100");
 		      ss = append(ss," Nextafter -- Not sure what this does yet.  Reference factor for the fcn is 1e9.");
 		      ss = append(ss," SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
@@ -721,6 +771,16 @@ func GetResult(s string) (float64, []string) {
                       PushMatrixStacks();
                       LastX = Stack[X];
                       Stack[X] *= 180.0/PI;
+                    }else if strings.HasPrefix(Token.Str,"PRIMEFAC") {
+                                                               // Intended for PrimeFactors or PrimeFactorization
+                      PushMatrixStacks();
+                      N := int(Round(Stack[X]));
+                      PrimeFactors := PrimeFactorization(N);
+
+                      for _,pf := range PrimeFactors {
+                        ss = append(ss,fmt.Sprintf("%d",pf));
+                      }
+
                     } else {
                       ss = append(ss,fmt.Sprintf(" %s is an unrecognized command.",Token.Str));
                     }  // main text command selection if statement

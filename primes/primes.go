@@ -70,7 +70,7 @@ func main () {
 
 func PrimeFactorization(N int) []int {
 
-  var PD = [...]int {2,3,5,7,11,13,17,19,23,29};  // Prime divisors array
+  var PD = [...]int {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47};  // Prime divisors array
 
   PrimeFactors := make([]int,0,10);
 
