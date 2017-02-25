@@ -60,13 +60,15 @@ func main () {
 
   PrimeFactors := PrimeFactorization(N);
 
-  fmt.Print(" Prime factors for ",N," are :");
+  fmt.Print(" Prime factors for ",N," are : ");
   for _,pf := range PrimeFactors {
     fmt.Print(pf,"  ");
   }
 
   fmt.Println();
 } // end of main
+
+// -------------------------------------------- PrimeFactorization ------------------------------
 
 func PrimeFactorization(N int) []int {
 
@@ -91,8 +93,8 @@ func PrimeFactorization(N int) []int {
 
 
 
-// ------------------------------------------------- IsPrimeInt -----------------
-func IsPrimeInt(n int) bool {
+// ------------------------------------------------- IsPrimeInt64 -----------------
+func IsPrimeInt64(n int) bool {
 
   var t uint64 = 3;
 
@@ -107,6 +109,33 @@ func IsPrimeInt(n int) bool {
 
   sqrt := math.Sqrt(float64(Uint));
   UintSqrt := uint64(sqrt);
+
+  for t <= UintSqrt {
+    if Uint % t == 0 {
+      return false;
+    }
+    t += 2;
+  }
+  return true;
+} // IsPrimeInt64
+
+
+// ------------------------------------------------- IsPrimeInt -----------------
+func IsPrimeInt(n int) bool {
+
+  var t uint = 3;
+
+  Uint := uint(n);
+
+  if Uint == 0 || Uint == 1 || Uint %2 == 0 {
+    return false
+  } else if Uint == 2 || Uint == 3 {
+    return true
+  }
+
+
+  sqrt := math.Sqrt(float64(Uint));
+  UintSqrt := uint(sqrt);
 
   for t <= UintSqrt {
     if Uint % t == 0 {
