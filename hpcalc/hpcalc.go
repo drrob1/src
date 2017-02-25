@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "24 Feb 17";
+const compiledDateTime = "25 Feb 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -416,7 +416,8 @@ func UndoMatrixStacks() {    // RollDown operation for main stack
   StacksMatrixDown();
 
   StackUndoMatrix[Top] = TempStack;
-}; // UndoMatrixStacks  IE RollDown
+} // UndoMatrixStacks  IE RollDown
+
 //-------------------------------------------------------- RedoMatrixStacks
 func RedoMatrixStacks() {     // RollUp uperation for main stack
   TempStack := Stack;
@@ -427,8 +428,6 @@ func RedoMatrixStacks() {     // RollUp uperation for main stack
   StackUndoMatrix[Bottom] = TempStack;
 }  // RedoMatrixStacks  IE RollUp
 
-//--------------------------------------------------------
-//--------------------------------------------------------
 
 //-------------------------------------------------------- HCF -------------------------------------
 func HCF(a,b int) int {
@@ -777,9 +776,11 @@ func GetResult(s string) (float64, []string) {
                       N := int(Round(Stack[X]));
                       PrimeFactors := PrimeFactorization(N);
 
+                      stringslice := make([]string,0,10);
                       for _,pf := range PrimeFactors {
-                        ss = append(ss,fmt.Sprintf("%d",pf));
+                        stringslice = append(stringslice,fmt.Sprintf("%d",pf));
                       }
+                      ss = append(ss,strings.Join(stringslice,", "));
 
                     } else {
                       ss = append(ss,fmt.Sprintf(" %s is an unrecognized command.",Token.Str));
