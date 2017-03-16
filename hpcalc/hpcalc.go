@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "25 Feb 17";
+const compiledDateTime = "16 Mar 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -66,6 +66,7 @@ const compiledDateTime = "25 Feb 17";
                  log and exp functions were moved to the bottom, and I combined conditions into compound OR conditionals for clarity of function.
   23 Feb 17 -- Removed a redundant line in the help command.  Changed ! to | so I can implement factorial.  Help can now be called by ?.
   24 Feb 17 -- Added PrimeFactorization
+  16 Mar 17 -- Rephrased help text for vol command.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -546,7 +547,7 @@ func GetResult(s string) (float64, []string) {
                       ss = append(ss," CURT -- X = cuberoot(X).");
                       ss = append(ss," RECIP -- X = 1/X.");
                       ss = append(ss," CHS,_ -- Change Sign,  X = -1 * X.");
-                      ss = append(ss," VOL -- X = estimated diameter for a given volume, assuming a sphere.");
+                      ss = append(ss," VOL -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.");
                       ss = append(ss," STO,RCL  -- store/recall the X register to/from the memory register.");
                       ss = append(ss," `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.");
                       ss = append(ss," @, LastX -- put the value of the LASTX register back into the X register.");
