@@ -1,4 +1,4 @@
-// cal.go
+// calgo.go
 // Copyright (C) 1987-2016  Robert Solomon MD.  All rights reserved.
 
 package main

@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "16 Mar 17";
+const compiledDateTime = "19 Mar 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -67,6 +67,7 @@ const compiledDateTime = "16 Mar 17";
   23 Feb 17 -- Removed a redundant line in the help command.  Changed ! to | so I can implement factorial.  Help can now be called by ?.
   24 Feb 17 -- Added PrimeFactorization
   16 Mar 17 -- Rephrased help text for vol command.
+  19 Mar 17 -- Made LOG a synonym for LN.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -554,7 +555,7 @@ func GetResult(s string) (float64, []string) {
 //                                                                    ss = append(ss," !,DN,ROLLDN -- roll the stack down one register.  X goes to T1.");
                       ss = append(ss," , or UP -- stack up.  | or DN -- stack down.");
                       ss = append(ss," Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.");
-                      ss = append(ss," EXP,LN -- evaluate exp(X) or ln(X) and put result back into X.");
+                      ss = append(ss," EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.");
                       ss = append(ss," ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X");
                       ss = append(ss," **  -- ABS(Y) to the X power, put result in X and pop stack 1 reg.");
                       ss = append(ss," INT, TRUNC, ROUND, CEIL, FRAC, PI, PIOVER6 -- do what their names suggest.");
@@ -735,7 +736,7 @@ func GetResult(s string) (float64, []string) {
                       PushMatrixStacks();
                       LastX = Stack[X];
                       Stack[X] = math.Exp(Stack[X]);
-                    }else if Token.Str == "LN" {
+                    }else if Token.Str == "LN" || Token.Str == "LOG" {
                       PushMatrixStacks();
                       LastX = Stack[X];
                       Stack[X] = math.Log(math.Abs(Stack[X]));
