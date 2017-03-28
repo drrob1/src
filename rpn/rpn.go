@@ -20,7 +20,7 @@ import (
 //                                                                                              "timlibg"
 )
 
-const LastCompiled = "23 Feb 17";
+const LastCompiled = "26 Mar 17";
 
 func main () {
 /*
@@ -55,6 +55,7 @@ func main () {
   28 Aug 16 -- added makesubst capability for substitutions = -> + and ; -> *
   28 Nov 16 -- Backported stringslice return of hpcalc so can use the new, improved hpcalc.
   23 Feb 17 -- Made "?" equivalent to "help"
+  26 Mar 17 -- Changed startup message to include written in Go.
 */
 
   var R float64;
@@ -94,7 +95,7 @@ func main () {
 
   hpcalc.PushMatrixStacks();
 
-  fmt.Println(" HP-type RPN calculator started.  Last compiled ",LastCompiled);
+  fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ",LastCompiled);
   fmt.Println();
 
   scanner := bufio.NewScanner(os.Stdin)

@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "19 Mar 17";
+const compiledDateTime = "28 Mar 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -68,6 +68,7 @@ const compiledDateTime = "19 Mar 17";
   24 Feb 17 -- Added PrimeFactorization
   16 Mar 17 -- Rephrased help text for vol command.
   19 Mar 17 -- Made LOG a synonym for LN.
+  26 Mar 17 -- Fixed help text regarding ^ and ** operators.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -557,7 +558,7 @@ func GetResult(s string) (float64, []string) {
                       ss = append(ss," Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.");
                       ss = append(ss," EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.");
                       ss = append(ss," ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X");
-                      ss = append(ss," **  -- ABS(Y) to the X power, put result in X and pop stack 1 reg.");
+                      ss = append(ss," **  -- Y to the X power, put result in X and pop stack 1 reg, using Pow()");
                       ss = append(ss," INT, TRUNC, ROUND, CEIL, FRAC, PI, PIOVER6 -- do what their names suggest.");
                       ss = append(ss," MOD -- evaluate Y MOD X, put result in X and pop stack 1 reg.");
 		      ss = append(ss," %   -- does XY/100, places result in X.  Leaves Y alone.");
