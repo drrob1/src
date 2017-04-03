@@ -11,7 +11,7 @@ import (
         "holidaycalc"
 )
 
-const compiledDateTime = "28 Mar 17";
+const compiledDateTime = "4 Apr 17";
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
   REVISION HISTORY
@@ -69,6 +69,7 @@ const compiledDateTime = "28 Mar 17";
   16 Mar 17 -- Rephrased help text for vol command.
   19 Mar 17 -- Made LOG a synonym for LN.
   26 Mar 17 -- Fixed help text regarding ^ and ** operators.
+   4 Apr 17 -- Added BEFORE command to use NextAfter towards 0.  And made "AFTER" a synonym for NEXTAFTER.
 */
 
 const HeaderDivider = "+--------------------------------------------------+";
@@ -520,10 +521,14 @@ func GetResult(s string) (float64, []string) {
                       Stack[X] *= 100;
 		      Stack[X]  = Round(Stack[X]); // Decided to use round instead of math.Ceil(Stack[X]) in case error is .000001 instead of .9999997
 		      Stack[X] /= 100;
-		    } else if strings.HasPrefix(Token.Str,"NEXT") {  // intended for math.Nextafter 
+		    } else if strings.HasPrefix(Token.Str,"NEXT") || Token.Str == "AFTER" {  // intended for math.Nextafter 
                       LastX = Stack[X];
                       PushMatrixStacks();
                       Stack[X] = math.Nextafter(LastX,1e9);
+		    } else if Token.Str == "BEFORE" {  // intended for math.Nextafter 
+                      LastX = Stack[X];
+                      PushMatrixStacks();
+                      Stack[X] = math.Nextafter(LastX,0);
 		    } else if strings.HasPrefix(Token.Str,"SIG") || strings.HasPrefix(Token.Str,"FIX") {  // SigFigN command, or FIX
                       ch := Token.Str[len(Token.Str)-1];  // ie, the last character.
                       sigfig = GetRegIdx(ch);
