@@ -19,13 +19,7 @@ import (
 "tokenize"
 )
 
-/*
-It seems that up and dn commands of any kind corrupt the output.  But it works in rpng, just not here.
-And having about on the command line does not work correctly.  Dont yet know why.
-*/
-
-
-const LastCompiled = "23 Feb 17";
+const LastCompiled = "4 Apr 17";
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64;   // 0 ..  9, a ..  z
@@ -98,6 +92,8 @@ func main () {
   11 Dec 16 -- Fixed bug in GetRegIdx when out of range char is passed in.
   13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
   23 Feb 17 -- Added "?" as equivalent to "help"
+   4 Apr 17 -- Noticed that HardClearScreen is called before MaxRow is set.  I fixed this by moving the Size call.
+               And I commented out a fmt.Println() call that didn't do anything anyway, and is ignored on Windows.
 */
 
   var INBUF,HomeDir string;
@@ -115,7 +111,8 @@ func main () {
 
   ClearScreen(); // ClearScreen before termbox.init fcn, to see if this helps.
   fmt.Println();
-  fmt.Println("  I hope this helps.  But it likely won't.  ");
+ //  fmt.Println("  I hope this helps.  But it likely won't.  ");  It didn't help.  I'm commenting it
+ //  out, finally.
   fmt.Println();
   fmt.Println();
 
@@ -127,24 +124,24 @@ func main () {
     panic(termerr);
   }
   defer termbox.Close();
-  e := termbox.Clear(Black,Black);
-  check(e);
-  e = termbox.Flush();
-  check(e);
-  HardClearScreen();  // I think there is a bug in termbox.
-
-  stringslice = make([]string,0,35);
-  sigfig = -1;  // now only applies to WriteRegToScreen
-  MaxCol,MaxRow = termbox.Size();
-  StartRow := 0;
-  StartCol := 0;
-  outputmode = 0;
-
   BrightYellow = termbox.ColorYellow | termbox.AttrBold;
   BrightCyan = termbox.ColorCyan | termbox.AttrBold;
   Black = termbox.ColorBlack;
   err = termbox.Clear(BrightYellow,Black);
   check(err);
+  e := termbox.Clear(Black,Black);
+                         check(e);
+  e = termbox.Flush();
+                         check(e);
+  MaxCol,MaxRow = termbox.Size();
+  HardClearScreen();  // I think there is a bug in termbox.
+
+  stringslice = make([]string,0,35);
+  sigfig = -1;  // now only applies to WriteRegToScreen
+  StartRow := 0;
+  StartCol := 0;
+  outputmode = 0;
+
 
   if runtime.GOOS == "linux" {
     HomeDir = os.Getenv("HOME");

@@ -580,7 +580,7 @@ func GetResult(s string) (float64, []string) {
                       ss = append(ss," UNDO, REDO -- entire stack.  More comprehensive than lastx.");
                       ss = append(ss," Prime, PrimeFactors -- evaluates X.");
                       ss = append(ss," Adjust -- X reg *100, Round, /100");
-		      ss = append(ss," Nextafter -- Not sure what this does yet.  Reference factor for the fcn is 1e9.");
+		      ss = append(ss," NextAfter,Before -- Reference factor for the fcn is 1e9 or 0.");
 		      ss = append(ss," SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
                       ss = append(ss," EXIT,STOP,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.");
                       ss = append(ss,fmt.Sprintf(" last compiled hpcalc %s.",compiledDateTime));
