@@ -277,7 +277,7 @@ func PRMONTH(MN int) { // Originally intended to print one month per page.  Not 
                                       check(err,"");
     _, err = OutCal12file.WriteString("      ");
                                       check(err,"");
-    for I := 1; I < 6; I++ { // write out Monday .. Friday
+    for I := 1; I < 6; I++ { // write out Monday ..  Friday
       _, err = OutCal12file.WriteString(" ");
                                         check(err,"");
       _, err = OutCal12file.WriteString(EntireYear[MN] [W] [I].DateStr);
@@ -316,7 +316,7 @@ func WrMonthForXL(MN int) {
     err = OutCal12file.WriteByte(HorizTab); // <tab>, or horizontal tab <HT>, to confirm that this does work
                                                 check(err,"");
 
-    for I := 1; I < 6; I++ {                                  // write out Monday .. Friday
+    for I := 1; I < 6; I++ {                                  // write out Monday ..  Friday
 
       _, err = OutCal12file.WriteString(EntireYear[MN][W][I].DateStr);
                                                 check(err,"");
@@ -426,6 +426,11 @@ func WrOnePageYear() {
 func SetMonthNumber(token tokenize.TokenType) int {
   var RequestedMonthNumber int;
 
+
+  Printf_tb(0,LineNum,BrightYellow,Black,"In SetMonthNumber and token.State is %d, token.Str is %s\n",token.State,token.Str);
+  LineNum++
+
+  RequestedMonthNumber = CurrentMonthNumber;
   if token.State == tokenize.DGT {
     if token.Isum > 0 && token.Isum <= 12 {
       RequestedMonthNumber = token.Isum;
@@ -433,14 +438,19 @@ func SetMonthNumber(token tokenize.TokenType) int {
       RequestedMonthNumber = CurrentMonthNumber;
     }
   }else if token.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
+    Print_tb(0,LineNum,BrightYellow,Black,"In SetMonthNumber and token.State is ALLELSE");
+    LineNum++
+    Printf_tb(0,LineNum,BrightYellow,Black," token.Str is %s",token.Str);
+    LineNum++
     for c := JAN; c < NumOfMonthsInYear; c++ {
+      Printf_tb(0,LineNum,BrightYellow,Black," MONNAMSHORT[%d] is %s.",c,MONNAMSHORT[c]);
+      LineNum++
+//                                                               if strings.Contains(MONNAMSHORT[c],token.Str) {
       if strings.HasPrefix(MONNAMSHORT[c],token.Str) {
         RequestedMonthNumber = c+1;
         break;
       }
     }
-  }else{
-    RequestedMonthNumber = CurrentMonthNumber;
   }
   return RequestedMonthNumber;
 }
@@ -465,6 +475,51 @@ func main() {
     os.Exit(0);
 }
 
+  MONNAMSHORT[JAN] = "JANUARY";
+  MONNAMSHORT[FEB] = "FEBRUARY";
+  MONNAMSHORT[MAR] = "MARCH";
+  MONNAMSHORT[APR] = "APRIL";
+  MONNAMSHORT[MAY] = "MAY";
+  MONNAMSHORT[JUN] = "JUNE";
+  MONNAMSHORT[JUL] = "JULY";
+  MONNAMSHORT[AUG] = "AUGUST";
+  MONNAMSHORT[SEP] = "SEPTEMBER";
+  MONNAMSHORT[OCT] = "OCTOBER";
+  MONNAMSHORT[NOV] = "NOVEMBER";
+  MONNAMSHORT[DCM] = "DECEMBER";
+
+  MONNAMLONG[JAN] = "    J A N U A R Y        ";
+  MONNAMLONG[FEB] = "   F E B R U A R Y       ";
+  MONNAMLONG[MAR] = "      M A R C H          ";
+  MONNAMLONG[APR] = "      A P R I L          ";
+  MONNAMLONG[MAY] = "        M A Y            ";
+  MONNAMLONG[JUN] = "       J U N E           ";
+  MONNAMLONG[JUL] = "       J U L Y           ";
+  MONNAMLONG[AUG] = "     A U G U S T         ";
+  MONNAMLONG[SEP] = "  S E P T E M B E R      ";
+  MONNAMLONG[OCT] = "    O C T O B E R        ";
+  MONNAMLONG[NOV] = "   N O V E M B E R       ";
+  MONNAMLONG[DCM] = "   D E C E M B E R       ";
+
+  DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY";
+  DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY";
+
+  DAYSNAMSHORT = "  S  M  T  W TH  F  S    ";
+
+
+// DIM = Days In Month
+  DIM[JAN] = 31;
+  DIM[MAR] = 31;
+  DIM[APR] = 30;
+  DIM[MAY] = 31;
+  DIM[JUN] = 30;
+  DIM[JUL] = 31;
+  DIM[AUG] = 31;
+  DIM[SEP] = 30;
+  DIM[OCT] = 31;
+  DIM[NOV] = 30;
+  DIM[DCM] = 31;
+
   PROMPT = " Enter Year : ";
   Ext1Default := ".out";
   Ext12Default := ".xls";
@@ -473,39 +528,17 @@ func main() {
   commandline := getcommandline.GetCommandLineString();
   cleancommandline := filepath.Clean(commandline);
   tokenize.INITKN(cleancommandline);
-  YearToken,EOLflag := tokenize.GETTKN();
+  YearToken,_ := tokenize.GETTKN();
   if YearToken.State != tokenize.DGT {
     year,_,_ = timlibg.TIME2MDY();
   }else{
     year = YearToken.Isum;
   }
 
-  if year < 40 {
-    year += 2000;
-  }else if year < 100 {
-    year += 1900;
-  }else if year < 1900 || year > 2100 {
-    fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n");
-    os.Exit(1)
-  }
-  YEARSTR = strconv.Itoa(year);
+  Printf_tb(0,LineNum,BrightCyan,Black," Calendar Printing Program written in Go.  Last compiled %s",LastCompiled);
+  LineNum++
 
-  if EOLflag {
-    RequestedMonthNumber = CurrentMonthNumber;
-  }else{
-    RequestedMonthNumberToken,_ := tokenize.GETTKN();
-    if RequestedMonthNumberToken.State == tokenize.DGT { // Allow number for month
-      if RequestedMonthNumberToken.Isum > 0 && RequestedMonthNumberToken.Isum <= 12 {
-        RequestedMonthNumber = RequestedMonthNumberToken.Isum;
-      }else{ // a number out of range was entered on the command line.
-        RequestedMonthNumber = CurrentMonthNumber;
-      }
-    }else if RequestedMonthNumberToken.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
-       RequestedMonthNumber = SetMonthNumber(RequestedMonthNumberToken);
-    } else {  // maybe got delim, or maybe nothing else is on the command line.
-        RequestedMonthNumber = CurrentMonthNumber;
-    }
-  }
+
   termerr := termbox.Init();
   if termerr != nil {
     log.Println(" TermBox init failed.");
@@ -518,9 +551,28 @@ func main() {
   e = termbox.Flush();
   check(e,"");
 
+  if year < 40 {
+    year += 2000;
+  }else if year < 100 {
+    year += 1900;
+  }else if year < 1900 || year > 2100 {
+    fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n");
+    os.Exit(1)
+  }
+  YEARSTR = strconv.Itoa(year);
 
-  Printf_tb(0,LineNum,BrightCyan,Black," Calendar Printing Program written in Go.  Last compiled %s",LastCompiled);
-  LineNum++
+  RequestedMonthNumber = CurrentMonthNumber;
+  RequestedMonthNumberToken,EOLflag := tokenize.GETTKN();
+
+  if !EOLflag {
+    if RequestedMonthNumberToken.State == tokenize.DGT { // Allow number for month
+      if RequestedMonthNumberToken.Isum > 0 && RequestedMonthNumberToken.Isum <= 12 {
+        RequestedMonthNumber = RequestedMonthNumberToken.Isum;
+      }
+    }else if RequestedMonthNumberToken.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
+       RequestedMonthNumber = SetMonthNumber(RequestedMonthNumberToken);
+    }
+  } 
 
   BaseFilename := YearToken.Str;
   Cal1Filename = BaseFilename + "_cal1" + Ext1Default;
@@ -573,52 +625,6 @@ func main() {
   }
 
 
-
-  MONNAMSHORT[JAN] = "JANUARY";
-  MONNAMSHORT[FEB] = "FEBRUARY";
-  MONNAMSHORT[MAR] = "MARCH";
-  MONNAMSHORT[APR] = "APRIL";
-  MONNAMSHORT[MAY] = "MAY";
-  MONNAMSHORT[JUN] = "JUNE";
-  MONNAMSHORT[JUL] = "JULY";
-  MONNAMSHORT[AUG] = "AUGUST";
-  MONNAMSHORT[SEP] = "SEPTEMBER";
-  MONNAMSHORT[OCT] = "OCTOBER";
-  MONNAMSHORT[NOV] = "NOVEMBER";
-  MONNAMSHORT[DCM] = "DECEMBER";
-
-  MONNAMLONG[JAN] = "    J A N U A R Y        ";
-  MONNAMLONG[FEB] = "   F E B R U A R Y       ";
-  MONNAMLONG[MAR] = "      M A R C H          ";
-  MONNAMLONG[APR] = "      A P R I L          ";
-  MONNAMLONG[MAY] = "        M A Y            ";
-  MONNAMLONG[JUN] = "       J U N E           ";
-  MONNAMLONG[JUL] = "       J U L Y           ";
-  MONNAMLONG[AUG] = "     A U G U S T         ";
-  MONNAMLONG[SEP] = "  S E P T E M B E R      ";
-  MONNAMLONG[OCT] = "    O C T O B E R        ";
-  MONNAMLONG[NOV] = "   N O V E M B E R       ";
-  MONNAMLONG[DCM] = "   D E C E M B E R       ";
-
-  DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY";
-  DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY";
-
-  DAYSNAMSHORT = "  S  M  T  W TH  F  S    ";
-
-
-// DIM = Days In Month
-  DIM[JAN] = 31;
-  DIM[MAR] = 31;
-  DIM[APR] = 30;
-  DIM[MAY] = 31;
-  DIM[JUN] = 30;
-  DIM[JUL] = 31;
-  DIM[AUG] = 31;
-  DIM[SEP] = 30;
-  DIM[OCT] = 31;
-  DIM[NOV] = 30;
-  DIM[DCM] = 31;
-
   MN = JAN;
 
   JulDate := timlibg.JULIAN(1,1,year);
@@ -667,6 +673,14 @@ func main() {
 // Now to do the special processing I envision for this pgm.  So far, the changes are minor.
 // First, time to debug what I've done already before I proceed.
 
+
+
+  Printf_tb(0,LineNum,BrightYellow,Black,"In main and token.State is %d, token.Str is %s\n",RequestedMonthNumberToken.State,RequestedMonthNumberToken.Str);
+  LineNum++
+  Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
+  LineNum++
+
+
   Print_tb(0,LineNum,BrightYellow,Black," Hit <enter> to continue.");
   LineNum++
   termbox.SetCursor(0,LineNum);
@@ -690,7 +704,6 @@ func check(e error, msg string) {
 
 /*
 type FileInfo
-
 A FileInfo describes a file and is returned by Stat and Lstat.
 
 type FileInfo interface {
@@ -702,14 +715,12 @@ type FileInfo interface {
         Sys() interface{}   // underlying data source (can return nil)
 }
 
-func Lstat
 func Lstat(name string) (FileInfo, error)
 
-Lstat returns a FileInfo describing the named file. If the file is a symbolic link, the returned FileInfo describes the symbolic link. Lstat makes no attempt to follow the link. If there is an 
+Lstat returns a FileInfo describing the named file.  If the file is a symbolic link, the returned FileInfo describes the symbolic link.  Lstat makes no attempt to follow the link.  If there is an 
 error, it will be of type *PathError.
 
 
-func Stat
 func Stat(name string) (FileInfo, error)
 
 
