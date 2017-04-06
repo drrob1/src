@@ -426,11 +426,7 @@ func WrOnePageYear() {
 func SetMonthNumber(token tokenize.TokenType) int {
   var RequestedMonthNumber int;
 
-
-  Printf_tb(0,LineNum,BrightYellow,Black,"In SetMonthNumber and token.State is %d, token.Str is %s\n",token.State,token.Str);
-  LineNum++
-
-  RequestedMonthNumber = CurrentMonthNumber;
+  RequestedMonthNumber = CurrentMonthNumber - 1;
   if token.State == tokenize.DGT {
     if token.Isum > 0 && token.Isum <= 12 {
       RequestedMonthNumber = token.Isum;
@@ -438,16 +434,10 @@ func SetMonthNumber(token tokenize.TokenType) int {
       RequestedMonthNumber = CurrentMonthNumber;
     }
   }else if token.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
-    Print_tb(0,LineNum,BrightYellow,Black,"In SetMonthNumber and token.State is ALLELSE");
-    LineNum++
-    Printf_tb(0,LineNum,BrightYellow,Black," token.Str is %s",token.Str);
-    LineNum++
     for c := JAN; c < NumOfMonthsInYear; c++ {
-      Printf_tb(0,LineNum,BrightYellow,Black," MONNAMSHORT[%d] is %s.",c,MONNAMSHORT[c]);
-      LineNum++
 //                                                               if strings.Contains(MONNAMSHORT[c],token.Str) {
       if strings.HasPrefix(MONNAMSHORT[c],token.Str) {
-        RequestedMonthNumber = c+1;
+        RequestedMonthNumber = c;
         break;
       }
     }
@@ -535,22 +525,6 @@ func main() {
     year = YearToken.Isum;
   }
 
-  Printf_tb(0,LineNum,BrightCyan,Black," Calendar Printing Program written in Go.  Last compiled %s",LastCompiled);
-  LineNum++
-
-
-  termerr := termbox.Init();
-  if termerr != nil {
-    log.Println(" TermBox init failed.");
-    panic(termerr);
-  }
-  defer termbox.Close();
-  MaxCol,MaxRow = termbox.Size();
-  e := termbox.Clear(Black,Black);
-  check(e,"");
-  e = termbox.Flush();
-  check(e,"");
-
   if year < 40 {
     year += 2000;
   }else if year < 100 {
@@ -560,6 +534,23 @@ func main() {
     os.Exit(1)
   }
   YEARSTR = strconv.Itoa(year);
+
+  termerr := termbox.Init();
+  if termerr != nil {
+    log.Println(" TermBox init failed.");
+    panic(termerr);
+  }
+  defer termbox.Close();
+  MaxCol,MaxRow = termbox.Size();
+  MaxCol--   // These numbers are too large by 1
+  MaxRow--   // So decrement them.
+  e := termbox.Clear(Black,Black);
+  check(e,"");
+  e = termbox.Flush();
+  check(e,"");
+
+  Printf_tb(0,LineNum,BrightCyan,Black," Calendar Printing Program written in Go.  Last compiled %s",LastCompiled);
+  LineNum++
 
   RequestedMonthNumber = CurrentMonthNumber;
   RequestedMonthNumberToken,EOLflag := tokenize.GETTKN();
@@ -572,7 +563,7 @@ func main() {
     }else if RequestedMonthNumberToken.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
        RequestedMonthNumber = SetMonthNumber(RequestedMonthNumberToken);
     }
-  } 
+  }
 
   BaseFilename := YearToken.Str;
   Cal1Filename = BaseFilename + "_cal1" + Ext1Default;
@@ -681,10 +672,10 @@ func main() {
   LineNum++
 
 
-  Print_tb(0,LineNum,BrightYellow,Black," Hit <enter> to continue.");
-  LineNum++
-  termbox.SetCursor(0,LineNum);
-  _ = GetInputString(0,LineNum);
+  Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
+//                                                                                              LineNum++
+  termbox.SetCursor(26,MaxRow);
+  _ = GetInputString(26,MaxRow);
 
 } // end main func
 
