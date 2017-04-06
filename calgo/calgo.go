@@ -43,7 +43,7 @@ import (
   "tokenize"
 )
 
-  const LastCompiled = "5 Apr 17";
+  const LastCompiled = "9 Apr 17";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
@@ -346,7 +346,7 @@ func WrMonthForXL(MN int) {
 } // END WrMonthForXL
 
 
-// -------------------------------------- WrOnePageYear ----------------------------------
+                    // -------------------------------------- WrOnePageYear ----------------------------------
 
 func WrOnePageYear() {
 
@@ -419,6 +419,35 @@ func WrOnePageYear() {
 
 
 } // WrOnePageYear
+
+       // ----------------------------- ShowMonth ---------------------------------
+func ShowMonth(col,row,mn int) {
+       // col is the starting col for this month number.  Will likely be either 0, 25 or 50.  
+       // Each week is 21 char wide (3 x 7), and 4 spaces btwn months.
+       // Print_tb should be able to handle this easily.  I have not yet coded the change in colors for a particular day.  I may process the holidays month by month or entire year.
+       // And I want to have today's date be shown differently, also.
+      // type DateCell struct { DateStr string; ch1,ch2 rune; fg,bg termbox.Attribute; }
+     // func Printf_tb(x,y int, fg,bg termbox.Attribute, format string, args ...interface{})
+
+  y := row;
+
+  Print_tb(col,y,BrightCyan,Black,MONNAMLONG[mn]);
+  y++
+  Print_tb(col,y,BrightCyan,Black,DAYSNAMSHORT);
+  y++
+  for W = 0; W < 6; W++ { // week number
+    x := col;
+    for I := 0; I < 7; I++ { // day of week positions for 1st month
+      Print_tb(x,y,EntireYear[mn][W][I].fg,EntireYear[mn][W][I].bg,EntireYear[mn][W][I].DateStr);
+      x += 3;
+    } // ENDFOR I
+    y++
+  }
+
+
+
+} // END ShowMonth
+
 
 
 // ----------------------------- SetMonthNumber ----------------------------------
@@ -552,7 +581,7 @@ func main() {
   Printf_tb(0,LineNum,BrightCyan,Black," Calendar Printing Program written in Go.  Last compiled %s",LastCompiled);
   LineNum++
 
-  RequestedMonthNumber = CurrentMonthNumber;
+  RequestedMonthNumber = CurrentMonthNumber - 1;
   RequestedMonthNumberToken,EOLflag := tokenize.GETTKN();
 
   if !EOLflag {
@@ -670,10 +699,20 @@ func main() {
   LineNum++
   Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
   LineNum++
+  LineNum++
+
+
+// I didn't yet do the date highlighting for holidays and today.
+
+
+  ShowMonth(0,LineNum,RequestedMonthNumber);
+  ShowMonth(25,LineNum,RequestedMonthNumber+1);
+  ShowMonth(50,LineNum,RequestedMonthNumber+2);
+  ShowMonth(75,LineNum,RequestedMonthNumber+3);
+
 
 
   Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
-//                                                                                              LineNum++
   termbox.SetCursor(26,MaxRow);
   _ = GetInputString(26,MaxRow);
 
@@ -687,47 +726,6 @@ func check(e error, msg string) {
     panic(e);
   }
 }
-
-
-
-
-//END calgo
-
-/*
-type FileInfo
-A FileInfo describes a file and is returned by Stat and Lstat.
-
-type FileInfo interface {
-        Name() string       // base name of the file
-        Size() int64        // length in bytes for regular files; system-dependent for others
-        Mode() FileMode     // file mode bits
-        ModTime() time.Time // modification time
-        IsDir() bool        // abbreviation for Mode().IsDir()
-        Sys() interface{}   // underlying data source (can return nil)
-}
-
-func Lstat(name string) (FileInfo, error)
-
-Lstat returns a FileInfo describing the named file.  If the file is a symbolic link, the returned FileInfo describes the symbolic link.  Lstat makes no attempt to follow the link.  If there is an 
-error, it will be of type *PathError.
-
-
-func Stat(name string) (FileInfo, error)
-
-
-type PathError -> PathError records an error and the operation and file path that caused it.
-
-type PathError struct {
-        Op   string
-        Path string
-        Err  error
-}
-
-func (*PathError) Error
-
-func (e *PathError) Error() string
-*/
-
 
 // --------------------------------------------------- GetInputString --------------------------------------
 
@@ -803,3 +801,13 @@ func GetInputString(x,y int) string {
   return string(bs);
 } // end GetInputString
 
+
+
+
+
+//END calgo
+
+/*
+    ColorBlack ColorRed ColorGreen ColorYellow ColorBlue ColorMagenta ColorCyan ColorWhite
+    const ( AttrBold AttrUnderline AttrReverse)
+*/
