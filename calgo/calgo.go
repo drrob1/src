@@ -41,9 +41,10 @@ import (
   "getcommandline"
   "timlibg"
   "tokenize"
+  "holidaycalc"
 )
 
-  const LastCompiled = "9 Apr 17";
+  const LastCompiled = "7 Apr 17";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
@@ -74,10 +75,9 @@ import (
   var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
 // AllMonthsArray type subscripts are [MN] [W] [DOW]
-// I will attempt to use week slices after I get a working excel version, just to see if I can.
-// Then I won't need the WIM array.
   type DateCell struct {
     DateStr string;
+    day int;
     ch1,ch2 rune;
     fg,bg termbox.Attribute;
   }
@@ -86,7 +86,7 @@ import (
   type AllMonthsArray [NumOfMonthsInYear] MonthMatrix;
   var EntireYear AllMonthsArray;
 
-  var year,DOW,W,JAN1DOW,FEBDAYS,CurrentMonthNumber,RequestedMonthNumber,LineNum int;
+  var year,DOW,W,JAN1DOW,FEBDAYS,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
   var DIM, WIM [NumOfMonthsInYear]int;
   var MONNAMSHORT [NumOfMonthsInYear]string;
   var MONNAMLONG  [NumOfMonthsInYear]string;
@@ -238,6 +238,7 @@ OUTPUT TO  GBL VAR'S : DOW, MonthArray(MN,,), WIM(MN)
     } // ENDIF
     DATESTRING,TensRune,UnitsRune := DAY2STR(DATE);
     EntireYear[MN][W][DOW].DateStr = DATESTRING;
+    EntireYear[MN][W][DOW].day = DATE;
     EntireYear[MN][W][DOW].ch1 = TensRune;
     EntireYear[MN][W][DOW].ch2 = UnitsRune;
     EntireYear[MN][W][DOW].fg = BrightCyan;
@@ -443,10 +444,232 @@ func ShowMonth(col,row,mn int) {
     } // ENDFOR I
     y++
   }
-
-
-
 } // END ShowMonth
+
+
+// ----------------------------- HolidayAssign ---------------------------------
+
+func HolidayAssign(year int) {
+
+  var Holiday holidaycalc.HolType;
+
+// type MDType struct { M,D int;}
+
+// type HolType struct {
+//         MLK,Pres,Easter,Mother,Memorial,Father,Labor,Columbus,Election,Thanksgiving MDType;
+//         Year int;
+//         Valid bool;
+//}                              TodaysDayNumber
+  if year < 40 {
+    year += 2000;
+  } else if year < 100 {
+    year += 1900;
+  }
+  Holiday = holidaycalc.GetHolidays(year);
+  Holiday.Valid = true;
+
+// New Year's Day
+  julian := timlibg.JULIAN(1,1,year);
+  dow := julian % 7;
+  EntireYear[0][0][dow].fg = Black;
+  EntireYear[0][0][dow].bg = BrightYellow;
+
+// MLK Day
+  d := Holiday.MLK.D;
+  MLKloop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[0][w][dow].day == d {
+        EntireYear[0][w][dow].fg = Black;
+        EntireYear[0][w][dow].bg = BrightYellow;
+        break MLKloop;
+      }
+    }
+  }
+
+// President's Day
+  d = Holiday.Pres.D;
+  PresLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[1][w][dow].day == d {
+        EntireYear[1][w][dow].fg = Black;
+        EntireYear[1][w][dow].bg = BrightYellow;
+        break PresLoop;
+      }
+    }
+  }
+
+// Easter
+  m := Holiday.Easter.M-1;
+  d = Holiday.Easter.D;
+  EasterLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[m][w][dow].day == d {
+        EntireYear[m][w][dow].fg = Black;
+        EntireYear[m][w][dow].bg = BrightYellow;
+        break EasterLoop;
+      }
+    }
+  }
+
+// Mother's Day
+  d = Holiday.Mother.D;
+  MotherLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[4][w][dow].day == d {
+        EntireYear[4][w][dow].fg = Black;
+        EntireYear[4][w][dow].bg = BrightYellow;
+        break MotherLoop;
+      }
+    }
+  }
+
+// Memorial Day
+  d = Holiday.Memorial.D;
+  MemorialLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[4][w][dow].day == d {
+        EntireYear[4][w][dow].fg = Black;
+        EntireYear[4][w][dow].bg = BrightYellow;
+        break MemorialLoop;
+      }
+    }
+  }
+
+
+// Father's Day
+  d = Holiday.Father.D;
+  FatherLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[5][w][dow].day == d {
+        EntireYear[5][w][dow].fg = Black;
+        EntireYear[5][w][dow].bg = BrightYellow;
+        break FatherLoop;
+      }
+    }
+  }
+
+// July 4th  
+  d = 4
+  IndependenceLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[6][w][dow].day == d {
+        EntireYear[6][w][dow].fg = Black;
+        EntireYear[6][w][dow].bg = BrightYellow;
+        break IndependenceLoop;
+      }
+    }
+  }
+
+
+
+// Labor Day
+  d = Holiday.Labor.D;
+  LaborLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[8][w][dow].day == d {
+        EntireYear[8][w][dow].fg = Black;
+        EntireYear[8][w][dow].bg = BrightYellow;
+        break LaborLoop;
+      }
+    }
+  }
+
+
+// Columbus Day
+  d = Holiday.Columbus.D;
+  ColumbusLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[9][w][dow].day == d {
+        EntireYear[9][w][dow].fg = Black;
+        EntireYear[9][w][dow].bg = BrightYellow;
+        break ColumbusLoop;
+      }
+    }
+  }
+
+// Election Day
+  d = Holiday.Election.D;
+  ElectionLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[10][w][dow].day == d {
+        EntireYear[10][w][dow].fg = Black;
+        EntireYear[10][w][dow].bg = BrightYellow;
+        break ElectionLoop;
+      }
+    }
+  }
+
+
+// Veteran's Day
+  d = 11;
+  VeteranLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+//      Printf_tb(0,20,BrightYellow,Black," w = %d, dow = %d ",w,dow);
+//      Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
+//      termbox.SetCursor(26,MaxRow);
+//      _ = GetInputString(26,MaxRow);
+      if EntireYear[10][w][dow].day == d {
+        EntireYear[10][w][dow].fg = Black;
+        EntireYear[10][w][dow].bg = BrightYellow;
+        break VeteranLoop;
+      }
+    }
+  }
+
+
+// Thanksgiving Day
+  d = Holiday.Thanksgiving.D;
+  TGLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[10][w][dow].day == d {
+        EntireYear[10][w][dow].fg = Black;
+        EntireYear[10][w][dow].bg = BrightYellow;
+        break TGLoop;
+      }
+    }
+  }
+
+// Christmas Day
+  d = 25;
+  XmasLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[11][w][dow].day == d {
+        EntireYear[11][w][dow].fg = Black;
+        EntireYear[11][w][dow].bg = BrightYellow;
+        break XmasLoop;
+      }
+    }
+  }
+
+// Today
+  d = TodaysDayNumber;
+  m = CurrentMonthNumber-1;
+  TodayLoop:
+  for w := 0; w < 6; w++ {
+    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+      if EntireYear[m][w][dow].day == d {
+        EntireYear[m][w][dow].fg = Black;
+        EntireYear[m][w][dow].bg = BrightCyan;
+        break TodayLoop;
+      }
+    }
+  }
+
+} // END HolidayAssign
+
 
 
 
@@ -480,6 +703,7 @@ func SetMonthNumber(token tokenize.TokenType) int {
 */
 func main() {
   var Cal1FilenameFlag, Cal12FilenameFlag bool;
+  var YearToken tokenize.TokenType;
 
   BLANKSTR2 = "  ";
   BLANKSTR3 = "   ";
@@ -488,11 +712,6 @@ func main() {
   Black = termbox.ColorBlack;
   fmt.Println(" Calendar Printing Program written in Go.  Last compiled ",LastCompiled);
   fmt.Println();
-
-  if len(os.Args) <=1 {
-    fmt.Println(" Usage: calgo <year> [<month>]");
-    os.Exit(0);
-}
 
   MONNAMSHORT[JAN] = "JANUARY";
   MONNAMSHORT[FEB] = "FEBRUARY";
@@ -542,16 +761,23 @@ func main() {
   PROMPT = " Enter Year : ";
   Ext1Default := ".out";
   Ext12Default := ".xls";
-  CurrentMonthNumber,_,_ = timlibg.TIME2MDY(); // Use today's month number, and ignore today's day and year.
+  CurrentMonthNumber,TodaysDayNumber,CurrentYear = timlibg.TIME2MDY(); // Use today's month number, and ignore today's day and year.
 
-  commandline := getcommandline.GetCommandLineString();
-  cleancommandline := filepath.Clean(commandline);
-  tokenize.INITKN(cleancommandline);
-  YearToken,_ := tokenize.GETTKN();
-  if YearToken.State != tokenize.DGT {
-    year,_,_ = timlibg.TIME2MDY();
+  if len(os.Args) > 1 {
+    commandline := getcommandline.GetCommandLineString();
+    cleancommandline := filepath.Clean(commandline);
+    tokenize.INITKN(cleancommandline);
+    YearToken,_ = tokenize.GETTKN();
+    if YearToken.State != tokenize.DGT {
+      year = CurrentYear;
+    }else{
+      year = YearToken.Isum;
+    }
   }else{
-    year = YearToken.Isum;
+    year = CurrentYear;
+    YearToken.Str = strconv.Itoa(year);
+    YearToken.State = tokenize.DGT;
+//    fmt.Printf(" default year is %d, YearToken is %#v \n",year,YearToken);  doesn't display anyway.
   }
 
   if year < 40 {
@@ -562,7 +788,11 @@ func main() {
     fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n");
     os.Exit(1)
   }
-  YEARSTR = strconv.Itoa(year);
+//  Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
+//  termbox.SetCursor(26,MaxRow-1);
+//  _ = GetInputString(26,MaxRow-1);
+
+  YEARSTR = strconv.Itoa(year);  // This will always be a 4 digit year, regardless of what's entered on command line.
 
   termerr := termbox.Init();
   if termerr != nil {
@@ -690,27 +920,38 @@ func main() {
     WrOnePageYear();
   }
 
-// Now to do the special processing I envision for this pgm.  So far, the changes are minor.
-// First, time to debug what I've done already before I proceed.
-
-
-
-  Printf_tb(0,LineNum,BrightYellow,Black,"In main and token.State is %d, token.Str is %s\n",RequestedMonthNumberToken.State,RequestedMonthNumberToken.Str);
-  LineNum++
-  Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
+//  Printf_tb(0,LineNum,BrightYellow,Black,"In main and token.State is %d, token.Str is %s\n",RequestedMonthNumberToken.State,RequestedMonthNumberToken.Str);
+//  LineNum++
+//  Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
   LineNum++
   LineNum++
 
+  HolidayAssign(year);
 
-// I didn't yet do the date highlighting for holidays and today.
-
-
+  Printf_tb(MaxCol/3,LineNum,BrightYellow,Black," Year %4d",year);
+  LineNum++
   ShowMonth(0,LineNum,RequestedMonthNumber);
-  ShowMonth(25,LineNum,RequestedMonthNumber+1);
-  ShowMonth(50,LineNum,RequestedMonthNumber+2);
-  ShowMonth(75,LineNum,RequestedMonthNumber+3);
-
-
+  if MaxCol > 48 && RequestedMonthNumber < DEC {
+    ShowMonth(25,LineNum,RequestedMonthNumber+1);
+  }
+  if MaxCol > 72 && RequestedMonthNumber < NOV {
+    ShowMonth(50,LineNum,RequestedMonthNumber+2);
+  }
+  if MaxCol > 98 && RequestedMonthNumber < OCT {
+    ShowMonth(75,LineNum,RequestedMonthNumber+3);
+  }
+  if MaxCol > 122 && RequestedMonthNumber < SEP {
+    ShowMonth(100,LineNum,RequestedMonthNumber+4);
+  }
+  if MaxCol > 148 && RequestedMonthNumber < AUG {
+    ShowMonth(125,LineNum,RequestedMonthNumber+5);
+  }
+  if MaxCol > 172 && RequestedMonthNumber < JUL {
+    ShowMonth(150,LineNum,RequestedMonthNumber+6);
+  }
+  if MaxCol > 198 && RequestedMonthNumber < JUN {
+    ShowMonth(175,LineNum,RequestedMonthNumber+7);
+  }
 
   Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
   termbox.SetCursor(26,MaxRow);
