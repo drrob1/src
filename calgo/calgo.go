@@ -91,7 +91,7 @@ import (
   var MONNAMSHORT [NumOfMonthsInYear]string;
   var MONNAMLONG  [NumOfMonthsInYear]string;
   var clear map[string]func();
-  var BrightYellow,BrightCyan,Black termbox.Attribute;
+  var BrightYellow,BrightCyan,BrightGreen,Black termbox.Attribute;
   var StartCol,StartRow,sigfig,MaxRow,MaxCol,TitleRow,StackRow,RegRow,OutputRow,DisplayCol,PromptRow,outputmode,n int;
 
 
@@ -662,7 +662,7 @@ func HolidayAssign(year int) {
     for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
       if EntireYear[m][w][dow].day == d {
         EntireYear[m][w][dow].fg = Black;
-        EntireYear[m][w][dow].bg = BrightCyan;
+        EntireYear[m][w][dow].bg = BrightGreen;
         break TodayLoop;
       }
     }
@@ -709,6 +709,7 @@ func main() {
   BLANKSTR3 = "   ";
   BrightYellow = termbox.ColorYellow | termbox.AttrBold;
   BrightCyan = termbox.ColorCyan | termbox.AttrBold;
+  BrightGreen = termbox.ColorGreen | termbox.AttrBold;
   Black = termbox.ColorBlack;
   fmt.Println(" Calendar Printing Program written in Go.  Last compiled ",LastCompiled);
   fmt.Println();
