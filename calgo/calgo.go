@@ -771,6 +771,7 @@ func main() {
     YearToken,_ = tokenize.GETTKN();
     if YearToken.State != tokenize.DGT {
       year = CurrentYear;
+      tokenize.UNGETTKN(); // Send the token back so it behaves as a month request.
     }else{
       year = YearToken.Isum;
     }
