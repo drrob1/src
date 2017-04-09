@@ -23,6 +23,7 @@ package main
   3 Mar 17 -- Now calgo, and will use termbox to try to do what CALm2 does.
   3 Apr 17 -- Came back to this, after going thru Book of R.
   4 Apr 17 -- Will only write the calendar output files if they do not already exist.
+  9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
 */
 
 
@@ -44,7 +45,7 @@ import (
   "holidaycalc"
 )
 
-  const LastCompiled = "7 Apr 17";
+  const LastCompiled = "9 Apr 17";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
@@ -349,27 +350,33 @@ func WrMonthForXL(MN int) {
 
                     // -------------------------------------- WrOnePageYear ----------------------------------
 
-func WrOnePageYear() {
-
+func WrOnePageYear() {  // Each column must be exactly 25 characters for the spacing to work.
+  var err error;
 // Write one page calendar
   s := fmt.Sprintf("%40s",YEARSTR);
-  _, err := OutCal1file.WriteString(s);
-                                                check(err,"Error while writing YEARSTR to Cal 1 file");
-  _, err = OutCal1file.WriteRune('\n');
-                                                check(err,"Error while writing a newline rune to Cal 1 file");
+//  _, err := OutCal1file.WriteString(s);
+//                                                check(err,"Error while writing YEARSTR to Cal 1 file");
+//  _, err = OutCal1file.WriteRune('\n');
+//                                                check(err,"Error while writing a newline rune to Cal 1 file");
 
   for MN = JAN; MN <= DCM; MN += 3 {
     MN2 = MN + 1;
     MN3 = MN + 2;
 
-    _, err = OutCal1file.WriteRune('\n');
-                                                  check(err,"Error while writing newline rune to Cal 1 file");
+//    _, err = OutCal1file.WriteRune('\n');
+//                                                  check(err,"Error while writing newline rune to Cal 1 file");
     if MN > JAN {  // have fewer blank lines after year heading than btwn rows of months.
       _, err = OutCal1file.WriteRune('\n');
                                                     check(err,"Error while writing newline rune to Cal 1 file");
       _, err = OutCal1file.WriteRune('\n');
                                                     check(err,"Error while writing newline rune to Cal 1 file");
     }
+    _, err := OutCal1file.WriteString(s);
+                                                    check(err,"Error while writing YEARSTR to Cal 1 file");
+    _, err = OutCal1file.WriteRune('\n');
+                                                  check(err,"Error while writing a newline rune to Cal 1 file");
+    _, err = OutCal1file.WriteRune('\n');
+                                                  check(err,"Error while writing a newline rune to Cal 1 file");
     _, err = OutCal1file.WriteString(MONNAMLONG[MN]);
                                                   check(err,"Error writing first long month name to cal 1 file");
     _, err = OutCal1file.WriteString(MONNAMLONG[MN2]);
