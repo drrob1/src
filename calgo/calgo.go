@@ -24,6 +24,7 @@ package main
   3 Apr 17 -- Came back to this, after going thru Book of R.
   4 Apr 17 -- Will only write the calendar output files if they do not already exist.
   9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
+ 10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
 */
 
 
@@ -45,7 +46,7 @@ import (
   "holidaycalc"
 )
 
-  const LastCompiled = "9 Apr 17";
+  const LastCompiled = "10 Apr 17";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
@@ -72,7 +73,6 @@ import (
   var OutCal1file, OutCal12file *bufio.Writer;
   var PROMPT,ExtDefault,YEARSTR,BLANKSTR2,BLANKSTR3 string;
   var Cal1Filename,Cal12Filename string;
-  var DAYSNAMLONG, DayNamesWithTabs, DAYSNAMSHORT string;
   var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
 // AllMonthsArray type subscripts are [MN] [W] [DOW]
@@ -88,15 +88,25 @@ import (
   var EntireYear AllMonthsArray;
 
   var (
-      year,DOW,W,JAN1DOW,FEBDAYS,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
-      DIM, WIM [NumOfMonthsInYear]int;
-//  var MONNAMSHORT [NumOfMonthsInYear]string;  Non-idiomatic declaration and initialization
+      year,W,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
+      WIM [NumOfMonthsInYear]int;
+      DIM = [...]int{31,0,31,30,31,30,31,31,30,31,30,31);
       MONNAMSHORT = [...]string{"January","February","March","April","May", "June","July","August", "September","October","November","December"};
       MONNAMLONG  [NumOfMonthsInYear]string;
       clear map[string]func();
       BrightYellow,BrightCyan,BrightGreen,Black termbox.Attribute;
       StartCol,StartRow,sigfig,MaxRow,MaxCol,TitleRow,StackRow,RegRow,OutputRow,DisplayCol,PromptRow,outputmode,n int;
+      DAYSNAMLONG = string{"SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"};
+      DayNamesWithTabs = string{"SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"};
+      DAYSNAMSHORT = string{"  S  M  T  W TH  F  S    "};
      )
+//                      var MONNAMSHORT [NumOfMonthsInYear]string;  Non-idiomatic declaration and initialization
+//                      var DAYSNAMLONG, DayNamesWithTabs, DAYSNAMSHORT string;
+
+
+// DIM = Days In Month  Non-idiomatic initialization.
+//  DIM[JAN] = 31; DIM[MAR] = 31; DIM[APR] = 30; DIM[MAY] = 31; DIM[JUN] = 30; DIM[JUL] = 31; DIM[AUG] = 31;
+//  DIM[SEP] = 30; DIM[OCT] = 31; DIM[NOV] = 30; DIM[DCM] = 31;
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {  // start termbox in the init code doesn't work.  Don't know why.  But this init does work.
@@ -145,7 +155,7 @@ func ClearLine(y int) {
     y = MaxRow
   }
   for x := StartCol; x <= MaxCol; x++ {
-    termbox.SetCell(x,y,0,Black,Black);  // Don't know if it matters if the char is ' ' or nil.
+    termbox.SetCell(x,y,' ',Black,Black);  // Don't know if it matters if the char is ' ' or nil.
   }
   err := termbox.Flush();
   check(err,"");
@@ -380,7 +390,7 @@ func WrOnePageYear() {  // Each column must be exactly 25 characters for the spa
     _, err = OutCal1file.WriteRune('\n');
                                                   check(err,"Error while writing a newline rune to Cal 1 file");
     _, err = OutCal1file.WriteString(MONNAMLONG[MN]);
-                                                  check(err,"Error writing first long month name to cal 1 file");
+                                                 check(err,"Error writing first long month name to cal 1 file");
     _, err = OutCal1file.WriteString(MONNAMLONG[MN2]);
                                                   check(err,"");
     _, err = OutCal1file.WriteString(MONNAMLONG[MN3]);
@@ -707,6 +717,59 @@ func SetMonthNumber(token tokenize.TokenType) int {
 }
 
 
+// ----------------------------------- AssignYear ----------------------------------------------------
+func AssignYear(y int) {
+
+  if y < 40 {
+    y += 2000;
+  }else if y < 100 {
+    y += 1900;
+  }else if y < 1900 || y > 2100 {
+    fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n");
+    os.Exit(1)
+  }
+
+
+  JulDate := timlibg.JULIAN(1,1,y);
+  JAN1DOW := JulDate % 7;
+  DOW := JAN1DOW;
+  FEBDAYS := 28;
+
+  if ((y % 4) == 0) && ((y % 100) != 0) {
+// YEAR IS DIVISIBLE BY 4 AND NOT BY 100 
+    FEBDAYS := 29;
+  }else if (y % 400) == 0 {
+    FEBDAYS := 29;
+  } // ENDIF about leap year
+
+  DIM[FEB] = FEBDAYS;
+
+// Initialize the calendar to all BLANKSTR3, for correct spacing
+  for m := JAN; m <= DEC; m++ { // month position
+    for wk := 0; wk < 6; wk++ { // week position
+      for dayofweek := 0; dayofweek < 7; dayofweek++ {
+        EntireYear[m][wk][dayofweek].DateStr = BLANKSTR3;
+        EntireYear[m][wk][dayofweek].day = 0;
+        EntireYear[m][wk][dayofweek].ch1 = '0';
+        EntireYear[m][wk][dayofweek].ch2 = '0';
+        EntireYear[m][wk][dayofweek].fg = Black;
+        EntireYear[m][wk][dayofweek].bg = Black;
+      }
+    }
+  }
+
+// Make the calendar
+
+  for MN := JAN; MN <= DCM; MN++ {
+    DATEASSIGN(MN);
+  } // ENDFOR;
+
+
+
+}
+
+
+
 /*
 --------------------- MAIN ---------------------------------------------
 */
@@ -748,25 +811,6 @@ func main() {
   MONNAMLONG[OCT] = "    O C T O B E R        ";
   MONNAMLONG[NOV] = "   N O V E M B E R       ";
   MONNAMLONG[DCM] = "   D E C E M B E R       ";
-
-  DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY";
-  DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY";
-
-  DAYSNAMSHORT = "  S  M  T  W TH  F  S    ";
-
-
-// DIM = Days In Month
-  DIM[JAN] = 31;
-  DIM[MAR] = 31;
-  DIM[APR] = 30;
-  DIM[MAY] = 31;
-  DIM[JUN] = 30;
-  DIM[JUL] = 31;
-  DIM[AUG] = 31;
-  DIM[SEP] = 30;
-  DIM[OCT] = 31;
-  DIM[NOV] = 30;
-  DIM[DCM] = 31;
 
   PROMPT = " Enter Year : ";
   Ext1Default := ".out";
@@ -885,38 +929,6 @@ func main() {
     defer OutCal12file.Flush();
   }
 
-
-  MN = JAN;
-
-  JulDate := timlibg.JULIAN(1,1,year);
-  JAN1DOW = JulDate % 7;
-  DOW = JAN1DOW;
-
-  if ((year % 4) == 0) && ((year % 100) != 0) {
-// YEAR IS DIVISIBLE BY 4 AND NOT BY 100 
-    FEBDAYS = 29;
-  }else if (year % 400) == 0 {
-    FEBDAYS = 29;
-  }else{
-// HAVE EITHER A NON-LEAP YEAR OR A CENTURY YEAR 
-    FEBDAYS = 28;
-  } // ENDIF about leap year
-  DIM[FEB] = FEBDAYS;
-
-// Initialize the calendar to all BLANKSTR3, for correct spacing
-  for m := JAN; m <= DEC; m++ { // month position
-    for wk := 0; wk < 6; wk++ { // week position
-      for dayofweek := 0; dayofweek < 7; dayofweek++ {
-        EntireYear[m][wk][dayofweek].DateStr = BLANKSTR3;
-      }
-    }
-  }
-
-// Make the calendar
-
-  for MN := JAN; MN <= DCM; MN++ {
-    DATEASSIGN(MN);
-  } // ENDFOR;
 
 
 // WRITE 12 PAGE CALENDAR, ONE MONTH PER PAGE 
