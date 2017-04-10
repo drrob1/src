@@ -87,14 +87,16 @@ import (
   type AllMonthsArray [NumOfMonthsInYear] MonthMatrix;
   var EntireYear AllMonthsArray;
 
-  var year,DOW,W,JAN1DOW,FEBDAYS,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
-  var DIM, WIM [NumOfMonthsInYear]int;
-  var MONNAMSHORT [NumOfMonthsInYear]string;
-  var MONNAMLONG  [NumOfMonthsInYear]string;
-  var clear map[string]func();
-  var BrightYellow,BrightCyan,BrightGreen,Black termbox.Attribute;
-  var StartCol,StartRow,sigfig,MaxRow,MaxCol,TitleRow,StackRow,RegRow,OutputRow,DisplayCol,PromptRow,outputmode,n int;
-
+  var (
+      year,DOW,W,JAN1DOW,FEBDAYS,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
+      DIM, WIM [NumOfMonthsInYear]int;
+//  var MONNAMSHORT [NumOfMonthsInYear]string;  Non-idiomatic declaration and initialization
+      MONNAMSHORT = [...]string{"January","February","March","April","May", "June","July","August", "September","October","November","December"};
+      MONNAMLONG  [NumOfMonthsInYear]string;
+      clear map[string]func();
+      BrightYellow,BrightCyan,BrightGreen,Black termbox.Attribute;
+      StartCol,StartRow,sigfig,MaxRow,MaxCol,TitleRow,StackRow,RegRow,OutputRow,DisplayCol,PromptRow,outputmode,n int;
+     )
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {  // start termbox in the init code doesn't work.  Don't know why.  But this init does work.
@@ -720,7 +722,7 @@ func main() {
   Black = termbox.ColorBlack;
   fmt.Println(" Calendar Printing Program written in Go.  Last compiled ",LastCompiled);
   fmt.Println();
-
+/* Non-idiomatic initialization.  See above for the idiomatic declaration and initialization
   MONNAMSHORT[JAN] = "JANUARY";
   MONNAMSHORT[FEB] = "FEBRUARY";
   MONNAMSHORT[MAR] = "MARCH";
@@ -733,7 +735,7 @@ func main() {
   MONNAMSHORT[OCT] = "OCTOBER";
   MONNAMSHORT[NOV] = "NOVEMBER";
   MONNAMSHORT[DCM] = "DECEMBER";
-
+*/
   MONNAMLONG[JAN] = "    J A N U A R Y        ";
   MONNAMLONG[FEB] = "   F E B R U A R Y       ";
   MONNAMLONG[MAR] = "      M A R C H          ";
