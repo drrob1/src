@@ -93,7 +93,7 @@ import (
       year,DOW,W,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
       WIM [NumOfMonthsInYear]int;
       DIM = [...]int{31,0,31,30,31,30,31,31,30,31,30,31};
-      MONNAMSHORT = [...]string{"January","February","March","April","May", "June","July","August", "September","October","November","December"};
+      MONNAMSHORT = [...]string{"JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"};
       MONNAMLONG  [NumOfMonthsInYear]string;
       clear map[string]func();
       BrightYellow,BrightCyan,BrightGreen,Black termbox.Attribute;
@@ -669,15 +669,17 @@ func HolidayAssign(year int) {
   }
 
 // Today
-  d = TodaysDayNumber;
-  m = CurrentMonthNumber-1;
-  TodayLoop:
-  for w := 0; w < 6; w++ {
-    for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-      if EntireYear[m][w][dow].day == d {
-        EntireYear[m][w][dow].fg = Black;
-        EntireYear[m][w][dow].bg = BrightGreen;
-        break TodayLoop;
+  if year == CurrentYear {
+    d = TodaysDayNumber;
+    m = CurrentMonthNumber-1;
+    TodayLoop:
+    for w := 0; w < 6; w++ {
+      for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+        if EntireYear[m][w][dow].day == d {
+          EntireYear[m][w][dow].fg = Black;
+          EntireYear[m][w][dow].bg = BrightGreen;
+          break TodayLoop;
+        }
       }
     }
   }
@@ -689,26 +691,33 @@ func HolidayAssign(year int) {
 
 // ----------------------------- SetMonthNumber ----------------------------------
 
-func SetMonthNumber(token tokenize.TokenType) int {
-  var RequestedMonthNumber int;
+func SetMonthNumber(token tokenize.TokenType) int {  // Input for Jan = 1, but 0 represents Jan
+  var RequestedMonthNum int;
 
-  RequestedMonthNumber = CurrentMonthNumber - 1;
+//  RequestedMonthNum = CurrentMonthNumber - 1;
   if token.State == tokenize.DGT {
     if token.Isum > 0 && token.Isum <= 12 {
-      RequestedMonthNumber = token.Isum;
+      RequestedMonthNum = token.Isum - 1;
     }else{
-      RequestedMonthNumber = CurrentMonthNumber;
+      RequestedMonthNum = CurrentMonthNumber;
     }
   }else if token.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
     for c := JAN; c < NumOfMonthsInYear; c++ {
 //                                                               if strings.Contains(MONNAMSHORT[c],token.Str) {
       if strings.HasPrefix(MONNAMSHORT[c],token.Str) {
-        RequestedMonthNumber = c;
+        RequestedMonthNum = c;
         break;
       }
     }
   }
-  return RequestedMonthNumber;
+
+//  Printf_tb(0,LineNum,BrightYellow,Black,
+//            " in SetMonthNumber: monnamshort[0] %s monnamshort[1] %s, token %#v, Requestedmon num %d",
+//            MONNAMSHORT[0],MONNAMSHORT[1],token,RequestedMonthNum);
+//  LineNum++
+//  LineNum++
+
+  return RequestedMonthNum;
 }
 
 
@@ -800,7 +809,7 @@ func main() {
   PROMPT = " Enter Year : ";  // not currently used.
   Ext1Default := ".out";
   Ext12Default := ".xls";
-  CurrentMonthNumber,TodaysDayNumber,CurrentYear = timlibg.TIME2MDY(); // Use today's month number, and ignore today's day and year.
+  CurrentMonthNumber,TodaysDayNumber,CurrentYear = timlibg.TIME2MDY();
 
   if len(os.Args) > 1 {
     commandline := getcommandline.GetCommandLineString();
@@ -854,14 +863,11 @@ func main() {
   RequestedMonthNumber = CurrentMonthNumber - 1;
   RequestedMonthNumberToken,EOLflag := tokenize.GETTKN();
 
+//  Printf_tb(0,LineNum,BrightYellow,Black," Requestedmonthnumbertoken %#v, EOLflag %t", RequestedMonthNumberToken,EOLflag);
+//  LineNum++
+
   if !EOLflag {
-    if RequestedMonthNumberToken.State == tokenize.DGT { // Allow number for month
-      if RequestedMonthNumberToken.Isum > 0 && RequestedMonthNumberToken.Isum <= 12 {
-        RequestedMonthNumber = RequestedMonthNumberToken.Isum;
-      }
-    }else if RequestedMonthNumberToken.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
-       RequestedMonthNumber = SetMonthNumber(RequestedMonthNumberToken);
-    }
+    RequestedMonthNumber = SetMonthNumber(RequestedMonthNumberToken);
   }
 
   BaseFilename := YearToken.Str;
@@ -928,9 +934,9 @@ func main() {
     WrOnePageYear();
   }
 
-//  Printf_tb(0,LineNum,BrightYellow,Black,"In main and token.State is %d, token.Str is %s\n",RequestedMonthNumberToken.State,RequestedMonthNumberToken.Str);
-//  LineNum++
-//  Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
+// Printf_tb(0,LineNum,BrightYellow,Black,"In main and token.State is %d, token.Str is %s\n",RequestedMonthNumberToken.State,RequestedMonthNumberToken.Str);
+// LineNum++
+// Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
   LineNum++
   LineNum++
 
