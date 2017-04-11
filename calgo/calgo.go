@@ -71,7 +71,9 @@ import (
 
   var OutputCal1,OutputCal12 os.File;
   var OutCal1file, OutCal12file *bufio.Writer;
-  var PROMPT,ExtDefault,YEARSTR,BLANKSTR2,BLANKSTR3 string;
+  var PROMPT,ExtDefault,YEARSTR string;
+  var BLANKSTR2 = "  ";
+  var BLANKSTR3 = "   ";
   var Cal1Filename,Cal12Filename string;
   var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
@@ -88,17 +90,17 @@ import (
   var EntireYear AllMonthsArray;
 
   var (
-      year,W,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
+      year,DOW,W,CurrentMonthNumber,RequestedMonthNumber,LineNum,TodaysDayNumber,CurrentYear int
       WIM [NumOfMonthsInYear]int;
-      DIM = [...]int{31,0,31,30,31,30,31,31,30,31,30,31);
+      DIM = [...]int{31,0,31,30,31,30,31,31,30,31,30,31};
       MONNAMSHORT = [...]string{"January","February","March","April","May", "June","July","August", "September","October","November","December"};
       MONNAMLONG  [NumOfMonthsInYear]string;
       clear map[string]func();
       BrightYellow,BrightCyan,BrightGreen,Black termbox.Attribute;
       StartCol,StartRow,sigfig,MaxRow,MaxCol,TitleRow,StackRow,RegRow,OutputRow,DisplayCol,PromptRow,outputmode,n int;
-      DAYSNAMLONG = string{"SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"};
-      DayNamesWithTabs = string{"SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"};
-      DAYSNAMSHORT = string{"  S  M  T  W TH  F  S    "};
+      DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY";
+      DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY";
+      DAYSNAMSHORT = "  S  M  T  W TH  F  S    ";
      )
 //                      var MONNAMSHORT [NumOfMonthsInYear]string;  Non-idiomatic declaration and initialization
 //                      var DAYSNAMLONG, DayNamesWithTabs, DAYSNAMSHORT string;
@@ -732,14 +734,14 @@ func AssignYear(y int) {
 
   JulDate := timlibg.JULIAN(1,1,y);
   JAN1DOW := JulDate % 7;
-  DOW := JAN1DOW;
+  DOW = JAN1DOW;
   FEBDAYS := 28;
 
   if ((y % 4) == 0) && ((y % 100) != 0) {
 // YEAR IS DIVISIBLE BY 4 AND NOT BY 100 
-    FEBDAYS := 29;
+    FEBDAYS = 29;
   }else if (y % 400) == 0 {
-    FEBDAYS := 29;
+    FEBDAYS = 29;
   } // ENDIF about leap year
 
   DIM[FEB] = FEBDAYS;
@@ -766,7 +768,7 @@ func AssignYear(y int) {
 
 
 
-}
+} // END AssignYear
 
 
 
@@ -777,8 +779,6 @@ func main() {
   var Cal1FilenameFlag, Cal12FilenameFlag bool;
   var YearToken tokenize.TokenType;
 
-  BLANKSTR2 = "  ";
-  BLANKSTR3 = "   ";
   BrightYellow = termbox.ColorYellow | termbox.AttrBold;
   BrightCyan = termbox.ColorCyan | termbox.AttrBold;
   BrightGreen = termbox.ColorGreen | termbox.AttrBold;
@@ -929,7 +929,7 @@ func main() {
     defer OutCal12file.Flush();
   }
 
-
+  AssignYear(year);
 
 // WRITE 12 PAGE CALENDAR, ONE MONTH PER PAGE 
   if Cal12FilenameFlag {
