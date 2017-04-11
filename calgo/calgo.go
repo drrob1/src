@@ -46,7 +46,7 @@ import (
   "holidaycalc"
 )
 
-  const LastCompiled = "10 Apr 17";
+  const LastCompiled = "11 Apr 17";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
@@ -786,18 +786,10 @@ func main() {
   fmt.Println(" Calendar Printing Program written in Go.  Last compiled ",LastCompiled);
   fmt.Println();
 /* Non-idiomatic initialization.  See above for the idiomatic declaration and initialization
-  MONNAMSHORT[JAN] = "JANUARY";
-  MONNAMSHORT[FEB] = "FEBRUARY";
-  MONNAMSHORT[MAR] = "MARCH";
-  MONNAMSHORT[APR] = "APRIL";
-  MONNAMSHORT[MAY] = "MAY";
-  MONNAMSHORT[JUN] = "JUNE";
-  MONNAMSHORT[JUL] = "JULY";
-  MONNAMSHORT[AUG] = "AUGUST";
-  MONNAMSHORT[SEP] = "SEPTEMBER";
-  MONNAMSHORT[OCT] = "OCTOBER";
-  MONNAMSHORT[NOV] = "NOVEMBER";
-  MONNAMSHORT[DCM] = "DECEMBER";
+  MONNAMSHORT[JAN] = "JANUARY"; MONNAMSHORT[FEB] = "FEBRUARY"; MONNAMSHORT[MAR] = "MARCH";
+  MONNAMSHORT[APR] = "APRIL"; MONNAMSHORT[MAY] = "MAY"; MONNAMSHORT[JUN] = "JUNE";
+  MONNAMSHORT[JUL] = "JULY"; MONNAMSHORT[AUG] = "AUGUST"; MONNAMSHORT[SEP] = "SEPTEMBER";
+  MONNAMSHORT[OCT] = "OCTOBER"; MONNAMSHORT[NOV] = "NOVEMBER"; MONNAMSHORT[DCM] = "DECEMBER";
 */
   MONNAMLONG[JAN] = "    J A N U A R Y        ";
   MONNAMLONG[FEB] = "   F E B R U A R Y       ";
@@ -975,6 +967,45 @@ func main() {
   if MaxCol > 198 && RequestedMonthNumber < JUN {
     ShowMonth(175,LineNum,RequestedMonthNumber+7);
   }
+
+// Now disploy next year.  No file writing.  Min 10 lines/calendar.
+  if MaxRow > 30 {
+    year++
+    YEARSTR = strconv.Itoa(year);
+    AssignYear(year);
+    HolidayAssign(year);
+    LineNum += 10;
+    RequestedMonthNumber = 0;
+
+
+    Printf_tb(MaxCol/3,LineNum,BrightYellow,Black," Year %4d",year);
+    LineNum++
+    ShowMonth(0,LineNum,RequestedMonthNumber);
+    if MaxCol > 48 && RequestedMonthNumber < DEC {
+      ShowMonth(25,LineNum,RequestedMonthNumber+1);
+    }
+    if MaxCol > 72 && RequestedMonthNumber < NOV {
+      ShowMonth(50,LineNum,RequestedMonthNumber+2);
+    }
+    if MaxCol > 98 && RequestedMonthNumber < OCT {
+      ShowMonth(75,LineNum,RequestedMonthNumber+3);
+    }
+    if MaxCol > 122 && RequestedMonthNumber < SEP {
+      ShowMonth(100,LineNum,RequestedMonthNumber+4);
+    }
+    if MaxCol > 148 && RequestedMonthNumber < AUG {
+      ShowMonth(125,LineNum,RequestedMonthNumber+5);
+    }
+    if MaxCol > 172 && RequestedMonthNumber < JUL {
+      ShowMonth(150,LineNum,RequestedMonthNumber+6);
+    }
+    if MaxCol > 198 && RequestedMonthNumber < JUN {
+      ShowMonth(175,LineNum,RequestedMonthNumber+7);
+    }
+  }
+
+
+
 
   Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
   termbox.SetCursor(26,MaxRow);
