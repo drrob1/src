@@ -157,7 +157,7 @@ func ClearLine(y int) {
     y = MaxRow
   }
   for x := StartCol; x <= MaxCol; x++ {
-    termbox.SetCell(x,y,' ',Black,Black);  // Don't know if it matters if the char is ' ' or nil.
+    termbox.SetCell(x,y,0,Black,Black);  // Don't know if it matters if the char is ' ' or nil.
   }
   err := termbox.Flush();
   check(err,"");
@@ -187,13 +187,6 @@ func ClearEOL(x,y int) {
   }
   err := termbox.Flush();
   check(err,"");
-}
-
-
-// ------------------------------------------------------- Repaint ----------------------------------
-func RepaintScreen(x int) {
-
-  Printf_tb(x,TitleRow,BrightCyan,Black," Calendar Printing Program written in Go.  Last compiled %s\n",LastCompiled);
 }
 
 
@@ -804,7 +797,7 @@ func main() {
   MONNAMLONG[NOV] = "   N O V E M B E R       ";
   MONNAMLONG[DCM] = "   D E C E M B E R       ";
 
-  PROMPT = " Enter Year : ";
+  PROMPT = " Enter Year : ";  // not currently used.
   Ext1Default := ".out";
   Ext12Default := ".xls";
   CurrentMonthNumber,TodaysDayNumber,CurrentYear = timlibg.TIME2MDY(); // Use today's month number, and ignore today's day and year.
@@ -1007,7 +1000,7 @@ func main() {
 
 
 
-  Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
+  Print_tb(0,MaxRow,BrightYellow,Black," Hit <enter> to continue.");
   termbox.SetCursor(26,MaxRow);
   _ = GetInputString(26,MaxRow);
 
