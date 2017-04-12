@@ -879,36 +879,36 @@ func main() {
 //                                               fmt.Println();
 
   FI,err := os.Stat(Cal1Filename);
-  s1 := "";
+//                                               s1 := "";
   if err == nil {
     Cal1FilenameFlag = false;
-    s1 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal1Filename,FI.Size());
-//    Printf_tb(0,LineNum,BrightCyan,Black," %s already exists.  From stat call filesize is %d.",Cal1Filename.FI.Size());
-//    LineNum++
+//               s1 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal1Filename,FI.Size());
+    Printf_tb(0,LineNum,BrightCyan,Black," %s already exists.  From stat call filesize is %d.",Cal1Filename,FI.Size());
+    LineNum++
   }else{
     Cal1FilenameFlag = true;
-    s1 = fmt.Sprintf(" %s does not already exist.",Cal1Filename);
-//    Printf_tb(0,LineNum,BrightCyan,Black," %s does not already exist.",Cal1Filename);
-//    LineNum++
+//                                               s1 = fmt.Sprintf(" %s does not already exist.",Cal1Filename);
+    Printf_tb(0,LineNum,BrightCyan,Black," %s does not already exist.",Cal1Filename);
+    LineNum++
   }
 
   FI,err = os.Stat(Cal12Filename);
-  s2 := "";
+//                                               s2 := "";
   if err == nil {
     Cal12FilenameFlag = false;
-    s2 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
-//    Printf_tb(0,LineNum,BrightCyan,Black," %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
-//    LineNum++
+//              s2 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
+    Printf_tb(0,LineNum,BrightCyan,Black," %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
+    LineNum++
   }else{
     Cal12FilenameFlag = true;
-    s2 = fmt.Sprintf(" %s does not already exist.",Cal12Filename);
-//    Printf_tb(0,LineNum,BrightCyan,Black," %s does not already exist.",Cal12Filename);
-//    LineNum++
+//                                               s2 = fmt.Sprintf(" %s does not already exist.",Cal12Filename);
+    Printf_tb(0,LineNum,BrightCyan,Black," %s does not already exist.",Cal12Filename);
+    LineNum++
   }
-  s := s1 + s2;
-  Print_tb(0,LineNum,BrightCyan,Black,s);
-  LineNum++
-  LineNum++
+//                                               s := s1 + s2;
+//                                               Print_tb(0,LineNum,BrightCyan,Black,s);
+//                                               LineNum++
+//                                               LineNum++
 
   if Cal1FilenameFlag {
     OutCal1,err := os.Create(Cal1Filename);
@@ -940,9 +940,6 @@ func main() {
     WrOnePageYear();
   }
 
-// Printf_tb(0,LineNum,BrightYellow,Black,"In main and token.State is %d, token.Str is %s\n",RequestedMonthNumberToken.State,RequestedMonthNumberToken.Str);
-// LineNum++
-// Printf_tb(0,LineNum,BrightCyan,Black," RequestedMonthNumberToken.Str: %s.  RequestedMonthNumber: %d, Currentmonthnumber: %d",RequestedMonthNumberToken.Str,RequestedMonthNumber,CurrentMonthNumber);
   LineNum++
   LineNum++
 
