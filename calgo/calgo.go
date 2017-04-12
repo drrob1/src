@@ -25,6 +25,7 @@ package main
   4 Apr 17 -- Will only write the calendar output files if they do not already exist.
   9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
  10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
+ 12 Apr 17 -- Tweaking display output
 */
 
 
@@ -46,7 +47,7 @@ import (
   "holidaycalc"
 )
 
-  const LastCompiled = "11 Apr 17";
+  const LastCompiled = "12 Apr 17";
   const BLANKCHR   = ' ';
   const HorizTab = 9;  // ASCII code, also ^I, or ctrl-I
   const BlankLineWithTabs = "  	  	  	  	  	  	  "; // There are embedded <tab> chars here, too
@@ -826,7 +827,6 @@ func main() {
     year = CurrentYear;
     YearToken.Str = strconv.Itoa(year);
     YearToken.State = tokenize.DGT;
-//    fmt.Printf(" default year is %d, YearToken is %#v \n",year,YearToken);  doesn't display anyway.
   }
 
   if year < 40 {
@@ -837,9 +837,9 @@ func main() {
     fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n");
     os.Exit(1)
   }
-//  Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
-//  termbox.SetCursor(26,MaxRow-1);
-//  _ = GetInputString(26,MaxRow-1);
+//                                              Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
+//                                              termbox.SetCursor(26,MaxRow-1);
+//                                              _ = GetInputString(26,MaxRow-1);
 
   YEARSTR = strconv.Itoa(year);  // This will always be a 4 digit year, regardless of what's entered on command line.
 
@@ -879,30 +879,36 @@ func main() {
 //                                               fmt.Println();
 
   FI,err := os.Stat(Cal1Filename);
+  s1 := "";
   if err == nil {
     Cal1FilenameFlag = false;
-    Printf_tb(0,LineNum,BrightYellow,Black," %s already exists and will not be over-written.",Cal1Filename);
-    LineNum++
-    Printf_tb(0,LineNum,BrightCyan,Black," Stat call.  Filename is %s, Filesize is %d.",FI.Name(),FI.Size());
-    LineNum++
+    s1 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal1Filename,FI.Size());
+//    Printf_tb(0,LineNum,BrightCyan,Black," %s already exists.  From stat call filesize is %d.",Cal1Filename.FI.Size());
+//    LineNum++
   }else{
     Cal1FilenameFlag = true;
-    Printf_tb(0,LineNum,BrightYellow,Black," %s does not already exist and will be written.",Cal1Filename);
-    LineNum++
+    s1 = fmt.Sprintf(" %s does not already exist.",Cal1Filename);
+//    Printf_tb(0,LineNum,BrightCyan,Black," %s does not already exist.",Cal1Filename);
+//    LineNum++
   }
 
   FI,err = os.Stat(Cal12Filename);
+  s2 := "";
   if err == nil {
     Cal12FilenameFlag = false;
-    Printf_tb(0,LineNum,BrightYellow,Black," %s already exists and will not be over-written.",Cal12Filename);
-    LineNum++
-    Printf_tb(0,LineNum,BrightCyan,Black," Stat call.  Filename is %s, Filesize is %d.",FI.Name(),FI.Size());
-    LineNum++
+    s2 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
+//    Printf_tb(0,LineNum,BrightCyan,Black," %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
+//    LineNum++
   }else{
     Cal12FilenameFlag = true;
-    Printf_tb(0,LineNum,BrightYellow,Black," %s does not already exist and will be written.",Cal12Filename);
-    LineNum++
+    s2 = fmt.Sprintf(" %s does not already exist.",Cal12Filename);
+//    Printf_tb(0,LineNum,BrightCyan,Black," %s does not already exist.",Cal12Filename);
+//    LineNum++
   }
+  s := s1 + s2;
+  Print_tb(0,LineNum,BrightCyan,Black,s);
+  LineNum++
+  LineNum++
 
   if Cal1FilenameFlag {
     OutCal1,err := os.Create(Cal1Filename);
