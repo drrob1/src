@@ -27,6 +27,7 @@ package main
   9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
  10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
  12 Apr 17 -- Tweaking display output
+ 13 Apr 17 -- Golint complained, so I added some comments
 */
 
 import (
@@ -46,12 +47,20 @@ import (
 	"tokenize"
 )
 
-const LastCompiled = "12 Apr 17"                 // A newly installed go tool is crying unless I put a comment here.
-const BLANKCHR = ' '                             // A newly installed go tool is crying unless I put a comment here.
-const HorizTab = 9                               // ASCII code, also ^I, or ctrl-I
-const BlankLineWithTabs = "  	  	  	  	  	  	  " // There are embedded <tab> chars here, too
+// LastCompiled needs a comment according to golint
+const LastCompiled = "13 Apr 17"
 
-const ( // MNenum, ie, month number enumeration from the old Modula-2 code
+// BLANKCHR is probably not used much anymore, but golint needs a comment
+const BLANKCHR = ' '
+
+// HorizTab needs comment according to golint
+const HorizTab = 9
+
+// BlankLineWithTabs -- There are embedded <tab> chars here.
+const BlankLineWithTabs = "  	  	  	  	  	  	  "
+
+// These are the month number constants.  Golint complains unless I write this.
+const (
 	JAN = iota
 	FEB
 	MAR
@@ -66,7 +75,9 @@ const ( // MNenum, ie, month number enumeration from the old Modula-2 code
 	DEC
 	NumOfMonthsInYear
 )
-const DCM = DEC // These are now synonyms for December Month Number = 11, as Jan = 0.
+
+// DCM is now a synonym for December Month Number = 11, as Jan = 0.
+const DCM = DEC
 
 var OutputCal1, OutputCal12 os.File
 var OutCal1file, OutCal12file *bufio.Writer
@@ -76,7 +87,7 @@ var BLANKSTR3 = "   "
 var Cal1Filename, Cal12Filename string
 var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
-// AllMonthsArray type subscripts are [MN] [W] [DOW]
+// DateCell structure was added for termbox code.  Subscripts are [MN] [W] [DOW]
 type DateCell struct {
 	DateStr  string
 	day      int
