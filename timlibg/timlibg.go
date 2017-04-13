@@ -48,7 +48,7 @@ elapsed since 00:00 hours, Jan 1, 1970 UTC (i.e., a unix timestamp). Although li
 type using alternative time representations.
 */
 
-type  DateTimeType struct {
+type  DateTimeType struct { // golint wants a comment here.  I don't think I need one.
     Rawtime time.Time;
     Month,Day,Year,Hours,Minutes,Seconds int;
     Nanosec int64;
@@ -57,10 +57,10 @@ type  DateTimeType struct {
 
 
 var (  // I tried declaring these as const but this would not compile.
-  DayNames = [...]string{"Sunday","Monday","Tuesday","Wednesday", "Thursday","Friday","Saturday"};
+  DayNames = [...]string{"Sunday","Monday","Tuesday","Wednesday", "Thursday","Friday","Saturday"};  // golint wants a comment here
   MonthNames = [...]string{"","January","February","March","April","May", "June","July","August", "September","October","November","December"};
-  ADIPM = [...]int{0,1,-1,0,0,1,1,2,3,3,4,4};
-      )
+  ADIPM = [...]int{0,1,-1,0,0,1,1,2,3,3,4,4};  // Accumulated Days in Previous Month
+    )
 
 //  ADIPM is a typed constant that represents the difference btwn the last day
 //  of the previous month and 30, assuming each month was 30 days long.
@@ -69,7 +69,7 @@ var (  // I tried declaring these as const but this would not compile.
 
 
 //              *********************************** TIME2MDY *************************
-// System Time To Month, Day, and Year Conversion.
+// TIME2MDY System Time To Month, Day, and Year Conversion.
 func TIME2MDY()(MM, DD, YY int) {
 
   var DateTime DateTimeType;
@@ -82,6 +82,7 @@ func TIME2MDY()(MM, DD, YY int) {
 }// TIME2MDY
 
 // **************************************************** GetDateTime ***********************************
+// GetDateTime fills the structure.
 func GetDateTime() DateTimeType {
   var DateTime DateTimeType;
 
@@ -100,7 +101,7 @@ func GetDateTime() DateTimeType {
 }// GetDateTime
 
 // ***************************************** MDY2STR ***************************************************
-// Month Day Year Cardinals To String.  By both returning a string as a param and as a function I have
+// MDY2STR Month Day Year Cardinals To String.  By both returning a string as a param and as a function I have
 func MDY2STR(M, D, Y int) string{
 
   const DateSepChar = "/";
@@ -116,6 +117,7 @@ func MDY2STR(M, D, Y int) string{
 } // MDY2STR
 
 // ************************************************ JULIAN **********************************
+// JULIAN used to need longint or longcard.  Since the numbers are < 800,000, regular 32 bit int are enough.
 func JULIAN(M, D, Y int) int {
 
  var (
