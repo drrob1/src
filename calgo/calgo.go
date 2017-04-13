@@ -40,6 +40,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+        "github.com/nsf/termbox-go"
 	//
 	"getcommandline"
 	"holidaycalc"
@@ -831,7 +832,7 @@ func main() {
 	//                                              _ = GetInputString(26,MaxRow-1);
 
 	YEARSTR = strconv.Itoa(year) // This will always be a 4 digit year, regardless of what's entered on command line.
-	runtime.Breakpoint
+//                                      runtime.Breakpoint  doesn't seem to work anyway
 	termerr := termbox.Init()
 	if termerr != nil {
 		log.Println(" TermBox init failed.")
