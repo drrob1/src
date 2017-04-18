@@ -87,7 +87,7 @@ func main() {
 	}
 
 	InputFile.Close()
-	OutBufioWriter.Flush()
+	OutBufioWriter.Flush() // code did not work without this line.
 	OutputFile.Close()
 
 	FI, err := os.Stat(InFilename)
