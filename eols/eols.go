@@ -7,6 +7,7 @@ package main
   REVISION HISTORY
   ----------------
  16 Apr 17 -- Started coding first version of eols, based on cal.go
+ 18 Apr 17 -- Tweaked output message text.
 */
 
 import (
@@ -24,7 +25,7 @@ import (
 	//  "tokenize"
 )
 
-const lastCompiled = "17 Apr 2017"
+const lastCompiled = "18 Apr 2017"
 const k = 1024
 
 // CR is the ASCII carriage return value
@@ -102,8 +103,10 @@ func main() {
 
 	}
 
-	fmt.Println(" File ", Filename, " has ", CRtotal, " CR and ", LFtotal, " LF.")
-	fmt.Println(" Length of byteslice is ", len(byteslice), ", FileSize is ", filesize)
+	fmt.Print(" File ", Filename, " has ", CRtotal, " CR and ", LFtotal, " LF.")
+	fmt.Println("  FileSize is ", filesize)
+	//	fmt.Println("  Length of byteslice is ", len(byteslice), ", FileSize is ",
+	//	filesize)  Length of byteslice and filesize are equal.
 	fmt.Println()
 
 } // end main func for eols
