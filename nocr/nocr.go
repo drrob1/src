@@ -20,6 +20,7 @@ func main() {
 	   REVISION HISTORY
 	   ----------------
 	   17 Apr 17 -- Started writing nocr, based on rpn.go
+	   18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
 	*/
 
 	var inoutline string
@@ -90,14 +91,21 @@ func main() {
 	OutBufioWriter.Flush() // code did not work without this line.
 	OutputFile.Close()
 
+	// Make the processed file the same name as the input file.  IE, swap in and
+	// out files.
+	TempFilename := InFilename + OutFilename + ".tmp"
+	os.Rename(InFilename, TempFilename)
+	os.Rename(OutFilename, InFilename)
+	os.Rename(TempFilename, OutFilename)
+
 	FI, err := os.Stat(InFilename)
 	InputFileSize := FI.Size()
 
 	FI, err = os.Stat(OutFilename)
 	OutputFileSize := FI.Size()
 
-	fmt.Println(" InputFilename is ", InFilename, " and size is ", InputFileSize)
-	fmt.Println(" OutputFilename is ", OutFilename, " and size is ", OutputFileSize)
+	fmt.Println(" Original file is now ", OutFilename, " and size is ", OutputFileSize)
+	fmt.Println(" Output File is now ", InFilename, " and size is ", InputFileSize)
 	fmt.Println()
 
 } // main in nocr.go
