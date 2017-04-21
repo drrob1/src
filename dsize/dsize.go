@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"path/filepath"
 	"sort"
 	//
-	"getcommandline"
 )
 
 const lastCompiled = "21 Apr 17"
@@ -41,14 +41,23 @@ func main() {
 	var files FISlice
 	var err error
 
-	CleanDirName := ""
+	var revflag = flag.Bool("r", false, "reverse the sort, ie, smallest is first") // Ptr
 
-	if len(os.Args) > 1 {
-		commandline := getcommandline.GetCommandLineString()
-		CleanDirName = filepath.Clean(commandline)
-	} else {
-		CleanDirName = "." + string(filepath.Separator)
-	}
+	var RevFlag bool
+	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, smallest is first") // Var
+
+	flag.PrintDefaults()
+	flag.Parse()
+	Reverse := *revflag || RevFlag
+
+	CleanDirName := "." + string(filepath.Separator)
+	/*
+		if len(os.Args) > 1 {
+			commandline := getcommandline.GetCommandLineString()
+			CleanDirName = filepath.Clean(commandline)
+		}
+	*/
+
 	fmt.Println(" dsize will display a directory by size.  Written in Go.  lastCompiled ", lastCompiled)
 	fmt.Println()
 	fmt.Println(" Dirname is", CleanDirName)
@@ -58,11 +67,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sort.Sort(files)
+	fmt.Println(" bool pointer reverse is ", *revflag, ".  bool var Reverse is ", RevFlag, ", Reverse is ", Reverse)
+
+	if Reverse {
+		sort.Sort(sort.Reverse(files))
+	} else {
+		sort.Sort(files)
+	}
 
 	for _, f := range files {
-		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), f.ModTime().String(), f.Name())
-		//		fmt.Println(f.Mode(), "  ", f.Size(), "  ", f.ModTime().String(), "  ", f.Name())
+		s := f.ModTime().Format("Jan-02-2006 15:04:05")
+		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
+		//		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), f.ModTime().String(), f.Name())
 	}
 
 }
