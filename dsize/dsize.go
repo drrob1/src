@@ -13,13 +13,13 @@ import (
 	"getcommandline"
 )
 
-const lastCompiled = "20 Apr 17"
+const lastCompiled = "21 Apr 17"
 
 /*
 Revision History
 ----------------
 20 Apr 17 -- Started writing this rtn, based on dirlist.go
-
+21 Apr 17 -- Now tweaking the output format.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -61,7 +61,8 @@ func main() {
 	sort.Sort(files)
 
 	for _, f := range files {
-		fmt.Println(f.Name(), "  ", f.Size(), "  ", f.ModTime().String(), "  ", f.Mode())
+		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), f.ModTime().String(), f.Name())
+		//		fmt.Println(f.Mode(), "  ", f.Size(), "  ", f.ModTime().String(), "  ", f.Name())
 	}
 
 }
