@@ -39,7 +39,7 @@ func (f FISlice) Len() int {
 }
 
 func main() {
-	const numlines = 60
+	const numlines = 50
 	var files FISlice
 	var err error
 
