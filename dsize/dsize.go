@@ -13,13 +13,14 @@ import (
 	//
 )
 
-const lastCompiled = "21 Apr 17"
+const lastCompiled = "22 Apr 17"
 
 /*
 Revision History
 ----------------
 20 Apr 17 -- Started writing this rtn, based on dirlist.go
-21 Apr 17 -- Now tweaking the output format.
+21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
+22 Apr 17 -- Now to use the non flag commandline.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -51,6 +52,7 @@ func main() {
 	Reverse := *revflag || RevFlag
 
 	CleanDirName := "." + string(filepath.Separator)
+	commandline := flag.Args()
 	/*
 		if len(os.Args) > 1 {
 			commandline := getcommandline.GetCommandLineString()
@@ -67,7 +69,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(" bool pointer reverse is ", *revflag, ".  bool var Reverse is ", RevFlag, ", Reverse is ", Reverse)
+	//	fmt.Println(" bool pointer reverse is ", *revflag, ".  bool var Reverse is ", RevFlag, ", Reverse is ", Reverse)
 
 	if Reverse {
 		sort.Sort(sort.Reverse(files))
