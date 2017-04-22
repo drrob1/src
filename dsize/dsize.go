@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	//
 )
 
 const lastCompiled = "22 Apr 17"
@@ -20,7 +19,7 @@ Revision History
 ----------------
 20 Apr 17 -- Started writing this rtn, based on dirlist.go
 21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
-22 Apr 17 -- Now to use the non flag commandline.
+22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -52,13 +51,10 @@ func main() {
 	Reverse := *revflag || RevFlag
 
 	CleanDirName := "." + string(filepath.Separator)
-	commandline := flag.Args()
-	/*
-		if len(os.Args) > 1 {
-			commandline := getcommandline.GetCommandLineString()
-			CleanDirName = filepath.Clean(commandline)
-		}
-	*/
+	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want
+	if len(commandline) > 0 {
+		CleanDirName = filepath.Clean(commandline)
+	}
 
 	fmt.Println(" dsize will display a directory by size.  Written in Go.  lastCompiled ", lastCompiled)
 	fmt.Println()
