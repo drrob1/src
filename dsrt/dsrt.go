@@ -43,10 +43,10 @@ func main() {
 	var files FISlice
 	var err error
 
-	var revflag = flag.Bool("r", false, "reverse the sort, ie, smallest is first") // Ptr
+	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest is first") // Ptr
 
 	var RevFlag bool
-	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, smallest is first") // Value
+	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest is first") // Value
 
 	var nlines = flag.Int("n", numlines, "number of lines to display") // Ptr
 
