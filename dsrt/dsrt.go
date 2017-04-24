@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,7 +13,7 @@ import (
 	"sort"
 )
 
-const lastCompiled = "22 Apr 17"
+const lastCompiled = "24 Apr 17"
 
 /*
 Revision History
@@ -21,6 +22,7 @@ Revision History
 21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
 22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
+24 Apr 17 -- Now adding file matching, like dir or ls does.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -42,6 +44,7 @@ func main() {
 	const numlines = 50
 	var files FISlice
 	var err error
+	var count int
 
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest is first") // Ptr
 
@@ -66,19 +69,44 @@ func main() {
 	} else if NLines != numlines {
 		NumLines = NLines
 	}
+	askforinput := true
 
 	CleanDirName := "." + string(filepath.Separator)
+	CleanFileName := ""
 	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want
 	if len(commandline) > 0 {
 		CleanDirName = filepath.Clean(commandline)
+		askforinput = false
+	}
+
+	if askforinput {
+		// Asking for input so don't have to worry about command line globbing
+		fmt.Print(" Enter input for globbing: ")
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		newtext := scanner.Text()
+		if err = scanner.Err(); err != nil {
+			fmt.Fprintln(os.Stderr, " reading std input: ", err)
+			os.Exit(1)
+		}
+		if len(newtext) > 0 {
+			// time to do the stuff I'm writing this pgm for
+			CleanDirName, CleanFileName = filepath.Split(newtext)
+			if len(CleanDirName) == 0 {
+				CleanDirName = "." + string(filepath.Separator)
+			}
+		}
+
+	}
+
+	if len(CleanFileName) == 0 {
+		CleanFileName = "*"
 	}
 
 	files, err = ioutil.ReadDir(CleanDirName)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	//	fmt.Println(" bool pointer reverse is ", *revflag, ".  bool var Reverse is ", RevFlag, ", Reverse is ", Reverse)
 
 	if Reverse {
 		sort.Sort(sort.Reverse(files))
@@ -88,11 +116,14 @@ func main() {
 
 	fmt.Println(" Dirname is", CleanDirName)
 
-	for i, f := range files {
-		s := f.ModTime().Format("Jan-02-2006 15:04:05")
-		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
-		if i > NumLines {
-			break
+	for _, f := range files {
+		if BOOL, _ := filepath.Match(CleanFileName, f.Name()); BOOL {
+			s := f.ModTime().Format("Jan-02-2006 15:04:05")
+			fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
+			count++
+			if count > NumLines {
+				break
+			}
 		}
 	}
 
