@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 )
 
 const lastCompiled = "25 Apr 17"
@@ -23,7 +24,7 @@ Revision History
 22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
 24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
-25 Apr 17 -- Now adding sort by size as an option, like -s
+25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -161,7 +162,13 @@ func main() {
 	for _, f := range files {
 		if BOOL, _ := filepath.Match(CleanFileName, f.Name()); BOOL {
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
-			fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
+			sizeint := int(f.Size())
+			sizestr := strconv.Itoa(sizeint)
+			if sizeint > 100000 {
+				sizestr = AddCommas(sizestr)
+			}
+			//			fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
+			fmt.Printf("%10v %15s %s %s\n", f.Mode(), sizestr, s, f.Name())
 			count++
 			if count > NumLines {
 				break
@@ -170,6 +177,28 @@ func main() {
 	}
 
 } // end main dsrt
+
+//-------------------------------------------------------------------- InsertByteSlice
+func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
+	return append(slice[:index], append(insertion, slice[index:]...)...)
+}
+
+//---------------------------------------------------------------------- AddCommas
+func AddCommas(instr string) string {
+	var Comma []byte = []byte{','}
+
+	BS := make([]byte, 0, 15)
+	BS = append(BS, instr...)
+
+	i := len(BS)
+
+	for NumberOfCommas := i / 3; (NumberOfCommas > 0) && (i > 3); NumberOfCommas-- {
+		i -= 3
+		BS = InsertIntoByteSlice(BS, Comma, i)
+	}
+	return string(BS)
+} // AddCommas
+//-----------------------------------------------------------------------------------------------------------------------------
 
 /*
 package path
