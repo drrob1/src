@@ -13,7 +13,7 @@ import (
 	"sort"
 )
 
-const lastCompiled = "24 Apr 17"
+const lastCompiled = "25 Apr 17"
 
 /*
 Revision History
@@ -22,46 +22,75 @@ Revision History
 21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
 22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
-24 Apr 17 -- Now adding file matching, like dir or ls does.
+24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
+25 Apr 17 -- Now adding sort by size as an option, like -s
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
+type FISliceDate []os.FileInfo
+type FISliceSize []os.FileInfo
 
-func (f FISlice) Less(i, j int) bool {
+func (f FISliceDate) Less(i, j int) bool {
 	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
 }
 
-func (f FISlice) Swap(i, j int) {
+func (f FISliceDate) Swap(i, j int) {
 	f[i], f[j] = f[j], f[i]
 }
 
-func (f FISlice) Len() int {
+func (f FISliceDate) Len() int {
+	return len(f)
+}
+
+func (f FISliceSize) Less(i, j int) bool {
+	return f[i].Size() > f[j].Size() // I want a reverse sort, largest first
+}
+
+func (f FISliceSize) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+
+func (f FISliceSize) Len() int {
 	return len(f)
 }
 
 func main() {
 	const numlines = 50
 	var files FISlice
+	var filesDate FISliceDate
+	var filesSize FISliceSize
 	var err error
 	var count int
 
-	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest is first") // Ptr
+	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
 	var RevFlag bool
-	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest is first") // Value
+	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var nlines = flag.Int("n", numlines, "number of lines to display") // Ptr
 
 	var NLines int
 	flag.IntVar(&NLines, "N", numlines, "number of lines to display") // Value
 
-	fmt.Println(" dsrt will display a directory by date.  Written in Go.  lastCompiled ", lastCompiled)
+	var helpflag = flag.Bool("h", false, "print help message") // pointer
+	var HelpFlag bool
+	flag.BoolVar(&HelpFlag, "H", false, "print help message")
+
+	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
+	var SizeFlag bool
+	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+	flag.Parse()
+
+	fmt.Println(" dsrt will display a directory by date or size.  Written in Go.  LastCompiled ", lastCompiled)
 	fmt.Println()
 
-	flag.PrintDefaults()
-	flag.Parse()
+	if *helpflag || HelpFlag {
+		flag.PrintDefaults()
+	}
+
 	Reverse := *revflag || RevFlag
+	SizeSort := *sizeflag || SizeFlag
 
 	NumLines := numlines
 	if *nlines != numlines {
@@ -103,15 +132,28 @@ func main() {
 		CleanFileName = "*"
 	}
 
-	files, err = ioutil.ReadDir(CleanDirName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if Reverse {
-		sort.Sort(sort.Reverse(files))
+	if SizeSort {
+		filesSize, err = ioutil.ReadDir(CleanDirName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if Reverse {
+			sort.Sort(sort.Reverse(filesSize))
+		} else {
+			sort.Sort(filesSize)
+		}
+		files = FISlice(filesSize)
 	} else {
-		sort.Sort(files)
+		filesDate, err = ioutil.ReadDir(CleanDirName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if Reverse {
+			sort.Sort(sort.Reverse(filesDate))
+		} else {
+			sort.Sort(filesDate)
+		}
+		files = FISlice(filesDate)
 	}
 
 	fmt.Println(" Dirname is", CleanDirName)
