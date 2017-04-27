@@ -12,9 +12,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 )
 
-const lastCompiled = "25 Apr 17"
+const lastCompiled = "27 Apr 17"
 
 /*
 Revision History
@@ -25,6 +26,7 @@ Revision History
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
 24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
 25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
+27 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -125,6 +127,7 @@ func main() {
 			if len(CleanDirName) == 0 {
 				CleanDirName = "." + string(filepath.Separator)
 			}
+			CleanFileName = strings.ToUpper(CleanFileName)
 		}
 
 	}
@@ -160,7 +163,8 @@ func main() {
 	fmt.Println(" Dirname is", CleanDirName)
 
 	for _, f := range files {
-		if BOOL, _ := filepath.Match(CleanFileName, f.Name()); BOOL {
+		NAME := strings.ToUpper(f.Name())
+		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
 			sizeint := int(f.Size())
 			sizestr := strconv.Itoa(sizeint)
