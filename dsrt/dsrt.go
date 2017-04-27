@@ -127,12 +127,13 @@ func main() {
 		if len(newtext) > 0 {
 			// time to do the stuff I'm writing this pgm for
 			CleanDirName, CleanFileName = filepath.Split(newtext)
-			if len(CleanDirName) == 0 {
-				CleanDirName = "." + string(filepath.Separator)
-			}
 			CleanFileName = strings.ToUpper(CleanFileName)
 		}
 
+	}
+
+	if len(CleanDirName) == 0 {
+		CleanDirName = "." + string(filepath.Separator)
 	}
 
 	if len(CleanFileName) == 0 {
