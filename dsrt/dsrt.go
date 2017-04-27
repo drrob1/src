@@ -26,7 +26,8 @@ Revision History
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
 24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
 25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
-27 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
+26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
+27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -107,7 +108,9 @@ func main() {
 	CleanFileName := ""
 	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want
 	if len(commandline) > 0 {
-		CleanDirName = filepath.Clean(commandline)
+		//		CleanDirName = filepath.Clean(commandline)
+		CleanDirName, CleanFileName = filepath.Split(commandline)
+		CleanFileName = strings.ToUpper(CleanFileName)
 		askforinput = false
 	}
 
