@@ -1,5 +1,5 @@
 // (C) 1990-2016.  Robert W Solomon.  All rights reserved.
-// utf-8 to ascii, based on nocr.go
+// ShowUtf-8 codes.  Based on utf8toascii, based on nocr.go
 
 package main
 
@@ -14,7 +14,7 @@ import (
 	"getcommandline"
 )
 
-const lastCompiled = "5 May 17"
+const lastCompiled = "6 May 17"
 
 //const openQuoteRune = 0xe2809c
 //const closeQuoteRune = 0xe2809d
@@ -24,11 +24,9 @@ const openQuoteRune = 8220
 const closeQuoteRune = 8221
 const squoteRune = 8217
 const emdashRune = 8212
-const bulletpointRune = 8226
 const quoteString = "\""
 const squoteString = "'"
 const emdashStr = " -- "
-const bulletpointStr = "--"
 
 /*
    REVISION HISTORY
@@ -36,13 +34,14 @@ const bulletpointStr = "--"
    17 Apr 17 -- Started writing nocr, based on rpn.go
    18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
+	6 May 17 -- Need to know the utf8 codes before I can convert 'em.
 */
 
 func main() {
 	var instr, outstr, str string
 	//	var err error
 
-	fmt.Println(" utf8toascii converts utf8 to ascii.  Last compiled ", lastCompiled)
+	fmt.Println(" ShowUtf8.  Last compiled ", lastCompiled)
 	fmt.Println()
 
 	if len(os.Args) <= 1 {
@@ -106,7 +105,7 @@ func main() {
 			for dnctr := runecount; dnctr > 0; dnctr-- {
 				r, siz := utf8.DecodeRuneInString(instr) // front rune in r
 				instr = instr[siz:]                      // chop off the first rune
-				//				fmt.Print(" r, siz: ", r, siz, ".  ")
+				fmt.Print(" r, siz: ", r, siz, ".  ")
 				if r == openQuoteRune {
 					str = quoteString
 				} else if r == closeQuoteRune {
@@ -115,8 +114,6 @@ func main() {
 					str = squoteString
 				} else if r == emdashRune {
 					str = emdashStr
-				} else if r == bulletpointRune {
-					str = bulletpointStr
 				} else {
 					str = string(r)
 				}
@@ -124,7 +121,7 @@ func main() {
 
 			}
 			outstr = strings.Join(stringslice, "")
-
+			fmt.Println()
 		}
 		_, err := OutBufioWriter.WriteString(outstr)
 		check(err)
