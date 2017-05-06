@@ -24,9 +24,11 @@ const openQuoteRune = 8220
 const closeQuoteRune = 8221
 const squoteRune = 8217
 const emdashRune = 8212
+const bulletpointRune = 8226
 const quoteString = "\""
 const squoteString = "'"
 const emdashStr = " -- "
+const bulletpointStr = "--"
 
 /*
    REVISION HISTORY
@@ -38,7 +40,7 @@ const emdashStr = " -- "
 */
 
 func main() {
-	var instr, outstr, str string
+	var instr string
 	//	var err error
 
 	fmt.Println(" ShowUtf8.  Last compiled ", lastCompiled)
@@ -54,7 +56,7 @@ func main() {
 	InFilename := ""
 	InFileExists := false
 	Ext1Default := ".txt"
-	OutFileSuffix := ".out"
+	//	OutFileSuffix := ".out"
 
 	if strings.Contains(BaseFilename, ".") {
 		InFilename = BaseFilename
@@ -81,79 +83,48 @@ func main() {
 		os.Exit(1)
 	}
 	defer InputFile.Close()
-
-	OutFilename := BaseFilename + OutFileSuffix
-	OutputFile, err := os.Create(OutFilename)
-	if err != nil {
-		fmt.Println(" Error while opening OutputFile ", OutFilename, ".  Exiting.")
-		os.Exit(1)
-	}
-	defer OutputFile.Close()
-
 	InBufioScanner := bufio.NewScanner(InputFile)
-	OutBufioWriter := bufio.NewWriter(OutputFile)
-	defer OutBufioWriter.Flush()
-
+	linecounter := 0
 	for InBufioScanner.Scan() {
 		instr = InBufioScanner.Text() // does not include the trailing EOL char
+		linecounter++
 		runecount := utf8.RuneCountInString(instr)
-		//		fmt.Println(" Len of instr is ", len(instr), ", runecount is ", runecount)
 		if len(instr) == runecount {
-			outstr = instr
+			continue
 		} else { // a mismatch btwn instr length and rune count means that a multibyte rune is in this instr
-			stringslice := make([]string, 0, runecount)
+			fmt.Print(" Line ", linecounter, " : ")
 			for dnctr := runecount; dnctr > 0; dnctr-- {
 				r, siz := utf8.DecodeRuneInString(instr) // front rune in r
 				instr = instr[siz:]                      // chop off the first rune
-				fmt.Print(" r, siz: ", r, siz, ".  ")
-				if r == openQuoteRune {
-					str = quoteString
-				} else if r == closeQuoteRune {
-					str = quoteString
-				} else if r == squoteRune {
-					str = squoteString
-				} else if r == emdashRune {
-					str = emdashStr
-				} else {
-					str = string(r)
+				if r > 128 {
+					fmt.Print(" r: ", r, ", siz: ", siz, "; ")
+					if r == openQuoteRune {
+						fmt.Print(" rune is opening", quoteString, "; ")
+					} else if r == closeQuoteRune {
+						fmt.Print(" rune is closing", quoteString, "; ")
+					} else if r == squoteRune {
+						fmt.Print(" rune is ", squoteString, "; ")
+					} else if r == emdashRune {
+						fmt.Print(" rune is ", emdashStr, "; ")
+					} else if r == bulletpointRune {
+						fmt.Print(" rune is bulletpoint; ")
+					} else {
+						fmt.Print(" rune is new ")
+					}
 				}
-				stringslice = append(stringslice, str)
-
 			}
-			outstr = strings.Join(stringslice, "")
 			fmt.Println()
 		}
-		_, err := OutBufioWriter.WriteString(outstr)
-		check(err)
-		_, err = OutBufioWriter.WriteRune('\n')
-		check(err)
 	}
 
-	InputFile.Close()
-	OutBufioWriter.Flush() // code did not work without this line.
-	OutputFile.Close()
-
-	// Make the processed file the same name as the input file.  IE, swap in and
-	// out files.
-	TempFilename := InFilename + OutFilename + ".tmp"
-	os.Rename(InFilename, TempFilename)
-	os.Rename(OutFilename, InFilename)
-	os.Rename(TempFilename, OutFilename)
-
-	FI, err := os.Stat(InFilename)
-	InputFileSize := FI.Size()
-
-	FI, err = os.Stat(OutFilename)
-	OutputFileSize := FI.Size()
-
-	fmt.Println(" Original file is now ", OutFilename, " and size is ", OutputFileSize)
-	fmt.Println(" Output File is now ", InFilename, " and size is ", InputFileSize)
+	//	InputFile.Close()
 	fmt.Println()
 
-} // main in utf8toascii.go
-
+} // main in ShowUtf8.go
+/*
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
+*/
