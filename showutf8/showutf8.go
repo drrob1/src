@@ -23,8 +23,13 @@ const lastCompiled = "6 May 17"
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
 const squoteRune = 8217
+const opensquoteRune = 8216
 const emdashRune = 8212
+const endashRune = 8211
 const bulletpointRune = 8226
+const threedotsRune = 8230
+const hyphenRune = 8208
+
 const quoteString = "\""
 const squoteString = "'"
 const emdashStr = " -- "
@@ -102,12 +107,16 @@ func main() {
 						fmt.Print(" rune is opening", quoteString, "; ")
 					} else if r == closeQuoteRune {
 						fmt.Print(" rune is closing", quoteString, "; ")
-					} else if r == squoteRune {
+					} else if r == squoteRune || r == opensquoteRune {
 						fmt.Print(" rune is ", squoteString, "; ")
-					} else if r == emdashRune {
+					} else if r == emdashRune || r == endashRune {
 						fmt.Print(" rune is ", emdashStr, "; ")
 					} else if r == bulletpointRune {
 						fmt.Print(" rune is bulletpoint; ")
+					} else if r == threedotsRune {
+						fmt.Print(" rune is ... ; ")
+					} else if r == hyphenRune {
+						fmt.Print(" rune is hyphen; ")
 					} else {
 						fmt.Print(" rune is new ")
 					}

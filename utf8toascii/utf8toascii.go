@@ -23,12 +23,19 @@ const lastCompiled = "5 May 17"
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
 const squoteRune = 8217
+const opensquoteRune = 8216
 const emdashRune = 8212
+const endashRune = 8211
 const bulletpointRune = 8226
+const threedotsRune = 8230
+const hyphenRune = 8208
+
 const quoteString = "\""
 const squoteString = "'"
 const emdashStr = " -- "
 const bulletpointStr = "--"
+const threedotsStr = " ... "
+const hyphenStr = "-"
 
 /*
    REVISION HISTORY
@@ -107,16 +114,18 @@ func main() {
 				r, siz := utf8.DecodeRuneInString(instr) // front rune in r
 				instr = instr[siz:]                      // chop off the first rune
 				//				fmt.Print(" r, siz: ", r, siz, ".  ")
-				if r == openQuoteRune {
+				if r == openQuoteRune || r == closeQuoteRune {
 					str = quoteString
-				} else if r == closeQuoteRune {
-					str = quoteString
-				} else if r == squoteRune {
+				} else if r == squoteRune || r == opensquoteRune {
 					str = squoteString
-				} else if r == emdashRune {
+				} else if r == emdashRune || r == endashRune {
 					str = emdashStr
 				} else if r == bulletpointRune {
 					str = bulletpointStr
+				} else if r == threedotsRune {
+					str = threedotsStr
+				} else if r == hyphenRune {
+					str = hyphenStr
 				} else {
 					str = string(r)
 				}
