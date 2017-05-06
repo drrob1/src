@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode/utf8"
 	//
 	"getcommandline"
 )
 
-const lastCompiled = "5 May 17"
+const lastCompiled = "6 May 17"
 
 //const openQuoteRune = 0xe2809c
 //const closeQuoteRune = 0xe2809d
@@ -43,10 +44,12 @@ const hyphenStr = "-"
    17 Apr 17 -- Started writing nocr, based on rpn.go
    18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
+	6 May 17 -- After I wrote ShowUtf8, I added more runes here and
+                  added OS based line endings.
 */
 
 func main() {
-	var instr, outstr, str string
+	var instr, outstr, str, lineEndings string
 	//	var err error
 
 	fmt.Println(" utf8toascii converts utf8 to ascii.  Last compiled ", lastCompiled)
@@ -63,6 +66,12 @@ func main() {
 	InFileExists := false
 	Ext1Default := ".txt"
 	OutFileSuffix := ".out"
+
+	if runtime.GOOS == "linux" {
+		lineEndings = "\n"
+	} else if runtime.GOOS == "windows" {
+		lineEndings = "\r\n"
+	}
 
 	if strings.Contains(BaseFilename, ".") {
 		InFilename = BaseFilename
@@ -137,7 +146,7 @@ func main() {
 		}
 		_, err := OutBufioWriter.WriteString(outstr)
 		check(err)
-		_, err = OutBufioWriter.WriteRune('\n')
+		_, err = OutBufioWriter.WriteString(lineEndings)
 		check(err)
 	}
 

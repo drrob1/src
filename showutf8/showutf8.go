@@ -42,6 +42,7 @@ const bulletpointStr = "--"
    18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
 	6 May 17 -- Need to know the utf8 codes before I can convert 'em.
+	6 May 17 -- Added a flag -b for before to see the prev string to give me context for a new rune.
 */
 
 func main() {
