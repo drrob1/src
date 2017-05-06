@@ -30,6 +30,8 @@ const endashRune = 8211
 const bulletpointRune = 8226
 const threedotsRune = 8230
 const hyphenRune = 8208
+const diagraphFIrune = 64257
+const diagraphFLrune = 64258
 
 const quoteString = "\""
 const squoteString = "'"
@@ -37,6 +39,8 @@ const emdashStr = " -- "
 const bulletpointStr = "--"
 const threedotsStr = " ... "
 const hyphenStr = "-"
+const diagraphFIstr = "fi"
+const diagraphFLstr = "fl"
 
 /*
    REVISION HISTORY
@@ -135,6 +139,10 @@ func main() {
 					str = threedotsStr
 				} else if r == hyphenRune {
 					str = hyphenStr
+				} else if r == diagraphFIrune {
+					str = diagraphFIstr
+				} else if r == diagraphFLrune {
+					str = diagraphFLstr
 				} else {
 					str = string(r)
 				}
