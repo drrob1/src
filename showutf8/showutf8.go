@@ -127,8 +127,9 @@ func main() {
 					} else if r == hyphenRune {
 						fmt.Print(" rune is hyphen; ")
 					} else {
-						fmt.Print(" rune is new, rest of input line is: ")
+						fmt.Print(" rune is new.")
 						if After {
+							fmt.Print("  Rest of input line is: ")
 							fmt.Println(instr)
 						}
 					}
