@@ -5,13 +5,13 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
 	//
-	"getcommandline"
 )
 
 const lastCompiled = "6 May 17"
@@ -42,7 +42,7 @@ const bulletpointStr = "--"
    18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
 	6 May 17 -- Need to know the utf8 codes before I can convert 'em.
-	6 May 17 -- Added a flag -b for before to see the prev string to give me context for a new rune.
+	6 May 17 -- Added a flag -a for after to see the rest of the string to give me context for a new rune.
 */
 
 func main() {
@@ -57,7 +57,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	commandline := getcommandline.GetCommandLineString()
+	var afterflag = flag.Bool("a", false, "afterflag -- show string after rune.")
+	var AfterFlag bool
+	flag.BoolVar(&AfterFlag, "A", false, "AfterFlag -- show string after rune.")
+
+	flag.Parse()
+
+	After := *afterflag || AfterFlag
+
+	commandline := flag.Arg(0)
 	BaseFilename := filepath.Clean(commandline)
 	InFilename := ""
 	InFileExists := false
@@ -119,7 +127,10 @@ func main() {
 					} else if r == hyphenRune {
 						fmt.Print(" rune is hyphen; ")
 					} else {
-						fmt.Print(" rune is new ")
+						fmt.Print(" rune is new, rest of input line is: ")
+						if After {
+							fmt.Println(instr)
+						}
 					}
 				}
 			}
