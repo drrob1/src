@@ -14,7 +14,7 @@ import (
 	//
 )
 
-const lastCompiled = "6 May 17"
+const lastCompiled = "7 May 17"
 
 //const openQuoteRune = 0xe2809c
 //const closeQuoteRune = 0xe2809d
@@ -43,6 +43,7 @@ const bulletpointStr = "--"
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
 	6 May 17 -- Need to know the utf8 codes before I can convert 'em.
 	6 May 17 -- Added a flag -a for after to see the rest of the string to give me context for a new rune.
+	7 May 17 -- Added help flag.
 */
 
 func main() {
@@ -52,16 +53,24 @@ func main() {
 	fmt.Println(" ShowUtf8.  Last compiled ", lastCompiled)
 	fmt.Println()
 
-	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: utf8toascii <filename> ")
-		os.Exit(1)
-	}
-
 	var afterflag = flag.Bool("a", false, "afterflag -- show string after rune.")
 	var AfterFlag bool
 	flag.BoolVar(&AfterFlag, "A", false, "AfterFlag -- show string after rune.")
+	var helpflag = flag.Bool("h", false, "print help message") // pointer
+	var HelpFlag bool
+	flag.BoolVar(&HelpFlag, "H", false, "print help message")
 
 	flag.Parse()
+
+	if len(os.Args) <= 1 {
+		fmt.Println(" Usage: showutf8 <filename> ")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	if *helpflag || HelpFlag {
+		flag.PrintDefaults()
+	}
 
 	After := *afterflag || AfterFlag
 
