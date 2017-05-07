@@ -43,7 +43,7 @@ const bulletpointStr = "--"
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
 	6 May 17 -- Need to know the utf8 codes before I can convert 'em.
 	6 May 17 -- Added a flag -a for after to see the rest of the string to give me context for a new rune.
-	7 May 17 -- Added help flag.
+	7 May 17 -- Added help flag, and a character position counter.
 */
 
 func main() {
@@ -115,12 +115,12 @@ func main() {
 		if len(instr) == runecount {
 			continue
 		} else { // a mismatch btwn instr length and rune count means that a multibyte rune is in this instr
-			fmt.Print(" Line ", linecounter, " : ")
+			fmt.Print(" Line ", linecounter, " . ")
 			for dnctr := runecount; dnctr > 0; dnctr-- {
 				r, siz := utf8.DecodeRuneInString(instr) // front rune in r
 				instr = instr[siz:]                      // chop off the first rune
 				if r > 128 {
-					fmt.Print(" r: ", r, ", siz: ", siz, "; ")
+					fmt.Print(" r:", r, ", siz:", siz, ", dnctr:", runecount-dnctr, ";")
 					if r == openQuoteRune {
 						fmt.Print(" rune is opening", quoteString, "; ")
 					} else if r == closeQuoteRune {
