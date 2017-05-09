@@ -8,6 +8,7 @@ package main
   ----------------
  16 Apr 17 -- Started coding first version of eols, based on cal.go
  18 Apr 17 -- Tweaked output message text.
+  9 May 17 -- Will AddCommas on filesize for output
 */
 
 import (
@@ -15,17 +16,17 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	//
 	"getcommandline"
-
 	//  "bufio"
 	//  "strconv"
 	//  "timlibg"
 	//  "tokenize"
 )
 
-const lastCompiled = "18 Apr 2017"
+const lastCompiled = "9 May 2017"
 const k = 1024
 
 // CR is the ASCII carriage return value
@@ -103,8 +104,13 @@ func main() {
 
 	}
 
+	FileSizeStr := strconv.FormatInt(filesize, 10)
+	if filesize > 100000 {
+		FileSizeStr = AddCommas(FileSizeStr)
+	}
+
 	fmt.Print(" File ", Filename, " has ", CRtotal, " CR and ", LFtotal, " LF.")
-	fmt.Println("  FileSize is ", filesize)
+	fmt.Println("  FileSize is ", FileSizeStr)
 	//	fmt.Println("  Length of byteslice is ", len(byteslice), ", FileSize is ",
 	//	filesize)  Length of byteslice and filesize are equal.
 	fmt.Println()
@@ -112,3 +118,25 @@ func main() {
 } // end main func for eols
 
 // end eols.go
+
+//-------------------------------------------------------------------- InsertByteSlice
+func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
+	return append(slice[:index], append(insertion, slice[index:]...)...)
+}
+
+//---------------------------------------------------------------------- AddCommas
+func AddCommas(instr string) string {
+	var Comma []byte = []byte{','}
+
+	BS := make([]byte, 0, 15)
+	BS = append(BS, instr...)
+
+	i := len(BS)
+
+	for NumberOfCommas := i / 3; (NumberOfCommas > 0) && (i > 3); NumberOfCommas-- {
+		i -= 3
+		BS = InsertIntoByteSlice(BS, Comma, i)
+	}
+	return string(BS)
+} // AddCommas
+//-----------------------------------------------------------------------------------------------------------------------------

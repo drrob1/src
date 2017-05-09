@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 	//
 )
 
-const lastCompiled = "7 May 17"
+const lastCompiled = "9 May 17"
 
 //const openQuoteRune = 0xe2809c
 //const closeQuoteRune = 0xe2809d
@@ -44,6 +45,7 @@ const bulletpointStr = "--"
 	6 May 17 -- Need to know the utf8 codes before I can convert 'em.
 	6 May 17 -- Added a flag -a for after to see the rest of the string to give me context for a new rune.
 	7 May 17 -- Added help flag, and a character position counter.
+	9 May 17 -- Tweaked output message regarding the line and position counter.
 */
 
 func main() {
@@ -115,12 +117,16 @@ func main() {
 		if len(instr) == runecount {
 			continue
 		} else { // a mismatch btwn instr length and rune count means that a multibyte rune is in this instr
-			fmt.Print(" Line ", linecounter, " . ")
+			lineCtrStr := strconv.Itoa(linecounter)
+			if linecounter > 100000 {
+				lineCtrStr = AddCommas(lineCtrStr)
+			}
+			fmt.Print(" Line ", lineCtrStr, " : ")
 			for dnctr := runecount; dnctr > 0; dnctr-- {
 				r, siz := utf8.DecodeRuneInString(instr) // front rune in r
 				instr = instr[siz:]                      // chop off the first rune
 				if r > 128 {
-					fmt.Print(" r:", r, ", siz:", siz, ", dnctr:", runecount-dnctr, ";")
+					fmt.Print(" r ", r, ", siz ", siz, ", posn:", runecount-dnctr+1, ".")
 					if r == openQuoteRune {
 						fmt.Print(" rune is opening", quoteString, "; ")
 					} else if r == closeQuoteRune {
@@ -159,3 +165,25 @@ func check(e error) {
 	}
 }
 */
+
+//-------------------------------------------------------------------- InsertByteSlice
+func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
+	return append(slice[:index], append(insertion, slice[index:]...)...)
+}
+
+//---------------------------------------------------------------------- AddCommas
+func AddCommas(instr string) string {
+	var Comma []byte = []byte{','}
+
+	BS := make([]byte, 0, 15)
+	BS = append(BS, instr...)
+
+	i := len(BS)
+
+	for NumberOfCommas := i / 3; (NumberOfCommas > 0) && (i > 3); NumberOfCommas-- {
+		i -= 3
+		BS = InsertIntoByteSlice(BS, Comma, i)
+	}
+	return string(BS)
+} // AddCommas
+//-----------------------------------------------------------------------------------------------------------------------------

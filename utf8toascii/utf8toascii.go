@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,15 +13,14 @@ import (
 	"strings"
 	"unicode/utf8"
 	//
-	"getcommandline"
 )
 
-const lastCompiled = "6 May 17"
+const lastCompiled = "8 May 17"
 
-//const openQuoteRune = 0xe2809c
-//const closeQuoteRune = 0xe2809d
-//const squoteRune = 0xe28099
-//const emdashRune = 0xe28094
+//const openQuoteRune = 0xe2809c  \  These values are in the file itself seen by hexdump -C
+//const closeQuoteRune = 0xe2809d  \ but are not the rune (unicode code point)
+//const squoteRune = 0xe28099      / representing these characters.
+//const emdashRune = 0xe28094     /  I didn't know these could be different.
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
 const squoteRune = 8217
@@ -48,23 +48,39 @@ const diagraphFLstr = "fl"
    17 Apr 17 -- Started writing nocr, based on rpn.go
    18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
     5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
-	6 May 17 -- After I wrote ShowUtf8, I added more runes here and
+    6 May 17 -- After I wrote ShowUtf8, I added more runes here and
                   added OS based line endings.
+    8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
 */
 
 func main() {
 	var instr, outstr, str, lineEndings string
-	//	var err error
 
 	fmt.Println(" utf8toascii converts utf8 to ascii.  Last compiled ", lastCompiled)
 	fmt.Println()
 
-	if len(os.Args) <= 1 {
+	var norenameflag = flag.Bool("no", false, "norenameflag -- do not rename files at end.")
+	var NoRenameFlag bool
+	flag.BoolVar(&NoRenameFlag, "N", false, "NoRenameFlag -- do not rename files at end.")
+	var helpflag = flag.Bool("h", false, "Print help message")
+	var HelpFlag bool
+	flag.BoolVar(&HelpFlag, "H", false, "Print help message")
+
+	flag.Parse()
+
+	commandline := flag.Arg(0)
+	if len(os.Args) <= 1 || len(commandline) == 0 {
 		fmt.Println(" Usage: utf8toascii <filename> ")
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	commandline := getcommandline.GetCommandLineString()
+	if *helpflag || HelpFlag {
+		flag.PrintDefaults()
+	}
+
+	RenameFlag := !(*norenameflag || NoRenameFlag) // same as ~A && ~B, symbollically.  So this reads better in the code below.
+
 	BaseFilename := filepath.Clean(commandline)
 	InFilename := ""
 	InFileExists := false
@@ -163,20 +179,28 @@ func main() {
 	OutputFile.Close()
 
 	// Make the processed file the same name as the input file.  IE, swap in and
-	// out files.
-	TempFilename := InFilename + OutFilename + ".tmp"
-	os.Rename(InFilename, TempFilename)
-	os.Rename(OutFilename, InFilename)
-	os.Rename(TempFilename, OutFilename)
+	// out files, unless the norename flag was used on the command line.
 
-	FI, err := os.Stat(InFilename)
+	inputfilename := InFilename
+	outputfilename := OutFilename
+
+	if RenameFlag {
+		TempFilename := InFilename + OutFilename + ".tmp"
+		os.Rename(InFilename, TempFilename)
+		os.Rename(OutFilename, InFilename)
+		os.Rename(TempFilename, OutFilename)
+		inputfilename = OutFilename
+		outputfilename = InFilename
+	}
+
+	FI, err := os.Stat(inputfilename)
 	InputFileSize := FI.Size()
 
-	FI, err = os.Stat(OutFilename)
+	FI, err = os.Stat(outputfilename)
 	OutputFileSize := FI.Size()
 
-	fmt.Println(" Original file is now ", OutFilename, " and size is ", OutputFileSize)
-	fmt.Println(" Output File is now ", InFilename, " and size is ", InputFileSize)
+	fmt.Println(" Input File is now ", inputfilename, " and size is ", InputFileSize)
+	fmt.Println(" Output File is now ", outputfilename, " and size is ", OutputFileSize)
 	fmt.Println()
 
 } // main in utf8toascii.go
