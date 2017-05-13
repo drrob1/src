@@ -15,7 +15,7 @@ import (
 	//
 )
 
-const lastCompiled = "8 May 17"
+const lastCompiled = "13 May 17"
 
 //const openQuoteRune = 0xe2809c  \  These values are in the file itself seen by hexdump -C
 //const closeQuoteRune = 0xe2809d  \ but are not the rune (unicode code point)
@@ -51,6 +51,7 @@ const diagraphFLstr = "fl"
     6 May 17 -- After I wrote ShowUtf8, I added more runes here and
                   added OS based line endings.
     8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
+   13 May 17 -- Changed the text of the final output message.
 */
 
 func main() {
@@ -199,8 +200,8 @@ func main() {
 	FI, err = os.Stat(outputfilename)
 	OutputFileSize := FI.Size()
 
-	fmt.Println(" Input File is now ", inputfilename, " and size is ", InputFileSize)
-	fmt.Println(" Output File is now ", outputfilename, " and size is ", OutputFileSize)
+	fmt.Println(" UTF-8 File is ", inputfilename, " and size is ", InputFileSize)
+	fmt.Println(" ASCII File is ", outputfilename, " and size is ", OutputFileSize)
 	fmt.Println()
 
 } // main in utf8toascii.go
