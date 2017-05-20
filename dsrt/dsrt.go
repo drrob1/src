@@ -194,16 +194,22 @@ func main() {
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-			sysUID := f.Sys().(*syscall.Stat_t).Uid
-			sysGID := f.Sys().(*syscall.Stat_t).Gid
+			sysUID := int(f.Sys().(*syscall.Stat_t).Uid) // Stat_t is a uint32
+			uidStr := strconv.Itoa(sysUID)
+			sysGID := int(f.Sys().(*syscall.Stat_t).Gid) // Stat_t is a uint32
+			gidStr := strconv.Itoa(sysGID)
+
+			usernameStr := GetIDname(uidStr)
+			groupnameStr := GetIDname(gidStr)
+
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
 			sizeint := int(f.Size())
 			sizestr := strconv.Itoa(sizeint)
 			if sizeint > 100000 {
 				sizestr = AddCommas(sizestr)
 			}
-			//			fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
-			fmt.Printf("%10v %d %d %15s %s %s\n", f.Mode(), sysUID, sysGID, sizestr, s, f.Name())
+			//	old way:		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
+			fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 			count++
 			if count > NumLines {
 				break
@@ -233,7 +239,20 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
-//-----------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
+
+// ---------------------------- GetIDname -----------------------------------------------------------
+func GetIDname(uidStr string) string {
+
+	ptrToUser, err := user.LookupId(uidStr)
+	if err != nil {
+		panic("uid not found")
+	}
+
+	idname := ptrToUser.Username
+	return idname
+
+} // GetIDname
 
 /*
 package path
