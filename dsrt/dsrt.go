@@ -169,8 +169,6 @@ func main() {
 		files = FISlice(filesDate)
 	}
 
-	fmt.Println(" Dirname is", CleanDirName)
-
 	uid := os.Getuid() // int
 	gid := os.Getgid() // int
 	systemStr := ""
@@ -191,6 +189,9 @@ func main() {
 
 	fmt.Printf("uid = %d, gid = %d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 		uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+
+	fmt.Println(" Dirname is", CleanDirName)
+
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
@@ -209,7 +210,11 @@ func main() {
 				sizestr = AddCommas(sizestr)
 			}
 			//	old way:		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
-			fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			if linuxflag {
+				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			} else {
+				fmt.Printf("%10v %15s %s %s\n", f.Mode(), sizestr, s, f.Name())
+			}
 			count++
 			if count > NumLines {
 				break
@@ -312,4 +317,13 @@ The insight I had with my append troubles that the 1 slice entries were empty, i
 I needed to make the slice as empty for this to work.  So I am directly assigning the DirEntries slice, and appending the FileNames slice, to make sure that these both are doing what I want.
 This code is now doing exactly what I want.  I guess there is no substitute for playing with myself.  Wait, that didn't come out right.  Or did it.
 
+
+package os/user
+type User struct {
+  Uid string
+  Gid string
+  Username string // login name
+  Name string     // full or display name.  It may be blank.
+  HomeDir string
+}
 */
