@@ -32,6 +32,7 @@ Revision History
 26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
 19 May 19 -- Will now show the uid:gid for linux.
+20 May 19 -- Turns out that (*syscall.Stat_t) only compiles on linux.  It will be commented out for windows
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -91,11 +92,32 @@ func main() {
 	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 	flag.Parse()
 
-	fmt.Println(" dsrt will display a directory by date or size.  Written in Go.  LastCompiled ", lastCompiled)
+	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastCompiled ", lastCompiled)
 	fmt.Println()
+
+	uid := os.Getuid() // int
+	gid := os.Getgid() // int
+	systemStr := ""
+	linuxflag := runtime.GOOS == "linux"
+	if linuxflag {
+		systemStr = "Linux"
+	} else if runtime.GOOS == "windows" {
+		systemStr = "Windows"
+	} else {
+		systemStr = "Mac, maybe"
+	}
+
+	userptr, err = user.Current()
+	if err != nil {
+		fmt.Println(" user.Current error is ", err, "Exiting.")
+		os.Exit(1)
+	}
 
 	if *helpflag || HelpFlag {
 		flag.PrintDefaults()
+		fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
+			uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+
 	}
 
 	Reverse := *revflag || RevFlag
@@ -169,27 +191,6 @@ func main() {
 		files = FISlice(filesDate)
 	}
 
-	uid := os.Getuid() // int
-	gid := os.Getgid() // int
-	systemStr := ""
-	linuxflag := runtime.GOOS == "linux"
-	if linuxflag {
-		systemStr = "Linux"
-	} else if runtime.GOOS == "windows" {
-		systemStr = "Windows"
-	} else {
-		systemStr = "Mac, maybe"
-	}
-
-	userptr, err = user.Current()
-	if err != nil {
-		fmt.Println(" user.Current error is ", err, "Exiting.")
-		os.Exit(1)
-	}
-
-	fmt.Printf("uid = %d, gid = %d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
-		uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
-
 	fmt.Println(" Dirname is", CleanDirName)
 
 	for _, f := range files {
@@ -209,7 +210,7 @@ func main() {
 			if sizeint > 100000 {
 				sizestr = AddCommas(sizestr)
 			}
-			//	old way:		fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
+
 			if linuxflag {
 				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 			} else {
