@@ -9,13 +9,16 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
-const lastCompiled = "27 Apr 17"
+const lastCompiled = "20 May 17"
 
 /*
 Revision History
@@ -28,6 +31,7 @@ Revision History
 25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
 26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
+19 May 19 -- Will now show the uid:gid for linux.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -61,6 +65,7 @@ func (f FISliceSize) Len() int {
 
 func main() {
 	const numlines = 50
+	var userptr *user.User
 	var files FISlice
 	var filesDate FISliceDate
 	var filesSize FISliceSize
@@ -166,9 +171,31 @@ func main() {
 
 	fmt.Println(" Dirname is", CleanDirName)
 
+	uid := os.Getuid() // int
+	gid := os.Getgid() // int
+	systemStr := ""
+	linuxflag := runtime.GOOS == "linux"
+	if linuxflag {
+		systemStr = "Linux"
+	} else if runtime.GOOS == "windows" {
+		systemStr = "Windows"
+	} else {
+		systemStr = "Mac, maybe"
+	}
+
+	userptr, err = user.Current()
+	if err != nil {
+		fmt.Println(" user.Current error is ", err, "Exiting.")
+		os.Exit(1)
+	}
+
+	fmt.Printf("uid = %d, gid = %d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
+		uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+			sysUID := f.Sys().(*syscall.Stat_t).Uid
+			sysGID := f.Sys().(*syscall.Stat_t).Gid
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
 			sizeint := int(f.Size())
 			sizestr := strconv.Itoa(sizeint)
@@ -176,7 +203,7 @@ func main() {
 				sizestr = AddCommas(sizestr)
 			}
 			//			fmt.Printf("%10v %11d %s %s\n", f.Mode(), f.Size(), s, f.Name())
-			fmt.Printf("%10v %15s %s %s\n", f.Mode(), sizestr, s, f.Name())
+			fmt.Printf("%10v %d %d %15s %s %s\n", f.Mode(), sysUID, sysGID, sizestr, s, f.Name())
 			count++
 			if count > NumLines {
 				break
