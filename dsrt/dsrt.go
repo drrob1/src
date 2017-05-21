@@ -32,6 +32,7 @@ Revision History
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
 19 May 19 -- Will now show the uid:gid for linux.
 20 May 19 -- Turns out that (*syscall.Stat_t) only compiles on linux. Time for platform specific code.
+21 May 19 -- Cross compiling to GOARCH=386, and the uid and User routines won't work. So I'm dealing with that.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -94,8 +95,8 @@ func main() {
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastCompiled ", lastCompiled)
 	fmt.Println()
 
-	uid := os.Getuid() // int
-	gid := os.Getgid() // int
+	uid := 0
+	gid := 0
 	systemStr := ""
 	linuxflag := runtime.GOOS == "linux"
 	if linuxflag {
@@ -107,6 +108,8 @@ func main() {
 	}
 
 	if runtime.GOARCH == "amd64" {
+		uid = os.Getuid() // int
+		gid = os.Getgid() // int
 		userptr, err = user.Current()
 		if err != nil {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
@@ -116,8 +119,10 @@ func main() {
 
 	if *helpflag || HelpFlag {
 		flag.PrintDefaults()
-		fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
-			uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+		if runtime.GOARCH == "amd64" {
+			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
+				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+		}
 
 	}
 
@@ -204,7 +209,11 @@ func main() {
 				sizestr = AddCommas(sizestr)
 			}
 
-			usernameStr, groupnameStr := GetUserGroupStr(f)
+			usernameStr, groupnameStr := "", ""
+			if runtime.GOARCH == "amd64" {
+				usernameStr, groupnameStr = GetUserGroupStr(f)
+			}
+
 			if linuxflag {
 				if f.IsDir() {
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
@@ -254,6 +263,9 @@ func AddCommas(instr string) string {
 // ---------------------------- GetIDname -----------------------------------------------------------
 func GetIDname(uidStr string) string {
 
+	if len(uidStr) == 0 {
+		return ""
+	}
 	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
 		panic("uid not found")
