@@ -15,10 +15,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
-const lastCompiled = "20 May 17"
+const lastCompiled = "21 May 17"
 
 /*
 Revision History
@@ -32,7 +31,7 @@ Revision History
 26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
 19 May 19 -- Will now show the uid:gid for linux.
-20 May 19 -- Turns out that (*syscall.Stat_t) only compiles on linux.  It will be commented out for windows
+20 May 19 -- Turns out that (*syscall.Stat_t) only compiles on linux. Time for platform specific code.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -196,14 +195,6 @@ func main() {
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-			sysUID := int(f.Sys().(*syscall.Stat_t).Uid) // Stat_t is a uint32
-			uidStr := strconv.Itoa(sysUID)
-			sysGID := int(f.Sys().(*syscall.Stat_t).Gid) // Stat_t is a uint32
-			gidStr := strconv.Itoa(sysGID)
-
-			usernameStr := GetIDname(uidStr)
-			groupnameStr := GetIDname(gidStr)
-
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
 			sizeint := int(f.Size())
 			sizestr := strconv.Itoa(sizeint)
@@ -211,10 +202,21 @@ func main() {
 				sizestr = AddCommas(sizestr)
 			}
 
+			usernameStr, groupnameStr := GetUserGroupStr(f)
 			if linuxflag {
-				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			} else {
-				fmt.Printf("%10v %15s %s %s\n", f.Mode(), sizestr, s, f.Name())
+				if f.IsDir() {
+					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				} else if f.Mode().IsRegular() {
+					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				} else { // it's a symlink
+					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				}
+			} else { // must be windows because this won't compile on Mac.  And I'm ignoring symlinks
+				if f.IsDir() {
+					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+				} else {
+					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+				}
 			}
 			count++
 			if count > NumLines {
