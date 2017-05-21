@@ -106,10 +106,12 @@ func main() {
 		systemStr = "Mac, maybe"
 	}
 
-	userptr, err = user.Current()
-	if err != nil {
-		fmt.Println(" user.Current error is ", err, "Exiting.")
-		os.Exit(1)
+	if runtime.GOARCH == "amd64" {
+		userptr, err = user.Current()
+		if err != nil {
+			fmt.Println(" user.Current error is ", err, "Exiting.")
+			os.Exit(1)
+		}
 	}
 
 	if *helpflag || HelpFlag {
