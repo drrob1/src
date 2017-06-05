@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const compiledDateTime = "26 Apr 17"
+const compiledDateTime = "29 May 17"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -72,6 +72,7 @@ REVISION HISTORY
  4 Apr 17 -- Added BEFORE command to use NextAfter towards 0.  And made "AFTER" a synonym for NEXTAFTER.
 26 Apr 17 -- Fixed help text to remove stop, which blocked STO into the P register.  Edited the HeaderDivider to align a '+' with '|'.
                At some point, "?" became a synonym for "help"
+29 May 17 -- Found bug in CropNStr.  If number is in scientific notation, and the exponent ends in 0, that will be removed.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -188,8 +189,14 @@ func CropNStr(instr string) string {
 
 	//   A bug is if there is no decimal pt and there is a 0 in ones place, then that will no longer be
 	//   removed.
+	//   Another bug if in scientific notation.
+
 	var outstr string
 	var i int
+
+	if strings.LastIndex(instr, "e") > 0 || strings.LastIndex(instr, "E") > 0 { // e char cannot be first char
+		return instr
+	}
 
 	if strings.LastIndex(instr, ".") < 0 {
 		return instr // ie, instr is unchanged.
