@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"getcommandline"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,7 +65,12 @@ func main() {
 
 	p := xml.NewDecoder(InputFile)
 
-	for t, e = p.Token(); e == nil; t, e = p.Token() {
+	for {
+		t, e = p.Token()
+		if e == io.EOF {
+			break
+		}
+
 		switch token := t.(type) {
 		case xml.StartElement:
 			name := token.Name.Local
@@ -83,7 +89,8 @@ func main() {
 			fmt.Printf("This is the content: %v\n", content)
 			// ...
 		default:
-			// ...
+			fmt.Println(" default branch.  Token is ", t, ", and error is ", e)
+			_ = p.Skip()
 		}
 	}
 	fmt.Println("Error code is ", e)
