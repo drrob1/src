@@ -231,9 +231,9 @@ func DateFieldReformat(datein string) (string, int) {
 	datebyteslice[6] = datein[2]
 	datebyteslice[7] = datein[3]
 	dateout = string(datebyteslice)
-	m, _ := strconv.Atoi(datein[4:5])
-	d, _ := strconv.Atoi(datein[6:7])
-	y, err := strconv.Atoi(datein[2:3])
+	m, _ := strconv.Atoi(datein[4:6])
+	d, _ := strconv.Atoi(datein[6:8])
+	y, err := strconv.Atoi(datein[0:4])
 	juldate := timlibg.JULIAN(m, d, y)
 	fmt.Println(" in DateFieldReformat datein=", datein, " m=", m, ",d=", d, ",y=", y, "err=", err, "juldate=", juldate, "dateout=", dateout)
 	return dateout, juldate

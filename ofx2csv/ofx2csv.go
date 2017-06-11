@@ -13,7 +13,7 @@ import (
 	"timlibg"
 )
 
-const lastModified = "10 Jun 17"
+const lastModified = "11 Jun 17"
 
 /*
 MODULE qfx2xls;
@@ -204,7 +204,7 @@ func main() {
 	fmt.Println(" Header is ", header, ",  footer is ", footer, ", and number of transactions is ", len(Transactions))
 
 	for cnt, t := range Transactions {
-		fmt.Printf(" TRNTYPE=%s, DTPOSTED=%s,TRNAMTstr=%s,TRNAMT=%g,FITID=%s,CHECKNUM=%d,Name=%s,Memo=%s,Juldate=%d",
+		fmt.Printf(" TRNTYPE=%s, DTPOSTED=%s,TRNAMTstr=%s,TRNAMT=%g,FITID=%s,CHECKNUM=%d,Name=%s,Memo=%s,Juldate=%d \n",
 			t.TRNTYPE, t.DTPOSTED, t.TRNAMTstr, t.TRNAMT, t.FITID, t.CHECKNUM, t.NAME, t.MEMO, t.Juldate)
 		if cnt%20 == 0 {
 			Pause()
@@ -231,11 +231,10 @@ func DateFieldReformat(datein string) (string, int) {
 	datebyteslice[6] = datein[2]
 	datebyteslice[7] = datein[3]
 	dateout = string(datebyteslice)
-	m, _ := strconv.Atoi(datein[4:5])
-	d, _ := strconv.Atoi(datein[6:7])
-	y, err := strconv.Atoi(datein[2:3])
+	m, _ := strconv.Atoi(datein[4:6])
+	d, _ := strconv.Atoi(datein[6:8])
+	y, _ := strconv.Atoi(datein[0:4])
 	juldate := timlibg.JULIAN(m, d, y)
-	fmt.Println(" in DateFieldReformat datein=", datein, " m=", m, ",d=", d, ",y=", y, "err=", err, "juldate=", juldate, "dateout=", dateout)
 	return dateout, juldate
 
 } // END DateFieldReformat;
