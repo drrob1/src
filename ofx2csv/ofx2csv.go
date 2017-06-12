@@ -609,7 +609,7 @@ func ExtractNumberFromString(s string) (string, int) {
 		if EOL {
 			return "", 0
 		}
-		if token.State == tokenize.DGT {
+		if token.State == tokenize.DGT && token.Isum > 12000 && token.Isum < 30000 {
 			chknum = token.Str
 			chknumint = token.Isum
 			return chknum, chknumint
