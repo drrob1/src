@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"timlibg"
+	"tokenize"
 )
 
 const lastModified = "11 Jun 17"
@@ -100,15 +101,17 @@ type citiheadertype struct {
 }
 
 type citiTransactionType struct {
-	TRNTYPE   string
-	DTPOSTED  string
-	TRNAMTstr string
-	TRNAMT    float64
-	FITID     string
-	CHECKNUM  int
-	NAME      string
-	MEMO      string
-	Juldate   int
+	TRNTYPE     string
+	DTPOSTED    string
+	TRNAMT      string
+	TRNAMTfloat float64
+	FITID       string
+	CHECKNUM    string
+	CHECKNUMint int
+	NAME        string
+	MEMO        string
+	Descript    string
+	Juldate     int
 }
 
 type citifootertype struct {
@@ -201,11 +204,26 @@ func main() {
 	// now I have a header, footer, and a slice of all the individual transactions.  At this
 	// point, I'll just display them, and pause in between.
 
+	for ctr := range Transactions { // assign Descript field
+		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ")
+	}
+
+	for ctr, t := range Transactions { // assign CHECKNUMs fields
+		if t.CHECKNUMint == 0 {
+			if strings.Contains(t.NAME, "Bill Payment") {
+				Transactions[ctr].CHECKNUM, Transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
+			} else {
+				Transactions[ctr].CHECKNUM = t.FITID[8:]
+				Transactions[ctr].CHECKNUMint, _ = strconv.Atoi(t.FITID[8:])
+			}
+		}
+	}
+
 	fmt.Println(" Header is ", header, ",  footer is ", footer, ", and number of transactions is ", len(Transactions))
 
 	for cnt, t := range Transactions {
-		fmt.Printf(" TRNTYPE=%s, DTPOSTED=%s,TRNAMTstr=%s,TRNAMT=%g,FITID=%s,CHECKNUM=%d,Name=%s,Memo=%s,Juldate=%d \n",
-			t.TRNTYPE, t.DTPOSTED, t.TRNAMTstr, t.TRNAMT, t.FITID, t.CHECKNUM, t.NAME, t.MEMO, t.Juldate)
+		fmt.Printf("TYP=%s,DTPOST=%s,AMT=%s:%g,FITID=%s,CK#=%s:%d,Name=%s,Memo=%s,Juldate=%d, Desc=%s\n",
+			t.TRNTYPE, t.DTPOSTED, t.TRNAMT, t.TRNAMTfloat, t.FITID, t.CHECKNUM, t.CHECKNUMint, t.NAME, t.MEMO, t.Juldate, t.Descript)
 		if cnt%20 == 0 {
 			Pause()
 		}
@@ -372,8 +390,8 @@ func GetTransactionData(buf *bytes.Buffer) citiTransactionType {
 				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
 				break
 			} // if EOF or token state not a string
-			transaction.TRNAMTstr = OFXtoken.Str
-			transaction.TRNAMT, _ = strconv.ParseFloat(OFXtoken.Str, 64)
+			transaction.TRNAMT = OFXtoken.Str
+			transaction.TRNAMTfloat, _ = strconv.ParseFloat(OFXtoken.Str, 64)
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "FITID") {
 			OFXtoken = GetOfxToken(buf)
@@ -389,7 +407,8 @@ func GetTransactionData(buf *bytes.Buffer) citiTransactionType {
 				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
 				break
 			} // if EOF or token state not a string
-			transaction.CHECKNUM, _ = strconv.Atoi(OFXtoken.Str)
+			transaction.CHECKNUM = OFXtoken.Str
+			transaction.CHECKNUMint, _ = strconv.Atoi(OFXtoken.Str)
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "NAME") {
 			OFXtoken = GetOfxToken(buf)
@@ -577,5 +596,25 @@ func Pause() {
 	scanner.Scan()
 	_ = scanner.Text()
 }
+
+//------------------------------------------------------------
+
+func ExtractNumberFromString(s string) (string, int) {
+	var chknum string
+	var chknumint int
+
+	tokenize.INITKN(s)
+	for {
+		token, EOL := tokenize.GETTKN()
+		if EOL {
+			return "", 0
+		}
+		if token.State == tokenize.DGT {
+			chknum = token.Str
+			chknumint = token.Isum
+			return chknum, chknumint
+		}
+	}
+} // end ExtractNumberFromString
 
 // END ofx2csv.go based on qfx2xls.mod
