@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"getcommandline"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,7 +16,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "11 Jun 17"
+const lastModified = "13 Jun 17"
 
 /*
 MODULE qfx2xls;
@@ -128,11 +130,13 @@ func main() {
 	var e error
 	var filebyteslice []byte
 
+	fmt.Println(" ofx2csv.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
 		fmt.Println(" Usage: ofx2csv <FileName.ext> where .ext = [.qfx|.ofx]")
 		os.Exit(1)
 	}
 
+	fmt.Println()
 	inbuf := getcommandline.GetCommandLineString()
 	BaseFilename := filepath.Clean(inbuf)
 	InFilename := ""
@@ -200,15 +204,11 @@ func main() {
 	Transactions = make([]citiTransactionType, 0, 200)
 
 	header, footer := ProcessOFXFile(bytesbuffer)
+	//	fmt.Println(" Header is ", header, ",  footer is ", footer, ", and number of transactions is ", len(Transactions))
+	fmt.Println(" Number of transactions is ", len(Transactions))
 
-	// now I have a header, footer, and a slice of all the individual transactions.  At this
-	// point, I'll just display them, and pause in between.
-
-	for ctr := range Transactions { // assign Descript field
+	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
 		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ")
-	}
-
-	for ctr, t := range Transactions { // assign CHECKNUMs fields
 		if t.CHECKNUMint == 0 {
 			if strings.Contains(t.NAME, "Bill Payment") {
 				Transactions[ctr].CHECKNUM, Transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
@@ -219,15 +219,48 @@ func main() {
 		}
 	}
 
-	fmt.Println(" Header is ", header, ",  footer is ", footer, ", and number of transactions is ", len(Transactions))
+	/*
+		for cnt, t := range Transactions {
+			fmt.Printf("TYP=%s,DTPOST=%s,AMT=%s:%g,FITID=%s,CK#=%s:%d,Name=%s,Memo=%s,Juldate=%d, Desc=%s\n",
+				t.TRNTYPE, t.DTPOSTED, t.TRNAMT, t.TRNAMTfloat, t.FITID, t.CHECKNUM, t.CHECKNUMint, t.NAME, t.MEMO, t.Juldate, t.Descript)
+			if cnt%20 == 0 {
+				Pause()
+			}
+		}
+	*/
 
-	for cnt, t := range Transactions {
-		fmt.Printf("TYP=%s,DTPOST=%s,AMT=%s:%g,FITID=%s,CK#=%s:%d,Name=%s,Memo=%s,Juldate=%d, Desc=%s\n",
-			t.TRNTYPE, t.DTPOSTED, t.TRNAMT, t.TRNAMTfloat, t.FITID, t.CHECKNUM, t.CHECKNUMint, t.NAME, t.MEMO, t.Juldate, t.Descript)
-		if cnt%20 == 0 {
+	// Output to file section
+
+	OutFilename := "citifile.txt" // this is the output filename used by CitiFilterQIF.mod
+	OutputFile, err := os.Create(OutFilename)
+	check(err)
+	defer OutputFile.Close()
+	writer := csv.NewWriter(OutputFile)
+	defer writer.Flush()
+
+	outputstringslice := make([]string, 6, 10)
+	for ctr, t := range Transactions {
+		outputstringslice[0] = t.TRNTYPE
+		outputstringslice[1] = t.DTPOSTED
+		outputstringslice[2] = t.CHECKNUM
+		outputstringslice[3] = t.Descript
+		outputstringslice[4] = t.TRNAMT
+		outputstringslice[5] = header.ACCTTYPE
+		fmt.Printf(" %d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2], outputstringslice[3], outputstringslice[4], outputstringslice[5])
+		if e = writer.Write(outputstringslice); e != nil {
+			log.Fatalln(" Error writing record to csv:", e)
+		}
+		if ctr%20 == 0 {
 			Pause()
 		}
 	}
+	fmt.Println(" Footer balance amount is", footer.BalAmt)
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		log.Fatal(err)
+	}
+	OutputFile.Close()
 
 } // end main of this package
 
@@ -278,6 +311,10 @@ MainProcessingLoop:
 		for size > 1 { // discard non-ASCII runes
 			r, size, err = buf.ReadRune()
 			if err != nil { // this includes the EOF condition
+				//      i noticed that FITID last 4 digits, from positions 9..12, or [9:13] are a sequence number for that dayonly
+				//	  And name = Bill Payment is when I have to extract the number > 12000 at the end for the CHECKNUM field
+				//	  I'll have to code this later.
+				//
 				break MainProcessingLoop
 			}
 		}
@@ -616,5 +653,12 @@ func ExtractNumberFromString(s string) (string, int) {
 		}
 	}
 } // end ExtractNumberFromString
+
+//-------------------------------------------------------
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 // END ofx2csv.go based on qfx2xls.mod
