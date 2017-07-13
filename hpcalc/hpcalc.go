@@ -276,7 +276,6 @@ func DumpStackGeneral() []string {
 } // DumpStackGeneral
 
 //------------------------------------------------- ToHex ------------------
-// Will ignore issue of sign bit.
 // The new algorithm is elegantly simple.
 func ToHex(L float64) string {
 	const hexDigits = "0123456789abcdef"
