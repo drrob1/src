@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const compiledDateTime = "29 May 17"
+const LastAlteredDate = "13 July 2017"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -73,6 +73,7 @@ REVISION HISTORY
 26 Apr 17 -- Fixed help text to remove stop, which blocked STO into the P register.  Edited the HeaderDivider to align a '+' with '|'.
                At some point, "?" became a synonym for "help"
 29 May 17 -- Found bug in CropNStr.  If number is in scientific notation, and the exponent ends in 0, that will be removed.
+13 July 17 -- Rewrote ToHex, based on code from the Python mooc I'm taking now.  And with more experience.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -276,33 +277,27 @@ func DumpStackGeneral() []string {
 
 //------------------------------------------------- ToHex ------------------
 // Will ignore issue of sign bit.
+// The new algorithm is elegantly simple.
 func ToHex(L float64) string {
-	const hexDigits = "0123456789ABCDEF"
-	var h, d uint
+	const hexDigits = "0123456789abcdef"
 
 	IsNeg := false
 	if L < 0 {
 		IsNeg = true
+		L = -L
 	}
-	h = uint(math.Trunc(Round(L))) // not changing sign of the value, so -1 may show as 0FFFFh, etc
+	// not changing sign of the value, so -1 may show as 0FFFFh, etc
+	str := ""
 
-	buf := make([]byte, 17) // up to 16 hex digits to be filled in reverse, enough for an int64.  But I'm using uint here, which I think is uint32.
-	buf[16] = 'H'
-	i := 0
-	for { // repeat  until L = 0
-		d = h % 16 // % is MOD op, and d is least significant digit.
-		buf[15-i] = hexDigits[d]
-		i++
-		h = h / 16
-		if h == 0 {
-			break
-		}
-	} // until h = 0
+	for h := int(math.Trunc(Round(L))); h > 0; h = h / 16 {
+		d := h % 16 // % is MOD op
+		str = string(hexDigits[d]) + str
+	} // until L = 0
 
 	if IsNeg {
-		return "Negative" + string(buf[:])
+		return "Negative " + str + "H"
 	}
-	return string(buf[:])
+	return str + "H"
 } // ToHex
 
 // ------------------------------------------------- IsPrime -----------------
@@ -605,7 +600,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " NextAfter,Before -- Reference factor for the fcn is 1e9 or 0.")
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
-				ss = append(ss, fmt.Sprintf(" last compiled hpcalc %s.", compiledDateTime))
+				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
 			} else if Token.Str == "STO" {
 				MemReg = Stack[X]
 			} else if Token.Str == "RCL" {
@@ -751,7 +746,7 @@ func GetResult(s string) (float64, []string) {
 						Holiday.Election.D, timlibg.DayNames[VetD], Holiday.Thanksgiving.D, timlibg.DayNames[ChristmasD]))
 				}
 			} else if Token.Str == "ABOUT" {
-				ss = append(ss, fmt.Sprintf(" last compiled hpcalc.go %s", compiledDateTime))
+				ss = append(ss, fmt.Sprintf(" last changed hpcalc.go %s", LastAlteredDate))
 			} else if Token.Str == "SQR" {
 				LastX = Stack[X]
 				PushMatrixStacks()
