@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"getcommandline"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -51,6 +53,7 @@ func BinaryInsertion(a []string) []string {
 } // END BinaryInsertion
 
 func StraightSelection(a []string) []string {
+	n := len(a)
 	for i := 0; i <= n-2; i++ {
 		k := i
 		x := a[i]
@@ -80,7 +83,7 @@ func ShellSort(a []string) []string {
 		for i := k + 1; i < n; i++ {
 			x := a[i]
 			j := i - k
-			for (j >= k) & (x < a[j]) {
+			for (j >= k) && (x < a[j]) {
 				a[j+k] = a[j]
 				j = j - k
 			} // END for/while (j >= k) & (x < a[j]) DO
@@ -91,7 +94,7 @@ func ShellSort(a []string) []string {
 } //END ShellSort
 
 // -----------------------------------------------------------
-func sift(L, R int) {
+func sift(a []string, L, R int) []string {
 	i := L
 	j := 2*i + 1
 	x := a[i]
@@ -107,29 +110,27 @@ func sift(L, R int) {
 		} // end if
 	} //END for/while (j <= R) & (x < a[j]) DO
 	a[i] = x
+	return a
 } // END sift;
 
 func HeapSort(a []string) []string {
-
+	n := len(a)
 	L := n / 2
 	R := n - 1
 	for L > 0 {
 		L--
-		func(L, R) {
-			sift(L, R)
-		}(L, R)
+		a = sift(a, L, R)
 	} // END for-while L>0
 	for R > 0 {
 		a[0], a[R] = a[R], a[0]
 		R--
-		func(L, R) {
-			sift(L, R)
-		}(L, R)
+		a = sift(a, L, R)
 	} // END for-while R > 0
+	return a
 } // END HeapSort
 
 //------------------------------------------------------------------------
-func siftup(n int) { // items is global to this function which is called as an anonymous closure.
+func siftup(items []string, n int) []string { // items is global to this function which is called as an anonymous closure.
 	i := n
 	done := false
 	for (i > 0) && !done { // Originally a while statement
@@ -141,9 +142,10 @@ func siftup(n int) { // items is global to this function which is called as an a
 			i = p
 		} // END (* end if *)
 	} // END (* end for-while *)
+	return items
 } // END siftup;
 
-func siftdown(n int) { // items is global to this function which is called as an anonymous closure.
+func siftdown(items []string, n int) []string { // items is global to this function which is called as an anonymous closure.
 	i := 0
 	c := 0
 	done := false
@@ -154,7 +156,7 @@ func siftdown(n int) { // items is global to this function which is called as an
 				c++
 			} // END if
 			if items[c] <= items[i] {
-				done := true
+				done = true
 			} else {
 				items[c], items[i] = items[i], items[c]
 				i = c
@@ -168,23 +170,19 @@ func anotherheapsort(items []string) []string {
 	size := len(items)
 	number := size - 1
 	for index := 1; index <= number; index++ {
-		func(idx int) {
-			siftup(idx)
-		}(index)
+		items = siftup(items, index)
 	} // END for
 
 	for index := number; index >= 1; index-- {
 		items[0], items[index] = items[index], items[0]
-		func(idx int) {
-			siftdown(idx)
-		}(index - 1)
+		items = siftdown(items, index)
 	} // END for
 	return items
 } // END anotherheapsort;
 
 //-------------------------------------------------------------
 
-func qsort(L, R int) {
+func qsort(a []string, L, R int) []string {
 	i := L
 	j := R
 	x := a[(L+R)/2]
@@ -202,18 +200,17 @@ func qsort(L, R int) {
 		} // end if i <= j
 	} // UNTIL i > j;
 	if L < j {
-		qsort(L, j)
+		a = qsort(a, L, j)
 	}
 	if i < R {
-		qsort(i, R)
+		a = qsort(a, i, R)
 	}
+	return a
 } // END qsort;
 
 func QuickSort(a []string) []string {
 	n := len(a) - 1
-	func(a, b) {
-		qsort(a, b)
-	}(0, n)
+	a = qsort(a, 0, n)
 	return a
 } // END QuickSort
 
@@ -229,7 +226,7 @@ func NonRecursiveQuickSort(a []string) []string {
 	for { // REPEAT take top request from stack
 		L := low[s]
 		R := high[s]
-		DEC(s)
+		s--
 		for { // REPEAT (*partition a[L] ...  a[R]*)
 			i := L
 			j := R
@@ -264,6 +261,7 @@ func NonRecursiveQuickSort(a []string) []string {
 			break
 		}
 	}
+	return a
 } // END NonRecursiveQuickSort
 
 //mergesort.go
@@ -285,21 +283,21 @@ func merge(left, right []string) []string {
 	j := 0
 	for i < len(left) && j < len(right) {
 		if left[i] < right[j] {
-			result.append(left[i])
+			result = append(result, left[i])
 			i += 1
 		} else {
-			result.append(right[j])
+			result = append(result, right[j])
 			j += 1
 		}
 	} // end while
 
 	for i < len(left) {
-		result.append(left[i])
+		result = append(result, left[i])
 		i += 1
 	}
 
 	for j < len(right) {
-		result.append(right[j])
+		result = append(result, right[j])
 		j += 1
 	}
 
@@ -375,17 +373,19 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Enter number of words for this run.  0 means full file: ")
 	scanner.Scan()
-	requestedwordcount := strconv.Atoi(scanner.Text())
+	answer := scanner.Text()
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		os.Exit(1)
 	}
-	if len(INBUF) == 0 {
-		os.Exit(0)
+	requestedwordcount, err := strconv.Atoi(answer)
+	if err != nil {
+		fmt.Println(" No valid answer entered")
+		os.Exit(1)
 	}
 
 	if requestedwordcount == 0 {
-		requestedwordcount = filesize / 5
+		requestedwordcount = int(filesize / 5)
 	}
 
 	sliceofwords := make([]string, 0, requestedwordcount)
@@ -417,8 +417,8 @@ func main() {
 
 	t1 := time.Now()
 	sliceofsortedwords := StraightInsertion(sliceofwords)
-	StaightInsertionTime := time.Since(t1)
-	fmt.Println(" StraightInsertion:", StraightSelectionTime)
+	StraightInsertionTime := time.Since(t1)
+	fmt.Println(" StraightInsertion:", StraightInsertionTime)
 	for _, w := range sliceofsortedwords {
 		fmt.Print(w, " ")
 	}
@@ -437,7 +437,7 @@ func main() {
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
 	fmt.Println(" ShellSort:", ShellSortedTime)
-	for _, w := range BinaryInsertionSortedWords {
+	for _, w := range ShellSortedWords {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
@@ -473,7 +473,26 @@ func main() {
 	MergeSortedWords := mergeSort(sliceofwords)
 	MergeSortTime := time.Since(t7)
 	fmt.Println(" mergeSort:", MergeSortTime)
-	for _, w := range QuickSortedWords {
+	for _, w := range MergeSortedWords {
+		fmt.Print(w, " ")
+	}
+	fmt.Println()
+
+	t8 := time.Now()
+	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
+	NonRecursiveQuickedTime := time.Since(t8)
+	fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
+	for _, w := range NonRecursiveQuickSortedWords {
+		fmt.Print(w, " ")
+	}
+	fmt.Println()
+
+	NativeWords := sort.StringSlice(sliceofwords[:])
+	t9 := time.Now()
+	NativeWords.Sort()
+	NativeSortTime := time.Since(t9)
+	fmt.Println(" NativeSort:", NativeSortTime)
+	for _, w := range NativeWords {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
