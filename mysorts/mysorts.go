@@ -391,10 +391,11 @@ func main() {
 	sliceofwords := make([]string, 0, requestedwordcount)
 
 	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
-		word, err := bytesbuffer.ReadString(' ')
+		word, err := bytesbuffer.ReadString('\n')
 		if err != nil {
 			break
 		}
+		fmt.Println(" word from file is: ", word)
 		word = strings.TrimSpace(word)
 		if len(word) < 4 {
 			continue
@@ -402,9 +403,11 @@ func main() {
 		sliceofwords = append(sliceofwords, word)
 	}
 
+	fmt.Print(" sliceofwords: ")
 	for _, w := range sliceofwords {
 		fmt.Print(w, " ")
 	}
+	fmt.Println()
 
 	t0 := time.Now()
 	sortedsliceofwords := StraightSelection(sliceofwords)
