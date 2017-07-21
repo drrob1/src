@@ -32,6 +32,7 @@ func StraightInsertion(input []string) []string {
 
 func BinaryInsertion(a []string) []string {
 	n := len(a)
+	//                                                             for i := 0; i < n; i++ {
 	for i := 1; i < n; i++ {
 		x := a[i]
 		L := 1
@@ -44,7 +45,7 @@ func BinaryInsertion(a []string) []string {
 				R = m
 			} // END if a[m] <= x
 		} //END for L < R
-		for j := i; j <= R+1; j-- {
+		for j := i; j <= R; j-- {
 			a[j] = a[j-1]
 		} //END for j := i TO R+1 BY -1 DO
 		a[R] = x
@@ -54,7 +55,8 @@ func BinaryInsertion(a []string) []string {
 
 func StraightSelection(a []string) []string {
 	n := len(a)
-	for i := 0; i <= n-2; i++ {
+	for i := 0; i < n-1; i++ {
+		//                                                  for i := 0; i <= n-2; i++ {
 		k := i
 		x := a[i]
 		for j := i + 1; j <= n-1; j++ {
@@ -388,22 +390,38 @@ func main() {
 		requestedwordcount = int(filesize / 5)
 	}
 
-	sliceofwords := make([]string, 0, requestedwordcount)
+	mastersliceofwords := make([]string, 0, requestedwordcount)
 
 	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
 		word, err := bytesbuffer.ReadString('\n')
 		if err != nil {
 			break
 		}
-		fmt.Println(" word from file is: ", word)
-		word = strings.TrimSpace(word)
+		//                                                     word = strings.TrimSpace(word)
+		word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 4 {
 			continue
 		}
-		sliceofwords = append(sliceofwords, word)
+		mastersliceofwords = append(mastersliceofwords, word)
 	}
 
-	fmt.Print(" sliceofwords: ")
+	fmt.Println("master before:", mastersliceofwords)
+	sliceofwords := make([]string, requestedwordcount)
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("slice before:", sliceofwords)
+	NativeWords := sort.StringSlice(sliceofwords[:])
+	t9 := time.Now()
+	NativeWords.Sort()
+	NativeSortTime := time.Since(t9)
+	fmt.Println(" after NativeSort:", NativeSortTime)
+	for _, w := range NativeWords {
+		fmt.Print(w, " ")
+	}
+	fmt.Println()
+	fmt.Println()
+
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Print(" sliceofwords before: ")
 	for _, w := range sliceofwords {
 		fmt.Print(w, " ")
 	}
@@ -412,30 +430,39 @@ func main() {
 	t0 := time.Now()
 	sortedsliceofwords := StraightSelection(sliceofwords)
 	StraightSelectionTime := time.Since(t0)
-	fmt.Println(" StraightSelection:", StraightSelectionTime)
+	fmt.Println(" after StraightSelection:", StraightSelectionTime)
 	for _, w := range sortedsliceofwords {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
+	fmt.Println()
 
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
 	t1 := time.Now()
 	sliceofsortedwords := StraightInsertion(sliceofwords)
 	StraightInsertionTime := time.Since(t1)
-	fmt.Println(" StraightInsertion:", StraightInsertionTime)
+	fmt.Println(" after StraightInsertion:", StraightInsertionTime)
 	for _, w := range sliceofsortedwords {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
-
-	t2 := time.Now()
-	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
-	BinaryInsertionTime := time.Since(t2)
-	fmt.Println(" BinaryInsertion:", BinaryInsertionTime)
-	for _, w := range BinaryInsertionSortedWords {
-		fmt.Print(w, " ")
-	}
 	fmt.Println()
-
+	/*
+		copy(sliceofwords, mastersliceofwords)
+		fmt.Println("before:", sliceofwords)
+		t2 := time.Now()
+		BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
+		BinaryInsertionTime := time.Since(t2)
+		fmt.Println(" after BinaryInsertion:", BinaryInsertionTime)
+		for _, w := range BinaryInsertionSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+		fmt.Println()
+	*/
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
 	t3 := time.Now()
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
@@ -444,7 +471,10 @@ func main() {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
+	fmt.Println()
 
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
 	t4 := time.Now()
 	HeapSortedWords := HeapSort(sliceofwords)
 	HeapSortedTime := time.Since(t4)
@@ -453,7 +483,10 @@ func main() {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
+	fmt.Println()
 
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
 	t5 := time.Now()
 	AnotherHeapSortedWords := anotherheapsort(sliceofwords)
 	AnotherHeapTime := time.Since(t5)
@@ -462,7 +495,10 @@ func main() {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
+	fmt.Println()
 
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
 	t6 := time.Now()
 	QuickSortedWords := QuickSort(sliceofwords)
 	QuickSortedTime := time.Since(t6)
@@ -471,7 +507,10 @@ func main() {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
+	fmt.Println()
 
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
 	t7 := time.Now()
 	MergeSortedWords := mergeSort(sliceofwords)
 	MergeSortTime := time.Since(t7)
@@ -480,24 +519,30 @@ func main() {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
-
-	t8 := time.Now()
-	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
-	NonRecursiveQuickedTime := time.Since(t8)
-	fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
-	for _, w := range NonRecursiveQuickSortedWords {
-		fmt.Print(w, " ")
-	}
 	fmt.Println()
-
-	NativeWords := sort.StringSlice(sliceofwords[:])
-	t9 := time.Now()
+	/*
+		copy(sliceofwords, mastersliceofwords)
+		fmt.Println("before:", sliceofwords)
+		t8 := time.Now()
+		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
+		NonRecursiveQuickedTime := time.Since(t8)
+		fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
+		for _, w := range NonRecursiveQuickSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+		fmt.Println()
+	*/
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
+	NativeWords = sort.StringSlice(sliceofwords)
+	t9 = time.Now()
 	NativeWords.Sort()
-	NativeSortTime := time.Since(t9)
+	NativeSortTime = time.Since(t9)
 	fmt.Println(" NativeSort:", NativeSortTime)
 	for _, w := range NativeWords {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
-
+	fmt.Println()
 }
