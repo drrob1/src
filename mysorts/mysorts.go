@@ -45,7 +45,7 @@ func BinaryInsertion(a []string) []string {
 				R = m
 			} // END if a[m] <= x
 		} //END for L < R
-		for j := i; j <= R; j-- {
+		for j := i; j <= R+1; j-- {
 			a[j] = a[j-1]
 		} //END for j := i TO R+1 BY -1 DO
 		a[R] = x
