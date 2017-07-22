@@ -364,7 +364,8 @@ func main() {
 	bytesbuffer := bytes.NewBuffer(byteslice)
 
 	OutFilename := BaseFilename + OutDefault
-	OutputFile, err := os.Create(OutFilename)
+	//	OutputFile, err := os.Create(OutFilename)
+	OutputFile, err := os.OpenFile(OutFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(" Error while opening OutputFile ", OutFilename, ".  Exiting.")
 		os.Exit(1)
@@ -372,6 +373,8 @@ func main() {
 	defer OutputFile.Close()
 	OutBufioWriter := bufio.NewWriter(OutputFile)
 	defer OutBufioWriter.Flush()
+	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
+	check(err)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Enter number of words for this run.  0 means full file: ")
@@ -383,15 +386,19 @@ func main() {
 	}
 	requestedwordcount, err := strconv.Atoi(answer)
 	if err != nil {
-		fmt.Println(" No valid answer entered")
-		os.Exit(1)
+		fmt.Println(" No valid answer entered.  Will assume 0.")
+		requestedwordcount = 0
 	}
 
 	if requestedwordcount == 0 {
-		requestedwordcount = int(filesize / 5)
+		requestedwordcount = int(filesize / 7)
 	}
 
+	s := fmt.Sprintf(" requestedwordcount = %d \n", requestedwordcount)
+	OutBufioWriter.WriteString(s)
 	mastersliceofwords := make([]string, 0, requestedwordcount)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 
 	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
 		word, err := bytesbuffer.ReadString('\n')
@@ -406,12 +413,22 @@ func main() {
 		mastersliceofwords = append(mastersliceofwords, word)
 	}
 
-	s := ""
-	fmt.Println("master before:", mastersliceofwords)
-	sliceofwords := make([]string, requestedwordcount)
+	numberofwords := len(mastersliceofwords)
+
+	allowoutput := false
+	if numberofwords < 50 {
+		allowoutput = true
+	}
+
+	if allowoutput {
+		fmt.Println("master before:", mastersliceofwords)
+	}
+	sliceofwords := make([]string, numberofwords)
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("slice before:", sliceofwords)
-	NativeWords := sort.StringSlice(sliceofwords[:])
+	if allowoutput {
+		fmt.Println("slice before:", sliceofwords)
+	}
+	NativeWords := sort.StringSlice(sliceofwords)
 	t9 := time.Now()
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
@@ -422,22 +439,24 @@ func main() {
 	//	s = fmt.Sprintf("%v\n", NativeWords)
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
-	for _, w := range NativeWords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range NativeWords {
+			fmt.Print(w, " ")
+		}
 	}
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
 	fmt.Println()
 
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Print(" sliceofwords before: ")
-	for _, w := range sliceofwords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		fmt.Print(" sliceofwords before: ")
+		for _, w := range sliceofwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
-	fmt.Println()
 
 	t0 := time.Now()
 	sortedsliceofwords := StraightSelection(sliceofwords)
@@ -449,18 +468,20 @@ func main() {
 	//	s = fmt.Sprintf("%v\n", sortedsliceofwords)
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
-	for _, w := range sortedsliceofwords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range sortedsliceofwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
 	fmt.Println()
 
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	t1 := time.Now()
 	sliceofsortedwords := StraightInsertion(sliceofwords)
 	StraightInsertionTime := time.Since(t1)
@@ -471,13 +492,14 @@ func main() {
 	//	s = fmt.Sprintf("%v \n", sliceofsortedwords)
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
-	for _, w := range sliceofsortedwords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range sliceofsortedwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	fmt.Println()
 	fmt.Println()
 	/* Does not sort correctly, but doesn't panic anymore
 	copy(sliceofwords, mastersliceofwords)
@@ -506,7 +528,9 @@ func main() {
 	fmt.Println()
 	*/
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	t4 := time.Now()
 	HeapSortedWords := HeapSort(sliceofwords)
 	HeapSortedTime := time.Since(t4)
@@ -514,14 +538,14 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(" HeapSort:", HeapSortedTime)
-	for _, w := range HeapSortedWords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range HeapSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
 	fmt.Println()
 	/*  Does not sort correctly, but does not panic.
 	copy(sliceofwords, mastersliceofwords)
@@ -537,7 +561,9 @@ func main() {
 	fmt.Println()
 	*/
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	t6 := time.Now()
 	QuickSortedWords := QuickSort(sliceofwords)
 	QuickSortedTime := time.Since(t6)
@@ -545,18 +571,20 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(" QuickSort:", QuickSortedTime)
-	for _, w := range QuickSortedWords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range QuickSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
 	fmt.Println()
 
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	t7 := time.Now()
 	MergeSortedWords := mergeSort(sliceofwords)
 	MergeSortTime := time.Since(t7)
@@ -564,14 +592,14 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(" mergeSort:", MergeSortTime)
-	for _, w := range MergeSortedWords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range MergeSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
 	fmt.Println()
 	/*  I think this paniced
 	copy(sliceofwords, mastersliceofwords)
@@ -587,7 +615,9 @@ func main() {
 	fmt.Println()
 	*/
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	NativeWords = sort.StringSlice(sliceofwords)
 	t9 = time.Now()
 	NativeWords.Sort()
@@ -596,15 +626,25 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(" NativeSort:", NativeSortTime)
-	for _, w := range NativeWords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range NativeWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
+	fmt.Println()
+
+	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
+		requestedwordcount, numberofwords, len(mastersliceofwords))
+	_, err = OutBufioWriter.WriteString(s)
+	if len(mastersliceofwords) > 1000 {
+		fmt.Println(s)
+		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
+	}
+	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
 	check(err)
-	fmt.Println()
-	fmt.Println()
 }
 
 //===========================================================
@@ -615,7 +655,7 @@ func check(e error) {
 }
 
 /*
-  Timing for full data file, ScienceOfHappiness.dat
+  Timing for full data file, ScienceOfHappiness.dat, 71,476 rows.
 
  after NativeSort: 47.745145ms
 
