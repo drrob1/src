@@ -45,7 +45,8 @@ func BinaryInsertion(a []string) []string {
 				R = m
 			} // END if a[m] <= x
 		} //END for L < R
-		for j := i; j <= R+1; j-- {
+		//                                                             for i := 0; i < n; i++ {
+		for j := i; j >= R+1; j-- {
 			a[j] = a[j-1]
 		} //END for j := i TO R+1 BY -1 DO
 		a[R] = x
@@ -405,6 +406,7 @@ func main() {
 		mastersliceofwords = append(mastersliceofwords, word)
 	}
 
+	s := ""
 	fmt.Println("master before:", mastersliceofwords)
 	sliceofwords := make([]string, requestedwordcount)
 	copy(sliceofwords, mastersliceofwords)
@@ -413,10 +415,20 @@ func main() {
 	t9 := time.Now()
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
-	fmt.Println(" after NativeSort:", NativeSortTime)
+	s = fmt.Sprintf(" after NativeSort: %s \n", NativeSortTime.String())
+	fmt.Println(s)
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	//	s = fmt.Sprintf("%v\n", NativeWords)
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
 	for _, w := range NativeWords {
 		fmt.Print(w, " ")
 	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 	fmt.Println()
 	fmt.Println()
 
@@ -430,10 +442,20 @@ func main() {
 	t0 := time.Now()
 	sortedsliceofwords := StraightSelection(sliceofwords)
 	StraightSelectionTime := time.Since(t0)
+	s = fmt.Sprintf(" After StraightSelection: %s \n", StraightSelectionTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" after StraightSelection:", StraightSelectionTime)
+	//	s = fmt.Sprintf("%v\n", sortedsliceofwords)
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
 	for _, w := range sortedsliceofwords {
 		fmt.Print(w, " ")
 	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 	fmt.Println()
 	fmt.Println()
 
@@ -442,25 +464,35 @@ func main() {
 	t1 := time.Now()
 	sliceofsortedwords := StraightInsertion(sliceofwords)
 	StraightInsertionTime := time.Since(t1)
+	s = fmt.Sprintf(" After StraightInsertion: %s \n", StraightInsertionTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" after StraightInsertion:", StraightInsertionTime)
+	//	s = fmt.Sprintf("%v \n", sliceofsortedwords)
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
 	for _, w := range sliceofsortedwords {
+		fmt.Print(w, " ")
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	fmt.Println()
+	fmt.Println()
+	/* Does not sort correctly, but doesn't panic anymore
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
+	t2 := time.Now()
+	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
+	BinaryInsertionTime := time.Since(t2)
+	fmt.Println(" after BinaryInsertion:", BinaryInsertionTime)
+	for _, w := range BinaryInsertionSortedWords {
 		fmt.Print(w, " ")
 	}
 	fmt.Println()
 	fmt.Println()
-	/*
-		copy(sliceofwords, mastersliceofwords)
-		fmt.Println("before:", sliceofwords)
-		t2 := time.Now()
-		BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
-		BinaryInsertionTime := time.Since(t2)
-		fmt.Println(" after BinaryInsertion:", BinaryInsertionTime)
-		for _, w := range BinaryInsertionSortedWords {
-			fmt.Print(w, " ")
-		}
-		fmt.Println()
-		fmt.Println()
 	*/
+	/* Does not sort correctly, but doesn't panic
 	copy(sliceofwords, mastersliceofwords)
 	fmt.Println("before:", sliceofwords)
 	t3 := time.Now()
@@ -472,19 +504,26 @@ func main() {
 	}
 	fmt.Println()
 	fmt.Println()
-
+	*/
 	copy(sliceofwords, mastersliceofwords)
 	fmt.Println("before:", sliceofwords)
 	t4 := time.Now()
 	HeapSortedWords := HeapSort(sliceofwords)
 	HeapSortedTime := time.Since(t4)
+	s = fmt.Sprintf(" After HeapSort: %s \n", HeapSortedTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" HeapSort:", HeapSortedTime)
 	for _, w := range HeapSortedWords {
 		fmt.Print(w, " ")
 	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 	fmt.Println()
 	fmt.Println()
-
+	/*  Does not sort correctly, but does not panic.
 	copy(sliceofwords, mastersliceofwords)
 	fmt.Println("before:", sliceofwords)
 	t5 := time.Now()
@@ -496,16 +535,23 @@ func main() {
 	}
 	fmt.Println()
 	fmt.Println()
-
+	*/
 	copy(sliceofwords, mastersliceofwords)
 	fmt.Println("before:", sliceofwords)
 	t6 := time.Now()
 	QuickSortedWords := QuickSort(sliceofwords)
 	QuickSortedTime := time.Since(t6)
+	s = fmt.Sprintf(" After QuickSort: %s \n", QuickSortedTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" QuickSort:", QuickSortedTime)
 	for _, w := range QuickSortedWords {
 		fmt.Print(w, " ")
 	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 	fmt.Println()
 	fmt.Println()
 
@@ -514,24 +560,31 @@ func main() {
 	t7 := time.Now()
 	MergeSortedWords := mergeSort(sliceofwords)
 	MergeSortTime := time.Since(t7)
+	s = fmt.Sprintf(" After mergeSort: %s \n", MergeSortTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" mergeSort:", MergeSortTime)
 	for _, w := range MergeSortedWords {
 		fmt.Print(w, " ")
 	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 	fmt.Println()
 	fmt.Println()
-	/*
-		copy(sliceofwords, mastersliceofwords)
-		fmt.Println("before:", sliceofwords)
-		t8 := time.Now()
-		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
-		NonRecursiveQuickedTime := time.Since(t8)
-		fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
-		for _, w := range NonRecursiveQuickSortedWords {
-			fmt.Print(w, " ")
-		}
-		fmt.Println()
-		fmt.Println()
+	/*  I think this paniced
+	copy(sliceofwords, mastersliceofwords)
+	fmt.Println("before:", sliceofwords)
+	t8 := time.Now()
+	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
+	NonRecursiveQuickedTime := time.Since(t8)
+	fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
+	for _, w := range NonRecursiveQuickSortedWords {
+		fmt.Print(w, " ")
+	}
+	fmt.Println()
+	fmt.Println()
 	*/
 	copy(sliceofwords, mastersliceofwords)
 	fmt.Println("before:", sliceofwords)
@@ -539,10 +592,24 @@ func main() {
 	t9 = time.Now()
 	NativeWords.Sort()
 	NativeSortTime = time.Since(t9)
+	s = fmt.Sprintf(" After NativeSort again: %s \n", NativeSortTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" NativeSort:", NativeSortTime)
 	for _, w := range NativeWords {
 		fmt.Print(w, " ")
 	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 	fmt.Println()
 	fmt.Println()
+}
+
+//===========================================================
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
