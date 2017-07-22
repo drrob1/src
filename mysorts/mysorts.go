@@ -613,3 +613,27 @@ func check(e error) {
 		panic(e)
 	}
 }
+
+/*
+  Timing for full data file, ScienceOfHappiness.dat
+
+ after NativeSort: 47.745145ms
+
+ After StraightSelection: 47.340594191s
+
+ After StraightInsertion: 14.074816209s
+
+ After HeapSort: 84.269188ms
+
+ After QuickSort: 55.141166ms
+
+ After mergeSort: 128.025583ms
+
+ After NativeSort again: 60.068087ms
+
+
+ Conclusion:
+   Fastest for large files is the NativeSort, then QuickSort.
+   HeapSort is faster than mergeSort, by a factor of about 1.5.
+   StraightInsertion is faster than StraightSelection, by about a factor of 3.
+*/
