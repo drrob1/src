@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "21 July 17"
+const LastAlteredDate = "22 July 17"
 
 func StraightInsertion(input []string) []string {
 	n := len(input)
@@ -35,7 +35,7 @@ func BinaryInsertion(a []string) []string {
 	//                                                             for i := 0; i < n; i++ {
 	for i := 1; i < n; i++ {
 		x := a[i]
-		L := 1
+		L := 0 // I think the mistake was here, where I first set L to 1.
 		R := i
 		for L < R {
 			m := (L + R) / 2
@@ -44,13 +44,13 @@ func BinaryInsertion(a []string) []string {
 			} else {
 				R = m
 			} // END if a[m] <= x
-		} //END for L < R
+		} //END while L < R
 		//                                                             for i := 0; i < n; i++ {
 		for j := i; j >= R+1; j-- {
 			a[j] = a[j-1]
 		} //END for j := i TO R+1 BY -1 DO
 		a[R] = x
-	} // END for i := 1 to n-1
+	} // END for i := left+1 to right
 	return a
 } // END BinaryInsertion
 
@@ -405,8 +405,8 @@ func main() {
 		if err != nil {
 			break
 		}
-		//                                                     word = strings.TrimSpace(word)
-		word = strings.ToLower(strings.TrimSpace(word))
+		word = strings.TrimSpace(word)
+		//	word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 4 {
 			continue
 		}
@@ -501,19 +501,26 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
-	/* Does not sort correctly, but doesn't panic anymore
+
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	t2 := time.Now()
 	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
 	BinaryInsertionTime := time.Since(t2)
-	fmt.Println(" after BinaryInsertion:", BinaryInsertionTime)
-	for _, w := range BinaryInsertionSortedWords {
-		fmt.Print(w, " ")
+	s = fmt.Sprintf(" After BinaryInsertion: %s \n", BinaryInsertionTime.String())
+	fmt.Println(s)
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	if allowoutput {
+		for _, w := range BinaryInsertionSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
 	fmt.Println()
-	fmt.Println()
-	*/
+
 	/* Does not sort correctly, but doesn't panic
 	copy(sliceofwords, mastersliceofwords)
 	fmt.Println("before:", sliceofwords)
@@ -547,18 +554,21 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
-	/*  Does not sort correctly, but does not panic.
-	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
-	t5 := time.Now()
-	AnotherHeapSortedWords := anotherheapsort(sliceofwords)
-	AnotherHeapTime := time.Since(t5)
-	fmt.Println(" anotherheapsort:", AnotherHeapTime)
-	for _, w := range AnotherHeapSortedWords {
-		fmt.Print(w, " ")
-	}
-	fmt.Println()
-	fmt.Println()
+	/*
+
+		Does not sort correctly, but does not panic.
+		copy(sliceofwords, mastersliceofwords)
+		fmt.Println("before:", sliceofwords)
+		t5 := time.Now()
+		AnotherHeapSortedWords := anotherheapsort(sliceofwords)
+		AnotherHeapTime := time.Since(t5)
+		fmt.Println(" anotherheapsort:", AnotherHeapTime)
+		for _, w := range AnotherHeapSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+		fmt.Println()
+
 	*/
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -601,18 +611,21 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
-	/*  I think this paniced
-	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
-	t8 := time.Now()
-	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
-	NonRecursiveQuickedTime := time.Since(t8)
-	fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
-	for _, w := range NonRecursiveQuickSortedWords {
-		fmt.Print(w, " ")
-	}
-	fmt.Println()
-	fmt.Println()
+	/*
+
+		I think this paniced
+		copy(sliceofwords, mastersliceofwords)
+		fmt.Println("before:", sliceofwords)
+		t8 := time.Now()
+		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
+		NonRecursiveQuickedTime := time.Since(t8)
+		fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
+		for _, w := range NonRecursiveQuickSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+		fmt.Println()
+
 	*/
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -655,13 +668,15 @@ func check(e error) {
 }
 
 /*
-  Timing for full data file, ScienceOfHappiness.dat, 71,476 rows.
+  Timing for full data file, ScienceOfHappiness.dat, ~67,500 words
 
  after NativeSort: 47.745145ms
 
  After StraightSelection: 47.340594191s
 
  After StraightInsertion: 14.074816209s
+
+ BinaryInsertion has been fixed, but now timings are in the ScienceOfHappiness.sorted file
 
  After HeapSort: 84.269188ms
 
