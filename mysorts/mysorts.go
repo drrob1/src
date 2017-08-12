@@ -14,7 +14,15 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "22 July 17"
+const LastAlteredDate = "7 Aug 2017"
+
+/*
+  REVISION HISTORY
+  ----------------
+  July 2017 -- First version
+  26 July 17 -- Will try to learn delve (dlv) by using it to debug the routines here that don't work.
+   7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
+*/
 
 func StraightInsertion(input []string) []string {
 	n := len(input)
@@ -86,7 +94,7 @@ func ShellSort(a []string) []string {
 		for i := k + 1; i < n; i++ {
 			x := a[i]
 			j := i - k
-			for (j >= k) && (x < a[j]) {
+			for (j >= k) && (x <= a[j]) {
 				a[j+k] = a[j]
 				j = j - k
 			} // END for/while (j >= k) & (x < a[j]) DO
@@ -307,6 +315,19 @@ func merge(left, right []string) []string {
 	return result
 }
 
+// modified mergesort.go
+func ModifiedMergeSort(L []string) []string {
+	if len(L) < 6 {
+		L = StraightInsertion(L)
+		return L
+	} else {
+		middle := len(L) / 2 // middle needs to be of type int
+		left := ModifiedMergeSort(L[:middle])
+		right := ModifiedMergeSort(L[middle:])
+		return merge(left, right)
+	} // end if else clause
+}
+
 func main() {
 	var filesize int64
 	fmt.Println(" Sort a slice of strings, using the different algorithms.  Last altered", LastAlteredDate)
@@ -523,15 +544,22 @@ func main() {
 
 	/* Does not sort correctly, but doesn't panic
 	copy(sliceofwords, mastersliceofwords)
-	fmt.Println("before:", sliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
 	t3 := time.Now()
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
+	s = fmt.Sprintf(" After HeapSort: %s \n", ShellSortedTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	fmt.Println(" ShellSort:", ShellSortedTime)
-	for _, w := range ShellSortedWords {
-		fmt.Print(w, " ")
+	if allowoutput {
+		for _, w := range ShellSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
 	}
-	fmt.Println()
 	fmt.Println()
 	*/
 	copy(sliceofwords, mastersliceofwords)
@@ -554,19 +582,22 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
-	/*
 
-		Does not sort correctly, but does not panic.
+	/*	Does not sort correctly, but does not panic.
 		copy(sliceofwords, mastersliceofwords)
-		fmt.Println("before:", sliceofwords)
+		if allowoutput {
+			fmt.Println("before:", sliceofwords)
+		}
 		t5 := time.Now()
 		AnotherHeapSortedWords := anotherheapsort(sliceofwords)
 		AnotherHeapTime := time.Since(t5)
 		fmt.Println(" anotherheapsort:", AnotherHeapTime)
-		for _, w := range AnotherHeapSortedWords {
-			fmt.Print(w, " ")
+		if allowoutput {
+			for _, w := range AnotherHeapSortedWords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
 		}
-		fmt.Println()
 		fmt.Println()
 
 	*/
@@ -611,21 +642,44 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
-	/*
 
-		I think this paniced
-		copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
 		fmt.Println("before:", sliceofwords)
+	}
+	t7a := time.Now()
+	ModifiedMergeSortedWords := ModifiedMergeSort(sliceofwords)
+	ModifiedMergeSortTime := time.Since(t7a)
+	s = fmt.Sprintf(" After ModifiedMergeSort: %s \n", ModifiedMergeSortTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(" ModifiedMergeSort:", MergeSortTime)
+	if allowoutput {
+		for _, w := range ModifiedMergeSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+	/*	I think this paniced
+		copy(sliceofwords, mastersliceofwords)
+		if allowoutput {
+			fmt.Println("before:", sliceofwords)
+		}
 		t8 := time.Now()
 		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
 		NonRecursiveQuickedTime := time.Since(t8)
 		fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
-		for _, w := range NonRecursiveQuickSortedWords {
-			fmt.Print(w, " ")
+		if allowoutput {
+			for _, w := range NonRecursiveQuickSortedWords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
 		}
 		fmt.Println()
-		fmt.Println()
-
 	*/
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -668,7 +722,7 @@ func check(e error) {
 }
 
 /*
-  Timing for full data file, ScienceOfHappiness.dat, ~67,500 words
+  Timing for first full data file, ScienceOfHappiness.dat, ~67,500 words.  More complete information is now in the .sorted file
 
  after NativeSort: 47.745145ms
 
