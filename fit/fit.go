@@ -34,7 +34,7 @@ import (
 	//  "tokenize"
 )
 
-const LastAltered = "11 Aug 2017"
+const LastAltered = "12 Aug 2017"
 
 
 
@@ -57,40 +57,30 @@ const GastricPattern = "gastric*.txt";
 const MenuSep = '|';
 const blankline = "                                                              ";
 const sepline = "--------------------------------------------------------------";
+const MaxEle = 100 // for LR stuff
+const IterMax = 20 // for regression algorithm
+const tolerance = 1.0E-4 // for regression algorithm
+
   var sigfig,N,M,max,length int
 
   type Point struct {
-    x,y,wt,ax float64  // ax is an error factor defined by the author I reference below.
+    x,y,ExpectedX,ExpectedY,ErrorX,ErrorY2,wt,ax float64  // ax is an error factor defined by the author I reference below.
   }
-  type rowvec []Point
+//  type rowvec []Point  I think this is not needed.
 //  type matrix []rowvec  I think this is not needed, because rowvec is made of points, not indiv elements
   type inputrow []float64
   type inputmatrix []inputrow
+  type SummaryOfData struct {
+	  SumWt,SumWtX,SumWtY,SumWtX2,SumWtXY,SumWtY2,SumWtAx,SumWtAxX,SumWtAxY,R2,ExpectedX,ExpectedY,
+      ErrorX,ErrorY2,DENOM,StDevS,StDevI,Slope,Intercept,R2
+      lambda0,intercept0,Thalf0,lambda1,intercept1,ln2,Thalf1,lambda2,intercept2,Thalf2 float64
+  }
 
-  var ra1,ra2,ra3,ra4,IM,ans matrix
-  var X,Y,DecayCorY rowvec
-  var lambda0,intercept0,Thalf0,lambda1,intercept1,ln2,Thalf1,lambda2,intercept2,Thalf2 float64
 
-  var SumWt,SumWtX,SumWtY,SumWtX2,SumWtXY,SumWtY2,SumWtAx,SumWtAxX,SumWtAxY,R2,ExpectedX,ExpectedY,
-      ErrorX,ErrorY2,DENOM,StDevS,StDevI  float64
 //  WEIGHT,AX : ARRAY[0..MAXELE] OF LONGREAL;
 //  PREVSLOPE,PREVINTRCPT : LONGREAL;
 //  C,K,ITERCTR : CARDINAL;
 
-
-func CheckPattern(ns string) string {
-
-  s := ns;
-  FoundStar := false;
-  if len(ns) == 0 {
-    s = GastricPattern;
-  }else if ns[0] == '*' {
-    // do nothing
-  }else if ! strings.Contains(ns,"*") { // asterisk not found
-      s = s + "*"
-  } // END if len == 0
-  return s
-} // END CheckPattern;
 
 //************************************************************************
 //*                              MAIN PROGRAM                            *
@@ -99,10 +89,10 @@ func CheckPattern(ns string) string {
 func main() {
   var point Point
   ln2 = math.Log(2)
-  row := make(rowvec,0,MaxCol)
-  TimeAndCountsTable := make(matrix,0,MaxN)
+  rows := make([]Point,0,MaxCol)
   ir := make(inputrow,2)  // input row
   im := make(inputmatrix,0,MaxN)  // input matrix
+  var stats SummaryOfData
 
   fmt.Println(" Gastric Emtpying program written in Go.  Last modified",LastAltered)
   if len(os.Args) <= 1 {
@@ -140,7 +130,7 @@ func main() {
   byteslice := make([]byte,0,5000)
   byteslice,err := ioutil.ReadFile(Filename)
   if err != nil {
-    fmt.Println(" Error",err," from iotuil.ReadFile when reading",Filename,".  Exiting."
+    fmt.Println(" Error",err," from iotuil.ReadFile when reading",Filename,".  Exiting.")
     os.Exit(1)
   }
 
@@ -190,18 +180,18 @@ func main() {
   for c := range im {
     point.x = im[c][0]
     point.y = im[c][1]
-    row = append(row,point)
+    rows = append(rows,point)
   }
 
   fmt.Println(" N = ", len(row));
   fmt.Println();
   fmt.Println(" X is time(min) and Y is kcounts");
   fmt.Println();
-  for p := range row {
+  for p := range rows {
     fmt.Println(p.x,p.y)
   }
   fmt.Println()
-------------------------------------------------------------------------
+//------------------------------------------
   SEMILOGLR(N,X,Y,lambda1,intercept1);
   Thalf1 := -ln2/lambda1;
   LongStr.RealToFixed(Thalf1,SigFig,Thalf1strFixed);
@@ -274,132 +264,76 @@ func main() {
   IMPORT WholeStr, LongStr, LongMath;
   FROM LongMath IMPORT sqrt, exp, ln;
 
-  const MaxEle = 100;
-        IterMax = 20;
-        tolerance = 1.0E-4;
-
 func SQR(R float64) float64 {
   return R*R
 } // END SQR;
 
-func DOLR(N:CARDINAL; X,Y:ARRAY OF LONGREAL; VAR Slope,Intercept:LONGREAL){
+//  -------------------------------SimpleSumUp ----------------------------------------
+func SimpleSumUp(rows []Points) SummaryOfData {
 /*
----------------------------------- DOLR ---------------------------------
-Do Linear Regression Routine.
-  This routine does the actual linear regression using a weighted algorithm
-that is described in Zanter, Jean-Paul, "Comparison of Linear Regression
-Algortims," JPAM Jan/Feb '86, 5:1, p 14-22.  This algorithm is used instead
-of the std one because the std one assumes that the errors on the independent
-variable are negligible and the errors on the dependent variable are
-constant.  This is definitely not the case in a clinical situation where,
-for example, both the time of a blood sample and the counts per minute in
-that blood sample, are subject to variances.
-
-
-(*
-                                      1
-  WEIGHT OF A POINT = ---------------------------------------
-                      (error_on_y)**2 + (slope*error_on_x)**2
-
-  AX -- a quantity defined by the author, used in the iterative solution of
-        the system of equations used in computing the weights, and hence the
-        errors on the data, and on the slopes and intercepts.  Like weights,
-        it applies to each point.
-
-     =  X - Weight * (Intercept + Slope*X - Y) * Slope * Error_on_X**2
-
-It is clear that the weights and the AX quantity depend on the errors
-on the data points.  My modification is a variation on the chi square
-analysis to determine the errors on the data points.  This, too is
-iterated.
-
-                     (Observed value - Expected value)**2
- CHI SQUARE = sum of ------------------------------------
-                             Expected value
-
+  Does the simple (unweighted) sums required of the std formula.  This is
+  used as a first guess for the iterative solution performed by the other routines.
 */
+  var Stats SummaryOfData
 
-(*
-  The following procedures are local to this outer procedure, and all of the
-  I/O for these are passed indirectly (globally).
-*)
+  Stats.SumWt   := float64(N)
+  for _,p := range rows {                       // FOR c := 0 TO N-1 DO
+      Stats.SumWtX  += p.x;
+      Stats.SumWtY  += p.y;
+      Stats.SumWtXY += p.x * p.y;
+      Stats.SumWtX2 += SQR(p.x);
+      Stats.SumWtY2 += SQR(p.y);
+  }END(*FOR*);
+  return Stats
+}// END SimpleSumUp;
 
-  PROCEDURE SIMPLESUMUP;
-  (*
-  **************************** SIMPLESUMUP ********************************
-    Does the simple (unweighted) sums required of the std formula.  This is
-  used as a first guess for the iterative solution performed by the
-  other routines.
-  *)
-  VAR c : CARDINAL;
-  BEGIN
-    SUMWT   := FLOAT(N);
-    SUMWTX  := 0.;
-    SUMWTY  := 0.;
-    SUMWTX2 := 0.;
-    SUMWTXY := 0.;
-    SUMWTY2 := 0.;
-
-    FOR c := 0 TO N-1 DO
-      SUMWTX  := SUMWTX  + X[c];
-      SUMWTY  := SUMWTY  + Y[c];
-      SUMWTXY := SUMWTXY + X[c]*Y[c];
-      SUMWTX2 := SUMWTX2 + SQR(X[c]);
-      SUMWTY2 := SUMWTY2 + SQR(Y[c]);
-    END(*FOR*);
-  END SIMPLESUMUP;
-
-  PROCEDURE STDLR;
-  (*
-  ****************************** STDLR **********************************
+//  ------------------------------ StdLR ----------------------------------
+func StdLR(Stats SummaryOfData) (SummaryOfData) {
+/*
   This routine does the standard, unweighted, computation of the slope and
   intercept, using the formulas that are built into many pocket calculators,
   including mine.  This computation serves as an initial guess for the
   iterative solution used by this program as described by Dr. Zanter.
-  *)
+*/
 
-  VAR SLOPENUMERATOR,SLOPEDENOMINATOR : LONGREAL;
+  Stats := SimpleSumUp()
+  SlopeNumerator := Stats.SumWt*Stats.SumWtXY - Stats.SumWtX*Stats.SumWtY;
+  SlopeDenominator := Stats.SumWt*Stats.SumWtX2 - SQR(Stats.SumWtX);
+  Stats.Slope := SlopeNumerator/SlopeDenominator;
+  Stats.Intercept := (Stats.SumWtY - Slope*Stats.SumWtX)/Stats.SumWt;
+  Stats.R2 := SQR(SlopeNumerator)/SlopeDenominator/(Stats.SumWt*Stats.SumWtY2 - SQR(Stats.SumWtY));
+  return Stats
+}//  END StdLR;
 
-  BEGIN
-    SIMPLESUMUP;
-    SLOPENUMERATOR := SUMWT*SUMWTXY - SUMWTX*SUMWTY;
-    SLOPEDENOMINATOR := SUMWT*SUMWTX2 - SQR(SUMWTX);
-    Slope := SLOPENUMERATOR/SLOPEDENOMINATOR;
-    Intercept := (SUMWTY - Slope*SUMWTX)/SUMWT;
-    R2 := SQR(SLOPENUMERATOR)/SLOPEDENOMINATOR/(SUMWT*SUMWTY2 - SQR(SUMWTY));
-  END STDLR;
-
-  PROCEDURE GETWTS;
-  (*
-  ************************ GETWTS ************************************
+//  ------------------------ GetWts ------------------------------------
+func GetWts(rows []Point, Stats SummaryOfData) SummaryOfData {
+/*
   GET WEIGHTS.
-  This routine computes the weights and the AX quantities as given by the
-  above formulas.
+  This routine computes the weights and the AX quantities as given by the referenced formulas.
 
-  *)
+*/
 
-  VAR MINERROR : LONGREAL; (* MINIMUM ERROR ALLOWED. *)
-          c        : CARDINAL;
+  var MinError float64 // MINIMUM ERROR ALLOWED.
 
-  BEGIN
-    FOR c := 0 TO N-1 DO
-      EXPECTEDX := (Y[c] - Intercept) / Slope;
-      EXPECTEDY := Slope * X[c] + Intercept;
-      ERRORX := ABS(X[c] - EXPECTEDX)/sqrt(ABS(EXPECTEDX));
-      MINERROR := TOLERANCE*ABS(EXPECTEDX);
-      IF ERRORX < MINERROR THEN ERRORX := MINERROR; END(*IF*);
+  for c, p := range rows {       //    FOR c := 0 TO N-1 DO
+    rows[c].ExpectedX = math.Abs((p.y - Stats.Intercept) / Stats.Slope)
+    rows[c].ExpectedY = Stats.Slope * p.x + Stats.Intercept;
+    rows[c].ErrorX = math.Abs(p.x - rows[c].ExpectedX)/math.Sqrt(rows[c].ExpectedX)
+    MinError = tolerance*rows[c].ExpectedX // Don't need ABS call because that is now stored.
+    if rows.ErrorX < MinError { ERRORX := MINERROR}
       ERRORY2 := SQR(Y[c] - EXPECTEDY)/ABS(EXPECTEDY);
       MINERROR := TOLERANCE*ABS(EXPECTEDY);
       IF ERRORY2 < MINERROR THEN ERRORY2 := MINERROR; END(*IF*);
       WEIGHT[c] := 1./(ERRORY2 + SQR(Slope*ERRORX));
       AX[c] := X[c] - WEIGHT[c]*(Slope*X[c] + Intercept - Y[c])*
                                                           Slope*SQR(ERRORX);
-    END(*FOR*);
-  END GETWTS;
+  }//  END FOR
+  return Stats
+}//  END GETWTS;
 
-  PROCEDURE WTSUMUP;
+//  -------------------------------- WTSUMUP ---------------------------------
+func WtSumUp(){
   (*
-  ******************************** WTSUMUP *********************************
   Weighted Sum Up.
   This procedure sums the variables using the weights and AX quantaties as
   described (and computed) above.
@@ -429,9 +363,9 @@ iterated.
       SUMWTAXX := SUMWTAXX + W*AX[c]*X[c];
       SUMWTAXY := SUMWTAXY + W*AX[c]*Y[c];
     END(*FOR*);
-  END WTSUMUP;
+}//  END WTSUMUP;
 
-  PROCEDURE WTLR;
+func WTLR() {
   (*
   ******************************** WTLR ********************************
   Weighted Linear Regression.
@@ -444,9 +378,9 @@ iterated.
     Slope := (SUMWTAX*SUMWTY - SUMWTAXY*SUMWT)/
                                           (SUMWTX*SUMWTAX - SUMWTAXX*SUMWT);
     Intercept := (SUMWTY - Slope*SUMWTX)/SUMWT;
-  END WTLR;
+}//  END WTLR;
 
-  PROCEDURE GETCORR(VAR R2 : LONGREAL);
+func GETCORR() float64 {
   (*
   ********************************* GETCORR ****************************
   Get Correlation Coefficient
@@ -476,8 +410,48 @@ iterated.
     END(*FOR*);
     R2 := SQR(SUMWT*SUMWTXY - SUMWTX*SUMWTY)/
                 (SUMWT*SUMWTX2 - SQR(SUMWTX))/(SUMWT*SUMWTY2 - SQR(SUMWTY));
-  END GETCORR;
+	return R2
+}//  END GETCORR;
 
+func DOLR(N:CARDINAL; X,Y:ARRAY OF LONGREAL; VAR Slope,Intercept:LONGREAL){
+/*
+---------------------------------- DOLR ---------------------------------
+Do Linear Regression Routine.
+  This routine does the actual linear regression using a weighted algorithm
+that is described in Zanter, Jean-Paul, "Comparison of Linear Regression
+Algortims," JPAM Jan/Feb '86, 5:1, p 14-22.  This algorithm is used instead
+of the std one because the std one assumes that the errors on the independent
+variable are negligible and the errors on the dependent variable are
+constant.  This is definitely not the case in a clinical situation where,
+for example, both the time of a blood sample and the counts per minute in
+that blood sample, are subject to variances.
+
+
+
+                                      1
+  WEIGHT OF A POINT = ---------------------------------------
+                      (error_on_y)**2 + (slope*error_on_x)**2
+
+  AX -- a quantity defined by the author, used in the iterative solution of
+        the system of equations used in computing the weights, and hence the
+        errors on the data, and on the slopes and intercepts.  Like weights,
+        it applies to each point.
+
+     =  X - Weight * (Intercept + Slope*X - Y) * Slope * Error_on_X**2
+
+It is clear that the weights and the AX quantity depend on the errors
+on the data points.  My modification is a variation on the chi square
+analysis to determine the errors on the data points.  This, too is
+iterated.
+
+                     (Observed value - Expected value)**2
+ CHI SQUARE = sum of ------------------------------------
+                             Expected value
+
+*/
+
+// Sums are passed back globally
+//  ---------------------------- SIMPLESUMUP --------------------------------
 BEGIN (* BODY OF DOLR PROCEDURE *)
   STDLR;
   PREVSLOPE := Slope;
@@ -658,3 +632,159 @@ func check(e error) {
 		panic(e)
 	}
 }
+
+// -------------------------- fit -----------------------------
+func fit(rows []Point, Stats SummaryOfData) SummaryOfData {
+  
+/*
+  Based on Numerical Recipies code of same name on p 508-9 in Fortran,
+  and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
+  William H. Press, Brian P. Flannery, Saul A. Teukolsky, William T. Vettering.
+  (C) 1986, Cambridge University Press.
+*/
+  var i int
+  var wt,t,ay,ay,sxoss,sx,st2,ss,sigdat,chi2 float64
+
+  if mwt != 0 { // means that there are variances for the data points
+	for i,p := range rows {
+        wt = 1/SQR(sig[i])
+		ss += wt
+		sx += x[i]*wt
+		sy += y[i]*wt
+    }
+  }else{
+	for i,p := range rows {
+        sx += x[i]
+		sy += y[i]
+	}
+	ss = len(rows)
+  }
+  sxoss = sx/ss
+  if mwt != 0 {
+    for i,p := range rows {
+      t = (x[i] - sxoss)/sig[i]
+	  st2 += SQR(t)
+	  b += t*y[i]/sig[i]
+    }
+  }else{
+	for i,p := range rows {
+      t = x[i] - sxoss
+	  st2 =+ SQR(t)
+	  b += t*y[i]
+	}
+  }
+  b = b/st2
+  a = (sy-sx*b)/ss 
+  siga = math.Sqrt((1+SQR(sx)/(ss*st2))/ss)
+  sigb = math.Sqrt(1/st2)
+
+  // Now to sum up Chi squared 
+  if mwt == 0 {
+    for i,p := range rows {
+      chi2 += SQR(y[i]-a-b*x[i])
+	}
+	q = 1
+	sigdat = math.Sqrt(chi2/(len(rows)-2))
+	siga *= sigdat
+	sigb *= sigdat
+  }else{
+    for i,p := range rows {
+      chi2 += SQR((y[i] - a - b*x[i])/sig[i])
+	}
+	q = gammq(0.5*(len(rows)-2),0.5*chi2)
+  }
+}
+
+// -------------------------------- gamq ----------------------------------
+func gammq(a,x float64) float64 {
+// Incomplete Gamma Function, is what "Numerical Recipies" says.
+// gln is the ln of the gamma function result
+
+  if x < 0 || A <= 0 {  // error condition, but I don't want to return an error result
+    return 0
+  }
+  if x < a+1 { // use the series representation
+	gamser,gln := gser(a,x)
+	return 1-gamser
+  }else{
+	gammcf,gln := gcf(a,x)
+	return gammcf
+  }
+}
+
+// ------------------------------- gser ----------------------------------
+func gser(a,x float64) (float64,float64) {
+  const ITERMAX = 100
+  const tolerance = 3e-7
+
+  gln := gammln(a)
+  if x = 0 {
+	  return 0,0
+  }else if x < 0 { // invalid argument, but I'll just return 0 to not return an error result
+      return 0,0
+  }
+  ap := a
+  sum := 1/a
+  del := sum
+  for n := 1; n < ITERMAX; n++ {
+    ap = ap + 1
+	del *= x/ap
+	sum += del
+	if math.Abs(del) < math.Abs(sum)*tolerance {
+      break	
+	}
+  }
+  return sum*math.Exp(-x + a*math.Log(x)-gln)
+}
+
+func gammln(xx float64) float64 {
+  const stp = 2.50662827465
+  const half = 0.5
+  const one = 1
+  const fpf = 5.5
+
+  var cof = [...]float64 {76.18009173,-86.50532033,24.01409822,-1.231739516,0.120858003e-2,-0.536382e-5}
+
+  x := xx-one
+  tmp := x+fpf
+  tmp = (x + half)*math.Log(tmp)-tmp
+  ser := one
+  for j := range cof {
+    x += one
+	ser += cof[j]/x
+  }
+  return tmp + math.Log(stp*ser)
+}
+
+func gcf(a,x float64) (float64,float64) {
+  const ITERMAX = 100
+  const tolerance = 3e-7
+  var gln,gold,g,fac,b1,b0,anf,ana,an,a1,a0 float64
+
+  gln = gammln(a)
+  a0 = 1.0
+  a1 = x
+  b1 = 1.
+  fac = 1.
+
+  for n := 1; n < ITERMAX; n++ {
+	  an = float64(n)
+	  ana = an - a
+	  a0 = (a1 + a0*ana)*fac
+	  b0 = (b1 + b0*ana)*fac
+	  anf = an*fac
+	  a1 = x*a0 + anf*a1
+	  b1 = x*b0 + anf*b1
+      if a1 != 0 {
+        fac = 1/a1
+		g = b1*fac
+		if math.Abs((g-gold)/g) < tolerance {
+          break
+		}
+		gold = g
+	  }
+  gammcf = math.Exp(-x + a*math.Log(x) - gln)*g
+  return gammcf,gln
+  }
+}
+
