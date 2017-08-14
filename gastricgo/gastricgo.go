@@ -1,7 +1,21 @@
 // GastricEmptying in Go.  (C) 2017.  Based on GastricEmtpying2.mod code.
-// Includes LR code here.  No point in making it separate.
 
 package main
+
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"math"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+	//
+	"getcommandline"
+	"tknptr"
+)
 
 /*
   REVISION HISTORY
@@ -17,23 +31,10 @@ package main
   27 Dec 14 -- Removing unused modules so can compile in ADW.
   21 Jun 15 -- Will write out to file, and close all files before program closes.
   10 Aug 17 -- Converting to Go
+  12 Aug 17 -- Added "Numerical Recipies" code, and removed old iterative algorithm.
 */
 
-import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"io/ioutil"
-	"math"
-	"os"
-	"path/filepath"
-	"strings"
-	//
-	"getcommandline"
-	"tknptr"
-)
-
-const LastAltered = "12 Aug 2017"
+const LastAltered = "13 Aug 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -75,7 +76,9 @@ func main() {
 	rows := make([]Point, 0, MaxCol)
 	im := make(inputmatrix, 0, MaxN) // input matrix
 
+	fmt.Println()
 	fmt.Println(" Gastric Emtpying program written in Go.  Last modified", LastAltered)
+	fmt.Println()
 	if len(os.Args) <= 1 {
 		fmt.Println(" Usage: GastricEmptying <filename>")
 		os.Exit(0)
@@ -164,26 +167,40 @@ func main() {
 		point.x = im[c][0]
 		point.y = im[c][1]
 		point.lny = math.Log(point.y)
-		point.stdev = point.lny / 2
+		point.stdev = 0.5
 		rows = append(rows, point)
 	}
+
+	date := time.Now()
+	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Println(" Date and Time in default format:", date)
+	fmt.Println(" Date and Time in basic format:", datestring)
 
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
 	fmt.Println(" X is time(min), Y is kcounts, Ln(y) and stdev")
 	fmt.Println()
 	for _, p := range rows {
-		fmt.Println(p.x, p.y, p.lny, p.stdev)
+		s := fmt.Sprintf("%11.2f %13.2f %9.2f %10.2f\n", p.x, p.y, p.lny, p.stdev)
+		fmt.Print(s)
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
 	}
 	fmt.Println()
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 
 	fmt.Println(" Original standard unweighted Slope", stdslope, ", standard Intercept is", stdintercept)
 	fmt.Println(" standard R-squared Correlation Coefficient", stdr2)
 	stdhalflife := -ln2 / stdslope
-	fmt.Println(" T-1/2 of Gastric Emptying is", stdhalflife)
+	s := fmt.Sprintf(" T-1/2 of Gastric Emptying is %.2f minutes \n", stdhalflife)
+	fmt.Print(s)
 	fmt.Println()
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
 
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
