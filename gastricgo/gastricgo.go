@@ -167,18 +167,23 @@ func main() {
 		point.x = im[c][0]
 		point.y = im[c][1]
 		point.lny = math.Log(point.y)
-		point.stdev = 0.5
+		point.stdev = 0.2
 		rows = append(rows, point)
 	}
 
 	date := time.Now()
 	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Println(" Date and Time in default format:", date)
-	fmt.Println(" Date and Time in basic format:", datestring)
+	// fmt.Println(" Date and Time in default format:", date)
+	s := fmt.Sprintf(" Date and Time in basic format: %s \n", datestring)
+	fmt.Println(s)
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
-	fmt.Println(" X is time(min), Y is kcounts, Ln(y) and stdev")
+	fmt.Println(" X is time(min)  Y is kcounts  Ln(y)     stdev")
 	fmt.Println()
 	for _, p := range rows {
 		s := fmt.Sprintf("%11.2f %13.2f %9.2f %10.2f\n", p.x, p.y, p.lny, p.stdev)
@@ -195,19 +200,52 @@ func main() {
 	fmt.Println(" Original standard unweighted Slope", stdslope, ", standard Intercept is", stdintercept)
 	fmt.Println(" standard R-squared Correlation Coefficient", stdr2)
 	stdhalflife := -ln2 / stdslope
-	s := fmt.Sprintf(" T-1/2 of Gastric Emptying is %.2f minutes \n", stdhalflife)
+	s = fmt.Sprintf(" Original T-1/2 of Gastric Emptying is %.2f minutes. \n", stdhalflife)
 	fmt.Print(s)
 	fmt.Println()
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
 	fmt.Println("Weighted Slope is", WeightedResults.Slope, ", Weighted Intercept is", WeightedResults.Intercept)
 	fmt.Println("stdev Slope is", WeightedResults.StDevSlope, ", stdev Intercept is", WeightedResults.StDevIntercept)
 	fmt.Println("GoodnessOfFit is", WeightedResults.GoodnessOfFit)
-	fmt.Println(" halflife of Gastric Emptying using Weights is", weightedhalflife)
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights is %.2f minutes. \n", weightedhalflife)
+	fmt.Println(s)
+	fmt.Println()
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+
+	UnWeightedResults := fitfull(rows, false)
+	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
+	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
+	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
+	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
+	s = fmt.Sprintf(" halflife of Gastric Emptying not using Weights is %.2f minutes. \n", Unweightedhalflife)
+	fmt.Println(s)
+	fmt.Println()
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+
+	WeightedResults2 := fitfull(rows, true)
+	weightedhalflife2 := -ln2 / WeightedResults2.Slope
+	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
+	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
+	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes. \n", weightedhalflife2)
+	fmt.Println(s)
+	fmt.Println()
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
 
 	// The files will close themselves because of the defer statements.
 }
@@ -264,6 +302,7 @@ func fit(rows []Point) FittedData {
 	   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering.
 	   (C) 1986, Cambridge University Press.
 	   y = ax + b.  And it returns stdeva, stdevb, and goodness of fit param q.
+	   I think the docs are wrong.  The equation is y = a + bx, ie, b is Slope.  I'll make that switch now.
 	*/
 	var SumXoverSumWt, SumX, SumY, Sumt2, SumWt, chi2, a, b float64
 	var result FittedData
@@ -290,13 +329,83 @@ func fit(rows []Point) FittedData {
 		chi2 += SQR((p.lny - a - b*p.x) / p.stdev)
 	}
 	q := gammq(0.5*float64(len(rows)-2), 0.5*chi2)
-	result.Slope = a
-	result.StDevSlope = stdeva
-	result.Intercept = b
-	result.StDevIntercept = stdevb
+	result.Slope = b
+	result.StDevSlope = stdevb
+	result.Intercept = a
+	result.StDevIntercept = stdeva
 	result.GoodnessOfFit = q
 	return result
-}
+} // END fit
+
+// -------------------------------- fitunwt ---------------------------------
+
+func fitfull(row []Point, weighted bool) FittedData {
+
+	/*
+	   Based on Numerical Recipies code of same name on p 508-9 in Fortran,
+	   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
+	   William H. Press, Brian P. Flannery, Saul A. Teukolsky, William T. Vettering.
+	   (C) 1986, Cambridge University Press.
+	   I think the docs are wrong.  The equation is y = a + bx, ie, b is Slope.  I'll make that switch now.
+	*/
+	var wt, a, b, t, q, sxoss, sx, sy, st2, ss, sigdat, chi2 float64
+	var result FittedData
+
+	if weighted { // means that there are variances for the data points
+		for i := range row {
+			wt = 1 / SQR(row[i].stdev)
+			ss += wt
+			sx += row[i].x * wt
+			sy += row[i].lny * wt
+		}
+	} else { // perform an unweighted sum
+		for i := range row {
+			sx += row[i].x
+			sy += row[i].lny
+		}
+		ss = float64(len(row))
+	}
+	sxoss = sx / ss
+	if weighted {
+		for i := range row {
+			t = (row[i].x - sxoss) / row[i].stdev
+			st2 += SQR(t)
+			b += t * row[i].lny / row[i].stdev
+		}
+	} else {
+		for i := range row {
+			t = row[i].x - sxoss
+			st2 += SQR(t)
+			b += t * row[i].lny
+		}
+	}
+	b = b / st2
+	a = (sy - sx*b) / ss
+	siga := math.Sqrt((1 + SQR(sx)/(ss*st2)) / ss)
+	sigb := math.Sqrt(1 / st2)
+
+	// Now to sum up Chi squared
+	if !weighted {
+		for i := range row {
+			chi2 += SQR(row[i].lny - a - b*row[i].x)
+		}
+		q = 1
+		sigdat = math.Sqrt(chi2 / float64(len(row)-2))
+		siga *= sigdat
+		sigb *= sigdat
+	} else {
+		for i := range row {
+			chi2 += SQR((row[i].lny - a - b*row[i].x) / row[i].stdev)
+		}
+		q = gammq(0.5*float64(len(row)-2), 0.5*chi2)
+	}
+	result.Slope = b
+	result.StDevSlope = sigb
+	result.Intercept = a
+	result.StDevIntercept = siga
+	result.GoodnessOfFit = q
+	return result
+} // END fitfull
 
 // -------------------------------- gamq ----------------------------------
 func gammq(a, x float64) float64 {
