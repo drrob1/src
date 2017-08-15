@@ -32,6 +32,9 @@ import (
   21 Jun 15 -- Will write out to file, and close all files before program closes.
   10 Aug 17 -- Converting to Go
   12 Aug 17 -- Added "Numerical Recipies" code, and removed old iterative algorithm.
+  15 Aug 17 -- Added ability to show timestamp of the executable file, as a way of showing last linking timestamp.
+                 To be used in addition of the LastAltered string.  But I can recompile without altering, as when
+		 a new version of the Go toolchain is released.
 */
 
 const LastAltered = "15 Aug 2017"
@@ -83,6 +86,15 @@ func main() {
 		fmt.Println(" Usage: GastricEmptying <filename>")
 		os.Exit(0)
 	}
+	date := time.Now()
+	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable() // from memory, check at home
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+	fmt.Println(" Full name of executable file is", execname)
+	fmt.Println()
 
 	InExtDefault := ".txt"
 	OutExtDefault := ".out"
@@ -171,8 +183,6 @@ func main() {
 		rows = append(rows, point)
 	}
 
-	date := time.Now()
-	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST")
 	// fmt.Println(" Date and Time in default format:", date)
 	s := fmt.Sprintf(" Date and Time in basic format: %s \n", datestring)
 	fmt.Println(s)
