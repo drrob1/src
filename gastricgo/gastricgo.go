@@ -34,7 +34,7 @@ import (
   12 Aug 17 -- Added "Numerical Recipies" code, and removed old iterative algorithm.
 */
 
-const LastAltered = "13 Aug 2017"
+const LastAltered = "15 Aug 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -167,7 +167,7 @@ func main() {
 		point.x = im[c][0]
 		point.y = im[c][1]
 		point.lny = math.Log(point.y)
-		point.stdev = 0.2
+		point.stdev = 10
 		rows = append(rows, point)
 	}
 
