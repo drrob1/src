@@ -37,7 +37,7 @@ import (
 		 a new version of the Go toolchain is released.
 */
 
-const LastAltered = "15 Aug 2017"
+const LastAltered = "16 Aug 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -206,11 +206,11 @@ func main() {
 	check(err)
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
-
-	fmt.Println(" Original standard unweighted Slope", stdslope, ", standard Intercept is", stdintercept)
-	fmt.Println(" standard R-squared Correlation Coefficient", stdr2)
 	stdhalflife := -ln2 / stdslope
-	s = fmt.Sprintf(" Original T-1/2 of Gastric Emptying is %.2f minutes. \n", stdhalflife)
+
+	//	fmt.Println(" Original standard unweighted Slope", stdslope, ", standard Intercept is", stdintercept)
+	//	fmt.Println(" standard R-squared Correlation Coefficient", stdr2)
+	s = fmt.Sprintf(" Original T-1/2 of Gastric Emptying is %.2f minutes.  Original std unweighted slope is %.6f and std intercept is %.6f and R-squared is %.6f \n", stdhalflife, stdslope, stdintercept, stdr2)
 	fmt.Print(s)
 	fmt.Println()
 	_, err = OutBufioWriter.WriteString(s)
@@ -220,10 +220,11 @@ func main() {
 
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
-	fmt.Println("Weighted Slope is", WeightedResults.Slope, ", Weighted Intercept is", WeightedResults.Intercept)
-	fmt.Println("stdev Slope is", WeightedResults.StDevSlope, ", stdev Intercept is", WeightedResults.StDevIntercept)
-	fmt.Println("GoodnessOfFit is", WeightedResults.GoodnessOfFit)
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights is %.2f minutes. \n", weightedhalflife)
+	//	fmt.Println("Weighted Slope is", WeightedResults.Slope, ", Weighted Intercept is", WeightedResults.Intercept)
+	//	fmt.Println("stdev Slope is", WeightedResults.StDevSlope, ", stdev Intercept is", WeightedResults.StDevIntercept)
+	//	fmt.Println("GoodnessOfFit is", WeightedResults.GoodnessOfFit)
+	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f, GoodnessOfFit=%.6f \n",
+		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.StDevIntercept, WeightedResults.GoodnessOfFit)
 	fmt.Println(s)
 	fmt.Println()
 	_, err = OutBufioWriter.WriteString(s)
@@ -233,17 +234,18 @@ func main() {
 
 	UnWeightedResults := fitfull(rows, false)
 	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
-	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
-	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
-	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
-	s = fmt.Sprintf(" halflife of Gastric Emptying not using Weights is %.2f minutes. \n", Unweightedhalflife)
+	//	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
+	//	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
+	//	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
+	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, Intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f. \n",
+		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
 	fmt.Println(s)
 	fmt.Println()
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-
+	/* This code works but is redundant.  So I'll remove it.
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
 	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
@@ -256,7 +258,7 @@ func main() {
 	check(err)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-
+	*/
 	// The files will close themselves because of the defer statements.
 }
 
