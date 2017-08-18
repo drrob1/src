@@ -196,7 +196,7 @@ func main() {
 	fmt.Println(" X is time(min)  Y is kcounts  Ln(y)     stdev")
 	fmt.Println()
 	for _, p := range rows {
-		s := fmt.Sprintf("%11.2f %13.2f %9.2f %10.2f\n", p.x, p.y, p.lny, p.stdev)
+		s := fmt.Sprintf("%11.0f %13.2f %10.4f %10.4f\n", p.x, p.y, p.lny, p.stdev)
 		fmt.Print(s)
 		_, err = OutBufioWriter.WriteString(s)
 		check(err)
