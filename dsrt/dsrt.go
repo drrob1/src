@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const lastCompiled = "21 May 17"
+const LastAltered = "2 Sep 17"
 
 /*
 Revision History
@@ -30,9 +30,10 @@ Revision History
 25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
 26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
-19 May 19 -- Will now show the uid:gid for linux.
-20 May 19 -- Turns out that (*syscall.Stat_t) only compiles on linux. Time for platform specific code.
-21 May 19 -- Cross compiling to GOARCH=386, and the uid and User routines won't work. So I'm dealing with that.
+19 May 17 -- Will now show the uid:gid for linux.
+20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
+21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
+ 2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -92,7 +93,11 @@ func main() {
 	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 	flag.Parse()
 
-	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastCompiled ", lastCompiled)
+	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 
 	uid := 0
