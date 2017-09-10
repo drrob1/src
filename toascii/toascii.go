@@ -16,7 +16,7 @@ import (
 	//
 )
 
-const lastCompiled = "15 May 17"
+const lastAltered = "10 Sep 2017"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -50,13 +50,20 @@ const diagraphFLstr = "fl"
     8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
    13 May 17 -- Changed the text of the final output message.
    15 May 17 -- Will now call this toascii.go.  io.Copy and encoding/ascii85.NewEncoder does not work.
+   10 Sep 17 -- Added code to show timestamp of execname.  And changed bufio error checking.
 */
 
 func main() {
 	var str string
 
 	fmt.Println()
-	fmt.Println(" toascii converts utf8 to ascii.  Last compiled ", lastCompiled)
+	fmt.Println(" toascii converts utf8 to ascii.  Last altered ", lastAltered)
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable() // from memory, check at home
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+	fmt.Println(" Full name of executable file is", execname)
 	fmt.Println()
 
 	var norenameflag = flag.Bool("no", false, "norenameflag -- do not rename files at end.")
@@ -155,12 +162,16 @@ func main() {
 			str = string(r)
 		}
 
-		_, err = OutBufioWriter.WriteString(str)
-		check(err)
+		_, _ = OutBufioWriter.WriteString(str)
+		//		_, err = OutBufioWriter.WriteString(str)
+		//		check(err)
 	}
 
 	InputFile.Close()
-	OutBufioWriter.Flush() // code did not work without this line.
+	// based on Rob Pike's posting.  Only need to check the error here.
+	if err := OutBufioWriter.Flush(); err != nil {
+		fmt.Println(" Output file error from bufio WriteString")
+	}
 	OutputFile.Close()
 
 	// Make the processed file the same name as the input file.  IE, swap in and
