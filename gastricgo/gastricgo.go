@@ -35,9 +35,10 @@ import (
   15 Aug 17 -- Added ability to show timestamp of the executable file, as a way of showing last linking timestamp.
                  To be used in addition of the LastAltered string.  But I can recompile without altering, as when
 		 a new version of the Go toolchain is released.
+   9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
 */
 
-const LastAltered = "16 Aug 2017"
+const LastAltered = "9 Sep 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -75,6 +76,8 @@ type FittedData struct {
 
 func main() {
 	var point Point
+	var err error
+
 	ln2 := math.Log(2)
 	rows := make([]Point, 0, MaxCol)
 	im := make(inputmatrix, 0, MaxN) // input matrix
@@ -124,7 +127,7 @@ func main() {
 	}
 
 	byteslice := make([]byte, 0, 5000)
-	byteslice, err := ioutil.ReadFile(Filename)
+	byteslice, err = ioutil.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error", err, " from iotuil.ReadFile when reading", Filename, ".  Exiting.")
 		os.Exit(1)
@@ -182,13 +185,29 @@ func main() {
 		point.stdev = 10
 		rows = append(rows, point)
 	}
+	// this is a closure, I think my first one.
+	writestr := func(s string) {
+		if err != nil {
+			return
+		}
+		_, err = OutBufioWriter.WriteString(s)
+	}
+
+	writerune := func() { // this is a closure.
+		if err != nil {
+			return
+		}
+		_, err = OutBufioWriter.WriteRune('\n')
+	}
 
 	// fmt.Println(" Date and Time in default format:", date)
 	s := fmt.Sprintf(" Date and Time in basic format: %s \n", datestring)
 	fmt.Println(s)
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
+	writestr(s) // using the closure from above, I hope.
+	writerune() //
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
 	fmt.Println(" N = ", len(rows))
@@ -198,11 +217,13 @@ func main() {
 	for _, p := range rows {
 		s := fmt.Sprintf("%11.0f %13.2f %10.4f %10.4f\n", p.x, p.y, p.lny, p.stdev)
 		fmt.Print(s)
-		_, err = OutBufioWriter.WriteString(s)
-		check(err)
+		writestr(s) // the closure from above
+		//		_, err = OutBufioWriter.WriteString(s)
+		//		check(err)
 	}
 	fmt.Println()
-	_, err = OutBufioWriter.WriteRune('\n')
+	writerune()
+	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
@@ -213,9 +234,11 @@ func main() {
 	s = fmt.Sprintf(" Original T-1/2 of Gastric Emptying is %.2f minutes.  Original std unweighted slope is %.6f and std intercept is %.6f and R-squared is %.6f \n", stdhalflife, stdslope, stdintercept, stdr2)
 	fmt.Print(s)
 	fmt.Println()
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
+	writestr(s) // using the write closure, I hope
+	writerune()
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
 	WeightedResults := fit(rows)
@@ -227,9 +250,11 @@ func main() {
 		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.StDevIntercept, WeightedResults.GoodnessOfFit)
 	fmt.Println(s)
 	fmt.Println()
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
+	writestr(s) // using the write closure, I hope
+	writerune()
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
 	UnWeightedResults := fitfull(rows, false)
@@ -241,9 +266,11 @@ func main() {
 		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
 	fmt.Println(s)
 	fmt.Println()
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
+	writestr(s) // using the write closure, I hope
+	writerune()
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	/* This code works but is redundant.  So I'll remove it.
 	WeightedResults2 := fitfull(rows, true)
