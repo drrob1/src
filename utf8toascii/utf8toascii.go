@@ -15,7 +15,7 @@ import (
 	//
 )
 
-const lastCompiled = "13 May 17"
+const lastAltered = "10 Sep 17"
 
 //const openQuoteRune = 0xe2809c  \  These values are in the file itself seen by hexdump -C
 //const closeQuoteRune = 0xe2809d  \ but are not the rune (unicode code point)
@@ -52,12 +52,31 @@ const diagraphFLstr = "fl"
                   added OS based line endings.
     8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
    13 May 17 -- Changed the text of the final output message.
+   10 Sep 17 -- Added execname code, and changed error handling based on Rob Pike suggestion.
 */
+
+type errWriter struct {
+	w   *bufio.Writer
+	err error
+}
+
+func (ew *errWriter) writestr(s string) {
+	if ew.err != nil {
+		return
+	}
+	_, ew.err = ew.w.WriteString(s)
+}
 
 func main() {
 	var instr, outstr, str, lineEndings string
 
-	fmt.Println(" utf8toascii converts utf8 to ascii.  Last compiled ", lastCompiled)
+	fmt.Println(" utf8toascii converts utf8 to ascii.  Last altered ", lastAltered)
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable() // from memory, check at home
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+	fmt.Println(" Full name of executable file is", execname)
 	fmt.Println()
 
 	var norenameflag = flag.Bool("no", false, "norenameflag -- do not rename files at end.")
@@ -132,6 +151,8 @@ func main() {
 	OutBufioWriter := bufio.NewWriter(OutputFile)
 	defer OutBufioWriter.Flush()
 
+	ew := &errWriter{w: OutBufioWriter} // struct literal only init w field.  err field is default false
+
 	for InBufioScanner.Scan() {
 		instr = InBufioScanner.Text() // does not include the trailing EOL char
 		runecount := utf8.RuneCountInString(instr)
@@ -169,13 +190,21 @@ func main() {
 			outstr = strings.Join(stringslice, "")
 
 		}
-		_, err := OutBufioWriter.WriteString(outstr)
-		check(err)
-		_, err = OutBufioWriter.WriteString(lineEndings)
-		check(err)
+		ew.writestr(outstr)
+		ew.writestr(lineEndings)
+		//		_, err := OutBufioWriter.WriteString(outstr)
+		//		check(err)
+		//		_, err = OutBufioWriter.WriteString(lineEndings)
+		//		check(err)
 	}
 
 	InputFile.Close()
+
+	if ew.err != nil {
+		fmt.Println(" Error from bufio.WriteString is", ew.err, ".  Aborting")
+		os.Exit(1)
+	}
+
 	OutBufioWriter.Flush() // code did not work without this line.
 	OutputFile.Close()
 
