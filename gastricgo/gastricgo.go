@@ -277,20 +277,22 @@ func main() {
 	/* This code works but is redundant.  So I'll remove it.  Maybe not after all */
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
-	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
-	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
-	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
 	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes, stdev is %.6f. \n", weightedhalflife2, WeightedResults2.StDevSlope)
 	fmt.Println(s)
-	fmt.Println()
 	writestr(s)
 	writerune()
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
+
+	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
+	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
+	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
 	/* */
 	// The files will flush and close themselves because of the defer statements.
+	fmt.Println()
+	fmt.Println()
 }
 
 // -------------------------------------- SQR ---------------------------------------------
