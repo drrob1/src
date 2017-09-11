@@ -36,9 +36,10 @@ import (
                  To be used in addition of the LastAltered string.  But I can recompile without altering, as when
 		 a new version of the Go toolchain is released.
    9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
+  11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
 */
 
-const LastAltered = "10 Sep 2017"
+const LastAltered = "11 Sep 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -53,6 +54,7 @@ const LastAltered = "10 Sep 2017"
 
 const MaxN = 500
 const MaxCol = 10
+const StDevFac = 25 // treated as a percentage
 
 // stdev relates to counts, or the ordinate.  This algorithm has it apply to the abscissa
 // also.  I'll run with this and see what happens.
@@ -66,27 +68,23 @@ type FittedData struct {
 	Slope, Intercept, StDevSlope, StDevIntercept, GoodnessOfFit float64
 }
 
-//  WEIGHT,AX : ARRAY[0..MAXELE] OF LONGREAL;
-//  PREVSLOPE,PREVINTRCPT : LONGREAL;
-//  C,K,ITERCTR : CARDINAL;
-
 //************************************************************************
 //*                              MAIN PROGRAM                            *
 //************************************************************************
 
 func main() {
 	var point Point
-	var err error
+	var err, bufioErr error
 
 	ln2 := math.Log(2)
 	rows := make([]Point, 0, MaxCol)
 	im := make(inputmatrix, 0, MaxN) // input matrix
 
 	fmt.Println()
-	fmt.Println(" Gastric Emtpying program written in Go.  Last modified", LastAltered)
+	fmt.Println(" GastricGo, a Gastric Emtpying program written in Go.  Last modified", LastAltered)
 	fmt.Println()
 	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: GastricEmptying <filename>")
+		fmt.Println(" Usage: gastricgo <filename>.txt")
 		os.Exit(0)
 	}
 	date := time.Now()
@@ -182,22 +180,22 @@ func main() {
 		point.x = im[c][0]
 		point.y = im[c][1]
 		point.lny = math.Log(point.y)
-		point.stdev = 10
+		point.stdev = point.y * StDevFac / 100 // treating StDevFac as a %-age.
 		rows = append(rows, point)
 	}
 	// this is a closure, I think my first one.
 	writestr := func(s string) {
-		if err != nil {
+		if bufioErr != nil {
 			return
 		}
-		_, err = OutBufioWriter.WriteString(s)
+		_, bufioErr = OutBufioWriter.WriteString(s)
 	}
 
 	writerune := func() { // this is a closure.
-		if err != nil {
+		if bufioErr != nil {
 			return
 		}
-		_, err = OutBufioWriter.WriteRune('\n')
+		_, bufioErr = OutBufioWriter.WriteRune('\n')
 	}
 
 	// fmt.Println(" Date and Time in default format:", date)
@@ -246,11 +244,13 @@ func main() {
 	//	fmt.Println("Weighted Slope is", WeightedResults.Slope, ", Weighted Intercept is", WeightedResults.Intercept)
 	//	fmt.Println("stdev Slope is", WeightedResults.StDevSlope, ", stdev Intercept is", WeightedResults.StDevIntercept)
 	//	fmt.Println("GoodnessOfFit is", WeightedResults.GoodnessOfFit)
-	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f, GoodnessOfFit=%.6f \n",
-		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.StDevIntercept, WeightedResults.GoodnessOfFit)
+	//	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f, GoodnessOfFit=%.6f \n",
+	//		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.StDevIntercept, WeightedResults.GoodnessOfFit)
+	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f, GoodnessOfFit= %.6f \n",
+		weightedhalflife, WeightedResults.Slope, WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
 	fmt.Println(s)
 	fmt.Println()
-	writestr(s) // using the write closure, I hope
+	writestr(s) // using the write closure
 	writerune()
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
@@ -262,8 +262,10 @@ func main() {
 	//	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
 	//	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
 	//	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
-	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, Intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f. \n",
-		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
+	//	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, Intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f. \n",
+	//		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
+	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f. \n",
+		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.StDevSlope)
 	fmt.Println(s)
 	fmt.Println()
 	writestr(s) // using the write closure, I hope
@@ -272,21 +274,23 @@ func main() {
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	/* This code works but is redundant.  So I'll remove it.
+	/* This code works but is redundant.  So I'll remove it.  Maybe not after all */
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
 	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
 	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
 	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes. \n", weightedhalflife2)
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes, stdev is %.6f. \n", weightedhalflife2, WeightedResults2.StDevSlope)
 	fmt.Println(s)
 	fmt.Println()
-	_, err = OutBufioWriter.WriteString(s)
+	writestr(s)
+	writerune()
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	*/
-	// The files will close themselves because of the defer statements.
+	/* */
+	// The files will flush and close themselves because of the defer statements.
 }
 
 // -------------------------------------- SQR ---------------------------------------------
