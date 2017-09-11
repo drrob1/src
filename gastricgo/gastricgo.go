@@ -38,7 +38,7 @@ import (
    9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
 */
 
-const LastAltered = "9 Sep 2017"
+const LastAltered = "10 Sep 2017"
 
 /*
   Normal values from source that I don't remember anymore.
