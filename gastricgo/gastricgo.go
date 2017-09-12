@@ -37,6 +37,7 @@ import (
 		 a new version of the Go toolchain is released.
    9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
   11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
+  12 Sep 17 -- Added heading to output file.
 */
 
 const LastAltered = "12 Sep 2017"
@@ -212,6 +213,8 @@ func main() {
 	fmt.Println()
 	fmt.Println(" X is time(min)  Y is kcounts  Ln(y)     stdev")
 	fmt.Println()
+	writestr(" X is time(min)  Y is kcounts  Ln(y)     stdev") // the closure from above
+	writerune()
 	for _, p := range rows {
 		s := fmt.Sprintf("%11.0f %13.2f %10.4f %10.4f\n", p.x, p.y, p.lny, p.stdev)
 		fmt.Print(s)
