@@ -180,7 +180,7 @@ func main() {
 		point.x = im[c][0]
 		point.y = im[c][1]
 		point.lny = math.Log(point.y)
-		point.stdev = point.y * StDevFac / 100 // treating StDevFac as a %-age.
+		point.stdev = math.Log(point.y * StDevFac / 100) // treating StDevFac as a %-age.
 		rows = append(rows, point)
 	}
 	// this is a closure, I think my first one.
@@ -206,7 +206,7 @@ func main() {
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
+	check(bufioErr)
 
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
@@ -222,7 +222,7 @@ func main() {
 	fmt.Println()
 	writerune()
 	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
+	check(bufioErr)
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
@@ -237,7 +237,7 @@ func main() {
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
+	check(bufioErr)
 
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
@@ -255,7 +255,7 @@ func main() {
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
+	check(bufioErr)
 
 	UnWeightedResults := fitfull(rows, false)
 	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
@@ -273,7 +273,7 @@ func main() {
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
+	check(bufioErr)
 	/* This code works but is redundant.  So I'll remove it.  Maybe not after all */
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
@@ -284,7 +284,7 @@ func main() {
 	//	_, err = OutBufioWriter.WriteString(s)
 	//	check(err)
 	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
+	check(bufioErr)
 
 	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
 	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
