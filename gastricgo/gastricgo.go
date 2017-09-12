@@ -39,7 +39,7 @@ import (
   11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
 */
 
-const LastAltered = "11 Sep 2017"
+const LastAltered = "12 Sep 2017"
 
 /*
   Normal values from source that I don't remember anymore.
