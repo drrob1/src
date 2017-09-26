@@ -42,7 +42,7 @@ import (
   24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
 */
 
-const LastAltered = "24 Sep 2017"
+const LastAltered = "26 Sep 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -67,7 +67,7 @@ const ITERMAX = 100   // this too
 // stdev relates to counts, or the ordinate.  This algorithm has it apply to the abscissa also.
 // Version 2 handles these separately in fitexy.
 type Point struct {
-	x, y, OrigY, stdev             float64
+	x, y, OrigY, stdev,
 	sigx, sigy, xx, yy, sx, sy, ww float64 // added when I added fitexy in Sep 2017
 }
 
@@ -77,9 +77,12 @@ type FittedData struct {
 	Slope, Intercept, StDevSlope, StDevIntercept, GoodnessOfFit float64
 }
 
-//	COMMON /fitxyc/ xx,yy,sx,sy,ww -- NOW PART OF Point -- ,aa,ofs,nn
-var aa, offs float64
-var nn int
+type FittedData2 struct {
+	Slope, Intercept, StDevSlope, StDevIntercept, chi2, q float64
+}
+
+//	COMMON /fitxyc/ xx,yy,sx,sy,ww -- NOW PART OF Point -- ,aa,ofs,nn -- defined next.
+var aa, offs, nn float64
 
 //************************************************************************
 //*                              MAIN PROGRAM                            *
@@ -306,7 +309,29 @@ func main() {
 	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
 	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
 	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
-	/* */
+
+	WeightedResults3 := fitexy(rows)
+	fmt.Println(" After fitexy call.  Slope is", WeightedResults3.Slope, ", Intercept is", WeightedResults3.Intercept, ", chi2 is", WeightedResults3.chi2, ", q is", WeightedResults3.q)
+	fmt.Println(WeightedResults3)
+	weightedhalflife3 := WeightedResults3.Slope // just to define this as a float64
+	if WeightedResults3.Slope != 0 {
+		weightedhalflife3 = -ln2 / WeightedResults3.Slope
+	} else { // I will assign a silly number that is not infinity.
+		weightedhalflife3 = 2000
+	}
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 is %.2f minutes, stdev is %.6f. \n", weightedhalflife3, WeightedResults3.StDevSlope)
+	fmt.Println(s)
+	writestr(s)
+	writerune()
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
+	check(bufioErr)
+
+	fmt.Println("Weighted Slope is", WeightedResults3.Slope, ", Weighted Intercept is", WeightedResults3.Intercept)
+	fmt.Println("stdev Slope is", WeightedResults3.StDevSlope, ", stdev Intercept is", WeightedResults3.StDevIntercept)
+	fmt.Println("GoodnessOfFit is", WeightedResults3.chi2, "and", WeightedResults3.q)
+
 	// The files will flush and close themselves because of the defer statements.
 	fmt.Println()
 	fmt.Println()
@@ -562,13 +587,15 @@ func gcf(a, x float64) (float64, float64) {
 // -------------------------------------------- Version 2 -----------------------------
 //
 // Section 15.3 -- Straight line data with errors in both coordinates.  P 660 ff.
-/* debug the new Point structure.
-// subroutine fitexy(x, y, sigx, sigy, a, b, siga, sigb, chi2, q float64, ndat int) {
-func fitexy(row []Point) (a, b, siga, sigb, chi2, q float64) {
 
+// subroutine fitexy(x, y, sigx, sigy, a, b, siga, sigb, chi2, q float64, ndat int) {
+func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
+
+	var result2 FittedData2
 	// REAL x(ndat),y(ndat),sigx(ndat),sigy(ndat),a,b,siga,sigb,chi2,q,POTN,PI,BIG,ACC
 	//	const NMAX = 1000.  Will use MaxN that I defined above.
 	var PI float64 = math.Pi
+	var r2 float64
 
 	// Uses avevar,brent,chixy,fit,gammq,mnbrak,zbrent
 	// Straight line fit to input data x(1..ndat) and y(1..ndat) with errors in both
@@ -578,68 +605,67 @@ func fitexy(row []Point) (a, b, siga, sigb, chi2, q float64) {
 	// indicating a poor fit.  Standard errors on a and b are returned as siga and sigb.  If
 	// siga and sigb are returned as BIG, then the data are c/w all values of b.
 
-	ndat := len(row)
+	ndat := len(rows)
+	nn = float64(ndat)
 	//	REAL xx, yy, sx, sy, ww [ndat]float64 // dim of NMAX, or same as row slice
-	var swap, amx, amn, varx, vary float64 // aa and offs are now global.
-	var ang, ch [7]float64                 // to emulate Fortran one origin arrays.  I'll ignore element [0]
+	var amx, amn, varx, vary float64 // aa and offs are now global.
+	var ang, ch [7]float64           // to emulate Fortran one origin arrays.  I'll ignore element [0]
 	//REAL scale,bmn,bmx,d1,d2,r2,dum1,dum3,dum3,dum4,dum5,brent,chixy,gammq,zbrent
 	//COMMON /fitxyc/ xx,yy,sx,sy,ww,aa,ofs,nn
 	if ndat > MaxN {
 		fmt.Println(" Too many data points.  N =", ndat, ".  MaxN =", MaxN)
 		os.Exit(1)
 	}
-	_, varx, _, vary = avevar(row)
+	_, varx, _, vary = avevar(rows)
 	//	call avevar(x,ndat,dum1,varx)       Find x and y variances, and scale the data into
 	//	call avevar(lny,ndat,dum1,vary)     the common block for communication with chixy.
 	scale := math.Sqrt(varx / vary)
-	nn := ndat
 
-	for j := range row { // for j := 0; j < ndat; j++ {
-		row.xx[j] = row.x[j]
-		row.yy[j] = row.y[j] * scale
-		row.sx[j] = row.sigx[j]
-		row.sy[j] = row.sigy[j] * scale
-		row.ww[j] = math.Sqrt(SQR(row.sx[j]) + SQR(row.sy[j])) // use both x and y weights in first trial fit.
+	for j := range rows { // for j := 0; j < ndat; j++ {
+		rows[j].xx = rows[j].x
+		rows[j].yy = rows[j].y * scale
+		rows[j].sx = rows[j].sigx
+		rows[j].sy = rows[j].sigy * scale
+		rows[j].ww = math.Sqrt(SQR(rows[j].sx) + SQR(rows[j].sy)) // use both x and y weights in first trial fit.
 	}
-	fit(xx, yy, nn, ww, 1, dum1, b, dum2, dum3, dum4, dum5)
+	result2 = fit2(rows) // fit(xx, yy, nn, ww, 1, dum1, b, dum2, dum3, dum4, dum5) as a trial fit for b.
 	// subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 	offs = 0
 	ang[1] = 0
-	ang[2] = math.Atan(b)
+	ang[2] = math.Atan(result2.Slope)
 	ang[4] = 0
 	ang[5] = ang[2]
 	ang[6] = POTN
 
 	for j := 4; j <= 6; j++ {
-		ch[j] = chixy(ang[j], row)
+		ch[j] = chixy(ang[j], rows)
 	}
 
 	//	call mnbrak(ang[1],ang[2],ang[3],ch[1],ch[2],ch[3],chixy) // Bracket the Chi squared minumum
 	//	chi2 = brent(ang[1],ang[2],ang[3],chixy,ACC,b)            // and then locate it with brent.
-	ang[1], ang[2], ang[3], ch[1], ch[2], ch[3] = mnbrak(ang[1], ang[2])
-	chi2, b = brent(ang[1], ang[2], ang[3])
+	ang[1], ang[2], ang[3], ch[1], ch[2], ch[3] = mnbrak(ang[1], ang[2], rows)
+	result2.chi2, result2.Slope = brent(ang[1], ang[2], ang[3], rows)
 
-	chi2 = chixy(b, row)
-	a = aa // aa is passed in the common block, or sort of globally
+	result2.chi2 = chixy(result2.Slope, rows)
+	result2.Intercept = aa // aa is passed in the common block globally
 
-	q = gamq(0.5*(nn-2), 0.5*chi2) // compute the Chi squared probability.  nn also passed in the common blk
+	result2.q = gammq(0.5*(nn-2), 0.5*result2.chi2) // compute the Chi squared probability.  nn also passed in the common blk
 
-	r2 = 0
-	for j := 0; j < nn; j++ {
-		r2 += ww[j] // save the inverse sum of weights at the minumum
+	for j := range rows { // for j := 0; j < nn; j++ {
+		r2 += rows[j].ww // save the inverse sum of weights at the minumum
 	}
 
 	r2 = 1 / r2
 
-	bmx = BIG // find sandard errors for b as points where
-	bmn = BIG // delta chi squared = 1.
-	offs = chi2 + 1
+	bmx := BIG // find sandard errors for b as points where
+	bmn := BIG // delta chi squared = 1.
+	offs = result2.chi2 + 1
 
 	for j := 1; j <= 6; j++ {
 		if ch[j] > offs { // Go thru saved values to bracket the desired roots.
-			d1 = math.Mod(math.Abs(ang[j]-b), PI) // Note periodicity in slope angles
-			d2 = PI - d1
-			if ang[j] < b {
+			d1 := math.Mod(math.Abs(ang[j]-result2.Slope), PI) // Note periodicity in slope angles
+			d2 := PI - d1
+			if ang[j] < result2.Slope {
 				d1, d2 = d2, d1
 			}
 			if d1 < bmx {
@@ -651,20 +677,25 @@ func fitexy(row []Point) (a, b, siga, sigb, chi2, q float64) {
 		}
 	}
 
+	a := result2.Intercept
+	b := result2.Slope
 	if bmx < BIG {
-		bmx = zbrent(chixy, b, b+bmx, ACC) - b
+		bmx = zbrent(b, b+bmx, rows) - b // bmx = zbrent(chixy, b, b+bmx, ACC) - b
 		amx = aa - a
-		bnm = zbrent(chixy, b, b-bmn, ACC) - b
+		bmn = zbrent(b, b-bmn, rows) - b // bnm = zbrent(chixy, b, b-bmn, ACC) - b
 		amn = aa - a
-		sigb = math.Sqrt(0.5*(SQR(bmx)+SQR(bmn))) / (scale * SQR(math.Cos(b)))
-		siga = math.Sqrt(0.5*(SQR(amx)+SQR(amn))+r2) / scale // error in a has additional piece r2.
+		result2.StDevSlope = math.Sqrt(0.5*(SQR(bmx)+SQR(bmn))) / (scale * SQR(math.Cos(b)))
+		result2.StDevIntercept = math.Sqrt(0.5*(SQR(amx)+SQR(amn))+r2) / scale // error in a has additional piece r2.
 	} else {
-		sigb = BIG
-		siga = BIG
+		result2.StDevSlope = BIG
+		result2.StDevIntercept = BIG
 	}
 	a = a / scale
 	b = math.Tan(b) / scale
-}
+	result2.Slope = b
+	result2.Intercept = a
+	return result2
+} // end fitexy
 
 func chixy(bang float64, row []Point) float64 {
 	// Returns the value of Chi squared - offs, for the slope b = tan(bang).
@@ -674,52 +705,53 @@ func chixy(bang float64, row []Point) float64 {
 
 	b = math.Tan(bang)
 	for j := range row { // for j = 0; j < nn; j++ {
-		row.ww[j] = SQR(b*row.sx[j]) + SQR(row.sy[j])
-		if row.ww[j] < 1/BIG {
-			row.ww[j] = BIG
+		row[j].ww = SQR(b*row[j].sx) + SQR(row[j].sy)
+		if row[j].ww < 1/BIG {
+			row[j].ww = BIG
 		} else {
-			row.ww[j] = 1 / row.ww[j]
+			row[j].ww = 1 / row[j].ww
 		}
-		sumw += row.ww[j]
-		avex += row.ww[j] * row.xx[j]
-		avey += row.ww[j] * row.yy[j]
+		sumw += row[j].ww
+		avex += row[j].ww * row[j].xx
+		avey += row[j].ww * row[j].yy
 	}
 	avex = avex / sumw
 	avey = avey / sumw
 	aa = avey - b*avex
 	Chixy = -offs
-	for j := 0; j < nn; j++ {
-		Chixy += row.ww[j] * SQR(row.yy[j]-aa-b*row.xx[j])
+	for _, p := range row {
+		Chixy += p.ww * SQR(p.yy-aa-b*p.xx)
 	}
-}
+	return Chixy
+} // end chixy
 
 func avevar(points []Point) (float64, float64, float64, float64) { // return mean, variance of both x and y.
 	var avex, avey, // ave of x and y which is lny
-		variancex, variancey, // variance of x and y which is lny
-		epx, epy float64 // ep of x and y which is lny
+		variancex, variancey, // variance of x and y
+		epx, epy float64 // ep of x and y
 
-	n := len(points)
+	//	nn := len(points) but this is a float64 and is global.
 
 	for j := range points { // for j :=  0; j < n; j++ {
 		avex += points[j].x
 		avey += points[j].y
 	}
-	avex = avex / n
-	avey = avey / n
+	avex = avex / nn
+	avey = avey / nn
 
 	for j := range points { // for j := 0; j < n; j++ {
-		points.sx = points[j].x - avex
-		epx += sx
-		variancex += sx * sx
+		points[j].sx = points[j].x - avex
+		epx += points[j].sx
+		variancex += SQR(points[j].sx)
 
-		points.sy = points[j].y - avey
-		epy += sy
-		variancey += sy * sy
+		points[j].sy = points[j].y - avey
+		epy += points[j].sy
+		variancey += SQR(points[j].sy)
 	}
-	variancex = (variancex - SQR(epx)/n) / (n - 1)
-	variancey = (variancey - SQR(epy)/n) / (n - 1)
+	variancex = (variancex - SQR(epx)/nn) / (nn - 1)
+	variancey = (variancey - SQR(epy)/nn) / (nn - 1)
 	return avex, variancex, avey, variancey
-}
+} // end avevar
 
 func SignTransfer(a, b float64) float64 {
 	// Sign Transfer function from Fortran returns the first argument with the sign of the 2nd.
@@ -746,7 +778,7 @@ func mnbrak(ax, bx float64, rows []Point) (float64, float64, float64, float64, f
 
 	fa = chixy(ax, rows)
 	fb = chixy(bx, rows)
-	if fb > fa {
+	if fb > fa { // Switch a and b so that we can go downhill from a to b.
 		ax, bx = bx, ax
 		fa, fb = fb, fa
 	}
@@ -758,8 +790,8 @@ func mnbrak(ax, bx float64, rows []Point) (float64, float64, float64, float64, f
 			r = (bx - ax) * (fb - fc) // compute u by parabolic extrapolation from a,b,c
 			q = (bx - cx) * (fb - fa) // TINY is used to prevent any possible div by zero.
 			u = bx - ((bx-cx)*q-(bx-ax)*r)/(2*SignTransfer(math.Max(math.Abs(q-r), TINY), q-r))
-			ulim = bx + GLIMIT*(cx-bx)
-			if (bx-u)*(u-cx) > 0 {
+			ulim = bx + GLIMIT*(cx-bx) // Won't go farther than this.  Test possibilities
+			if (bx-u)*(u-cx) > 0 {     // parabolic is btwn b and c.
 				fu = chixy(u, rows)
 				if fu < fc { // got a minimum btwn b and c
 					ax = bx
@@ -771,7 +803,7 @@ func mnbrak(ax, bx float64, rows []Point) (float64, float64, float64, float64, f
 					cx = u
 					fc = fu
 					return ax, bx, cx, fa, fb, fc
-				}
+				} // endif fu < fc or fu > fb
 				u = cx + GOLD*(cx-bx)
 				fu = chixy(u, rows)
 			} else if (cx-u)*(u-ulim) > 0 { // parabolic fit is btwn c and its allowed limit
@@ -783,24 +815,26 @@ func mnbrak(ax, bx float64, rows []Point) (float64, float64, float64, float64, f
 					fb = fc
 					fc = fu
 					fu = chixy(u, rows)
-				}
+				} //endif fu < fc
 			} else if (u-ulim)*(ulim-cx) >= 0 { // limit parabolic u to maximum allowed value
 				u = ulim
 				fu = chixy(u, rows)
 			} else { // reject parabolic u, use default magnification
 				u = cx + GOLD*(cx-bx)
 				fu = chixy(u, rows)
-			}
+			} // endif (bx-u)*(u-cx) or (cx-u)*u-ulim) etc
 			ax = bx
 			bx = cx
 			cx = u
 			fa = fb
-			fb = fa
+			fb = fc
 			fc = fu
-		}
-	}
+		} else { // I had to add this break to emulate the essence of the Fortran code
+			break
+		} // endif fb >= fc
+	} // ENDFOR
 	return ax, bx, cx, fa, fb, fc
-}
+} // end mnbrak
 
 func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 	// Given a function, chixy, and given a bracketing tiplet of abscissas ax,bx,cx such that
@@ -813,7 +847,7 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 	const CGOLD = 0.3819660 // golden ratio
 	const ZEPS = 1e-10      // small number that protects against trying to achieve fractional accuracy that happens to be exactly zero
 
-	var a, b, c, d, e, etemp, fu, fv, fw, fx, p, q, r, u, v, w, x, xm, xmin, Brent, tol1, tol2 float64
+	var a, b, d, e, etemp, fu, fv, fw, fx, p, q, r, u, v, w, x, xm, xmin, Brent, tol1, tol2 float64
 
 	a = math.Min(ax, cx) // a and b must be in ascending order, though the input abscissas need not be.
 	b = math.Max(ax, cx)
@@ -899,7 +933,7 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 	}
 
 	return Brent, xmin
-}
+} // end brent
 
 // Using brent's method find the root of a function know to lie btwn x1 and x2.  The root,
 // returned as Zbrent, will be refined until its accuracy is ACC.
@@ -974,5 +1008,46 @@ func zbrent(x1, x2 float64, rows []Point) float64 {
 		fb = chixy(b, rows)
 	}
 	return b
-}
-*/
+} // end zbrent
+
+func fit2(rows []Point) FittedData2 {
+	/*
+		subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
+		   Based on Numerical Recipies code of same name on p 508-9 in Fortran, 1st ed,
+		   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
+		   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering.
+		   (C) 1986, Cambridge University Press.
+		   y = a + bx.  And it returns stdeva, stdevb, and goodness of fit param q.
+		   fit2 uses the xx,yy,sx,sy,ww fields defined in fitexy.
+	*/
+	var SumXoverSumWt, SumX, SumY, Sumt2, SumWt, chi2, a, b float64
+	var result2 FittedData2
+
+	for _, p := range rows {
+		wt := 1 / SQR(p.sigy)
+		SumWt += wt
+		SumX += p.xx * wt
+		SumY += p.yy * wt
+	}
+	SumXoverSumWt = SumX / SumWt
+	for _, p := range rows {
+		t := (p.xx - SumXoverSumWt) / p.sigy
+		Sumt2 += SQR(t)
+		b += t * p.yy / p.sigy
+	}
+	b = b / Sumt2
+	a = (SumY - SumX*b) / SumWt
+	stdeva := math.Sqrt((1 + SQR(SumX)/(SumWt*Sumt2)) / SumWt)
+	stdevb := math.Sqrt(1 / Sumt2)
+
+	// Now to sum up Chi squared
+	for _, p := range rows {
+		chi2 += SQR((p.yy - a - b*p.xx) / p.sigy)
+	}
+	result2.q = gammq(0.5*float64(len(rows)-2), 0.5*chi2)
+	result2.Slope = b
+	result2.StDevSlope = stdevb
+	result2.Intercept = a
+	result2.StDevIntercept = stdeva
+	return result2
+} // END fit2
