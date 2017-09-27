@@ -42,7 +42,7 @@ import (
   24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
 */
 
-const LastAltered = "26 Sep 2017"
+const LastAltered = "27 Sep 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -310,6 +310,19 @@ func main() {
 	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
 	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
 
+	// fitexy call follows
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("------------------------------------------------------\n")
+	fmt.Println()
+	fmt.Println()
+	fmt.Println(" Slope,Intercept,StDevSlope,StDevIntercept,GoodnessOfFit")
+	fmt.Println(" WeightedResults")
+	fmt.Println(WeightedResults)
+	fmt.Println(" UnWeightedResults")
+	fmt.Println(UnWeightedResults)
+	// fmt.Println(" WeightedResults2")
+	// fmt.Println(WeightedResults2)
 	WeightedResults3 := fitexy(rows)
 	fmt.Println(" After fitexy call.  Slope is", WeightedResults3.Slope, ", Intercept is", WeightedResults3.Intercept, ", chi2 is", WeightedResults3.chi2, ", q is", WeightedResults3.q)
 	fmt.Println(WeightedResults3)
@@ -335,7 +348,7 @@ func main() {
 	// The files will flush and close themselves because of the defer statements.
 	fmt.Println()
 	fmt.Println()
-}
+} // end main
 
 // -------------------------------------- SQR ---------------------------------------------
 func SQR(R float64) float64 {
@@ -529,7 +542,7 @@ func gser(a, x float64) (float64, float64) {
 		}
 	}
 	return sum * math.Exp(-x+a*math.Log(x)-gln), gln
-}
+} // end gser
 
 func gammln(xx float64) float64 {
 	const stp = 2.50662827465
@@ -548,7 +561,7 @@ func gammln(xx float64) float64 {
 		ser += cof[j] / x
 	}
 	return tmp + math.Log(stp*ser)
-}
+} // end gammln
 
 func gcf(a, x float64) (float64, float64) {
 	const ITERMAX = 100
@@ -580,7 +593,7 @@ func gcf(a, x float64) (float64, float64) {
 		gammcf = math.Exp(-x+a*math.Log(x)-gln) * g
 	}
 	return gammcf, gln
-}
+} // end gcf
 
 // -------------------------------------------- Version 2 -----------------------------
 // -------------------------------------------- Version 2 -----------------------------
@@ -628,8 +641,10 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 		rows[j].sy = rows[j].sigy * scale
 		rows[j].ww = math.Sqrt(SQR(rows[j].sx) + SQR(rows[j].sy)) // use both x and y weights in first trial fit.
 	}
-	result2 = fit2(rows) // fit(xx, yy, nn, ww, 1, dum1, b, dum2, dum3, dum4, dum5) as a trial fit for b.
 	// subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
+	result2 = fit2(rows) // fit(xx, yy, nn, ww, 1, dum1, b, dum2, dum3, dum4, dum5) as a trial fit for b.
+	fmt.Println(" After fit2.  result2 Slope,Intercept,StDevSlope,StDevIntercept,chi2,q are:")
+	fmt.Println(result2)
 	offs = 0
 	ang[1] = 0
 	ang[2] = math.Atan(result2.Slope)
@@ -1024,16 +1039,16 @@ func fit2(rows []Point) FittedData2 {
 	var result2 FittedData2
 
 	for _, p := range rows {
-		wt := 1 / SQR(p.sigy)
+		wt := 1 / SQR(p.sy)
 		SumWt += wt
 		SumX += p.xx * wt
 		SumY += p.yy * wt
 	}
 	SumXoverSumWt = SumX / SumWt
 	for _, p := range rows {
-		t := (p.xx - SumXoverSumWt) / p.sigy
+		t := (p.xx - SumXoverSumWt) / p.sy
 		Sumt2 += SQR(t)
-		b += t * p.yy / p.sigy
+		b += t * p.yy / p.sy
 	}
 	b = b / Sumt2
 	a = (SumY - SumX*b) / SumWt
@@ -1042,7 +1057,7 @@ func fit2(rows []Point) FittedData2 {
 
 	// Now to sum up Chi squared
 	for _, p := range rows {
-		chi2 += SQR((p.yy - a - b*p.xx) / p.sigy)
+		chi2 += SQR((p.yy - a - b*p.xx) / p.sy)
 	}
 	result2.q = gammq(0.5*float64(len(rows)-2), 0.5*chi2)
 	result2.Slope = b
