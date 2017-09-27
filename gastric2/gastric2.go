@@ -40,6 +40,7 @@ import (
   12 Sep 17 -- Added heading to output file.
   13 Sep 17 -- Adding code from Numerical Recipies for errors in x and y.
   24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
+  27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
 */
 
 const LastAltered = "27 Sep 2017"
@@ -78,7 +79,7 @@ type FittedData struct {
 }
 
 type FittedData2 struct {
-	Slope, Intercept, StDevSlope, StDevIntercept, chi2, q float64
+	Slope, Intercept, StDevSlope, StDevIntercept, chi2, q, scale float64
 }
 
 //	COMMON /fitxyc/ xx,yy,sx,sy,ww -- NOW PART OF Point -- ,aa,ofs,nn -- defined next.
@@ -259,6 +260,24 @@ func main() {
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
+	UnWeightedResults := fitfull(rows, false)
+	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
+	//	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
+	//	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
+	//	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
+	//	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, Intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f. \n",
+	//		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
+	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f. \n",
+		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.StDevSlope)
+	fmt.Println(s)
+	fmt.Println()
+	writestr(s) // using the write closure, I hope
+	writerune()
+	//	_, err = OutBufioWriter.WriteString(s)
+	//	check(err)
+	//	_, err = OutBufioWriter.WriteRune('\n')
+	check(bufioErr)
+
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
 	//	fmt.Println("Weighted Slope is", WeightedResults.Slope, ", Weighted Intercept is", WeightedResults.Intercept)
@@ -277,23 +296,6 @@ func main() {
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
-	UnWeightedResults := fitfull(rows, false)
-	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
-	//	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
-	//	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
-	//	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
-	//	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, Intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f. \n",
-	//		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
-	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f. \n",
-		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.StDevSlope)
-	fmt.Println(s)
-	fmt.Println()
-	writestr(s) // using the write closure, I hope
-	writerune()
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	check(bufioErr)
 	/* This code works but is redundant.  So I'll remove it.  Maybe not after all */
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
@@ -306,33 +308,27 @@ func main() {
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
-	fmt.Println("Weighted Slope is", WeightedResults2.Slope, ", Weighted Intercept is", WeightedResults2.Intercept)
-	fmt.Println("stdev Slope is", WeightedResults2.StDevSlope, ", stdev Intercept is", WeightedResults2.StDevIntercept)
-	fmt.Println("GoodnessOfFit is", WeightedResults2.GoodnessOfFit)
+	//	fmt.Println("Weighted2 Slope is", WeightedResults2.Slope, ", Weighted2 Intercept is", WeightedResults2.Intercept)
+	//	fmt.Println("stdev2 Slope is", WeightedResults2.StDevSlope, ", stdev2 Intercept is", WeightedResults2.StDevIntercept)
+	//	fmt.Println("GoodnessOfFit2 is", WeightedResults2.GoodnessOfFit)
 
 	// fitexy call follows
-	fmt.Println()
-	fmt.Println()
-	fmt.Println("------------------------------------------------------\n")
-	fmt.Println()
-	fmt.Println()
-	fmt.Println(" Slope,Intercept,StDevSlope,StDevIntercept,GoodnessOfFit")
-	fmt.Println(" WeightedResults")
-	fmt.Println(WeightedResults)
-	fmt.Println(" UnWeightedResults")
-	fmt.Println(UnWeightedResults)
+	//	fmt.Println()
+	//	fmt.Println("------------------------------------------------------")
+	//	fmt.Println()
+	//	fmt.Println(" Slope,Intercept,StDevSlope,StDevIntercept,GoodnessOfFit")
+	//	fmt.Println(" WeightedResults")
+	//	fmt.Println(WeightedResults)
+	//	fmt.Println(" UnWeightedResults")
+	//	fmt.Println(UnWeightedResults)
 	// fmt.Println(" WeightedResults2")
 	// fmt.Println(WeightedResults2)
 	WeightedResults3 := fitexy(rows)
-	fmt.Println(" After fitexy call.  Slope is", WeightedResults3.Slope, ", Intercept is", WeightedResults3.Intercept, ", chi2 is", WeightedResults3.chi2, ", q is", WeightedResults3.q)
-	fmt.Println(WeightedResults3)
-	weightedhalflife3 := WeightedResults3.Slope // just to define this as a float64
-	if WeightedResults3.Slope != 0 {
-		weightedhalflife3 = -ln2 / WeightedResults3.Slope
-	} else { // I will assign a silly number that is not infinity.
-		weightedhalflife3 = 2000
-	}
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 is %.2f minutes, stdev is %.6f. \n", weightedhalflife3, WeightedResults3.StDevSlope)
+	//	fmt.Println(" After fitexy call.  Slope is", WeightedResults3.Slope, ", Intercept is", WeightedResults3.Intercept, ", chi2 is", WeightedResults3.chi2, ", q is", WeightedResults3.q)
+	//	fmt.Println(WeightedResults3)
+	//	weightedhalflife3 := WeightedResults3.Slope // just to define this as a float64
+	weightedhalflife3 := -ln2 / WeightedResults3.Slope
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 and fitexy is %.2f minutes, stdev is %.6f. \n", weightedhalflife3, WeightedResults3.StDevSlope)
 	fmt.Println(s)
 	writestr(s)
 	writerune()
@@ -341,9 +337,9 @@ func main() {
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
-	fmt.Println("Weighted Slope is", WeightedResults3.Slope, ", Weighted Intercept is", WeightedResults3.Intercept)
-	fmt.Println("stdev Slope is", WeightedResults3.StDevSlope, ", stdev Intercept is", WeightedResults3.StDevIntercept)
-	fmt.Println("GoodnessOfFit is", WeightedResults3.chi2, "and", WeightedResults3.q)
+	//	fmt.Println("Weighted3 Slope is", WeightedResults3.Slope, ", Weighted3 Intercept is", WeightedResults3.Intercept)
+	//	fmt.Println("stdev3 Slope is", WeightedResults3.StDevSlope, ", stdev3 Intercept is", WeightedResults3.StDevIntercept)
+	//	fmt.Println("chi2 is", WeightedResults3.chi2, "and q is", WeightedResults3.q)
 
 	// The files will flush and close themselves because of the defer statements.
 	fmt.Println()
@@ -439,7 +435,7 @@ func fitfull(row []Point, weighted bool) FittedData {
 	/*
 	   Based on Numerical Recipies code of same name on p 508-9 in Fortran,
 	   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
-	   William H. Press, Brian P. Flannery, Saul A. Teukolsky, William T. Vettering.
+	   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering.
 	   (C) 1986, Cambridge University Press.
 	   I think the docs are wrong.  The equation is y = a + bx, ie, b is Slope.  I'll make that switch now.
 	*/
@@ -643,8 +639,10 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 	}
 	// subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 	result2 = fit2(rows) // fit(xx, yy, nn, ww, 1, dum1, b, dum2, dum3, dum4, dum5) as a trial fit for b.
-	fmt.Println(" After fit2.  result2 Slope,Intercept,StDevSlope,StDevIntercept,chi2,q are:")
-	fmt.Println(result2)
+	result2.scale = scale
+	//	fmt.Println(" After fit2.  scale =", scale, ", result2 Slope,Intercept,StDevSlope,StDevIntercept,chi2,q,scale are:")
+	//	fmt.Println(result2)
+	//	fmt.Println(" reversing the scale gives slope of", result2.Slope/result2.scale, ", and intercept is", result2.Intercept/result2.scale)
 	offs = 0
 	ang[1] = 0
 	ang[2] = math.Atan(result2.Slope)
@@ -660,7 +658,7 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 	//	chi2 = brent(ang[1],ang[2],ang[3],chixy,ACC,b)            // and then locate it with brent.
 	ang[1], ang[2], ang[3], ch[1], ch[2], ch[3] = mnbrak(ang[1], ang[2], rows)
 	result2.chi2, result2.Slope = brent(ang[1], ang[2], ang[3], rows)
-
+	//	fmt.Println(" after brent call.  slope is", result2.Slope)
 	result2.chi2 = chixy(result2.Slope, rows)
 	result2.Intercept = aa // aa is passed in the common block globally
 
@@ -862,7 +860,7 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 	const CGOLD = 0.3819660 // golden ratio
 	const ZEPS = 1e-10      // small number that protects against trying to achieve fractional accuracy that happens to be exactly zero
 
-	var a, b, d, e, etemp, fu, fv, fw, fx, p, q, r, u, v, w, x, xm, xmin, Brent, tol1, tol2 float64
+	var a, b, d, e, etemp, fu, fv, fw, fx, p, q, r, u, v, w, x, xm, tol1, tol2 float64
 
 	a = math.Min(ax, cx) // a and b must be in ascending order, though the input abscissas need not be.
 	b = math.Max(ax, cx)
@@ -879,7 +877,7 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 		tol1 = tolerance*math.Abs(x) + ZEPS
 		tol2 = 2 * tol1
 		if math.Abs(x-xm) <= (tol2 - 0.5*(b-a)) {
-			break // goto 3  -- done
+			break // goto 3 in orig Fortran code -- done
 		}
 		if math.Abs(e) > tol1 { // construct a trial parabolic fit
 			r = (x - w) * (fx - fv)
@@ -893,10 +891,10 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 			etemp = e
 			e = d
 			if math.Abs(p) >= math.Abs(0.5*q*etemp) || p <= q*(a-x) || p >= q*(b-x) {
-				goto Label1 // These conditions determine the acceptability of the parabolic fit.  It is ok.
+				goto Label1 // These conditions determine the acceptability of the parabolic fit.  It is ok to proceed.
 			}
 			d = p / q
-			u = r + d
+			u = x + d
 			if u-a < tol2 || b-u < tol2 {
 				d = SignTransfer(tol1, xm-x)
 			}
@@ -923,9 +921,9 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 			} else {
 				b = x
 			}
-			v = x
+			v = w
 			fv = fw
-			x = x
+			w = x
 			fw = fx
 			x = u
 			fx = fu
@@ -946,8 +944,9 @@ func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
 			}
 		}
 	}
-
-	return Brent, xmin
+	//	xmin = x
+	//	Brent = fx
+	return fx, x // looks like both of these never get a value.  That can't be right.
 } // end brent
 
 // Using brent's method find the root of a function know to lie btwn x1 and x2.  The root,
@@ -998,9 +997,9 @@ func zbrent(x1, x2 float64, rows []Point) float64 {
 				p = s * (2*xm*q*(q-r) - (b-a)*(r-1))
 				q = (q - 1) * (r - 1) * (s - 1)
 			}
-			if q > 0 {
+			if p > 0 { // check whether in bounds
 				q = -q
-			} // check whether in bounds
+			}
 			p = math.Abs(p)
 			if 2*p < math.Min(3*xm*q-math.Abs(tol1*q), math.Abs(e*q)) {
 				e = d // accept interpolation
@@ -1015,7 +1014,7 @@ func zbrent(x1, x2 float64, rows []Point) float64 {
 		}
 		a = b
 		fa = fb
-		if math.Abs(d) > tol1 {
+		if math.Abs(d) > tol1 { // evaluate new trial root
 			b += d
 		} else {
 			b += SignTransfer(tol1, xm)
