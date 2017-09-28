@@ -101,7 +101,7 @@ func main() {
 	fmt.Println(" GastricGo v 2, Gastric Emtpying program written in Go.  Last modified", LastAltered)
 	fmt.Println()
 	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: gastricgo <filename>.txt")
+		fmt.Println(" Usage: gastric2 <filename>.txt")
 		os.Exit(0)
 	}
 	date := time.Now()
@@ -182,15 +182,11 @@ func main() {
 				col++
 			}
 		} // UNTIL EOL OR have 2 numbers
-		//		fmt.Println(" input row is ", ir, ", col is", col)  for debugging
 		if col >= 1 { // process line as it has 2 numbers
 			im = append(im, ir)
 			N++
 		}
 	} // END main input reading loop
-
-	// output im for debugging
-	// fmt.Println(" inputmatrix IM is", im)
 
 	// Now need to populate the Time And Counts Table
 	for c := range im {
@@ -221,10 +217,7 @@ func main() {
 	s := fmt.Sprintf(" Date and Time in basic format: %s \n", datestring)
 	fmt.Println(s)
 	writestr(s) // using the closure from above, I hope.
-	writerune() //
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
+	writerune()
 	check(bufioErr)
 
 	fmt.Println(" N = ", len(rows))
@@ -237,109 +230,59 @@ func main() {
 		s := fmt.Sprintf("%11.0f %13.2f %10.4f %10.4f\n", p.x, p.OrigY, p.y, p.stdev)
 		fmt.Print(s)
 		writestr(s) // the closure from above
-		//		_, err = OutBufioWriter.WriteString(s)
-		//		check(err)
 	}
 	fmt.Println()
 	writerune()
-	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
 
-	//	fmt.Println(" Original standard unweighted Slope", stdslope, ", standard Intercept is", stdintercept)
-	//	fmt.Println(" standard R-squared Correlation Coefficient", stdr2)
 	s = fmt.Sprintf(" Original T-1/2 of Gastric Emptying is %.2f minutes.  Original std unweighted slope is %.6f and std intercept is %.6f and R-squared is %.6f \n", stdhalflife, stdslope, stdintercept, stdr2)
 	fmt.Print(s)
 	fmt.Println()
 	writestr(s) // using the write closure, I hope
 	writerune()
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
 	UnWeightedResults := fitfull(rows, false)
 	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
-	//	fmt.Println("unWeighted Slope is", UnWeightedResults.Slope, ", Intercept is", UnWeightedResults.Intercept)
-	//	fmt.Println("stdev Slope is", UnWeightedResults.StDevSlope, ", stdev Intercept is", UnWeightedResults.StDevIntercept)
-	//	fmt.Println("GoodnessOfFit is", UnWeightedResults.GoodnessOfFit)
-	//	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, Intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f. \n",
-	//		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope, UnWeightedResults.StDevIntercept)
 	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f. \n",
 		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.StDevSlope)
 	fmt.Println(s)
 	fmt.Println()
 	writestr(s) // using the write closure, I hope
 	writerune()
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
-	//	fmt.Println("Weighted Slope is", WeightedResults.Slope, ", Weighted Intercept is", WeightedResults.Intercept)
-	//	fmt.Println("stdev Slope is", WeightedResults.StDevSlope, ", stdev Intercept is", WeightedResults.StDevIntercept)
-	//	fmt.Println("GoodnessOfFit is", WeightedResults.GoodnessOfFit)
-	//	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope=%.6f, intercept=%.6f, StDevSlope=%.6f, StDevIntercept=%.6f, GoodnessOfFit=%.6f \n",
-	//		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.StDevIntercept, WeightedResults.GoodnessOfFit)
 	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f, GoodnessOfFit= %.6f \n",
 		weightedhalflife, WeightedResults.Slope, WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
 	fmt.Println(s)
 	fmt.Println()
 	writestr(s) // using the write closure
 	writerune()
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
-	/* This code works but is redundant.  So I'll remove it.  Maybe not after all */
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes, stdev is %.6f. \n", weightedhalflife2, WeightedResults2.StDevSlope)
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes, fit is %.6f. \n", weightedhalflife2, WeightedResults2.GoodnessOfFit)
 	fmt.Println(s)
 	writestr(s)
 	writerune()
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
 
-	//	fmt.Println("Weighted2 Slope is", WeightedResults2.Slope, ", Weighted2 Intercept is", WeightedResults2.Intercept)
-	//	fmt.Println("stdev2 Slope is", WeightedResults2.StDevSlope, ", stdev2 Intercept is", WeightedResults2.StDevIntercept)
-	//	fmt.Println("GoodnessOfFit2 is", WeightedResults2.GoodnessOfFit)
-
-	// fitexy call follows
-	//	fmt.Println()
-	//	fmt.Println("------------------------------------------------------")
-	//	fmt.Println()
-	//	fmt.Println(" Slope,Intercept,StDevSlope,StDevIntercept,GoodnessOfFit")
-	//	fmt.Println(" WeightedResults")
-	//	fmt.Println(WeightedResults)
-	//	fmt.Println(" UnWeightedResults")
-	//	fmt.Println(UnWeightedResults)
-	// fmt.Println(" WeightedResults2")
-	// fmt.Println(WeightedResults2)
 	WeightedResults3 := fitexy(rows)
-	//	fmt.Println(" After fitexy call.  Slope is", WeightedResults3.Slope, ", Intercept is", WeightedResults3.Intercept, ", chi2 is", WeightedResults3.chi2, ", q is", WeightedResults3.q)
-	//	fmt.Println(WeightedResults3)
-	//	weightedhalflife3 := WeightedResults3.Slope // just to define this as a float64
 	weightedhalflife3 := -ln2 / WeightedResults3.Slope
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 and fitexy is %.2f minutes, stdev is %.6f. \n", weightedhalflife3, WeightedResults3.StDevSlope)
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 and fitexy is %.2f minutes, stdev is %.6f.", weightedhalflife3, WeightedResults3.StDevSlope)
+	fmt.Println(s)
+	writestr(s)
+	s = fmt.Sprintf("  chi2= %.6f, q= %.6f \n", WeightedResults3.chi2, WeightedResults3.q)
 	fmt.Println(s)
 	writestr(s)
 	writerune()
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(bufioErr)
-
-	//	fmt.Println("Weighted3 Slope is", WeightedResults3.Slope, ", Weighted3 Intercept is", WeightedResults3.Intercept)
-	//	fmt.Println("stdev3 Slope is", WeightedResults3.StDevSlope, ", stdev3 Intercept is", WeightedResults3.StDevIntercept)
-	//	fmt.Println("chi2 is", WeightedResults3.chi2, "and q is", WeightedResults3.q)
 
 	// The files will flush and close themselves because of the defer statements.
 	fmt.Println()
@@ -625,9 +568,9 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 		fmt.Println(" Too many data points.  N =", ndat, ".  MaxN =", MaxN)
 		os.Exit(1)
 	}
-	_, varx, _, vary = avevar(rows)
 	//	call avevar(x,ndat,dum1,varx)       Find x and y variances, and scale the data into
 	//	call avevar(lny,ndat,dum1,vary)     the common block for communication with chixy.
+	_, varx, _, vary = avevar(rows)
 	scale := math.Sqrt(varx / vary)
 
 	for j := range rows { // for j := 0; j < ndat; j++ {
@@ -640,9 +583,6 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 	// subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 	result2 = fit2(rows) // fit(xx, yy, nn, ww, 1, dum1, b, dum2, dum3, dum4, dum5) as a trial fit for b.
 	result2.scale = scale
-	//	fmt.Println(" After fit2.  scale =", scale, ", result2 Slope,Intercept,StDevSlope,StDevIntercept,chi2,q,scale are:")
-	//	fmt.Println(result2)
-	//	fmt.Println(" reversing the scale gives slope of", result2.Slope/result2.scale, ", and intercept is", result2.Intercept/result2.scale)
 	offs = 0
 	ang[1] = 0
 	ang[2] = math.Atan(result2.Slope)
@@ -743,12 +683,11 @@ func avevar(points []Point) (float64, float64, float64, float64) { // return mea
 		variancex, variancey, // variance of x and y
 		epx, epy float64 // ep of x and y
 
-	//	nn := len(points) but this is a float64 and is global.
-
 	for j := range points { // for j :=  0; j < n; j++ {
 		avex += points[j].x
 		avey += points[j].y
 	}
+	//	nn := len(points) but this is a float64 and is global.
 	avex = avex / nn
 	avey = avey / nn
 
