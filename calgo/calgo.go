@@ -28,6 +28,7 @@ package main
  10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
  12 Apr 17 -- Tweaking display output
  13 Apr 17 -- Golint complained, so I added some comments
+ 29 Sep 17 -- Changed the output of the final line, and added exec detection code.
 */
 
 import (
@@ -40,16 +41,16 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-        "github.com/nsf/termbox-go"
 	//
 	"getcommandline"
 	"holidaycalc"
 	"timlibg"
 	"tokenize"
 )
+import termbox "github.com/nsf/termbox-go"
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "13 Apr 17"
+const LastCompiled = "29 Sep 17"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -102,17 +103,18 @@ type AllMonthsArray [NumOfMonthsInYear]MonthMatrix
 var EntireYear AllMonthsArray
 
 var (
-	year, DOW, W, CurrentMonthNumber, RequestedMonthNumber, LineNum, TodaysDayNumber, CurrentYear                           int
-	WIM                                                                                                                     [NumOfMonthsInYear]int
-	DIM                                                                                                                     = [...]int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-	MONNAMSHORT                                                                                                             = [...]string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
-	MONNAMLONG                                                                                                              [NumOfMonthsInYear]string
-	clear                                                                                                                   map[string]func()
-	BrightYellow, BrightCyan, BrightGreen, Black                                                                            termbox.Attribute
-	StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol, PromptRow, outputmode, n int
-	DAYSNAMLONG                                                                                                             = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"
-	DayNamesWithTabs                                                                                                        = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"
-	DAYSNAMSHORT                                                                                                            = "  S  M  T  W TH  F  S    "
+	WIM                                          [NumOfMonthsInYear]int
+	DIM                                          = [...]int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+	MONNAMSHORT                                  = [...]string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
+	MONNAMLONG                                   [NumOfMonthsInYear]string
+	clear                                        map[string]func()
+	BrightYellow, BrightCyan, BrightGreen, Black termbox.Attribute
+	year, DOW, W, CurrentMonthNumber, RequestedMonthNumber, LineNum, TodaysDayNumber, CurrentYear,
+	StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol,
+	PromptRow, outputmode, n int
+	DAYSNAMLONG      = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"
+	DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"
+	DAYSNAMSHORT     = "  S  M  T  W TH  F  S    "
 )
 
 //                      var MONNAMSHORT [NumOfMonthsInYear]string;  Non-idiomatic declaration and initialization
@@ -776,7 +778,7 @@ func main() {
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	BrightGreen = termbox.ColorGreen | termbox.AttrBold
 	Black = termbox.ColorBlack
-	fmt.Println(" Calendar Printing Program written in Go.  Last compiled ", LastCompiled)
+	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", LastCompiled)
 	fmt.Println()
 	/* Non-idiomatic initialization.  See above for the idiomatic declaration and initialization
 	   MONNAMSHORT[JAN] = "JANUARY"; MONNAMSHORT[FEB] = "FEBRUARY"; MONNAMSHORT[MAR] = "MARCH";
@@ -832,7 +834,7 @@ func main() {
 	//                                              _ = GetInputString(26,MaxRow-1);
 
 	YEARSTR = strconv.Itoa(year) // This will always be a 4 digit year, regardless of what's entered on command line.
-//                                      runtime.Breakpoint  doesn't seem to work anyway
+	//                                      runtime.Breakpoint  doesn't seem to work anyway
 	termerr := termbox.Init()
 	if termerr != nil {
 		log.Println(" TermBox init failed.")
@@ -847,7 +849,16 @@ func main() {
 	e = termbox.Flush()
 	check(e, "")
 
-	Printf_tb(0, LineNum, BrightCyan, Black, " Calendar Printing Program written in Go.  Last compiled %s", LastCompiled)
+	Printf_tb(0, LineNum, BrightCyan, Black, " Calendar Printing Program written in Go.  Last altered %s", LastCompiled)
+	LineNum++
+
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable() // from memory, check at home
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	Printf_tb(0, LineNum, BrightCyan, Black, "%s was last linked on %s.  Working directory is %s.", ExecFI.Name(), LastLinkedTimeStamp, workingdir)
+	LineNum++
+	Printf_tb(0, LineNum, BrightCyan, Black, " Full name of executable file is %s", execname)
 	LineNum++
 
 	RequestedMonthNumber = CurrentMonthNumber - 1
@@ -995,9 +1006,10 @@ func main() {
 		}
 	}
 
-	Print_tb(0, MaxRow, BrightYellow, Black, " Hit <enter> to continue.")
-	termbox.SetCursor(26, MaxRow)
-	_ = GetInputString(26, MaxRow)
+	LineNum += 20
+	Print_tb(0, LineNum, BrightYellow, Black, " Hit <enter> to continue.")
+	termbox.SetCursor(26, LineNum)
+	_ = GetInputString(26, LineNum)
 
 } // end main func
 

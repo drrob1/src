@@ -41,9 +41,11 @@ import (
   13 Sep 17 -- Adding code from Numerical Recipies for errors in x and y.
   24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
   27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
+   2 Oct 17 -- Discovered that in very normal patients, counts are low enough for stdev to be neg.  I can't allow that!
+                 And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
 */
 
-const LastAltered = "27 Sep 2017"
+const LastAltered = "2 Oct 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -110,7 +112,7 @@ func main() {
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+	fmt.Println(ExecFI.Name(), " has timestamp of", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
 	fmt.Println(" Full name of executable file is", execname)
 	fmt.Println()
 
@@ -193,8 +195,11 @@ func main() {
 		point.x = im[c][0]
 		point.OrigY = im[c][1]
 		point.y = math.Log(point.OrigY)
-		point.stdev = math.Log(point.OrigY * StDevFac / 100) // treating StDevFac as a %-age.
-		point.sigx = 5                                       // StDevFac is too large.  I'll say there is a 5 min error in x.
+		point.stdev = math.Abs(math.Log(point.OrigY * StDevFac / 100)) // treating StDevFac as a %-age.
+		if math.Abs(point.y) < math.Abs(point.stdev) {
+			point.stdev = math.Abs(point.y)
+		}
+		point.sigx = point.x * StDevFac / 100
 		point.sigy = point.stdev
 		rows = append(rows, point)
 	}
@@ -222,12 +227,12 @@ func main() {
 
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
-	fmt.Println(" X is time(min)  Y is kcounts  Ln(y)     stdev")
+	fmt.Println(" X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev")
 	fmt.Println()
-	writestr(" X is time(min)  Y is kcounts  Ln(y)     stdev") // the closure from above
+	writestr(" X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev") // the closure from above
 	writerune()
 	for _, p := range rows {
-		s := fmt.Sprintf("%11.0f %13.2f %10.4f %10.4f\n", p.x, p.OrigY, p.y, p.stdev)
+		s := fmt.Sprintf("%11.0f %13.2f %10.4f %10.4f %10.4f\n", p.x, p.OrigY, p.y, p.sigx, p.stdev)
 		fmt.Print(s)
 		writestr(s) // the closure from above
 	}
@@ -267,7 +272,7 @@ func main() {
 
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 is %.2f minutes, fit is %.6f. \n", weightedhalflife2, WeightedResults2.GoodnessOfFit)
+	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 and fitfull is %.2f minutes, fit is %.6f. \n", weightedhalflife2, WeightedResults2.GoodnessOfFit)
 	fmt.Println(s)
 	writestr(s)
 	writerune()
