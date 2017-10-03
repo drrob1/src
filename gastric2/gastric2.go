@@ -43,6 +43,8 @@ import (
   27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
    2 Oct 17 -- Discovered that in very normal patients, counts are low enough for stdev to be neg.  I can't allow that!
                  And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
+   3 Oct 17 -- Added separate StDevTime constant, and set a minimum of 2.  Output optimized for Windows since that
+                 is where it will be used in "production."
 */
 
 const LastAltered = "3 Oct 2017"
@@ -61,7 +63,7 @@ const LastAltered = "3 Oct 2017"
 const MaxN = 500
 const MaxCol = 10
 const StDevFac = 25 // treated as a percentage for weights used for GastricGo v1 code.
-
+const StDevTime = 10
 const POTN = 1.571000 // used for fitexy and related routines
 const BIG = 1e30      // this too
 const ACC = 1e-3      // this too
@@ -112,8 +114,9 @@ func main() {
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Println(ExecFI.Name(), " has timestamp of", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
-	fmt.Println(" Full name of executable file is", execname)
+	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
+	//	fmt.Println(ExecFI.Name(), " has timestamp of", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+	//	fmt.Println(" Full name of executable file is", execname)
 	fmt.Println()
 
 	InExtDefault := ".txt"
@@ -199,7 +202,10 @@ func main() {
 		if math.Abs(point.y) < math.Abs(point.stdev) {
 			point.stdev = math.Abs(point.y)
 		}
-		point.sigx = point.x * StDevFac / 100
+		point.sigx = point.x * StDevTime / 100
+		if point.sigx < 2 {
+			point.sigx = 2
+		}
 		point.sigy = point.stdev
 		rows = append(rows, point)
 	}
