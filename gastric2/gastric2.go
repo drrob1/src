@@ -45,7 +45,7 @@ import (
                  And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
 */
 
-const LastAltered = "2 Oct 2017"
+const LastAltered = "3 Oct 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -281,7 +281,7 @@ func main() {
 	WeightedResults3 := fitexy(rows)
 	weightedhalflife3 := -ln2 / WeightedResults3.Slope
 	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 and fitexy is %.2f minutes, stdev is %.6f.", weightedhalflife3, WeightedResults3.StDevSlope)
-	fmt.Println(s)
+	fmt.Print(s)
 	writestr(s)
 	s = fmt.Sprintf("  chi2= %.6f, q= %.6f \n", WeightedResults3.chi2, WeightedResults3.q)
 	fmt.Println(s)
