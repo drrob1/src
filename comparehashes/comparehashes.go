@@ -1,22 +1,23 @@
-package main;
+package main
 
 import (
-"os"
-"bufio"
-"fmt"
-"runtime"
-"strings"
-"encoding/hex"
-"crypto/sha512"
-"crypto/sha256"
-"crypto/sha1"
-"crypto/md5"
-"io"
-"path/filepath"
-"hash"
-"getcommandline"
-"tokenize"
+	"bufio"
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
+	"fmt"
+	"getcommandline"
+	"hash"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"tokenize"
 )
+
 /*
   REVISION HISTORY
   ----------------
@@ -29,209 +30,213 @@ import (
   21 Sep 16 -- Fixed the case issue in tokenize.GetToken.  Edited code here to correspond to this fix.
   25 Nov 16 -- Need to not panic when target file is not found, only panic when hash file is not found.
                  And added a LastCompiled message and string.
+  13 Oct 17 -- No changes here, but tokenize was changed so that horizontal tab char is now a delim.
 */
 
-const LastCompiled = "25 Nov 2016";
+const LastCompiled = "13 Oct 2017"
+
 //* ************************* MAIN ***************************************************************
 func main() {
 
+	const K = 1024
+	const M = 1024 * 1024
 
-  const K = 1024;
-  const M = 1024*1024;
+	const (
+		md5hash = iota
+		sha1hash
+		sha256hash
+		sha384hash
+		sha512hash
+		HashType
+	)
 
-  const (
-         md5hash = iota
-         sha1hash
-         sha256hash
-         sha384hash
-         sha512hash
-         HashType
-        );
+	const ReadBufferSize = M
+	//  const ReadBufferSize = 80 * M;
 
-  const ReadBufferSize = M;
-//  const ReadBufferSize = 80 * M;
+	var HashName = [...]string{"md5", "sha1", "sha256", "sha384", "sha512"}
+	var inbuf string
+	var WhichHash int
+	var readErr error
+	var TargetFilename, HashValueReadFromFile, HashValueComputedStr string
+	var hasher hash.Hash
+	var FileSize int64
 
-  var HashName = [...]string{"md5","sha1","sha256","sha384","sha512"};
-  var inbuf string;
-  var WhichHash int;
-  var readErr error;
-  var TargetFilename,HashValueReadFromFile,HashValueComputedStr string;
-  var hasher hash.Hash;
-  var FileSize int64;
+	if len(os.Args) <= 1 {
+		fmt.Println(" Usage: comparehashes <hashFileName.ext> where .ext = [.md5|.sha1|.sha256|.sha384|.sha512]")
+		os.Exit(0)
+	}
+	inbuf = getcommandline.GetCommandLineString()
 
+	extension := filepath.Ext(inbuf)
+	extension = strings.ToLower(extension)
+	switch extension {
+	case ".md5":
+		WhichHash = md5hash
+	case ".sha1":
+		WhichHash = sha1hash
+	case ".sha256":
+		WhichHash = sha256hash
+	case ".sha384":
+		WhichHash = sha384hash
+	case ".sha512":
+		WhichHash = sha512hash
+	default:
+		fmt.Println()
+		fmt.Println()
+		fmt.Println(" Not a recognized hash extension.  Will assume sha1.")
+		WhichHash = sha1hash
+	} // switch case on extension for HashType
 
-  if len(os.Args) <= 1 {
-    fmt.Println(" Usage: comparehashes <hashFileName.ext> where .ext = [.md5|.sha1|.sha256|.sha384|.sha512]");
-    os.Exit(0);
-  }
-  inbuf = getcommandline.GetCommandLineString();
+	fmt.Println()
+	fmt.Println(" GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
+	//  fmt.Println();
+	//  fmt.Println();
+	//  fmt.Println();
 
-  extension := filepath.Ext(inbuf);
-  extension = strings.ToLower(extension);
-  switch extension {
-  case ".md5" :
-    WhichHash = md5hash;
-  case ".sha1":
-    WhichHash = sha1hash;
-  case ".sha256":
-    WhichHash = sha256hash;
-  case ".sha384":
-    WhichHash = sha384hash;
-  case ".sha512":
-    WhichHash = sha512hash;
-  default:
-    fmt.Println();
-    fmt.Println();
-    fmt.Println(" Not a recognized hash extension.  Will assume sha1.");
-    WhichHash = sha1hash;
-  } // switch case on extension for HashType 
+	fmt.Println(" Last compiled ", LastCompiled)
+	//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
+	fmt.Println()
 
-  fmt.Println();
-  fmt.Println(" GOOS =",runtime.GOOS,".  ARCH=",runtime.GOARCH);
-//  fmt.Println();
-//  fmt.Println();
-//  fmt.Println();
+	// Read and parse the file with the hashes.
 
-  fmt.Println(" Last compiled ",LastCompiled);
-//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
-  fmt.Println();
+	HashesFile, err := os.Open(inbuf)
+	check(err, "Cannot open HashesFile.  Does it exist?  ")
+	defer HashesFile.Close()
 
+	scanner := bufio.NewScanner(HashesFile)
+	scanner.Split(bufio.ScanLines) // I believe this is the default.  I may experiment to see if I need this line for my code to work, AFTER I debug it as it is.
 
-// Read and parse the file with the hashes.
+	for { /* to read multiple lines */
+		FileSize = 0
+		readSuccess := scanner.Scan()
+		if !readSuccess {
+			break
+		} // end main reading loop
 
-  HashesFile,err := os.Open(inbuf);
-  check(err,"Cannot open HashesFile.  Does it exist?  ");
-  defer HashesFile.Close();
+		inputline := scanner.Text()
+		if readErr = scanner.Err(); readErr != nil {
+			if readErr == io.EOF {
+				break
+			} // reached EOF condition, so there are no more lines to read.
+			fmt.Fprintln(os.Stderr, "Unknown error while reading from the HashesFile :", readErr)
+			os.Exit(1)
+		}
 
-  scanner := bufio.NewScanner(HashesFile);
-  scanner.Split(bufio.ScanLines);    // I believe this is the default.  I may experiment to see if I need this line for my code to work, AFTER I debug it as it is.
+		if strings.HasPrefix(inputline, ";") || strings.HasPrefix(inputline, "#") || (len(inputline) <= 10) {
+			continue
+		} /* allow comments and essentially blank lines */
 
-  for { /* to read multiple lines */
-    FileSize = 0;
-    readSuccess := scanner.Scan();
-    if !readSuccess {break}    // end main reading loop
+		tokenize.INITKN(inputline)
 
-    inputline := scanner.Text();
-    if readErr = scanner.Err(); readErr != nil {
-      if readErr == io.EOF { break }  // reached EOF condition, so there are no more lines to read.
-      fmt.Fprintln(os.Stderr, "Unknown error while reading from the HashesFile :", readErr);
-      os.Exit(1);
-    }
+		FirstToken, EOL := tokenize.GetTokenString(false)
 
-    if strings.HasPrefix(inputline,";") || strings.HasPrefix(inputline,"#") || (len(inputline) <= 10) { continue } /* allow comments and essentially blank lines */
+		if EOL {
+			fmt.Errorf(" Error while getting 1st token in the hashing file.  Skipping")
+			continue
+		}
 
-    tokenize.INITKN(inputline);
+		if strings.ContainsRune(FirstToken.Str, '.') { /* have filename first on line */
+			TargetFilename = FirstToken.Str
+			SecondToken, EOL := tokenize.GetTokenString(false) // Get hash string from the line in the file
+			if EOL {
+				fmt.Errorf(" Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping \n")
+				continue
+			} /* if EOL */
+			HashValueReadFromFile = SecondToken.Str
 
-    FirstToken,EOL := tokenize.GetTokenString(false);
+		} else { /* have hash first on line */
+			HashValueReadFromFile = FirstToken.Str
+			SecondToken, EOL := tokenize.GetTokenString(false) // Get name of file on which to compute the hash
+			if EOL {
+				fmt.Errorf(" Error while gatting TargetFilename token in the hashing file.  Skipping \n")
+				continue
+			} /* if EOL */
 
-    if EOL  {
-      fmt.Errorf(" Error while getting 1st token in the hashing file.  Skipping");
-      continue;
-    }
+			if strings.ContainsRune(SecondToken.Str, '*') { // If it contains a *, it will be the first position.
+				SecondToken.Str = SecondToken.Str[1:]
+				if strings.ContainsRune(SecondToken.Str, '*') { // this should not happen
+					fmt.Println(" Filename token still contains a * character.  Str:", SecondToken.Str, "  Skipping.")
+					continue
+				}
+			}
+			TargetFilename = (SecondToken.Str)
+		} /* if have filename first or hash value first */
 
-    if strings.ContainsRune(FirstToken.Str,'.') { /* have filename first on line */
-      TargetFilename = FirstToken.Str;
-      SecondToken,EOL := tokenize.GetTokenString(false);  // Get hash string from the line in the file
-      if EOL {
-        fmt.Errorf(" Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping \n");
-        continue;
-      } /* if EOL */
-      HashValueReadFromFile = SecondToken.Str;
+		/*
+		   now to compute the hash, compare them, and output results
+		*/
+		/* Create Hash Section */
+		TargetFile, err := os.Open(TargetFilename)
+		//    exists := true;
+		if os.IsNotExist(err) {
+			//      exists = false;
+			fmt.Println(TargetFilename, " does not exist.")
+			continue
+		} else { // we know that the file exists
+			check(err, " Error opening TargetFilename.")
+		}
 
-    }else{  /* have hash first on line */
-      HashValueReadFromFile = FirstToken.Str;
-      SecondToken,EOL := tokenize.GetTokenString(false);   // Get name of file on which to compute the hash
-      if EOL {
-        fmt.Errorf(" Error while gatting TargetFilename token in the hashing file.  Skipping \n");
-        continue;
-      } /* if EOL */
+		defer TargetFile.Close()
 
-      if strings.ContainsRune(SecondToken.Str,'*') {  // If it contains a *, it will be the first position.
-        SecondToken.Str = SecondToken.Str[1:];
-        if strings.ContainsRune(SecondToken.Str,'*') { // this should not happen
-          fmt.Println(" Filename token still contains a * character.  Str:",SecondToken.Str,"  Skipping.");
-          continue;
-        }
-      }
-      TargetFilename = (SecondToken.Str);
-    } /* if have filename first or hash value first */
+		switch WhichHash { // Initialing case switch on WhichHash
+		case md5hash:
+			hasher = md5.New()
+		case sha1hash:
+			hasher = sha1.New()
+		case sha256hash:
+			hasher = sha256.New()
+		case sha384hash:
+			hasher = sha512.New384()
+		case sha512hash:
+			hasher = sha512.New()
+		default:
+			hasher = sha256.New()
+		} /* initializing switch case on WhichHash */
 
-/*
-  now to compute the hash, compare them, and output results
-*/
-    /* Create Hash Section */
-    TargetFile,err := os.Open(TargetFilename);
-//    exists := true;
-    if os.IsNotExist(err) {
-//      exists = false;
-      fmt.Println(TargetFilename," does not exist.");
-      continue;
-    }else{  // we know that the file exists
-      check(err," Error opening TargetFilename.");
-    }
+		/*    This loop works, but there is a much shorter way.  I got this after asking for help on the mailing list.
+		      FileReadBuffer := make([]byte,ReadBufferSize);
+		      for {   // Repeat Until eof loop.
+		        n,err := TargetFile.Read(FileReadBuffer);
+		        if n == 0 || err == io.EOF { break }
+		        check(err," Unexpected error while reading the target file on which to compute the hash,");
+		        hasher.Write(FileReadBuffer[:n]);
+		        FileSize += int64(n);
+		      } // Repeat Until TargetFile.eof loop;
+		*/
 
-    defer TargetFile.Close();
+		FileSize, readErr = io.Copy(hasher, TargetFile)
+		HashValueComputedStr = hex.EncodeToString(hasher.Sum(nil))
 
-    switch WhichHash {     // Initialing case switch on WhichHash
-    case md5hash :
-           hasher = md5.New();
-    case sha1hash :
-           hasher = sha1.New();
-    case sha256hash :
-           hasher = sha256.New();
-    case sha384hash :
-           hasher = sha512.New384();
-    case sha512hash :
-           hasher = sha512.New();
-    default:
-           hasher = sha256.New();
-    } /* initializing switch case on WhichHash */
+		// I got the idea to use the different base64 versions and my own hex converter code, just to see.
+		// And I can also use sfprintf with the %x verb.  base64 versions are not useful as they use a larger
+		// character set than hex.  I deleted all references to the base64 versions.  And the hex encoded and
+		// sprintf using %x were the same, so I removed the sprintf code.
+		//    HashValueComputedSprintf := fmt.Sprintf("%x",hasher.Sum(nil));
 
-/*    This loop works, but there is a much shorter way.  I got this after asking for help on the mailing list.
-    FileReadBuffer := make([]byte,ReadBufferSize);
-    for {   // Repeat Until eof loop.
-      n,err := TargetFile.Read(FileReadBuffer);
-      if n == 0 || err == io.EOF { break }
-      check(err," Unexpected error while reading the target file on which to compute the hash,");
-      hasher.Write(FileReadBuffer[:n]);
-      FileSize += int64(n);
-    } // Repeat Until TargetFile.eof loop;
-*/
+		fmt.Println(" Filename  = ", TargetFilename, ", FileSize = ", FileSize, ", ", HashName[WhichHash], " computed hash string -- ")
+		fmt.Println("       Read From File:", HashValueReadFromFile)
+		fmt.Println(" Computed hex encoded:", HashValueComputedStr)
+		//    fmt.Println(" Computed sprintf:",HashValueComputedSprintf);
 
-    FileSize,readErr = io.Copy(hasher,TargetFile);
-    HashValueComputedStr = hex.EncodeToString(hasher.Sum(nil));
+		if HashValueReadFromFile == HashValueComputedStr {
+			fmt.Print(" Matched.")
+		} else {
+			fmt.Print(" Not matched.")
+		} /* if hashes */
+		TargetFile.Close() // Close the handle to allow opening a target from the next line, if there is one.
+		fmt.Println()
+		fmt.Println()
+		fmt.Println()
+	} /* outer LOOP to read multiple lines */
 
-// I got the idea to use the different base64 versions and my own hex converter code, just to see.
-// And I can also use sfprintf with the %x verb.  base64 versions are not useful as they use a larger
-// character set than hex.  I deleted all references to the base64 versions.  And the hex encoded and
-// sprintf using %x were the same, so I removed the sprintf code.
-//    HashValueComputedSprintf := fmt.Sprintf("%x",hasher.Sum(nil));
-
-    fmt.Println(" Filename  = ",TargetFilename,", FileSize = ",FileSize,", ",HashName[WhichHash]," computed hash string -- ");
-    fmt.Println("       Read From File:",HashValueReadFromFile);
-    fmt.Println(" Computed hex encoded:",HashValueComputedStr);
-//    fmt.Println(" Computed sprintf:",HashValueComputedSprintf);
-
-    if HashValueReadFromFile == HashValueComputedStr {
-      fmt.Print(" Matched.");
-    }else{
-      fmt.Print(" Not matched.");
-    } /* if hashes */
-    TargetFile.Close();     // Close the handle to allow opening a target from the next line, if there is one.
-    fmt.Println();
-    fmt.Println();
-    fmt.Println();
-  }   /* outer LOOP to read multiple lines */
-
-  HashesFile.Close();    // Don't really need this because of the defer statement.
-  fmt.Println();
-}  // Main for comparehashes.go.
+	HashesFile.Close() // Don't really need this because of the defer statement.
+	fmt.Println()
+} // Main for comparehashes.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
-  if e != nil {
-    fmt.Errorf("%s : ",msg);
-    panic(e);
-  }
+	if e != nil {
+		fmt.Errorf("%s : ", msg)
+		panic(e)
+	}
 }
-

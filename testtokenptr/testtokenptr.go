@@ -7,6 +7,7 @@ package main
   21 Sep 16 -- Now need to test my new GetTknStrPreserveCase routine.  And test the change I made to GETCHR.
    7 Oct 16 -- Changed the scanner to scan by words.  I hope.  This is to test the scanner for rpng.  Default is scan by lines.
   11 Aug 17 -- Now named testtokenptr, and will test using pointer receivers and scanning whole lines.
+  13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
 */
 
 import (

@@ -58,6 +58,7 @@ import (
   25 Nov 16 -- The TKNMAXSIZ was too small for sha512, so I increased it.
    3 Dec 16 -- Decided to change how the UpperCase flag is handled in GetToken.
   10 Aug 17 -- Making this use pointer receivers, if I can.
+  13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -159,6 +160,7 @@ func InitStateMap() {
 	}
 	StateMap[' '] = DELIM
 	StateMap[';'] = DELIM
+	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab
 	StateMap['#'] = OP
 	StateMap['*'] = OP
 	StateMap['+'] = OP
