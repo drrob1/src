@@ -31,7 +31,7 @@ import (
   25 Nov 16 -- Need to not panic when target file is not found, only panic when hash file is not found.
                  And added a LastCompiled message and string.
   13 Oct 17 -- No changes here, but tokenize was changed so that horizontal tab char is now a delim.
-  14 Oct 17 -- Tweaked output a bit.
+  14 Oct 17 -- Tweaked output a bit.  And added executable timestamp code.
 */
 
 const LastCompiled = "14 Oct 2017"
@@ -89,13 +89,15 @@ func main() {
 	} // switch case on extension for HashType
 
 	fmt.Println()
-	fmt.Print(" GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-	//  fmt.Println();
-	//  fmt.Println();
-	//  fmt.Println();
+	fmt.Print(" comparehashes written in Go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
 
 	fmt.Println(".  Last compiled ", LastCompiled)
 	//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
 	fmt.Println()
 
 	// Read and parse the file with the hashes.
@@ -214,7 +216,8 @@ func main() {
 		// sprintf using %x were the same, so I removed the sprintf code.
 		//    HashValueComputedSprintf := fmt.Sprintf("%x",hasher.Sum(nil));
 
-		fmt.Println(" Filename  = ", TargetFilename, ", FileSize = ", FileSize, ", ", HashName[WhichHash], " computed hash string -- ")
+		//		fmt.Println(" Filename  = ", TargetFilename, ", FileSize = ", FileSize, ", ", HashName[WhichHash], " computed hash string -- ")
+		fmt.Printf(" Filename  = %s, filesize = %d, using hash %s.\n", TargetFilename, FileSize, HashName[WhichHash])
 		fmt.Println("       Read From File:", HashValueReadFromFile)
 		fmt.Println(" Computed hex encoded:", HashValueComputedStr)
 		//    fmt.Println(" Computed sprintf:",HashValueComputedSprintf);

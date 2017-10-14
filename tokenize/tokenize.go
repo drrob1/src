@@ -58,6 +58,9 @@ import (
   25 Nov 16 -- The TKNMAXSIZ was too small for sha512, so I increased it.
    3 Dec 16 -- Decided to change how the UpperCase flag is handled in GetToken.
   13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
+  14 Oct 17 -- Decided to change the initializing routine so that all control characters are delims.
+                 I hope that I don't break anything.  And I'm not changing tknptr package for now.
+				 I thought about writing a SetMapDelim and SetMapAllelse, but decided I don't need it for now.
 */
 
 type FSATYP int
@@ -148,17 +151,21 @@ func init() {
 
 // ************************************ InitStateMap ************************************************
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
+// Changed initializing routine Oct 14, 2017.  See comments above.
 func InitStateMap() {
-	StateMap[NullChar] = DELIM
-	for i := 1; i < 128; i++ {
+	//	StateMap[NullChar] = DELIM
+	for i := 0; i < 33; i++ {
+		StateMap[byte(i)] = DELIM
+	}
+	for i := 33; i < 128; i++ {
 		StateMap[byte(i)] = ALLELSE // including comma
 	}
 	for c := Dgt0; c <= Dgt9; c++ {
 		StateMap[byte(c)] = DGT
 	}
-	StateMap[' '] = DELIM
+	//	StateMap[' '] = DELIM   Not needed anymore.
+	//	StateMap['\t'] = DELIM // this is the tab char, but not needed since I changed entire initializing routine
 	StateMap[';'] = DELIM
-	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab
 	StateMap['#'] = OP
 	StateMap['*'] = OP
 	StateMap['+'] = OP
