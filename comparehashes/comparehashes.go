@@ -31,9 +31,10 @@ import (
   25 Nov 16 -- Need to not panic when target file is not found, only panic when hash file is not found.
                  And added a LastCompiled message and string.
   13 Oct 17 -- No changes here, but tokenize was changed so that horizontal tab char is now a delim.
+  14 Oct 17 -- Tweaked output a bit.
 */
 
-const LastCompiled = "13 Oct 2017"
+const LastCompiled = "14 Oct 2017"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -88,12 +89,12 @@ func main() {
 	} // switch case on extension for HashType
 
 	fmt.Println()
-	fmt.Println(" GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
+	fmt.Print(" GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
 	//  fmt.Println();
 	//  fmt.Println();
 	//  fmt.Println();
 
-	fmt.Println(" Last compiled ", LastCompiled)
+	fmt.Println(".  Last compiled ", LastCompiled)
 	//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
 	fmt.Println()
 
