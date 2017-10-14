@@ -103,6 +103,12 @@ func main() {
 	// Read and parse the file with the hashes.
 
 	HashesFile, err := os.Open(inbuf)
+	if os.IsNotExist(err) {
+		fmt.Println(inbuf, " does not exist.")
+		os.Exit(1)
+	} else { // we know that the file exists
+		check(err, " Error opening hashes file.")
+	}
 	check(err, "Cannot open HashesFile.  Does it exist?  ")
 	defer HashesFile.Close()
 
@@ -172,7 +178,6 @@ func main() {
 		TargetFile, err := os.Open(TargetFilename)
 		//    exists := true;
 		if os.IsNotExist(err) {
-			//      exists = false;
 			fmt.Println(TargetFilename, " does not exist.")
 			continue
 		} else { // we know that the file exists
