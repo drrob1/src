@@ -54,7 +54,8 @@ func main() {
 	a := 'a'
 	b := a ^ 32
 	c := a &^ 32
-	fmt.Println(" playing with bit clearing.  a,b,c =", a, b, c)
+	d := a | 32
+	fmt.Printf(" Bit fiddling:  a,b,c,d = %d %c, %d %c, %d %c, %d  %c \n", a, a, b, b, c, c, d, d)
 
 	fmt.Println()
 
