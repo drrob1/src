@@ -131,7 +131,7 @@ func main() {
 
 	if len(os.Args) <= 1 { // need to use filepicker
 		filenames := filepicker.GetFilenames("gastric*.txt")
-		for i := 0; i < len(filenames); i++ {
+		for i := 0; i < min(len(filenames), 10); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
@@ -1045,3 +1045,11 @@ func fit2(rows []Point) FittedData2 {
 	result2.StDevIntercept = stdeva
 	return result2
 } // END fit2
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
