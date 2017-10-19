@@ -150,6 +150,7 @@ func main() {
 			Filename = filenames[i]
 		}
 		fmt.Println(" Picked filename is", Filename)
+		BaseFilename = Filename
 	} else { // will use filename entered on commandline
 		ns := getcommandline.GetCommandLineString()
 		BaseFilename = filepath.Clean(ns)
