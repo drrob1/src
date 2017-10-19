@@ -60,7 +60,8 @@ import (
   13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
   14 Oct 17 -- Decided to change the initializing routine so that all control characters are delims.
                  I hope that I don't break anything.  And I'm not changing tknptr package for now.
-				 I thought about writing a SetMapDelim and SetMapAllelse, but decided I don't need it for now.
+  19 Oct 17 -- Standard hash256 files for linux include a * in front of the filename.  I'm not sure why.  I want to
+                 ignore this, so I'm writing SetMapDelim so I can.
 */
 
 type FSATYP int
@@ -683,6 +684,15 @@ ExitLoop:
 
 	return TOKEN, EOL
 } // GETTKNREAL
+
+
+
+// ---------------------------------------- SetMapDelim -----------------------------------------
+func SetMapDelim(char byte) {
+    StateMap[char] = DELIM
+} // SetMapDelim
+
+
 
 // *************************************** GetTokenString ***************************************
 

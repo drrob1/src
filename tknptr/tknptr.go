@@ -60,6 +60,8 @@ import (
   10 Aug 17 -- Making this use pointer receivers, if I can.
   13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
   18 Oct 17 -- Changed init process so all control codes are delims, just as in the current tokenize.
+  19 Oct 17 -- Standard hash256 files for linux include a * in front of the filename.  I'm not sure why.  I want to
+                 ignore this, so I'm writing SetMapDelim so I can.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -585,6 +587,16 @@ func FromHex(s string) int {
 	}
 	return result
 } // FromHex
+
+
+
+// ---------------------------------------- SetMapDelim -----------------------------------------
+func SetMapDelim(char byte) {
+    StateMap[char] = DELIM
+} // SetMapDelim
+
+
+
 
 //-------------------------------------------- GETTKNREAL ---------------------------------------
 // I am copying the working code from TKNRTNS here.  See the comments in tknrtnsa.adb for reason why.

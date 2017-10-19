@@ -32,6 +32,7 @@ import (
                  And added a LastCompiled message and string.
   13 Oct 17 -- No changes here, but tokenize was changed so that horizontal tab char is now a delim.
   14 Oct 17 -- Tweaked output a bit.  And added executable timestamp code.
+  19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
 */
 
 const LastCompiled = "14 Oct 2017"
@@ -136,6 +137,7 @@ func main() {
 		} /* allow comments and essentially blank lines */
 
 		tokenize.INITKN(inputline)
+		tokenize.SetMapDelim('*')  // to ignore this character that begins the filename field.  Don't know why it's there. 
 
 		FirstToken, EOL := tokenize.GetTokenString(false)
 

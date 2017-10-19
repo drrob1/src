@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
+	"filepicker"
 	"fmt"
 	"getcommandline"
 	"io/ioutil"
@@ -16,7 +17,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "13 Jun 17"
+const lastModified = "19 Oct 2017"
 
 /*
 MODULE qfx2xls;
@@ -54,6 +55,7 @@ MODULE qfx2xls;
    7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
                 which means open financial exchange (for/of information).  New name is ofx2cvs.go
 		I think I will first process the file using something like toascii.
+  19 Oct 17 -- Added filepicker code
 */
 
 const ( // intended for ofxCharType
@@ -124,65 +126,68 @@ type citifootertype struct {
 var Transactions []citiTransactionType
 
 func main() {
-
-	//	var juldate1, juldate2, juldate3 int   soon but not yet.
-
 	var e error
 	var filebyteslice []byte
+	var BaseFilename, ans, InFilename string
+	InFileExists := false
 
 	fmt.Println(" ofx2csv.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: ofx2csv <FileName.ext> where .ext = [.qfx|.ofx]")
-		os.Exit(1)
-	}
-
-	fmt.Println()
-	inbuf := getcommandline.GetCommandLineString()
-	BaseFilename := filepath.Clean(inbuf)
-	InFilename := ""
-	InFileExists := false
-
-	if strings.Contains(BaseFilename, ".") { // there is an extension here
-		InFilename = BaseFilename
-		_, err := os.Stat(InFilename)
-		if err == nil {
-			InFileExists = true
+		filenames := filepicker.GetFilenames("CHK*.QFX")
+		for i := 0; i < min(len(filenames), 10); i++ {
+			fmt.Println("filename[", i, "] is", filenames[i])
 		}
-	} else {
-		InFilename = BaseFilename + qfxext
-		_, err := os.Stat(InFilename)
+		fmt.Print(" Enter filename choice : ")
+		fmt.Scanln(&ans)
+		if len(ans) == 0 {
+			ans = "0"
+		}
+		i, err := strconv.Atoi(ans)
 		if err == nil {
-			InFileExists = true
+			InFilename = filenames[i]
 		} else {
-			InFilename = BaseFilename + ofxext
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A')
+			InFilename = filenames[i]
+		}
+		fmt.Println(" Picked filename is", InFilename)
+		BaseFilename = InFilename
+	} else {
+		inbuf := getcommandline.GetCommandLineString()
+		BaseFilename = filepath.Clean(inbuf)
+
+		if strings.Contains(BaseFilename, ".") { // there is an extension here
+			InFilename = BaseFilename
 			_, err := os.Stat(InFilename)
 			if err == nil {
 				InFileExists = true
 			}
+		} else {
+			InFilename = BaseFilename + qfxext
+			_, err := os.Stat(InFilename)
+			if err == nil {
+				InFileExists = true
+			} else {
+				InFilename = BaseFilename + ofxext
+				_, err := os.Stat(InFilename)
+				if err == nil {
+					InFileExists = true
+				}
+			}
 		}
-	}
 
-	if !InFileExists {
-		fmt.Println(" File ", BaseFilename, BaseFilename+qfxext, BaseFilename+ofxext, " or ", InFilename, " do not exist.  Exiting.")
-		os.Exit(1)
-	}
-	/* Can't get this to work.  I don't really need it, anyway.
-	toascii := func(s string) { // anonymous function, also called a closure.
-		cmd := exec.Command("cmd", "/c", "toascii", s)
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
-
-	if runtime.GOOS == "windows" {
-		err = toascii(InFilename)
-		if err != nil {
-			fmt.Println(" Error from toascii ", err)
+		if !InFileExists {
+			fmt.Println(" File ", BaseFilename, BaseFilename+qfxext, BaseFilename+ofxext, " or ", InFilename, " do not exist.  Exiting.")
 			os.Exit(1)
 		}
-	}
-	*/
+		fmt.Println(" input filename is ", InFilename)
 
-	fmt.Println(" input filename is ", InFilename)
+	}
+
+	fmt.Println()
+
 	filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.
 	filebyteslice, e = ioutil.ReadFile(InFilename)
 	if e != nil {
@@ -219,16 +224,6 @@ func main() {
 		}
 	}
 
-	/*
-		for cnt, t := range Transactions {
-			fmt.Printf("TYP=%s,DTPOST=%s,AMT=%s:%g,FITID=%s,CK#=%s:%d,Name=%s,Memo=%s,Juldate=%d, Desc=%s\n",
-				t.TRNTYPE, t.DTPOSTED, t.TRNAMT, t.TRNAMTfloat, t.FITID, t.CHECKNUM, t.CHECKNUMint, t.NAME, t.MEMO, t.Juldate, t.Descript)
-			if cnt%20 == 0 {
-				Pause()
-			}
-		}
-	*/
-
 	// Output to file section
 
 	OutFilename := "citifile.txt" // this is the output filename used by CitiFilterQIF.mod
@@ -250,7 +245,7 @@ func main() {
 		if e = writer.Write(outputstringslice); e != nil {
 			log.Fatalln(" Error writing record to csv:", e)
 		}
-		if ctr%20 == 0 {
+		if ctr%30 == 0 && ctr > 0 {
 			Pause()
 		}
 	}
@@ -658,6 +653,14 @@ func ExtractNumberFromString(s string) (string, int) {
 func check(err error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
 	}
 }
 
