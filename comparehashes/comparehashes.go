@@ -35,7 +35,7 @@ import (
   19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
 */
 
-const LastCompiled = "14 Oct 2017"
+const LastCompiled = "19 Oct 2017"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -137,7 +137,7 @@ func main() {
 		} /* allow comments and essentially blank lines */
 
 		tokenize.INITKN(inputline)
-		tokenize.SetMapDelim('*')  // to ignore this character that begins the filename field.  Don't know why it's there. 
+		tokenize.SetMapDelim('*') // to ignore this character that begins the filename field.  Don't know why it's there.
 
 		FirstToken, EOL := tokenize.GetTokenString(false)
 
