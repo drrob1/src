@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "2 Sep 17"
+const LastAltered = "18 Oct 17"
 
 /*
 Revision History
@@ -34,6 +34,7 @@ Revision History
 20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
 21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
  2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
+18 Oct 17 -- Added filesize totals
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -73,6 +74,7 @@ func main() {
 	var filesSize FISliceSize
 	var err error
 	var count int
+	var SizeTotal int64
 
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
@@ -206,8 +208,9 @@ func main() {
 
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
-		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() {
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
+			SizeTotal += f.Size()
 			sizeint := int(f.Size())
 			sizestr := strconv.Itoa(sizeint)
 			if sizeint > 100000 {
@@ -240,6 +243,12 @@ func main() {
 			}
 		}
 	}
+
+	s := fmt.Sprintf("%d", SizeTotal)
+	if SizeTotal > 100000 {
+		s = AddCommas(s)
+	}
+	fmt.Println(" File Size total =", s)
 
 } // end main dsrt
 

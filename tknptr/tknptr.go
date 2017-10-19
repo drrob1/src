@@ -59,6 +59,7 @@ import (
    3 Dec 16 -- Decided to change how the UpperCase flag is handled in GetToken.
   10 Aug 17 -- Making this use pointer receivers, if I can.
   13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
+  18 Oct 17 -- Changed init process so all control codes are delims, just as in the current tokenize.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -151,8 +152,11 @@ func init() {
 // ------------------------------------ InitStateMap ------------------------------------------------
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
 func InitStateMap() {
-	StateMap[NullChar] = DELIM
-	for i := 1; i < 128; i++ {
+//	StateMap[NullChar] = DELIM
+	for i := 0; i < 33; i++ {
+		StateMap[byte(i)] = DELIM
+	}
+	for i := 33; i < 128; i++ {
 		StateMap[byte(i)] = ALLELSE // including comma
 	}
 	for c := Dgt0; c <= Dgt9; c++ {
@@ -160,7 +164,7 @@ func InitStateMap() {
 	}
 	StateMap[' '] = DELIM
 	StateMap[';'] = DELIM
-	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab
+//	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab.  This line is unnecessary after I changed the init loop above
 	StateMap['#'] = OP
 	StateMap['*'] = OP
 	StateMap['+'] = OP

@@ -3,15 +3,12 @@
 package filepicker
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -64,15 +61,15 @@ func (f FISliceSize) Len() int {
 	return len(f)
 }
 
-func GetFilenames(pattern string) []os.FileInfo {
+func GetFilenames(pattern string) []string { // Not sure what I want this routine to return yet. []os.FileInfo
 	const numlines = 50
-	var userptr *user.User
 	var files FISlice
 	var filesDate FISliceDate
 	var filesSize FISliceSize
 	var err error
 	var count int
 	/*
+		var userptr *user.User
 		var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
 		var RevFlag bool
@@ -143,31 +140,8 @@ func GetFilenames(pattern string) []os.FileInfo {
 	*/
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
-	//	commandline := getcommandline.GetCommandLineString()
-	if len(pattern) > 0 {
-		CleanDirName, CleanFileName = filepath.Split(pattern)
-		CleanFileName = strings.ToUpper(CleanFileName)
-		//		askforinput = false
-	}
-	/*
-		if askforinput {
-			// Asking for input so don't have to worry about command line globbing
-			fmt.Print(" Enter input for globbing: ")
-			scanner := bufio.NewScanner(os.Stdin)
-			scanner.Scan()
-			newtext := scanner.Text()
-			if err = scanner.Err(); err != nil {
-				fmt.Fprintln(os.Stderr, " reading std input: ", err)
-				os.Exit(1)
-			}
-			if len(newtext) > 0 {
-				// time to do the stuff I'm writing this pgm for
-				CleanDirName, CleanFileName = filepath.Split(newtext)
-				CleanFileName = strings.ToUpper(CleanFileName)
-			}
-
-		}
-	*/
+	CleanDirName, CleanFileName = filepath.Split(pattern)
+	CleanFileName = strings.ToUpper(CleanFileName)
 	if len(CleanDirName) == 0 {
 		CleanDirName = "." + string(filepath.Separator)
 	}
@@ -175,6 +149,9 @@ func GetFilenames(pattern string) []os.FileInfo {
 	if len(CleanFileName) == 0 {
 		CleanFileName = "*"
 	}
+
+	SizeSort := false
+	Reverse := false
 
 	if SizeSort {
 		filesSize, err = ioutil.ReadDir(CleanDirName)
@@ -200,44 +177,48 @@ func GetFilenames(pattern string) []os.FileInfo {
 		files = FISlice(filesDate)
 	}
 
-	fmt.Println(" Dirname is", CleanDirName)
+	//	fmt.Println(" Dirname is", CleanDirName)
+
+	stringslice := make([]string, 0)
 
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
-		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-			s := f.ModTime().Format("Jan-02-2006 15:04:05")
-			sizeint := int(f.Size())
-			sizestr := strconv.Itoa(sizeint)
-			if sizeint > 100000 {
-				sizestr = AddCommas(sizestr)
-			}
-
-			usernameStr, groupnameStr := "", ""
-			if runtime.GOARCH == "amd64" {
-				usernameStr, groupnameStr = GetUserGroupStr(f)
-			}
-
-			if linuxflag {
-				if f.IsDir() {
-					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				} else if f.Mode().IsRegular() {
-					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				} else { // it's a symlink
-					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				}
-			} else { // must be windows because this won't compile on Mac.  And I'm ignoring symlinks
-				if f.IsDir() {
-					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-				} else {
-					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
-				}
-			}
+		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() { // ignore directory names that happen to match the pattern
+			stringslice = append(stringslice, f.Name()) // needs to preserve case of filename for linux
+			/*
+			   //			s := f.ModTime().Format("Jan-02-2006 15:04:05")
+			   //			sizeint := int(f.Size())
+			   //			sizestr := strconv.Itoa(sizeint)
+			   //			if sizeint > 100000 {
+			   //				sizestr = AddCommas(sizestr)
+			   //			}
+			   //			usernameStr, groupnameStr := "", ""
+			   //			if runtime.GOARCH == "amd64" {
+			   //				usernameStr, groupnameStr = GetUserGroupStr(f)
+			   //			}
+			   //			if linuxflag {
+			   //				if f.IsDir() {
+			   //					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			   //				} else if f.Mode().IsRegular() {
+			   //					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			   //				} else { // it's a symlink
+			   //					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			   //				}
+			   //			} else { // must be windows because this won't compile on Mac.  And I'm ignoring symlinks
+			   //				if f.IsDir() {
+			   //					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+			   //				} else {
+			   //					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+			   //				}
+			   //			}
+			*/
 			count++
-			if count > NumLines {
+			if count > numlines {
 				break
 			}
 		}
 	}
+	return stringslice
 
 } // end GetFilenames
 
