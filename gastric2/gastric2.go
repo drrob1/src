@@ -10,9 +10,11 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	//
+	"filepicker"
 	"getcommandline"
 	"tknptr"
 )
@@ -45,9 +47,10 @@ import (
                  And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
    3 Oct 17 -- Added separate StDevTime constant, and set a minimum of 2.  Output optimized for Windows since that
                  is where it will be used in "production."
+  18 Oct 17 -- Added filepicker
 */
 
-const LastAltered = "3 Oct 2017"
+const LastAltered = "18 Oct 2017"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -96,6 +99,7 @@ var aa, offs, nn float64
 func main() {
 	var point Point
 	var err, bufioErr error
+	var BaseFilename string
 
 	ln2 := math.Log(2)
 	rows := make([]Point, 0, MaxCol)
@@ -104,10 +108,10 @@ func main() {
 	fmt.Println()
 	fmt.Println(" GastricGo v 2, Gastric Emtpying program written in Go.  Last modified", LastAltered)
 	fmt.Println()
-	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: gastric2 <filename>.txt")
-		os.Exit(0)
-	}
+	//	if len(os.Args) <= 1 {
+	//		fmt.Println(" Usage: gastric2 <filename>.txt")
+	//		os.Exit(0)
+	//	}
 	date := time.Now()
 	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 	workingdir, _ := os.Getwd()
@@ -121,29 +125,54 @@ func main() {
 
 	InExtDefault := ".txt"
 	OutExtDefault := ".out"
-
-	ns := getcommandline.GetCommandLineString()
-	BaseFilename := filepath.Clean(ns)
+	ans := ""
 	Filename := ""
 	FileExists := false
 
-	if strings.Contains(BaseFilename, ".") {
-		Filename = BaseFilename
-		_, err := os.Stat(Filename)
-		if err == nil {
-			FileExists = true
+	if len(os.Args) <= 1 { // need to use filepicker
+		filenames := filepicker.GetFilenames("gastric*.txt")
+		for i := 0; i < len(filenames); i++ {
+			fmt.Println("filename[", i, "] is", filenames[i])
 		}
-	} else {
-		Filename = BaseFilename + InExtDefault
-		_, err := os.Stat(Filename)
-		if err == nil {
-			FileExists = true
+		fmt.Print(" Enter filename choice : ")
+		fmt.Scanln(&ans)
+		if len(ans) == 0 {
+			ans = "0"
 		}
-	}
+		i, err := strconv.Atoi(ans)
+		if err == nil {
+			Filename = filenames[i]
+		} else {
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A')
+			Filename = filenames[i]
+		}
+		fmt.Println(" Picked filename is", Filename)
+	} else { // will use filename entered on commandline
+		ns := getcommandline.GetCommandLineString()
+		BaseFilename = filepath.Clean(ns)
 
-	if !FileExists {
-		fmt.Println(" File", BaseFilename, " or ", Filename, " do not exist.  Exiting.")
-		os.Exit(1)
+		if strings.Contains(BaseFilename, ".") {
+			Filename = BaseFilename
+			_, err := os.Stat(Filename)
+			if err == nil {
+				FileExists = true
+			}
+		} else {
+			Filename = BaseFilename + InExtDefault
+			_, err := os.Stat(Filename)
+			if err == nil {
+				FileExists = true
+			}
+		}
+
+		if !FileExists {
+			fmt.Println(" File", BaseFilename, " or ", Filename, " do not exist.  Exiting.")
+			os.Exit(1)
+		}
+		fmt.Println(" Filename is", Filename)
 	}
 
 	byteslice := make([]byte, 0, 5000)
