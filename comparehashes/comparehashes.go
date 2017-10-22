@@ -35,10 +35,10 @@ import (
   13 Oct 17 -- No changes here, but tokenize was changed so that horizontal tab char is now a delim.
   14 Oct 17 -- Tweaked output a bit.  And added executable timestamp code.
   19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
-  21 Oct 17 -- Added filepicker.
+  22 Oct 17 -- Added filepicker.
 */
 
-const LastCompiled = "21 Oct 2017"
+const LastCompiled = "22 Oct 2017"
 
 //* ************************* MAIN ***************************************************************
 func main() {
