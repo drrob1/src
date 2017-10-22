@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "18 Oct 17"
+const LastAltered = "22 Oct 17"
 
 /*
 Revision History
@@ -35,6 +35,7 @@ Revision History
 21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
  2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
 18 Oct 17 -- Added filesize totals
+22 Oct 17 -- Made default numlines of 40.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -67,7 +68,7 @@ func (f FISliceSize) Len() int {
 }
 
 func main() {
-	const numlines = 50
+	const numlines = 40
 	var userptr *user.User
 	var files FISlice
 	var filesDate FISliceDate
