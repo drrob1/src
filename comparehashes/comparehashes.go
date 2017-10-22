@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"filepicker"
 	"fmt"
 	"getcommandline"
 	"hash"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"tokenize"
 )
@@ -33,9 +35,10 @@ import (
   13 Oct 17 -- No changes here, but tokenize was changed so that horizontal tab char is now a delim.
   14 Oct 17 -- Tweaked output a bit.  And added executable timestamp code.
   19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
+  21 Oct 17 -- Added filepicker.
 */
 
-const LastCompiled = "19 Oct 2017"
+const LastCompiled = "21 Oct 2017"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -56,20 +59,56 @@ func main() {
 	//  const ReadBufferSize = 80 * M;
 
 	var HashName = [...]string{"md5", "sha1", "sha256", "sha384", "sha512"}
-	var inbuf string
+	var inbuf, ans, Filename string
 	var WhichHash int
 	var readErr error
 	var TargetFilename, HashValueReadFromFile, HashValueComputedStr string
 	var hasher hash.Hash
 	var FileSize int64
 
-	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: comparehashes <hashFileName.ext> where .ext = [.md5|.sha1|.sha256|.sha384|.sha512]")
-		os.Exit(0)
-	}
-	inbuf = getcommandline.GetCommandLineString()
+	fmt.Print(" comparehashes written in Go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
 
-	extension := filepath.Ext(inbuf)
+	fmt.Println(".  Last compiled ", LastCompiled)
+	//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
+	fmt.Println()
+
+	// filepicker stuff.
+
+	if len(os.Args) <= 1 { // need to use filepicker
+		filenames := filepicker.GetFilenames("*.sha*")
+		for i := 0; i < min(len(filenames), 10); i++ {
+			fmt.Println("filename[", i, "] is", filenames[i])
+		}
+		fmt.Print(" Enter filename choice : ")
+		fmt.Scanln(&ans)
+		if len(ans) == 0 {
+			ans = "0"
+		}
+		i, err := strconv.Atoi(ans)
+		if err == nil {
+			Filename = filenames[i]
+		} else {
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A')
+			Filename = filenames[i]
+		}
+		fmt.Println(" Picked filename is", Filename)
+	} else { // will use filename entered on commandline
+		Filename = getcommandline.GetCommandLineString()
+	}
+
+	fmt.Println()
+
+	// process extension
+
+	extension := filepath.Ext(Filename)
 	extension = strings.ToLower(extension)
 	switch extension {
 	case ".md5":
@@ -90,31 +129,20 @@ func main() {
 	} // switch case on extension for HashType
 
 	fmt.Println()
-	fmt.Print(" comparehashes written in Go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-
-	fmt.Println(".  Last compiled ", LastCompiled)
-	//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
-	workingdir, _ := os.Getwd()
-	execname, _ := os.Executable()
-	ExecFI, _ := os.Stat(execname)
-	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
-	fmt.Println()
 
 	// Read and parse the file with the hashes.
 
-	HashesFile, err := os.Open(inbuf)
+	HashesFile, err := os.Open(Filename)
 	if os.IsNotExist(err) {
 		fmt.Println(inbuf, " does not exist.")
 		os.Exit(1)
 	} else { // we know that the file exists
 		check(err, " Error opening hashes file.")
 	}
-	check(err, "Cannot open HashesFile.  Does it exist?  ")
 	defer HashesFile.Close()
 
 	scanner := bufio.NewScanner(HashesFile)
-	scanner.Split(bufio.ScanLines) // I believe this is the default.  I may experiment to see if I need this line for my code to work, AFTER I debug it as it is.
+	//	scanner.Split(bufio.ScanLines) // I believe this is the default.  I may experiment to see if I need this line for my code to work, AFTER I debug it as it is.
 
 	for { /* to read multiple lines */
 		FileSize = 0
@@ -249,5 +277,14 @@ func check(e error, msg string) {
 	if e != nil {
 		fmt.Errorf("%s : ", msg)
 		panic(e)
+	}
+}
+
+// ------------------------------------------------------- min ---------------------------------
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
 	}
 }
