@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "22 Oct 17"
+const LastAltered = "23 Oct 17"
 
 /*
 Revision History
@@ -36,6 +36,7 @@ Revision History
  2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
 18 Oct 17 -- Added filesize totals
 22 Oct 17 -- Made default numlines of 40.
+23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -68,7 +69,9 @@ func (f FISliceSize) Len() int {
 }
 
 func main() {
-	const numlines = 40
+	const defaultlineswin = 50
+	const defaultlineslinux = 40
+	var numlines int
 	var userptr *user.User
 	var files FISlice
 	var filesDate FISliceDate
@@ -76,6 +79,31 @@ func main() {
 	var err error
 	var count int
 	var SizeTotal int64
+
+	uid := 0
+	gid := 0
+	systemStr := ""
+	linuxflag := runtime.GOOS == "linux"
+	if linuxflag {
+		systemStr = "Linux"
+		numlines = defaultlineslinux
+	} else if runtime.GOOS == "windows" {
+		systemStr = "Windows"
+		numlines = defaultlineswin
+	} else {
+		systemStr = "Mac, maybe"
+		numlines = defaultlineslinux
+	}
+
+	if runtime.GOARCH == "amd64" {
+		uid = os.Getuid() // int
+		gid = os.Getgid() // int
+		userptr, err = user.Current()
+		if err != nil {
+			fmt.Println(" user.Current error is ", err, "Exiting.")
+			os.Exit(1)
+		}
+	}
 
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
@@ -102,28 +130,6 @@ func main() {
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
-
-	uid := 0
-	gid := 0
-	systemStr := ""
-	linuxflag := runtime.GOOS == "linux"
-	if linuxflag {
-		systemStr = "Linux"
-	} else if runtime.GOOS == "windows" {
-		systemStr = "Windows"
-	} else {
-		systemStr = "Mac, maybe"
-	}
-
-	if runtime.GOARCH == "amd64" {
-		uid = os.Getuid() // int
-		gid = os.Getgid() // int
-		userptr, err = user.Current()
-		if err != nil {
-			fmt.Println(" user.Current error is ", err, "Exiting.")
-			os.Exit(1)
-		}
-	}
 
 	if *helpflag || HelpFlag {
 		flag.PrintDefaults()

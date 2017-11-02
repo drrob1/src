@@ -17,7 +17,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "19 Oct 2017"
+const lastModified = "1 Nov 2017"
 
 /*
 MODULE qfx2xls;
@@ -56,6 +56,7 @@ MODULE qfx2xls;
                 which means open financial exchange (for/of information).  New name is ofx2cvs.go
 		I think I will first process the file using something like toascii.
   19 Oct 17 -- Added filepicker code
+   1 Nov 17 -- Added output of $ for footer amount.
 */
 
 const ( // intended for ofxCharType
@@ -245,11 +246,11 @@ func main() {
 		if e = writer.Write(outputstringslice); e != nil {
 			log.Fatalln(" Error writing record to csv:", e)
 		}
-		if ctr%30 == 0 && ctr > 0 {
+		if ctr%40 == 0 && ctr > 0 {
 			Pause()
 		}
 	}
-	fmt.Println(" Footer balance amount is", footer.BalAmt)
+	fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
 
 	writer.Flush()
 	if err := writer.Error(); err != nil {
@@ -598,6 +599,10 @@ func ProcessOFXFile(buf *bytes.Buffer) (citiheadertype, citifootertype) {
 				break
 			}
 			footer.BalAmt = token.Str
+			balance, _ := strconv.ParseFloat(footer.BalAmt, 64)
+			if balance > 9999 {
+				footer.BalAmt = AddCommas(footer.BalAmt)
+			}
 
 		} else if token.State == openinghtml && token.Str == "DTASOF" {
 			token = GetOfxToken(buf)
@@ -656,6 +661,7 @@ func check(err error) {
 	}
 }
 
+//-------------------------------------------------------
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -664,4 +670,25 @@ func min(a, b int) int {
 	}
 }
 
+//-------------------------------------------------------------------- InsertByteSlice
+func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
+	return append(slice[:index], append(insertion, slice[index:]...)...)
+}
+
+//---------------------------------------------------------------------- AddCommas
+func AddCommas(instr string) string {
+	var Comma []byte = []byte{','}
+
+	BS := make([]byte, 0, 15)
+	BS = append(BS, instr...)
+
+	i := len(BS) - 3 // account for a decimal point and 2 decimal digits.
+
+	for NumberOfCommas := i / 3; (NumberOfCommas > 0) && (i > 3); NumberOfCommas-- {
+		i -= 3
+		BS = InsertIntoByteSlice(BS, Comma, i)
+	}
+	return string(BS)
+} // AddCommas
+//---------------------------------------------------------------------------------------------------
 // END ofx2csv.go based on qfx2xls.mod
