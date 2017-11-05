@@ -53,11 +53,11 @@ func main() {
 	fmt.Println(" Total Size of walked tree is", DirTotalString)
 
 	fmt.Println()
-	//	for i := 0; i < 30; i++ {
-	//		fmt.Print(filesList[i], ", ")
-	//	}
-	//	fmt.Println()
-	//	fmt.Println()
+	for i := 0; i < 30; i++ {
+		fmt.Print(filesList[i], ", ")
+	}
+	fmt.Println()
+	fmt.Println()
 
 } // main
 
