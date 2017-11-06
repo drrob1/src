@@ -1,5 +1,5 @@
-// DirWalk written in go.  (C) 2017.  All rights reserved
-// dirwalk.go
+// Dirmap written in go.  (C) 2017.  All rights reserved
+// dirmap.go
 package main
 
 import (
@@ -10,22 +10,34 @@ import (
 	//	"getcommandline"
 )
 
-const LastAltered = " 5 Nov 2017"
+const LastAltered = " 6 Nov 2017"
 
 /*
   REVISION HISTORY
   -------- -------
-   5 Nov 2017 -- First version, based on code I got from a book on Go, and is in GoLang.txt.
+   5 Nov 2017 -- First version, based on code dirwalk.
 
 
 */
 
-func main() {
-	var dirTotal uint64
-	fmt.Println()
-	fmt.Println(" dirwalk sums the directories it walks.  Written in Go.  Last altered ", LastAltered)
+type directory struct {
+	name     string
+	subtotal int64
+}
 
-	startDirectory := os.Args[1]
+func main() {
+	var GrandTotal uint64
+	var startDirectory string
+	var dirList []directory
+
+	fmt.Println()
+	fmt.Println(" dirmap sums the directories it walks.  Written in Go.  Last altered ", LastAltered)
+
+	if len(os.Args) < 2 {
+		startDirectory, _ = os.Getwd()
+	} else {
+		startDirectory = os.Args[1]
+	}
 	start, err := os.Stat(startDirectory)
 	if err != nil || !start.IsDir() {
 		fmt.Println(" usage: diskwalk <directoryname>")
@@ -33,28 +45,47 @@ func main() {
 	}
 
 	var filesList []string
+	filesList = make([]string, 0, 5000)
+	dirList = make([]directory, 0, 5000)
 	filepath.Walk(startDirectory, func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !fi.Mode().IsRegular() {
+		if fi.Mode().IsDir() && len(dirList) == 0 { // This one is the first in the list.
+			d := directory{} // null element to init.
+			d.name = filepath.Dir(fpath)
+			d.subtotal = 0
+			dirList = append(dirList, d)
+			return nil
+		} else if fi.Mode().IsDir() && filepath.Dir(fpath) != dirList[len(dirList)-1].name {
+			d := directory{} // null element to init.
+			d.name = filepath.Dir(fpath)
+			d.subtotal = 0
+			dirList = append(dirList, d)
+			return nil
+		} else if !fi.Mode().IsRegular() { // not a dir or a reg file, maybe a symlink
 			return nil
 		}
 
 		filesList = append(filesList, fpath)
-		dirTotal += uint64(fi.Size())
+		GrandTotal += uint64(fi.Size())
+		lastDirList := len(dirList) - 1
+		if filepath.Dir(fpath) == dirList[lastDirList].name { // if not already there.
+			dirList[lastDirList].subtotal += fi.Size()
+		}
+
 		return nil
 	})
 
-	DirTotalString := strconv.FormatUint(dirTotal, 10)
-	DirTotalString = AddCommas(DirTotalString)
+	GrandTotalString := strconv.FormatUint(GrandTotal, 10)
+	GrandTotalString = AddCommas(GrandTotalString)
 	fmt.Print(" start dir is ", startDirectory, ".  Found ", len(filesList), " files in this tree. ")
-	fmt.Println(" Total Size of walked tree is", DirTotalString)
+	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of directories is", len(dirList))
 
 	fmt.Println()
-	for i := 0; i < 30; i++ {
-		fmt.Print(filesList[i], ", ")
+	for i := 0; i < 30; i++ { // I can sort this, but later.
+		fmt.Println(dirList[i].name, " subtotal is ", dirList[i].subtotal, ". ")
 	}
 	fmt.Println()
 	fmt.Println()

@@ -22,10 +22,15 @@ const LastAltered = " 5 Nov 2017"
 
 func main() {
 	var dirTotal uint64
+	var startDirectory string
 	fmt.Println()
 	fmt.Println(" dirwalk sums the directories it walks.  Written in Go.  Last altered ", LastAltered)
 
-	startDirectory := os.Args[1]
+	if len(os.Args) < 2 {
+		startDirectory, _ = os.Getwd()
+	} else {
+		startDirectory = os.Args[1]
+	}
 	start, err := os.Stat(startDirectory)
 	if err != nil || !start.IsDir() {
 		fmt.Println(" usage: diskwalk <directoryname>")
