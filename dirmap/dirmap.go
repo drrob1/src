@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	//	"getcommandline"
 )
@@ -25,10 +26,24 @@ type directory struct {
 	subtotal int64
 }
 
+type dirslice []directory
+
+func (ds dirslice) Less(i, j int) bool {
+	return ds[i].subtotal > ds[j].subtotal // I want a reverse sort, largest first
+}
+
+func (ds dirslice) Swap(i, j int) {
+	ds[i], ds[j] = ds[j], ds[i]
+}
+
+func (ds dirslice) Len() int {
+	return len(ds)
+}
+
 func main() {
 	var GrandTotal uint64
 	var startDirectory string
-	var dirList []directory
+	var dirList dirslice
 
 	fmt.Println()
 	fmt.Println(" dirmap sums the directories it walks.  Written in Go.  Last altered ", LastAltered)
@@ -46,7 +61,7 @@ func main() {
 
 	var filesList []string
 	filesList = make([]string, 0, 5000)
-	dirList = make([]directory, 0, 5000)
+	dirList = make(dirslice, 0, 5000)
 	filepath.Walk(startDirectory, func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -78,18 +93,24 @@ func main() {
 		return nil
 	})
 
+	sort.Sort(dirList)
+
 	GrandTotalString := strconv.FormatUint(GrandTotal, 10)
 	GrandTotalString = AddCommas(GrandTotalString)
 	fmt.Print(" start dir is ", startDirectory, ".  Found ", len(filesList), " files in this tree. ")
 	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of directories is", len(dirList))
 
 	fmt.Println()
-	for i := 0; i < 30; i++ { // I can sort this, but later.
-		fmt.Println(dirList[i].name, " subtotal is ", dirList[i].subtotal, ". ")
+	for i, d := range dirList {
+		subtotalstr := strconv.FormatInt(d.subtotal, 10)
+		subtotalstr = AddCommas(subtotalstr)
+		fmt.Printf(" %s subtotal is %s.\n", d.name, subtotalstr)
+		if i > 40 {
+			break
+		}
 	}
 	fmt.Println()
 	fmt.Println()
-
 } // main
 
 //-------------------------------------------------------------------- InsertByteSlice
