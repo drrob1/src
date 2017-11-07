@@ -95,10 +95,15 @@ func main() {
 
 	sort.Sort(dirList)
 
+	NumOfDirs := len(dirList)
+	for i := NumOfDirs - 1; i >= 0 && dirList[i].subtotal == 0; i-- {
+		NumOfDirs--
+	}
+
 	GrandTotalString := strconv.FormatUint(GrandTotal, 10)
 	GrandTotalString = AddCommas(GrandTotalString)
-	fmt.Print(" start dir is ", startDirectory, ".  Found ", len(filesList), " files in this tree. ")
-	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of directories is", len(dirList))
+	fmt.Print(" start dir is ", startDirectory, "; found ", len(filesList), " files in this tree. ")
+	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of directories is", NumOfDirs)
 
 	fmt.Println()
 	for i, d := range dirList {
