@@ -110,7 +110,7 @@ func main() {
 		subtotalstr := strconv.FormatInt(d.subtotal, 10)
 		subtotalstr = AddCommas(subtotalstr)
 		fmt.Printf(" %s subtotal is %s.\n", d.name, subtotalstr)
-		if i > 40 {
+		if i > min(NumOfDirs, 40) {
 			break
 		}
 	}
@@ -138,4 +138,12 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
+
+func min(i, j int) int {
+	if i < j {
+		return i
+	} else {
+		return j
+	}
+} // min
 //---------------------------------------------------------------------------------------------------
