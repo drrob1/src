@@ -10,7 +10,7 @@ import (
 	//	"getcommandline"
 )
 
-const LastAltered = " 5 Nov 2017"
+const LastAltered = " 8 Nov 2017"
 
 /*
   REVISION HISTORY
@@ -54,7 +54,7 @@ func main() {
 
 	DirTotalString := strconv.FormatUint(dirTotal, 10)
 	DirTotalString = AddCommas(DirTotalString)
-	fmt.Print(" start dir is ", startDirectory, ".  Found ", len(filesList), " files in this tree. ")
+	fmt.Print(" start dir is ", startDirectory, "; found ", len(filesList), " files in this tree. ")
 	fmt.Println(" Total Size of walked tree is", DirTotalString)
 
 	fmt.Println()
