@@ -8,16 +8,15 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
-	//	"getcommandline"
 )
 
-const LastAltered = " 6 Nov 2017"
+const LastAltered = " 8 Nov 2017"
 
 /*
   REVISION HISTORY
   -------- -------
    5 Nov 2017 -- First version, based on code dirwalk.
-
+   8 Nov 2017 -- My first use of sort.Slice, which uses a closure as the less procedure.
 
 */
 
@@ -93,24 +92,38 @@ func main() {
 		return nil
 	})
 
-	sort.Sort(dirList)
+	// Will now sort by name and attempt to remove duplicates by setting their subtotal to zero.
+	sort.Slice(dirList, func(i, j int) bool { return dirList[i].name < dirList[j].name })
 
 	NumOfDirs := len(dirList)
-	for i := NumOfDirs - 1; i >= 0 && dirList[i].subtotal == 0; i-- {
+	for i := 0; i < NumOfDirs-1; i++ { // will compare current to prev list entry
+		if dirList[i].name == dirList[i+1].name {
+			for j := i + 1; j < NumOfDirs && dirList[i].name == dirList[j].name; j++ { // walk down list of == names
+				dirList[i].subtotal += dirList[j].subtotal
+				dirList[j].subtotal = 0 // zero it out so it will sort towards bottom and not display.
+			}
+		}
+
+	}
+
+	// Prepare for output.
+	sort.Sort(dirList)
+
+	for i := NumOfDirs - 1; i > 0 && dirList[i].subtotal == 0; i-- {
 		NumOfDirs--
 	}
 
 	GrandTotalString := strconv.FormatUint(GrandTotal, 10)
 	GrandTotalString = AddCommas(GrandTotalString)
 	fmt.Print(" start dir is ", startDirectory, "; found ", len(filesList), " files in this tree. ")
-	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of directories is", NumOfDirs)
+	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of non-empty directories is", NumOfDirs)
 
 	fmt.Println()
 	for i, d := range dirList {
 		subtotalstr := strconv.FormatInt(d.subtotal, 10)
 		subtotalstr = AddCommas(subtotalstr)
 		fmt.Printf(" %s subtotal is %s.\n", d.name, subtotalstr)
-		if i > min(NumOfDirs-2, 40) {
+		if i > 40 || d.subtotal == 0 {
 			break
 		}
 	}
