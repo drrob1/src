@@ -126,7 +126,7 @@ func main() {
 
 	var DirListFlag = flag.Bool("d", false, "include directories in the output listing")
 	var FilenameListFlag bool
-	flag.BoolVar(&FilenameListFlag, "D", true, "include filenames in the output listing")
+	flag.BoolVar(&FilenameListFlag, "D", false, "include filenames in the output listing")
 
 	flag.Parse()
 
@@ -156,7 +156,8 @@ func main() {
 		NumLines = NLines
 	}
 
-	Dirlist := *DirListFlag || !FilenameListFlag // if -D entered then this expression also needs to be true.
+	Dirlist := *DirListFlag || FilenameListFlag // if -D entered then this expression also needs to be true.
+	FilenameList := !FilenameListFlag           // need to reverse the flag.
 
 	askforinput := true
 
@@ -224,7 +225,7 @@ func main() {
 
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
-		//		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() { // altered
+		//		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() {
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
 			sizeint := 0
@@ -246,15 +247,15 @@ func main() {
 			if linuxflag {
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				} else if FilenameListFlag && f.Mode().IsRegular() { // altered
+				} else if FilenameList && f.Mode().IsRegular() { // altered
 					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				} else if Dirlist { // it's a symlink
+				} else if Dirlist && !f.Mode().IsRegular() { // it's a symlink
 					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				}
 			} else { // must be windows because this won't compile on Mac.
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-				} else if FilenameListFlag {
+				} else if FilenameList {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 				}
 			}
