@@ -38,6 +38,7 @@ Revision History
 22 Oct 17 -- Made default numlines of 40.
 23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
 12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
+13 Dec 17 -- Changed how lines are counted.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -124,9 +125,9 @@ func main() {
 	var SizeFlag bool
 	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 
-	var DirListFlag = flag.Bool("d", false, "include directories in the output listing")
+	var DirListFlag = flag.Bool("d", false, "include directories in the output listing") // pointer
 	var FilenameListFlag bool
-	flag.BoolVar(&FilenameListFlag, "D", false, "include filenames in the output listing")
+	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
 	flag.Parse()
 
@@ -247,19 +248,23 @@ func main() {
 			if linuxflag {
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					count++
 				} else if FilenameList && f.Mode().IsRegular() { // altered
 					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					count++
 				} else if Dirlist && !f.Mode().IsRegular() { // it's a symlink
 					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					count++
 				}
 			} else { // must be windows because I don't think this will compile on Mac.
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					count++
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+					count++
 				}
 			}
-			count++
 			if count > NumLines {
 				break
 			}
