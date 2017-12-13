@@ -252,10 +252,10 @@ func main() {
 				} else if Dirlist && !f.Mode().IsRegular() { // it's a symlink
 					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				}
-			} else { // must be windows because this won't compile on Mac.
+			} else { // must be windows because I don't think this will compile on Mac.
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-				} else if FilenameList {
+				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 				}
 			}
