@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "23 Oct 17"
+const LastAltered = "13 Dec 2017"
 
 /*
 Revision History
@@ -37,6 +37,7 @@ Revision History
 18 Oct 17 -- Added filesize totals
 22 Oct 17 -- Made default numlines of 40.
 23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
+12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -122,6 +123,11 @@ func main() {
 	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
 	var SizeFlag bool
 	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+
+	var DirListFlag = flag.Bool("d", false, "include directories in the output listing")
+	var FilenameListFlag bool
+	flag.BoolVar(&FilenameListFlag, "D", true, "include filenames in the output listing")
+
 	flag.Parse()
 
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
@@ -149,6 +155,9 @@ func main() {
 	} else if NLines != numlines {
 		NumLines = NLines
 	}
+
+	Dirlist := *DirListFlag || !FilenameListFlag // if -D entered then this expression also needs to be true.
+
 	askforinput := true
 
 	CleanDirName := "." + string(filepath.Separator)
@@ -215,13 +224,18 @@ func main() {
 
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
-		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() {
+		//		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() { // altered
+		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
-			SizeTotal += f.Size()
-			sizeint := int(f.Size())
-			sizestr := strconv.Itoa(sizeint)
-			if sizeint > 100000 {
-				sizestr = AddCommas(sizestr)
+			sizeint := 0
+			sizestr := ""
+			if f.Mode().IsRegular() { // only sum regular files, not dir or symlink entries.
+				SizeTotal += f.Size()
+				sizeint = int(f.Size())
+				sizestr = strconv.Itoa(sizeint)
+				if sizeint > 100000 {
+					sizestr = AddCommas(sizestr)
+				}
 			}
 
 			usernameStr, groupnameStr := "", ""
@@ -230,17 +244,17 @@ func main() {
 			}
 
 			if linuxflag {
-				if f.IsDir() {
+				if Dirlist && f.IsDir() {
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				} else if f.Mode().IsRegular() {
+				} else if FilenameListFlag && f.Mode().IsRegular() { // altered
 					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				} else { // it's a symlink
+				} else if Dirlist { // it's a symlink
 					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				}
-			} else { // must be windows because this won't compile on Mac.  And I'm ignoring symlinks
-				if f.IsDir() {
+			} else { // must be windows because this won't compile on Mac.
+				if Dirlist && f.IsDir() {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-				} else {
+				} else if FilenameListFlag {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 				}
 			}
@@ -256,7 +270,6 @@ func main() {
 		s = AddCommas(s)
 	}
 	fmt.Println(" File Size total =", s)
-
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertByteSlice

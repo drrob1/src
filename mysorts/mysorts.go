@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "7 Aug 2017"
+const LastAlteredDate = "10 Nov 2017"
 
 /*
   REVISION HISTORY
@@ -22,6 +22,7 @@ const LastAlteredDate = "7 Aug 2017"
   July 2017 -- First version
   26 July 17 -- Will try to learn delve (dlv) by using it to debug the routines here that don't work.
    7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
+   8 Nov 17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
 */
 
 func StraightInsertion(input []string) []string {
@@ -328,6 +329,10 @@ func ModifiedMergeSort(L []string) []string {
 	} // end if else clause
 }
 
+//-----------------------------------------------------------------------+
+//                               MAIN PROGRAM                            |
+//-----------------------------------------------------------------------+
+
 func main() {
 	var filesize int64
 	fmt.Println(" Sort a slice of strings, using the different algorithms.  Last altered", LastAlteredDate)
@@ -341,6 +346,9 @@ func main() {
 	Ext1Default := ".dat"
 	Ext2Default := ".txt"
 	OutDefault := ".sorted"
+
+	date := time.Now()
+	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 
 	commandline := getcommandline.GetCommandLineString()
 	BaseFilename := filepath.Clean(commandline)
@@ -395,6 +403,8 @@ func main() {
 	OutBufioWriter := bufio.NewWriter(OutputFile)
 	defer OutBufioWriter.Flush()
 	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
+	_, err = OutBufioWriter.WriteString(datestring)
+	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -415,7 +425,7 @@ func main() {
 		requestedwordcount = int(filesize / 7)
 	}
 
-	s := fmt.Sprintf(" requestedwordcount = %d \n", requestedwordcount)
+	s := fmt.Sprintf(" filesize = %d, requestedwordcount = %d \n", filesize, requestedwordcount)
 	OutBufioWriter.WriteString(s)
 	mastersliceofwords := make([]string, 0, requestedwordcount)
 	_, err = OutBufioWriter.WriteRune('\n')
@@ -693,6 +703,35 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(" NativeSort:", NativeSortTime)
+	if allowoutput {
+		for _, w := range NativeWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
+		requestedwordcount, numberofwords, len(mastersliceofwords))
+	_, err = OutBufioWriter.WriteString(s)
+	if len(mastersliceofwords) > 1000 {
+		fmt.Println(s)
+		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
+	}
+
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before:", sliceofwords)
+	}
+	t10 := time.Now()
+	sort.Strings(sliceofwords)
+	StringsSortTime := time.Since(t10)
+	s = fmt.Sprintf(" After sort.Strings: %s \n", StringsSortTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(" StringsSortTime:", StringsSortTime)
 	if allowoutput {
 		for _, w := range NativeWords {
 			fmt.Print(w, " ")
