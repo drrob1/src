@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 	//
 )
 
-const lastAltered = "10 Sep 17"
+const lastAltered = "23 Dec 17"
 
 //const openQuoteRune = 0xe2809c  \  These values are in the file itself seen by hexdump -C
 //const closeQuoteRune = 0xe2809d  \ but are not the rune (unicode code point)
@@ -42,6 +43,15 @@ const hyphenStr = "-"
 const diagraphFIstr = "fi"
 const diagraphFLstr = "fl"
 
+// From the vim lines that change high ASCII characters to printable equivalents.
+const highsquote91 = 0x91 // open squote
+const highsquote92 = 0x92 // close squote
+const highquote93 = 0x93  // open quote
+const highquote94 = 0x94  // close quote
+const emdash97 = 0x97     // emdash as ASCII character
+const bullet96 = 0x96
+const bullet95 = 0x95
+
 /*
    REVISION HISTORY
    ----------------
@@ -53,6 +63,7 @@ const diagraphFLstr = "fl"
     8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
    13 May 17 -- Changed the text of the final output message.
    10 Sep 17 -- Added execname code, and changed error handling based on Rob Pike suggestion.
+   23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 */
 
 type errWriter struct {
@@ -181,6 +192,16 @@ func main() {
 					str = diagraphFIstr
 				} else if r == diagraphFLrune {
 					str = diagraphFLstr
+				} else if r == unicode.ReplacementChar {
+					str = ""
+				} else if r == highsquote91 || r == highsquote92 {
+					str = "'"
+				} else if r == highquote93 || r == highquote94 {
+					str = "\""
+				} else if r == emdash97 {
+					str = " -- "
+				} else if r == bullet95 || r == bullet96 {
+					str = "--"
 				} else {
 					str = string(r)
 				}

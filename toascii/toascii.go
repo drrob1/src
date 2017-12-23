@@ -16,7 +16,7 @@ import (
 	//
 )
 
-const lastAltered = "10 Sep 2017"
+const lastAltered = "23 Dec 2017"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -39,6 +39,15 @@ const hyphenStr = "-"
 const diagraphFIstr = "fi"
 const diagraphFLstr = "fl"
 
+// From the vim lines that change high ASCII characters to printable equivalents.
+const highsquote91 = 0x91 // open squote
+const highsquote92 = 0x92 // close squote
+const highquote93 = 0x93  // open quote
+const highquote94 = 0x94  // close quote
+const emdash97 = 0x97     // emdash as ASCII character
+const bullet96 = 0x96
+const bullet95 = 0x95
+
 /*
    REVISION HISTORY
    ----------------
@@ -51,6 +60,7 @@ const diagraphFLstr = "fl"
    13 May 17 -- Changed the text of the final output message.
    15 May 17 -- Will now call this toascii.go.  io.Copy and encoding/ascii85.NewEncoder does not work.
    10 Sep 17 -- Added code to show timestamp of execname.  And changed bufio error checking.
+   23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 */
 
 func main() {
@@ -158,6 +168,14 @@ func main() {
 			str = diagraphFLstr
 		} else if r == unicode.ReplacementChar {
 			str = ""
+		} else if r == highsquote91 || r == highsquote92 {
+			str = "'"
+		} else if r == highquote93 || r == highquote94 {
+			str = "\""
+		} else if r == emdash97 {
+			str = " -- "
+		} else if r == bullet95 || r == bullet96 {
+			str = "--"
 		} else {
 			str = string(r)
 		}
