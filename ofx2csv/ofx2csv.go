@@ -17,7 +17,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "1 Nov 2017"
+const lastModified = "25 Dec 2017"
 
 /*
 MODULE qfx2xls;
@@ -57,6 +57,7 @@ MODULE qfx2xls;
 		I think I will first process the file using something like toascii.
   19 Oct 17 -- Added filepicker code
    1 Nov 17 -- Added output of $ for footer amount.
+  25 Dec 27 -- Decided to try changing date format to match ISO8601 YYYY-MM-DD required for sqlite.
 */
 
 const ( // intended for ofxCharType
@@ -261,7 +262,8 @@ func main() {
 } // end main of this package
 
 //---------------------------------------------------------------------------------------------------
-func DateFieldReformat(datein string) (string, int) {
+/*
+func DateFieldReformat(datein string) (string, int) {  Original way that is not compatible with ISO8601 fmt.
 	//                                                                    01234567    01234567
 	//  This procedure changes the date as it is input in a qfx file from yyyymmdd -> mm/dd/yy.
 	// I have to look into if I want a 2 or 4 digit year
@@ -285,7 +287,33 @@ func DateFieldReformat(datein string) (string, int) {
 	return dateout, juldate
 
 } // END DateFieldReformat;
+*/
+func DateFieldReformat(datein string) (string, int) {
+	//                                                                    01234567    0123456789
+	//  This procedure changes the date as it is input in a qfx file from yyyymmdd -> YYYY-MM-DD.
+	// I have to look into if I want a 2 or 4 digit year
 
+	var dateout string
+
+	datebyteslice := make([]byte, 10)
+	datebyteslice[0] = datein[0]
+	datebyteslice[1] = datein[1]
+	datebyteslice[2] = datein[2]
+	datebyteslice[3] = datein[3]
+	datebyteslice[4] = '-'
+	datebyteslice[5] = datein[4]
+	datebyteslice[6] = datein[5]
+	datebyteslice[7] = '-'
+	datebyteslice[8] = datein[6]
+	datebyteslice[9] = datein[7]
+	dateout = string(datebyteslice)
+	m, _ := strconv.Atoi(datein[4:6]) // Remember that these bounds include lower and up to but not
+	d, _ := strconv.Atoi(datein[6:8]) // including the upper bound.
+	y, _ := strconv.Atoi(datein[0:4])
+	juldate := timlibg.JULIAN(m, d, y)
+	return dateout, juldate
+
+} // END DateFieldReformat;
 //--------------------------------------------------------------------------------------------------
 func GetOfxToken(buf *bytes.Buffer) ofxTokenType {
 	// -------------------------------------------------- GetQfxToken ----------------------------------
