@@ -58,7 +58,7 @@ MODULE qfx2xls;
    1 Nov 17 -- Added output of $ for footer amount.
   24 Dec 17 -- Now called dateconvert, meant to read csv from sqlite and change format to ISO8601 YYYY-MM-DD HH:MM:SS.SSS
   25 Dec 17 -- Now will do same thing for Allcc-Sqlite.db.  Too bad the fields are in a different order.
-  27 Dec 17 -- Added automatic removal of blank lines.
+  27 Dec 17 -- Added automatic removal of blank lines, and fixed 00 problem.
 */
 
 type Row struct {
@@ -222,8 +222,9 @@ func ExtractDateFromString(in string) string {
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
-	d := token.Isum
-	if d > 9 {
+
+	L := len(token.Str)
+	if L >= 2 {
 		dstr = token.Str
 	} else {
 		dstr = "0" + token.Str

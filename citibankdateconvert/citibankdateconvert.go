@@ -230,8 +230,8 @@ func ExtractDateFromString(in string) string {
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
-	d := token.Isum
-	if d > 9 {
+	L := len(token.Str)
+	if L >= 2 {
 		dstr = token.Str
 	} else {
 		dstr = "0" + token.Str
