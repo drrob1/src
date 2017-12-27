@@ -16,7 +16,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "25 Dec 2017"
+const lastModified = "27 Dec 2017"
 
 /*
 MODULE qfx2xls;
@@ -57,6 +57,7 @@ MODULE qfx2xls;
   19 Oct 17 -- Added filepicker code
    1 Nov 17 -- Added output of $ for footer amount.
   24 Dec 17 -- Now called dateconvert, meant to read csv from sqlite and change format to ISO8601 YYYY-MM-DD HH:MM:SS.SSS
+  27 Dec 17 -- Added automatic removal of blank lines.
 */
 
 type Row struct {
@@ -157,6 +158,8 @@ func main() {
 			break
 		} else if err != nil {
 			log.Fatal(err)
+		} else if len(record[4]) < 2 { // likely an empty line
+			continue
 		}
 		datestring := record[0]
 		row.date = ExtractDateFromString(datestring)

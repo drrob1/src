@@ -1,4 +1,4 @@
-// dateconvert.go using ofx2cvs as a template.
+// Citibankdateconvert.go using dateconvert as a template.
 package main
 
 import (
@@ -57,12 +57,11 @@ MODULE qfx2xls;
   19 Oct 17 -- Added filepicker code
    1 Nov 17 -- Added output of $ for footer amount.
   24 Dec 17 -- Now called dateconvert, meant to read csv from sqlite and change format to ISO8601 YYYY-MM-DD HH:MM:SS.SSS
-  25 Dec 17 -- Now will do same thing for Allcc-Sqlite.db.  Too bad the fields are in a different order.
-  27 Dec 17 -- Added automatic removal of blank lines.
+  27 Dec 17 -- Now called Citibankdateconvert, to do for citibank.db as I already did for the others
 */
 
 type Row struct {
-	date, descr, amount, comment string
+	cleared, date, chknum, descr, amount, comment, acntnum, unon string
 }
 
 const CSVext = ".CSV"
@@ -74,10 +73,10 @@ func main() {
 	var row Row
 
 	rows := make([]Row, 0, 10000)
-	outputstringslice := make([]string, 4)
+	outputstringslice := make([]string, 8)
 	InFileExists := false
 
-	fmt.Println(" dateconvert.go lastModified is", lastModified)
+	fmt.Println(" citibankdateconvert.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
 		filenames := filepicker.GetFilenames("*" + csvext)
 		for i := 0; i < min(len(filenames), 10); i++ {
@@ -162,11 +161,16 @@ func main() {
 		} else if len(record[4]) < 2 { // likely an empty line
 			continue
 		}
-		datestring := record[0]
+		//		fmt.Println(" input record:", record)
+		row.cleared = record[0]
+		datestring := record[1]
 		row.date = ExtractDateFromString(datestring)
-		row.amount = ExtractAmtFromString(record[1])
-		row.descr = record[2]
-		row.comment = record[3]
+		row.chknum = record[2]
+		row.descr = record[3]
+		row.amount = ExtractAmtFromString(record[4])
+		row.comment = record[5]
+		row.acntnum = record[6]
+		row.unon = record[7]
 
 		rows = append(rows, row)
 	}
@@ -179,10 +183,14 @@ func main() {
 	defer wrtr.Flush()
 
 	for ctr, r := range rows {
-		outputstringslice[0] = r.date
-		outputstringslice[1] = r.amount
-		outputstringslice[2] = r.descr
-		outputstringslice[3] = r.comment
+		outputstringslice[0] = r.cleared
+		outputstringslice[1] = r.date
+		outputstringslice[2] = r.chknum
+		outputstringslice[3] = r.descr
+		outputstringslice[4] = r.amount
+		outputstringslice[5] = r.comment
+		outputstringslice[6] = r.acntnum
+		outputstringslice[7] = r.unon
 		fmt.Printf(" %d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2], outputstringslice[3])
 		if e = wrtr.Write(outputstringslice); e != nil {
 			log.Fatalln(" Error writing record to csv:", e)
@@ -233,12 +241,24 @@ func ExtractDateFromString(in string) string {
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
-	//	y := token.Isum
-	ystr = token.Str
+	y := token.Isum
+	if y >= 1900 {
+		ystr = token.Str
+	} else { // assume all 2 digit dates are in the 21st century for banking transactions
+		ystr = "20" + token.Str
+	}
 
 	out := ystr + "-" + mstr + "-" + dstr
 	return out
 } // end ExtractDateFromString
+
+//-------------------------------------------------------
+func check(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 //-------------------------------------------------------
 func ExtractAmtFromString(in string) string {
 	// Need to make ($###.##) format to -###.##.  If already -###.##, leave alone.
@@ -272,12 +292,6 @@ func ExtractAmtFromString(in string) string {
 } // end ExtractAmtFromString
 
 //-------------------------------------------------------
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 //-------------------------------------------------------
 func Pause() {
 	scanner := bufio.NewScanner(os.Stdin)
