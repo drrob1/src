@@ -17,7 +17,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "25 Dec 2017"
+const lastModified = "30 Dec 2017"
 
 /*
 MODULE qfx2xls;
@@ -57,7 +57,10 @@ MODULE qfx2xls;
 		I think I will first process the file using something like toascii.
   19 Oct 17 -- Added filepicker code
    1 Nov 17 -- Added output of $ for footer amount.
-  25 Dec 27 -- Decided to try changing date format to match ISO8601 YYYY-MM-DD required for sqlite.
+  25 Dec 17 -- Decided to try changing date format to match ISO8601 YYYY-MM-DD required for sqlite.
+  30 Dec 17 -- Discovered that Access won't handle yyyy-mm-dd format, only Excel will.  Now I need
+                 to write out 2 different files, one for Access and one for Sqlite.db.  And I need to
+				 append 2 commas for the sqlite file.
 */
 
 const ( // intended for ofxCharType
@@ -92,6 +95,8 @@ const KB = 1024
 const MB = KB * KB
 const ofxext = ".OFX"
 const qfxext = ".QFX"
+const sqliteoutfile = "citifile.csv"
+const accessoutfile = "citifile.txt"
 
 type citiheadertype struct {
 	DTSERVER string
@@ -226,9 +231,9 @@ func main() {
 		}
 	}
 
-	// Output to file section
+	// Output to Access format file section
 
-	OutFilename := "citifile.txt" // this is the output filename used by CitiFilterQIF.mod
+	OutFilename := accessoutfile
 	OutputFile, err := os.Create(OutFilename)
 	check(err)
 	defer OutputFile.Close()
@@ -259,36 +264,77 @@ func main() {
 	}
 	OutputFile.Close()
 
+	// Now to reformat the datestring for output to Sqlite
+
+	for ctr, t := range Transactions {
+		Transactions[ctr].DTPOSTED = DateFieldAccessToSQlite(t.DTPOSTED)
+	}
+
+	OutFilename = sqliteoutfile
+	OutputFile, err = os.Create(OutFilename)
+	check(err)
+	defer OutputFile.Close()
+	writer = csv.NewWriter(OutputFile)
+	defer writer.Flush()
+
+	outputstringslice = make([]string, 8, 10) // need to add 2 empty fields at the end of each line.
+	for ctr, t := range Transactions {
+		outputstringslice[0] = t.TRNTYPE
+		outputstringslice[1] = t.DTPOSTED
+		outputstringslice[2] = t.CHECKNUM
+		outputstringslice[3] = t.Descript
+		outputstringslice[4] = t.TRNAMT
+		outputstringslice[5] = header.ACCTTYPE
+		outputstringslice[6] = ""
+		outputstringslice[7] = ""
+		fmt.Printf(" %d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2], outputstringslice[3], outputstringslice[4], outputstringslice[5])
+		if e = writer.Write(outputstringslice); e != nil {
+			log.Fatalln(" Error writing record to csv:", e)
+		}
+		if ctr%40 == 0 && ctr > 0 {
+			Pause()
+		}
+	}
+	fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		log.Fatal(err)
+	}
+	OutputFile.Close()
+
 } // end main of this package
 
 //---------------------------------------------------------------------------------------------------
-/*
-func DateFieldReformat(datein string) (string, int) {  Original way that is not compatible with ISO8601 fmt.
-	//                                                                    01234567    01234567
-	//  This procedure changes the date as it is input in a qfx file from yyyymmdd -> mm/dd/yy.
-	// I have to look into if I want a 2 or 4 digit year
+
+func DateFieldReformatAccess(datein string) (string, int) {
+	//                                                                0123456789     01234567
+	//  This procedure changes the date as it is input in a qfx file: mm/dd/yyyy <-- YYYYMMDD
+	// I have to look into if I want a 2 or 4 digit year.  I'll make it a 4 digit year, as of
+	// Dec 2017, when I became interested in Sqlite because it's FOSS.
 
 	var dateout string
 
-	datebyteslice := make([]byte, 8)
+	datebyteslice := make([]byte, 10)
 	datebyteslice[0] = datein[4]
 	datebyteslice[1] = datein[5]
 	datebyteslice[2] = '/'
 	datebyteslice[3] = datein[6]
 	datebyteslice[4] = datein[7]
 	datebyteslice[5] = '/'
-	datebyteslice[6] = datein[2]
-	datebyteslice[7] = datein[3]
+	datebyteslice[6] = datein[0]
+	datebyteslice[7] = datein[1]
+	datebyteslice[8] = datein[2]
+	datebyteslice[9] = datein[3]
 	dateout = string(datebyteslice)
 	m, _ := strconv.Atoi(datein[4:6])
 	d, _ := strconv.Atoi(datein[6:8])
 	y, _ := strconv.Atoi(datein[0:4])
 	juldate := timlibg.JULIAN(m, d, y)
 	return dateout, juldate
-
-} // END DateFieldReformat;
-*/
-func DateFieldReformat(datein string) (string, int) {
+} // END DateFieldReformatAccess;
+/*
+func DateFieldReformatSQlite(datein string) (string, int) {
 	//                                                                    01234567    0123456789
 	//  This procedure changes the date as it is input in a qfx file from yyyymmdd -> YYYY-MM-DD.
 	// I have to look into if I want a 2 or 4 digit year
@@ -312,8 +358,34 @@ func DateFieldReformat(datein string) (string, int) {
 	y, _ := strconv.Atoi(datein[0:4])
 	juldate := timlibg.JULIAN(m, d, y)
 	return dateout, juldate
+} // END DateFieldReformatSQlite;
+*/
 
-} // END DateFieldReformat;
+func DateFieldAccessToSQlite(datein string) string {
+	//                                   0123456789     0123456789
+	//  This procedure changes the date: YYYY-MM-DD <-- MM/DD/YYYY
+	// Written after I learned that Access won't handle the YYYY-MM-DD format, so now I have to
+	// write out 2 files.  First I'll write the Access file, then reprocess the date fields to
+	// write out the Sqlite format.  The Juldate doesn't change, but I don't think I use it
+	// anyway.
+
+	var dateout string
+
+	datebyteslice := make([]byte, 10)
+	datebyteslice[0] = datein[6]
+	datebyteslice[1] = datein[7]
+	datebyteslice[2] = datein[8]
+	datebyteslice[3] = datein[9]
+	datebyteslice[4] = '-'
+	datebyteslice[5] = datein[0]
+	datebyteslice[6] = datein[1]
+	datebyteslice[7] = '-'
+	datebyteslice[8] = datein[3]
+	datebyteslice[9] = datein[4]
+	dateout = string(datebyteslice)
+	return dateout
+} // END DateFieldAccessToSQlite
+
 //--------------------------------------------------------------------------------------------------
 func GetOfxToken(buf *bytes.Buffer) ofxTokenType {
 	// -------------------------------------------------- GetQfxToken ----------------------------------
@@ -443,7 +515,7 @@ func GetTransactionData(buf *bytes.Buffer) citiTransactionType {
 				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
 				break
 			} // if EOF or token state not a string
-			transaction.DTPOSTED, transaction.Juldate = DateFieldReformat(OFXtoken.Str)
+			transaction.DTPOSTED, transaction.Juldate = DateFieldReformatAccess(OFXtoken.Str)
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "TRNAMT") {
 			OFXtoken = GetOfxToken(buf)
