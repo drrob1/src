@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "10 Nov 2017"
+const LastAlteredDate = "30 Dec 2017"
 
 /*
   REVISION HISTORY
@@ -23,6 +23,7 @@ const LastAlteredDate = "10 Nov 2017"
   26 July 17 -- Will try to learn delve (dlv) by using it to debug the routines here that don't work.
    7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
    8 Nov 17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
+  30 Dec 17 -- Added comparing to sort.Strings.  Nevermind.  It's already done.
 */
 
 func StraightInsertion(input []string) []string {
@@ -751,7 +752,8 @@ func main() {
 	}
 	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
 	check(err)
-}
+
+} // end main
 
 //===========================================================
 func check(e error) {
