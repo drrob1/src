@@ -16,7 +16,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "27 Dec 2017"
+const lastModified = "31 Dec 2017"
 
 /*
 MODULE qfx2xls;
@@ -56,9 +56,12 @@ MODULE qfx2xls;
 		I think I will first process the file using something like toascii.
   19 Oct 17 -- Added filepicker code
    1 Nov 17 -- Added output of $ for footer amount.
-  24 Dec 17 -- Now called dateconvert, meant to read csv from sqlite and change format to ISO8601 YYYY-MM-DD HH:MM:SS.SSS
+  24 Dec 17 -- Now called dateconvert, meant to read csv from sqlite and change format to ISO8601 YYYY-MM-DD
+               Fields are date,amount,descr,comment, like in allcc-sqlite.db.
   25 Dec 17 -- Now will do same thing for Allcc-Sqlite.db.  Too bad the fields are in a different order.
   27 Dec 17 -- Added automatic removal of blank lines, and fixed 00 problem.
+  31 Dec 17 -- Fixed a panic when testing record[4].  There is no record[4].  What was I thinking???
+               And I broadened the ExtractAmtFromString logic.
 */
 
 type Row struct {
@@ -159,7 +162,7 @@ func main() {
 			break
 		} else if err != nil {
 			log.Fatal(err)
-		} else if len(record[4]) < 2 { // likely an empty line
+		} else if len(record[0]) < 2 { // likely an empty line.  Was record[4]; don't remember why
 			continue
 		}
 		datestring := record[0]
@@ -255,7 +258,7 @@ func ExtractAmtFromString(in string) string {
 	}
 
 	for i := range bs {
-		if bs[i] == ')' {
+		if bs[i] == ')' || bs[i] == '(' || bs[i] == '$' {
 			bs[i] = ' '
 		}
 	}
