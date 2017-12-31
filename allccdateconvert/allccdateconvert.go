@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"tokenize"
+	"unicode"
 )
 
 const lastModified = "31 Dec 2017"
@@ -162,7 +163,9 @@ func main() {
 			break
 		} else if err != nil {
 			log.Fatal(err)
-		} else if len(record[0]) < 2 { // likely an empty line.  Was record[4]; don't remember why
+		} else if len(record[0]) < 3 { // likely an empty field with just "", like a Header line.
+			continue
+		} else if unicode.IsLetter(rune(record[0][0])) { // Header line.
 			continue
 		}
 		datestring := record[0]
