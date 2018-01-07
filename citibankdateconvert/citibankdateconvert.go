@@ -13,10 +13,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"tknptr"
 	"tokenize"
 )
 
-const lastModified = "27 Dec 2017"
+const lastModified = "6 Jan 2018"
 
 /*
 MODULE qfx2xls;
@@ -58,6 +59,9 @@ MODULE qfx2xls;
    1 Nov 17 -- Added output of $ for footer amount.
   24 Dec 17 -- Now called dateconvert, meant to read csv from sqlite and change format to ISO8601 YYYY-MM-DD HH:MM:SS.SSS
   27 Dec 17 -- Now called Citibankdateconvert, to do for citibank.db as I already did for the others
+   5 Jan 18 -- Will have it change the output format of the date field to the opposite of the input file.
+   6 Jan 18 -- Expanded ReformatToISO8601date to accept either 2 or 4 digit year in input.
+                 And will use tknptr instead of tokenize, for variety in ReformatToStdDate
 */
 
 type Row struct {
@@ -164,7 +168,17 @@ func main() {
 		//		fmt.Println(" input record:", record)
 		row.cleared = record[0]
 		datestring := record[1]
-		row.date = ExtractDateFromString(datestring)
+		if IsNotDate(datestring) {
+			fmt.Print(" First field is not formated like a date. Continue? ")
+			if Stop() {
+				os.Exit(1)
+			}
+		}
+		if IsISO8601(datestring) {
+			row.date = ReformatToStdDate(datestring)
+		} else {
+			row.date = ReformatToISO8601date(datestring)
+		}
 		row.chknum = record[2]
 		row.descr = record[3]
 		row.amount = ExtractAmtFromString(record[4])
@@ -210,12 +224,13 @@ func main() {
 
 //---------------------------------------------------------------------------------------------------
 
-func ExtractDateFromString(in string) string {
-	// need to construct YYYY-MM-DD from MM/DD/YYYY
+func ReformatToISO8601date(in string) string {
+	//                                          formerly  func ExtractDateFromString(in string) string {
+	// need to construct YYYY-MM-DD from MM/DD/YYYY or MM/DD/YY
 	var mstr, dstr, ystr string
 
 	tokenize.INITKN(in)
-	token, EOL := tokenize.GETTKN()
+	token, EOL := tokenize.GETTKN() // get MM
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
@@ -226,10 +241,11 @@ func ExtractDateFromString(in string) string {
 		mstr = "0" + token.Str
 	}
 	token, EOL = tokenize.GETTKN() // discard the / which is state of opcode.
-	token, EOL = tokenize.GETTKN()
+	token, EOL = tokenize.GETTKN() // get DD
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
+
 	L := len(token.Str)
 	if L >= 2 {
 		dstr = token.Str
@@ -237,21 +253,66 @@ func ExtractDateFromString(in string) string {
 		dstr = "0" + token.Str
 	}
 	token, EOL = tokenize.GETTKN() // discard the / which is state of opcode.
-	token, EOL = tokenize.GETTKN()
+	token, EOL = tokenize.GETTKN() // get YY or YYYY
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
 	y := token.Isum
-	if y >= 1900 {
-		ystr = token.Str
-	} else { // assume all 2 digit dates are in the 21st century for banking transactions
-		ystr = "20" + token.Str
+	if y < 100 {
+		y += 2000
 	}
+	ystr = strconv.Itoa(y)
 
 	out := ystr + "-" + mstr + "-" + dstr
 	return out
-} // end ExtractDateFromString
+} // end ReformatToISO8601date, formerly ExtractDateFromString
+//-------------------------------------------------------
+func ReformatToStdDate(in string) string {
+	// need to construct MM/DD/YYYY from YYYY-MM-DD
+	var mstr, dstr, ystr string
 
+	tknP := tknptr.INITKN(in)
+	token, EOL := tknP.GETTKN() // get YYYY
+	if EOL || token.State != tknptr.DGT {
+		return ""
+	}
+	y := token.Isum
+	if y < 100 {
+		y += 2000
+	}
+	ystr = strconv.Itoa(y)
+
+	//	token, EOL = tknP.GETTKN() // discard the - which is state of opcode.
+	token, EOL = tknP.GETTKN() // get MM, which is negative because of the dash as a minus sign effect.
+	if EOL || token.State != tknptr.DGT {
+		return ystr
+	}
+	m := token.Isum
+	if m < 0 {
+		m = -m
+	}
+	if m > 9 {
+		mstr = token.Str
+	} else {
+		mstr = "0" + strconv.Itoa(m)
+	}
+
+	//  token, EOL = tknP.GETTKN() // discard the - which is state of opcode.
+	token, EOL = tknP.GETTKN() // get DD, which is negative because of the dash as a minus sign effect
+	if EOL || token.State != tknptr.DGT {
+		return ystr + "-" + mstr
+	}
+	L := len(token.Str)
+	if L >= 2 {
+		dstr = token.Str // the leading "-" won't be in the Str field.
+	} else {
+		dstr = "0" + token.Str
+	}
+
+	out := mstr + "/" + dstr + "/" + ystr
+	return out
+} // end ReformatToStdDate
+//-------------------------------------------------------
 //-------------------------------------------------------
 func check(err error) {
 	if err != nil {
@@ -329,5 +390,30 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
+//---------------------------------------------------------------------------------------------------
+func IsISO8601(instr string) bool {
+	// Look for either a - or a / in the string.  That's it!
+	isISOdate := strings.Contains(instr, "-")
+	return isISOdate
+}
+
+//---------------------------------------------------------------------------------------------------
+func IsNotDate(instr string) bool {
+	NotAdate := !strings.ContainsAny(instr, "-/")
+	return NotAdate
+}
+
+//---------------------------------------------------------------------------------------------------
+func Stop() bool {
+	var ans string
+	_, _ = fmt.Scanln(&ans)
+	ans = strings.ToUpper(ans)
+	stopflag := false
+	if len(ans) > 0 && strings.HasPrefix(ans, "N") {
+		stopflag = true
+	}
+	return stopflag
+}
+
 //---------------------------------------------------------------------------------------------------
 // END dateconvert based on ofx2csv.go based on qfx2xls.mod

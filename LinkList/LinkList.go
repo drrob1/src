@@ -246,7 +246,7 @@ func main() {
 		PrevPlaceInListP = CurrentPlaceInListP
 		CurrentPlaceInListP = CurrentPlaceInListP.PrevP
 	}
-
+	//	EndofListP++  Compilation fails with a non-numeric operation, non-numeric type.
 	/* Deallocate is unnecessary in Go */
 
 } // LinkList
