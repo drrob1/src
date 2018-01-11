@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "13 Dec 2017"
+const LastAltered = "10 Jan 2018"
 
 /*
 Revision History
@@ -39,6 +39,7 @@ Revision History
 23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
 12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
 13 Dec 17 -- Changed how lines are counted.
+10 Jan 18 -- Added correct processing of ~.  The CleanFileName is ignored.  Only CleanDirName is used.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -74,7 +75,7 @@ func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
 	var numlines int
-	var userptr *user.User
+	var userptr *user.User // from os/user
 	var files FISlice
 	var filesDate FISliceDate
 	var filesSize FISliceSize
@@ -164,12 +165,15 @@ func main() {
 
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
-	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want
+	commandline := flag.Arg(0)              // this only gets the first non flag argument.  That's all I want.
+	sepstring := string(filepath.Separator) // filepath.Separator is of type rune.
 	if len(commandline) > 0 {
-		//		CleanDirName = filepath.Clean(commandline)
+		if !strings.HasSuffix(commandline, sepstring) {
+			commandline = commandline + sepstring
+		}
 		CleanDirName, CleanFileName = filepath.Split(commandline)
-		CleanFileName = strings.ToUpper(CleanFileName)
 		askforinput = false
+		fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)
 	}
 
 	if askforinput {
@@ -184,8 +188,14 @@ func main() {
 		}
 		if len(newtext) > 0 {
 			// time to do the stuff I'm writing this pgm for
+			if !strings.HasSuffix(newtext, sepstring) {
+				newtext = newtext + sepstring
+			}
+			if strings.Contains(newtext, "~") {
+				newtext = strings.Replace(newtext, "~", userptr.HomeDir, 1) // userptr is from os/user package
+			}
 			CleanDirName, CleanFileName = filepath.Split(newtext)
-			CleanFileName = strings.ToUpper(CleanFileName)
+			fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)
 		}
 
 	}
