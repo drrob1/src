@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -17,7 +16,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "10 Jan 2018"
+const LastAltered = "11 Jan 2018"
 
 /*
 Revision History
@@ -40,6 +39,7 @@ Revision History
 12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
 13 Dec 17 -- Changed how lines are counted.
 10 Jan 18 -- Added correct processing of ~.
+11 Jan 18 -- Switching to fmt.Scanln.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -182,13 +182,18 @@ func main() {
 	if askforinput {
 		// Asking for input so don't have to worry about command line globbing
 		fmt.Print(" Enter input for globbing: ")
-		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Scan()
-		newtext := scanner.Text()
-		if err = scanner.Err(); err != nil {
-			fmt.Fprintln(os.Stderr, " reading std input: ", err)
-			os.Exit(1)
-		}
+		//		scanner := bufio.NewScanner(os.Stdin)
+		//		scanner.Scan()
+		//		newtext := scanner.Text()
+		//		if err = scanner.Err(); err != nil {
+		//			fmt.Fprintln(os.Stderr, " reading std input: ", err)
+		//			os.Exit(1)
+		//		}
+		newtext := ""
+		fmt.Scanln(&newtext)
+		//		_, err = fmt.Scanln(&newtext)
+		//		fmt.Println("Status of Scanln err is", err)  A blank line gives the error "unexpected newline", which I'm going to ignore.
+
 		if len(newtext) > 0 {
 			// time to do the stuff I'm writing this pgm for
 			if strings.Contains(newtext, "~") {
