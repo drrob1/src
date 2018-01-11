@@ -172,8 +172,8 @@ func main() {
 		if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
 			commandline = strings.Replace(commandline, "~", HomeDirStr, 1) // userptr is from os/user package
 		}
-		//		commandline = filepath.Clean(commandline) // get rid of double filepath Separator.  Nevermind, it didn't work.  It may have removed too many Separators
 		CleanDirName, CleanFileName = filepath.Split(commandline)
+		CleanDirName = filepath.Clean(CleanDirName)
 		CleanFileName = strings.ToUpper(CleanFileName)
 		askforinput = false
 		//		fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  debugging line removed.
@@ -194,8 +194,8 @@ func main() {
 			if strings.Contains(newtext, "~") {
 				newtext = strings.Replace(newtext, "~", HomeDirStr, 1) // userptr is from os/user package
 			}
-			//			newtext = filepath.Clean(newtext) // get rid of double filepath Separator.  Nevermind, it didn't work.  It may have removed too many Separators.
 			CleanDirName, CleanFileName = filepath.Split(newtext)
+			CleanDirName = filepath.Clean(CleanDirName)
 			CleanFileName = strings.ToUpper(CleanFileName)
 			//			fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  a debugging line.
 		}
