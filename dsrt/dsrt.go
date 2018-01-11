@@ -39,7 +39,7 @@ Revision History
 23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
 12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
 13 Dec 17 -- Changed how lines are counted.
-10 Jan 18 -- Added correct processing of ~.  The CleanFileName is ignored.  Only CleanDirName is used.
+10 Jan 18 -- Added correct processing of ~.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -165,15 +165,18 @@ func main() {
 
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
-	commandline := flag.Arg(0)              // this only gets the first non flag argument.  That's all I want.
-	sepstring := string(filepath.Separator) // filepath.Separator is of type rune.
+	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want.
+	sepstring := string(filepath.Separator)
+	HomeDirStr := userptr.HomeDir + sepstring
 	if len(commandline) > 0 {
-		if !strings.HasSuffix(commandline, sepstring) {
-			commandline = commandline + sepstring
+		if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
+			commandline = strings.Replace(commandline, "~", HomeDirStr, 1) // userptr is from os/user package
 		}
+		//		commandline = filepath.Clean(commandline) // get rid of double filepath Separator.  Nevermind, it didn't work.  It may have removed too many Separators
 		CleanDirName, CleanFileName = filepath.Split(commandline)
+		CleanFileName = strings.ToUpper(CleanFileName)
 		askforinput = false
-		fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)
+		//		fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  debugging line removed.
 	}
 
 	if askforinput {
@@ -188,14 +191,13 @@ func main() {
 		}
 		if len(newtext) > 0 {
 			// time to do the stuff I'm writing this pgm for
-			if !strings.HasSuffix(newtext, sepstring) {
-				newtext = newtext + sepstring
-			}
 			if strings.Contains(newtext, "~") {
-				newtext = strings.Replace(newtext, "~", userptr.HomeDir, 1) // userptr is from os/user package
+				newtext = strings.Replace(newtext, "~", HomeDirStr, 1) // userptr is from os/user package
 			}
+			//			newtext = filepath.Clean(newtext) // get rid of double filepath Separator.  Nevermind, it didn't work.  It may have removed too many Separators.
 			CleanDirName, CleanFileName = filepath.Split(newtext)
-			fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)
+			CleanFileName = strings.ToUpper(CleanFileName)
+			//			fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  a debugging line.
 		}
 
 	}
