@@ -36,9 +36,10 @@ import (
   14 Oct 17 -- Tweaked output a bit.  And added executable timestamp code.
   19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
   22 Oct 17 -- Added filepicker.
+  21 Jan 18 -- Really ignore *.  Before method did not work.
 */
 
-const LastCompiled = "22 Oct 2017"
+const LastCompiled = "21 Jan 2018"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -68,7 +69,7 @@ func main() {
 
 	fmt.Print(" comparehashes written in Go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
 
-	fmt.Println(".  Last compiled ", LastCompiled)
+	fmt.Println(".  Last altered", LastCompiled)
 	//            fmt.Println(".  HashType = md5, sha1, sha256, sha384, sha512.  WhichHash = ",HashName[WhichHash]);
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable()
@@ -164,8 +165,11 @@ func main() {
 			continue
 		} /* allow comments and essentially blank lines */
 
+		inputline = strings.Replace(inputline, "*", " ", -1) // just blank out the * char
 		tokenize.INITKN(inputline)
-		tokenize.SetMapDelim('*') // to ignore this character that begins the filename field.  Don't know why it's there.
+
+		//tokenize.SetMapDelim('*') does not work to ignore this character that begins the filename field.
+		//SetMapDelim will only work with GetToken or GETTKN, not GetTokenString
 
 		FirstToken, EOL := tokenize.GetTokenString(false)
 
