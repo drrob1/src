@@ -62,6 +62,8 @@ import (
                  I hope that I don't break anything.  And I'm not changing tknptr package for now.
   19 Oct 17 -- Standard hash256 files for linux include a * in front of the filename.  I'm not sure why.  I want to
                  ignore this, so I'm writing SetMapDelim so I can.
+  26 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
+                 when I remap the characters.
 */
 
 type FSATYP int
@@ -685,14 +687,10 @@ ExitLoop:
 	return TOKEN, EOL
 } // GETTKNREAL
 
-
-
 // ---------------------------------------- SetMapDelim -----------------------------------------
 func SetMapDelim(char byte) {
-    StateMap[char] = DELIM
+	StateMap[char] = DELIM
 } // SetMapDelim
-
-
 
 // *************************************** GetTokenString ***************************************
 
@@ -702,14 +700,38 @@ func GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool) {
 		StateMap[byte(c)] = ALLELSE
 	}
 
-	StateMap['#'] = ALLELSE /* poundsign */
-	StateMap['*'] = ALLELSE /* multsign */
-	StateMap['+'] = ALLELSE /* plussign */
-	StateMap['-'] = ALLELSE /* minussign */
-	StateMap['/'] = ALLELSE /* divsign */
-	StateMap['<'] = ALLELSE /* LTSIGN */
-	StateMap['='] = ALLELSE /* EQUAL */
-	StateMap['>'] = ALLELSE /* GTSIGN */
+	// remember that these map assignments could have been altered by SetMapDelim.  In that case I will not change the StateMap for that character
+	if StateMap['#'] == OP {
+		StateMap['#'] = ALLELSE
+	}
+
+	if StateMap['*'] == OP {
+		StateMap['*'] = ALLELSE
+	}
+
+	if StateMap['+'] == OP {
+		StateMap['+'] = ALLELSE
+	}
+
+	if StateMap['-'] == OP {
+		StateMap['-'] = ALLELSE
+	}
+
+	if StateMap['/'] == OP {
+		StateMap['/'] = ALLELSE
+	}
+
+	if StateMap['<'] == OP {
+		StateMap['<'] = ALLELSE
+	}
+
+	if StateMap['='] == OP {
+		StateMap['='] = ALLELSE /* plussign */
+	}
+
+	if StateMap['>'] == OP {
+		StateMap['>'] = ALLELSE /* minussign */
+	}
 
 	TOKEN, EOL = GetToken(UpperCase)
 	if EOL || (TOKEN.State == DELIM) || ((TOKEN.State == ALLELSE) && (TOKEN.DelimState == DELIM)) {

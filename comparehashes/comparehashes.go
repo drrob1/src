@@ -37,9 +37,10 @@ import (
   19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
   22 Oct 17 -- Added filepicker.
   21 Jan 18 -- Really ignore *.  Before method did not work.
+  26 Jan 18 -- Changed tokenize so that SetMapDelim change sticks.
 */
 
-const LastCompiled = "21 Jan 2018"
+const LastCompiled = "26 Jan 2018"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -165,11 +166,10 @@ func main() {
 			continue
 		} /* allow comments and essentially blank lines */
 
-		inputline = strings.Replace(inputline, "*", " ", -1) // just blank out the * char
+		//	inputline = strings.Replace(inputline, "*", " ", -1) // just blank out the * char
 		tokenize.INITKN(inputline)
 
-		//tokenize.SetMapDelim('*') does not work to ignore this character that begins the filename field.
-		//SetMapDelim will only work with GetToken or GETTKN, not GetTokenString
+		tokenize.SetMapDelim('*') // this should now work, as of 01/26/2018
 
 		FirstToken, EOL := tokenize.GetTokenString(false)
 
