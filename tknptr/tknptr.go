@@ -62,6 +62,8 @@ import (
   18 Oct 17 -- Changed init process so all control codes are delims, just as in the current tokenize.
   19 Oct 17 -- Standard hash256 files for linux include a * in front of the filename.  I'm not sure why.  I want to
                  ignore this, so I'm writing SetMapDelim so I can.
+  27 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
+                 when I remap the characters.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -154,7 +156,7 @@ func init() {
 // ------------------------------------ InitStateMap ------------------------------------------------
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
 func InitStateMap() {
-//	StateMap[NullChar] = DELIM
+	//	StateMap[NullChar] = DELIM
 	for i := 0; i < 33; i++ {
 		StateMap[byte(i)] = DELIM
 	}
@@ -166,7 +168,7 @@ func InitStateMap() {
 	}
 	StateMap[' '] = DELIM
 	StateMap[';'] = DELIM
-//	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab.  This line is unnecessary after I changed the init loop above
+	//	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab.  This line is unnecessary after I changed the init loop above
 	StateMap['#'] = OP
 	StateMap['*'] = OP
 	StateMap['+'] = OP
@@ -588,15 +590,10 @@ func FromHex(s string) int {
 	return result
 } // FromHex
 
-
-
 // ---------------------------------------- SetMapDelim -----------------------------------------
 func SetMapDelim(char byte) {
-    StateMap[char] = DELIM
+	StateMap[char] = DELIM
 } // SetMapDelim
-
-
-
 
 //-------------------------------------------- GETTKNREAL ---------------------------------------
 // I am copying the working code from TKNRTNS here.  See the comments in tknrtnsa.adb for reason why.
@@ -710,14 +707,38 @@ func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool
 		StateMap[byte(c)] = ALLELSE
 	}
 
-	StateMap['#'] = ALLELSE /* poundsign */
-	StateMap['*'] = ALLELSE /* multsign */
-	StateMap['+'] = ALLELSE /* plussign */
-	StateMap['-'] = ALLELSE /* minussign */
-	StateMap['/'] = ALLELSE /* divsign */
-	StateMap['<'] = ALLELSE /* LTSIGN */
-	StateMap['='] = ALLELSE /* EQUAL */
-	StateMap['>'] = ALLELSE /* GTSIGN */
+	// remember that these map assignments could have been altered by SetMapDelim.  In that case I will not change the StateMap for that character
+	if StateMap['#'] == OP {
+		StateMap['#'] = ALLELSE
+	}
+
+	if StateMap['*'] == OP {
+		StateMap['*'] = ALLELSE
+	}
+
+	if StateMap['+'] == OP {
+		StateMap['+'] = ALLELSE
+	}
+
+	if StateMap['-'] == OP {
+		StateMap['-'] = ALLELSE
+	}
+
+	if StateMap['/'] == OP {
+		StateMap['/'] = ALLELSE
+	}
+
+	if StateMap['<'] == OP {
+		StateMap['<'] = ALLELSE
+	}
+
+	if StateMap['='] == OP {
+		StateMap['='] = ALLELSE /* plussign */
+	}
+
+	if StateMap['>'] == OP {
+		StateMap['>'] = ALLELSE /* minussign */
+	}
 
 	TOKEN, EOL = bs.GetToken(UpperCase)
 	if EOL || (TOKEN.State == DELIM) || ((TOKEN.State == ALLELSE) && (TOKEN.DelimState == DELIM)) {
