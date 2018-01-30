@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "11 Jan 2018"
+const LastAltered = "30 Jan 2018"
 
 /*
 Revision History
@@ -40,6 +40,7 @@ Revision History
 13 Dec 17 -- Changed how lines are counted.
 10 Jan 18 -- Added correct processing of ~.
 11 Jan 18 -- Switching to fmt.Scanln.
+30 Jan 18 -- Will exit if use -h flag.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -145,6 +146,7 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
 		}
+		os.Exit(0)
 
 	}
 

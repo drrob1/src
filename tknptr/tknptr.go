@@ -591,7 +591,7 @@ func FromHex(s string) int {
 } // FromHex
 
 // ---------------------------------------- SetMapDelim -----------------------------------------
-func SetMapDelim(char byte) {
+func (bs *BufferState) SetMapDelim(char byte) {
 	StateMap[char] = DELIM
 } // SetMapDelim
 

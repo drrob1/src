@@ -1,5 +1,18 @@
 package main
 
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	//	"getcommandline"
+	"log"
+	"os"
+	"strings"
+	"tknptr"
+)
+
+const LastAltered = "30 Jan 2018"
+
 /*
   REVISION HISTORY
   ================
@@ -8,41 +21,48 @@ package main
    7 Oct 16 -- Changed the scanner to scan by words.  I hope.  This is to test the scanner for rpng.  Default is scan by lines.
   11 Aug 17 -- Now named testtokenptr, and will test using pointer receivers and scanning whole lines.
   13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
+  30 Jan 18 -- Will use flags to set the mode now.
 */
-
-import (
-	"bufio"
-	"fmt"
-	"getcommandline"
-	"log"
-	"os"
-	"strings"
-	"tknptr"
-)
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
 
 func main() {
+	//	commandline := getcommandline.GetCommandLineString()
+	//	commandline = strings.ToUpper(commandline)
+	var floatflag = flag.Bool("f", false, "call GetTknReal")  // pointer syntax
+	var noopflag = flag.Bool("noop", false, "Set No OpCodes") // pointer syntax
+	var strflag = flag.Bool("s", false, "Call GetTknStr")     // pointer syntax
+	var Strflag bool
+	flag.BoolVar(&Strflag, "S", false, "Call GetTknStr")                // value syntax
+	var eolflag = flag.Bool("e", false, "Call GetTknEOL")               // pointer syntax
+	var lowerflag = flag.Bool("l", false, "Call using lower case form") // pointer syntax
+	var helpflag = flag.Bool("h", false, "help")                        // pointer syntax
+	var mapflag = flag.Bool("m", false, "test setmapdelim routine")
+
+	flag.Parse()
+
+	if *helpflag {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
 	// testingstate = 0: gettkn, 1: gettknreal, 2: gettknstr, 3: gettkneol, 4: string lower case,
 	//                5: token lower case
 	testingstate := 0
-	commandline := getcommandline.GetCommandLineString()
-	commandline = strings.ToUpper(commandline)
-	floatflag := false
-	if (commandline == "REAL") || (commandline == "FLOAT") {
-		floatflag = true
+	if *floatflag {
 		testingstate = 1
-	} else if commandline == "STRING" {
-		testingstate = 2
-	} else if commandline == "EOL" {
-		testingstate = 3
-	} else if commandline == "STR" {
+	} else if *lowerflag && (*strflag || Strflag) {
 		testingstate = 4
-	} else if commandline == "LOWER" {
+	} else if *strflag || Strflag {
+		testingstate = 2
+	} else if *eolflag {
+		testingstate = 3
+	} else if *lowerflag {
 		testingstate = 5
 	}
 
-	fmt.Print(" Will be testing GetTknReal? ", floatflag, ", testingstate is ", testingstate)
+	fmt.Print(" Test Token Ptr last altered ", LastAltered)
+	fmt.Print(",  floatflag is ", *floatflag, ", testingstate is ", testingstate, ", mapflag is ", *mapflag)
 	fmt.Println()
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -59,18 +79,30 @@ func main() {
 		if len(inputline) == 0 {
 			os.Exit(0)
 		}
-		fmt.Println(" After the call to scanner.Text(), before TrimSpace: ", inputline, ".")
-		inputline = strings.TrimSpace(inputline)
+		//		fmt.Println(" After the call to scanner.Text(), before TrimSpace: ", inputline, ".")
+		//		inputline = strings.TrimSpace(inputline)
 		fmt.Println(" After call to TrimSpace: ", inputline)
 		if strings.ToUpper(inputline) == "QUIT" {
 			log.Println(" Test Token finished.")
 			os.Exit(0)
 		}
 		tokenbuffer := tknptr.NewToken(inputline)
+		if *mapflag || *noopflag {
+			tokenbuffer.SetMapDelim('#')
+			tokenbuffer.SetMapDelim('*')
+			tokenbuffer.SetMapDelim('+')
+			tokenbuffer.SetMapDelim('-')
+			tokenbuffer.SetMapDelim('=')
+			tokenbuffer.SetMapDelim('/')
+			tokenbuffer.SetMapDelim('<')
+			tokenbuffer.SetMapDelim('>')
+			tokenbuffer.SetMapDelim('%')
+			tokenbuffer.SetMapDelim('^')
+		}
 		EOL := false
 		token := tknptr.TokenType{}
 		for !EOL {
-			if floatflag || testingstate == 1 {
+			if *floatflag || testingstate == 1 {
 				token, EOL = tokenbuffer.GETTKNREAL()
 			} else if testingstate == 2 {
 				token, EOL = tokenbuffer.GETTKNSTR()
