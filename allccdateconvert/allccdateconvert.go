@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const lastModified = "6 Jan 2018"
+const lastModified = "2 Feb 2018"
 
 /*
   REVISION HISTORY
@@ -66,6 +66,7 @@ const lastModified = "6 Jan 2018"
    5 Jan 18 -- Will have it change the output format of the date field to the opposite of the input file.
    6 Jan 18 -- Expanded ReformatToISO8601date to accept either 2 or 4 digit year in input.
                  And will use tknptr instead of tokenize, for variety in ReformatToStdDate
+   2 Feb 18 -- Fixed formatting bug to ISO8601 format, in which January becomes 001 instead of 01.
 */
 
 type Row struct {
@@ -231,8 +232,8 @@ func ReformatToISO8601date(in string) string {
 	if EOL || token.State != tokenize.DGT {
 		return ""
 	}
-	m := token.Isum
-	if m > 9 {
+	L := len(token.Str)
+	if L >= 2 {
 		mstr = token.Str
 	} else {
 		mstr = "0" + token.Str
@@ -243,7 +244,7 @@ func ReformatToISO8601date(in string) string {
 		return ""
 	}
 
-	L := len(token.Str)
+	L = len(token.Str)
 	if L >= 2 {
 		dstr = token.Str
 	} else {
