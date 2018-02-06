@@ -29,6 +29,7 @@ package main
  12 Apr 17 -- Tweaking display output
  13 Apr 17 -- Golint complained, so I added some comments
  29 Sep 17 -- Changed the output of the final line, and added exec detection code.
+  5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
 */
 
 import (
@@ -50,7 +51,7 @@ import (
 import termbox "github.com/nsf/termbox-go"
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "29 Sep 17"
+const LastCompiled = "5 Feb 2018"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -910,7 +911,7 @@ func main() {
 	//                                               Print_tb(0,LineNum,BrightCyan,Black,s);
 	//                                               LineNum++
 	//                                               LineNum++
-
+	var OutCal1, OutCal12 *os.File
 	if Cal1FilenameFlag {
 		OutCal1, err := os.Create(Cal1Filename)
 		check(err, " Trying to create Cal1 output file")
@@ -934,11 +935,15 @@ func main() {
 		for MN := JAN; MN <= DCM; MN++ {
 			WrMonthForXL(MN)
 		} // ENDFOR
+		OutCal12file.Flush()
+		OutCal12.Close()
 	}
 
 	// Write One Page Calendar
 	if Cal1FilenameFlag {
 		WrOnePageYear()
+		OutCal1file.Flush()
+		OutCal1.Close()
 	}
 
 	LineNum++
