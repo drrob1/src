@@ -30,6 +30,7 @@ package main
  13 Apr 17 -- Golint complained, so I added some comments
  29 Sep 17 -- Changed the output of the final line, and added exec detection code.
   5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
+  6 Feb 18 -- Tried to move global variables to main, but had to move them back.
 */
 
 import (
@@ -47,11 +48,12 @@ import (
 	"holidaycalc"
 	"timlibg"
 	"tokenize"
+
+	termbox "github.com/nsf/termbox-go"
 )
-import termbox "github.com/nsf/termbox-go"
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "5 Feb 2018"
+const LastCompiled = "6 Feb 2018"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -82,8 +84,8 @@ const (
 // DCM is now a synonym for December Month Number = 11, as Jan = 0.
 const DCM = DEC
 
-var OutputCal1, OutputCal12 os.File
-var OutCal1file, OutCal12file *bufio.Writer
+// var OutputCal1, OutputCal12 os.File
+var OutCal1file, OutCal12file *bufio.Writer // must be global
 var PROMPT, ExtDefault, YEARSTR string
 var BLANKSTR2 = "  "
 var BLANKSTR3 = "   "
