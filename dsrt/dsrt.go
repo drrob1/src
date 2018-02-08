@@ -16,31 +16,32 @@ import (
 	"strings"
 )
 
-const LastAltered = "30 Jan 2018"
+const LastAltered = "8 Feb 2018"
 
 /*
 Revision History
 ----------------
-20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
-21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
-22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
-22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
-24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
-25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
-26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
-27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
-19 May 17 -- Will now show the uid:gid for linux.
-20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
-21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
- 2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
-18 Oct 17 -- Added filesize totals
-22 Oct 17 -- Made default numlines of 40.
-23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
-12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
-13 Dec 17 -- Changed how lines are counted.
-10 Jan 18 -- Added correct processing of ~.
-11 Jan 18 -- Switching to fmt.Scanln.
-30 Jan 18 -- Will exit if use -h flag.
+  20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
+  21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
+  22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
+  22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
+  24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
+  25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
+  26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
+  27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
+  19 May 17 -- Will now show the uid:gid for linux.
+  20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
+  21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
+   2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
+  18 Oct 17 -- Added filesize totals
+  22 Oct 17 -- Made default numlines of 40.
+  23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
+  12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
+  13 Dec 17 -- Changed how lines are counted.
+  10 Jan 18 -- Added correct processing of ~.
+  11 Jan 18 -- Switching to fmt.Scanln.
+  30 Jan 18 -- Will exit if use -h flag.
+   8 Feb 18 -- Windows version will not pause to accept a pattern, as it's not necessary.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -87,6 +88,8 @@ func main() {
 	uid := 0
 	gid := 0
 	systemStr := ""
+	askforinput := true
+
 	linuxflag := runtime.GOOS == "linux"
 	if linuxflag {
 		systemStr = "Linux"
@@ -94,6 +97,7 @@ func main() {
 	} else if runtime.GOOS == "windows" {
 		systemStr = "Windows"
 		numlines = defaultlineswin
+		askforinput = false // added 02/08/2018 11:56:23 AM, so won't ask for input on Windows system, ever.
 	} else {
 		systemStr = "Mac, maybe"
 		numlines = defaultlineslinux
@@ -162,8 +166,6 @@ func main() {
 
 	Dirlist := *DirListFlag || FilenameListFlag // if -D entered then this expression also needs to be true.
 	FilenameList := !FilenameListFlag           // need to reverse the flag.
-
-	askforinput := true
 
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
