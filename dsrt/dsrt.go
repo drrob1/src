@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "8 Feb 2018"
+const LastAltered = "23 Feb 2018"
 
 /*
 Revision History
@@ -42,6 +42,7 @@ Revision History
   11 Jan 18 -- Switching to fmt.Scanln.
   30 Jan 18 -- Will exit if use -h flag.
    8 Feb 18 -- Windows version will not pause to accept a pattern, as it's not necessary.
+  23 Feb 18 -- Fixing a bug when GOARCH=386 in that userptr causes a panic.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -171,7 +172,14 @@ func main() {
 	CleanFileName := ""
 	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want.
 	sepstring := string(filepath.Separator)
-	HomeDirStr := userptr.HomeDir + sepstring
+	HomeDirStr := ""
+	if userptr != nil {
+		HomeDirStr = userptr.HomeDir + sepstring
+	} else if linuxflag {
+		HomeDirStr = os.Getenv("HOME") + sepstring
+	} else { // must be Windows system.
+		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
+	}
 	if len(commandline) > 0 {
 		if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
 			commandline = strings.Replace(commandline, "~", HomeDirStr, 1) // userptr is from os/user package
