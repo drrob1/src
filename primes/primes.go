@@ -54,6 +54,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	N := int(U)
+	PrimeFactors := PrimeFactorization(N)
+
+	fmt.Print(" Prime factors for ", N, " are : ")
+	for _, pf := range PrimeFactors {
+		fmt.Print(pf, "  ")
+	}
+	fmt.Println()
+	fmt.Println()
+
 	fac, primeflag := IsPrimeInt64(U)
 	if primeflag {
 		fmt.Println(U, " is prime.")
@@ -65,15 +75,14 @@ func main() {
 		}
 	}
 	fmt.Println()
+	fmt.Println()
 
-	N := int(U)
-	PrimeFactors := PrimeFactorization(N)
-
-	fmt.Print(" Prime factors for ", N, " are : ")
-	for _, pf := range PrimeFactors {
+	PrimeUfactors := PrimeFactorMemoized(uint(U))
+	for _, pf := range PrimeUfactors {
 		fmt.Print(pf, "  ")
 	}
 
+	fmt.Println()
 	fmt.Println()
 } // end of main
 
@@ -110,6 +119,35 @@ func PrimeFactorization(N int) []int {
 	return PrimeFactors
 
 } // PrimeFactorization
+
+// --------------------------------------- PrimeFactorMemoized -------------------
+func PrimeFactorMemoized(U uint) []uint {
+
+	if U == 0 {
+		return nil
+	}
+
+	var val uint = 3
+	finalval := usqrt(U)
+
+	PrimeUfactors := make([]uint, 0, 20)
+
+	//	fmt.Print("u, fac, val, primeflag : ")
+	for u := U; u > finalval; {
+		fac, primeflag := NextPrimeFac(u, val)
+		//		fmt.Print(u, " ", fac, " ", val, " ", primeflag, ", ")
+		if primeflag {
+			PrimeUfactors = append(PrimeUfactors, fac)
+			u = u / fac
+			val = fac
+		} else {
+			PrimeUfactors = append(PrimeUfactors, u)
+			break
+		}
+	}
+	//	fmt.Println()
+	return PrimeUfactors
+}
 
 // ------------------------------------------------- IsPrimeInt64 -----------------
 func IsPrimeInt64(n uint64) (uint64, bool) {
@@ -162,3 +200,34 @@ func IsPrimeInt(n uint) (uint, bool) {
 	}
 	return 0, true
 } // IsPrime
+
+// ------------------------------------------------- NextPrimeFac -----------------
+func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
+
+	var t uint = startfac
+
+	UintSqrt := usqrt(n)
+
+	for t <= UintSqrt {
+		if n%t == 0 {
+			return t, true
+		}
+		t += 2
+	}
+	return 0, false
+} // IsPrime
+
+//----------------------------------------------- usqrt ---------------------------
+func usqrt(u uint) uint {
+
+	sqrt := u / 2
+
+	for i := 0; i < 20; i++ {
+		guess := u / sqrt
+		sqrt = (guess + sqrt) / 2
+		if sqrt-guess <= 1 { // recall that this is not floating math.
+			break
+		}
+	}
+	return sqrt
+}
