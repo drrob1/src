@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "13 July 2017"
+const LastAlteredDate = "25 Feb 2018"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -74,6 +74,7 @@ REVISION HISTORY
                At some point, "?" became a synonym for "help"
 29 May 17 -- Found bug in CropNStr.  If number is in scientific notation, and the exponent ends in 0, that will be removed.
 13 July 17 -- Rewrote ToHex, based on code from the Python mooc I'm taking now.  And with more experience.
+25 Feb 18 -- PrimeFactorMemoized added.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -370,6 +371,66 @@ func IsPrimeInt(n int) bool {
 	}
 	return true
 } // IsPrimeInt
+
+// --------------------------------------- PrimeFactorMemoized -------------------
+func PrimeFactorMemoized(U uint) []uint {
+
+	if U == 0 {
+		return nil
+	}
+
+	var val uint = 3
+	finalval := usqrt(U)
+
+	PrimeUfactors := make([]uint, 0, 20)
+
+	//	fmt.Print("u, fac, val, primeflag : ")
+	for u := U; u > finalval; {
+		fac, primeflag := NextPrimeFac(u, val)
+		//		fmt.Print(u, " ", fac, " ", val, " ", primeflag, ", ")
+		if primeflag {
+			PrimeUfactors = append(PrimeUfactors, fac)
+			u = u / fac
+			val = fac
+		} else {
+			PrimeUfactors = append(PrimeUfactors, u)
+			break
+		}
+	}
+	//	fmt.Println()
+	return PrimeUfactors
+}
+
+// ------------------------------------------------- NextPrimeFac -----------------
+func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
+
+	var t uint = startfac
+
+	UintSqrt := usqrt(n)
+
+	for t <= UintSqrt {
+		if n%t == 0 {
+			return t, true
+		}
+		t += 2
+	}
+	return 0, false
+} // IsPrime
+
+//----------------------------------------------- usqrt ---------------------------
+func usqrt(u uint) uint {
+
+	sqrt := u / 2
+
+	for i := 0; i < 20; i++ {
+		guess := u / sqrt
+		sqrt = (guess + sqrt) / 2
+		if sqrt-guess <= 1 { // recall that this is not floating math.
+			break
+		}
+	}
+	return sqrt
+}
 
 // ---------------------------------------- PWRI -------------------------------------------------
 func PWRI(R float64, I int) float64 {
@@ -797,11 +858,13 @@ func GetResult(s string) (float64, []string) {
 			} else if strings.HasPrefix(Token.Str, "PRIMEFAC") {
 				// Intended for PrimeFactors or PrimeFactorization
 				PushMatrixStacks()
-				N := int(Round(Stack[X]))
-				PrimeFactors := PrimeFactorization(N)
+				//				N := int(Round(Stack[X]))
+				//				PrimeFactors := PrimeFactorization(N)
+				U := uint(Round(Stack[X]))
+				PrimeUfactors := PrimeFactorMemoized(U)
 
 				stringslice := make([]string, 0, 10)
-				for _, pf := range PrimeFactors {
+				for _, pf := range PrimeUfactors {
 					stringslice = append(stringslice, fmt.Sprintf("%d", pf))
 				}
 				ss = append(ss, strings.Join(stringslice, ", "))

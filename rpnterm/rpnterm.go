@@ -16,11 +16,11 @@ import (
 	"getcommandline"
 	"hpcalc"
 	"tokenize"
+
+	termbox "github.com/nsf/termbox-go"
 )
 
-import termbox "github.com/nsf/termbox-go"
-
-const LastAltered = "16 Aug 17"
+const LastAltered = "25 February 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -45,56 +45,57 @@ const ( // output modes
 */
 
 /*
-		     This module uses the HPCALC module to simulate an RPN type calculator.
-		     REVISION HISTORY
-		     ----------------
-		      1 Dec 89 -- Changed prompt.
-		   - 24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-		     25 Jul 93 -- Output result without trailing insignificant zeros,
+This module uses the HPCALC module to simulate an RPN type calculator.
+REVISION HISTORY
+----------------
+ 1 Dec 89 -- Changed prompt.
+24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
+25 Jul 93 -- Output result without trailing insignificant zeros,
 		                   imported UL2, and changed prompt again.
-		      3 Mar 96 -- Fixed bug in string display if real2str fails because
+3 Mar 96 -- Fixed bug in string display if real2str fails because
 		                   number is too large (ie, Avogadro's Number).
-		     18 May 03 -- First Win32 version.  And changed name.
-		      1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
+18 May 03 -- First Win32 version.  And changed name.
+1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
 		                   And will save/restore the stack to/from a file.
-		      2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
+2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
 		                   And I now have the skipline included in MiscStdInOut so it is removed from here.
-		     15 Oct 13 -- Now writing for gm2 under linux.
-		     22 Jul 14 -- Converting to Ada.
-		      6 Dec 14 -- Converting to cpp.
-		     20 Dec 14 -- Added macros for date and time last compiled.
-		     31 Dec 14 -- Started coding HOL command.
-		      1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
-		     10 Jan 15 -- Playing with string conversions and number formatting.
-		      5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
-		     22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
-		     13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
-		      2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
-		      7 Jul 16 -- Added UP command to hpcalcc.cpp
-		      8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
-		     22 Aug 16 -- Started conversion to Go, as rpn.go.
-		      8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
-		     11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
-		      1 Oct 16 -- Made the stack display when the program starts.
-		      4 Oct 16 -- Made the storage registers display when the program starts.
-		      7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
+15 Oct 13 -- Now writing for gm2 under linux.
+22 Jul 14 -- Converting to Ada.
+ 6 Dec 14 -- Converting to cpp.
+20 Dec 14 -- Added macros for date and time last compiled.
+31 Dec 14 -- Started coding HOL command.
+ 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
+10 Jan 15 -- Playing with string conversions and number formatting.
+ 5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
+22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
+13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
+ 2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
+ 7 Jul 16 -- Added UP command to hpcalcc.cpp
+ 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+22 Aug 16 -- Started conversion to Go, as rpn.go.
+ 8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
+11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
+ 1 Oct 16 -- Made the stack display when the program starts.
+ 4 Oct 16 -- Made the storage registers display when the program starts.
+ 7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
 		                    Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
-		      8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
-		      9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
-		     21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
-		     28 Oct 16 -- Will clear screen in between command calls.  I took this out when I did next revision.
-		     30 Oct 16 -- Decided to rename this to rpnterm, and will now start to use termbox-go.
-		     31 Oct 16 -- Debugged GetInputString(x,y int) string
-		      4 Nov 16 -- Changed hpcalc.go to return a string slice for everything.  Added outputmodes.
-		      6 Nov 16 -- Windows returns <backspace> code of 8, which is std ASCII.  Seems linux does not do this.
-		     23 Nov 16 -- Will clear screen before calling init termbox-go, to see if that helps some of the irregularities
+ 8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
+ 9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
+21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
+28 Oct 16 -- Will clear screen in between command calls.  I took this out when I did next revision.
+30 Oct 16 -- Decided to rename this to rpnterm, and will now start to use termbox-go.
+31 Oct 16 -- Debugged GetInputString(x,y int) string
+ 4 Nov 16 -- Changed hpcalc.go to return a string slice for everything.  Added outputmodes.
+ 6 Nov 16 -- Windows returns <backspace> code of 8, which is std ASCII.  Seems linux does not do this.
+23 Nov 16 -- Will clear screen before calling init termbox-go, to see if that helps some of the irregularities
 		                    I've found with termbox-go.  It doesn't help.
-		     11 Dec 16 -- Fixed bug in GetRegIdx when out of range char is passed in.
-		     13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
-		     23 Feb 17 -- Added "?" as equivalent to "help"
-		      4 Apr 17 -- Noticed that HardClearScreen is called before MaxRow is set.  I fixed this by moving the Size call.
+11 Dec 16 -- Fixed bug in GetRegIdx when out of range char is passed in.
+13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
+23 Feb 17 -- Added "?" as equivalent to "help"
+ 4 Apr 17 -- Noticed that HardClearScreen is called before MaxRow is set.  I fixed this by moving the Size call.
 		                  And I commented out a fmt.Println() call that didn't do anything anyway, and is ignored on Windows.
-	         16 Aug 17 -- Added code from when.go to use timestamp on executable as link time.
+16 Aug 17 -- Added code from when.go to use timestamp on executable as link time.
+25 Feb 18 -- PrimeFactorMemoized added.
 */
 
 func main() {
