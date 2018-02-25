@@ -5,21 +5,14 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"getcommandline"
+	"makesubst"
 	"math"
 	"os"
 	"strconv"
-	//"strings"
-	//
-	//"hpcalc"
-	"getcommandline"
-	"makesubst"
-	//                                                                                          "holidaycalc"
-	//                                                                                              "timlibg"
-	//                                                                                             "tokenize"
-	//                                                                                              "timlibg"
 )
 
-const LastCompiled = "17 Feb 2018"
+const LastCompiled = "25 Feb 2018"
 
 func main() {
 	/*
@@ -27,7 +20,8 @@ func main() {
 	   REVISION HISTORY
 	   ----------------
 	   24 Feb 17 -- Primes.go is derived from rpn.go
-	   17 Feb 18 -- Made prime divisors a slice inested of an array.  Addressing syntax is the same.
+	   17 Feb 18 -- Made prime divisors a slice instead of an array.  Addressing syntax is the same.
+	   25 Feb 18 -- 736711 is trouble.  Will print out a factor.  And use uint.
 	*/
 
 	var INBUF string
@@ -53,12 +47,26 @@ func main() {
 		INBUF = makesubst.MakeSubst(INBUF)
 	} // if command tail exists
 
-	N, err := strconv.Atoi(INBUF)
+	//	N, err := strconv.Atoi(INBUF)
+	U, err := strconv.ParseUint(INBUF, 10, 64)
 	if err != nil {
 		fmt.Println(" Conversion to number failed.  Exiting")
 		os.Exit(1)
 	}
 
+	fac, primeflag := IsPrimeInt64(U)
+	if primeflag {
+		fmt.Println(U, " is prime.")
+		os.Exit(0)
+	} else {
+		fmt.Print(U, " is NOT prime.")
+		if fac != 0 {
+			fmt.Println("  ", fac, " is its first factor")
+		}
+	}
+	fmt.Println()
+
+	N := int(U)
 	PrimeFactors := PrimeFactorization(N)
 
 	fmt.Print(" Prime factors for ", N, " are : ")
@@ -75,7 +83,17 @@ func PrimeFactorization(N int) []int {
 
 	var PD = []int{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47} // Prime divisors array
 
+	if N == 0 {
+		return nil
+	}
+
 	PrimeFactors := make([]int, 0, 10)
+
+	_, flag := IsPrimeInt(uint(N))
+	if flag {
+		PrimeFactors = append(PrimeFactors, N)
+		return PrimeFactors
+	}
 
 	n := N
 	for i := 0; i < len(PD); i++ { // outer loop to sequentially test the prime divisors
@@ -83,7 +101,8 @@ func PrimeFactorization(N int) []int {
 			PrimeFactors = append(PrimeFactors, PD[i])
 			n = n / PD[i]
 		}
-		if n == 0 || IsPrimeInt(n) {
+		_, primeflag := IsPrimeInt(uint(n))
+		if primeflag {
 			PrimeFactors = append(PrimeFactors, n)
 			break
 		}
@@ -93,16 +112,17 @@ func PrimeFactorization(N int) []int {
 } // PrimeFactorization
 
 // ------------------------------------------------- IsPrimeInt64 -----------------
-func IsPrimeInt64(n int) bool {
+func IsPrimeInt64(n uint64) (uint64, bool) {
 
 	var t uint64 = 3
 
-	Uint := uint64(n)
+	//	Uint := uint64(n)
+	Uint := n
 
 	if Uint == 0 || Uint == 1 || Uint%2 == 0 {
-		return false
+		return 0, false
 	} else if Uint == 2 || Uint == 3 {
-		return true
+		return Uint, true
 	}
 
 	sqrt := math.Sqrt(float64(Uint))
@@ -110,24 +130,25 @@ func IsPrimeInt64(n int) bool {
 
 	for t <= UintSqrt {
 		if Uint%t == 0 {
-			return false
+			return t, false
 		}
 		t += 2
 	}
-	return true
+	return 0, true
 } // IsPrimeInt64
 
 // ------------------------------------------------- IsPrimeInt -----------------
-func IsPrimeInt(n int) bool {
+func IsPrimeInt(n uint) (uint, bool) {
 
 	var t uint = 3
 
-	Uint := uint(n)
+	//	Uint := uint(n)
+	Uint := n
 
 	if Uint == 0 || Uint == 1 || Uint%2 == 0 {
-		return false
+		return 0, false
 	} else if Uint == 2 || Uint == 3 {
-		return true
+		return Uint, true
 	}
 
 	sqrt := math.Sqrt(float64(Uint))
@@ -135,9 +156,9 @@ func IsPrimeInt(n int) bool {
 
 	for t <= UintSqrt {
 		if Uint%t == 0 {
-			return false
+			return t, false
 		}
 		t += 2
 	}
-	return true
+	return 0, true
 } // IsPrime
