@@ -54,6 +54,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	_, primeflag := IsPrimeInt64(U)
+	if primeflag {
+		fmt.Println(U, " is prime so it has no factors.")
+		fmt.Println()
+		os.Exit(0)
+	}
+
 	N := int(U)
 	PrimeFactors := PrimeFactorization(N)
 
@@ -78,6 +85,7 @@ func main() {
 	fmt.Println()
 
 	PrimeUfactors := PrimeFactorMemoized(uint(U))
+	fmt.Print(" Memoized Prime factors for ", N, " are : ")
 	for _, pf := range PrimeUfactors {
 		fmt.Print(pf, "  ")
 	}
