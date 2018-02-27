@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"getcommandline"
 	"makesubst"
-	"math"
 	"os"
 	"strconv"
 )
 
-const LastCompiled = "25 Feb 2018"
+const LastCompiled = "27 Feb 2018"
 
 func main() {
 	/*
@@ -22,6 +21,7 @@ func main() {
 	   24 Feb 17 -- Primes.go is derived from rpn.go
 	   17 Feb 18 -- Made prime divisors a slice instead of an array.  Addressing syntax is the same.
 	   25 Feb 18 -- 736711 is trouble.  Will print out a factor.  And use uint.
+	   27 Feb 18 -- Fixing a bug about even numbers and correct number of factors.
 	*/
 
 	var INBUF string
@@ -54,7 +54,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, primeflag := IsPrimeInt64(U)
+	fac, primeflag := IsPrimeInt64(U)
 	if primeflag {
 		fmt.Println(U, " is prime so it has no factors.")
 		fmt.Println()
@@ -71,21 +71,12 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 
-	fac, primeflag := IsPrimeInt64(U)
-	if primeflag {
-		fmt.Println(U, " is prime.")
-		os.Exit(0)
-	} else {
-		fmt.Print(U, " is NOT prime.")
-		if fac != 0 {
-			fmt.Println("  ", fac, " is its first factor")
-		}
-	}
+	fmt.Println(U, " is NOT prime, and ", fac, " is its first factor")
 	fmt.Println()
 	fmt.Println()
 
-	PrimeUfactors := PrimeFactorMemoized(uint(U))
-	fmt.Print(" Memoized Prime factors for ", N, " are : ")
+	PrimeUfactors := PrimeFactorMemoized(U)
+	fmt.Print(" Memoized Prime factors for ", U, " are : ")
 	for _, pf := range PrimeUfactors {
 		fmt.Print(pf, "  ")
 	}
@@ -129,31 +120,30 @@ func PrimeFactorization(N int) []int {
 } // PrimeFactorization
 
 // --------------------------------------- PrimeFactorMemoized -------------------
-func PrimeFactorMemoized(U uint) []uint {
+func PrimeFactorMemoized(U uint64) []uint64 {
 
 	if U == 0 {
 		return nil
 	}
 
-	var val uint = 3
-	finalval := usqrt(U)
+	var val uint64 = 2
 
-	PrimeUfactors := make([]uint, 0, 20)
+	PrimeUfactors := make([]uint64, 0, 20)
 
-	//	fmt.Print("u, fac, val, primeflag : ")
-	for u := U; u > finalval; {
-		fac, primeflag := NextPrimeFac(u, val)
-		//		fmt.Print(u, " ", fac, " ", val, " ", primeflag, ", ")
-		if primeflag {
+	//fmt.Print("u, fac, val, primeflag : ")
+	for u := U; u > 1; {
+		fac, facflag := NextPrimeFac(u, val)
+		//	fmt.Print(u, " ", fac, " ", val, " ", primeflag, ", ")
+		if facflag {
 			PrimeUfactors = append(PrimeUfactors, fac)
 			u = u / fac
 			val = fac
-		} else {
+		} else { // no more factors found
 			PrimeUfactors = append(PrimeUfactors, u)
 			break
 		}
 	}
-	//	fmt.Println()
+	//fmt.Println()
 	return PrimeUfactors
 }
 
@@ -162,17 +152,19 @@ func IsPrimeInt64(n uint64) (uint64, bool) {
 
 	var t uint64 = 3
 
-	//	Uint := uint64(n)
 	Uint := n
 
-	if Uint == 0 || Uint == 1 || Uint%2 == 0 {
-		return 0, false
+	if Uint == 0 || Uint == 1 {
+		return Uint, false
+	} else if Uint%2 == 0 {
+		return 2, false
 	} else if Uint == 2 || Uint == 3 {
-		return Uint, true
+		return 0, true
 	}
 
-	sqrt := math.Sqrt(float64(Uint))
-	UintSqrt := uint64(sqrt)
+	//	sqrt := math.Sqrt(float64(Uint))
+	//	UintSqrt := uint64(sqrt)
+	UintSqrt := usqrt(n)
 
 	for t <= UintSqrt {
 		if Uint%t == 0 {
@@ -186,23 +178,25 @@ func IsPrimeInt64(n uint64) (uint64, bool) {
 // ------------------------------------------------- IsPrimeInt -----------------
 func IsPrimeInt(n uint) (uint, bool) {
 
-	var t uint = 3
+	var t uint64 = 3
 
-	//	Uint := uint(n)
-	Uint := n
+	Uint := uint64(n)
 
-	if Uint == 0 || Uint == 1 || Uint%2 == 0 {
-		return 0, false
+	if Uint == 0 || Uint == 1 {
+		return uint(Uint), false
+	} else if Uint%2 == 0 {
+		return 2, false
 	} else if Uint == 2 || Uint == 3 {
-		return Uint, true
+		return 0, true
 	}
 
-	sqrt := math.Sqrt(float64(Uint))
-	UintSqrt := uint(sqrt)
+	//	sqrt := math.Sqrt(float64(Uint))
+	//	UintSqrt := uint(sqrt)
+	UintSqrt := usqrt(uint64(n))
 
 	for t <= UintSqrt {
 		if Uint%t == 0 {
-			return t, false
+			return uint(t), false
 		}
 		t += 2
 	}
@@ -210,9 +204,9 @@ func IsPrimeInt(n uint) (uint, bool) {
 } // IsPrime
 
 // ------------------------------------------------- NextPrimeFac -----------------
-func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
+func NextPrimeFac(n, startfac uint64) (uint64, bool) { // note that this is the reverse of IsPrime
 
-	var t uint = startfac
+	var t = startfac
 
 	UintSqrt := usqrt(n)
 
@@ -220,17 +214,21 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 		if n%t == 0 {
 			return t, true
 		}
-		t += 2
+		if t == 2 {
+			t = 3
+		} else {
+			t += 2
+		}
 	}
 	return 0, false
-} // IsPrime
+} // NextPrimeFac
 
 //----------------------------------------------- usqrt ---------------------------
-func usqrt(u uint) uint {
+func usqrt(u uint64) uint64 {
 
 	sqrt := u / 2
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 30; i++ {
 		guess := u / sqrt
 		sqrt = (guess + sqrt) / 2
 		if sqrt-guess <= 1 { // recall that this is not floating math.
@@ -238,4 +236,4 @@ func usqrt(u uint) uint {
 		}
 	}
 	return sqrt
-}
+} // usqrt
