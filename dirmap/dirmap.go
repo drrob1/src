@@ -10,14 +10,14 @@ import (
 	"strconv"
 )
 
-const LastAltered = " 8 Nov 2017"
+const LastAltered = " 28 Feb 2018"
 
 /*
   REVISION HISTORY
   -------- -------
    5 Nov 2017 -- First version, based on code dirwalk.
    8 Nov 2017 -- My first use of sort.Slice, which uses a closure as the less procedure.
-
+  28 Feb 2810 -- My use of alternate closure syntax seems to be working.  I can understand this more easily.
 */
 
 type directory struct {
@@ -93,7 +93,13 @@ func main() {
 	})
 
 	// Will now sort by name and attempt to remove duplicates by setting their subtotal to zero.
-	sort.Slice(dirList, func(i, j int) bool { return dirList[i].name < dirList[j].name })
+	//	sort.Slice(dirList, func(i, j int) bool { return dirList[i].name < dirList[j].name })
+	// Attempting to us an alternate closure syntax, that I find easier to understand.  It seems
+	// to work.
+	f := func(i, j int) bool {
+		return dirList[i].name < dirList[j].name
+	}
+	sort.Slice(dirList, f)
 
 	NumOfDirs := len(dirList)
 	for i := 0; i < NumOfDirs-1; i++ { // will compare current to prev list entry
