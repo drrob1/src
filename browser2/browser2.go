@@ -11,7 +11,10 @@ func main() {
 }
 
 func index_handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "index_handler output")
+	fmt.Fprintf(w, `	<h1>index output message</h1>
+	<p>paragraph about_handler output message</p>
+	<p>new paragraph about_handler output message</p>
+	`)
 }
 
 func about_handler(w http.ResponseWriter, r *http.Request) {
