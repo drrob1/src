@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "27 Feb 2018"
+const LastAlteredDate = "8 Mar 2018"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -76,6 +76,7 @@ REVISION HISTORY
 13 July 17 -- Rewrote ToHex, based on code from the Python mooc I'm taking now.  And with more experience.
 25 Feb 18 -- PrimeFactorMemoized added.
 27 Feb 18 -- Fixed bug in PrimeFactorMemoized and support routines.
+ 8 Mar 18 -- Fixed bug in IsPrime rtn.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -309,10 +310,12 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 
 	Uint := uint64(Round(math.Abs(real))) // just thoughts now, but will check in hpcalc
 
-	if Uint == 0 || Uint == 1 || Uint%2 == 0 {
+	if Uint == 0 || Uint == 1 {
 		return false
 	} else if Uint == 2 || Uint == 3 {
 		return true
+	} else if Uint%2 == 0 {
+		return false
 	}
 
 	sqrt := math.Sqrt(real)
@@ -355,10 +358,12 @@ func IsPrimeInt(n int) bool {
 
 	Uint := uint64(n)
 
-	if Uint == 0 || Uint == 1 || Uint%2 == 0 {
+	if Uint == 0 || Uint == 1 {
 		return false
 	} else if Uint == 2 || Uint == 3 {
 		return true
+	} else if Uint%2 == 0 {
+		return false
 	}
 
 	sqrt := math.Sqrt(float64(Uint))
