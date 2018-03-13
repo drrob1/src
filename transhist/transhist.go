@@ -173,7 +173,7 @@ func main() {
 			log.Fatal(err)
 		} else if len(record[0]) < 3 { // likely an empty field with just "", like a Header line.
 			continue
-		} else if unicode.IsLetter(rune(record[0][0])) { // Header line.
+		} else if unicode.IsLetter(rune(record[0][len(record[0])-1])) { // Header line.
 			continue
 		}
 		datestring := strings.TrimSpace(record[0])
