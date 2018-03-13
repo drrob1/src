@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const lastModified = "12 Mar 2018"
+const lastModified = "13 Mar 2018"
 
 /*
   REVISION HISTORY
@@ -67,10 +67,11 @@ const lastModified = "12 Mar 2018"
    6 Jan 18 -- Expanded ReformatToISO8601date to accept either 2 or 4 digit year in input.
                  And will use tknptr instead of tokenize, for variety in ReformatToStdDate
    2 Feb 18 -- Fixed formatting bug to ISO8601 format, in which January becomes 001 instead of 01.
-  12 Mar 18 -- Now called transhist.go, to convert HSBC csv file to a usable format.
+  12 Mar 18 -- Now called transhist.go, to convert HSBC csv file to a compatible format for my files.
                TransHist = date not in ISO8601 format, description and amount.
 			   Write out to date in ISO8601 format, amount, description and comment.  But there is
 			   white space before the date that I want to remove.
+  13 Mar 18 -- Now that this works in writing the .csv, I'll also write an .xls file using tab delims.
 */
 
 type Row struct {
@@ -79,6 +80,7 @@ type Row struct {
 
 const CSVext = ".CSV"
 const csvext = ".csv"
+const excel = ".xls"
 
 func main() {
 	var e error
@@ -161,6 +163,14 @@ func main() {
 	}
 	defer OutputFile.Close()
 
+	ExcelFilename := BaseFilename + excel
+	ExcelOutput, err := os.Create(ExcelFilename)
+	if err != nil {
+		fmt.Println(" Error while creating excel file ", ExcelFilename, ".  Exiting.")
+		os.Exit(1)
+	}
+	defer ExcelOutput.Close()
+
 	// Process input file line by line.
 
 	rdr := csv.NewReader(InputFile)
@@ -201,16 +211,27 @@ func main() {
 
 	wrtr := csv.NewWriter(OutputFile)
 	defer wrtr.Flush()
+	excelwrite := bufio.NewWriter(ExcelOutput)
+	defer excelwrite.Flush()
 
 	for ctr, r := range rows {
 		outputstringslice[0] = r.date
 		outputstringslice[1] = r.amount
 		outputstringslice[2] = r.descr
 		outputstringslice[3] = r.comment
+
 		fmt.Printf(" %d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2], outputstringslice[3])
 		if e = wrtr.Write(outputstringslice); e != nil {
 			log.Fatalln(" Error writing record to csv:", e)
 		}
+
+		s := fmt.Sprintf("%s \t %s \t %s \t %s", outputstringslice[0], outputstringslice[1], outputstringslice[2], outputstringslice[3])
+		excelwrite.WriteString(s)
+		_, err := excelwrite.WriteRune('\n')
+		if err != nil {
+			log.Fatalln(" Error writing excel file", e)
+		}
+
 		if ctr%40 == 0 && ctr > 0 && ctr < 100 { // these files can have 6000 records to output.
 			Pause()
 		}
@@ -221,6 +242,12 @@ func main() {
 		log.Fatal(err)
 	}
 	OutputFile.Close()
+
+	err = excelwrite.Flush()
+	if err != nil {
+		log.Fatal(err)
+	}
+	ExcelOutput.Close()
 
 } // end main of this package
 
