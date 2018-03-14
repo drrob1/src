@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const lastModified = "13 Mar 2018"
+const lastModified = "14 Mar 2018"
 
 /*
   REVISION HISTORY
@@ -72,6 +72,7 @@ const lastModified = "13 Mar 2018"
 			   Write out to date in ISO8601 format, amount, description and comment.  But there is
 			   white space before the date that I want to remove.
   13 Mar 18 -- Now that this works in writing the .csv, I'll also write an .xls file using tab delims.
+  14 Mar 18 -- Comment made to be HSBC.
 */
 
 type Row struct {
@@ -200,7 +201,7 @@ func main() {
 		}
 		row.amount = ExtractAmtFromString(record[2])
 		row.descr = strings.TrimSpace(record[1])
-		row.comment = " "
+		row.comment = "HSBC.  "
 
 		rows = append(rows, row)
 	}
