@@ -22,7 +22,7 @@ func main() {
 	   	17 Feb 18 -- Made prime divisors a slice instead of an array.  Addressing syntax is the same.
 	   	25 Feb 18 -- 736711 is trouble.  Will print out a factor.  And use uint.
 	   	27 Feb 18 -- Fixing a bug about even numbers and correct number of factors.
-	        7 Mar 18 -- Fixed another bug about 2 not being prime.  It is prime.
+	     7 Mar 18 -- Fixed another bug about 2 not being prime.  It is prime.
 	   	 8 Mar 18 -- Added the PrimesMap and PrimesSlice
 	*/
 
