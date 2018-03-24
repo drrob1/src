@@ -75,7 +75,7 @@ func NewsAggHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	p := NewsAggPage{Title: "A News Aggregator based on the Washington Post", News: news_map}
-	t, err := template.ParseFiles("newsaggtemplate.html")
+	t, err := template.ParseFiles("newsaggtemplate.gohtml")
 	check(err)
 	t.Execute(w, p)
 }

@@ -1,20 +1,16 @@
 <h1>{{.Title}}</h1>
 
 <table>
-  <thead>                                            table head
-    <th>Title</th>                                   table header which I guess is column headers
+  <thead>
+    <th>Title</th>
     <th>Keywords</th>
   </thead>
-  <tbody>                                            table body
+  <tbody>     
      {{ range $key, $value := .News}}
-
-       <tr>                                            table row
-         <td><a href="{{$value.Location}}" target="_blank">{{ $key }} </a></td>                           table data
+       <tr>
+         <td><a href="{{$value.Location}}" target="_blank">{{ $key }} </a></td> 
          <td>{{ $value.Keyword }}</td>
        </tr>
-
-
-
-     {{ end }}                                       ends the range
+     {{ end }} 
   </tbody>
 </table>
