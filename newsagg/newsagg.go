@@ -7,10 +7,16 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"runtime"
+	"strings"
 	"sync"
 )
 
+const tmplt = "newsaggtemplate.gohtml"
+
 var wg sync.WaitGroup
+var HomeDir, execname, workingdir, ans, ExecTimeStamp, fulltmplt string
 
 type NewsMap struct {
 	Keyword  string
@@ -70,16 +76,52 @@ func newsAggHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p := NewsAggPage{Title: "A News Aggregator based on the Washington Post", News: news_map}
-
-	t, err := template.ParseFiles("newsaggtemplate.gohtml")
+	t, err := template.ParseFiles(tmplt)
+	//	t, err := template.ParseFiles("newsaggtemplate.gohtml")
 	check(err)
 	//	t, _ := template.ParseFiles("aggregatorfinish.html")
 	t.Execute(w, p)
 }
 
 func main() {
+	if runtime.GOOS == "linux" {
+		HomeDir = os.Getenv("HOME")
+	} else if runtime.GOOS == "windows" {
+		HomeDir = os.Getenv("userprofile")
+	} else { // then HomeDir will be empty.
+		fmt.Println(" runtime.GOOS does not say linux or windows.  Is this a Mac?")
+	}
+	workingdir, _ := os.Getwd()
+
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	ExecTimeStamp = ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	pathsep := string(os.PathSeparator)
+	tmplt1 := workingdir + pathsep + tmplt
+	tmplt2 := HomeDir + pathsep + tmplt
+
+	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+	fulltmplt = tmplt1
+	_, err := os.Stat(tmplt1)
+	if err != nil {
+		fulltmplt = tmplt2
+		_, err = os.Stat(tmplt2)
+		if err != nil {
+			fmt.Println(" Template file not found in ", workingdir, " or ", HomeDir, ".  Exiting.")
+			os.Exit(1)
+		}
+	}
+	fmt.Println(" Using", fulltmplt, " as template file.")
+	fmt.Println()
+
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/agg/", newsAggHandler)
+	fmt.Print("Hit <enter> to continue   ")
+	fmt.Scanln(&ans)
+	if strings.ToUpper(ans) == "QUIT" {
+		os.Exit(0)
+	}
+
 	http.ListenAndServe(":8000", nil)
 }
 
