@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"sync"
 )
 
@@ -116,11 +115,11 @@ func main() {
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/agg/", newsAggHandler)
-	fmt.Print("Hit <enter> to continue   ")
-	fmt.Scanln(&ans)
-	if strings.ToUpper(ans) == "QUIT" {
-		os.Exit(0)
-	}
+	//	fmt.Print("Hit <enter> to continue   ")
+	//	fmt.Scanln(&ans)
+	//	if strings.ToUpper(ans) == "QUIT" {
+	//		os.Exit(0)
+	//	}
 
 	http.ListenAndServe(":8000", nil)
 }
