@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/gob"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 	//	"github.com/nsf/termbox-go"
 	//
 	"getcommandline"
@@ -20,7 +22,7 @@ import (
 	termbox "github.com/nsf/termbox-go"
 )
 
-const LastAltered = "25 February 2018"
+const LastAltered = "6 Apr 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -96,6 +98,7 @@ REVISION HISTORY
 		                  And I commented out a fmt.Println() call that didn't do anything anyway, and is ignored on Windows.
 16 Aug 17 -- Added code from when.go to use timestamp on executable as link time.
 25 Feb 18 -- PrimeFactorMemoized added.
+ 6 Apr 18 -- Wrote code to save DisplayTape as a text file.
 */
 
 func main() {
@@ -104,6 +107,7 @@ func main() {
 	const Storage1FileName = "RPNStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
 	const Storage2FileName = "RPNStorage2.gob"
 	const Storage3FileName = "RPNStorage3.gob"
+	const DisplayTapeFilename = "displaytape.txt"
 	var x int
 	//  var Holidays holidaycalc.HolType;
 	//  var fgYellow,fgCyan termbox.Attribute;
@@ -374,6 +378,28 @@ func main() {
 	err = encoder.Encode(Stk)          // encoder writes the file
 	check(err)                         // Panic if there is an error
 	err = encoder.Encode(Storage)      // encoder writes the file
+	check(err)
+
+	// Will open this file in the current working directory instead of the HomeDir.
+	DisplayTapeFile, err := os.OpenFile(DisplayTapeFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println(" Error while opening DisplayTapeFilename", err)
+		os.Exit(1)
+	}
+	defer DisplayTapeFile.Close()
+	DisplayTapeWriter := bufio.NewWriter(DisplayTapeFile)
+	defer DisplayTapeWriter.Flush()
+	today := time.Now()
+	datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+	_, err = DisplayTapeWriter.WriteString("------------------------------------------------------\n")
+	_, err = DisplayTapeWriter.WriteString(datestring)
+	_, err = DisplayTapeWriter.WriteRune('\n')
+	for _, s := range DisplayTape {
+		_, err = DisplayTapeWriter.WriteString(s)
+		_, err = DisplayTapeWriter.WriteRune('\n')
+		check(err)
+	}
+	_, err = DisplayTapeWriter.WriteString("\n\n")
 	check(err)
 
 } // main in rpnterm.go
