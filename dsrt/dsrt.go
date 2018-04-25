@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "23 Feb 2018"
+const LastAltered = "April 24, 2018"
 
 /*
 Revision History
@@ -43,12 +43,14 @@ Revision History
   30 Jan 18 -- Will exit if use -h flag.
    8 Feb 18 -- Windows version will not pause to accept a pattern, as it's not necessary.
   23 Feb 18 -- Fixing a bug when GOARCH=386 in that userptr causes a panic.
+  23 Apr 18 -- Linux version will properly process command line lists based by the shell.
+  24 Apr 18 -- Improving comments, and removing prompt for a pattern, as it is no longer needed.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
-type FISliceDate []os.FileInfo
-type FISliceSize []os.FileInfo
+type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
+type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
 
 func (f FISliceDate) Less(i, j int) bool {
 	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
@@ -85,16 +87,20 @@ func main() {
 	var err error
 	var count int
 	var SizeTotal int64
+	var havefiles bool
+	var commandline string
+	var askforinput bool // default is false, which I'll leave, essentially removing this flag.
+	//	askforinput := true      Since it will never be true, it is essentially removed.
 
 	uid := 0
 	gid := 0
 	systemStr := ""
-	askforinput := true
 
 	linuxflag := runtime.GOOS == "linux"
 	if linuxflag {
 		systemStr = "Linux"
 		numlines = defaultlineslinux
+		files = make([]os.FileInfo, 0, 500)
 	} else if runtime.GOOS == "windows" {
 		systemStr = "Windows"
 		numlines = defaultlineswin
@@ -114,6 +120,7 @@ func main() {
 		}
 	}
 
+	// flag definitions and processing
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
 	var RevFlag bool
@@ -152,11 +159,12 @@ func main() {
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
 		}
 		os.Exit(0)
-
 	}
 
 	Reverse := *revflag || RevFlag
+	Forward := !Reverse // convenience variable
 	SizeSort := *sizeflag || SizeFlag
+	DateSort := !SizeSort // convenience variable
 
 	NumLines := numlines
 	if *nlines != numlines {
@@ -170,9 +178,44 @@ func main() {
 
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
-	commandline := flag.Arg(0) // this only gets the first non flag argument.  That's all I want.
+	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
+	if len(filenamesStringSlice) > 1 {  // linux command line processing for filenames.
+		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
+			fi, err := os.Stat(s)
+			if err != nil {
+				log.Fatal(err)
+			}
+			files = append(files, fi)
+		}
+		if SizeSort && Forward {
+			largestSize := func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+				return files[i].Size() > files[j].Size() // I want a largest first sort
+			}
+			sort.Slice(files, largestSize)
+		} else if DateSort && Forward {
+			newestDate := func(i, j int) bool { // this is a closure anonymous function
+				return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest first sort
+			}
+			sort.Slice(files, newestDate)
+		} else if SizeSort && Reverse {
+			smallestSize := func(i, j int) bool { // this is a closure anonymous function
+				return files[i].Size() < files[j].Size() // I want a smallest first sort
+			}
+			sort.Slice(files, smallestSize)
+		} else if DateSort && Reverse {
+			oldestDate := func(i, j int) bool { // this is a closure anonymous function
+				return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest first sort
+			}
+			sort.Slice(files, oldestDate)
+		}
+		havefiles = true
+		askforinput = false
+	} else {
+		commandline = flag.Arg(0) // this only gets the first non flag argument.  That's all I want on Windows.
+		// Inelegant after adding linux filenames on command line code.
+	}
 	sepstring := string(filepath.Separator)
-	HomeDirStr := ""
+	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
 	if userptr != nil {
 		HomeDirStr = userptr.HomeDir + sepstring
 	} else if linuxflag {
@@ -188,23 +231,15 @@ func main() {
 		CleanDirName = filepath.Clean(CleanDirName)
 		CleanFileName = strings.ToUpper(CleanFileName)
 		askforinput = false
-		//		fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  debugging line removed.
 	}
 
 	if askforinput {
-		// Asking for input so don't have to worry about command line globbing
+		// Asking for input so don't have to worry about command line globbing.  Now that I am handling command line filenames on linux, this code is essentially removed.
 		fmt.Print(" Enter input for globbing: ")
-		//		scanner := bufio.NewScanner(os.Stdin)
-		//		scanner.Scan()
-		//		newtext := scanner.Text()
-		//		if err = scanner.Err(); err != nil {
-		//			fmt.Fprintln(os.Stderr, " reading std input: ", err)
-		//			os.Exit(1)
-		//		}
 		newtext := ""
 		fmt.Scanln(&newtext)
-		//		_, err = fmt.Scanln(&newtext)
-		//		fmt.Println("Status of Scanln err is", err)  A blank line gives the error "unexpected newline", which I'm going to ignore.
+		//  _, err = fmt.Scanln(&newtext)
+		//  fmt.Println("Status of Scanln err is", err)  A blank line gives the error "unexpected newline", which I'm going to ignore.
 
 		if len(newtext) > 0 {
 			// time to do the stuff I'm writing this pgm for
@@ -214,7 +249,7 @@ func main() {
 			CleanDirName, CleanFileName = filepath.Split(newtext)
 			CleanDirName = filepath.Clean(CleanDirName)
 			CleanFileName = strings.ToUpper(CleanFileName)
-			//			fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  a debugging line.
+			// fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  a debugging line.
 		}
 
 	}
@@ -227,7 +262,7 @@ func main() {
 		CleanFileName = "*"
 	}
 
-	if SizeSort {
+	if SizeSort && !havefiles {
 		filesSize, err = ioutil.ReadDir(CleanDirName)
 		if err != nil {
 			log.Fatal(err)
@@ -238,7 +273,7 @@ func main() {
 			sort.Sort(filesSize)
 		}
 		files = FISlice(filesSize)
-	} else {
+	} else if !havefiles {
 		filesDate, err = ioutil.ReadDir(CleanDirName)
 		if err != nil {
 			log.Fatal(err)
@@ -253,6 +288,9 @@ func main() {
 
 	fmt.Println(" Dirname is", CleanDirName)
 
+	// I need to add a description of how this code works, because I forgot.
+	// The entire contents of the directory is read in by the ioutil.ReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
+	// This is still the way it works for Windows.  On linux, the matching pattern is set to be a *, so all entries match, depending on regular file or directory options selected.
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
 		//		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() {
