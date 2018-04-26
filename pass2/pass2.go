@@ -40,6 +40,28 @@ func main() {
 
 	fmt.Println(" pass2 program written in Go.  Last altered", LastAltered)
 
+	if runtime.GOOS == "linux" {
+		infile, err := os.Open("/dev/random")
+		check(err, "after Open /dev/random")
+		defer infile.Close()
+
+		byteslice := make([]byte, 8)
+		infile.Read(byteslice)
+		i64 := int64(byteslice[0])
+		rand.Seed(i64)
+		infile.Close()
+	} else if runtime.GOOS == "windows" {
+		t := time.Now()
+		nano := t.UnixNano()
+		unix := t.Unix()
+		nsec := t.Nanosecond()
+		fmt.Println("nano=", nano, ", unix=", unix, "nsec=", nsec)
+		rand.Seed(nano - unix)
+		for i := 0; i < int(unix)-nsec; i++ {
+			_ = rand.Int()
+		}
+	}
+
 	if len(os.Args) <= 1 {
 		n = 10
 	} else {
@@ -70,9 +92,9 @@ func main() {
 		char := rand.Intn(128)
 		b := byte(char)
 		if b > 32 && b <= '~' {
-			r := rune(b)
-			s := strconv.QuoteRuneToASCII(r)
-			fmt.Println(" b=", b, ", r=", r, ".  s=", s)
+			// r := rune(b)
+			// s := strconv.QuoteRuneToASCII(r)
+			// fmt.Println(" b=", b, ", r=", r, ".  s=", s)
 			passwordslice = append(passwordslice, b)
 			i++
 		}
@@ -85,30 +107,3 @@ func main() {
 	fmt.Println()
 	//  fmt.Println()
 } // END MAIN
-
-// --------------------------- INIT ------------------------------------------------
-func Init() {
-	if runtime.GOOS == "linux" {
-		infile, err := os.Open("/dev/random")
-		check(err, "after Open /dev/random")
-		defer infile.Close()
-
-		byteslice := make([]byte, 8)
-		infile.Read(byteslice)
-		i64 := int64(byteslice[0])
-		rand.Seed(i64)
-		infile.Close()
-	} else if runtime.GOOS == "windows" {
-		t := time.Now()
-		nano := t.UnixNano()
-		unix := t.Unix()
-		nsec := t.Nanosecond()
-		rand.Seed(nano)
-		for i := 0; i < int(unix); i++ {
-			_ = rand.Int()
-		}
-		for i := 0; i < nsec; i++ {
-			_ = rand.Int()
-		}
-	}
-}
