@@ -6,6 +6,7 @@ package main
   21 Apr 18 -- First version, based on vlc.go
   22 Apr 18 -- Added ability to write the passwords to a file.
   26 Apr 18 -- Now called pass2.  Now uses rand routines, init based on OS.
+                 And will make ~1000 random initial calls.
 */
 
 import (
@@ -55,9 +56,11 @@ func main() {
 		nano := t.UnixNano()
 		unix := t.Unix()
 		nsec := t.Nanosecond()
-		fmt.Println("nano=", nano, ", unix=", unix, "nsec=", nsec)
 		rand.Seed(nano - unix)
-		for i := 0; i < int(unix)-nsec; i++ {
+		quotient := nsec / 1000
+		loopcounter := quotient % 1000
+		fmt.Println("nano=", nano, ", unix=", unix, ", nsec=", nsec, ", loopcounter=", loopcounter)
+		for i := 0; i < loopcounter; i++ {
 			_ = rand.Int()
 		}
 	}
