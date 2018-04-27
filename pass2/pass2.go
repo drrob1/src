@@ -7,6 +7,7 @@ package main
   22 Apr 18 -- Added ability to write the passwords to a file.
   26 Apr 18 -- Now called pass2.  Now uses rand routines, init based on OS.
                  And will make ~1000 random initial calls.
+  27 Apr 18 -- Will divide nano by 100, as those are always zeros anyway.
 */
 
 import (
@@ -17,13 +18,9 @@ import (
 	"runtime"
 	"strconv"
 	"time"
-	//  "strings"
-	//  "io"
-	//  "time"
-	//  "path/filepath"
 )
 
-const LastAltered = "April 26, 2018"
+const LastAltered = "April 27, 2018"
 const passwordfilename = "pass.txt"
 
 // -------------------------------------------- check ---------------------------------------------
@@ -53,7 +50,7 @@ func main() {
 		infile.Close()
 	} else if runtime.GOOS == "windows" {
 		t := time.Now()
-		nano := t.UnixNano()
+		nano := t.UnixNano() / 100
 		unix := t.Unix()
 		nsec := t.Nanosecond()
 		rand.Seed(nano - unix)
