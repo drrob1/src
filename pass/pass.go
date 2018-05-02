@@ -4,21 +4,18 @@ package main
   REVISION HISTORY
   21 Apr 18 -- First version, based on vlc.go
   22 Apr 18 -- Added ability to write the passwords to a file.
+  28 Apr 18 -- Will exit on Windows.
 */
 
 import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
-	//  "strings"
-	//  "io"
-	//  "math/rand"
-	//  "time"
-	//  "path/filepath"
 )
 
-const LastAltered = "April 24, 2018"
+const LastAltered = "April 28, 2018"
 const passwordfilename = "pass.txt"
 
 // -------------------------------------------- check ---------------------------------------------
@@ -35,6 +32,11 @@ func main() {
 	var err error
 
 	fmt.Println(" pass program written in Go.  Last altered", LastAltered)
+
+	if runtime.GOOS == "windows" {
+		fmt.Println("This program will not run on Windows.  Exiting.")
+		os.Exit(0)
+	}
 
 	if len(os.Args) <= 1 {
 		n = 10

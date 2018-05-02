@@ -1,4 +1,4 @@
-// dsrt.go -- directoy sort in reverse date order.  IE, newest is first.
+// dsrt.go -- directoy sort
 
 package main
 
@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "April 24, 2018"
+const LastAltered = "May 2, 2018"
 
 /*
 Revision History
@@ -43,8 +43,9 @@ Revision History
   30 Jan 18 -- Will exit if use -h flag.
    8 Feb 18 -- Windows version will not pause to accept a pattern, as it's not necessary.
   23 Feb 18 -- Fixing a bug when GOARCH=386 in that userptr causes a panic.
-  23 Apr 18 -- Linux version will properly process command line lists based by the shell.
+  23 Apr 18 -- Linux version will properly process command line lists passed by the shell.
   24 Apr 18 -- Improving comments, and removing prompt for a pattern, as it is no longer needed.
+   2 May 18 -- More improving comments.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -212,7 +213,7 @@ func main() {
 		askforinput = false
 	} else {
 		commandline = flag.Arg(0) // this only gets the first non flag argument.  That's all I want on Windows.
-		// Inelegant after adding linux filenames on command line code.
+		// Inelegant after adding linux filenames on command line code.  Could have now used filenameStringSlice[0].  I chose to not change the use of flag.Arg(0).
 	}
 	sepstring := string(filepath.Separator)
 	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
