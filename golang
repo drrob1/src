@@ -1,3 +1,0 @@
-GOPATH=$(echo $GOPATH)/gocode/src
-export GOPATH
-echo $GOPATH
