@@ -14,9 +14,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
-const LastAltered = "May 2, 2018"
+const LastAltered = "May 11, 2018"
 
 /*
 Revision History
@@ -46,6 +47,7 @@ Revision History
   23 Apr 18 -- Linux version will properly process command line lists passed by the shell.
   24 Apr 18 -- Improving comments, and removing prompt for a pattern, as it is no longer needed.
    2 May 18 -- More improving comments.
+  11 May 18 -- Adding use of dsrt environment variable.  Tested ideas in shoenv.go.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -77,10 +79,16 @@ func (f FISliceSize) Len() int {
 	return len(f)
 }
 
+type DsrtParamType struct {
+	numlines                                             int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag bool
+}
+
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	var numlines int
+	var dsrtparam DsrtParamType
+	var numoflines int
 	var userptr *user.User // from os/user
 	var files FISlice
 	var filesDate FISliceDate
@@ -91,24 +99,35 @@ func main() {
 	var havefiles bool
 	var commandline string
 	var askforinput bool // default is false, which I'll leave, essentially removing this flag.
-	//	askforinput := true      Since it will never be true, it is essentially removed.
+	//						Since it will never be true, it is essentially removed.
 
 	uid := 0
 	gid := 0
 	systemStr := ""
 
+	// environment variable processing.  If present, these will be the defaults.
+	dsrtparam = GetEnviron()
+
 	linuxflag := runtime.GOOS == "linux"
 	if linuxflag {
 		systemStr = "Linux"
-		numlines = defaultlineslinux
 		files = make([]os.FileInfo, 0, 500)
+		if dsrtparam.numlines > 0 {
+			numoflines = dsrtparam.numlines
+		} else {
+			numoflines = defaultlineslinux
+		}
 	} else if runtime.GOOS == "windows" {
 		systemStr = "Windows"
-		numlines = defaultlineswin
 		askforinput = false // added 02/08/2018 11:56:23 AM, so won't ask for input on Windows system, ever.
+		if dsrtparam.numlines > 0 {
+			numoflines = dsrtparam.numlines
+		} else {
+			numoflines = defaultlineswin
+		}
 	} else {
 		systemStr = "Mac, maybe"
-		numlines = defaultlineslinux
+		numoflines = defaultlineslinux
 	}
 
 	if runtime.GOARCH == "amd64" {
@@ -127,10 +146,10 @@ func main() {
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	var nlines = flag.Int("n", numlines, "number of lines to display") // Ptr
+	var nlines = flag.Int("n", numoflines, "number of lines to display") // Ptr
 
 	var NLines int
-	flag.IntVar(&NLines, "N", numlines, "number of lines to display") // Value
+	flag.IntVar(&NLines, "N", numoflines, "number of lines to display") // Value
 
 	var helpflag = flag.Bool("h", false, "print help message") // pointer
 	var HelpFlag bool
@@ -154,6 +173,7 @@ func main() {
 	fmt.Println()
 
 	if *helpflag || HelpFlag {
+		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
 		flag.PrintDefaults()
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
@@ -162,20 +182,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	Reverse := *revflag || RevFlag
+	Reverse := *revflag || RevFlag || dsrtparam.reverseflag
 	Forward := !Reverse // convenience variable
-	SizeSort := *sizeflag || SizeFlag
+
+	SizeSort := *sizeflag || SizeFlag || dsrtparam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
-	NumLines := numlines
-	if *nlines != numlines {
+	NumLines := numoflines
+	if *nlines != numoflines {
 		NumLines = *nlines
-	} else if NLines != numlines {
+	} else if NLines != numoflines {
 		NumLines = NLines
 	}
 
-	Dirlist := *DirListFlag || FilenameListFlag // if -D entered then this expression also needs to be true.
-	FilenameList := !FilenameListFlag           // need to reverse the flag.
+	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
+	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
 
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
@@ -383,6 +404,40 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
+
+// ------------------------------- GetEnviron ------------------------------------------------
+func GetEnviron() DsrtParamType {
+	var dsrtparam DsrtParamType
+
+	EnvironSlice := os.Environ()
+
+	for _, e := range EnvironSlice {
+		if strings.HasPrefix(e, "dsrt") {
+			dsrtslice := strings.SplitAfter(e, "=")
+			indiv := strings.Split(dsrtslice[1], "") // all characters after dsrt=
+			for j, str := range indiv {
+				s := str[0]
+				if s == 'r' || s == 'R' {
+					dsrtparam.reverseflag = true
+				} else if s == 's' || s == 'S' {
+					dsrtparam.sizeflag = true
+				} else if s == 'd' {
+					dsrtparam.dirlistflag = true
+					dsrtparam.filenamelistflag = true
+				} else if s == 'D' {
+					dsrtparam.dirlistflag = true
+				} else if unicode.IsDigit(rune(s)) {
+					dsrtparam.numlines = int(s) - int('0')
+					if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
+						dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
+						break // if have a 2 digit number, it ends processing of the indiv string
+					}
+				}
+			}
+		}
+	}
+	return dsrtparam
+} // GetEnviron
 
 /*
 package path
