@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "May 11, 2018"
+const LastAltered = "11 May 2018"
 
 /*
 Revision History
