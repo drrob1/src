@@ -4,6 +4,8 @@ github.com/derekparker/
 *.DEF
 *.mod
 *.MOD
+*.sav
+*.SAV
 debug
 ds-docs
 go-cookbook/
