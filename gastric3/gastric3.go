@@ -49,9 +49,11 @@ import (
                  is where it will be used in "production."
   18 Oct 17 -- Added filepicker
   15 Jun 18 -- Now at version 3, and I'm revisiting the old iterative solution that I used for a long time.  Is there a bug here?
+  18 Jun 18 -- Added some comments regarding my thoughts and observations, and decided to return FittedData3 so I can get R2.
+                 And screen output will be shorter than file output.
 */
 
-const LastAltered = "16 June 2018"
+const LastAltered = "18 June 2018"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -71,7 +73,7 @@ const StDevTime = 10
 const POTN = 1.571000         // used for fitexy and related routines
 const BIG = 1e30              // this too
 const ACC = 1e-3              // this too
-const ITERMAX = 100           // this too, and now for the old ressurrected code.
+const ITERMAX = 100           // this too, and now also for the old ressurrected code.
 const ToleranceFactor = 1.E-5 // used for old code that's been ressurrected.
 
 // stdev relates to counts, or the ordinate.  This algorithm used to apply it to the abscissa also.
@@ -280,58 +282,58 @@ func main() {
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
-
-	s = fmt.Sprintf(" Original T-1/2 of Gastric Emptying is %.2f minutes.  Original std unweighted slope is %.6f and std intercept is %.6f and R-squared is %.6f \n", stdhalflife, stdslope, stdintercept, stdr2)
-	fmt.Print(s)
+	fmt.Printf(" Original unweighted: halflife is %0.2f minutes, and intercept is %0.6f counts.", stdhalflife, stdintercept)
 	fmt.Println()
+	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.6f minutes, slope is %.6f cnts/min, intercept is %.6f cnts and R-squared is %.6f.",
+		stdhalflife, stdslope, stdintercept, stdr2)
 	writestr(s) // using the write closure, I hope
 	writerune()
 	check(bufioErr)
 
 	UnWeightedResults := fitfull(rows, false)
 	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
-	s = fmt.Sprintf(" unweighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f. \n",
-		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.StDevSlope)
-	fmt.Println(s)
-	fmt.Println()
+	// not writing this output to screen as its redundant.
+	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.6f minutes.  Slope= %.6f cnts/min, intercept= %.6f, StDevSlope= %.6f cnts.",
+		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope)
 	writestr(s) // using the write closure, I hope
 	writerune()
 	check(bufioErr)
 
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
-	s = fmt.Sprintf(" Weighted halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, StDevSlope= %.6f, GoodnessOfFit= %.6f \n",
-		weightedhalflife, WeightedResults.Slope, WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
-	fmt.Println(s)
-	fmt.Println()
+	// not writing this output to screen as its redundant.
+	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.6f minutes.  Slope= %.6f, Intercept= %.6f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
+		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
 	writestr(s) // using the write closure
 	writerune()
 	check(bufioErr)
 
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights2 and fitfull is %.2f minutes, fit is %.6f. \n", weightedhalflife2, WeightedResults2.GoodnessOfFit)
-	fmt.Println(s)
+	fmt.Printf(" fitful weighted: halflife is %.2f minutes, intercept is %.6f counts.", weightedhalflife2, WeightedResults2.Intercept)
+	fmt.Println()
+	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.6f minutes,slope is %.6f, intercept = %.6f, fit is %.6f.",
+		weightedhalflife2, WeightedResults2.Slope, WeightedResults2.Intercept, WeightedResults2.GoodnessOfFit)
 	writestr(s)
 	writerune()
 	check(bufioErr)
 
 	WeightedResults3 := fitexy(rows)
 	weightedhalflife3 := -ln2 / WeightedResults3.Slope
-	s = fmt.Sprintf(" halflife of Gastric Emptying using Weights3 and fitexy is %.2f minutes, stdev is %.6f.", weightedhalflife3, WeightedResults3.StDevSlope)
-	fmt.Print(s)
-	writestr(s)
-	s = fmt.Sprintf("  chi2= %.6f, q= %.6f \n", WeightedResults3.chi2, WeightedResults3.q)
-	fmt.Println(s)
+	fmt.Printf(" fitexy weighted: halflife is %.2f minutes, intercept is %.6f counts. ", weightedhalflife3, WeightedResults3.Intercept)
+	fmt.Println()
+	s = fmt.Sprintf(" fitexy weighted: halflife of Gastric Emptying is %.6f minutes, slope is %.6f, intercept = %.6f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
+		weightedhalflife3, WeightedResults3.Slope, WeightedResults3.Intercept, WeightedResults3.StDevSlope, WeightedResults3.chi2, WeightedResults3.q)
 	writestr(s)
 	writerune()
 	check(bufioErr)
 
 	// Version 3 code, adding the orig weighting function
-	IteratedSlope, IteratedIntercept := DoOldWeightedLR(rows, stdslope, stdintercept)
-	IteratedHalfLife := -ln2 / IteratedSlope
-	s = fmt.Sprintf(" halflife of Gastric Emptying using old iterative method is %.2f minutes, intercept = %f", IteratedHalfLife, IteratedIntercept)
-	fmt.Print(s)
+	IteratedResults := DoOldWeightedLR(rows, stdslope, stdintercept)
+	IteratedHalfLife := -ln2 / IteratedResults.Slope
+	fmt.Printf(" Old iterative method: halflife is %.2f minutes, slope is %.2f, intercept is %.6f, R-squared is %.6f.", IteratedHalfLife, IteratedResults.Slope, IteratedResults.Intercept, IteratedResults.R2)
+	fmt.Println()
+	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.6f minutes, slope is %.6f, intercept = %.6f, R^2 = %.6f.", IteratedHalfLife, IteratedResults.Slope, IteratedResults.Intercept, IteratedResults.R2)
 	writestr(s)
 	writerune()
 	check(bufioErr)
@@ -381,7 +383,6 @@ func check(e error) {
 
 // -------------------------- fit -----------------------------
 func fit(rows []Point) FittedData {
-
 	/*
 		subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 		   Based on Numerical Recipies code of same name on p 508-9 in Fortran, 1st ed,
@@ -1066,10 +1067,18 @@ func min(a, b int) int {
 }
 
 // ============================================================================================
-// Version 3
+//               Version 3
 // ============================================================================================
 // I don't remember what was wrong with the old iterative solution.  I'm revisiting it
 // and will document what I see wrong, so I don't forget again.
+// Turns out that I don't see anything wrong, and the code is working.  Sometimes the iterated
+// result is smaller and sometimes larger than the original unweighted estimate.  That seems to
+// be as it should be.
+// Bssic algorithm is that the variances are used to calculate a weight for each point, and then
+// those weights are used to calculate a new slope and intercept.  Then new weights are computed
+// using the new slope and intercpt, and a new slope and intercept is computed by the new weights.
+// The iteration stops at either 100 iterations or if the change is below the tolerance factor,
+// currently 1.e-5 * slope.
 
 /*
    Do Old Linear Regression Routine.
@@ -1085,10 +1094,10 @@ func min(a, b int) int {
 
 
                                          1
-     WEIGHT OF A POINT = ---------------------------------------
+     Weight of a point = ---------------------------------------
                          (error_on_y)**2 + (slope*error_on_x)**2
 
-     AX -- a quantity defined by the author, used in the iterative solution of
+     ax -- a quantity defined by the author, used in the iterative solution of
            the system of equations used in computing the weights, and hence the
            errors on the data, and on the slopes and intercepts.  Like weights,
            it applies to each point.
@@ -1107,13 +1116,14 @@ func min(a, b int) int {
 */
 
 //	   ---------------------------------- DoOldWeightedLR ---------------------------------
-func DoOldWeightedLR(rows []Point, slope, intercept float64) (float64, float64) { //VAR Slope,Intercept:LONGREAL){
+func DoOldWeightedLR(rows []Point, slope, intercept float64) FittedData3 {
 	PrevSlope := slope
 	PrevIntrcpt := intercept
+	var result FittedData3
 
 	for ITERCTR := 0; ITERCTR < ITERMAX; ITERCTR++ {
 		rows = GetWeights(rows, slope, intercept)
-		result := WeightedLR(rows)
+		result = WeightedLR(rows)
 		slope = result.Slope
 		intercept = result.Intercept
 		if (math.Abs(slope-PrevSlope) < ToleranceFactor*math.Abs(slope)) &&
@@ -1131,7 +1141,7 @@ func DoOldWeightedLR(rows []Point, slope, intercept float64) (float64, float64) 
 	   fmt.Println(" St Dev on Slope is ",StDevS,", St Dev on Intercept is ", StDevI)
 	   fmt.Println()
 	*/
-	return slope, intercept
+	return result
 } // END DoOldWeightedLR
 
 func GetWeights(rows []Point, slope, intercept float64) []Point {
@@ -1163,7 +1173,7 @@ func GetWeights(rows []Point, slope, intercept float64) []Point {
 
 func WeightedLR(rows []Point) FittedData3 {
 	/*
-	  ******************************** WeightSumUp *********************************
+	  ******************************** WeightedLR *********************************
 	  Weighted Sum Up.
 	  This procedure sums the variables using the weights and AX quantaties as
 	  described (and computed) above.
@@ -1191,4 +1201,4 @@ func WeightedLR(rows []Point) FittedData3 {
 		(result3.SumWt*result3.SumWtX2 - SQR(result3.SumWtX)) / (result3.SumWt*result3.SumWtY2 -
 		SQR(result3.SumWtY))
 	return result3
-} //  END WeightSumUp
+} //  END WeightedLR
