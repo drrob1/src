@@ -51,9 +51,10 @@ import (
   15 Jun 18 -- Now at version 3, and I'm revisiting the old iterative solution that I used for a long time.  Is there a bug here?
   18 Jun 18 -- Added some comments regarding my thoughts and observations, and decided to return FittedData3 so I can get R2.
                  And screen output will be shorter than file output.
+  20 Jun 18 -- Added comments regarding reference normal.
 */
 
-const LastAltered = "18 June 2018"
+const LastAltered = "20 June 2018"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -61,7 +62,8 @@ const LastAltered = "18 June 2018"
   2 hr should have 60% of activity remaining in stomach = 2.7 hr halflife = 163 min halflife
   3 hr should have 30% of activity remaining in stomach = 1.7 hr halflife = 104 min halflife
   4 hr should have 10% of activity remaining in stomach = 1.2 hr halflife = 72 min halflife
-
+  Using these 4 points as data for gastric3, I get T-1/2 of Orig std unweighted = 72.91,
+  fit weighted= 60.65, fitexy weighted= 60.76, and iterated weighted= 75.73
 */
 
 //----------------------------------------------------------------------------
