@@ -52,9 +52,10 @@ import (
   18 Jun 18 -- Added some comments regarding my thoughts and observations, and decided to return FittedData3 so I can get R2.
                  And screen output will be shorter than file output.
   20 Jun 18 -- Added comments regarding reference normal.
+  21 Jun 18 -- Added first non digit token on line will skip that line.  So entire line can be easily commented out.
 */
 
-const LastAltered = "20 June 2018"
+const LastAltered = "21 June 2018"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -215,7 +216,7 @@ func main() {
 		// loop to process first 2 digit tokens on this line and ignore the rest
 		for col < 2 {
 			token, EOL := tokenreader.GETTKNREAL()
-			if EOL {
+			if EOL || token.State != tknptr.DGT { // better way to handle non digit tokens.
 				break
 			}
 			if token.State == tknptr.DGT { // ignore non-digit tokens, which allows for comments
