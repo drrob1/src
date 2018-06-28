@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "11 May 2018"
+const LastAltered = "28 June 2018"
 
 /*
 Revision History
@@ -48,6 +48,7 @@ Revision History
   24 Apr 18 -- Improving comments, and removing prompt for a pattern, as it is no longer needed.
    2 May 18 -- More improving comments.
   11 May 18 -- Adding use of dsrt environment variable.  Tested ideas in shoenv.go.
+  28 Jun 18 -- Refining my use of an environment variable.  I did not get it exactly right the first time around.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -106,7 +107,8 @@ func main() {
 	systemStr := ""
 
 	// environment variable processing.  If present, these will be the defaults.
-	dsrtparam = GetEnviron()
+	// dsrtparam = GetEnviron(), now obsolete
+	dsrtparam = ProcessEnvironString()
 
 	linuxflag := runtime.GOOS == "linux"
 	if linuxflag {
@@ -354,7 +356,7 @@ func main() {
 					count++
 				}
 			}
-			if count > NumLines {
+			if count >= NumLines {
 				break
 			}
 		}
@@ -406,7 +408,7 @@ func GetIDname(uidStr string) string {
 } // GetIDname
 
 // ------------------------------- GetEnviron ------------------------------------------------
-func GetEnviron() DsrtParamType {
+func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obsolete now but not gone.
 	var dsrtparam DsrtParamType
 
 	EnvironSlice := os.Environ()
@@ -438,6 +440,40 @@ func GetEnviron() DsrtParamType {
 	}
 	return dsrtparam
 } // GetEnviron
+
+// ------------------------------------ ProcessEnvironString ---------------------------------------
+func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
+	var dsrtparam DsrtParamType
+
+	s := os.Getenv("dsrt")
+
+	if len(s) < 1 {
+		return dsrtparam
+	} // empty dsrtparam is returned
+
+	indiv := strings.Split(s, "")
+
+	for j, str := range indiv {
+		s := str[0]
+		if s == 'r' || s == 'R' {
+			dsrtparam.reverseflag = true
+		} else if s == 's' || s == 'S' {
+			dsrtparam.sizeflag = true
+		} else if s == 'd' {
+			dsrtparam.dirlistflag = true
+			dsrtparam.filenamelistflag = true
+		} else if s == 'D' {
+			dsrtparam.dirlistflag = true
+		} else if unicode.IsDigit(rune(s)) {
+			dsrtparam.numlines = int(s) - int('0')
+			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
+				dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
+				break // if have a 2 digit number, it ends processing of the indiv string
+			}
+		}
+	}
+	return dsrtparam
+}
 
 /*
 package path
@@ -505,5 +541,60 @@ type User struct {
   Username string // login name
   Name string     // full or display name.  It may be blank.
   HomeDir string
+}
+
+package os
+func Getenv
+func Getenv(key string) string
+Getenv retrieves the value of the environment variable named by the key. It returns the value, which will be empty if the variable is not present. To distinguish between an empty value and an unset
+value, use LookupEnv.
+
+Example
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	fmt.Printf("%s lives in %s.\n", os.Getenv("USER"), os.Getenv("HOME"))
+
+}
+
+func Getwd
+func Getwd() (dir string, err error)
+Getwd returns a rooted path name corresponding to the current directory. If the current directory can be reached via multiple paths (due to symbolic links), Getwd may return any one of them.
+
+func Environ
+func Environ() []string
+Environ returns a copy of strings representing the environment, in the form "key=value".
+
+
+func LookupEnv
+func LookupEnv(key string) (string, bool)
+LookupEnv retrieves the value of the environment variable named by the key. If the variable is present in the environment the value (which may be empty) is returned and the boolean is true. Otherwise the returned value will be empty and the boolean will be false.
+
+Example
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	show := func(key string) {
+		val, ok := os.LookupEnv(key)
+		if !ok {
+			fmt.Printf("%s not set\n", key)
+		} else {
+			fmt.Printf("%s=%s\n", key, val)
+		}
+	}
+
+	show("USER")
+	show("GOPATH")
+
 }
 */
