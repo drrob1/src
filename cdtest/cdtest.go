@@ -3,18 +3,25 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 )
 
-// this does not exit in HomeDir.  So I'm dropping it.
+// still doesn't change directory upon exiting
 func main() {
 	if runtime.GOOS == "linux" {
 		HomeDir := os.Getenv("HOME")
-		err := os.Chdir(HomeDir)
-		fmt.Println(" change directory to", HomeDir, " on linux, with error", err)
+		fmt.Println(" change directory to", HomeDir, " on linux")
+		//		cmd := exec.Command("cd", HomeDir)
+		//		cmd.Stdout = os.Stdout
+		//		cmd.Run()
+		fmt.Fprintf(os.Stdout, "%s", HomeDir)
 	} else {
 		HomeDir := os.Getenv("userprofile")
-		err := os.Chdir(HomeDir)
-		fmt.Println(" change directory to", HomeDir, " on windows, with error", err)
+		fmt.Println(" change directory to", HomeDir, " on windows")
+		cmd := exec.Command("cd", HomeDir)
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+		fmt.Fprint(os.Stdout, HomeDir)
 	}
 }

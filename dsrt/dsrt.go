@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "28 June 2018"
+const LastAltered = "18 July 2018"
 
 /*
 Revision History
@@ -49,6 +49,7 @@ Revision History
    2 May 18 -- More improving comments.
   11 May 18 -- Adding use of dsrt environment variable.  Tested ideas in shoenv.go.
   28 Jun 18 -- Refining my use of an environment variable.  I did not get it exactly right the first time around.
+  18 Jul 18 -- Fixed bug in processing of "d" and "D" in dsrt environment.  And removed askforinput completely.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -99,8 +100,6 @@ func main() {
 	var SizeTotal int64
 	var havefiles bool
 	var commandline string
-	var askforinput bool // default is false, which I'll leave, essentially removing this flag.
-	//						Since it will never be true, it is essentially removed.
 
 	uid := 0
 	gid := 0
@@ -121,7 +120,6 @@ func main() {
 		}
 	} else if runtime.GOOS == "windows" {
 		systemStr = "Windows"
-		askforinput = false // added 02/08/2018 11:56:23 AM, so won't ask for input on Windows system, ever.
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else {
@@ -233,7 +231,6 @@ func main() {
 			sort.Slice(files, oldestDate)
 		}
 		havefiles = true
-		askforinput = false
 	} else {
 		commandline = flag.Arg(0) // this only gets the first non flag argument.  That's all I want on Windows.
 		// Inelegant after adding linux filenames on command line code.  Could have now used filenameStringSlice[0].  I chose to not change the use of flag.Arg(0).
@@ -254,28 +251,6 @@ func main() {
 		CleanDirName, CleanFileName = filepath.Split(commandline)
 		CleanDirName = filepath.Clean(CleanDirName)
 		CleanFileName = strings.ToUpper(CleanFileName)
-		askforinput = false
-	}
-
-	if askforinput {
-		// Asking for input so don't have to worry about command line globbing.  Now that I am handling command line filenames on linux, this code is essentially removed.
-		fmt.Print(" Enter input for globbing: ")
-		newtext := ""
-		fmt.Scanln(&newtext)
-		//  _, err = fmt.Scanln(&newtext)
-		//  fmt.Println("Status of Scanln err is", err)  A blank line gives the error "unexpected newline", which I'm going to ignore.
-
-		if len(newtext) > 0 {
-			// time to do the stuff I'm writing this pgm for
-			if strings.Contains(newtext, "~") {
-				newtext = strings.Replace(newtext, "~", HomeDirStr, 1) // userptr is from os/user package
-			}
-			CleanDirName, CleanFileName = filepath.Split(newtext)
-			CleanDirName = filepath.Clean(CleanDirName)
-			CleanFileName = strings.ToUpper(CleanFileName)
-			// fmt.Println(" CleanDirName:", CleanDirName, ".  CleanFileName:", CleanFileName)  a debugging line.
-		}
-
 	}
 
 	if len(CleanDirName) == 0 {
@@ -425,9 +400,8 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 					dsrtparam.sizeflag = true
 				} else if s == 'd' {
 					dsrtparam.dirlistflag = true
-					dsrtparam.filenamelistflag = true
 				} else if s == 'D' {
-					dsrtparam.dirlistflag = true
+					dsrtparam.filenamelistflag = true
 				} else if unicode.IsDigit(rune(s)) {
 					dsrtparam.numlines = int(s) - int('0')
 					if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
@@ -461,9 +435,8 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 			dsrtparam.sizeflag = true
 		} else if s == 'd' {
 			dsrtparam.dirlistflag = true
-			dsrtparam.filenamelistflag = true
 		} else if s == 'D' {
-			dsrtparam.dirlistflag = true
+			dsrtparam.filenamelistflag = true
 		} else if unicode.IsDigit(rune(s)) {
 			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
