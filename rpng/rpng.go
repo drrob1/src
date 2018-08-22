@@ -33,58 +33,59 @@ var SuppressDump map[string]bool
 
 func main() {
 	/*
-			This module uses the HPCALC module to simulate an RPN type calculator.
-			REVISION HISTORY
-			----------------
-			 1 Dec 89 -- Changed prompt.
-			24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-			25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
-			 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
-			18 May 03 -- First Win32 version.  And changed name.
-			 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
-			               And will save/restore the stack to/from a file.
-			 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
-		               And I now have the skipline included in MiscStdInOut so it is removed from here.
-			15 Oct 13 -- Now writing for gm2 under linux.
-			22 Jul 14 -- Converting to Ada.
-			 6 Dec 14 -- Converting to cpp.
-			20 Dec 14 -- Added macros for date and time last compiled.
-			31 Dec 14 -- Started coding HOL command.
-			 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
-			10 Jan 15 -- Playing with string conversions and number formatting.
-		     5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
-		    22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
-		    13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
-		     2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
-			 7 Jul 16 -- Added UP command to hpcalcc.cpp
-			 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
-			22 Aug 16 -- Started conversion to Go, as rpn.go.
-			 8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
-			11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
-			 1 Oct 16 -- Made the stack display when the program starts.
-			 4 Oct 16 -- Made the storage registers display when the program starts.
-			 7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
-			               Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
-			 8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
-			 9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
-			21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
-			28 Oct 16 -- Will clear screen in between command calls.  This is before I play with termbox or goterm
-			31 Oct 16 -- Since clear screen works, I'll have the stack and reg's displayed more often.
-			               Turns out that this cleared output like PRIME or HEX.  Now have YES,NO,ON,OFF for manual
-			               control of DUMP output.  And added a HELP line printed here after that from hpcalc.
-			 3 Nov 16 -- Changed hpcalc to return strings for output by the client rtn, instead of it doing its own output.  So now have
-			               to make the corresponding changes here.
-			 4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
-			 5 Nov 16 -- Added SuppressDump map code
-			 6 Nov 16 -- Added blank lines before writing output from hpcalc.
-			11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
-			13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
-			23 Feb 17 -- Made "?" equivalent to "help"
-			17 Jul 17 -- Discovered bug in that command history is not displayed correctly here.  It is displayed
-			               correctly in rpnterm.  It will take me a little longer to find and fix this bug.
-			31 Aug 17 -- Stopped working on the command hx issue.  Instead of bufio, I will use fmt.Scan().
-			               And will check timestamp of the rpng exec file.
-			 6 Apr 18 -- Wrote out DisplayTapeFile.
+	   	This module uses the HPCALC module to simulate an RPN type calculator.
+	   	REVISION HISTORY
+	   	----------------
+	   	 1 Dec 89 -- Changed prompt.
+	   	24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
+	   	25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+	   	 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
+	   	18 May 03 -- First Win32 version.  And changed name.
+	   	 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
+	   	               And will save/restore the stack to/from a file.
+	   	 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
+	                  And I now have the skipline included in MiscStdInOut so it is removed from here.
+	   	15 Oct 13 -- Now writing for gm2 under linux.
+	   	22 Jul 14 -- Converting to Ada.
+	   	 6 Dec 14 -- Converting to cpp.
+	   	20 Dec 14 -- Added macros for date and time last compiled.
+	   	31 Dec 14 -- Started coding HOL command.
+	   	 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
+	   	10 Jan 15 -- Playing with string conversions and number formatting.
+	        5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
+	       22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
+	       13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
+	        2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
+	   	 7 Jul 16 -- Added UP command to hpcalcc.cpp
+	   	 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+	   	22 Aug 16 -- Started conversion to Go, as rpn.go.
+	   	 8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
+	   	11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
+	   	 1 Oct 16 -- Made the stack display when the program starts.
+	   	 4 Oct 16 -- Made the storage registers display when the program starts.
+	   	 7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
+	   	               Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
+	   	 8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
+	   	 9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
+	   	21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
+	   	28 Oct 16 -- Will clear screen in between command calls.  This is before I play with termbox or goterm
+	   	31 Oct 16 -- Since clear screen works, I'll have the stack and reg's displayed more often.
+	   	               Turns out that this cleared output like PRIME or HEX.  Now have YES,NO,ON,OFF for manual
+	   	               control of DUMP output.  And added a HELP line printed here after that from hpcalc.
+	   	 3 Nov 16 -- Changed hpcalc to return strings for output by the client rtn, instead of it doing its own output.  So now have
+	   	               to make the corresponding changes here.
+	   	 4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
+	   	 5 Nov 16 -- Added SuppressDump map code
+	   	 6 Nov 16 -- Added blank lines before writing output from hpcalc.
+	   	11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
+	   	13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
+	   	23 Feb 17 -- Made "?" equivalent to "help"
+	   	17 Jul 17 -- Discovered bug in that command history is not displayed correctly here.  It is displayed
+	   	               correctly in rpnterm.  It will take me a little longer to find and fix this bug.
+	   	31 Aug 17 -- Stopped working on the command hx issue.  Instead of bufio, I will use fmt.Scan().
+	   	               And will check timestamp of the rpng exec file.
+	   	 6 Apr 18 -- Wrote out DisplayTapeFile.
+	   	22 Aug 18 -- learning about code folding
 	*/
 
 	//  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
@@ -141,10 +142,11 @@ func main() {
 	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
 	Storage3FullFilenameSlice[2] = Storage3FileName
 	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
-
+	// {{{
 	//	fmt.Println(" StorageFullFilename (1,2,3):", StorageFullFilename, Storage2FullFilename,
 	//	Storage3FullFilename)  This is not needed anymore.
 	//	fmt.Println()
+	// }}}
 	thefile, err := os.Open(StorageFullFilename) // open for reading
 	if err != nil {
 		fmt.Errorf(" Error from os.Open(Storage1FileName).  Possibly because no Stack File found: %v\n", err)
@@ -181,9 +183,11 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 
+	// {{{
 	//	scanner := bufio.NewScanner(os.Stdin)    not using bufio anymore.
 	// Here is where I made it scan by space-delimited words.  This is to make all commands go thru rpng before being sent to hpcalc.
 	//	scanner.Split(bufio.ScanWords)           not using bufio anymore.
+	// }}}
 
 	if len(os.Args) > 1 {
 		INBUF = getcommandline.GetCommandLineString()

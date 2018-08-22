@@ -99,6 +99,7 @@ REVISION HISTORY
 16 Aug 17 -- Added code from when.go to use timestamp on executable as link time.
 25 Feb 18 -- PrimeFactorMemoized added.
  6 Apr 18 -- Wrote code to save DisplayTape as a text file.
+22 Aug 18 -- learning about code folding
 */
 
 func main() {
@@ -259,12 +260,14 @@ func main() {
 			for c := range Storage {
 				Storage[c] = 0.0
 			}
+			// {{{
 			/*  This is now handled in hpcalc directly, and returned in the stringslice.
 			    }else if INBUF == "DOW" {
 			      r,_ := hpcalc.GetResult("DOW");
 			      i := int(r);
 			      Printf_tb(x,OutputRow,BrightYellow,Black," Day of Week for X value is a %s",timlibg.DayNames[i]);
 			*/
+			// }}}
 		} else if strings.HasPrefix(INBUF, "STO") {
 			i := 0
 			if len(INBUF) > 3 {
@@ -609,7 +612,7 @@ func WriteStack(x, y int) {
 		Print_tb(x, y, BrightCyan, Black, s)
 		y++
 	}
-
+	// {{{
 	/*  Old way was to GetStack and output.  Now use hpcalc to generate the output as a string.
 	    var SRN int;  // IIRC, SRN = stack register name OR stack register number
 	    var str string;
@@ -625,6 +628,7 @@ func WriteStack(x, y int) {
 	      y++
 	    }
 	*/
+	// }}}
 } // end WriteStack
 
 //--------------------------------------------- WriteHelp -------------------------------------------
@@ -639,6 +643,7 @@ func WriteHelp(x, y int) {
 	}
 	P(x, y, BrightYellow, Black, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
 	y++
+	// {{{
 	/*
 	   P(x,y,BrightYellow,Black," SQRT,SQR -- X = sqrt(X) or sqr(X) register.");
 	   y++
@@ -705,7 +710,7 @@ func WriteHelp(x, y int) {
 	   P(x,y,BrightYellow,Black," EXIT,STOP,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.");
 	   y++  // There are 32 print statements here as of Nov 1, 2016.
 	*/
-
+	// }}}
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
 	_ = GetInputString(x+11, y)
