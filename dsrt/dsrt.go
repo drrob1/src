@@ -50,6 +50,7 @@ Revision History
   11 May 18 -- Adding use of dsrt environment variable.  Tested ideas in shoenv.go.
   28 Jun 18 -- Refining my use of an environment variable.  I did not get it exactly right the first time around.
   18 Jul 18 -- Fixed bug in processing of "d" and "D" in dsrt environment.  And removed askforinput completely.
+  21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -449,6 +450,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 }
 
 /*
+ {{{
 package path
 func Match
 
@@ -519,7 +521,7 @@ type User struct {
 package os
 func Getenv
 func Getenv(key string) string
-Getenv retrieves the value of the environment variable named by the key. It returns the value, which will be empty if the variable is not present. To distinguish between an empty value and an unset
+Getenv retrieves the value of the environment variable named by the key.  It returns the value, which will be empty if the variable is not present.  To distinguish between an empty value and an unset
 value, use LookupEnv.
 
 Example
@@ -537,7 +539,7 @@ func main() {
 
 func Getwd
 func Getwd() (dir string, err error)
-Getwd returns a rooted path name corresponding to the current directory. If the current directory can be reached via multiple paths (due to symbolic links), Getwd may return any one of them.
+Getwd returns a rooted path name corresponding to the current directory.  If the current directory can be reached via multiple paths (due to symbolic links), Getwd may return any one of them.
 
 func Environ
 func Environ() []string
@@ -546,7 +548,7 @@ Environ returns a copy of strings representing the environment, in the form "key
 
 func LookupEnv
 func LookupEnv(key string) (string, bool)
-LookupEnv retrieves the value of the environment variable named by the key. If the variable is present in the environment the value (which may be empty) is returned and the boolean is true. Otherwise the returned value will be empty and the boolean will be false.
+LookupEnv retrieves the value of the environment variable named by the key.  If the variable is present in the environment the value (which may be empty) is returned and the boolean is true.  Otherwise the returned value will be empty and the boolean will be false.
 
 Example
 package main
@@ -570,4 +572,6 @@ func main() {
 	show("GOPATH")
 
 }
+
+}}}
 */
