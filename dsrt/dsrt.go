@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "18 July 2018"
+const LastAltered = "11 Sept 2018"
 
 /*
 Revision History
@@ -51,6 +51,7 @@ Revision History
   28 Jun 18 -- Refining my use of an environment variable.  I did not get it exactly right the first time around.
   18 Jul 18 -- Fixed bug in processing of "d" and "D" in dsrt environment.  And removed askforinput completely.
   21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
+  11 Sep 18 -- Will total and display all filesizes in the files slice.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -98,7 +99,7 @@ func main() {
 	var filesSize FISliceSize
 	var err error
 	var count int
-	var SizeTotal int64
+	var SizeTotal, GrandTotal int64
 	var havefiles bool
 	var commandline string
 
@@ -108,7 +109,7 @@ func main() {
 
 	// environment variable processing.  If present, these will be the defaults.
 	// dsrtparam = GetEnviron(), now obsolete
-	dsrtparam = ProcessEnvironString()
+	dsrtparam = ProcessEnvironString() // This is a function below.
 
 	linuxflag := runtime.GOOS == "linux"
 	if linuxflag {
@@ -209,6 +210,9 @@ func main() {
 				log.Fatal(err)
 			}
 			files = append(files, fi)
+			if fi.Mode().IsRegular() {
+				GrandTotal += fi.Size()
+			}
 		}
 		if SizeSort && Forward {
 			largestSize := func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
@@ -267,6 +271,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		for _, f := range filesSize {
+			if f.Mode().IsRegular() {
+				GrandTotal += f.Size()
+			}
+		}
 		if Reverse {
 			sort.Sort(sort.Reverse(filesSize))
 		} else {
@@ -277,6 +286,11 @@ func main() {
 		filesDate, err = ioutil.ReadDir(CleanDirName)
 		if err != nil {
 			log.Fatal(err)
+		}
+		for _, f := range filesDate {
+			if f.Mode().IsRegular() {
+				GrandTotal += f.Size()
+			}
 		}
 		if Reverse {
 			sort.Sort(sort.Reverse(filesDate))
@@ -342,7 +356,11 @@ func main() {
 	if SizeTotal > 100000 {
 		s = AddCommas(s)
 	}
-	fmt.Println(" File Size total =", s)
+	s0 := fmt.Sprintf("%d", GrandTotal)
+	if GrandTotal > 100000 {
+		s0 = AddCommas(s0)
+	}
+	fmt.Println(" File Size total =", s, ", Directory grand total is", s0)
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertByteSlice
