@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "11 Sept 2018"
+const LastAltered = "12 Sept 2018"
 
 /*
 Revision History
@@ -52,6 +52,7 @@ Revision History
   18 Jul 18 -- Fixed bug in processing of "d" and "D" in dsrt environment.  And removed askforinput completely.
   21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
   11 Sep 18 -- Will total and display all filesizes in the files slice.
+  12 Sep 18 -- Adding a t flag to show the totals of the entire directory
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -84,8 +85,8 @@ func (f FISliceSize) Len() int {
 }
 
 type DsrtParamType struct {
-	numlines                                             int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag bool
+	numlines                                                        int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
 }
 
 func main() {
@@ -165,6 +166,8 @@ func main() {
 	var FilenameListFlag bool
 	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
+	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
+
 	flag.Parse()
 
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
@@ -200,6 +203,8 @@ func main() {
 	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
 	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
 
+	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
+
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
@@ -210,7 +215,7 @@ func main() {
 				log.Fatal(err)
 			}
 			files = append(files, fi)
-			if fi.Mode().IsRegular() {
+			if fi.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += fi.Size()
 			}
 		}
@@ -272,7 +277,7 @@ func main() {
 			log.Fatal(err)
 		}
 		for _, f := range filesSize {
-			if f.Mode().IsRegular() {
+			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
 			}
 		}
@@ -288,7 +293,7 @@ func main() {
 			log.Fatal(err)
 		}
 		for _, f := range filesDate {
-			if f.Mode().IsRegular() {
+			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
 			}
 		}
@@ -360,7 +365,12 @@ func main() {
 	if GrandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Println(" File Size total =", s, ", Directory grand total is", s0)
+	fmt.Print(" File Size total =", s)
+	if ShowGrandTotal {
+		fmt.Println(", Directory grand total is", s0, ".")
+	} else {
+		fmt.Println(".")
+	}
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertByteSlice
@@ -456,6 +466,8 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 			dsrtparam.dirlistflag = true
 		} else if s == 'D' {
 			dsrtparam.filenamelistflag = true
+		} else if s == 't' { // added 09/12/2018 12:26:01 PM
+			dsrtparam.totalflag = true // for the grand total operation
 		} else if unicode.IsDigit(rune(s)) {
 			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
