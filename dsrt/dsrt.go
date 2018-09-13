@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "12 Sept 2018"
+const LastAltered = "13 Sept 2018"
 
 /*
 Revision History
@@ -53,6 +53,7 @@ Revision History
   21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
   11 Sep 18 -- Will total and display all filesizes in the files slice.
   12 Sep 18 -- Adding a t flag to show the totals of the entire directory
+  13 Sep 18 -- Added GrandTotalCount.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -101,6 +102,7 @@ func main() {
 	var err error
 	var count int
 	var SizeTotal, GrandTotal int64
+	var GrandTotalCount int
 	var havefiles bool
 	var commandline string
 
@@ -217,6 +219,7 @@ func main() {
 			files = append(files, fi)
 			if fi.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += fi.Size()
+				GrandTotalCount++
 			}
 		}
 		if SizeSort && Forward {
@@ -279,6 +282,7 @@ func main() {
 		for _, f := range filesSize {
 			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
+				GrandTotalCount++
 			}
 		}
 		if Reverse {
@@ -295,6 +299,7 @@ func main() {
 		for _, f := range filesDate {
 			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
+				GrandTotalCount++
 			}
 		}
 		if Reverse {
@@ -367,7 +372,7 @@ func main() {
 	}
 	fmt.Print(" File Size total =", s)
 	if ShowGrandTotal {
-		fmt.Println(", Directory grand total is", s0, ".")
+		fmt.Println(", Directory grand total is", s0, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
 	}
