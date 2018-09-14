@@ -53,7 +53,7 @@ Revision History
   21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
   11 Sep 18 -- Will total and display all filesizes in the files slice.
   12 Sep 18 -- Adding a t flag to show the totals of the entire directory
-  13 Sep 18 -- Added GrandTotalCount.
+  13 Sep 18 -- Added GrandTotalCount.  And KB, MB, TB.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -370,9 +370,39 @@ func main() {
 	if GrandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Print(" File Size total =", s)
+	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
-		fmt.Println(", Directory grand total is", s0, "in", GrandTotalCount, "files.")
+		s1 := ""
+		var i int64
+		switch {
+		case GrandTotal > 1000000000000: // 1 trillion, or TB
+			i = GrandTotal / 1000000000000               // I'm forcing an integer division.
+			if GrandTotal%1000000000000 > 500000000000 { // rounding up
+				i++
+			}
+			s1 = fmt.Sprintf("%d TB", i)
+		case GrandTotal > 1000000000: // 1 billion, or GB
+			i = GrandTotal / 1000000000
+			if GrandTotal%1000000000 > 500000000 { // rounding up
+				i++
+			}
+			s1 = fmt.Sprintf("%d GB", i)
+		case GrandTotal > 1000000: // 1 million, or MB
+			i = GrandTotal / 1000000
+			if GrandTotal%1000000 > 500000 {
+				i++
+			}
+			s1 = fmt.Sprintf("%d MB", i)
+		case GrandTotal > 1000: // KB
+			i = GrandTotal / 1000
+			if GrandTotal%1000 > 500 {
+				i++
+			}
+			s1 = fmt.Sprintf("%d KB", i)
+		default:
+			s1 = fmt.Sprintf("%d", i)
+		}
+		fmt.Println(", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
 	}
