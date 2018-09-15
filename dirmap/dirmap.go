@@ -98,7 +98,7 @@ func main() {
 		d.subtotal = m
 		dirList = append(dirList, d)
 	}
-	fmt.Println(" Length if dirList is", len(dirList))
+	fmt.Println(" Length of dirList is", len(dirList))
 	sort.Sort(dirList)
 
 	datestr := MakeDateStr()
@@ -123,11 +123,14 @@ func main() {
 		}
 		fmt.Println()
 	} else { // write output to a file.  First, build filename
+		s0 := fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, and number of directories is %d\n", startDirectory, TotalOfFiles, GrandTotalString, len(DirMap))
+		outputfile.WriteString(s0)
+		outputfile.WriteString("\n")
 		for _, d := range dirList {
 			str := strconv.FormatInt(d.subtotal, 10)
 			str = AddCommas(str)
-			s := fmt.Sprintf("%s size is %s\n", d.name, str)
-			outputfile.WriteString(s)
+			s1 := fmt.Sprintf("%s size is %s\n", d.name, str)
+			outputfile.WriteString(s1)
 		}
 		outputfile.WriteString("\n")
 		outputfile.WriteString("\n")
