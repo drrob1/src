@@ -10,14 +10,17 @@ import (
 	"strconv"
 )
 
-const LastAltered = " 28 Feb 2018"
+const LastAltered = " 14 Sep 2018"
 
 /*
   REVISION HISTORY
   -------- -------
    5 Nov 2017 -- First version, based on code dirwalk.
    8 Nov 2017 -- My first use of sort.Slice, which uses a closure as the less procedure.
-  28 Feb 2810 -- My use of alternate closure syntax seems to be working.  I can understand this more easily.
+  14 Sep 2018 -- Added map data structure to sort out why the subtotals are wrong, but the GrandTotal is right.
+                   I think subdirectories are being entered more than once.  I need to sort the list by name and subtotal to find this.
+                   Turns out that the map method total is correct, the string slice method is not correct.
+				   Need to think about this more.
 */
 
 type directory struct {
@@ -40,7 +43,7 @@ func (ds dirslice) Len() int {
 }
 
 func main() {
-	var GrandTotal uint64
+	var GrandTotal int64 // this used to be a uint64.  I think making it an int64 is better as of 09/14/2018 2:46:12 PM
 	var startDirectory string
 	var dirList dirslice
 
@@ -59,9 +62,10 @@ func main() {
 	}
 
 	var filesList []string
-	filesList = make([]string, 0, 5000)
-	dirList = make(dirslice, 0, 5000)
-	filepath.Walk(startDirectory, func(fpath string, fi os.FileInfo, err error) error {
+	filesList = make([]string, 0, 500)
+	dirList = make(dirslice, 0, 500)
+	DirMap := make(map[string]int64, 100)
+	filepathwalkfunc := func(fpath string, fi os.FileInfo, err error) error { // this is a closure
 		if err != nil {
 			return err
 		}
@@ -81,25 +85,26 @@ func main() {
 		} else if !fi.Mode().IsRegular() { // not a dir or a reg file, maybe a symlink
 			return nil
 		}
-
+		//  Now have a regular file.
 		filesList = append(filesList, fpath)
-		GrandTotal += uint64(fi.Size())
+		GrandTotal += fi.Size()
+		DirMap[filepath.Dir(fpath)] += fi.Size() // using a map so order of walk is not important
 		lastDirList := len(dirList) - 1
 		if filepath.Dir(fpath) == dirList[lastDirList].name { // if not already there.
 			dirList[lastDirList].subtotal += fi.Size()
 		}
 
 		return nil
-	})
+	}
+
+	filepath.Walk(startDirectory, filepathwalkfunc)
 
 	// Will now sort by name and attempt to remove duplicates by setting their subtotal to zero.
-	//	sort.Slice(dirList, func(i, j int) bool { return dirList[i].name < dirList[j].name })
-	// Attempting to us an alternate closure syntax, that I find easier to understand.  It seems
-	// to work.
-	f := func(i, j int) bool {
+	// This is probably the reason why the subtotals are wrong.
+	namesortfunc := func(i, j int) bool {
 		return dirList[i].name < dirList[j].name
 	}
-	sort.Slice(dirList, f)
+	sort.Slice(dirList, namesortfunc)
 
 	NumOfDirs := len(dirList)
 	for i := 0; i < NumOfDirs-1; i++ { // will compare current to prev list entry
@@ -119,7 +124,7 @@ func main() {
 		NumOfDirs--
 	}
 
-	GrandTotalString := strconv.FormatUint(GrandTotal, 10)
+	GrandTotalString := strconv.FormatInt(GrandTotal, 10) // I'm guessing as to the name of the correct function here.
 	GrandTotalString = AddCommas(GrandTotalString)
 	fmt.Print(" start dir is ", startDirectory, "; found ", len(filesList), " files in this tree. ")
 	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of non-empty directories is", NumOfDirs)
@@ -134,6 +139,19 @@ func main() {
 		}
 	}
 	fmt.Println()
+	fmt.Print(" ready for more:")
+	var ans string
+	fmt.Scanln(&ans)
+	fmt.Println(ans)
+
+	// Output map
+	fmt.Println(" Slice output:")
+	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
+		subtotalstr := strconv.FormatInt(m, 10)
+		subtotalstr = AddCommas(subtotalstr)
+		fmt.Printf(" %s subtotal is %s.\n", n, subtotalstr)
+	}
+
 	fmt.Println()
 } // main
 
