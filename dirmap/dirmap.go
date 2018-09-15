@@ -3,14 +3,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"timlibg"
 )
 
-const LastAltered = " 14 Sep 2018"
+const LastAltered = " 15 Sep 2018"
 
 /*
   REVISION HISTORY
@@ -19,8 +21,8 @@ const LastAltered = " 14 Sep 2018"
    8 Nov 2017 -- My first use of sort.Slice, which uses a closure as the less procedure.
   14 Sep 2018 -- Added map data structure to sort out why the subtotals are wrong, but the GrandTotal is right.
                    I think subdirectories are being entered more than once.  I need to sort the list by name and subtotal to find this.
-                   Turns out that the map method total is correct, the string slice method is not correct.
-				   Need to think about this more.
+				   I will remove the old way.  Then use the slices to sort and display results.
+				   And either display the output or write to a file.
 */
 
 type directory struct {
@@ -43,7 +45,7 @@ func (ds dirslice) Len() int {
 }
 
 func main() {
-	var GrandTotal int64 // this used to be a uint64.  I think making it an int64 is better as of 09/14/2018 2:46:12 PM
+	var GrandTotalSize, TotalOfFiles int64 // this used to be a uint64.  I think making it an int64 is better as of 09/14/2018 2:46:12 PM
 	var startDirectory string
 	var dirList dirslice
 
@@ -61,97 +63,77 @@ func main() {
 		os.Exit(1)
 	}
 
-	var filesList []string
-	filesList = make([]string, 0, 500)
 	dirList = make(dirslice, 0, 500)
-	DirMap := make(map[string]int64, 100)
+	DirMap := make(map[string]int64, 500)
 	filepathwalkfunc := func(fpath string, fi os.FileInfo, err error) error { // this is a closure
 		if err != nil {
 			return err
 		}
 
-		if fi.Mode().IsDir() && len(dirList) == 0 { // This one is the first in the list.
-			d := directory{} // null element to init.
-			d.name = filepath.Dir(fpath)
-			d.subtotal = 0
-			dirList = append(dirList, d)
-			return nil
-		} else if fi.Mode().IsDir() && filepath.Dir(fpath) != dirList[len(dirList)-1].name {
-			d := directory{} // null element to init.
-			d.name = filepath.Dir(fpath)
-			d.subtotal = 0
-			dirList = append(dirList, d)
-			return nil
-		} else if !fi.Mode().IsRegular() { // not a dir or a reg file, maybe a symlink
+		if !fi.Mode().IsRegular() { // not a reg file, maybe a directory or symlink
 			return nil
 		}
 		//  Now have a regular file.
-		filesList = append(filesList, fpath)
-		GrandTotal += fi.Size()
+		TotalOfFiles++
+		GrandTotalSize += fi.Size()
 		DirMap[filepath.Dir(fpath)] += fi.Size() // using a map so order of walk is not important
-		lastDirList := len(dirList) - 1
-		if filepath.Dir(fpath) == dirList[lastDirList].name { // if not already there.
-			dirList[lastDirList].subtotal += fi.Size()
-		}
 
 		return nil
 	}
 
 	filepath.Walk(startDirectory, filepathwalkfunc)
 
-	// Will now sort by name and attempt to remove duplicates by setting their subtotal to zero.
-	// This is probably the reason why the subtotals are wrong.
-	namesortfunc := func(i, j int) bool {
-		return dirList[i].name < dirList[j].name
-	}
-	sort.Slice(dirList, namesortfunc)
-
-	NumOfDirs := len(dirList)
-	for i := 0; i < NumOfDirs-1; i++ { // will compare current to prev list entry
-		if dirList[i].name == dirList[i+1].name {
-			for j := i + 1; j < NumOfDirs && dirList[i].name == dirList[j].name; j++ { // walk down list of == names
-				dirList[i].subtotal += dirList[j].subtotal
-				dirList[j].subtotal = 0 // zero it out so it will sort towards bottom and not display.
-			}
-		}
-
-	}
-
 	// Prepare for output.
+
+	GrandTotalString := strconv.FormatInt(GrandTotalSize, 10)
+	GrandTotalString = AddCommas(GrandTotalString)
+	fmt.Print(" start dir is ", startDirectory, "; found ", TotalOfFiles, " files in this tree. ")
+	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and len of DirMap is", len(DirMap))
+
+	fmt.Println()
+	// Output map
+	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
+		d := directory{} // this is a structured constant
+		d.name = n
+		d.subtotal = m
+		dirList = append(dirList, d)
+	}
+	fmt.Println(" Length if dirList is", len(dirList))
 	sort.Sort(dirList)
 
-	for i := NumOfDirs - 1; i > 0 && dirList[i].subtotal == 0; i-- {
-		NumOfDirs--
+	datestr := MakeDateStr()
+	outfilename := filepath.Base(startDirectory) + "_" + datestr
+	outfile, err := os.Create(outfilename)
+	defer outfile.Close()
+	outputfile := bufio.NewWriter(outfile)
+	defer outputfile.Flush()
+
+	if err != nil {
+		fmt.Println(" Cannot open outputfile ", outfilename, " with error ", err)
+		// I'm going to assume this branch does not occur in the code below.  Else I would need a
+		// stop flag of some kind to write to screen.
 	}
 
-	GrandTotalString := strconv.FormatInt(GrandTotal, 10) // I'm guessing as to the name of the correct function here.
-	GrandTotalString = AddCommas(GrandTotalString)
-	fmt.Print(" start dir is ", startDirectory, "; found ", len(filesList), " files in this tree. ")
-	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and number of non-empty directories is", NumOfDirs)
-
-	fmt.Println()
-	for i, d := range dirList {
-		subtotalstr := strconv.FormatInt(d.subtotal, 10)
-		subtotalstr = AddCommas(subtotalstr)
-		fmt.Printf(" %s subtotal is %s.\n", d.name, subtotalstr)
-		if i > 40 || d.subtotal == 0 {
-			break
+	if len(dirList) < 30 {
+		for _, d := range dirList {
+			str := strconv.FormatInt(d.subtotal, 10)
+			str = AddCommas(str)
+			s := fmt.Sprintf("%s size is %s", d.name, str)
+			fmt.Println(s)
 		}
+		fmt.Println()
+	} else { // write output to a file.  First, build filename
+		for _, d := range dirList {
+			str := strconv.FormatInt(d.subtotal, 10)
+			str = AddCommas(str)
+			s := fmt.Sprintf("%s size is %s\n", d.name, str)
+			outputfile.WriteString(s)
+		}
+		outputfile.WriteString("\n")
+		outputfile.WriteString("\n")
+		outputfile.Flush()
+		outfile.Close()
 	}
-	fmt.Println()
-	fmt.Print(" ready for more:")
-	var ans string
-	fmt.Scanln(&ans)
-	fmt.Println(ans)
-
-	// Output map
-	fmt.Println(" Slice output:")
-	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
-		subtotalstr := strconv.FormatInt(m, 10)
-		subtotalstr = AddCommas(subtotalstr)
-		fmt.Printf(" %s subtotal is %s.\n", n, subtotalstr)
-	}
-
 	fmt.Println()
 } // main
 
@@ -183,4 +165,23 @@ func min(i, j int) int {
 		return j
 	}
 } // min
-//---------------------------------------------------------------------------------------------------
+
+// ------------------------------------------- MakeDateStr ---------------------------------------------
+func MakeDateStr() (datestr string) {
+
+	const DateSepChar = "-"
+
+	m, d, y := timlibg.TIME2MDY()
+	timenow := timlibg.GetDateTime()
+
+	MSTR := strconv.Itoa(m)
+	DSTR := strconv.Itoa(d)
+	YSTR := strconv.Itoa(y)
+	Hr := strconv.Itoa(timenow.Hours)
+	Min := strconv.Itoa(timenow.Minutes)
+	Sec := strconv.Itoa(timenow.Seconds)
+
+	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
+		Sec + "__" + timenow.DayOfWeekStr
+	return datestr
+} // MakeDateStr
