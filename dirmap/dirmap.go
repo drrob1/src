@@ -102,7 +102,7 @@ func main() {
 	sort.Sort(dirList)
 
 	datestr := MakeDateStr()
-	outfilename := filepath.Base(startDirectory) + "_" + datestr
+	outfilename := filepath.Base(startDirectory) + "_" + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
 	outputfile := bufio.NewWriter(outfile)
