@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "13 Sept 2018"
+const LastAltered = "16 Sept 2018"
 
 /*
 Revision History
@@ -53,7 +53,8 @@ Revision History
   21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
   11 Sep 18 -- Will total and display all filesizes in the files slice.
   12 Sep 18 -- Adding a t flag to show the totals of the entire directory
-  13 Sep 18 -- Added GrandTotalCount.  And KB, MB, TB.
+  13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
+  16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -400,7 +401,7 @@ func main() {
 			}
 			s1 = fmt.Sprintf("%d KB", i)
 		default:
-			s1 = fmt.Sprintf("%d", i)
+			s1 = fmt.Sprintf("%d", GrandTotal)
 		}
 		fmt.Println(", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {

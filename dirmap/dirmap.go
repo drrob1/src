@@ -12,7 +12,7 @@ import (
 	"timlibg"
 )
 
-const LastAltered = " 15 Sep 2018"
+const LastAltered = " 16 Sep 2018"
 
 /*
   REVISION HISTORY
@@ -20,9 +20,9 @@ const LastAltered = " 15 Sep 2018"
    5 Nov 2017 -- First version, based on code dirwalk.
    8 Nov 2017 -- My first use of sort.Slice, which uses a closure as the less procedure.
   14 Sep 2018 -- Added map data structure to sort out why the subtotals are wrong, but the GrandTotal is right.
-                   I think subdirectories are being entered more than once.  I need to sort the list by name and subtotal to find this.
 				   I will remove the old way.  Then use the slices to sort and display results.
 				   And either display the output or write to a file.
+  16 Sep 2018 -- Added code from dsrt that shows TB, GB, etc.
 */
 
 type directory struct {
@@ -84,11 +84,41 @@ func main() {
 	filepath.Walk(startDirectory, filepathwalkfunc)
 
 	// Prepare for output.
+	s2 := ""
+	var i int64 = GrandTotalSize
+	switch {
+	case GrandTotalSize > 1000000000000: // 1 trillion, or TB
+		i = GrandTotalSize / 1000000000000               // I'm forcing an integer division.
+		if GrandTotalSize%1000000000000 > 500000000000 { // rounding up
+			i++
+		}
+		s2 = fmt.Sprintf("%d TB", i)
+	case GrandTotalSize > 1000000000: // 1 billion, or GB
+		i = GrandTotalSize / 1000000000
+		if GrandTotalSize%1000000000 > 500000000 { // rounding up
+			i++
+		}
+		s2 = fmt.Sprintf("%d GB", i)
+	case GrandTotalSize > 1000000: // 1 million, or MB
+		i = GrandTotalSize / 1000000
+		if GrandTotalSize%1000000 > 500000 {
+			i++
+		}
+		s2 = fmt.Sprintf("%d MB", i)
+	case GrandTotalSize > 1000: // KB
+		i = GrandTotalSize / 1000
+		if GrandTotalSize%1000 > 500 {
+			i++
+		}
+		s2 = fmt.Sprintf("%d KB", i)
+	default:
+		s2 = fmt.Sprintf("%d", i)
+	}
 
 	GrandTotalString := strconv.FormatInt(GrandTotalSize, 10)
 	GrandTotalString = AddCommas(GrandTotalString)
 	fmt.Print(" start dir is ", startDirectory, "; found ", TotalOfFiles, " files in this tree. ")
-	fmt.Println(" Total Size of walked tree is", GrandTotalString, ", and len of DirMap is", len(DirMap))
+	fmt.Println(" Total Size of walked tree is", GrandTotalString, "or", s2, ", and len of DirMap is", len(DirMap))
 
 	fmt.Println()
 	// Output map
@@ -102,7 +132,7 @@ func main() {
 	sort.Sort(dirList)
 
 	datestr := MakeDateStr()
-	outfilename := filepath.Base(startDirectory) + "_" + datestr + ".txt"
+	outfilename := filepath.Base(startDirectory) + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
 	outputfile := bufio.NewWriter(outfile)
@@ -123,7 +153,7 @@ func main() {
 		}
 		fmt.Println()
 	} else { // write output to a file.  First, build filename
-		s0 := fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, and number of directories is %d\n", startDirectory, TotalOfFiles, GrandTotalString, len(DirMap))
+		s0 := fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, or %s, and number of directories is %d\n", startDirectory, TotalOfFiles, GrandTotalString, s2, len(DirMap))
 		outputfile.WriteString(s0)
 		outputfile.WriteString("\n")
 		for _, d := range dirList {
@@ -136,6 +166,7 @@ func main() {
 		outputfile.WriteString("\n")
 		outputfile.Flush()
 		outfile.Close()
+		fmt.Println(" List of subdirectories written to", outfilename)
 	}
 	fmt.Println()
 } // main
