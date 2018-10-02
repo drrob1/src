@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "16 Sept 2018"
+const LastAltered = "2 Oct 2018"
 
 /*
 Revision History
@@ -55,6 +55,7 @@ Revision History
   12 Sep 18 -- Adding a t flag to show the totals of the entire directory
   13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
   16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
+   2 Oct 18 -- Using exponential numbers in case statement of TB, GB, etc.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -376,21 +377,21 @@ func main() {
 		s1 := ""
 		var i int64
 		switch {
-		case GrandTotal > 1000000000000: // 1 trillion, or TB
-			i = GrandTotal / 1000000000000               // I'm forcing an integer division.
-			if GrandTotal%1000000000000 > 500000000000 { // rounding up
+		case GrandTotal > 1e12: // 1000000000000: // 1 trillion, or TB
+			i = GrandTotal / 1e12       // 1000000000000               // I'm forcing an integer division.
+			if GrandTotal%1e12 > 5e11 { // round up
 				i++
 			}
 			s1 = fmt.Sprintf("%d TB", i)
-		case GrandTotal > 1000000000: // 1 billion, or GB
-			i = GrandTotal / 1000000000
-			if GrandTotal%1000000000 > 500000000 { // rounding up
+		case GrandTotal > 1e9: // 1000000000: // 1 billion, or GB
+			i = GrandTotal / 1e9      // 1000000000
+			if GrandTotal%1e9 > 5e8 { // round up
 				i++
 			}
 			s1 = fmt.Sprintf("%d GB", i)
-		case GrandTotal > 1000000: // 1 million, or MB
-			i = GrandTotal / 1000000
-			if GrandTotal%1000000 > 500000 {
+		case GrandTotal > 1e6: // 000000: // 1 million, or MB
+			i = GrandTotal / 1e6
+			if GrandTotal%1e6 > 5e5 {
 				i++
 			}
 			s1 = fmt.Sprintf("%d MB", i)
