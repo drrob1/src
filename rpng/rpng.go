@@ -19,7 +19,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "6 Apr 2018"
+const LastAlteredDate = "2 Oct 2018"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -44,7 +44,7 @@ func main() {
 	   	 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
 	   	               And will save/restore the stack to/from a file.
 	   	 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
-	                  And I now have the skipline included in MiscStdInOut so it is removed from here.
+	                          And I now have the skipline included in MiscStdInOut so it is removed from here.
 	   	15 Oct 13 -- Now writing for gm2 under linux.
 	   	22 Jul 14 -- Converting to Ada.
 	   	 6 Dec 14 -- Converting to cpp.
@@ -52,10 +52,10 @@ func main() {
 	   	31 Dec 14 -- Started coding HOL command.
 	   	 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
 	   	10 Jan 15 -- Playing with string conversions and number formatting.
-	        5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
-	       22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
-	       13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
-	        2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
+	            5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
+	   	22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
+	           13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
+	            2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
 	   	 7 Jul 16 -- Added UP command to hpcalcc.cpp
 	   	 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
 	   	22 Aug 16 -- Started conversion to Go, as rpn.go.
@@ -86,6 +86,7 @@ func main() {
 	   	               And will check timestamp of the rpng exec file.
 	   	 6 Apr 18 -- Wrote out DisplayTapeFile.
 	   	22 Aug 18 -- learning about code folding
+	   	 2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
 	*/
 
 	//  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
@@ -147,6 +148,7 @@ func main() {
 	//	Storage3FullFilename)  This is not needed anymore.
 	//	fmt.Println()
 	// }}}
+
 	thefile, err := os.Open(StorageFullFilename) // open for reading
 	if err != nil {
 		fmt.Errorf(" Error from os.Open(Storage1FileName).  Possibly because no Stack File found: %v\n", err)
@@ -182,7 +184,6 @@ func main() {
 	WriteRegToScreen()
 	fmt.Println()
 	fmt.Println()
-
 	// {{{
 	//	scanner := bufio.NewScanner(os.Stdin)    not using bufio anymore.
 	// Here is where I made it scan by space-delimited words.  This is to make all commands go thru rpng before being sent to hpcalc.
@@ -196,12 +197,18 @@ func main() {
 		//		scanner.Scan()
 		//      INBUF = strings.TrimSpace(scanner.Text())
 		//		if err := scanner.Err(); err != nil {
-		_, err := fmt.Scan(&INBUF)
+		// _, err := fmt.Scan(&INBUF)
+		_, err := fmt.Scanln(&INBUF) // 10/02/2018 04:52:23 PM
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "reading standard input from fmt.Scan():", err)
-			os.Exit(1)
+			msg := fmt.Sprintf("%v", err)
+			if strings.Contains(msg, "newline") {
+				INBUF = ""
+			} else {
+				fmt.Fprintln(os.Stderr, "reading standard input from fmt.Scanln():", err)
+				os.Exit(1)
+			}
 		}
-		if len(INBUF) == 0 { // it seems that this can never be empty when using fmt.Scan()
+		if len(INBUF) == 0 { // it seems that this can never be empty when using fmt.Scan(), but it can with fmt.Scanln().
 			os.Exit(0)
 		}
 	} // if command tail exists
@@ -265,7 +272,7 @@ func main() {
 		}
 		// -------------------------------------------------------------------------------------
 
-		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc.
+		//  These commands are processed thru hpcalc first, then these are processed here.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
 			fmt.Println(" Last altered the source of rpng.go", LastAlteredDate)
 			AllowDumpFlag = false
@@ -285,13 +292,22 @@ func main() {
 		}
 		fmt.Println()
 		fmt.Print(" Enter calculation, HELP or (Q)uit to exit: ")
-		_, err := fmt.Scan(&INBUF)
+		//_, err := fmt.Scan(&INBUF)
+		_, err := fmt.Scanln(&INBUF) // 10/02/2018 1:58:57 PM
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "reading standard input from 2nd fmt.Scan():", err)
-			os.Exit(1)
+			msg := fmt.Sprintf("%v", err)
+			if strings.Contains(msg, "newline") {
+				INBUF = ""
+			} else {
+				fmt.Fprintln(os.Stderr, "reading standard input from 2nd fmt.Scanln():", err)
+				os.Exit(1)
+			}
+		}
+		if len(INBUF) == 0 {
+			break
 		}
 		INBUF = strings.ToUpper(INBUF)
-		if len(INBUF) == 0 || strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" {
+		if strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" {
 			fmt.Println()
 			break
 		}
