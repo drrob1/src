@@ -82,7 +82,7 @@ func main() {
 		if !fi.Mode().IsRegular() { // not a reg file, maybe a directory or symlink
 			if fi.IsDir() {
 				if DirAlreadyWalked[fpath] {
-					return filepath.SkipDir
+					return nil
 				} else {
 					DirAlreadyWalked[fpath] = true
 				}
@@ -94,8 +94,12 @@ func main() {
 		//  Now have a regular file.
 		TotalOfFiles++
 		GrandTotalSize += fi.Size()
-		DirMap[filepath.Dir(fpath)] += fi.Size() // using a map so order of walk is not important
-
+		if fi.IsDir() {
+			DirMap[fpath] += fi.Size()
+		} else {
+			DirMap[filepath.Dir(fpath)] += fi.Size() // using a map so order of walk is not important
+		}
+		fmt.Println(" fpath is", fpath, "dir of fpath is", filepath.Dir(fpath), " is dir", fi.IsDir())
 		return nil
 	}
 
@@ -117,9 +121,9 @@ func main() {
 			i++
 		}
 		s2 = fmt.Sprintf("%d GB", i)
-	case GrandTotalSize > 1000000: // 1 million, or MB
-		i = GrandTotalSize / 1000000
-		if GrandTotalSize%1000000 > 500000 {
+	case GrandTotalSize > 1e6: // 1 million, or MB
+		i = GrandTotalSize / 1e6
+		if GrandTotalSize%1e6 > 5e5 {
 			i++
 		}
 		s2 = fmt.Sprintf("%d MB", i)
