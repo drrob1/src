@@ -12,7 +12,7 @@ import (
 	"timlibg"
 )
 
-const LastAltered = " 16 Sep 2018"
+const LastAltered = "5 Oct 2018"
 
 /*
   REVISION HISTORY
@@ -23,6 +23,10 @@ const LastAltered = " 16 Sep 2018"
 				   I will remove the old way.  Then use the slices to sort and display results.
 				   And either display the output or write to a file.
   16 Sep 2018 -- Added code from dsrt that shows TB, GB, etc.
+   4 Oct 2018 -- Will no longer ignore errors from the walk function, to try to track down why it sometimes fails.
+                   It seems like checking for errors was enough for the program to work.
+				   It reports an error and then continues without any more errors.
+   5 Oct 2018 -- Still improving, based on a thread from go-nuts.
 */
 
 type directory struct {
@@ -65,14 +69,27 @@ func main() {
 
 	dirList = make(dirslice, 0, 500)
 	DirMap := make(map[string]int64, 500)
-	filepathwalkfunc := func(fpath string, fi os.FileInfo, err error) error { // this is a closure
+	DirAlreadyWalked := make(map[string]bool, 500)
+
+	// walkfunc closure
+	filepathwalkfunc := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			fmt.Printf(" Error from walk.  Grand total size is %d in %d number of files, error is %v. \n ", GrandTotalSize, TotalOfFiles, err)
+			return filepath.SkipDir
 		}
 
 		if !fi.Mode().IsRegular() { // not a reg file, maybe a directory or symlink
-			return nil
+			if fi.IsDir() {
+				if DirAlreadyWalked[fi.Name()] {
+					return filepath.SkipDir
+				} else {
+					DirAlreadyWalked[fi.Name()] = true
+				}
+			} else {
+				return filepath.SkipDir
+			}
 		}
+
 		//  Now have a regular file.
 		TotalOfFiles++
 		GrandTotalSize += fi.Size()
@@ -87,15 +104,15 @@ func main() {
 	s2 := ""
 	var i int64 = GrandTotalSize
 	switch {
-	case GrandTotalSize > 1000000000000: // 1 trillion, or TB
-		i = GrandTotalSize / 1000000000000               // I'm forcing an integer division.
-		if GrandTotalSize%1000000000000 > 500000000000 { // rounding up
+	case GrandTotalSize > 1e12: // 1 trillion, or TB
+		i = GrandTotalSize / 1e12       // I'm forcing an integer division.
+		if GrandTotalSize%1e12 > 5e11 { // rounding up
 			i++
 		}
 		s2 = fmt.Sprintf("%d TB", i)
-	case GrandTotalSize > 1000000000: // 1 billion, or GB
-		i = GrandTotalSize / 1000000000
-		if GrandTotalSize%1000000000 > 500000000 { // rounding up
+	case GrandTotalSize > 1e9: // 1 billion, or GB
+		i = GrandTotalSize / 1e9
+		if GrandTotalSize%1e9 > 5e8 { // rounding up
 			i++
 		}
 		s2 = fmt.Sprintf("%d GB", i)
@@ -120,7 +137,6 @@ func main() {
 	fmt.Print(" start dir is ", startDirectory, "; found ", TotalOfFiles, " files in this tree. ")
 	fmt.Println(" Total Size of walked tree is", GrandTotalString, "or", s2, ", and len of DirMap is", len(DirMap))
 
-	fmt.Println()
 	// Output map
 	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
 		d := directory{} // this is a structured constant
@@ -128,7 +144,7 @@ func main() {
 		d.subtotal = m
 		dirList = append(dirList, d)
 	}
-	fmt.Println(" Length of dirList is", len(dirList))
+	fmt.Println(" Length of sorted dirList is", len(dirList), ", length of DirAlreadyWalked is", len(DirAlreadyWalked))
 	sort.Sort(dirList)
 
 	datestr := MakeDateStr()
@@ -168,6 +184,7 @@ func main() {
 		outfile.Close()
 		fmt.Println(" List of subdirectories written to", outfilename)
 	}
+	fmt.Println()
 	fmt.Println()
 } // main
 
