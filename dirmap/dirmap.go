@@ -12,7 +12,7 @@ import (
 	"timlibg"
 )
 
-const LastAltered = "5 Oct 2018"
+const LastAltered = "7 Oct 2018"
 
 /*
   REVISION HISTORY
@@ -27,6 +27,7 @@ const LastAltered = "5 Oct 2018"
                    It seems like checking for errors was enough for the program to work.
 				   It reports an error and then continues without any more errors.
    5 Oct 2018 -- Still improving, based on a thread from go-nuts.
+   7 Oct 2018 -- I posted on golang-nuts.  And I'll use their suggestions.  From the Masters, of course.
 */
 
 type directory struct {
@@ -75,18 +76,18 @@ func main() {
 	filepathwalkfunc := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk.  Grand total size is %d in %d number of files, error is %v. \n ", GrandTotalSize, TotalOfFiles, err)
-			return filepath.SkipDir
+			return nil
 		}
 
 		if !fi.Mode().IsRegular() { // not a reg file, maybe a directory or symlink
 			if fi.IsDir() {
-				if DirAlreadyWalked[fi.Name()] {
+				if DirAlreadyWalked[fpath] {
 					return filepath.SkipDir
 				} else {
-					DirAlreadyWalked[fi.Name()] = true
+					DirAlreadyWalked[fpath] = true
 				}
 			} else {
-				return filepath.SkipDir
+				return nil
 			}
 		}
 
