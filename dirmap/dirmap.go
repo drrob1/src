@@ -1,10 +1,10 @@
-// Dirmap written in go.  (C) 2017.  All rights reserved
-// dirmap.go
+// Dirmap written in go.  (C) 2017-18.  All rights reserved
 package main
 
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,7 +12,7 @@ import (
 	"timlibg"
 )
 
-const LastAltered = "7 Oct 2018"
+const LastAltered = "8 Oct 2018"
 
 /*
   REVISION HISTORY
@@ -28,6 +28,8 @@ const LastAltered = "7 Oct 2018"
 				   It reports an error and then continues without any more errors.
    5 Oct 2018 -- Still improving, based on a thread from go-nuts.
    7 Oct 2018 -- I posted on golang-nuts.  And I'll use their suggestions.  From the Masters, of course.
+   8 Oct 2018 -- Still adding their improvements.  And I decided to always write to the file, and only to screen if
+                   there's not too much output.
 */
 
 type directory struct {
@@ -64,7 +66,7 @@ func main() {
 	}
 	start, err := os.Stat(startDirectory)
 	if err != nil || !start.IsDir() {
-		fmt.Println(" usage: diskwalk <directoryname>")
+		fmt.Println(" usage: dirmap <directoryname>")
 		os.Exit(1)
 	}
 
@@ -99,7 +101,7 @@ func main() {
 		} else {
 			DirMap[filepath.Dir(fpath)] += fi.Size() // using a map so order of walk is not important
 		}
-		fmt.Println(" fpath is", fpath, "dir of fpath is", filepath.Dir(fpath), " is dir", fi.IsDir())
+		//	fmt.Println(" fpath is", fpath, "dir of fpath is", filepath.Dir(fpath), " is dir", fi.IsDir())
 		return nil
 	}
 
@@ -139,55 +141,84 @@ func main() {
 
 	GrandTotalString := strconv.FormatInt(GrandTotalSize, 10)
 	GrandTotalString = AddCommas(GrandTotalString)
-	fmt.Print(" start dir is ", startDirectory, "; found ", TotalOfFiles, " files in this tree. ")
-	fmt.Println(" Total Size of walked tree is", GrandTotalString, "or", s2, ", and len of DirMap is", len(DirMap))
 
-	// Output map
-	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
-		d := directory{} // this is a structured constant
-		d.name = n
-		d.subtotal = m
-		dirList = append(dirList, d)
-	}
-	fmt.Println(" Length of sorted dirList is", len(dirList), ", length of DirAlreadyWalked is", len(DirAlreadyWalked))
-	sort.Sort(dirList)
-
+	// Construct output filename
 	datestr := MakeDateStr()
 	outfilename := filepath.Base(startDirectory) + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
 	outputfile := bufio.NewWriter(outfile)
 	defer outputfile.Flush()
-
 	if err != nil {
 		fmt.Println(" Cannot open outputfile ", outfilename, " with error ", err)
 		// I'm going to assume this branch does not occur in the code below.  Else I would need a
 		// stop flag of some kind to write to screen.
 	}
 
-	if len(dirList) < 30 {
-		for _, d := range dirList {
-			str := strconv.FormatInt(d.subtotal, 10)
-			str = AddCommas(str)
-			s := fmt.Sprintf("%s size is %s", d.name, str)
-			fmt.Println(s)
+	// Construct output map
+	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
+		d := directory{} // this is a structured constant
+		d.name = n
+		d.subtotal = m
+		dirList = append(dirList, d)
+	}
+
+	var isFileOutput = len(dirList) >= 5 // I would do this as a short form declaration.  This is an alternate declare-n-assign syntax.
+	var w io.Writer
+	if !isFileOutput {
+		w = os.Stdout
+	} else {
+		var outfile, err = os.Create(outfilename)
+		if err != nil {
+			fmt.Println(" Cannot open outputfile ", outfilename, " with error ", err)
 		}
-		fmt.Println()
-	} else { // write output to a file.  First, build filename
-		s0 := fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, or %s, and number of directories is %d\n", startDirectory, TotalOfFiles, GrandTotalString, s2, len(DirMap))
-		outputfile.WriteString(s0)
-		outputfile.WriteString("\n")
-		for _, d := range dirList {
-			str := strconv.FormatInt(d.subtotal, 10)
-			str = AddCommas(str)
-			s1 := fmt.Sprintf("%s size is %s\n", d.name, str)
-			outputfile.WriteString(s1)
+		defer outfile.Close()
+		var bufoutfile = bufio.NewWriter(outfile)
+		defer bufoutfile.Flush()
+		w = bufoutfile
+	}
+
+	var b0 = []byte(fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, or %s, and number of directories is %d\n",
+		startDirectory, TotalOfFiles, GrandTotalString, s2, len(DirMap))) // leaving in as "expert code"
+	s1 := fmt.Sprintf("Length of sorted dirList is %d, length of DirAlreadyWalked is %d \n", len(dirList), len(DirAlreadyWalked))
+	if isFileOutput {
+		// Display summary info to Stdout as well if w is a disk file.
+		os.Stdout.Write(b0)
+		os.Stdout.WriteString(s1)
+		io.WriteString(w, "  ") // I don't know why this is necessary, yet.
+	}
+	_, err = w.Write(b0)
+	if err != nil {
+		fmt.Println(" error from w.Write writing to", w, " with error ", err)
+		os.Exit(1)
+	}
+	_, err = io.WriteString(w, s1)
+	if err != nil {
+		fmt.Println(" error from io.WriteString writing to", w, " with error ", err)
+		os.Exit(1)
+	}
+	//{{{
+	//	ans := ""
+	//	fmt.Print(" pausing until hit a key and then <enter> ")
+	//	fmt.Scan(&ans)
+	//}}}
+	sort.Sort(dirList)
+	for _, d := range dirList {
+		var str = strconv.FormatInt(d.subtotal, 10)
+		str = AddCommas(str)
+		var _, err = fmt.Fprintf(w, "%s size is %s\n", d.name, str) // I'm leaving this here as sample "expert code"
+		if err != nil {
+			fmt.Println(" error from Fprintf while writing dirList.  Error is", err)
+			os.Exit(1)
 		}
+	}
+
+	if isFileOutput {
+		fmt.Println(" List of", len(dirList), " (sub)directories written to", outfilename)
 		outputfile.WriteString("\n")
 		outputfile.WriteString("\n")
 		outputfile.Flush()
 		outfile.Close()
-		fmt.Println(" List of subdirectories written to", outfilename)
 	}
 	fmt.Println()
 	fmt.Println()
@@ -214,6 +245,7 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
+//------------------------------------------------------------------- min
 func min(i, j int) int {
 	if i < j {
 		return i
