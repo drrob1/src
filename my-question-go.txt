@@ -1,0 +1,108 @@
+
+
+This list likes to use The Go Playground at https://play.golang.org to
+share code that is not exceedingly large.  I have taken your program,
+repaired line breaks added by the email handling programs, fixed a typo,
+run gofmt, and pasted it into play.golang.org.  Clicking on the "Share"
+button gives the following link:
+<https://play.golang.org/p/XnmzUnbnhQQ>.
+
+Many simple programs run on the Playground, but when I attempted to run
+yours, I discovered that the playground passes an empty first command
+line argument (os.Args[1] == ""), so your program just gives the usage
+message.  I'm not sure whether or not this Playground behavior is
+intentional.
+
+Note that programs that are already running and which modify the
+directory being scanned (e.g.  Firefox may be frequently updating a
+cache subdirectory of your home directory) may cause the program to give
+different results for each run.  However, I think your problems lie
+elsewhere.
+
+One problem is that you use fi.Name() in DirAlreadyWalked, but fi.Name()
+is only the file name without the directory (e.g. filepath.Base(fpath)).
+You want to use fpath.
+
+The filepath.Walk function does not follow symlinks, and a normal file
+system will not have any cycles, so you do not need any of the logic
+associated with DirAlreadyWalked.  This would remove your problem with
+fi.Name as well.
+
+The documentation for WalkFunc is not clear on what errors might be
+passed in as the err argument, but I suspect things like errors from the
+underlying syscalls for stat or lstat.  However, it is clear that if err
+is not nil on entry, the Walk function will already skip that directory
+without you needing to return SkipDir.  You should return nil in this
+case unless you want to abort the walk completely.
+
+Also in your WalkFunc, you return SkipDir for non-regular files that are
+not directories (e.g. device or pipe).  You probably want to return nil
+in this case as well.
+
+When I first started writing this, I took "not getting consistent sums"
+to mean that you were getting different results from successive runs.
+Now I realize you may mean results that are not close to the output of
+du.  Being more specific about what your program produced and what you
+expected it to produce would help here.
+
+The *nix program du specifically gives you space taken on disk, unless
+you pass an appropriate option to return the sum of apparent file sizes.
+Your program sums file sizes, not disk space used.  It also ignores
+sizes of directories (which can be large for directories with many files
+and subdirectories).
+
+When you start producing output, you create an output file on disk, and
+then write to Stdout if dirList is small, leaving the empty disk file,
+or write to the disk file otherwise.  It would be better to do something
+like this:
+
+    var isFileOutput = len(dirList) >= 30
+    var w io.Writer
+    if !isFileOutput {
+        w = os.Stdout
+    } else {
+        var outfile, err = os.Create(outfilename)
+        if err != nil {
+            // print a message to os.Stderr and exit
+            ...
+        }
+        defer outfile.Close()
+        var bufoutfile = bufio.NewWriter(outfile)
+        defer bufoutfile.Flush()
+        w = bufoutfile
+    }
+
+I would put this code after filepath.Walk, but before any output.  You
+can then use isFileOutput to ensure that the summary info is written to
+both Stdout and the output file, but only have to generate it once.
+
+    var b0 = []byte(fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, or %s, and number of directories is %d\n", startDirectory, TotalOfFiles, GrandTotalString, s2, len(DirMap)))
+    if isFileOutput {
+        // Display summary info to Stdout as well.
+        os.Stdout.Write(b0)
+    }
+    _, err = w.Write(b0)
+    if err != nil {
+        // print a message to os.Stderr and exit
+        ...
+    }
+
+And then your main output loop would look like this:
+
+    for _, d := range dirList {
+        var str = strconv.FormatInt(d.subtotal, 10)
+        str = AddCommas(str)
+        var _, err = fmt.Fprintf(w, "%s size is %s", d.name, str)
+        if err != nil {
+            // print a message to os.Stderr and exit
+            ...
+        }
+    }
+
+I hope these comments help.
+
+...Marvin
+
+
+
+

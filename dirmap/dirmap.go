@@ -147,8 +147,8 @@ func main() {
 	outfilename := filepath.Base(startDirectory) + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
-	outputfile := bufio.NewWriter(outfile)
-	defer outputfile.Flush()
+	//	outputfile := bufio.NewWriter(outfile)  these may duplicate the "expert" code below.
+	//	defer outputfile.Flush()
 	if err != nil {
 		fmt.Println(" Cannot open outputfile ", outfilename, " with error ", err)
 		// I'm going to assume this branch does not occur in the code below.  Else I would need a
@@ -185,7 +185,7 @@ func main() {
 		// Display summary info to Stdout as well if w is a disk file.
 		os.Stdout.Write(b0)
 		os.Stdout.WriteString(s1)
-		io.WriteString(w, "  ") // I don't know why this is necessary, yet.
+		//		bufoutfile.WriteString("Test of output to see of characters are missing\n")
 	}
 	_, err = w.Write(b0)
 	if err != nil {
@@ -215,10 +215,10 @@ func main() {
 
 	if isFileOutput {
 		fmt.Println(" List of", len(dirList), " (sub)directories written to", outfilename)
-		outputfile.WriteString("\n")
-		outputfile.WriteString("\n")
-		outputfile.Flush()
-		outfile.Close()
+		//		outputfile.WriteString("\n")
+		//		outputfile.WriteString("\n")
+		//		outputfile.Flush()
+		//		outfile.Close()
 	}
 	fmt.Println()
 	fmt.Println()
