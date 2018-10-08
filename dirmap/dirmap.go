@@ -188,10 +188,6 @@ func main() {
 		//		bufoutfile.WriteString("Test of output to see of characters are missing\n")
 	}
 	_, err = w.Write(b0)
-	if err != nil {
-		fmt.Println(" error from w.Write writing to", w, " with error ", err)
-		os.Exit(1)
-	}
 	_, err = io.WriteString(w, s1)
 	if err != nil {
 		fmt.Println(" error from io.WriteString writing to", w, " with error ", err)
@@ -215,10 +211,6 @@ func main() {
 
 	if isFileOutput {
 		fmt.Println(" List of", len(dirList), " (sub)directories written to", outfilename)
-		//		outputfile.WriteString("\n")
-		//		outputfile.WriteString("\n")
-		//		outputfile.Flush()
-		//		outfile.Close()
 	}
 	fmt.Println()
 	fmt.Println()
