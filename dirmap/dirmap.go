@@ -12,7 +12,7 @@ import (
 	"timlibg"
 )
 
-const LastAltered = "8 Oct 2018"
+const LastAltered = "10 Oct 2018"
 
 /*
   REVISION HISTORY
@@ -30,6 +30,7 @@ const LastAltered = "8 Oct 2018"
    7 Oct 2018 -- I posted on golang-nuts.  And I'll use their suggestions.  From the Masters, of course.
    8 Oct 2018 -- Still adding their improvements.  And I decided to always write to the file, and only to screen if
                    there's not too much output.
+  10 Oct 2018 -- Changed output filename to a prefix of dirmap_ .
 */
 
 type directory struct {
@@ -144,7 +145,7 @@ func main() {
 
 	// Construct output filename
 	datestr := MakeDateStr()
-	outfilename := filepath.Base(startDirectory) + datestr + ".txt"
+	outfilename := "dirmap_" + filepath.Base(startDirectory) + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
 	//	outputfile := bufio.NewWriter(outfile)  these may duplicate the "expert" code below.
