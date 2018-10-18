@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "18 Oct 17"
+const LastAltered = "18 Oct 18"
 
 /*
 Revision History
@@ -30,6 +30,7 @@ Revision History
 21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
  2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
 18 Oct 17 -- Now called filepicker, derived from dsrt.go.
+18 Oct 18 -- Added folding markers
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -69,74 +70,76 @@ func GetFilenames(pattern string) []string { // Not sure what I want this routin
 	var err error
 	var count int
 	/*
-		var userptr *user.User
-		var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
+		{{{
+			var userptr *user.User
+			var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
-		var RevFlag bool
-		flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
+			var RevFlag bool
+			flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-		var nlines = flag.Int("n", numlines, "number of lines to display") // Ptr
+			var nlines = flag.Int("n", numlines, "number of lines to display") // Ptr
 
-		var NLines int
-		flag.IntVar(&NLines, "N", numlines, "number of lines to display") // Value
+			var NLines int
+			flag.IntVar(&NLines, "N", numlines, "number of lines to display") // Value
 
-		var helpflag = flag.Bool("h", false, "print help message") // pointer
-		var HelpFlag bool
-		flag.BoolVar(&HelpFlag, "H", false, "print help message")
+			var helpflag = flag.Bool("h", false, "print help message") // pointer
+			var HelpFlag bool
+			flag.BoolVar(&HelpFlag, "H", false, "print help message")
 
-		var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
-		var SizeFlag bool
-		flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
-		flag.Parse()
+			var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
+			var SizeFlag bool
+			flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+			flag.Parse()
 
-		fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
-		execname, _ := os.Executable()
-		ExecFI, _ := os.Stat(execname)
-		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
-		fmt.Println()
+			fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
+			execname, _ := os.Executable()
+			ExecFI, _ := os.Stat(execname)
+			ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+			fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+			fmt.Println()
 
-		uid := 0
-		gid := 0
-		systemStr := ""
-		linuxflag := runtime.GOOS == "linux"
-		if linuxflag {
-			systemStr = "Linux"
-		} else if runtime.GOOS == "windows" {
-			systemStr = "Windows"
-		} else {
-			systemStr = "Mac, maybe"
-		}
-
-		if runtime.GOARCH == "amd64" {
-			uid = os.Getuid() // int
-			gid = os.Getgid() // int
-			userptr, err = user.Current()
-			if err != nil {
-				fmt.Println(" user.Current error is ", err, "Exiting.")
-				os.Exit(1)
-			}
-		}
-
-		if *helpflag || HelpFlag {
-		  flag.PrintDefaults()
-		  if runtime.GOARCH == "amd64" {
-			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
-			  uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+			uid := 0
+			gid := 0
+			systemStr := ""
+			linuxflag := runtime.GOOS == "linux"
+			if linuxflag {
+				systemStr = "Linux"
+			} else if runtime.GOOS == "windows" {
+				systemStr = "Windows"
+			} else {
+				systemStr = "Mac, maybe"
 			}
 
-		}
+			if runtime.GOARCH == "amd64" {
+				uid = os.Getuid() // int
+				gid = os.Getgid() // int
+				userptr, err = user.Current()
+				if err != nil {
+					fmt.Println(" user.Current error is ", err, "Exiting.")
+					os.Exit(1)
+				}
+			}
 
-		Reverse := *revflag || RevFlag
-		SizeSort := *sizeflag || SizeFlag
+			if *helpflag || HelpFlag {
+			  flag.PrintDefaults()
+			  if runtime.GOARCH == "amd64" {
+				fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
+				  uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+				}
 
-		NumLines := numlines
-		if *nlines != numlines {
-			NumLines = *nlines
-		} else if NLines != numlines {
-			NumLines = NLines
-		}
-		askforinput := true
+			}
+
+			Reverse := *revflag || RevFlag
+			SizeSort := *sizeflag || SizeFlag
+
+			NumLines := numlines
+			if *nlines != numlines {
+				NumLines = *nlines
+			} else if NLines != numlines {
+				NumLines = NLines
+			}
+			askforinput := true
+		}}}
 	*/
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
@@ -186,31 +189,33 @@ func GetFilenames(pattern string) []string { // Not sure what I want this routin
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() { // ignore directory names that happen to match the pattern
 			stringslice = append(stringslice, f.Name()) // needs to preserve case of filename for linux
 			/*
-			   //			s := f.ModTime().Format("Jan-02-2006 15:04:05")
-			   //			sizeint := int(f.Size())
-			   //			sizestr := strconv.Itoa(sizeint)
-			   //			if sizeint > 100000 {
-			   //				sizestr = AddCommas(sizestr)
-			   //			}
-			   //			usernameStr, groupnameStr := "", ""
-			   //			if runtime.GOARCH == "amd64" {
-			   //				usernameStr, groupnameStr = GetUserGroupStr(f)
-			   //			}
-			   //			if linuxflag {
-			   //				if f.IsDir() {
-			   //					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			   //				} else if f.Mode().IsRegular() {
-			   //					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			   //				} else { // it's a symlink
-			   //					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			   //				}
-			   //			} else { // must be windows because this won't compile on Mac.  And I'm ignoring symlinks
-			   //				if f.IsDir() {
-			   //					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-			   //				} else {
-			   //					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
-			   //				}
-			   //			}
+				{{{
+				   //			s := f.ModTime().Format("Jan-02-2006 15:04:05")
+				   //			sizeint := int(f.Size())
+				   //			sizestr := strconv.Itoa(sizeint)
+				   //			if sizeint > 100000 {
+				   //				sizestr = AddCommas(sizestr)
+				   //			}
+				   //			usernameStr, groupnameStr := "", ""
+				   //			if runtime.GOARCH == "amd64" {
+				   //				usernameStr, groupnameStr = GetUserGroupStr(f)
+				   //			}
+				   //			if linuxflag {
+				   //				if f.IsDir() {
+				   //					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				   //				} else if f.Mode().IsRegular() {
+				   //					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				   //				} else { // it's a symlink
+				   //					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				   //				}
+				   //			} else { // must be windows because this won't compile on Mac.  And I'm ignoring symlinks
+				   //				if f.IsDir() {
+				   //					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+				   //				} else {
+				   //					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+				   //				}
+				   //			}
+				}}}
 			*/
 			count++
 			if count > numlines {
@@ -261,6 +266,7 @@ func GetIDname(uidStr string) string {
 } // GetIDname
 
 /*
+{{{
 package path
 func Match
 
@@ -327,4 +333,5 @@ type User struct {
   Name string     // full or display name.  It may be blank.
   HomeDir string
 }
+}}}
 */

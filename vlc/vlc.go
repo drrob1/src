@@ -22,6 +22,7 @@ package main
    6 Oct 16 -- Added timing information to time the shuffling.  This seems to take most of the time, esp as the file sizes get bigger and bigger.
   16 Oct 18 -- Learned about math/rand having a shuffle function.
   17 Oct 18 -- Adding filepicker for *.xspf pattern.
+  18 Oct 18 -- Added check for empty stringslice of filenames.
 */
 
 import (
@@ -44,7 +45,7 @@ import (
 const MaxNumOfTracks = 2048
 const blankline = "                                                                             " // ~70 spaces
 const sepline = "-----------------------------------------------------------------------------"
-const LastCompiled = "on or about Oct 16, 2018"
+const LastCompiled = "on or about Oct 18, 2018"
 
 const (
 	EMPTY    = iota
@@ -574,7 +575,7 @@ func min(a, b int) int {
 
 /* ---------------------------- MAIN -------------------------------- */
 func main() {
-	fmt.Println(" Shuffling program for the tracks in a vlc file.")
+	fmt.Println(" Shuffling program for the tracks in a vlc file.  Last altered", LastCompiled)
 	fmt.Println()
 
 	InExtDefault := ".xspf"
@@ -584,6 +585,10 @@ func main() {
 
 	if len(os.Args) <= 1 { // need to use filepicker
 		filenames := filepicker.GetFilenames("*.xspf")
+		if len(filenames) == 0 {
+			fmt.Println(" No filenames found that match *.xspf pattern.  Exiting")
+			os.Exit(1)
+		}
 		for i := 0; i < min(len(filenames), 26); i++ { // goes 0 .. 25, or a .. z
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
