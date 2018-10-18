@@ -617,6 +617,7 @@ func main() {
 			_, err := os.Stat(FullFilename)
 			if err == nil {
 				FileExists = true
+				Filename = FullFilename
 			}
 		}
 
