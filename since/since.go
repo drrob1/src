@@ -96,10 +96,17 @@ func main() {
 		}
 		return nil
 	}
-	for _, root := range flag.Args() {
-		walk.Walk(root, sizeVisitor)
+	if len(flag.Args()) < 1 {
+		dir, err := os.Getwd()
+		if err != nil {
+			log.Fatalln(" error from Getwd is", err)
+		}
+		walk.Walk(dir, sizeVisitor)
+	} else {
+		for _, root := range flag.Args() {
+			walk.Walk(root, sizeVisitor)
+		}
 	}
-
 	// wait for traversal results and print
 	close(results) // no more results
 	<-done         // wait for final results and sorting
