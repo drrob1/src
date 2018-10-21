@@ -33,7 +33,7 @@ func main() {
 	if *help {
 		fmt.Println()
 		fmt.Println()
-		fmt.Println(" Usage: since <options> <start-dir>")
+		fmt.Println(" Usage: since <options> <start-dir-list>")
 		fmt.Println(" Valid time units for duration are ns, us, ms, s, m, h.")
 		fmt.Println()
 		flag.PrintDefaults()
