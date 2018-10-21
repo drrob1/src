@@ -1,7 +1,6 @@
 // since.go
 /* REVISION HISTORY
    21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
-
 */
 
 package main
@@ -18,13 +17,14 @@ import (
 	"github.com/MichaelTJones/walk"
 )
 
+var LastAlteredDate = "Oct 21, 2018"
+
 var duration = flag.String("d", "", "find files modified within DURATION")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
 var instant = flag.String("t", "", "find files modified since TIME")
 var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
 var help = flag.Bool("h", false, "print help message")
-var LastAlteredDate = "Oct 21, 2018"
 
 func main() {
 	fmt.Println(" since written in Go.  LastAltered", LastAlteredDate)
