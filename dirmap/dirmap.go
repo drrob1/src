@@ -9,10 +9,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"time"
 	"timlibg"
 )
 
-const LastAltered = "10 Oct 2018"
+const LastAltered = "22 Oct 2018"
 
 /*
   REVISION HISTORY
@@ -31,6 +32,7 @@ const LastAltered = "10 Oct 2018"
    8 Oct 2018 -- Still adding their improvements.  And I decided to always write to the file, and only to screen if
                    there's not too much output.
   10 Oct 2018 -- Changed output filename to a prefix of dirmap_ .
+  22 Oct 2018 -- added timing code.
 */
 
 type directory struct {
@@ -57,6 +59,7 @@ func main() {
 	var startDirectory string
 	var dirList dirslice
 
+	now := time.Now()
 	fmt.Println()
 	fmt.Println(" dirmap sums the directories it walks.  Written in Go.  Last altered ", LastAltered)
 
@@ -181,7 +184,7 @@ func main() {
 
 	var b0 = []byte(fmt.Sprintf("start dir is %s, found %d files in this tree.  GrandTotal is %s, or %s, and number of directories is %d\n",
 		startDirectory, TotalOfFiles, GrandTotalString, s2, len(DirMap))) // leaving in as "expert code"
-	s1 := fmt.Sprintf("Length of sorted dirList is %d, length of DirAlreadyWalked is %d \n", len(dirList), len(DirAlreadyWalked))
+	s1 := fmt.Sprintf("Length of sorted dirList is %d, length of DirAlreadyWalked is %d. \n", len(dirList), len(DirAlreadyWalked))
 	if isFileOutput {
 		// Display summary info to Stdout as well if w is a disk file.
 		os.Stdout.Write(b0)
@@ -200,6 +203,7 @@ func main() {
 	//	fmt.Scan(&ans)
 	//}}}
 	sort.Sort(dirList)
+	deltaTime := float64(time.Since(now)) / 1e9
 	for _, d := range dirList {
 		var str = strconv.FormatInt(d.subtotal, 10)
 		str = AddCommas(str)
@@ -213,6 +217,7 @@ func main() {
 	if isFileOutput {
 		fmt.Println(" List of", len(dirList), " (sub)directories written to", outfilename)
 	}
+	fmt.Printf(" Took %.4g s to generate this list of directories. \n", deltaTime)
 	fmt.Println()
 	fmt.Println()
 } // main
