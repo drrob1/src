@@ -20,7 +20,7 @@ import (
 	"github.com/MichaelTJones/walk"
 )
 
-const LastAlteredDate = "Oct 22, 2018"
+const LastAlteredDate = "Oct 23, 2018"
 
 var duration = flag.String("d", "", "find files modified within DURATION")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -160,7 +160,7 @@ func main() {
 
 	// Construct output filename
 	datestr := MakeDateStr()
-	outfilename := "dirmap_" + filepath.Base(startDirectory) + datestr + ".txt"
+	outfilename := "multimap_" + filepath.Base(startDirectory) + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
 	var bufoutfile = bufio.NewWriter(outfile)
