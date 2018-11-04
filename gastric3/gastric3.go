@@ -53,9 +53,10 @@ import (
                  And screen output will be shorter than file output.
   20 Jun 18 -- Added comments regarding reference normal.
   21 Jun 18 -- Added first non digit token on line will skip that line.  So entire line can be easily commented out.
+   4 Nov 18 -- Realized that the intercept is log(counts), so exp(counts) is worth displaying.
 */
 
-const LastAltered = "21 June 2018"
+const LastAltered = "3 Nov 2018"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -103,9 +104,9 @@ type FittedData3 struct {
 
 var aa, offs, nn float64 // used by the Numerical Recipies book.
 
-//************************************************************************
-//*                              MAIN PROGRAM                            *
-//************************************************************************
+//------------------------------------------------------------------------
+//-                              MAIN PROGRAM                            -
+//------------------------------------------------------------------------
 
 func main() {
 	var point Point
@@ -138,7 +139,7 @@ func main() {
 
 	if len(os.Args) <= 1 { // need to use filepicker
 		filenames := filepicker.GetFilenames("gastric*.txt")
-		for i := 0; i < min(len(filenames), 10); i++ {
+		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
@@ -285,10 +286,10 @@ func main() {
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
-	fmt.Printf(" Original unweighted: halflife is %0.2f minutes, and intercept is %0.6f counts.", stdhalflife, stdintercept)
+	fmt.Printf(" Original unweighted: halflife is %.2f minutes, and exp(intercept) is %.2f counts.", stdhalflife, math.Exp(stdintercept))
 	fmt.Println()
-	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.6f minutes, slope is %.6f cnts/min, intercept is %.6f cnts and R-squared is %.6f.",
-		stdhalflife, stdslope, stdintercept, stdr2)
+	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
+		stdhalflife, stdslope, math.Exp(stdintercept), stdr2)
 	writestr(s) // using the write closure, I hope
 	writerune()
 	check(bufioErr)
@@ -296,8 +297,8 @@ func main() {
 	UnWeightedResults := fitfull(rows, false)
 	Unweightedhalflife := -ln2 / UnWeightedResults.Slope
 	// not writing this output to screen as its redundant.
-	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.6f minutes.  Slope= %.6f cnts/min, intercept= %.6f, StDevSlope= %.6f cnts.",
-		Unweightedhalflife, UnWeightedResults.Slope, UnWeightedResults.Intercept, UnWeightedResults.StDevSlope)
+	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.2f, StDevSlope= %.6f cnts.",
+		Unweightedhalflife, UnWeightedResults.Slope, math.Exp(UnWeightedResults.Intercept), UnWeightedResults.StDevSlope)
 	writestr(s) // using the write closure, I hope
 	writerune()
 	check(bufioErr)
@@ -305,28 +306,28 @@ func main() {
 	WeightedResults := fit(rows)
 	weightedhalflife := -ln2 / WeightedResults.Slope
 	// not writing this output to screen as its redundant.
-	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.6f minutes.  Slope= %.6f, Intercept= %.6f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
-		weightedhalflife, WeightedResults.Slope, WeightedResults.Intercept, WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
+	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, exp(Intercept)= %.2f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
+		weightedhalflife, WeightedResults.Slope, exp(WeightedResults.Intercept), WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
 	writestr(s) // using the write closure
 	writerune()
 	check(bufioErr)
 
 	WeightedResults2 := fitfull(rows, true)
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
-	fmt.Printf(" fitful weighted: halflife is %.2f minutes, intercept is %.6f counts.", weightedhalflife2, WeightedResults2.Intercept)
+	fmt.Printf(" fitful weighted: halflife is %.2f minutes, exp(intercept) is %.2f counts.", weightedhalflife2, exp(WeightedResults2.Intercept))
 	fmt.Println()
-	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.6f minutes,slope is %.6f, intercept = %.6f, fit is %.6f.",
-		weightedhalflife2, WeightedResults2.Slope, WeightedResults2.Intercept, WeightedResults2.GoodnessOfFit)
+	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exo(intercept) = %.2f, fit is %.6f.",
+		weightedhalflife2, WeightedResults2.Slope, exp(WeightedResults2.Intercept), WeightedResults2.GoodnessOfFit)
 	writestr(s)
 	writerune()
 	check(bufioErr)
 
 	WeightedResults3 := fitexy(rows)
 	weightedhalflife3 := -ln2 / WeightedResults3.Slope
-	fmt.Printf(" fitexy weighted: halflife is %.2f minutes, intercept is %.6f counts. ", weightedhalflife3, WeightedResults3.Intercept)
+	fmt.Printf(" fitexy weighted: halflife is %.2f minutes, exp(intercept) is %.2f counts. ", weightedhalflife3, exp(WeightedResults3.Intercept))
 	fmt.Println()
-	s = fmt.Sprintf(" fitexy weighted: halflife of Gastric Emptying is %.6f minutes, slope is %.6f, intercept = %.6f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
-		weightedhalflife3, WeightedResults3.Slope, WeightedResults3.Intercept, WeightedResults3.StDevSlope, WeightedResults3.chi2, WeightedResults3.q)
+	s = fmt.Sprintf(" fitexy weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
+		weightedhalflife3, WeightedResults3.Slope, exp(WeightedResults3.Intercept), WeightedResults3.StDevSlope, WeightedResults3.chi2, WeightedResults3.q)
 	writestr(s)
 	writerune()
 	check(bufioErr)
@@ -334,9 +335,10 @@ func main() {
 	// Version 3 code, adding the orig weighting function
 	IteratedResults := DoOldWeightedLR(rows, stdslope, stdintercept)
 	IteratedHalfLife := -ln2 / IteratedResults.Slope
-	fmt.Printf(" Old iterative method: halflife is %.2f minutes, slope is %.2f, intercept is %.6f, R-squared is %.6f.", IteratedHalfLife, IteratedResults.Slope, IteratedResults.Intercept, IteratedResults.R2)
+	fmt.Printf(" Old iterative method: halflife is %.2f minutes, slope is %.6f, exp(intercept) is %.2f, R-squared is %.6f.", IteratedHalfLife, IteratedResults.Slope, exp(IteratedResults.Intercept), IteratedResults.R2)
 	fmt.Println()
-	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.6f minutes, slope is %.6f, intercept = %.6f, R^2 = %.6f.", IteratedHalfLife, IteratedResults.Slope, IteratedResults.Intercept, IteratedResults.R2)
+	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, R^2 = %.6f.",
+		IteratedHalfLife, IteratedResults.Slope, exp(IteratedResults.Intercept), IteratedResults.R2)
 	writestr(s)
 	writerune()
 	check(bufioErr)
@@ -1205,3 +1207,8 @@ func WeightedLR(rows []Point) FittedData3 {
 		SQR(result3.SumWtY))
 	return result3
 } //  END WeightedLR
+
+// ------------------------------------ exp -----------------------------------
+func exp(f float64) float64 {
+	return math.Exp(f)
+}
