@@ -383,6 +383,9 @@ func main() {
 		fmt.Println()
 		writerune()
 		writerune()
+		s = fmt.Sprintf(" Peak point is at %.2g minutes.\n", peakrows[0].x)
+		fmt.Println(s)
+		writestr(s)
 		fmt.Printf(" Original unweighted peak halflife is %.2f minutes, and exp(intercept) is %.2f counts.\n",
 			stdpeakhalflife, exp(stdpeakintercept))
 		s := fmt.Sprintf(" Original std peak unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
