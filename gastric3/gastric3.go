@@ -383,7 +383,7 @@ func main() {
 		fmt.Println()
 		writerune()
 		writerune()
-		s = fmt.Sprintf(" Peak point is at %.2g minutes.\n", peakrows[0].x)
+		s = fmt.Sprintf(" Peak point is at %.3g minutes.\n", peakrows[0].x)
 		fmt.Println(s)
 		writestr(s)
 		fmt.Printf(" Original unweighted peak halflife is %.2f minutes, and exp(intercept) is %.2f counts.\n",

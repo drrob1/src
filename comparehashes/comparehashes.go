@@ -38,9 +38,10 @@ import (
   22 Oct 17 -- Added filepicker.
   21 Jan 18 -- Really ignore *.  Before method did not work.
   26 Jan 18 -- Changed tokenize so that SetMapDelim change sticks.
+  13 Nov 18 -- Will use "-" and "_" also to detech a filename token.
 */
 
-const LastCompiled = "26 Jan 2018"
+const LastCompiled = "13 Nov 2018"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -178,7 +179,8 @@ func main() {
 			continue
 		}
 
-		if strings.ContainsRune(FirstToken.Str, '.') { /* have filename first on line */
+		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
+			strings.ContainsRune(FirstToken.Str, '_') { /* have filename first on line */
 			TargetFilename = FirstToken.Str
 			SecondToken, EOL := tokenize.GetTokenString(false) // Get hash string from the line in the file
 			if EOL {
