@@ -1,6 +1,7 @@
 /*
   multimap.go.  multithreaded directoy mapping.  Was pmap but that conflicted with a system command.
   22 Oct 2018 -- Started coding this based on MichaelTJones' multithreaded code.
+  18 Nov 2018 -- Made the min function more idiomatic for Go.
 */
 package main
 
@@ -20,7 +21,7 @@ import (
 	"github.com/MichaelTJones/walk"
 )
 
-const LastAlteredDate = "Oct 23, 2018"
+const LastAlteredDate = "Nov 18, 2018"
 
 var duration = flag.String("d", "", "find files modified within DURATION")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -233,9 +234,8 @@ func AddCommas(instr string) string {
 func min(i, j int) int {
 	if i < j {
 		return i
-	} else {
-		return j
 	}
+	return j
 } // min
 
 // ------------------------------------------- MakeDateStr ---------------------------------------------
