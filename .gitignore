@@ -1,5 +1,5 @@
 *.swp
-github.com/derekparker/
+github.com/
 *.def
 *.DEF
 *.mod
@@ -9,3 +9,7 @@ github.com/derekparker/
 debug
 ds-docs
 go-cookbook/
+multimap_*
+.idea/
+golang.org/
+

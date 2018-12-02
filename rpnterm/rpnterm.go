@@ -19,13 +19,18 @@ import (
 	"hpcalc"
 	"tokenize"
 
-	termbox "github.com/nsf/termbox-go"
+	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "6 Apr 2018"
+const LastAltered = "2 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
-var Storage [36]float64 // 0 ..  9, a ..  z
+type Register struct {
+	Value float64
+	Name  string
+}
+
+var Storage [36]Register // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var Divider string
 var clear map[string]func()
@@ -75,7 +80,7 @@ REVISION HISTORY
  7 Jul 16 -- Added UP command to hpcalcc.cpp
  8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
 22 Aug 16 -- Started conversion to Go, as rpn.go.
- 8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
+ 8 Sep 16 -- Finished coding rpn.go, started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
 11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
  1 Oct 16 -- Made the stack display when the program starts.
  4 Oct 16 -- Made the storage registers display when the program starts.
@@ -100,14 +105,16 @@ REVISION HISTORY
 25 Feb 18 -- PrimeFactorMemoized added.
  6 Apr 18 -- Wrote code to save DisplayTape as a text file.
 22 Aug 18 -- learning about code folding
+ 2 Dec 18 -- Trying GoLand for editing this code now.  And exploring adding string names for the registers.
+               Need to code name command, display these names, deal w/ the reg file.  Code a converter.
 */
 
 func main() {
 	var INBUF, HomeDir string
 
-	const Storage1FileName = "RPNStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
-	const Storage2FileName = "RPNStorage2.gob"
-	const Storage3FileName = "RPNStorage3.gob"
+	const Storage1FileName = "RPNStorageName.gob" // Allows for a rotation of Storage files, in case of a mistake.
+	const Storage2FileName = "RPNStorageName2.gob"
+	const Storage3FileName = "RPNStorageName3.gob"
 	const DisplayTapeFilename = "displaytape.txt"
 	var x int
 	//  var Holidays holidaycalc.HolType;
@@ -258,7 +265,8 @@ func main() {
 		// These commands are not run thru hpcalc as they are processed before calling GetResult.
 		if INBUF == "ZEROREG" {
 			for c := range Storage {
-				Storage[c] = 0.0
+				Storage[c].Value = 0.0
+				Storage[c].Name = ""
 			}
 			// {{{
 			/*  This is now handled in hpcalc directly, and returned in the stringslice.
@@ -274,7 +282,7 @@ func main() {
 				ch := INBUF[3] // The 4th position.
 				i = GetRegIdx(ch)
 			}
-			Storage[i] = hpcalc.READX()
+			Storage[i].Value = hpcalc.READX()
 			n = WriteRegToScreen(x, RegRow)
 			if n > 8 {
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
@@ -286,7 +294,7 @@ func main() {
 				ch := INBUF[3] // the 4th position.
 				i = GetRegIdx(ch)
 			}
-			hpcalc.PUSHX(Storage[i])
+			hpcalc.PUSHX(Storage[i].Value)
 			RepaintScreen(StartCol)
 		} else if strings.HasPrefix(INBUF, "SHO") { // so it will match SHOW and SHO
 			n = WriteRegToScreen(StartCol, RegRow)
@@ -295,6 +303,17 @@ func main() {
 				PromptRow = OutputRow - 1
 			}
 			WriteDisplayTapeToScreen(DisplayCol, StackRow)
+		} else if strings.HasPrefix(INBUF, "NAME") {
+			var ans string
+			var i int // remember that this auto-zero'd
+			if len(INBUF) > 4 {
+				ch := INBUF[4] // the 5th position
+				i = GetRegIdx(ch)
+			}
+			promptstr := "   Input name string : "
+			Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
+			ans = GetInputString(len(promptstr)+2, OutputRow)
+			Storage[i].Name = ans
 		} else if strings.HasPrefix(INBUF, "SIG") || strings.HasPrefix(INBUF, "FIX") { // SigFigN command, or FIX
 			ch := INBUF[len(INBUF)-1] // ie, the last character.
 			sigfig = GetRegIdx(ch)
@@ -438,19 +457,19 @@ func WriteRegToScreen(x, y int) int { // Outputs the number of reg's that are no
 	n := 0
 
 	for i, r := range Storage {
-		if r != 0.0 {
+		if r.Value != 0.0 {
 			if FirstNonZeroStorageFlag {
 				Print_tb(x, y, BrightYellow, Black, "The following storage registers are not zero")
 				y++
 				FirstNonZeroStorageFlag = false
 			} // if firstnonzerostorageflag
 			ch := GetRegChar(i)
-			s := strconv.FormatFloat(r, 'g', sigfig, 64) // sigfig of -1 means max sigfig.
+			s := strconv.FormatFloat(r.Value, 'g', sigfig, 64) // sigfig of -1 means max sigfig.
 			s = hpcalc.CropNStr(s)
-			if r >= 10000 {
+			if r.Value >= 10000 {
 				s = hpcalc.AddCommas(s)
 			}
-			Printf_tb(x, y, BrightCyan, Black, " Reg [%s] =  %s", ch, s)
+			Printf_tb(x, y, BrightCyan, Black, " Reg [%s], %s =  %s", ch, r.Name, s)
 			y++
 			n++
 		} // if storage value is not zero
@@ -632,7 +651,7 @@ func WriteStack(x, y int) {
 } // end WriteStack
 
 //--------------------------------------------- WriteHelp -------------------------------------------
-func WriteHelp(x, y int) {
+func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while ago, but I didn't log when.
 	err := termbox.Clear(BrightYellow, Black)
 	check(err)
 	P := Print_tb
@@ -703,7 +722,11 @@ func WriteHelp(x, y int) {
 	   y++
 	   P(x,y,BrightYellow,Black," Adjust -- X reg *100, Round, /100");
 	   y++
-	   P(x,y,BrightYellow,Black," Nextafter -- Not sure what this does yet.  Reference factor for the fcn is 1e9.");
+	   P(x,y,BrightYellow,Black," Nextafter, Before -- correct floating point error up or down.");
+	   y++
+	   P(x,y,BrightYellow,Black," ZERO -- Zero all the registers, and blank their names.")
+	   y++
+	   P(x,y,BrightYellow,Black," NAME -- Set reg name, which can be blank.")
 	   y++
 	   P(x,y,BrightYellow,Black," SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 	   y++

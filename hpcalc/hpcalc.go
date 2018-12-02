@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "8 Mar 2018"
+const LastAlteredDate = "2 Dec 2018"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -77,6 +77,7 @@ REVISION HISTORY
 25 Feb 18 -- PrimeFactorMemoized added.
 27 Feb 18 -- Fixed bug in PrimeFactorMemoized and support routines.
  8 Mar 18 -- Fixed bug in IsPrime rtn.
+ 2 Dec 18 -- Fixed comments regarding before and after commands.  And updated the help command to include NAME.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -611,10 +612,10 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Nextafter(LastX, 1e9)
-			} else if Token.Str == "BEFORE" { // intended for math.Nextafter
+			} else if Token.Str == "BEFORE" { // intended for math.Nextafter to go down
 				LastX = Stack[X]
 				PushMatrixStacks()
-				Stack[X] = math.Nextafter(LastX, 0)
+				Stack[X] = math.Nextafter(LastX, 0)  // correct down.
 			} else if strings.HasPrefix(Token.Str, "SIG") || strings.HasPrefix(Token.Str, "FIX") { // SigFigN command, or FIX
 				ch := Token.Str[len(Token.Str)-1] // ie, the last character.
 				sigfig = GetRegIdx(ch)
@@ -667,6 +668,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
 				ss = append(ss, " Adjust -- X reg *100, Round, /100")
 				ss = append(ss, " NextAfter,Before -- Reference factor for the fcn is 1e9 or 0.")
+				ss = append(ss, " NAME -- Currently only in rpnterm.  NAME registers with strings.")
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
