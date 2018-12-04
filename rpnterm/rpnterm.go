@@ -22,7 +22,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "2 Dec 2018"
+const LastAltered = "4 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -107,6 +107,7 @@ REVISION HISTORY
 22 Aug 18 -- learning about code folding
  2 Dec 18 -- Trying GoLand for editing this code now.  And exploring adding string names for the registers.
                Need to code name command, display these names, deal w/ the reg file.  Code a converter.
+ 4 Dec 18 -- Made STO also ask for NAME.  And used ClearLine when the OutputLine is increased.
 */
 
 func main() {
@@ -285,9 +286,16 @@ func main() {
 			Storage[i].Value = hpcalc.READX()
 			n = WriteRegToScreen(x, RegRow)
 			if n > 8 {
+				ClearLine(OutputRow)       // Should have done this a long time ago.
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
 				PromptRow = OutputRow - 1
 			}
+			// Now ask for NAME
+			var ans string
+			promptstr := "   Input name string : "
+			Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
+			ans = GetInputString(len(promptstr)+2, OutputRow)
+			Storage[i].Name = ans
 		} else if strings.HasPrefix(INBUF, "RCL") {
 			i := 0
 			if len(INBUF) > 3 {
