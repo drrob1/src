@@ -75,7 +75,7 @@ func main() {
 
 	infile, err := os.Open(InStorageFullFilename) // open for reading
 	if os.IsNotExist(err) {
-		log.Print(" thefile does not exist for reading. ")
+		log.Println(" thefile does not exist for reading. ")
 		theFileExists = false
 	} else if err != nil {
 		log.Printf(" Error from os.Open(Storage1FileName) is %v\n", err)

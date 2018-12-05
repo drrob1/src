@@ -22,7 +22,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "4 Dec 2018"
+const LastAltered = "5 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -108,6 +108,7 @@ REVISION HISTORY
  2 Dec 18 -- Trying GoLand for editing this code now.  And exploring adding string names for the registers.
                Need to code name command, display these names, deal w/ the reg file.  Code a converter.
  4 Dec 18 -- Made STO also ask for NAME.  And used ClearLine when the OutputLine is increased.
+ 5 Dec 18 -- Help command will print from here those commands that are processed here, and from hpcalc those that are processed there.
 */
 
 func main() {
@@ -286,7 +287,8 @@ func main() {
 			Storage[i].Value = hpcalc.READX()
 			n = WriteRegToScreen(x, RegRow)
 			if n > 8 {
-				ClearLine(OutputRow)       // Should have done this a long time ago.
+				ClearLine(PromptRow)       // Should have done this a long time ago.
+				ClearLine(OutputRow)      // This too.
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
 				PromptRow = OutputRow - 1
 			}
@@ -668,80 +670,16 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 		P(x, y, BrightYellow, Black, s)
 		y++
 	}
+	P(x, y, BrightYellow, Black, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
+	y++
 	P(x, y, BrightYellow, Black, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
 	y++
-	// {{{
-	/*
-	   P(x,y,BrightYellow,Black," SQRT,SQR -- X = sqrt(X) or sqr(X) register.");
-	   y++
-	   P(x,y,BrightYellow,Black," CURT -- X = cuberoot(X).");
-	   y++
-	   P(x,y,BrightYellow,Black," RECIP -- X = 1/X.");
-	   y++
-	   P(x,y,BrightYellow,Black," VOL -- X = estimated diameter for a given volume, assuming a sphere.");
-	   y++
-	   P(x,y,BrightYellow,Black," STO,RCL  -- store/recall the X register to/from the memory register.");
-	   y++
-	   P(x,y,BrightYellow,Black," `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.");
-	   y++
-	   P(x,y,BrightYellow,Black," @, LastX -- put the value of the LASTX register back into the X register.");
-	   y++
-	   P(x,y,BrightYellow,Black," !,DN,ROLLDN -- roll the stack down one register.  X goes to T1.");
-	   y++
-	   P(x,y,BrightYellow,Black," , or UP -- stack up.  ! or DN -- stack down.");
-	   y++
-	   P(x,y,BrightYellow,Black," Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.");
-	   y++
-	   P(x,y,BrightYellow,Black," EXP,LN -- evaluate exp(X) or ln(X) and put result back into X.");
-	   y++
-	   P(x,y,BrightYellow,Black," ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X");
-	   y++
-	   P(x,y,BrightYellow,Black," **  -- ABS(Y) to the X power, put result in X and pop stack 1 reg.");
-	   y++
-	   P(x,y,BrightYellow,Black," INT, TRUNC, ROUND, CEIL, FRAC, PI -- do what their names suggest.");
-	   y++
-	   P(x,y,BrightYellow,Black," MOD -- evaluate Y MOD X, put result in X and pop stack 1 reg.");
-	   y++
-	   P(x,y,BrightYellow,Black," %   -- does XY/100, places result in X.  Leaves Y alone.");
-	   y++
-	   P(x,y,BrightYellow,Black," SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.");
-	   y++
-	   P(x,y,BrightYellow,Black," D2R -- perform degrees to radians conversion of the X register.");
-	   y++
-	   P(x,y,BrightYellow,Black," R2D -- perform radians to degrees conversion of the X register.");
-	   y++
-	   P(x,y,BrightYellow,Black," JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.");
-	   y++
-	   P(x,y,BrightYellow,Black," TODAY- Return Julian date number of today's date.  Pop stack x2.");
-	   y++
-	   P(x,y,BrightYellow,Black," GREG-- Return Z month, Y day, X year of Julian date number in X.");
-	   y++
-	   P(x,y,BrightYellow,Black," DOW -- Return day number 0..6 of julian date number in X register.");
-	   y++
-	   P(x,y,BrightYellow,Black," HEX -- Round X register to a long_integer and output it in hex format.");
-	   y++
-	   P(x,y,BrightYellow,Black," HCF -- Push HCF(Y,X) onto stack without removing Y or X.");
-	   y++
-	   P(x,y,BrightYellow,Black," HOL -- Display holidays.");
-	   y++
-	   P(x,y,BrightYellow,Black," UNDO, REDO -- entire stack.  More comprehensive than lastx.");
-	   y++
-	   P(x,y,BrightYellow,Black," Prime -- evaluates X.");
-	   y++
-	   P(x,y,BrightYellow,Black," Adjust -- X reg *100, Round, /100");
-	   y++
-	   P(x,y,BrightYellow,Black," Nextafter, Before -- correct floating point error up or down.");
-	   y++
-	   P(x,y,BrightYellow,Black," ZERO -- Zero all the registers, and blank their names.")
-	   y++
-	   P(x,y,BrightYellow,Black," NAME -- Set reg name, which can be blank.")
-	   y++
-	   P(x,y,BrightYellow,Black," SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
-	   y++
-	   P(x,y,BrightYellow,Black," EXIT,STOP,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.");
-	   y++  // There are 32 print statements here as of Nov 1, 2016.
-	*/
-	// }}}
+	P(x, y, BrightYellow, Black, " NAME -- NAME registers with strings, no spaces in these strings.  ")
+	y++
+    P(x, y, BrightYellow, Black, " Clear, CLS -- clear screen.")
+	y++
+	P(x, y, BrightYellow, Black," EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
+	y++
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
 	_ = GetInputString(x+11, y)

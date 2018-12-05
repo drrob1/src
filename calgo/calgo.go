@@ -32,6 +32,7 @@ package main
   5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
   6 Feb 18 -- Tried to move global variables to main, but had to move them back.
   8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
+  5 Dec 18 -- Fix 2 issues: 1st week is blank, and other years start display from current month.
 */
 
 import (
@@ -54,7 +55,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "8 Feb 2018"
+const LastCompiled = "8 Dec 2018"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
