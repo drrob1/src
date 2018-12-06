@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"timlibg"
+
 	//	"github.com/nsf/termbox-go"
 	//
 	"getcommandline"
@@ -22,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "5 Dec 2018"
+const LastAltered = "6 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -109,6 +111,7 @@ REVISION HISTORY
                Need to code name command, display these names, deal w/ the reg file.  Code a converter.
  4 Dec 18 -- Made STO also ask for NAME.  And used ClearLine when the OutputLine is increased.
  5 Dec 18 -- Help command will print from here those commands that are processed here, and from hpcalc those that are processed there.
+ 6 Dec 18 -- Added "today" for reg name string, and it will plug in today's date as a string.
 */
 
 func main() {
@@ -288,16 +291,16 @@ func main() {
 			n = WriteRegToScreen(x, RegRow)
 			if n > 8 {
 				ClearLine(PromptRow)       // Should have done this a long time ago.
-				ClearLine(OutputRow)      // This too.
+				ClearLine(OutputRow)       // This too.
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
 				PromptRow = OutputRow - 1
 			}
 			// Now ask for NAME
-			var ans string
-			promptstr := "   Input name string : "
-			Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
-			ans = GetInputString(len(promptstr)+2, OutputRow)
-			Storage[i].Name = ans
+			// var ans string
+			// promptstr := "   Input name string : "
+			// Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
+			// ans = GetInputString(len(promptstr)+2, OutputRow)
+			Storage[i].Name = GetNameStr()
 		} else if strings.HasPrefix(INBUF, "RCL") {
 			i := 0
 			if len(INBUF) > 3 {
@@ -314,16 +317,16 @@ func main() {
 			}
 			WriteDisplayTapeToScreen(DisplayCol, StackRow)
 		} else if strings.HasPrefix(INBUF, "NAME") {
-			var ans string
+			//var ans string
 			var i int // remember that this auto-zero'd
 			if len(INBUF) > 4 {
 				ch := INBUF[4] // the 5th position
 				i = GetRegIdx(ch)
 			}
-			promptstr := "   Input name string : "
-			Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
-			ans = GetInputString(len(promptstr)+2, OutputRow)
-			Storage[i].Name = ans
+			//promptstr := "   Input name string : "
+			//Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
+			//ans = GetInputString(len(promptstr)+2, OutputRow)
+			Storage[i].Name = GetNameStr()
 		} else if strings.HasPrefix(INBUF, "SIG") || strings.HasPrefix(INBUF, "FIX") { // SigFigN command, or FIX
 			ch := INBUF[len(INBUF)-1] // ie, the last character.
 			sigfig = GetRegIdx(ch)
@@ -676,9 +679,9 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	y++
 	P(x, y, BrightYellow, Black, " NAME -- NAME registers with strings, no spaces in these strings.  ")
 	y++
-    P(x, y, BrightYellow, Black, " Clear, CLS -- clear screen.")
+	P(x, y, BrightYellow, Black, " Clear, CLS -- clear screen.")
 	y++
-	P(x, y, BrightYellow, Black," EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
+	P(x, y, BrightYellow, Black, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
 	y++
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
@@ -750,6 +753,19 @@ func ClearScreen() {
 	} else { // unsupported platform
 		panic(" The ClearScreen platform is only supported on linux or windows, at the moment")
 	}
+}
+
+// -------------------------------------------------- GetNameStr --------------------------------
+func GetNameStr() string {
+	var ans string
+	promptstr := "   Input name string : "
+	Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
+	ans = GetInputString(len(promptstr)+2, OutputRow)
+	if strings.ToUpper(ans) == "TODAY" {
+		m, d, y := timlibg.TIME2MDY()
+		ans = timlibg.MDY2STR(m, d, y)
+	}
+	return ans
 }
 
 // ---------------------------------------------------- End rpnterm.go ------------------------------

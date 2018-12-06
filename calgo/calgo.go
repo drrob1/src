@@ -33,6 +33,7 @@ package main
   6 Feb 18 -- Tried to move global variables to main, but had to move them back.
   8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
   5 Dec 18 -- Fix 2 issues: 1st week is blank, and other years start display from current month.
+                Nevermind.  Turns out that this is not needed.  So I'm not recompiling.
 */
 
 import (
