@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "6 Dec 2018"
+const LastAltered = "8 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -112,6 +112,7 @@ REVISION HISTORY
  4 Dec 18 -- Made STO also ask for NAME.  And used ClearLine when the OutputLine is increased.
  5 Dec 18 -- Help command will print from here those commands that are processed here, and from hpcalc those that are processed there.
  6 Dec 18 -- Added "today" for reg name string, and it will plug in today's date as a string.
+ 8 Dec 18 -- Added StrSubst for register name operation, so that = or - becomes a space.  Note that = becomes + in GetInputString.
 */
 
 func main() {
@@ -764,8 +765,28 @@ func GetNameStr() string {
 	if strings.ToUpper(ans) == "TODAY" {
 		m, d, y := timlibg.TIME2MDY()
 		ans = timlibg.MDY2STR(m, d, y)
+	} else {
+		ans = StrSubst(ans) // will make - or = into a space.
 	}
 	return ans
 }
+
+// -------------------------------------------------- StrSubst -----------------------------------
+func StrSubst(instr string) string { // copied from makesubst package.
+
+	instr = strings.TrimSpace(instr)
+	inRune := make([]rune, len(instr))
+
+	for i, s := range instr {
+		switch s {
+		case '+':
+			s = ' '
+		case '-':
+			s = ' '
+		}
+		inRune[i] = s // was byte(s) before I made this a slice of runes.
+	}
+	return string(inRune)
+} // makesubst
 
 // ---------------------------------------------------- End rpnterm.go ------------------------------
