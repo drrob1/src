@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "8 Dec 2018"
+const LastAltered = "10 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -113,6 +113,7 @@ REVISION HISTORY
  5 Dec 18 -- Help command will print from here those commands that are processed here, and from hpcalc those that are processed there.
  6 Dec 18 -- Added "today" for reg name string, and it will plug in today's date as a string.
  8 Dec 18 -- Added StrSubst for register name operation, so that = or - becomes a space.  Note that = becomes + in GetInputString.
+10 Dec 18 -- Register 0 will not ask for name, to match my workflow using these registers.
 */
 
 func main() {
@@ -301,7 +302,9 @@ func main() {
 			// promptstr := "   Input name string : "
 			// Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
 			// ans = GetInputString(len(promptstr)+2, OutputRow)
-			Storage[i].Name = GetNameStr()
+			if i > 0 {
+				Storage[i].Name = GetNameStr()
+			}
 		} else if strings.HasPrefix(INBUF, "RCL") {
 			i := 0
 			if len(INBUF) > 3 {
