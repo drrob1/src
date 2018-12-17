@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "10 Dec 2018"
+const LastAltered = "17 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -48,10 +48,14 @@ const ( // output modes
 	outputgen
 )
 
-/*
- runtime.GOOS returns either linux or windows.  I have not tested mac.
- I want either $HOME or %userprofile to set the write dir.
-*/
+const Storage1FileName = "RPNStorageName.gob" // Allows for a rotation of Storage files, in case of a mistake.
+const Storage2FileName = "RPNStorageName2.gob"
+const Storage3FileName = "RPNStorageName3.gob"
+const DisplayTapeFilename = "displaytape.txt"
+const TextFilenameOut = "rpntermoutput.txt"
+const TextFilenameIn = "rpnterminput.txt"
+
+// runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
 /*
 This module uses the HPCALC module to simulate an RPN type calculator.
@@ -114,15 +118,12 @@ REVISION HISTORY
  6 Dec 18 -- Added "today" for reg name string, and it will plug in today's date as a string.
  8 Dec 18 -- Added StrSubst for register name operation, so that = or - becomes a space.  Note that = becomes + in GetInputString.
 10 Dec 18 -- Register 0 will not ask for name, to match my workflow using these registers.
+17 Dec 18 -- Starting to code :w and :r to/from text files, intended for clipboard access via vim or another text editor.
 */
 
 func main() {
 	var INBUF, HomeDir string
 
-	const Storage1FileName = "RPNStorageName.gob" // Allows for a rotation of Storage files, in case of a mistake.
-	const Storage2FileName = "RPNStorageName2.gob"
-	const Storage3FileName = "RPNStorageName3.gob"
-	const DisplayTapeFilename = "displaytape.txt"
 	var x int
 	//  var Holidays holidaycalc.HolType;
 	//  var fgYellow,fgCyan termbox.Attribute;
@@ -356,8 +357,56 @@ func main() {
 			RepaintScreen(StartCol)
 		} else if INBUF == "DEBUG" {
 			Printf_tb(StartCol, OutputRow+10, BrightYellow, Black,
-				" StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
+				" StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow,
+				TitleRow, StackRow, RegRow, OutputRow, PromptRow)
 			Printf_tb(StartCol, OutputRow+11, BrightYellow, Black, " DisplayCol=%d", DisplayCol)
+		} else if INBUF == ":W" || strings.HasPrefix(INBUF, "WR") {
+			xstring := GetXstring()
+			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+			if err != nil {
+				Printf_tb(0,OutputRow,BrightYellow,Black," Error %v while opening %s", err, TextFilenameOut)
+				os.Exit(1)
+			}
+			defer XStringFile.Close()
+			XstringWriter := bufio.NewWriter(XStringFile)
+			defer XstringWriter.Flush()
+			today := time.Now()
+			datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+			_, err = XstringWriter.WriteString("------------------------------------------------------\n")
+			_, err = XstringWriter.WriteString(datestring)
+			_, err = XstringWriter.WriteRune('\n')
+			_, err = XstringWriter.WriteString(xstring)
+			_, err = XstringWriter.WriteRune('\n')
+			check(err)
+
+			_, err = XstringWriter.WriteString("\n\n")
+			check(err)
+			XstringWriter.Flush()
+			XStringFile.Close()
+		} else if INBUF == ":R" || INBUF == "READ" || INBUF == "RD" {
+			XstringFileExists := true
+			XstringFile, err := os.Open(TextFilenameIn) // open for reading
+			if os.IsNotExist(err) {
+				Printf_tb(0,OutputRow,BrightYellow,Black,"\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				XstringFileExists = false
+			} else if err != nil {
+				Printf_tb(0,OutputRow,BrightYellow,Black,"\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				XstringFileExists = false
+			}
+			if XstringFileExists {
+				defer XstringFile.Close()
+				XstringScanner := bufio.NewScanner(XstringFile)
+				XstringScanner.Scan()
+				Xstring := strings.TrimSpace(XstringScanner.Text())
+				if err := XstringScanner.Err(); err != nil {
+					log.Println(" Error while reading from ", TextFilenameIn, ".  Error is ", err, ".  Command ignored.")
+				} else {
+					r, err := strconv.ParseFloat(Xstring, 64)
+					check(err)
+					// fmt.Println(" Read ", r, " from ", TextFilenameIn, ".")  a debugging statement
+					hpcalc.PUSHX(r)
+				}
+			}
 		} else {
 
 			// ----------------------------------------------------------------------------------------------
@@ -631,6 +680,19 @@ MainEventLoop:
 	return string(bs)
 } // end GetInputString
 
+// ------------------------------------------- GetXstring ------------------------------------------
+func GetXstring() string {
+
+	if outputmode == outputfix {
+		_, stringslice = hpcalc.GetResult("DUMPFIXED")
+	} else if outputmode == outputfloat {
+		_, stringslice = hpcalc.GetResult("DUMPFLOAT")
+	} else if outputmode == outputgen {
+		_, stringslice = hpcalc.GetResult("DUMP")
+	}
+	return stringslice[len(stringslice)-2]
+}
+
 // ------------------------------------------- WriteStack ------------------------------------------
 func WriteStack(x, y int) {
 
@@ -672,6 +734,7 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	err := termbox.Clear(BrightYellow, Black)
 	check(err)
 	P := Print_tb
+	Pf := Printf_tb
 	_, stringslice = hpcalc.GetResult("HELP")
 	for _, s := range stringslice {
 		P(x, y, BrightYellow, Black, s)
@@ -687,6 +750,9 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	y++
 	P(x, y, BrightYellow, Black, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
 	y++
+	Pf(x, y, BrightYellow, Black, " :w, wr -- write X register to text file %s", TextFilenameOut)
+	y++
+	Pf(x, y, BrightYellow, Black, ":r, rd, read -- read X register from first line of %s.", TextFilenameIn)
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
 	_ = GetInputString(x+11, y)
