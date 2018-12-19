@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "17 Dec 2018"
+const LastAltered = "18 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -119,6 +119,7 @@ REVISION HISTORY
  8 Dec 18 -- Added StrSubst for register name operation, so that = or - becomes a space.  Note that = becomes + in GetInputString.
 10 Dec 18 -- Register 0 will not ask for name, to match my workflow using these registers.
 17 Dec 18 -- Starting to code :w and :r to/from text files, intended for clipboard access via vim or another text editor.
+18 Dec 18 -- Fixed help to show :r, rd, read commands.
 */
 
 func main() {
@@ -364,7 +365,7 @@ func main() {
 			xstring := GetXstring()
 			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 			if err != nil {
-				Printf_tb(0,OutputRow,BrightYellow,Black," Error %v while opening %s", err, TextFilenameOut)
+				Printf_tb(0, OutputRow, BrightYellow, Black, " Error %v while opening %s", err, TextFilenameOut)
 				os.Exit(1)
 			}
 			defer XStringFile.Close()
@@ -387,10 +388,10 @@ func main() {
 			XstringFileExists := true
 			XstringFile, err := os.Open(TextFilenameIn) // open for reading
 			if os.IsNotExist(err) {
-				Printf_tb(0,OutputRow,BrightYellow,Black,"\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				Printf_tb(0, OutputRow, BrightYellow, Black, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
 				XstringFileExists = false
 			} else if err != nil {
-				Printf_tb(0,OutputRow,BrightYellow,Black,"\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				Printf_tb(0, OutputRow, BrightYellow, Black, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
 				XstringFileExists = false
 			}
 			if XstringFileExists {
@@ -753,6 +754,7 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	Pf(x, y, BrightYellow, Black, " :w, wr -- write X register to text file %s", TextFilenameOut)
 	y++
 	Pf(x, y, BrightYellow, Black, ":r, rd, read -- read X register from first line of %s.", TextFilenameIn)
+	y++
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
 	_ = GetInputString(x+11, y)

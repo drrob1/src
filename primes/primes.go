@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-const LastCompiled = "27 Feb 2018"
+const LastCompiled = "18 Dec 2018"
 
 func main() {
 	/*
@@ -22,11 +22,12 @@ func main() {
 	   17 Feb 18 -- Made prime divisors a slice instead of an array.  Addressing syntax is the same.
 	   25 Feb 18 -- 736711 is trouble.  Will print out a factor.  And use uint.
 	   27 Feb 18 -- Fixing a bug about even numbers and correct number of factors.
+	   18 Dec 18 -- Fixed bug about 2 not being prime.  I coded this in Primes2 10 months ago, but it never made it here.
 	*/
 
 	var INBUF string
 
-	fmt.Println(" Prime Factoring Program.  Last compiled ", LastCompiled)
+	fmt.Println(" Prime Factoring Program not using slice of pre-computed primes.  Last compiled ", LastCompiled)
 	fmt.Println()
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -156,10 +157,10 @@ func IsPrimeInt64(n uint64) (uint64, bool) {
 
 	if Uint == 0 || Uint == 1 {
 		return Uint, false
-	} else if Uint%2 == 0 {
-		return 2, false
 	} else if Uint == 2 || Uint == 3 {
 		return 0, true
+	} else if Uint%2 == 0 {
+		return 2, false
 	}
 
 	//	sqrt := math.Sqrt(float64(Uint))
@@ -184,10 +185,10 @@ func IsPrimeInt(n uint) (uint, bool) {
 
 	if Uint == 0 || Uint == 1 {
 		return uint(Uint), false
-	} else if Uint%2 == 0 {
-		return 2, false
 	} else if Uint == 2 || Uint == 3 {
 		return 0, true
+	} else if Uint%2 == 0 {
+		return 2, false
 	}
 
 	//	sqrt := math.Sqrt(float64(Uint))
