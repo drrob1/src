@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "18 Dec 2018"
+const LastAltered = "19 Dec 2018"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -753,7 +753,7 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	y++
 	Pf(x, y, BrightYellow, Black, " :w, wr -- write X register to text file %s", TextFilenameOut)
 	y++
-	Pf(x, y, BrightYellow, Black, ":r, rd, read -- read X register from first line of %s.", TextFilenameIn)
+	Pf(x, y, BrightYellow, Black, " :r, rd, read -- read X register from first line of %s.", TextFilenameIn)
 	y++
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
