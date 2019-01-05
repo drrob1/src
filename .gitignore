@@ -12,4 +12,5 @@ go-cookbook/
 multimap_*
 .idea/
 golang.org/
+fyne.io/
 
