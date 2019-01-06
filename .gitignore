@@ -13,4 +13,5 @@ multimap_*
 .idea/
 golang.org/
 fyne.io/
+examples/
 
