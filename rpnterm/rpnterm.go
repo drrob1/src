@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "19 Dec 2018"
+const LastAltered = "31 Jan 2019"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -120,6 +120,7 @@ REVISION HISTORY
 10 Dec 18 -- Register 0 will not ask for name, to match my workflow using these registers.
 17 Dec 18 -- Starting to code :w and :r to/from text files, intended for clipboard access via vim or another text editor.
 18 Dec 18 -- Fixed help to show :r, rd, read commands.
+31 Jan 19 -- Added prefix of  :w to write a text file, and prefix of :R to read a text file.
 */
 
 func main() {
@@ -361,7 +362,7 @@ func main() {
 				" StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow,
 				TitleRow, StackRow, RegRow, OutputRow, PromptRow)
 			Printf_tb(StartCol, OutputRow+11, BrightYellow, Black, " DisplayCol=%d", DisplayCol)
-		} else if INBUF == ":W" || strings.HasPrefix(INBUF, "WR") {
+		} else if strings.HasPrefix(INBUF, ":W") || strings.HasPrefix(INBUF, "WR") {
 			xstring := GetXstring()
 			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 			if err != nil {
@@ -384,7 +385,7 @@ func main() {
 			check(err)
 			XstringWriter.Flush()
 			XStringFile.Close()
-		} else if INBUF == ":R" || INBUF == "READ" || INBUF == "RD" {
+		} else if strings.HasPrefix(INBUF, ":R") || INBUF == "READ" || INBUF == "RD" {
 			XstringFileExists := true
 			XstringFile, err := os.Open(TextFilenameIn) // open for reading
 			if os.IsNotExist(err) {
@@ -754,6 +755,8 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	Pf(x, y, BrightYellow, Black, " :w, wr -- write X register to text file %s", TextFilenameOut)
 	y++
 	Pf(x, y, BrightYellow, Black, " :r, rd, read -- read X register from first line of %s.", TextFilenameIn)
+	y++
+	P(x,y,BrightYellow,Black," Debug -- Print debugging message to screen")
 	y++
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
