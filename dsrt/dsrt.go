@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "2 Oct 2018"
+const LastAltered = "21 Mar 2019"
 
 /*
 Revision History
@@ -55,13 +55,14 @@ Revision History
   12 Sep 18 -- Adding a t flag to show the totals of the entire directory
   13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
   16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
-   2 Oct 18 -- Using exponential numbers in case statement of TB, GB, etc.
+  20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
 type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
 type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
+type dirAliasMapType map[string]string
 
 func (f FISliceDate) Less(i, j int) bool {
 	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
@@ -107,13 +108,14 @@ func main() {
 	var GrandTotalCount int
 	var havefiles bool
 	var commandline string
+	var directoryAliasesMap dirAliasMapType
 
 	uid := 0
 	gid := 0
 	systemStr := ""
 
 	// environment variable processing.  If present, these will be the defaults.
-	// dsrtparam = GetEnviron(), now obsolete
+
 	dsrtparam = ProcessEnvironString() // This is a function below.
 
 	linuxflag := runtime.GOOS == "linux"
@@ -183,6 +185,7 @@ func main() {
 
 	if *helpflag || HelpFlag {
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
+		fmt.Println("reads from diraliases environment variable if needed on Windows.")
 		flag.PrintDefaults()
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
@@ -249,6 +252,9 @@ func main() {
 	} else {
 		commandline = flag.Arg(0) // this only gets the first non flag argument.  That's all I want on Windows.
 		// Inelegant after adding linux filenames on command line code.  Could have now used filenameStringSlice[0].  I chose to not change the use of flag.Arg(0).
+		if strings.ContainsRune(commandline, ':') {
+			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
+		}
 	}
 	sepstring := string(filepath.Separator)
 	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
@@ -377,21 +383,21 @@ func main() {
 		s1 := ""
 		var i int64
 		switch {
-		case GrandTotal > 1e12: // 1000000000000: // 1 trillion, or TB
-			i = GrandTotal / 1e12       // 1000000000000               // I'm forcing an integer division.
-			if GrandTotal%1e12 > 5e11 { // round up
+		case GrandTotal > 1000000000000: // 1 trillion, or TB
+			i = GrandTotal / 1000000000000               // I'm forcing an integer division.
+			if GrandTotal%1000000000000 > 500000000000 { // rounding up
 				i++
 			}
 			s1 = fmt.Sprintf("%d TB", i)
-		case GrandTotal > 1e9: // 1000000000: // 1 billion, or GB
-			i = GrandTotal / 1e9      // 1000000000
-			if GrandTotal%1e9 > 5e8 { // round up
+		case GrandTotal > 1000000000: // 1 billion, or GB
+			i = GrandTotal / 1000000000
+			if GrandTotal%1000000000 > 500000000 { // rounding up
 				i++
 			}
 			s1 = fmt.Sprintf("%d GB", i)
-		case GrandTotal > 1e6: // 000000: // 1 million, or MB
-			i = GrandTotal / 1e6
-			if GrandTotal%1e6 > 5e5 {
+		case GrandTotal > 1000000: // 1 million, or MB
+			i = GrandTotal / 1000000
+			if GrandTotal%1000000 > 500000 {
 				i++
 			}
 			s1 = fmt.Sprintf("%d MB", i)
@@ -516,8 +522,93 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 	return dsrtparam
 }
 
+//------------------------------ GetDirectoryAliases ----------------------------------------
+func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+
+	s := os.Getenv("diraliases")
+	if len(s) == 0 {
+		return nil
+	}
+
+	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
+	directoryAliasesMap := make(dirAliasMapType, 10)
+	//anAliasMap := make(dirAliasMapType,1)
+
+	dirAliasSlice := strings.Fields(s)
+
+	for _, aliasPair := range dirAliasSlice {
+		if string(aliasPair[len(aliasPair)-1]) != "\\" {
+			aliasPair = aliasPair + "\\"
+		}
+		aliasPair = MakeSubst(aliasPair, '-', ' ') // substitute a dash,-, for a space
+		splitAlias := strings.Fields(aliasPair)
+		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
+	}
+	return directoryAliasesMap
+}
+
+// --------------------------- MakeSubst -------------------------------------------
+func MakeSubst(instr string, r1, r2 rune) string {
+
+	inRune := make([]rune, len(instr))
+	if !strings.ContainsRune(instr, r1) {
+		return instr
+	}
+
+	for i, s := range instr {
+		if s == r1 {
+			s = r2
+		}
+		inRune[i] = s // was byte(s) before I made this a slice of runes.
+	}
+	return string(inRune)
+} // makesubst
+
+// ------------------------------ ProcessDirectoryAliases ---------------------------
+func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
+
+	idx := strings.IndexRune(cmdline, ':')
+	if idx < 2 { // note that if rune is not found, function returns -1.
+		return cmdline
+	}
+	aliasesMap = GetDirectoryAliases()
+	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
+	aliasValue, ok := aliasesMap[aliasName]
+	if !ok {
+		return cmdline
+	}
+	PathnFile := cmdline[idx+1:]
+	completeValue := aliasValue + PathnFile
+	return completeValue
+}
+
 /*
  {{{
+package strings
+func Contains
+func Contains(s, substr string) bool
+Contains reports whether substr is within s.
+
+
+
+func ContainsAny
+func ContainsAny(s, chars string) bool
+ContainsAny reports whether any Unicode code points in chars are within s.
+
+
+
+func ContainsRune
+func ContainsRune(s string, r rune) bool
+ContainsRune reports whether the Unicode code point r is within s.
+
+func Count
+func Count(s, substr string) int
+Count counts the number of non-overlapping instances of substr in s. If substr is an empty string, Count returns 1 + the number of Unicode code points in s.
+
+func Fields
+func Fields(s string) []string
+Fields splits the string s around each instance of one or more consecutive white space characters, as defined by unicode.IsSpace, returning a slice of substrings of s or an empty slice if s contains only white space.
+
 package path
 func Match
 
