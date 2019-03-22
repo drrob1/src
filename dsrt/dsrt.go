@@ -530,9 +530,8 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		return nil
 	}
 
-	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
+	s = strings.ReplaceAll(s, "_", " ") // substitute the underscore, _, for a space
 	directoryAliasesMap := make(dirAliasMapType, 10)
-	//anAliasMap := make(dirAliasMapType,1)
 
 	dirAliasSlice := strings.Fields(s)
 
@@ -540,29 +539,13 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		if string(aliasPair[len(aliasPair)-1]) != "\\" {
 			aliasPair = aliasPair + "\\"
 		}
-		aliasPair = MakeSubst(aliasPair, '-', ' ') // substitute a dash,-, for a space
+		aliasPair = strings.ReplaceAll(aliasPair, "-", " ") // substitute a dash,-, for a space
 		splitAlias := strings.Fields(aliasPair)
 		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
 	}
 	return directoryAliasesMap
 }
 
-// --------------------------- MakeSubst -------------------------------------------
-func MakeSubst(instr string, r1, r2 rune) string {
-
-	inRune := make([]rune, len(instr))
-	if !strings.ContainsRune(instr, r1) {
-		return instr
-	}
-
-	for i, s := range instr {
-		if s == r1 {
-			s = r2
-		}
-		inRune[i] = s // was byte(s) before I made this a slice of runes.
-	}
-	return string(inRune)
-} // makesubst
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
@@ -579,6 +562,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	}
 	PathnFile := cmdline[idx+1:]
 	completeValue := aliasValue + PathnFile
+        fmt.Println("in ProcessDirectoryAliases and complete value is",completeValue)
 	return completeValue
 }
 
