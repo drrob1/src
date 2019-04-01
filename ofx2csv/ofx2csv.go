@@ -17,7 +17,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "30 Dec 2017"
+const lastModified = "31 Mar 2019"
 
 /*
 MODULE qfx2xls;
@@ -53,7 +53,7 @@ MODULE qfx2xls;
                 global infile.  I will fix this next time I have to recompile.
 
    7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
-                which means open financial exchange (for/of information).  New name is ofx2cvs.go
+                which means open financial exchange (for/of information).  New name is ofx2csv.go
 		I think I will first process the file using something like toascii.
   19 Oct 17 -- Added filepicker code
    1 Nov 17 -- Added output of $ for footer amount.
@@ -61,6 +61,7 @@ MODULE qfx2xls;
   30 Dec 17 -- Discovered that Access won't handle yyyy-mm-dd format, only Excel will.  Now I need
                  to write out 2 different files, one for Access and one for Sqlite.db.  And I need to
 				 append 2 commas for the sqlite file.
+  31 Mar 19 -- Noticed that this pgm defaults to .qfx files.  I decided to have it default to both .ofx and .qfx files.
 */
 
 const ( // intended for ofxCharType
@@ -140,7 +141,7 @@ func main() {
 
 	fmt.Println(" ofx2csv.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetFilenames("CHK*.QFX")
+		filenames := filepicker.GetFilenames("CHK*.?FX")
 		for i := 0; i < min(len(filenames), 10); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
