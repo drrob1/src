@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "31 Jan 2019"
+const LastAltered = "13 Apr 2019"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -121,6 +121,7 @@ REVISION HISTORY
 17 Dec 18 -- Starting to code :w and :r to/from text files, intended for clipboard access via vim or another text editor.
 18 Dec 18 -- Fixed help to show :r, rd, read commands.
 31 Jan 19 -- Added prefix of  :w to write a text file, and prefix of :R to read a text file.
+13 Apr 19 -- If on a small screen, like the System76 laptop, there are too many help lines, so it panics.  Started to fix that.
 */
 
 func main() {
@@ -733,6 +734,11 @@ func WriteStack(x, y int) {
 
 //--------------------------------------------- WriteHelp -------------------------------------------
 func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while ago, but I didn't log when.
+	const NumOfHelpLines = 41 // as of 4/13/19.
+	if y+NumOfHelpLines >= MaxRow {
+		Print_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  Think of something else.")
+		return
+	}
 	err := termbox.Clear(BrightYellow, Black)
 	check(err)
 	P := Print_tb
@@ -756,7 +762,7 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	y++
 	Pf(x, y, BrightYellow, Black, " :r, rd, read -- read X register from first line of %s.", TextFilenameIn)
 	y++
-	P(x,y,BrightYellow,Black," Debug -- Print debugging message to screen")
+	P(x, y, BrightYellow, Black, " Debug -- Print debugging message to screen")
 	y++
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
