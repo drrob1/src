@@ -54,7 +54,7 @@ const Storage3FileName = "RPNStorageName3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 const TextFilenameOut = "rpntermoutput.txt"
 const TextFilenameIn = "rpnterminput.txt"
-const HelpFileName = "rpnhelp.txt"
+const HelpFileName = "helprpn.txt"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -123,6 +123,7 @@ REVISION HISTORY
 18 Dec 18 -- Fixed help to show :r, rd, read commands.
 31 Jan 19 -- Added prefix of  :w to write a text file, and prefix of :R to read a text file.
 13 Apr 19 -- If on a small screen, like the System76 laptop, there are too many help lines, so it panics.  Started to fix that.
+14 Apr 19 -- And took out a debug line at top that I should have done shortly after debugging this routine.
 */
 
 func main() {
@@ -188,9 +189,8 @@ func main() {
 	PromptRow = OutputRow - 1
 
 	Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
-	//  Printf_tb(x,TitleRow+1,BrightCyan,Black," GOOS = %s,  HomeDir = %s,  ARCH= %s. MaxCol = %d, MaxRow = %d",runtime.GOOS,HomeDir,runtime.GOARCH,MaxCol,MaxRow);
-	Printf_tb(StartCol, TitleRow+1, BrightYellow, Black,
-		" StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
+	// Printf_tb(x,TitleRow+1,BrightCyan,Black," GOOS = %s,  HomeDir = %s,  ARCH= %s. MaxCol = %d, MaxRow = %d",runtime.GOOS,HomeDir,runtime.GOARCH,MaxCol,MaxRow);
+	// Printf_tb(StartCol, TitleRow+1, BrightYellow, Black, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
 	Printf_tb(StartCol, MaxRow-1, BrightCyan, Black, Divider)
 	e = termbox.Flush()
 	check(e)
