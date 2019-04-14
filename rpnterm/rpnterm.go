@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "13 Apr 2019"
+const LastAltered = "14 Apr 2019"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -54,6 +54,7 @@ const Storage3FileName = "RPNStorageName3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 const TextFilenameOut = "rpntermoutput.txt"
 const TextFilenameIn = "rpnterminput.txt"
+const HelpFileName = "rpnhelp.txt"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -734,36 +735,53 @@ func WriteStack(x, y int) {
 
 //--------------------------------------------- WriteHelp -------------------------------------------
 func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while ago, but I didn't log when.
-	const NumOfHelpLines = 41 // as of 4/13/19.
-	if y+NumOfHelpLines >= MaxRow {
-		Print_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  Think of something else.")
+	var HelpFile *bufio.Writer
+
+	_, helpstringslice := hpcalc.GetResult("HELP")
+	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
+	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
+	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
+	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
+	helpstringslice = append(helpstringslice, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
+	helpstringslice = append(helpstringslice, fmt.Sprintf(" :w, wr -- write X register to text file %s.", TextFilenameOut))
+	helpstringslice = append(helpstringslice, fmt.Sprintf(" :r, rd, read -- read X register from first line of %s.", TextFilenameIn))
+	helpstringslice = append(helpstringslice, " Debug -- Print debugging message to screen.")
+
+	FI, err := os.Stat(HelpFileName)
+	//                                               s1 := "";
+	if err != nil {
+		// Will open this file in the current working directory instead of the HomeDir.
+		HelpOut, err := os.Create(HelpFileName)
+		check(err)
+		defer HelpOut.Close()
+		HelpFile = bufio.NewWriter(HelpOut)
+		defer HelpFile.Flush()
+
+		for _, s := range helpstringslice {
+			HelpFile.WriteString(s)
+			HelpFile.WriteRune('\n')
+		}
+
+		HelpFile.Flush()
+		HelpOut.Close()
+	}
+
+	if y+len(helpstringslice) >= MaxRow {
+		Printf_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  See %s.", HelpFileName)
+		yr, m, d := FI.ModTime().Date()
+		Printf_tb(x, y, BrightYellow, Black, "%s from %d/%d/%d is in current directory.", FI.Name(), m, d, yr)
 		return
 	}
-	err := termbox.Clear(BrightYellow, Black)
+	err = termbox.Clear(BrightYellow, Black)
 	check(err)
 	P := Print_tb
-	Pf := Printf_tb
-	_, stringslice = hpcalc.GetResult("HELP")
-	for _, s := range stringslice {
+	// Pf := Printf_tb  not needed now that the helpstringslice has been extended.
+
+	for _, s := range helpstringslice {
 		P(x, y, BrightYellow, Black, s)
 		y++
 	}
-	P(x, y, BrightYellow, Black, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
-	y++
-	P(x, y, BrightYellow, Black, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
-	y++
-	P(x, y, BrightYellow, Black, " NAME -- NAME registers with strings, no spaces in these strings.  ")
-	y++
-	P(x, y, BrightYellow, Black, " Clear, CLS -- clear screen.")
-	y++
-	P(x, y, BrightYellow, Black, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
-	y++
-	Pf(x, y, BrightYellow, Black, " :w, wr -- write X register to text file %s", TextFilenameOut)
-	y++
-	Pf(x, y, BrightYellow, Black, " :r, rd, read -- read X register from first line of %s.", TextFilenameIn)
-	y++
-	P(x, y, BrightYellow, Black, " Debug -- Print debugging message to screen")
-	y++
+
 	P(x, y, BrightCyan, Black, " pausing ")
 	termbox.SetCursor(x+11, y)
 	_ = GetInputString(x+11, y)
