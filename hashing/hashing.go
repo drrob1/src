@@ -1,18 +1,19 @@
-package main;
+package main
 
 import (
-"os"
-"fmt"
-"runtime"
-"encoding/hex"
-"crypto/sha512"
-"crypto/sha256"
-"crypto/sha1"
-"crypto/md5"
-"io"
-"hash"
-"getcommandline"   // this ones mine.
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
+	"fmt"
+	"getcommandline" // this ones mine.
+	"hash"
+	"io"
+	"os"
+	"runtime"
 )
+
 /*
   REVISION HISTORY
   ----------------
@@ -24,105 +25,101 @@ import (
                  the routine allowed either order in the file.  If the token has a '.' I assume it is a filename, else it is a hash value.
 */
 
-
 //* ************************* MAIN ***************************************************************
 func main() {
 
+	const K = 1024
+	const M = 1024 * 1024
 
-  const K = 1024;
-  const M = 1024*1024;
+	const (
+		md5hash = iota
+		sha1hash
+		sha256hash
+		sha384hash
+		sha512hash
+		HashType
+	)
 
-  const (
-         md5hash = iota
-         sha1hash
-         sha256hash
-         sha384hash
-         sha512hash
-         HashType
-        );
+	const ReadBufferSize = M
+	//  const ReadBufferSize = 10 * M;
 
-  const ReadBufferSize = M;
-//  const ReadBufferSize = 10 * M;
+	var HashName = [...]string{"md5", "sha1", "sha256", "sha384", "sha512"}
+	var WhichHash int
+	var hasher hash.Hash
+	var FileSize int64
 
-  var HashName = [...]string{"md5","sha1","sha256","sha384","sha512"};
-  var WhichHash int;
-  var hasher hash.Hash;
-  var FileSize int64;
+	if len(os.Args) <= 1 {
+		fmt.Println(" Need input filename as a param. ")
+		os.Exit(0)
+	}
+	FileToHash := getcommandline.GetCommandLineString()
 
+	fmt.Println()
+	fmt.Print(" GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
+	fmt.Println("  WhichHash = ", HashName[WhichHash])
+	fmt.Println()
+	fmt.Println()
 
-  if len(os.Args) <= 1 {
-    fmt.Println(" Need input filename as a param. ");
-    os.Exit(0);
-  }
-  FileToHash := getcommandline.GetCommandLineString();
+	for {
+		FileSize = 0
 
-  fmt.Println();
-  fmt.Print(" GOOS =",runtime.GOOS,".  ARCH=",runtime.GOARCH);
-  fmt.Println("  WhichHash = ",HashName[WhichHash]);
-  fmt.Println();
-  fmt.Println();
+		/* Create Hash Section */
+		TargetFile, readErr := os.Open(FileToHash)
+		check(readErr, " Error opening FileToHash.")
+		defer TargetFile.Close()
 
+		switch WhichHash { // Initialing case switch on WhichHash
+		case md5hash:
+			hasher = md5.New()
+		case sha1hash:
+			hasher = sha1.New()
+		case sha256hash:
+			hasher = sha256.New()
+		case sha384hash:
+			hasher = sha512.New384()
+		case sha512hash:
+			hasher = sha512.New()
+		default:
+			hasher = sha256.New()
+		} /* initializing case on WhichHash */
 
+		//    FileReadBuffer := make([]byte,ReadBufferSize);
+		/*
+		   for {   // Repeat Until eof loop.
+		     n,err := TargetFile.Read(FileReadBuffer);
+		     if n == 0 || err == io.EOF { break }
+		     check(err," Unexpected error while reading the target file on which to compute the hash,");
+		     hasher.Write(FileReadBuffer[:n]);
+		     FileSize += int64(n);
+		   } // Repeat Until TargetFile.eof loop;
+		*/
+		// If I understand a response to my post for help correctly, I can do this instead of the for loop
+		n, err := io.Copy(hasher, TargetFile)
+		check(err, " Unexpected error from io.Copy")
+		FileSize += int64(n)
 
-  for {
-    FileSize = 0;
+		HashValueComputedStr := hex.EncodeToString(hasher.Sum(nil))
 
-    /* Create Hash Section */
-    TargetFile,readErr := os.Open(FileToHash);
-    check(readErr," Error opening FileToHash.");
-    defer TargetFile.Close();
+		fmt.Println(" Filename  = ", FileToHash, ", FileSize = ", FileSize, ", ", HashName[WhichHash])
+		fmt.Println(" Computed hash hex encoded:", HashValueComputedStr)
 
-    switch WhichHash {     // Initialing case switch on WhichHash
-    case md5hash :
-           hasher = md5.New();
-    case sha1hash :
-           hasher = sha1.New();
-    case sha256hash :
-           hasher = sha256.New();
-    case sha384hash :
-           hasher = sha512.New384();
-    case sha512hash :
-           hasher = sha512.New();
-    default:
-           hasher = sha256.New();
-    } /* initializing case on WhichHash */
+		TargetFile.Close() // Close the handle to allow opening a target from the next line, if there is one.
+		fmt.Println()
+		fmt.Println()
 
-//    FileReadBuffer := make([]byte,ReadBufferSize);
-/*
-    for {   // Repeat Until eof loop.
-      n,err := TargetFile.Read(FileReadBuffer);
-      if n == 0 || err == io.EOF { break }
-      check(err," Unexpected error while reading the target file on which to compute the hash,");
-      hasher.Write(FileReadBuffer[:n]);
-      FileSize += int64(n);
-    } // Repeat Until TargetFile.eof loop;
-*/
-  // If I understand a response to my post for help correctly, I can do this instead of the for loop
-    n,err := io.Copy(hasher,TargetFile);
-    check(err," Unexpected error from io.Copy");
-    FileSize += int64(n);
+		WhichHash++
+		if WhichHash > sha512hash {
+			break
+		}
+	} /* outer LOOP */
 
-    HashValueComputedStr := hex.EncodeToString(hasher.Sum(nil));
-
-    fmt.Println(" Filename  = ",FileToHash,", FileSize = ",FileSize,", ",HashName[WhichHash]);
-    fmt.Println(" Computed hash hex encoded:",HashValueComputedStr);
-
-    TargetFile.Close();     // Close the handle to allow opening a target from the next line, if there is one.
-    fmt.Println();
-    fmt.Println();
-
-    WhichHash++
-    if WhichHash > sha512hash {break}
-  }   /* outer LOOP */
-
-  fmt.Println();
-}  // Main for comparehashes.go.
+	fmt.Println()
+} // Main for comparehashes.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
-  if e != nil {
-    fmt.Errorf("%s : ",msg);
-    panic(e);
-  }
+	if e != nil {
+		fmt.Errorf("%s : ", msg)
+		panic(e)
+	}
 }
-

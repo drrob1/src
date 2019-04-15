@@ -16,9 +16,9 @@ import (
 //    FreeImage_Unload(bitmap);
 //    return result?1:0;
 // }
-import "C"  // special import that brings in cgo.  The above comments are really code to be compiled in C.
+import "C" // special import that brings in cgo.  The above comments are really code to be compiled in C.
 
-func degradeJPEG(in, out string, quality int) bool {  // the C. notation means to call a C routine
+func degradeJPEG(in, out string, quality int) bool { // the C. notation means to call a C routine
 	return C.degrade_jpeg(C.CString(in), C.CString(out), C.int(quality)) == 1
 }
 

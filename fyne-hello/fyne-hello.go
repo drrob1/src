@@ -11,6 +11,6 @@ func main() {
 	quitapp := func() { app.Quit() }
 
 	w := app.NewWindow("Hello")
-	w.SetContent(widget.NewVBox(widget.NewLabel("Hello Fyne"),	widget.NewButton("Quit", quitapp)))
+	w.SetContent(widget.NewVBox(widget.NewLabel("Hello Fyne"), widget.NewButton("Quit", quitapp)))
 	w.ShowAndRun()
 }

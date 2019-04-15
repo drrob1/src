@@ -1,51 +1,48 @@
 package main
 
 import (
-        "fmt"
-	"net/http"
+	"fmt"
 	"io/ioutil"
-//	"time"
-//	"math/rand"
-//	"sync/atomic"
-       );
+	"net/http"
+	//	"time"
+	//	"math/rand"
+	//	"sync/atomic"
+)
 
 type webPage struct {
-  url string;
-  body []byte;
-  err error;
+	url  string
+	body []byte
+	err  error
 }
 
-
-
-
 func (w *webPage) get() {
-  resp, err := http.Get(w.url);
-  if err != nil {
-    w.err = err;
-    return;
-  }
-  defer resp.Body.Close();
+	resp, err := http.Get(w.url)
+	if err != nil {
+		w.err = err
+		return
+	}
+	defer resp.Body.Close()
 
-  w.body, err = ioutil.ReadAll(resp.Body)
-  if err != nil {
-    w.err = err;
-  }
+	w.body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		w.err = err
+	}
 }
 
 func (w *webPage) isOK() bool {
-  return w.err == nil
+	return w.err == nil
 }
 
 func main() {
 
 	w := new(webPage) // this creates an empty variable of this struct type.
-	w.url = "http://robsolomon.info/";
+	w.url = "http://robsolomon.info/"
 
-	w.get();
+	w.get()
 	if w.isOK() {
-	  fmt.Println("URL:",w.url,", length:",len(w.body));
-	}else{
-	  fmt.Println("URL:",w.url,", error:",w.err);
+		fmt.Println("URL:", w.url, ", length:", len(w.body))
+	} else {
+		fmt.Println("URL:", w.url, ", error:", w.err)
 	}
-	fmt.Println();
+	fmt.Println()
 }

@@ -8,9 +8,10 @@
  *  13 Sep 16 -- Rewrote using idiomatic Go
  */
 
-package getcommandline;
-import "os";
-import "strings";
+package getcommandline
+
+import "os"
+import "strings"
 
 /*  Not idiomatic Go.  My reading says to not use += operator for strings.
 func GetCommandLineString() string {
@@ -28,25 +29,22 @@ func GetCommandLineString() string {
 */
 
 func GetCommandLineString() string {
-        if len(os.Args) <= 1 {
-          return ""
-        }
-        s0 := make([]string,0,20);
-	for _, str  := range os.Args[1:] {  // Remember that os.Args[0] is exec pgm name
-          s0 = append(s0,str);
-        }
-        s := strings.Join(s0," ");
-        return s;
+	if len(os.Args) <= 1 {
+		return ""
+	}
+	s0 := make([]string, 0, 20)
+	for _, str := range os.Args[1:] { // Remember that os.Args[0] is exec pgm name
+		s0 = append(s0, str)
+	}
+	s := strings.Join(s0, " ")
+	return s
 }
-
 
 func GetCommandLineByteSlice() []byte {
-        if len(os.Args) <= 1 {
-          return []byte{} ;
-        }
-        s := GetCommandLineString();
-        bs := []byte(s);
-        return bs;
+	if len(os.Args) <= 1 {
+		return []byte{}
+	}
+	s := GetCommandLineString()
+	bs := []byte(s)
+	return bs
 }
-
-

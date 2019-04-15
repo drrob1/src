@@ -33,7 +33,7 @@ func main() {
 	// Connect event for button
 	button.ConnectClicked(func(checked bool) {
 		widgets.QMessageBox_Information(nil, "OK", input.Text(),
-		widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 	})
 
 	// Set main widget as the central widget of the window
