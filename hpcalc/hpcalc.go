@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "5 Dec 2018"
+const LastAlteredDate = "15 Apr 2019"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -79,6 +79,7 @@ REVISION HISTORY
  8 Mar 18 -- Fixed bug in IsPrime rtn.
  2 Dec 18 -- Fixed comments regarding before and after commands.  And updated the help command to include NAME.
  5 Dec 18 -- Help from here will only produce help text for those commands processed here.
+15 Apr 19 -- Increased size of stringslice
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -538,7 +539,7 @@ func GetResult(s string) (float64, []string) {
 	var Token tokenize.TokenType
 	var EOL bool
 	var Holiday holidaycalc.HolType
-	ss := make([]string, 0, 40) // stringslice is too long to keep having to type, esp in the help section.
+	ss := make([]string, 0, 100) // stringslice is too long to keep having to type, esp in the help section.
 
 	tokenize.INITKN(s)
 	for { //  UNTIL reached EOL
@@ -616,7 +617,7 @@ func GetResult(s string) (float64, []string) {
 			} else if Token.Str == "BEFORE" { // intended for math.Nextafter to go down
 				LastX = Stack[X]
 				PushMatrixStacks()
-				Stack[X] = math.Nextafter(LastX, 0)  // correct down.
+				Stack[X] = math.Nextafter(LastX, 0) // correct down.
 			} else if strings.HasPrefix(Token.Str, "SIG") || strings.HasPrefix(Token.Str, "FIX") { // SigFigN command, or FIX
 				ch := Token.Str[len(Token.Str)-1] // ie, the last character.
 				sigfig = GetRegIdx(ch)

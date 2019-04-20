@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "14 Apr 2019"
+const LastAltered = "15 Apr 2019"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -64,14 +64,12 @@ REVISION HISTORY
 ----------------
  1 Dec 89 -- Changed prompt.
 24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-25 Jul 93 -- Output result without trailing insignificant zeros,
-		                   imported UL2, and changed prompt again.
-3 Mar 96 -- Fixed bug in string display if real2str fails because
-		                   number is too large (ie, Avogadro's Number).
+25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+ 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
 18 May 03 -- First Win32 version.  And changed name.
-1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
+ 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
 		                   And will save/restore the stack to/from a file.
-2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
+ 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
 		                   And I now have the skipline included in MiscStdInOut so it is removed from here.
 15 Oct 13 -- Now writing for gm2 under linux.
 22 Jul 14 -- Converting to Ada.
@@ -124,22 +122,20 @@ REVISION HISTORY
 31 Jan 19 -- Added prefix of  :w to write a text file, and prefix of :R to read a text file.
 13 Apr 19 -- If on a small screen, like the System76 laptop, there are too many help lines, so it panics.  Started to fix that.
 14 Apr 19 -- And took out a debug line at top that I should have done shortly after debugging this routine.
+15 Apr 19 -- Changing the look somewhat.  I want the input to be on the top, like I did in C++.
 */
 
 func main() {
 	var INBUF, HomeDir string
 
 	var x int
-	//  var Holidays holidaycalc.HolType;
-	//  var fgYellow,fgCyan termbox.Attribute;
 
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 	var err error
 
 	ClearScreen() // ClearScreen before termbox.init fcn, to see if this helps.
 	fmt.Println()
-	//  fmt.Println("  I hope this helps.  But it likely won't.  ");  It didn't help.  I'm commenting it
-	//  out, finally.
+	//  fmt.Println("  I hope this helps.  But it likely won't.  ");  It didn't help.  I'm commenting it out, finally.
 	fmt.Println()
 	fmt.Println()
 
@@ -152,8 +148,8 @@ func main() {
 	BrightYellow = termbox.ColorYellow | termbox.AttrBold
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	Black = termbox.ColorBlack
-	err = termbox.Clear(BrightYellow, Black)
-	check(err)
+	//	err = termbox.Clear(BrightYellow, Black) \  removed 4/15/19
+	//	check(err)                               /
 	e := termbox.Clear(Black, Black)
 	check(e)
 	e = termbox.Flush()
@@ -169,12 +165,12 @@ func main() {
 
 	if runtime.GOOS == "linux" {
 		HomeDir = os.Getenv("HOME")
-		StartRow = 2 // Could this be the source of my problems with screen updating correctly?
-		StartCol = 1 // So I'll make it the same as under Windows, and I'll see what's going on, maybe?
+		//	StartRow = 2 // Could this be the source of my problems with screen updating correctly?  Nope.  commended out 4/15/19
+		//	StartCol = 1 // So I'll make it the same as under Windows, and I'll see what's going on, maybe?  Nope.  Comended 4/15/19
 	} else if runtime.GOOS == "windows" {
 		HomeDir = os.Getenv("userprofile")
-		StartRow = 2
-		StartCol = 1
+		//	StartRow = 2
+		//	StartCol = 1
 	} else { // then HomeDir will be empty.
 		Print_tb(StartCol, StartRow+20, BrightYellow, Black, " runtime.GOOS does not say linux or windows.  Is this a Mac?")
 	}
@@ -186,19 +182,14 @@ func main() {
 	RegRow = StackRow + 12
 	OutputRow = RegRow + 10
 	DisplayCol = MaxCol/2 + 2
-	PromptRow = OutputRow - 1
-
-	Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
-	// Printf_tb(x,TitleRow+1,BrightCyan,Black," GOOS = %s,  HomeDir = %s,  ARCH= %s. MaxCol = %d, MaxRow = %d",runtime.GOOS,HomeDir,runtime.GOARCH,MaxCol,MaxRow);
-	// Printf_tb(StartCol, TitleRow+1, BrightYellow, Black, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
-	Printf_tb(StartCol, MaxRow-1, BrightCyan, Black, Divider)
-	e = termbox.Flush()
-	check(e)
-
+	PromptRow = StartRow + 1
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	Printf_tb(0, TitleRow+2, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
+
+	Printf_tb(StartCol, MaxRow-1, BrightCyan, Black, Divider)
+	e = termbox.Flush()
+	check(e)
 
 	DisplayTape = make([]string, 0, 100)
 	theFileExists := true
@@ -221,7 +212,6 @@ func main() {
 	Storage3FullFilenameSlice[2] = Storage3FileName
 	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
 
-	//  Printf_tb(x,OutputRow,BrightYellow,Black," StorageFullFilename 1:%s, 2:%s, 3:%s",StorageFullFilename,Storage2FullFilename,Storage3FullFilename);
 	thefile, err := os.Open(StorageFullFilename) // open for reading
 	if os.IsNotExist(err) {
 		log.Print(" thefile does not exist for reading. ")
@@ -251,7 +241,7 @@ func main() {
 	n = WriteRegToScreen(x, RegRow)
 	if n > 8 {
 		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = OutputRow - 1
+		PromptRow = StartRow + 1   // used to be OutputRow -1
 	}
 
 	//  Print_tb(x,PromptRow,BrightCyan,Black,InputPrompt);  Doesn't make any difference, it seems.
@@ -300,7 +290,7 @@ func main() {
 				ClearLine(PromptRow)       // Should have done this a long time ago.
 				ClearLine(OutputRow)       // This too.
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-				PromptRow = OutputRow - 1
+				PromptRow = StartRow + 1   // used to be OutputRow -1
 			}
 			// Now ask for NAME
 			// var ans string
@@ -322,7 +312,7 @@ func main() {
 			n = WriteRegToScreen(StartCol, RegRow)
 			if n > 8 {
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-				PromptRow = OutputRow - 1
+				PromptRow = StartRow + 1   // used to be OutputRow -1
 			}
 			WriteDisplayTapeToScreen(DisplayCol, StackRow)
 		} else if strings.HasPrefix(INBUF, "NAME") {
@@ -360,10 +350,14 @@ func main() {
 		} else if INBUF == "REPAINT" {
 			RepaintScreen(StartCol)
 		} else if INBUF == "DEBUG" {
-			Printf_tb(StartCol, OutputRow+10, BrightYellow, Black,
-				" StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d", StartCol, StartRow, MaxCol, MaxRow,
-				TitleRow, StackRow, RegRow, OutputRow, PromptRow)
+			Printf_tb(x, OutputRow+8, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
+
+			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
+
+			Printf_tb(StartCol, OutputRow+10, BrightYellow, Black, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d",
+				StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
 			Printf_tb(StartCol, OutputRow+11, BrightYellow, Black, " DisplayCol=%d", DisplayCol)
+			Printf_tb(x, OutputRow+13, BrightYellow, Black, " StorageFullFilename 1:%s, 2:%s, 3:%s", StorageFullFilename, Storage2FullFilename, Storage3FullFilename)
 		} else if strings.HasPrefix(INBUF, ":W") || strings.HasPrefix(INBUF, "WR") {
 			xstring := GetXstring()
 			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -748,7 +742,6 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	helpstringslice = append(helpstringslice, " Debug -- Print debugging message to screen.")
 
 	FI, err := os.Stat(HelpFileName)
-	//                                               s1 := "";
 	if err != nil {
 		// Will open this file in the current working directory instead of the HomeDir.
 		HelpOut, err := os.Create(HelpFileName)
@@ -777,6 +770,7 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	P := Print_tb
 	// Pf := Printf_tb  not needed now that the helpstringslice has been extended.
 
+	y = 1
 	for _, s := range helpstringslice {
 		P(x, y, BrightYellow, Black, s)
 		y++
@@ -833,12 +827,12 @@ func ClearEOL(x, y int) {
 // ------------------------------------------------------- Repaint ----------------------------------
 func RepaintScreen(x int) {
 
-	Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
+	// Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)  Removed 4/15/19
 	WriteStack(x, StackRow)
 	n = WriteRegToScreen(x, RegRow)
 	if n > 8 {
 		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = OutputRow - 1
+		PromptRow = StartRow + 1   // PromptRow = OutputRow - 1 was prev assignment.
 	}
 	WriteDisplayTapeToScreen(DisplayCol, StackRow)
 	Printf_tb(x, MaxRow-1, BrightCyan, Black, Divider)
