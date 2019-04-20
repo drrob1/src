@@ -1,0 +1,3 @@
+[submodule "gometalinter"]
+	path = gometalinter
+	url = /home/rob/go/src/github.com/alecthomas/gometalinter/
