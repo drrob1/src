@@ -4,48 +4,46 @@
 // He suggests using unbuffered channels primarily because it makes program logic and debugging much
 // easier.
 
-package main  
+package main
 
 import (
-        "fmt"
-	"time"
+	"fmt"
 	"math/rand"
 	"sync/atomic"
-       );
+	"time"
+)
 
 var (
-	running int64 = 0;
+	running int64 = 0
 )
 
 func work() {
-	atomic.AddInt64(&running,1);
-	fmt.Printf("[%d",running);
-	time.Sleep(time.Duration(rand.Intn(2))*time.Second);
-	atomic.AddInt64(&running,-1);
-	fmt.Printf("]");
+	atomic.AddInt64(&running, 1)
+	fmt.Printf("[%d", running)
+	time.Sleep(time.Duration(rand.Intn(2)) * time.Second)
+	atomic.AddInt64(&running, -1)
+	fmt.Printf("]")
 }
 
 func worker(semaphore chan bool) {
-	<- semaphore   // only do something when can receive from the semaphore channel.
-	work();
-	semaphore <- true; // when done, put back into the channel
+	<-semaphore // only do something when can receive from the semaphore channel.
+	work()
+	semaphore <- true // when done, put back into the channel
 }
 
-
-
 func main() {
-//	intCh := make(chan int);  // unbuffered
-	semaphore := make(chan bool, 10); // buffered, this channel can store up to 10 int's as defined here.
+	//	intCh := make(chan int);  // unbuffered
+	semaphore := make(chan bool, 10) // buffered, this channel can store up to 10 int's as defined here.
 
 	for i := 0; i < 1000; i++ { // will start 1000, but only 10 can receive at a time from the buffer
-	  go worker(semaphore);
+		go worker(semaphore)
 	}
 
 	for i := 0; i < cap(semaphore); i++ {
-	  semaphore <- true;  // this won't block because of the buffer that can fill and accept these.
+		semaphore <- true // this won't block because of the buffer that can fill and accept these.
 	}
 
-	time.Sleep(30*time.Second);
+	time.Sleep(30 * time.Second)
 
-	fmt.Println();
+	fmt.Println()
 }

@@ -1,9 +1,9 @@
-package getcommandline;
+package getcommandline
 
-import "testing";
-import "fmt";
+import "testing"
+import "fmt"
 
 func Testgetcommandline(t *testing.T) {
-  TheString := GetCommandLineString()
-  fmt.Println(" Input commandline is : ",TheString);
+	TheString := GetCommandLineString()
+	fmt.Println(" Input commandline is : ", TheString)
 }

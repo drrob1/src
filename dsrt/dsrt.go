@@ -546,7 +546,6 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 	return directoryAliasesMap
 }
 
-
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
 
@@ -562,7 +561,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	}
 	PathnFile := cmdline[idx+1:]
 	completeValue := aliasValue + PathnFile
-        fmt.Println("in ProcessDirectoryAliases and complete value is",completeValue)
+	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
 }
 
