@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "15 Apr 2019"
+const LastAltered = "14 Apr 2019"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -124,7 +124,6 @@ REVISION HISTORY
 31 Jan 19 -- Added prefix of  :w to write a text file, and prefix of :R to read a text file.
 13 Apr 19 -- If on a small screen, like the System76 laptop, there are too many help lines, so it panics.  Started to fix that.
 14 Apr 19 -- And took out a debug line at top that I should have done shortly after debugging this routine.
-15 Apr 19 -- Changing the look somewhat.  I want the input to be on the top, like I did in C++.
 */
 
 func main() {
@@ -187,7 +186,7 @@ func main() {
 	RegRow = StackRow + 12
 	OutputRow = RegRow + 10
 	DisplayCol = MaxCol/2 + 2
-	PromptRow = StartRow + 1
+	PromptRow = OutputRow - 1
 
 	Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
 	// Printf_tb(x,TitleRow+1,BrightCyan,Black," GOOS = %s,  HomeDir = %s,  ARCH= %s. MaxCol = %d, MaxRow = %d",runtime.GOOS,HomeDir,runtime.GOARCH,MaxCol,MaxRow);
@@ -252,7 +251,7 @@ func main() {
 	n = WriteRegToScreen(x, RegRow)
 	if n > 8 {
 		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = StartRow + 1   // used to be OutputRow -1
+		PromptRow = OutputRow - 1
 	}
 
 	//  Print_tb(x,PromptRow,BrightCyan,Black,InputPrompt);  Doesn't make any difference, it seems.
@@ -301,7 +300,7 @@ func main() {
 				ClearLine(PromptRow)       // Should have done this a long time ago.
 				ClearLine(OutputRow)       // This too.
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-				PromptRow = StartRow + 1   // used to be OutputRow -1
+				PromptRow = OutputRow - 1
 			}
 			// Now ask for NAME
 			// var ans string
@@ -323,7 +322,7 @@ func main() {
 			n = WriteRegToScreen(StartCol, RegRow)
 			if n > 8 {
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-				PromptRow = StartRow + 1   // used to be OutputRow -1
+				PromptRow = OutputRow - 1
 			}
 			WriteDisplayTapeToScreen(DisplayCol, StackRow)
 		} else if strings.HasPrefix(INBUF, "NAME") {
@@ -778,7 +777,6 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	P := Print_tb
 	// Pf := Printf_tb  not needed now that the helpstringslice has been extended.
 
-	y = 1
 	for _, s := range helpstringslice {
 		P(x, y, BrightYellow, Black, s)
 		y++
@@ -840,8 +838,7 @@ func RepaintScreen(x int) {
 	n = WriteRegToScreen(x, RegRow)
 	if n > 8 {
 		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = StartRow + 1
-		//		PromptRow = OutputRow - 1
+		PromptRow = OutputRow - 1
 	}
 	WriteDisplayTapeToScreen(DisplayCol, StackRow)
 	Printf_tb(x, MaxRow-1, BrightCyan, Black, Divider)
