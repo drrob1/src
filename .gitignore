@@ -1,5 +1,4 @@
 *.swp
-github.com/
 *.def
 *.DEF
 *.mod
@@ -11,7 +10,4 @@ ds-docs
 go-cookbook/
 multimap_*
 .idea/
-golang.org/
-fyne.io/
-examples/
 
