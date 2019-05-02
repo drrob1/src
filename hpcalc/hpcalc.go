@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "15 Apr 2019"
+const LastAlteredDate = "1 May 2019"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -80,6 +80,7 @@ REVISION HISTORY
  2 Dec 18 -- Fixed comments regarding before and after commands.  And updated the help command to include NAME.
  5 Dec 18 -- Help from here will only produce help text for those commands processed here.
 15 Apr 19 -- Increased size of stringslice
+ 1 May 19 -- Noticed that the character substitutions were never listed here as they are in the cpp version.  Now added that.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -647,7 +648,6 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
 				ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 				ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
-				//                                                                    ss = append(ss," !,DN,ROLLDN -- roll the stack down one register.  X goes to T1.");
 				ss = append(ss, " , or UP -- stack up.  | or DN -- stack down.")
 				ss = append(ss, " Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.")
 				ss = append(ss, " EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.")
@@ -658,7 +658,6 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " %   -- does XY/100, places result in X.  Leaves Y alone.")
 				ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
 				ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
-				//ss = append(ss, " R2D -- perform radians to degrees conversion of the X register.")
 				ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.")
 				ss = append(ss, " TODAY- Return Julian date number of today's date.  Pop stack x2.")
 				ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
@@ -671,7 +670,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " Adjust -- X reg *100, Round, /100")
 				ss = append(ss, " NextAfter,Before -- Reference factor for the fcn is 1e9 or 0.")
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
-				//ss = append(ss, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
+                                ss = append(ss, " substitutions: = for +, ; for *.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
 			} else if Token.Str == "STO" {
 				MemReg = Stack[X]
