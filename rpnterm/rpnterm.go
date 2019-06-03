@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "15 Apr 2019"
+const LastAltered = "3 June 2019"
 const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
 
 type Register struct {
@@ -123,6 +123,7 @@ REVISION HISTORY
 13 Apr 19 -- If on a small screen, like the System76 laptop, there are too many help lines, so it panics.  Started to fix that.
 14 Apr 19 -- And took out a debug line at top that I should have done shortly after debugging this routine.
 15 Apr 19 -- Changing the look somewhat.  I want the input to be on the top, like I did in C++.
+ 3 Jun 19 -- Added T as abbreviation for today in GetNameStr rtn, and in hpcalc since I liked the idea so much.
 */
 
 func main() {
@@ -854,7 +855,8 @@ func GetNameStr() string {
 	promptstr := "   Input name string : "
 	Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
 	ans = GetInputString(len(promptstr)+2, OutputRow)
-	if strings.ToUpper(ans) == "TODAY" {
+	ans = strings.ToUpper(ans)
+	if ans == "TODAY" || ans == "T" {
 		m, d, y := timlibg.TIME2MDY()
 		ans = timlibg.MDY2STR(m, d, y)
 	} else {

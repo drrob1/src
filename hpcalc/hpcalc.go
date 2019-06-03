@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "1 May 2019"
+const LastAlteredDate = "3 June 2019"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -80,7 +80,8 @@ REVISION HISTORY
  2 Dec 18 -- Fixed comments regarding before and after commands.  And updated the help command to include NAME.
  5 Dec 18 -- Help from here will only produce help text for those commands processed here.
 15 Apr 19 -- Increased size of stringslice
- 1 May 19 -- Noticed that the character substitutions were never listed here as they are in the cpp version.  Now added that.
+ 1 May 19 -- Noticed that the character substitutions were never listed here in help as they are in the cpp version.  Now added that.
+ 3 Jun 19 -- Added t as an abbreviation for today
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -659,7 +660,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
 				ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
 				ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.")
-				ss = append(ss, " TODAY- Return Julian date number of today's date.  Pop stack x2.")
+				ss = append(ss, " TODAY, T -- Return Julian date number of today's date.  Pop stack x2.")
 				ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
 				ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
 				ss = append(ss, " HEX -- Round X register to a long_integer and output it in hex format.")
@@ -759,7 +760,7 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] = float64(timlibg.JULIAN(int(Round(Stack[Z])), int(Round(Stack[Y])), int(Round(Stack[X]))))
 				STACKDN()
 				STACKDN()
-			} else if Token.Str == "TODAY" {
+			} else if Token.Str == "TODAY" || Token.Str == "T" {
 				PushMatrixStacks()
 				LastX = Stack[X]
 				STACKUP()
