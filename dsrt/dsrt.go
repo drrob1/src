@@ -56,7 +56,7 @@ Revision History
   13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
   16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
   20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
-  19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.  
+  19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
                I changed the meanings so now use <symlink> and (dir) indicators, and fixed the oversight on Windows
                whereby symlinks could not be displayed.
 */
@@ -255,14 +255,14 @@ func main() {
 	} else {
 		// Inelegant after adding linux filenames on command line code.  Could have now used filenameStringSlice[0].  I chose to not change the use of flag.Arg(0).
 		// commandline = filenamesStringSlice[0] // this panics if there are no params on the line.
-		    commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
 		}
 	}
 	sepstring := string(filepath.Separator)
-	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
-	if userptr != nil {   // userptr is from os/user package
+	HomeDirStr := ""    // HomeDir code used for processing ~ symbol meaning home directory.
+	if userptr != nil { // userptr is from os/user package
 		HomeDirStr = userptr.HomeDir + sepstring
 	} else if linuxflag {
 		HomeDirStr = os.Getenv("HOME") + sepstring
@@ -271,7 +271,7 @@ func main() {
 	}
 	if len(commandline) > 0 {
 		if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
-			commandline = strings.Replace(commandline, "~", HomeDirStr, 1) 
+			commandline = strings.Replace(commandline, "~", HomeDirStr, 1)
 		}
 		CleanDirName, CleanFileName = filepath.Split(commandline)
 		CleanDirName = filepath.Clean(CleanDirName)
@@ -355,7 +355,7 @@ func main() {
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
-				} else if Dirlist  { // assume it's a symlink as it's not a directory and not a regular file
+				} else if Dirlist { // assume it's a symlink as it's not a directory and not a regular file
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
 				}
@@ -367,7 +367,8 @@ func main() {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 					count++
 				} else if Dirlist { // added 6/19/19.  Prior to then, this code could not show a symlink on Windows.
-						fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					count++
 				}
 			}
 			if count >= NumLines {
@@ -585,7 +586,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	}
 	PathnFile := cmdline[idx+1:]
 	completeValue := aliasValue + PathnFile
-        fmt.Println("in ProcessDirectoryAliases and complete value is",completeValue)
+	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
 }
 
