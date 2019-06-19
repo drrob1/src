@@ -57,7 +57,8 @@ Revision History
   16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
   20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
   19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.  
-               And I changed the meanings so now use <symlink> and (dir) indicators.
+               I changed the meanings so now use <symlink> and (dir) indicators, and fixed the oversight on Windows
+               whereby symlinks could not be displayed.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -358,13 +359,15 @@ func main() {
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
 				}
-			} else { // must be windows because I don't think this will compile on Mac.
+			} else { // assume Windows
 				if Dirlist && f.IsDir() {
-					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
 					count++
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 					count++
+				} else if Dirlist { // added 6/19/19.  Prior to then, this code could not show a symlink on Windows.
+						fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
 				}
 			}
 			if count >= NumLines {
