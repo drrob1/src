@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "21 Mar 2019"
+const LastAltered = "19 June 2019"
 
 /*
 Revision History
@@ -56,6 +56,8 @@ Revision History
   13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
   16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
   20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
+  19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.  
+               And I changed the meanings so now use <symlink> and (dir) indicators.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -250,15 +252,16 @@ func main() {
 		}
 		havefiles = true
 	} else {
-		commandline = flag.Arg(0) // this only gets the first non flag argument.  That's all I want on Windows.
 		// Inelegant after adding linux filenames on command line code.  Could have now used filenameStringSlice[0].  I chose to not change the use of flag.Arg(0).
+		// commandline = filenamesStringSlice[0] // this panics if there are no params on the line.
+		    commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
 		}
 	}
 	sepstring := string(filepath.Separator)
 	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
-	if userptr != nil {
+	if userptr != nil {   // userptr is from os/user package
 		HomeDirStr = userptr.HomeDir + sepstring
 	} else if linuxflag {
 		HomeDirStr = os.Getenv("HOME") + sepstring
@@ -267,7 +270,7 @@ func main() {
 	}
 	if len(commandline) > 0 {
 		if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
-			commandline = strings.Replace(commandline, "~", HomeDirStr, 1) // userptr is from os/user package
+			commandline = strings.Replace(commandline, "~", HomeDirStr, 1) 
 		}
 		CleanDirName, CleanFileName = filepath.Split(commandline)
 		CleanDirName = filepath.Clean(CleanDirName)
@@ -322,10 +325,10 @@ func main() {
 
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by the ioutil.ReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
-	// This is still the way it works for Windows.  On linux, the matching pattern is set to be a *, so all entries match, depending on regular file or directory options selected.
+	// This is still the way it works for Windows.
+	// On linux, the matching pattern is set to be a *, so all entries match, depending on regular file or directory options selected, unless bash populated the command line by globbing.
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
-		//		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL && f.Mode().IsRegular() {
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			s := f.ModTime().Format("Jan-02-2006 15:04:05")
 			sizeint := 0
@@ -346,13 +349,13 @@ func main() {
 
 			if linuxflag {
 				if Dirlist && f.IsDir() {
-					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
-				} else if FilenameList && f.Mode().IsRegular() { // altered
+				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
-				} else if Dirlist && !f.Mode().IsRegular() { // it's a symlink
-					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				} else if Dirlist  { // assume it's a symlink as it's not a directory and not a regular file
+					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
 				}
 			} else { // must be windows because I don't think this will compile on Mac.
@@ -530,8 +533,9 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		return nil
 	}
 
-	s = strings.ReplaceAll(s, "_", " ") // substitute the underscore, _, for a space
+	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
 	directoryAliasesMap := make(dirAliasMapType, 10)
+	//anAliasMap := make(dirAliasMapType,1)
 
 	dirAliasSlice := strings.Fields(s)
 
@@ -539,12 +543,29 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		if string(aliasPair[len(aliasPair)-1]) != "\\" {
 			aliasPair = aliasPair + "\\"
 		}
-		aliasPair = strings.ReplaceAll(aliasPair, "-", " ") // substitute a dash,-, for a space
+		aliasPair = MakeSubst(aliasPair, '-', ' ') // substitute a dash,-, for a space
 		splitAlias := strings.Fields(aliasPair)
 		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
 	}
 	return directoryAliasesMap
 }
+
+// --------------------------- MakeSubst -------------------------------------------
+func MakeSubst(instr string, r1, r2 rune) string {
+
+	inRune := make([]rune, len(instr))
+	if !strings.ContainsRune(instr, r1) {
+		return instr
+	}
+
+	for i, s := range instr {
+		if s == r1 {
+			s = r2
+		}
+		inRune[i] = s // was byte(s) before I made this a slice of runes.
+	}
+	return string(inRune)
+} // makesubst
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
@@ -561,7 +582,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	}
 	PathnFile := cmdline[idx+1:]
 	completeValue := aliasValue + PathnFile
-	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
+        fmt.Println("in ProcessDirectoryAliases and complete value is",completeValue)
 	return completeValue
 }
 
