@@ -349,7 +349,7 @@ func main() {
 			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Probably won't compile for foreign computer.
 			symlinkflag := IsSymlink(f.Mode())
 			irregflag := IsIrregular(f.Mode())
-			var Field MyFileMode  // extending anon-local type by adding a new method.
+			var Field MyFileMode // extending anon-local type by adding a new method.
 			Field.field = f.Mode()
 			SymLinkFlag := Field.isSymlink()
 
@@ -360,7 +360,7 @@ func main() {
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%10v %s %15s %s %s", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
-				} else if Dirlist { // assume it's a symlink as it's not a directory and not a regular file
+				} else if Field.field = f.Mode(); Field.isSymlink() { // assume it's a symlink as it's not a directory and not a regular file
 					fmt.Printf("%10v %s %15s %s <%s>", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
 				}
@@ -371,7 +371,7 @@ func main() {
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%10v %s %15s %s %s", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
-				} else if Dirlist { // added 6/19/19.  Prior to then, this code could not show a symlink on Windows.
+				} else if Field.field = f.Mode(); Field.isSymlink() { // added 6/19/19.  Prior to then, this code could not show a symlink on Windows.
 					fmt.Printf("%10v %s %15s %s <%s>", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
 				}
@@ -435,7 +435,7 @@ func main() {
 } // end main testfilemodes
 
 // ------------------------------ MyFileMode -------------------------
-type MyFileMode struct {  // extending a non-local type by adding a new method/function.
+type MyFileMode struct { // extending a non-local type by adding a new method/function.
 	field os.FileMode
 }
 
