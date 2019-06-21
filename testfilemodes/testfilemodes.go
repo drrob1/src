@@ -1,4 +1,4 @@
-// dsrt.go -- directoy sort
+// testfilemodes.go -- directoy sort
 
 package main
 
@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "21 June 2019"
+const LastAltered = "20 June 2019"
 
 /*
 Revision History
@@ -59,8 +59,9 @@ Revision History
   19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
                I changed the meanings so now use <symlink> and (dir) indicators, and fixed the oversight on Windows
                whereby symlinks could not be displayed.
-  20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
-               That required writing a new function to detect a symlink.
+  20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.  Nevermind.
+               It did not do what I wanted.  I need an IsSymlink function to do what I want.
+  20 Jun 19 -- Gased on dsrt code, now I want to test an IsSymlink function.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -194,7 +195,7 @@ func main() {
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
-	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006-15:04:05 MST")
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006, 15:04:05 MST")
 	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 
@@ -334,7 +335,7 @@ func main() {
 	for _, f := range files {
 		NAME := strings.ToUpper(f.Name())
 		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-			s := f.ModTime().Format("Jan-02-2006_15:04:05")
+			s := f.ModTime().Format("Jan-02-2006, 15:04:05") // added a comma in the format string.
 			sizeint := 0
 			sizestr := ""
 			if f.Mode().IsRegular() { // only sum regular files, not dir or symlink entries.
@@ -345,34 +346,42 @@ func main() {
 					sizestr = AddCommas(sizestr)
 				}
 			}
-
 			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Probably won't compile for foreign computer.
-
 			symlinkflag := IsSymlink(f.Mode())
+			irregflag := IsIrregular(f.Mode())
+			var Field MyFileMode  // extending anon-local type by adding a new method.
+			Field.field = f.Mode()
+			SymLinkFlag := Field.isSymlink()
 
 			if linuxflag {
 				if Dirlist && f.IsDir() {
-					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					fmt.Printf("%10v %s %15s %s (%s)", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
 				} else if FilenameList && f.Mode().IsRegular() {
-					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					fmt.Printf("%10v %s %15s %s %s", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
-				} else if symlinkflag {
-					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				} else if Dirlist { // assume it's a symlink as it's not a directory and not a regular file
+					fmt.Printf("%10v %s %15s %s <%s>", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
 				}
 			} else if winflag {
 				if Dirlist && f.IsDir() {
-					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
+					fmt.Printf("%10v %s %15s %s (%s)", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
 				} else if FilenameList && f.Mode().IsRegular() {
-					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+					fmt.Printf("%10v %s %15s %s %s", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
-				} else if symlinkflag {
-					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+				} else if Dirlist { // added 6/19/19.  Prior to then, this code could not show a symlink on Windows.
+					fmt.Printf("%10v %s %15s %s <%s>", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
 					count++
 				}
+			} else { // maybe darwin, maybe Rasberry Pi, or maybe computer from the future
+				fmt.Printf("%10v %s %15s %s %s  unknown OS or architecture", f.Mode(), f.Mode().String(), sizestr, s, f.Name())
+				count++
 			}
+
+			// turns out that none of these are irregular.  So I'm not going to use this in dsrt.
+			fmt.Printf(", Symlink: %t %t, Irregular: %t,    %s %s \n", symlinkflag, SymLinkFlag, irregflag, usernameStr, groupnameStr)
 			if count >= NumLines {
 				break
 			}
@@ -423,12 +432,37 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
-} // end main dsrt
+} // end main testfilemodes
+
+// ------------------------------ MyFileMode -------------------------
+type MyFileMode struct {  // extending a non-local type by adding a new method/function.
+	field os.FileMode
+}
+
+func (m MyFileMode) isSymlink() bool { // this is the new method.  I decided to not use it in dsrt.  But it works.
+	intermed := m.field & os.ModeSymlink
+	result := intermed != 0
+	return result
+}
+
+// ------------------------------ IsSymlink ---------------------------
+func IsSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+}
+
+// ------------------------------ IsIrregular -------------------------
+func IsIrregular(m os.FileMode) bool {
+	intermed := m & os.ModeIrregular
+	result := intermed != 0
+	return result
+}
 
 //-------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
-} // InsertIntoByteSlice
+}
 
 //---------------------------------------------------------------------- AddCommas
 func AddCommas(instr string) string {
@@ -445,13 +479,7 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
-
-// ------------------------------ IsSymlink ---------------------------
-func IsSymlink(m os.FileMode) bool {
-	intermed := m & os.ModeSymlink
-	result := intermed != 0
-	return result
-} // IsSymlink
+//---------------------------------------------------------------------------------------------------
 
 // ---------------------------- GetIDname -----------------------------------------------------------
 func GetIDname(uidStr string) string {
