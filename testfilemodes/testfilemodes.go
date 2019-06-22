@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "20 June 2019"
+const LastAltered = "21 June 2019"
 
 /*
 Revision History
@@ -61,7 +61,8 @@ Revision History
                whereby symlinks could not be displayed.
   20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.  Nevermind.
                It did not do what I wanted.  I need an IsSymlink function to do what I want.
-  20 Jun 19 -- Gased on dsrt code, now I want to test an IsSymlink function.
+  20 Jun 19 -- Based on dsrt code, now I want to test an IsSymlink function.
+  21 Jun 19 -- And testing isSymlink based on extending a non-local type.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
