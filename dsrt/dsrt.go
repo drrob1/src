@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "21 June 2019"
+const LastAltered = "23 June 2019"
 
 /*
 Revision History
@@ -61,6 +61,7 @@ Revision History
                whereby symlinks could not be displayed.
   20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
                That required writing a new function to detect a symlink.
+  23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -232,7 +233,7 @@ func main() {
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 	if len(filenamesStringSlice) > 1 {  // linux command line processing for filenames.
 		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
-			fi, err := os.Stat(s)
+			fi, err := os.Lstat(s)
 			if err != nil {
 				log.Fatal(err)
 			}
