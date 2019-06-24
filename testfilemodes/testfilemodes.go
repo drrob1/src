@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "21 June 2019"
+const LastAltered = "24 June 2019"
 
 /*
 Revision History
@@ -63,6 +63,7 @@ Revision History
                It did not do what I wanted.  I need an IsSymlink function to do what I want.
   20 Jun 19 -- Based on dsrt code, now I want to test an IsSymlink function.
   21 Jun 19 -- And testing isSymlink based on extending a non-local type.
+  24 Jun 19 -- Changed to use Lstat instead of Stat when command line has a globbed file list, which only happens in Linux.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -234,7 +235,7 @@ func main() {
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 	if len(filenamesStringSlice) > 1 {  // linux command line processing for filenames.
 		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
-			fi, err := os.Stat(s)
+			fi, err := os.Lstat(s)
 			if err != nil {
 				log.Fatal(err)
 			}
