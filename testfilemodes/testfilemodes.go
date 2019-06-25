@@ -351,7 +351,7 @@ func main() {
 			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Probably won't compile for foreign computer.
 			symlinkflag := IsSymlink(f.Mode())
 			irregflag := IsIrregular(f.Mode())
-			var Field MyFileMode // extending anon-local type by adding a new method.
+			var Field MyFileMode // extending a non-local type by adding a new method.
 			Field.field = f.Mode()
 			SymLinkFlag := Field.isSymlink()
 
