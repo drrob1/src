@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "3 June 2019"
+const LastAlteredDate = "28 June 2019"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -82,6 +82,7 @@ REVISION HISTORY
 15 Apr 19 -- Increased size of stringslice
  1 May 19 -- Noticed that the character substitutions were never listed here in help as they are in the cpp version.  Now added that.
  3 Jun 19 -- Added t as an abbreviation for today
+28 Jun 19 -- Added prev or previous as synonym for before
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -612,11 +613,11 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] *= 100
 				Stack[X] = Round(Stack[X]) // Decided to use round instead of math.Ceil(Stack[X]) in case error is .000001 instead of .9999997
 				Stack[X] /= 100
-			} else if strings.HasPrefix(Token.Str, "NEXT") || Token.Str == "AFTER" { // intended for math.Nextafter
+			} else if strings.HasPrefix(Token.Str, "NEXT") || Token.Str == "AFTER" { // intended for math.Nextafter to go up
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Nextafter(LastX, 1e9)
-			} else if Token.Str == "BEFORE" { // intended for math.Nextafter to go down
+			} else if Token.Str == "BEFORE" || strings.HasPrefix(Token.Str, "PREV") { // intended for math.Nextafter to go down towards zero
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Nextafter(LastX, 0) // correct down.
@@ -669,9 +670,9 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " UNDO, REDO -- entire stack.  More comprehensive than lastx.")
 				ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
 				ss = append(ss, " Adjust -- X reg *100, Round, /100")
-				ss = append(ss, " NextAfter,Before -- Reference factor for the fcn is 1e9 or 0.")
+				ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
-                                ss = append(ss, " substitutions: = for +, ; for *.")
+				ss = append(ss, " substitutions: = for +, ; for *.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
 			} else if Token.Str == "STO" {
 				MemReg = Stack[X]
