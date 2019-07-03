@@ -63,6 +63,7 @@ Revision History
                That required writing a new function to detect a symlink.
   23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
    2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And Lstat error processing changed.
+   3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -268,7 +269,6 @@ func main() {
 		}
 		havefiles = true
 	} else {
-		// Inelegant after adding linux filenames on command line code.  Could have now used filenameStringSlice[0].  I chose to not change the use of flag.Arg(0).
 		// commandline = filenamesStringSlice[0] // this panics if there are no params on the line.
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 		if strings.ContainsRune(commandline, ':') {
@@ -351,8 +351,6 @@ func main() {
 
 			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Probably won't compile for foreign computer.
 
-			symlinkflag := IsSymlink(f.Mode())
-
 			if linuxflag {
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
@@ -360,7 +358,7 @@ func main() {
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
-				} else if symlinkflag {
+				} else if IsSymlink(f.Mode()) {
 					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					count++
 				}
@@ -371,7 +369,7 @@ func main() {
 				} else if FilenameList && f.Mode().IsRegular() {
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 					count++
-				} else if symlinkflag {
+				} else if IsSymlink(f.Mode()) {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
 					count++
 				}
