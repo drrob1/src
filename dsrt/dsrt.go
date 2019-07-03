@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "23 June 2019"
+const LastAltered = "2 July 2019"
 
 /*
 Revision History
@@ -62,6 +62,7 @@ Revision History
   20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
                That required writing a new function to detect a symlink.
   23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
+   2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And log.Println from log.Fatal.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -195,7 +196,7 @@ func main() {
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
-	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006-15:04:05 MST")
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 
@@ -235,7 +236,7 @@ func main() {
 		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
 			fi, err := os.Lstat(s)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 			files = append(files, fi)
 			if fi.Mode().IsRegular() && ShowGrandTotal {
