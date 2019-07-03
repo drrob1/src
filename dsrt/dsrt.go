@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "2 July 2019"
+const LastAltered = "3 July 2019"
 
 /*
 Revision History
@@ -62,7 +62,7 @@ Revision History
   20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
                That required writing a new function to detect a symlink.
   23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
-   2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And log.Println from log.Fatal.
+   2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And Lstat error processing changed.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -237,6 +237,7 @@ func main() {
 			fi, err := os.Lstat(s)
 			if err != nil {
 				log.Println(err)
+				continue
 			}
 			files = append(files, fi)
 			if fi.Mode().IsRegular() && ShowGrandTotal {
