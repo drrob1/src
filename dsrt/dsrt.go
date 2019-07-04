@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "3 July 2019"
+const LastAltered = "4 July 2019"
 
 /*
 Revision History
@@ -64,6 +64,7 @@ Revision History
   23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
    2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And Lstat error processing changed.
    3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
+   4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -233,7 +234,10 @@ func main() {
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
-	if len(filenamesStringSlice) > 1 {  // linux command line processing for filenames.
+//	fmt.Println(" filenames on command line",filenamesStringSlice)
+//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
+
+	if linuxflag && len(filenamesStringSlice) > 0 {  // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
 		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
 			fi, err := os.Lstat(s)
 			if err != nil {
@@ -269,14 +273,14 @@ func main() {
 		}
 		havefiles = true
 	} else {
-		// commandline = filenamesStringSlice[0] // this panics if there are no params on the line.
+		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+	}
+//	fmt.Println(" havefiles = ", havefiles)
+	if len(commandline) > 0 {
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
-		}
-	}
-	if len(commandline) > 0 {
-		if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
+		} else if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
 			commandline = strings.Replace(commandline, "~", HomeDirStr, 1)
 		}
 		CleanDirName, CleanFileName = filepath.Split(commandline)
@@ -333,49 +337,59 @@ func main() {
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by the ioutil.ReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 	// This is still the way it works for Windows.
-	// On linux, the matching pattern is set to be a *, so all entries match, depending on regular file or directory options selected, unless bash populated the command line by globbing.
-	for _, f := range files {
-		NAME := strings.ToUpper(f.Name())
-		if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+	// On linux, bash populated the command line by globbing, or no command line params were entered
+	if linuxflag {
+		for _, f := range files {
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
 			sizeint := 0
 			sizestr := ""
-			if f.Mode().IsRegular() { // only sum regular files, not dir or symlink entries.
+			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Not needed anymore.  Probably won't compile for foreign computer.
+			if Dirlist && f.IsDir() {
+				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
+			} else if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
 				sizeint = int(f.Size())
 				sizestr = strconv.Itoa(sizeint)
 				if sizeint > 100000 {
 					sizestr = AddCommas(sizestr)
 				}
+				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
+			} else if IsSymlink(f.Mode()) {
+				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
 			}
-
-			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Probably won't compile for foreign computer.
-
-			if linuxflag {
-				if Dirlist && f.IsDir() {
-					fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-					count++
-				} else if FilenameList && f.Mode().IsRegular() {
-					fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-					count++
-				} else if IsSymlink(f.Mode()) {
-					fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-					count++
-				}
-			} else if winflag {
+			if count >= NumLines {
+				break
+			}
+		}
+	} else if winflag {
+		for _, f := range files {
+			NAME := strings.ToUpper(f.Name())
+			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+				s := f.ModTime().Format("Jan-02-2006_15:04:05")
+				sizeint := 0
+				sizestr := ""
 				if Dirlist && f.IsDir() {
 					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
 					count++
 				} else if FilenameList && f.Mode().IsRegular() {
+					SizeTotal += f.Size()
+					sizeint = int(f.Size())
+					sizestr = strconv.Itoa(sizeint)
+					if sizeint > 100000 {
+						sizestr = AddCommas(sizestr)
+					}
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 					count++
 				} else if IsSymlink(f.Mode()) {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
 					count++
 				}
-			}
-			if count >= NumLines {
-				break
+				if count >= NumLines {
+					break
+				}
 			}
 		}
 	}
