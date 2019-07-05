@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "4 July 2019"
+const LastAltered = "5 July 2019"
 
 /*
 Revision History
@@ -65,6 +65,7 @@ Revision History
    2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And Lstat error processing changed.
    3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
    4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
+   5 Jul 19 -- Optimized order of printing file types.  I hope.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -344,10 +345,7 @@ func main() {
 			sizeint := 0
 			sizestr := ""
 			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Not needed anymore.  Probably won't compile for foreign computer.
-			if Dirlist && f.IsDir() {
-				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			} else if FilenameList && f.Mode().IsRegular() {
+			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
 				sizeint = int(f.Size())
 				sizestr = strconv.Itoa(sizeint)
@@ -358,6 +356,9 @@ func main() {
 				count++
 			} else if IsSymlink(f.Mode()) {
 				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
+			}else if Dirlist && f.IsDir() {
+				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				count++
 			}
 			if count >= NumLines {
@@ -371,10 +372,7 @@ func main() {
 				s := f.ModTime().Format("Jan-02-2006_15:04:05")
 				sizeint := 0
 				sizestr := ""
-				if Dirlist && f.IsDir() {
-					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
-					count++
-				} else if FilenameList && f.Mode().IsRegular() {
+				if FilenameList && f.Mode().IsRegular() {
 					SizeTotal += f.Size()
 					sizeint = int(f.Size())
 					sizestr = strconv.Itoa(sizeint)
@@ -385,6 +383,9 @@ func main() {
 					count++
 				} else if IsSymlink(f.Mode()) {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					count++
+				} else if Dirlist && f.IsDir() {
+					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
 					count++
 				}
 				if count >= NumLines {
