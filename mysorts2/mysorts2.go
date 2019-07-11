@@ -82,27 +82,28 @@ func StraightSelection(a []string) []string {
 	return a
 } // END StraightSelection
 
-// From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1989
+// From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1989.  Code based on Pascal and 1 origin arrays.  So I subt 1 for each subscript reference.
 func ShellSort(a []string) []string {
-	var i,j,h int
+	var i, j, h int
 
 	n := len(a)
 
-	for h = 1; h < n; h = 3*h + 1 { } // get a max h value
+	for h = 1; h < n; h = 3*h + 1 {
+	} // get a max h value
 
-	loop:
-	for ; h > 0; h = h/3 - 1 { // REPEAT ... UNTIL h = 1
-		for i = h-1; i < n; i++ { // FOR i = h+1 TO n DO
-			v := a[i]
+loop:
+	for ; h > 0; h = h / 3 { // REPEAT ... UNTIL h = 1
+		for i = h + 1; i <= n; i++ { // FOR i = h+1 TO n DO
+			v := a[i-1]
 			j = i
 			for a[j-h] > v {
-				a[j] = a[j-h]
+				a[j-1] = a[j-h]
 				j -= h
-				if j < h {  // IF j <= h THEN continue
+				if j < h { // IF j <= h THEN continue
 					continue loop
 				}
 			}
-			a[j] = v
+			a[j-1] = v
 		}
 	} // REPEAT ... UNTIL h = 1
 	return a
