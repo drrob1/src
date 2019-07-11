@@ -804,24 +804,27 @@ func check(e error) {
   Timing for first full data file, ScienceOfHappiness.dat, ~67,500 words.  More complete information is now in the .sorted file
 
  after NativeSort: 47.745145ms
-
  After StraightSelection: 47.340594191s
-
  After StraightInsertion: 14.074816209s
-
  BinaryInsertion has been fixed, but now timings are in the ScienceOfHappiness.sorted file
-
  After HeapSort: 84.269188ms
-
  After QuickSort: 55.141166ms
-
  After mergeSort: 128.025583ms
-
  After NativeSort again: 60.068087ms
 
+7/10/19, timing for PaulKrugman.dat, 104,603 words, on z76.  Windows has trouble w/ timing below a ms.  Now sorted.
+QuickSort: 25.14 ms
+NativeSort: 29.51 ms
+sort.Strings: 30.24 ms
+NativeSort again: 32.29 ms
+HeapSort: 46.23 ms
+MergeSort: 62.61 ms
+BinaryInsertion: 3.66 s
+StraightInsertion: 28.86 s
+StraightSelection: 45.28 s
 
  Conclusion:
-   Fastest for large files is the NativeSort, then QuickSort.
-   HeapSort is faster than mergeSort, by a factor of about 1.5.
-   StraightInsertion is faster than StraightSelection, by about a factor of 3.
+   Fastest for large files is the NativeSort and QuickSort.
+   HeapSort is faster than MergeSort, by a factor of about 1.35, or 35%
+   StraightInsertion is faster than StraightSelection, by about a factor of ~1.6
 */
