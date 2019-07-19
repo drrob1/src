@@ -87,13 +87,21 @@ func ShellSort(a []string) []string {
 	var i, j, h int
 
 	n := len(a)
-
-	for h = 1; h < n; h = 3*h + 1 {
-	} // get a max h value
+	if n > 9 {
+		h = 9
+	} else if n > 7 {
+		h = 7
+	} else if n > 5 {
+		h = 5
+	} else if n > 3{
+		h = 3
+	} else {
+		h = 1
+	}
 
 loop:
-	for ; h > 0; h = h / 3 { // REPEAT ... UNTIL h = 1
-		for i = h + 1; i <= n; i++ { // FOR i = h+1 TO n DO
+	for ; h > 0; h -= 2 {
+		for i = h; i <= n; i++ { // FOR i = h+1 TO n DO
 			v := a[i-1]
 			j = i
 			for a[j-h] > v {
@@ -105,7 +113,7 @@ loop:
 			}
 			a[j-1] = v
 		}
-	} // REPEAT ... UNTIL h = 1
+	} // end for h
 	return a
 } //END ShellSort
 

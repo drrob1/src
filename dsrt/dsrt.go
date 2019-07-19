@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "5 July 2019"
+const LastAltered = "18 July 2019"
 
 /*
 Revision History
@@ -66,6 +66,7 @@ Revision History
    3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
    4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
    5 Jul 19 -- Optimized order of printing file types.  I hope.
+  18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -235,10 +236,10 @@ func main() {
 	CleanDirName := "." + string(filepath.Separator)
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
-//	fmt.Println(" filenames on command line",filenamesStringSlice)
-//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
+	//	fmt.Println(" filenames on command line",filenamesStringSlice)
+	//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
 
-	if linuxflag && len(filenamesStringSlice) > 0 {  // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
+	if linuxflag && len(filenamesStringSlice) > 0 { // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
 		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
 			fi, err := os.Lstat(s)
 			if err != nil {
@@ -277,7 +278,7 @@ func main() {
 		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 	}
-//	fmt.Println(" havefiles = ", havefiles)
+	//	fmt.Println(" havefiles = ", havefiles)
 	if len(commandline) > 0 {
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
@@ -299,8 +300,8 @@ func main() {
 
 	if SizeSort && !havefiles {
 		filesSize, err = ioutil.ReadDir(CleanDirName)
-		if err != nil {
-			log.Fatal(err)
+		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+			log.Println(err)
 		}
 		for _, f := range filesSize {
 			if f.Mode().IsRegular() && ShowGrandTotal {
@@ -316,8 +317,8 @@ func main() {
 		files = FISlice(filesSize)
 	} else if !havefiles {
 		filesDate, err = ioutil.ReadDir(CleanDirName)
-		if err != nil {
-			log.Fatal(err)
+		if err != nil { // It seems that ReadDir itself stops when it get an error of any kind, and I cannot change that.
+			log.Println(err)
 		}
 		for _, f := range filesDate {
 			if f.Mode().IsRegular() && ShowGrandTotal {
@@ -357,7 +358,7 @@ func main() {
 			} else if IsSymlink(f.Mode()) {
 				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				count++
-			}else if Dirlist && f.IsDir() {
+			} else if Dirlist && f.IsDir() {
 				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				count++
 			}
