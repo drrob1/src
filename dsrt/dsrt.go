@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "18 July 2019"
+const LastAltered = "19 July 2019"
 
 /*
 Revision History
@@ -67,6 +67,7 @@ Revision History
    4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
    5 Jul 19 -- Optimized order of printing file types.  I hope.
   18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
+  19 Jul 19 -- Writing MyReadDir
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -302,6 +303,7 @@ func main() {
 		filesSize, err = ioutil.ReadDir(CleanDirName)
 		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 			log.Println(err)
+			filesSize = MyReadDir(CleanDirName)
 		}
 		for _, f := range filesSize {
 			if f.Mode().IsRegular() && ShowGrandTotal {
@@ -316,10 +318,11 @@ func main() {
 		}
 		files = FISlice(filesSize)
 	} else if !havefiles {
-		filesDate, err = ioutil.ReadDir(CleanDirName)
-		if err != nil { // It seems that ReadDir itself stops when it get an error of any kind, and I cannot change that.
-			log.Println(err)
-		}
+			filesDate, err = ioutil.ReadDir(CleanDirName)
+			if err != nil { // It seems that ReadDir itself stops when it get an error of any kind, and I cannot change that.
+				log.Println(err)
+				filesDate = MyReadDir(CleanDirName)
+			}
 		for _, f := range filesDate {
 			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
@@ -613,7 +616,34 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	completeValue := aliasValue + PathnFile
 	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
-}
+} // ProcessDirectoryAliases
+
+// ------------------------------- MyReadDir -----------------------------------
+func MyReadDir(dir string) []os.FileInfo {
+
+	dirname, err := os.Open(dir)
+//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
+	if err != nil {
+		return nil
+	}
+	defer dirname.Close()
+
+	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
+	if err != nil {
+		return nil
+	}
+
+	fi := make([]os.FileInfo, 0, len(names))
+	for _, s := range names {
+		L, err := os.Lstat(s)
+		if err != nil {
+			log.Println(" Error from os.Lstat ", err)
+			continue
+		}
+		fi = append(fi, L)
+	}
+	return fi
+} // MyReadDir
 
 /*
  {{{
