@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "19 July 2019"
+const LastAltered = "22 July 2019"
 
 /*
 Revision History
@@ -67,7 +67,8 @@ Revision History
    4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
    5 Jul 19 -- Optimized order of printing file types.  I hope.
   18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
-  19 Jul 19 -- Writing MyReadDir
+  19 Jul 19 -- Wrote MyReadDir
+  22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -280,7 +281,7 @@ func main() {
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 	}
 	//	fmt.Println(" havefiles = ", havefiles)
-	if len(commandline) > 0 {
+	if winflag && len(commandline) > 0 { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
 		} else if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
@@ -318,11 +319,11 @@ func main() {
 		}
 		files = FISlice(filesSize)
 	} else if !havefiles {
-			filesDate, err = ioutil.ReadDir(CleanDirName)
-			if err != nil { // It seems that ReadDir itself stops when it get an error of any kind, and I cannot change that.
-				log.Println(err)
-				filesDate = MyReadDir(CleanDirName)
-			}
+		filesDate, err = ioutil.ReadDir(CleanDirName)
+		if err != nil { // It seems that ReadDir itself stops when it get an error of any kind, and I cannot change that.
+			log.Println(err)
+			filesDate = MyReadDir(CleanDirName)
+		}
 		for _, f := range filesDate {
 			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
@@ -622,7 +623,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 func MyReadDir(dir string) []os.FileInfo {
 
 	dirname, err := os.Open(dir)
-//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
+	//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
 	if err != nil {
 		return nil
 	}
