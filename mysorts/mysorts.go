@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "28 July 2019"
+const LastAlteredDate = "29 July 2019"
 
 /*
   REVISION HISTORY
@@ -24,7 +24,8 @@ const LastAlteredDate = "28 July 2019"
    7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
    8 Nov 17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
   10 July 19 -- Added better comments and output strings.
-  29 July 19 -- Adding Stable, and SliceStable
+  28 July 19 -- Adding Stable, and SliceStable
+  29 July 19 -- Changing some formating of the output.
 */
 
 // -----------------------------------------------------------
@@ -471,6 +472,10 @@ func main() {
 	}
 	sliceofwords := make([]string, numberofwords)
 
+	fmt.Println()
+	fmt.Println()
+
+
 	// sort.StringSlice method
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -495,7 +500,6 @@ func main() {
 	}
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	fmt.Println()
 	fmt.Println()
 
 	// StraightSelection
