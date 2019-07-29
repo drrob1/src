@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "10 July 2019"
+const LastAlteredDate = "28 July 2019"
 
 /*
   REVISION HISTORY
@@ -24,6 +24,7 @@ const LastAlteredDate = "10 July 2019"
    7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
    8 Nov 17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
   10 July 19 -- Added better comments and output strings.
+  29 July 19 -- Adding Stable, and SliceStable
 */
 
 // -----------------------------------------------------------
@@ -748,13 +749,53 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
-		requestedwordcount, numberofwords, len(mastersliceofwords))
-	_, err = OutBufioWriter.WriteString(s)
-	if len(mastersliceofwords) > 1000 {
-		fmt.Println(s)
-		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
+// sort.Sort
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before sort.Sort:", sliceofwords)
 	}
+	NativeWords = sort.StringSlice(sliceofwords)
+	t9 = time.Now()
+	sort.Sort(NativeWords)
+	NativeSortTime = time.Since(t9)
+	s = fmt.Sprintf(" After sort.Sort: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range NativeWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+	// sort.Stable
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before sort.Stable:", sliceofwords)
+	}
+	NativeWords = sort.StringSlice(sliceofwords)
+	t9 = time.Now()
+	sort.Stable(NativeWords)
+	NativeSortTime = time.Since(t9)
+	s = fmt.Sprintf(" After sort.Stable: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range NativeWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+
 
 	// sort.Strings
 	copy(sliceofwords, mastersliceofwords)
@@ -769,7 +810,7 @@ func main() {
 	check(err)
 	fmt.Println(s)
 	if allowoutput {
-		for _, w := range NativeWords {
+		for _, w := range sliceofwords {
 			fmt.Print(w, " ")
 		}
 		fmt.Println()
@@ -778,6 +819,57 @@ func main() {
 	check(err)
 	fmt.Println()
 
+	// sort.Slice
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before sort.Slice:", sliceofwords)
+	}
+	lessfunction := func (i,j int) bool {
+		return sliceofwords[i] < sliceofwords[j]
+	}
+	t11 := time.Now()
+	sort.Slice(sliceofwords,lessfunction)
+	SliceSortTime := time.Since(t11)
+	s = fmt.Sprintf(" After sort.Slice: %s, %d ns \n", SliceSortTime.String(), SliceSortTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range sliceofwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+
+	// sort.SliceStable
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before sort.SliceStable:", sliceofwords)
+	}
+	t12 := time.Now()
+	sort.SliceStable(sliceofwords,lessfunction)
+	SliceStableSortTime := time.Since(t12)
+	s = fmt.Sprintf(" After sort.SliceStable: %s, %d ns \n", SliceStableSortTime.String(), SliceStableSortTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range sliceofwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+
+
+	// Wrap it up by writing number of words, etc.
 	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
 		requestedwordcount, numberofwords, len(mastersliceofwords))
 	_, err = OutBufioWriter.WriteString(s)
