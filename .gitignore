@@ -18,4 +18,8 @@ github.com/mitchellh/
 github.com/mvdan/
 github.com/zmb3/
 cloud.google.com/
+github.com/therecipe/
+go.opencensus.io
+golang.org/
+gopkg.in/
 
