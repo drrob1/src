@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "22 July 2019"
+const LastAltered = "10 Sep 2019"
 
 /*
 Revision History
@@ -69,6 +69,7 @@ Revision History
   18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
   19 Jul 19 -- Wrote MyReadDir
   22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
+   9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -113,8 +114,8 @@ func main() {
 	var numoflines int
 	var userptr *user.User // from os/user
 	var files FISlice
-	var filesDate FISliceDate
-	var filesSize FISliceSize
+	//	var filesDate FISliceDate  \ unused as of 9/8/19.
+	//	var filesSize FISliceSize  /
 	var err error
 	var count int
 	var SizeTotal, GrandTotal int64
@@ -197,14 +198,18 @@ func main() {
 
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
+	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
+
 	flag.Parse()
 
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
-	execname, _ := os.Executable()
-	ExecFI, _ := os.Stat(execname)
-	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
-	fmt.Println()
+	if *testFlag {
+		execname, _ := os.Executable()
+		ExecFI, _ := os.Stat(execname)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		fmt.Println()
+	}
 
 	if *helpflag || HelpFlag {
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
@@ -235,48 +240,83 @@ func main() {
 
 	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
 
-	CleanDirName := "." + string(filepath.Separator)
+	//	CleanDirName := "." + string(filepath.Separator)  commented out 9/9/19
+	CleanDirName := ""
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 	//	fmt.Println(" filenames on command line",filenamesStringSlice)
 	//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
 
+
+	// set which sort function will be in the sortfcn var
+	sortfcn := func(i, j int) bool { return false }
+	if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
+		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+			return files[i].Size() > files[j].Size() // I want a largest first sort
+		}
+		if *testFlag {
+			fmt.Println("sortfcn = largest size.")
+		}
+	} else if DateSort && Forward {
+		sortfcn = func(i, j int) bool { // this is a closure anonymous function
+			return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest first sort
+		}
+		if *testFlag {
+			fmt.Println("sortfcn = newest date.")
+		}
+	} else if SizeSort && Reverse {
+		sortfcn = func(i, j int) bool { // this is a closure anonymous function
+			return files[i].Size() < files[j].Size() // I want a smallest first sort
+		}
+		if *testFlag {
+			fmt.Println("sortfcn = smallest size.")
+		}
+	} else if DateSort && Reverse {
+		sortfcn = func(i, j int) bool { // this is a closure anonymous function
+			return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest first sort
+		}
+		if *testFlag {
+			fmt.Println("sortfcn = oldest date.")
+		}
+	}
+
 	if linuxflag && len(filenamesStringSlice) > 0 { // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
-		for _, s := range filenamesStringSlice { // fill a slice of fileinfo
-			fi, err := os.Lstat(s)
+		paramIsDir := false
+		if len(filenamesStringSlice) == 1 {
+			// need to determine if the 1 param on command line is a directory
+			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
-				log.Println(err)
-				continue
+				log.Fatalln("after Lstat call for only one param.", err)
 			}
-			files = append(files, fi)
-			if fi.Mode().IsRegular() && ShowGrandTotal {
-				GrandTotal += fi.Size()
-				GrandTotalCount++
+			paramIsDir = fi.Mode().IsDir()
+			if *testFlag {
+				fmt.Println(" have only 1 param on line. filenameStringSlice=", filenamesStringSlice[0], "paramIsDir=", paramIsDir)
+				fmt.Println()
 			}
+			if paramIsDir {
+				CleanDirName = fi.Name()
+			} else { // not a param so this one file needs to be displayed.
+				files = append(files, fi)
+				havefiles = true
+			}
+		} else { // bash has placed more than one file in the command line, ie, len(filenameStringSlice) > 1
+			for _, s := range filenamesStringSlice { // fill a slice of fileinfo
+				fi, err := os.Lstat(s)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				files = append(files, fi)
+				if fi.Mode().IsRegular() && ShowGrandTotal {
+					GrandTotal += fi.Size()
+					GrandTotalCount++
+				}
+			}
+			sort.Slice(files, sortfcn)
+			havefiles = true
 		}
-		if SizeSort && Forward {
-			largestSize := func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
-				return files[i].Size() > files[j].Size() // I want a largest first sort
-			}
-			sort.Slice(files, largestSize)
-		} else if DateSort && Forward {
-			newestDate := func(i, j int) bool { // this is a closure anonymous function
-				return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest first sort
-			}
-			sort.Slice(files, newestDate)
-		} else if SizeSort && Reverse {
-			smallestSize := func(i, j int) bool { // this is a closure anonymous function
-				return files[i].Size() < files[j].Size() // I want a smallest first sort
-			}
-			sort.Slice(files, smallestSize)
-		} else if DateSort && Reverse {
-			oldestDate := func(i, j int) bool { // this is a closure anonymous function
-				return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest first sort
-			}
-			sort.Slice(files, oldestDate)
-		}
-		havefiles = true
-	} else {
+
+	} else { // either no params were present on the command line or this is running under Windows and may have a command line param.
 		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 	}
@@ -293,55 +333,37 @@ func main() {
 	}
 
 	if len(CleanDirName) == 0 {
-		CleanDirName = "." + string(filepath.Separator)
+		workingdir, _ := os.Getwd()
+		if *testFlag {
+			fmt.Println(" CleanDirName is empty, and will be ", workingdir)
+		}
+		CleanDirName = workingdir
+		//		CleanDirName = "." + string(filepath.Separator)  changed 9/8/19
 	}
 
 	if len(CleanFileName) == 0 {
 		CleanFileName = "*"
 	}
 
-	if SizeSort && !havefiles {
-		filesSize, err = ioutil.ReadDir(CleanDirName)
+	if !havefiles {
+		files, err = ioutil.ReadDir(CleanDirName)
 		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-			log.Println(err)
-			filesSize = MyReadDir(CleanDirName)
+			log.Println(err, "so calling my own MyReadDir.")
+			files = MyReadDir(CleanDirName)
 		}
-		for _, f := range filesSize {
+		for _, f := range files {
 			if f.Mode().IsRegular() && ShowGrandTotal {
 				GrandTotal += f.Size()
 				GrandTotalCount++
 			}
 		}
-		if Reverse {
-			sort.Sort(sort.Reverse(filesSize))
-		} else {
-			sort.Sort(filesSize)
-		}
-		files = FISlice(filesSize)
-	} else if !havefiles {
-		filesDate, err = ioutil.ReadDir(CleanDirName)
-		if err != nil { // It seems that ReadDir itself stops when it get an error of any kind, and I cannot change that.
-			log.Println(err)
-			filesDate = MyReadDir(CleanDirName)
-		}
-		for _, f := range filesDate {
-			if f.Mode().IsRegular() && ShowGrandTotal {
-				GrandTotal += f.Size()
-				GrandTotalCount++
-			}
-		}
-		if Reverse {
-			sort.Sort(sort.Reverse(filesDate))
-		} else {
-			sort.Sort(filesDate)
-		}
-		files = FISlice(filesDate)
+		sort.Slice(files, sortfcn)
 	}
 
 	fmt.Println(" Dirname is", CleanDirName)
 
 	// I need to add a description of how this code works, because I forgot.
-	// The entire contents of the directory is read in by the ioutil.ReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
+	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 	// This is still the way it works for Windows.
 	// On linux, bash populated the command line by globbing, or no command line params were entered
 	if linuxflag {
