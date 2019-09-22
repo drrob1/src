@@ -22,4 +22,10 @@ github.com/therecipe/
 go.opencensus.io
 golang.org/
 gopkg.in/
+delve/
+gi/
+google.golang.org/
+gotest.tools/
+golang.org/x/
+golang.org/
 
