@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "10 Sep 2019"
+const LastAltered = "22 Sep 2019"
 
 /*
 Revision History
@@ -70,6 +70,7 @@ Revision History
   19 Jul 19 -- Wrote MyReadDir
   22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
    9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
+  22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -286,7 +287,7 @@ func main() {
 			// need to determine if the 1 param on command line is a directory
 			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
-				log.Fatalln("after Lstat call for only one param.", err)
+				log.Fatalln(err, "; after Lstat call for only one param.")
 			}
 			paramIsDir = fi.Mode().IsDir()
 			if *testFlag {
