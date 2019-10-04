@@ -14,10 +14,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"unicode"
 )
 
-const LastAltered = "22 Sep 2019"
+const LastAltered = "4 Oct 2019"
 
 /*
 Revision History
@@ -71,6 +72,7 @@ Revision History
   22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
    9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
   22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
+   4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -248,7 +250,6 @@ func main() {
 	//	fmt.Println(" filenames on command line",filenamesStringSlice)
 	//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
 
-
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false }
 	if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
@@ -372,7 +373,7 @@ func main() {
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
 			sizeint := 0
 			sizestr := ""
-			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code, only for linux and windows.  Not needed anymore.  Probably won't compile for foreign computer.
+			usernameStr, groupnameStr := GetUserGroupStrLinux(f) // util function in platform specific code not needed anymore.  Removed Oct 4, 2019
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
 				sizeint = int(f.Size())
@@ -668,6 +669,20 @@ func MyReadDir(dir string) []os.FileInfo {
 	}
 	return fi
 } // MyReadDir
+
+func GetUserGroupStrLinux(fi os.FileInfo) (usernameStr, groupnameStr string) {
+
+	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
+		return "", ""
+	}
+	sysUID := int(fi.Sys().(*syscall.Stat_t).Uid) // Stat_t is a uint32
+	uidStr := strconv.Itoa(sysUID)
+	sysGID := int(fi.Sys().(*syscall.Stat_t).Gid) // Stat_t is a uint32
+	gidStr := strconv.Itoa(sysGID)
+	usernameStr = GetIDname(uidStr)
+	groupnameStr = GetIDname(gidStr)
+	return usernameStr, groupnameStr
+} // GetUserGroupStrLinux
 
 /*
  {{{
