@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "4 Oct 2019"
+const LastAltered = "6 Oct 2019"
 
 /*
 Revision History
@@ -73,6 +73,7 @@ Revision History
   22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
    4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
                  So as long as I want the exact same code for both platforms, I do need platform specific code.
+   6 Oct 19 -- Removed -H and added -help flags
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -189,7 +190,7 @@ func main() {
 
 	var helpflag = flag.Bool("h", false, "print help message") // pointer
 	var HelpFlag bool
-	flag.BoolVar(&HelpFlag, "H", false, "print help message")
+	flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
 	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
 	var SizeFlag bool
@@ -212,16 +213,16 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		fmt.Println()
-	}
-
-	if *helpflag || HelpFlag {
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
-		fmt.Println("reads from diraliases environment variable if needed on Windows.")
-		flag.PrintDefaults()
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
 		}
+	}
+
+	if *helpflag || HelpFlag {
+		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
+		fmt.Println(" Reads from diraliases environment variable if needed on Windows.")
+		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
