@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Oct 6, 2019"
+const LastAltered = "Oct 8, 2019"
 
 /*
 Revision History
@@ -76,46 +76,25 @@ Revision History
                  So as long as I want the exact same code for both platforms, I do need platform specific code.
    5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.
    6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
+   8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
+                 Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
-type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
-type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
 type dirAliasMapType map[string]string
-
-func (f FISliceDate) Less(i, j int) bool {
-	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
-}
-
-func (f FISliceDate) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-
-func (f FISliceDate) Len() int {
-	return len(f)
-}
-
-func (f FISliceSize) Less(i, j int) bool {
-	return f[i].Size() > f[j].Size() // I want a reverse sort, largest first
-}
-
-func (f FISliceSize) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-
-func (f FISliceSize) Len() int {
-	return len(f)
-}
 
 type DsrtParamType struct {
 	numlines                                                        int
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
 }
 
+const defaultlineswin = 50
+const defaultlineslinux = 40
+
+var directoryAliasesMap dirAliasMapType
+
 func main() {
-	const defaultlineswin = 50
-	const defaultlineslinux = 40
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var userptr *user.User // from os/user
@@ -218,11 +197,14 @@ func main() {
 	}
 
 	if *helpflag || HelpFlag {
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
-		fmt.Println(" Not implemented: diraliases environment variable if needed on Windows.")
+		fmt.Println()
+		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
+		fmt.Println()
 		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
-		fmt.Println(" * zero or more, + one or more, ? zero or one")
-		fmt.Println(" x{n,m} from n to m of x, x{n,} n or more of x ")
+		fmt.Println("                    * zero or more, + one or more, ? zero or one")
+		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
+		fmt.Println()
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -245,20 +227,41 @@ func main() {
 
 	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
 
-	inputRegEx := flag.Arg(0)
-	//   filenamesStringSlice := flag.Args() // Intended to process linux command line filenames in dsrt.  Now in regex.go
-	//	fmt.Println(" filenames on command line",filenamesStringSlice)
-	//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
-	if len(inputRegEx) == 0 {
+	inputRegEx := ""
+	workingdir, _ := os.Getwd()
+	startdir := workingdir
+
+	commandlineSlice := flag.Args()
+	if len(commandlineSlice) == 0 {
 		fmt.Print(" Enter regex: ")
 		_, err := fmt.Scanln(&inputRegEx)
 		if err != nil {
 			// an empty line gives the error "unexpected newline"  I will assume any error is the same.
-			log.Fatalln(" Must have a regex to process.  Use of dsrt recommended.")
+			inputRegEx = "."
 		}
+	} else if len(commandlineSlice) == 1 {
+		inputRegEx = commandlineSlice[0]
+	} else if len(commandlineSlice) == 2 {
+		inputRegEx = commandlineSlice[0]
+		workingdir = commandlineSlice[1]
+
+		if winflag { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
+			if strings.ContainsRune(commandlineSlice[1], ':') {
+				workingdir = ProcessDirectoryAliases(directoryAliasesMap, workingdir)
+			} else if strings.Contains(commandlineSlice[1], "~") { // this can only contain a ~ on Windows.
+				workingdir = strings.Replace(workingdir, "~", HomeDirStr, 1)
+			}
+		}
+		fi, err := os.Lstat(workingdir)
+		if err != nil || !fi.Mode().IsDir() {
+			fmt.Println(workingdir, "is an invalid directory name.  Will use", startdir, "instead.")
+			workingdir = startdir
+		}
+	} else {
+		log.Fatalln("too many params on line.  Usage: regex pattern directory")
 	}
 	if *testFlag {
-		fmt.Println(" input regular expression: ", inputRegEx)
+		fmt.Println("inputRegEx=", inputRegEx, ", and workingdir =", workingdir)
 	}
 
 	// set which sort function will be in the sortfcn var
@@ -291,11 +294,6 @@ func main() {
 		if *testFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
-	}
-
-	workingdir, _ := os.Getwd()
-	if *testFlag {
-		fmt.Println(" workingdir is ", workingdir)
 	}
 
 	files, err = ioutil.ReadDir(workingdir)
