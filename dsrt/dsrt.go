@@ -4,20 +4,18 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
-const LastAltered = "6 Oct 2019"
+const LastAltered = "13 Oct 2019"
 
 /*
 Revision History
@@ -74,14 +72,17 @@ Revision History
    4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
                  So as long as I want the exact same code for both platforms, I do need platform specific code.
    6 Oct 19 -- Removed -H and added -help flags
+  13 Oct 19 -- Commenting out dead code
 */
 
-// FIS is a FileInfo slice, as in os.FileInfo
+// FISlice is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
-type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
-type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
+
+// type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
+// type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
 type dirAliasMapType map[string]string
 
+/*  Sort interface methods, that are supplanted by the sortfcn closure.
 func (f FISliceDate) Less(i, j int) bool {
 	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
 }
@@ -105,6 +106,7 @@ func (f FISliceSize) Swap(i, j int) {
 func (f FISliceSize) Len() int {
 	return len(f)
 }
+*/
 
 type DsrtParamType struct {
 	numlines                                                        int
