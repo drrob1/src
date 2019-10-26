@@ -30,11 +30,12 @@ func main() {
 	button := widgets.NewQPushButton2("2. click me", nil)
 	layout.AddWidget(button, 0, 0)
 
-	// Connect event for button
-	button.ConnectClicked(func(checked bool) {
+	// Connect event for button using my preferred syntax
+	onclicked := func(checked bool){
 		widgets.QMessageBox_Information(nil, "OK", input.Text(),
-			widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-	})
+		widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+	}
+	button.ConnectClicked(onclicked)
 
 	// Set main widget as the central widget of the window
 	window.SetCentralWidget(mainWidget)
