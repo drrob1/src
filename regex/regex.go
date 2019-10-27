@@ -78,7 +78,7 @@ Revision History
    6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
    8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
                  Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
-  27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.
+  27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -203,10 +203,13 @@ func main() {
 		fmt.Println()
 		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
+		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
 		fmt.Println()
 		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
 		fmt.Println("                    * zero or more, + one or more, ? zero or one")
 		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
+		fmt.Println("                    ^ at beginning of text or line.  $ at end of text or line.")
+		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
 		fmt.Println()
 		flag.PrintDefaults()
 		os.Exit(0)
@@ -317,7 +320,7 @@ func main() {
 	if *testFlag {
 		fmt.Println(" Dirname is", workingdir)
 	}
-	
+
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 
