@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Oct 8, 2019"
+const LastAltered = "Oct 27, 2019"
 
 /*
 Revision History
@@ -78,6 +78,7 @@ Revision History
    6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
    8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
                  Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
+  27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -265,6 +266,8 @@ func main() {
 	if *testFlag {
 		fmt.Println("inputRegEx=", inputRegEx, ", and workingdir =", workingdir)
 	}
+    inputRegEx = strings.ToLower(inputRegEx)
+
 
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false }
@@ -311,8 +314,10 @@ func main() {
 	}
 	sort.Slice(files, sortfcn)
 
-	fmt.Println(" Dirname is", workingdir)
-
+	if *testFlag {
+		fmt.Println(" Dirname is", workingdir)
+	}
+	
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 
