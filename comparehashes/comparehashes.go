@@ -39,9 +39,10 @@ import (
   21 Jan 18 -- Really ignore *.  Before method did not work.
   26 Jan 18 -- Changed tokenize so that SetMapDelim change sticks.
   13 Nov 18 -- Will use "-" and "_" also to detech a filename token.
+  10 Nov 19 -- Now uses ToLower to compare the string hashes, to ignore case.
 */
 
-const LastCompiled = "13 Nov 2018"
+const LastCompiled = "10 Nov 2019"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -263,7 +264,7 @@ func main() {
 		fmt.Println(" Computed hex encoded:", HashValueComputedStr)
 		//    fmt.Println(" Computed sprintf:",HashValueComputedSprintf);
 
-		if HashValueReadFromFile == HashValueComputedStr {
+		if strings.ToLower(HashValueReadFromFile) == strings.ToLower(HashValueComputedStr) {
 			fmt.Print(" Matched.")
 		} else {
 			fmt.Print(" Not matched.")
