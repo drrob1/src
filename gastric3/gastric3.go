@@ -55,9 +55,10 @@ import (
   21 Jun 18 -- Added first non digit token on line will skip that line.  So entire line can be easily commented out.
    4 Nov 18 -- Realized that the intercept is log(counts), so exp(counts) is worth displaying.
    6 Nov 18 -- Will also account for a lag time.
+  19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
 */
 
-const LastAltered = "7 Nov 2018"
+const LastAltered = "19 Nov 19"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -79,7 +80,7 @@ const POTN = 1.571000         // used for fitexy and related routines
 const BIG = 1e30              // this too
 const ACC = 1e-3              // this too
 const ITERMAX = 100           // this too, and now also for the old ressurrected code.
-const ToleranceFactor = 1.E-5 // used for old code that's been ressurrected.
+const ToleranceFactor = 1.e-5 // used for old code that's been ressurrected.
 
 // stdev relates to counts, or the ordinate.  This algorithm used to apply it to the abscissa also.
 // Version 2 handles these separately in fitexy.
@@ -352,15 +353,30 @@ func main() {
 	// Separating output from peak, so it's easier to read.
 	// ask about lag time
 
-	fmt.Print(" Enter point number to use as peak: ")
-	_, err = fmt.Scanln(&ans)
-	if len(ans) == 0 || err != nil { // get an error if an empty line is input to ans.
-		ans = "0"
+	proposedPeak := FindLocalCountsPeak(rows)
+	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "] : ")
+	// Will try a new way to scan and process input
+	peakpt := 0
+	n, err := fmt.Scanf("%d\n", &peakpt) // fmt.Scan functions read from os.Stdin
+	if n < 1 || err != nil {
+		peakpt = proposedPeak
 	}
-	peakpt, err := strconv.Atoi(ans)
-	if err != nil {
-		peakpt = 0
-	}
+	fmt.Print(" Will use point [", peakpt, "] as peak point.")
+	fmt.Println()
+
+	/* old way of scanning.
+	     {{{
+	   	_, err = fmt.Scanln(&ans)
+	   	if len(ans) == 0 || err != nil { // get an error if an empty line is input to ans.
+	   		ans = "0"
+	   	}
+	   	peakpt, err := strconv.Atoi(ans)
+	   	if err != nil {
+	   		peakpt = proposedPeak
+	   	}
+	     }}}
+	*/
+
 	peakrows := rows[peakpt:] // peakrows covers the specified point to the end, usually n = 9
 	Peak := peakpt > 0
 	fmt.Println()
@@ -1290,4 +1306,18 @@ func WeightedLR(rows []Point) FittedData3 {
 // ------------------------------------ exp -----------------------------------
 func exp(f float64) float64 {
 	return math.Exp(f)
+}
+
+// ------------------------------------ FindLocalCountsPeak --------------------
+func FindLocalCountsPeak(rows []Point) int {
+	var maxcounts float64
+	var pointindex int
+
+	for i, point := range rows {
+		if point.OrigY > maxcounts {
+			maxcounts = point.OrigY
+			pointindex = i
+		}
+	}
+	return pointindex
 }
