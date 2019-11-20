@@ -58,7 +58,7 @@ import (
   19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
 */
 
-const LastAltered = "19 Nov 19"
+const LastAltered = "20 Nov 19"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -354,7 +354,7 @@ func main() {
 	// ask about lag time
 
 	proposedPeak := FindLocalCountsPeak(rows)
-	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "] : ")
+	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "]  ")
 	// Will try a new way to scan and process input
 	peakpt := 0
 	n, err := fmt.Scanf("%d\n", &peakpt) // fmt.Scan functions read from os.Stdin
@@ -364,21 +364,8 @@ func main() {
 	fmt.Print(" Will use point [", peakpt, "] as peak point.")
 	fmt.Println()
 
-	/* old way of scanning.
-	     {{{
-	   	_, err = fmt.Scanln(&ans)
-	   	if len(ans) == 0 || err != nil { // get an error if an empty line is input to ans.
-	   		ans = "0"
-	   	}
-	   	peakpt, err := strconv.Atoi(ans)
-	   	if err != nil {
-	   		peakpt = proposedPeak
-	   	}
-	     }}}
-	*/
-
 	peakrows := rows[peakpt:] // peakrows covers the specified point to the end, usually n = 9
-	Peak := peakpt > 0
+	PeakNonZero := peakpt > 0
 	fmt.Println()
 
 	stdpeakslope, stdpeakintercept, stdpeakr2 := StdLR(peakrows)
@@ -394,7 +381,7 @@ func main() {
 	IteratedPeakResults := DoOldWeightedLR(peakrows, stdpeakslope, stdpeakintercept)
 	IteratedPeakHalflife := -ln2 / IteratedPeakResults.Slope
 
-	if Peak {
+	if PeakNonZero {
 		fmt.Println()
 		fmt.Println()
 		writerune()
