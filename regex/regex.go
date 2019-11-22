@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Oct 27, 2019"
+const LastAltered = "Nov 21, 2019"
 
 /*
 Revision History
@@ -79,6 +79,7 @@ Revision History
    8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
                  Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
   27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
+  21 Nov 19 -- Added Println() statements to separate header from filename outputs.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -269,8 +270,7 @@ func main() {
 	if *testFlag {
 		fmt.Println("inputRegEx=", inputRegEx, ", and workingdir =", workingdir)
 	}
-    inputRegEx = strings.ToLower(inputRegEx)
-
+	inputRegEx = strings.ToLower(inputRegEx)
 
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false }
@@ -320,6 +320,8 @@ func main() {
 	if *testFlag {
 		fmt.Println(" Dirname is", workingdir)
 	}
+	fmt.Println()
+	fmt.Println()
 
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
@@ -365,6 +367,8 @@ func main() {
 	if GrandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
+	fmt.Println()
+	fmt.Println()
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
 		s1 := ""
