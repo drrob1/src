@@ -32,31 +32,33 @@ package main
   5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
   6 Feb 18 -- Tried to move global variables to main, but had to move them back.
   8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
-  5 Dec 18 -- Fix 2 issues: 1st week is blank, and other years start display from current month.
-                Nevermind.  Turns out that this is not needed.  So I'm not recompiling.
+ 22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
 */
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec" // for the clear screen functions.
-	"path/filepath"
+	//"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"unicode"
+
 	//
-	"getcommandline"
+	//"getcommandline"
 	"holidaycalc"
 	"timlibg"
-	"tokenize"
+	//"tokenize"
 
 	termbox "github.com/nsf/termbox-go"
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "8 Dec 2018"
+const LastCompiled = "Nov 24, 2019"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -695,21 +697,15 @@ XmasLoop:
 
 // ----------------------------- SetMonthNumber ----------------------------------
 
-func SetMonthNumber(token tokenize.TokenType) int { // Input for Jan = 1, but 0 represents Jan
-	var RequestedMonthNum int
+func SetMonthNumber(s string) int { // returns -1 if there was an error
+	var month int
 
-	//  RequestedMonthNum = CurrentMonthNumber - 1;
-	if token.State == tokenize.DGT {
-		if token.Isum > 0 && token.Isum <= 12 {
-			RequestedMonthNum = token.Isum - 1
-		} else {
-			RequestedMonthNum = CurrentMonthNumber
-		}
-	} else if token.State == tokenize.ALLELSE { // Allow abbrev letter codes for month
+	month = -1
+	t := strings.ToUpper(s)
+	if unicode.IsLetter(rune(s[0])) { // determine the 3 letter month code
 		for c := JAN; c < NumOfMonthsInYear; c++ {
-			//                                                               if strings.Contains(MONNAMSHORT[c],token.Str) {
-			if strings.HasPrefix(MONNAMSHORT[c], token.Str) {
-				RequestedMonthNum = c
+			if strings.HasPrefix(MONNAMSHORT[c], t) {
+				month = c
 				break
 			}
 		}
@@ -720,8 +716,7 @@ func SetMonthNumber(token tokenize.TokenType) int { // Input for Jan = 1, but 0 
 	//            MONNAMSHORT[0],MONNAMSHORT[1],token,RequestedMonthNum);
 	//  LineNum++
 	//  LineNum++
-
-	return RequestedMonthNum
+	return month
 }
 
 // ----------------------------------- AssignYear ----------------------------------------------------
@@ -777,20 +772,14 @@ func AssignYear(y int) {
 */
 func main() {
 	var Cal1FilenameFlag, Cal12FilenameFlag bool
-	var YearToken tokenize.TokenType
+	//	var YearToken tokenize.TokenType
 
 	BrightYellow = termbox.ColorYellow | termbox.AttrBold
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	BrightGreen = termbox.ColorGreen | termbox.AttrBold
 	Black = termbox.ColorBlack
-	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", LastCompiled)
-	fmt.Println()
-	/* Non-idiomatic initialization.  See above for the idiomatic declaration and initialization
-	   MONNAMSHORT[JAN] = "JANUARY"; MONNAMSHORT[FEB] = "FEBRUARY"; MONNAMSHORT[MAR] = "MARCH";
-	   MONNAMSHORT[APR] = "APRIL"; MONNAMSHORT[MAY] = "MAY"; MONNAMSHORT[JUN] = "JUNE";
-	   MONNAMSHORT[JUL] = "JULY"; MONNAMSHORT[AUG] = "AUGUST"; MONNAMSHORT[SEP] = "SEPTEMBER";
-	   MONNAMSHORT[OCT] = "OCTOBER"; MONNAMSHORT[NOV] = "NOVEMBER"; MONNAMSHORT[DCM] = "DECEMBER";
-	*/
+//	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", LastCompiled)
+//	fmt.Println()
 	MONNAMLONG[JAN] = "    J A N U A R Y        "
 	MONNAMLONG[FEB] = "   F E B R U A R Y       "
 	MONNAMLONG[MAR] = "      M A R C H          "
@@ -809,21 +798,77 @@ func main() {
 	Ext12Default := ".xls"
 	CurrentMonthNumber, TodaysDayNumber, CurrentYear = timlibg.TIME2MDY()
 
-	if len(os.Args) > 1 {
-		commandline := getcommandline.GetCommandLineString()
-		cleancommandline := filepath.Clean(commandline)
-		tokenize.INITKN(cleancommandline)
-		YearToken, _ = tokenize.GETTKN()
-		if YearToken.State != tokenize.DGT {
-			year = CurrentYear
-			tokenize.UNGETTKN() // Send the token back so it behaves as a month request.
-		} else {
-			year = YearToken.Isum
+	// flag definitions and processing
+	var nofilesflag = flag.Bool("no", false, "do not generate output cal1 and cal12 files.") // Ptr
+	var NoFilesFlag = flag.Bool("n", false, "do not generate output cal1 and cal12 files.") // Ptr
+
+	var helpflag = flag.Bool("h", false, "print help message.") // pointer
+	var HelpFlag bool
+	flag.BoolVar(&HelpFlag, "help", false, "print help message.")
+
+	var testFlag = flag.Bool("test", false, "test mode flag.") // pointer
+
+	flag.Parse()
+
+	if *helpflag || HelpFlag {
+		fmt.Println()
+		fmt.Println(" Calgo Calendar Printing Program, last altered", LastCompiled)
+		fmt.Println(" Usage: calgo <flags> year month or month year, where month must be a month name string.")
+		fmt.Println()
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	if *testFlag {
+		fmt.Println()
+		fmt.Println()
+		fmt.Println(" calgo, a calendar printing program written in Go.  Last altered", LastCompiled)
+		fmt.Println()
+		//ans := ""
+		//fmt.Print(" pausing, hit <enter> to resume")
+		//fmt.Scanln(&ans)
+		//fmt.Println()
+	}
+
+	// process command line parameters
+	RequestedMonthNumber = CurrentMonthNumber - 1 // default value.
+	MonthNotExplicitlySet := true
+	if flag.NArg() > 0 {
+		commandline := flag.Args()
+		if flag.NArg() > 2 {
+			commandline = commandline[:2] // if there are too many params, only use params 0 and 1, ie, up to 2 but not incl'g 2.
+		}
+		for _, commandlineparam := range commandline {
+			if unicode.IsDigit(rune(commandlineparam[0])) { // have numeric parameter, must be a year
+				YEARSTR = commandlineparam
+				var err error
+				year, err = strconv.Atoi(commandlineparam)
+				if err != nil {
+					fmt.Println(" Error from Atoi for year.  Using CurrentYear.  Entered string is", commandlineparam)
+					year = CurrentYear
+					fmt.Print(" pausing.  Hit <enter> to continue")
+					ans := ""
+					fmt.Scanln(&ans)
+					fmt.Println()
+				}
+				if MonthNotExplicitlySet {
+					RequestedMonthNumber = 0  // if a year is explicitily entered, start w/ January.
+				}
+			} else { // not a numeric parameter, process like it's a month abbrev code
+				RequestedMonthNumber = SetMonthNumber(commandlineparam)
+				if RequestedMonthNumber < 0 { // if error from SetMonthNumber, use current month
+					fmt.Println(" Error from SetMonthNumber.  Using current month of ", CurrentMonthNumber)
+					RequestedMonthNumber = CurrentMonthNumber - 1
+					fmt.Print(" pausing.  Hit <enter> to continue ")
+					ans := ""
+					fmt.Scanln(&ans)
+					fmt.Println()
+				}
+				MonthNotExplicitlySet = false
+			}
 		}
 	} else {
 		year = CurrentYear
-		YearToken.Str = strconv.Itoa(year)
-		YearToken.State = tokenize.DGT
 	}
 
 	if year < 40 {
@@ -834,12 +879,60 @@ func main() {
 		fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n", year)
 		os.Exit(1)
 	}
-	//                                              Print_tb(0,MaxRow-1,BrightYellow,Black," Hit <enter> to continue.");
-	//                                              termbox.SetCursor(26,MaxRow-1);
-	//                                              _ = GetInputString(26,MaxRow-1);
+	if *testFlag {
+		fmt.Println()
+		fmt.Println(" using year", year, ", using month", MONNAMSHORT[RequestedMonthNumber])
+		fmt.Println()
+		ans := ""
+		fmt.Print(" pausing, hit <enter> to resume")
+		fmt.Scanln(&ans)
+		fmt.Println()
+	}
 
 	YEARSTR = strconv.Itoa(year) // This will always be a 4 digit year, regardless of what's entered on command line.
-	//                                      runtime.Breakpoint  doesn't seem to work anyway
+
+	AssignYear(year)
+
+	HolidayAssign(year)
+
+	AllowFilesFlag := !(*nofilesflag || *NoFilesFlag)
+	Cal1FilenameFlag = false  // default value
+	Cal12FilenameFlag = false // default value
+	if AllowFilesFlag {
+		BaseFilename := YEARSTR
+		Cal1Filename = BaseFilename + "_cal1" + Ext1Default
+		Cal12Filename = BaseFilename + "_cal12" + Ext12Default
+		FI, err := os.Stat(Cal1Filename)
+
+		if err == nil {
+			//		Cal1FilenameFlag = false
+			fmt.Printf(" %s already exists.  From stat call file created %s, filesize is %d.\n",
+				Cal1Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
+		} else {
+			Cal1FilenameFlag = true
+			fmt.Printf(" %s does not already exist.\n", Cal1Filename)
+		}
+
+		FI, err = os.Stat(Cal12Filename)
+		if err == nil {
+			//		Cal12FilenameFlag = false
+			fmt.Printf(" %s already exists.  From stat call file created %s, filesize is %d.\n",
+				Cal12Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
+		} else {
+			Cal12FilenameFlag = true
+			fmt.Printf(" %s does not already exist.\n", Cal12Filename)
+		}
+	}
+
+	if *testFlag {
+		fmt.Println()
+		fmt.Println(" Completed year matrix.  AllowFilesFlag is", AllowFilesFlag, ".  Ready to jump into termbox.")
+		fmt.Print(" pausing.  Hit <enter> to contiue.")
+		ans := ""
+		fmt.Scanln(&ans)
+		fmt.Println()
+	}
+
 	termerr := termbox.Init()
 	if termerr != nil {
 		log.Println(" TermBox init failed.")
@@ -866,55 +959,12 @@ func main() {
 	Printf_tb(0, LineNum, BrightCyan, Black, " Full name of executable file is %s", execname)
 	LineNum++
 
-	RequestedMonthNumber = CurrentMonthNumber - 1
-	RequestedMonthNumberToken, EOLflag := tokenize.GETTKN()
-
-	//  Printf_tb(0,LineNum,BrightYellow,Black," Requestedmonthnumbertoken %#v, EOLflag %t", RequestedMonthNumberToken,EOLflag);
-	//  LineNum++
-
-	if !EOLflag {
-		RequestedMonthNumber = SetMonthNumber(RequestedMonthNumberToken)
-	}
-
-	BaseFilename := YearToken.Str
-	Cal1Filename = BaseFilename + "_cal1" + Ext1Default
-	Cal12Filename = BaseFilename + "_cal12" + Ext12Default
-	//            Printf_tb(0,LineNum,BrightYellow,Black,"  Output Files are : %s, %s.",Cal1Filename,Cal12Filename);
-	//            LineNum++
-	//                                               fmt.Println(" Output Files are : ",Cal1Filename,Cal12Filename);
-	//                                               fmt.Println();
-
-	FI, err := os.Stat(Cal1Filename)
-	//                                               s1 := "";
-	if err == nil {
-		Cal1FilenameFlag = false
-		//               s1 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal1Filename,FI.Size());
-		Printf_tb(0, LineNum, BrightCyan, Black, " %s already exists.  From stat call filesize is %d.", Cal1Filename, FI.Size())
-		LineNum++
-	} else {
-		Cal1FilenameFlag = true
-		//                                               s1 = fmt.Sprintf(" %s does not already exist.",Cal1Filename);
-		Printf_tb(0, LineNum, BrightCyan, Black, " %s does not already exist.", Cal1Filename)
-		LineNum++
-	}
-
-	FI, err = os.Stat(Cal12Filename)
-	//                                               s2 := "";
-	if err == nil {
-		Cal12FilenameFlag = false
-		//              s2 = fmt.Sprintf(" %s already exists.  From stat call filesize is %d.",Cal12Filename,FI.Size());
-		Printf_tb(0, LineNum, BrightCyan, Black, " %s already exists.  From stat call filesize is %d.", Cal12Filename, FI.Size())
-		LineNum++
-	} else {
-		Cal12FilenameFlag = true
-		//                                               s2 = fmt.Sprintf(" %s does not already exist.",Cal12Filename);
-		Printf_tb(0, LineNum, BrightCyan, Black, " %s does not already exist.", Cal12Filename)
-		LineNum++
-	}
-	//                                               s := s1 + s2;
-	//                                               Print_tb(0,LineNum,BrightCyan,Black,s);
-	//                                               LineNum++
-	//                                               LineNum++
+	/* {{{
+		//                                               s := s1 + s2;
+		//                                               Print_tb(0,LineNum,BrightCyan,Black,s);
+		//                                               LineNum++
+		//                                               LineNum++
+	   }}} */
 	var OutCal1, OutCal12 *os.File
 	if Cal1FilenameFlag {
 		OutCal1, err := os.Create(Cal1Filename)
@@ -931,8 +981,6 @@ func main() {
 		OutCal12file = bufio.NewWriter(OutCal12)
 		defer OutCal12file.Flush()
 	}
-
-	AssignYear(year)
 
 	// WRITE 12 PAGE CALENDAR, ONE MONTH PER PAGE
 	if Cal12FilenameFlag {
@@ -952,8 +1000,6 @@ func main() {
 
 	LineNum++
 	LineNum++
-
-	HolidayAssign(year)
 
 	Printf_tb(MaxCol/3, LineNum, BrightYellow, Black, " Year %4d", year)
 	LineNum++
