@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "Dec 24, 2019"
+const LastAltered = "Dec 25, 2019"
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
 type Register struct {
@@ -135,27 +135,27 @@ func main() {
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 	var err error
 
-//	ClearScreen() // ClearScreen before termbox.init fcn, to see if this helps.
-//	fmt.Println()
+	//	ClearScreen() // ClearScreen before termbox.init fcn, to see if this helps.
+	//	fmt.Println()
 	//  fmt.Println("  I hope this helps.  But it likely won't.  ");  It didn't help.  I'm commenting it out, finally.
-//	fmt.Println()
-//	fmt.Println()
+	//	fmt.Println()
+	//	fmt.Println()
 
 	termerr := termbox.Init()
 	if termerr != nil {
-		log.Printf(" TermBox init failed with error of %s.",termerr)
-		return   // I got from Mastering Go 2nd ed that return from main is same as os.Exit(0)
+		log.Printf(" TermBox init failed with error of %s.", termerr)
+		return // I got from Mastering Go 2nd ed that return from main is same as os.Exit(0)
 	}
-        defer termbox.Sync()   // added 12/24/2019 3:17:56 PM
-        defer termbox.Flush() // added 12/24/2019 2:37:47 PM
+	defer termbox.Sync()  // added 12/24/2019 3:17:56 PM
+	defer termbox.Flush() // added 12/24/2019 2:37:47 PM
 	defer termbox.Close()
 	BrightYellow = termbox.ColorYellow | termbox.AttrBold
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	Black = termbox.ColorBlack
-// {{{
+	// {{{
 	//	err = termbox.Clear(BrightYellow, Black) \  removed 4/15/19
 	//	check(err)                               /
-// }}}
+	// }}}
 	e := termbox.Clear(Black, Black)
 	check(e)
 	e = termbox.Flush()
@@ -200,25 +200,25 @@ func main() {
 	DisplayTape = make([]string, 0, 100)
 	theFileExists := true
 
-//	StorageFullFilenameSlice := make([]string, 5)                          \
-//	StorageFullFilenameSlice[0] = HomeDir                                   \  Don't remember what I was thinking to do this nonsense.
-//	StorageFullFilenameSlice[1] = string(os.PathSeparator)                  /  again and again
-//	StorageFullFilenameSlice[2] = Storage1FileName                         /
-//	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")     /
-        StorageFullFilename := HomeDir + string(os.PathSeparator) + Storage1FileName
+	//	StorageFullFilenameSlice := make([]string, 5)                          \
+	//	StorageFullFilenameSlice[0] = HomeDir                                   \  Don't remember what I was thinking to do this nonsense.
+	//	StorageFullFilenameSlice[1] = string(os.PathSeparator)                  /  again and again
+	//	StorageFullFilenameSlice[2] = Storage1FileName                         /
+	//	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")     /
+	StorageFullFilename := HomeDir + string(os.PathSeparator) + Storage1FileName
 
-//	Storage2FullFilenameSlice := make([]string, 5)
-//	Storage2FullFilenameSlice[0] = HomeDir
-//	Storage2FullFilenameSlice[1] = string(os.PathSeparator)
-//	Storage2FullFilenameSlice[2] = Storage2FileName
-//	Storage2FullFilename := strings.Join(Storage2FullFilenameSlice, "")
+	//	Storage2FullFilenameSlice := make([]string, 5)
+	//	Storage2FullFilenameSlice[0] = HomeDir
+	//	Storage2FullFilenameSlice[1] = string(os.PathSeparator)
+	//	Storage2FullFilenameSlice[2] = Storage2FileName
+	//	Storage2FullFilename := strings.Join(Storage2FullFilenameSlice, "")
 	Storage2FullFilename := HomeDir + string(os.PathSeparator) + Storage2FileName
 
-//	Storage3FullFilenameSlice := make([]string, 5)
-//	Storage3FullFilenameSlice[0] = HomeDir
-//	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
-//	Storage3FullFilenameSlice[2] = Storage3FileName
-//	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
+	//	Storage3FullFilenameSlice := make([]string, 5)
+	//	Storage3FullFilenameSlice[0] = HomeDir
+	//	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
+	//	Storage3FullFilenameSlice[2] = Storage3FileName
+	//	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
 	Storage3FullFilename := HomeDir + string(os.PathSeparator) + Storage3FileName
 
 	thefile, err := os.Open(StorageFullFilename) // open for reading
@@ -354,10 +354,10 @@ func main() {
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			HardClearScreen()
-			err := termbox.Sync()  // added 12/24/19
+			err := termbox.Sync() // added 12/24/19
 			if err != nil {
 				log.Println(" error from termbox sync()", err)
-				Printf_tb(1,OutputRow + 8, BrightCyan, Black, " termbox sync failed w/ err %v", err)
+				Printf_tb(1, OutputRow+8, BrightCyan, Black, " termbox sync failed w/ err %v", err)
 			}
 			//      err = termbox.Clear(BrightYellow,Black);
 			//      check(err);
@@ -469,16 +469,16 @@ func main() {
 		fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
 	}
 
-	thefile, err = os.Create(StorageFullFilename) // for writing
-	check(err)                                    // This should not fail, so panic if it does fail.
+	thefile, err = os.Create(StorageFullFilename)        // for writing
+	checkmsg(err, "After os.Create StorageFullFilename") // This should not fail, so panic if it does fail.
 	defer thefile.Close()
 
 	Stk = hpcalc.GETSTACK()
-	encoder := gob.NewEncoder(thefile) // encoder writes the file
-	err = encoder.Encode(Stk)          // encoder writes the file
-	check(err)                         // Panic if there is an error
-	err = encoder.Encode(Storage)      // encoder writes the file
-	check(err)
+	encoder := gob.NewEncoder(thefile)        // encoder writes the file
+	err = encoder.Encode(Stk)                 // encoder writes the file
+	checkmsg(err, "after encoder.Encode Stk") // Panic if there is an error
+	err = encoder.Encode(Storage)             // encoder writes the file
+	checkmsg(err, "after encoder.Encode Storage")
 
 	// Will open this file in the current working directory instead of the HomeDir.
 	DisplayTapeFile, err := os.OpenFile(DisplayTapeFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -497,10 +497,22 @@ func main() {
 	for _, s := range DisplayTape {
 		_, err = DisplayTapeWriter.WriteString(s)
 		_, err = DisplayTapeWriter.WriteRune('\n')
-		check(err)
+		checkmsg(err, "after DisplayTapeWriter WriteSrting and WriteRune")
 	}
 	_, err = DisplayTapeWriter.WriteString("\n\n")
-	check(err)
+	checkmsg(err, "after last DisplayTapeWriter WriteString newline newline")
+
+	err = DisplayTapeWriter.Flush()
+	checkmsg(err, "After last DisplayTapeWriter flush")
+
+	err = DisplayTapeFile.Close()
+	checkmsg(err, "after DisplayTapeFile close")
+
+	err = termbox.Sync()
+	checkmsg(err, "after termbox.Sync")
+	err = termbox.Flush()
+	checkmsg(err, "after termbox.flush")
+	termbox.Close()
 
 } // main in rpnterm.go
 
@@ -572,6 +584,14 @@ func WriteDisplayTapeToScreen(x, y int) {
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
 	if err != nil {
+		panic(err)
+	}
+}
+
+// ------------------------------------------------------- checkmsg -------------------------------
+func checkmsg(err error, msg string) {
+	if err != nil {
+		fmt.Println(msg, err)
 		panic(err)
 	}
 }
@@ -866,8 +886,8 @@ func ClearScreen() {
 func GetNameStr() string {
 	var ans string
 	promptstr := "   Input name string, making - or = into a space : "
-//	Print_tb(1, OutputRow, BrightYellow, Black, promptstr)  changed 12/24/2019 2:47:21 PM
-//	ans = GetInputString(len(promptstr)+2, OutputRow)
+	//	Print_tb(1, OutputRow, BrightYellow, Black, promptstr)  changed 12/24/2019 2:47:21 PM
+	//	ans = GetInputString(len(promptstr)+2, OutputRow)
 	Print_tb(1, PromptRow, BrightYellow, Black, promptstr)
 	ans = GetInputString(len(promptstr)+2, PromptRow)
 	ans = strings.ToUpper(ans)
