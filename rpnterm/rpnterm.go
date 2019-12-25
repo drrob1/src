@@ -24,8 +24,8 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "3 June 2019"
-const InputPrompt = " Enter calculation, HELP or (Q)uit to exit: "
+const LastAltered = "Dec 24, 2019"
+const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
 type Register struct {
 	Value float64
@@ -124,6 +124,7 @@ REVISION HISTORY
 14 Apr 19 -- And took out a debug line at top that I should have done shortly after debugging this routine.
 15 Apr 19 -- Changing the look somewhat.  I want the input to be on the top, like I did in C++.
  3 Jun 19 -- Added T as abbreviation for today in GetNameStr rtn, and in hpcalc since I liked the idea so much.
+14 Dec 19 -- Moved prompt for register name string to top, from middle of screen where it's easy to miss.
 */
 
 func main() {
@@ -134,23 +135,27 @@ func main() {
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 	var err error
 
-	ClearScreen() // ClearScreen before termbox.init fcn, to see if this helps.
-	fmt.Println()
+//	ClearScreen() // ClearScreen before termbox.init fcn, to see if this helps.
+//	fmt.Println()
 	//  fmt.Println("  I hope this helps.  But it likely won't.  ");  It didn't help.  I'm commenting it out, finally.
-	fmt.Println()
-	fmt.Println()
+//	fmt.Println()
+//	fmt.Println()
 
 	termerr := termbox.Init()
 	if termerr != nil {
-		log.Println(" TermBox init failed.")
-		panic(termerr)
+		log.Printf(" TermBox init failed with error of %s.",termerr)
+		return   // I got from Mastering Go 2nd ed that return from main is same as os.Exit(0)
 	}
+        defer termbox.Sync()   // added 12/24/2019 3:17:56 PM
+        defer termbox.Flush() // added 12/24/2019 2:37:47 PM
 	defer termbox.Close()
 	BrightYellow = termbox.ColorYellow | termbox.AttrBold
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	Black = termbox.ColorBlack
+// {{{
 	//	err = termbox.Clear(BrightYellow, Black) \  removed 4/15/19
 	//	check(err)                               /
+// }}}
 	e := termbox.Clear(Black, Black)
 	check(e)
 	e = termbox.Flush()
@@ -195,23 +200,26 @@ func main() {
 	DisplayTape = make([]string, 0, 100)
 	theFileExists := true
 
-	StorageFullFilenameSlice := make([]string, 5)
-	StorageFullFilenameSlice[0] = HomeDir
-	StorageFullFilenameSlice[1] = string(os.PathSeparator)
-	StorageFullFilenameSlice[2] = Storage1FileName
-	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")
+//	StorageFullFilenameSlice := make([]string, 5)                          \
+//	StorageFullFilenameSlice[0] = HomeDir                                   \  Don't remember what I was thinking to do this nonsense.
+//	StorageFullFilenameSlice[1] = string(os.PathSeparator)                  /  again and again
+//	StorageFullFilenameSlice[2] = Storage1FileName                         /
+//	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")     /
+        StorageFullFilename := HomeDir + string(os.PathSeparator) + Storage1FileName
 
-	Storage2FullFilenameSlice := make([]string, 5)
-	Storage2FullFilenameSlice[0] = HomeDir
-	Storage2FullFilenameSlice[1] = string(os.PathSeparator)
-	Storage2FullFilenameSlice[2] = Storage2FileName
-	Storage2FullFilename := strings.Join(Storage2FullFilenameSlice, "")
+//	Storage2FullFilenameSlice := make([]string, 5)
+//	Storage2FullFilenameSlice[0] = HomeDir
+//	Storage2FullFilenameSlice[1] = string(os.PathSeparator)
+//	Storage2FullFilenameSlice[2] = Storage2FileName
+//	Storage2FullFilename := strings.Join(Storage2FullFilenameSlice, "")
+	Storage2FullFilename := HomeDir + string(os.PathSeparator) + Storage2FileName
 
-	Storage3FullFilenameSlice := make([]string, 5)
-	Storage3FullFilenameSlice[0] = HomeDir
-	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
-	Storage3FullFilenameSlice[2] = Storage3FileName
-	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
+//	Storage3FullFilenameSlice := make([]string, 5)
+//	Storage3FullFilenameSlice[0] = HomeDir
+//	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
+//	Storage3FullFilenameSlice[2] = Storage3FileName
+//	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
+	Storage3FullFilename := HomeDir + string(os.PathSeparator) + Storage3FileName
 
 	thefile, err := os.Open(StorageFullFilename) // open for reading
 	if os.IsNotExist(err) {
@@ -346,6 +354,11 @@ func main() {
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			HardClearScreen()
+			err := termbox.Sync()  // added 12/24/19
+			if err != nil {
+				log.Println(" error from termbox sync()", err)
+				Printf_tb(1,OutputRow + 8, BrightCyan, Black, " termbox sync failed w/ err %v", err)
+			}
 			//      err = termbox.Clear(BrightYellow,Black);
 			//      check(err);
 		} else if INBUF == "REPAINT" {
@@ -852,9 +865,11 @@ func ClearScreen() {
 // -------------------------------------------------- GetNameStr --------------------------------
 func GetNameStr() string {
 	var ans string
-	promptstr := "   Input name string : "
-	Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
-	ans = GetInputString(len(promptstr)+2, OutputRow)
+	promptstr := "   Input name string, making - or = into a space : "
+//	Print_tb(1, OutputRow, BrightYellow, Black, promptstr)  changed 12/24/2019 2:47:21 PM
+//	ans = GetInputString(len(promptstr)+2, OutputRow)
+	Print_tb(1, PromptRow, BrightYellow, Black, promptstr)
+	ans = GetInputString(len(promptstr)+2, PromptRow)
 	ans = strings.ToUpper(ans)
 	if ans == "TODAY" || ans == "T" {
 		m, d, y := timlibg.TIME2MDY()
