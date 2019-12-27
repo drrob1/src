@@ -33,6 +33,7 @@ package main
   6 Feb 18 -- Tried to move global variables to main, but had to move them back.
   8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
  22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
+ 25 Dec 19 -- Fixed termbox, I hope.
 */
 
 import (
@@ -42,6 +43,7 @@ import (
 	"log"
 	"os"
 	"os/exec" // for the clear screen functions.
+
 	//"path/filepath"
 	"runtime"
 	"strconv"
@@ -52,13 +54,14 @@ import (
 	//"getcommandline"
 	"holidaycalc"
 	"timlibg"
+
 	//"tokenize"
 
-	termbox "github.com/nsf/termbox-go"
+	"github.com/nsf/termbox-go"
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Nov 24, 2019"
+const LastCompiled = "Dec 25, 2019"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -778,8 +781,8 @@ func main() {
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	BrightGreen = termbox.ColorGreen | termbox.AttrBold
 	Black = termbox.ColorBlack
-//	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", LastCompiled)
-//	fmt.Println()
+	//	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", LastCompiled)
+	//	fmt.Println()
 	MONNAMLONG[JAN] = "    J A N U A R Y        "
 	MONNAMLONG[FEB] = "   F E B R U A R Y       "
 	MONNAMLONG[MAR] = "      M A R C H          "
@@ -800,7 +803,7 @@ func main() {
 
 	// flag definitions and processing
 	var nofilesflag = flag.Bool("no", false, "do not generate output cal1 and cal12 files.") // Ptr
-	var NoFilesFlag = flag.Bool("n", false, "do not generate output cal1 and cal12 files.") // Ptr
+	var NoFilesFlag = flag.Bool("n", false, "do not generate output cal1 and cal12 files.")  // Ptr
 
 	var helpflag = flag.Bool("h", false, "print help message.") // pointer
 	var HelpFlag bool
@@ -852,7 +855,7 @@ func main() {
 					fmt.Println()
 				}
 				if MonthNotExplicitlySet {
-					RequestedMonthNumber = 0  // if a year is explicitily entered, start w/ January.
+					RequestedMonthNumber = 0 // if a year is explicitily entered, start w/ January.
 				}
 			} else { // not a numeric parameter, process like it's a month abbrev code
 				RequestedMonthNumber = SetMonthNumber(commandlineparam)
@@ -938,7 +941,11 @@ func main() {
 		log.Println(" TermBox init failed.")
 		panic(termerr)
 	}
+
 	defer termbox.Close()
+	defer termbox.Flush() // added 12/25/2019
+	defer termbox.Sync()  // added 12/25/2019
+
 	MaxCol, MaxRow = termbox.Size()
 	MaxCol-- // These numbers are too large by 1
 	MaxRow-- // So decrement them.
@@ -1065,6 +1072,9 @@ func main() {
 	Print_tb(0, LineNum, BrightYellow, Black, " Hit <enter> to continue.")
 	termbox.SetCursor(26, LineNum)
 	_ = GetInputString(26, LineNum)
+
+	termbox.Flush() // added 12/25/2019
+	termbox.Close() // added 12/25/2019
 
 } // end main func
 
