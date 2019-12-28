@@ -33,6 +33,18 @@ func putf(scrn tcell.Screen, style tcell.Style, x, y int, format string, args ..
 	puts(scrn, style, x, y, s)
 }
 
+func deleol(scrn tcell.Screen, style tcell.Style, x, y int)  {
+	width, _ := scrn.Size()  // don't need height for this calculation.
+	empty := width - x       // don't care if this is off by 1.
+	blanks := make([]byte,empty)
+	for i := range blanks {
+		blanks[i] = ' '
+	}
+    blankstring := string(blanks)
+    puts(scrn, style, x, y, blankstring)
+}
+
+
 func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 	i := 0
 	var deferred []rune
@@ -167,6 +179,7 @@ func main() {
 
 	width, height := scrn.Size()
 	putfln(scrn, "from putfln.  Screen width: %d, height: %d", width, height)
+	putf(scrn, style, 1, 17, " testing putf with a %s", "string I just typed.")
 
 	scrn.Show()
 
@@ -181,6 +194,9 @@ func main() {
 		putln(scrn, str)
 		putfln(scrn, "from putfln: %s", str)
 		scrn.Show()
+		if row >= height {
+			break
+		}
 	}
 	scrn.Fini()
 }
@@ -189,10 +205,11 @@ func main() {
 
 func GetInputString(scrn tcell.Screen, x, y int) string {
 
+	deleol(scrn, style, x, y)
 	scrn.ShowCursor(x, y)
 	scrn.Show()
 	donechan := make(chan bool)
-	keychannl := make(chan keyStructType)
+	keychannl := make(chan rune)
 	helpchan := make(chan bool)
 	delchan := make(chan bool)
 	upchan := make(chan bool)
@@ -203,7 +220,6 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 	rightchan := make(chan bool)
 
 	pollevent := func() {
-		var keystruct keyStructType
 		for {
 			event := scrn.PollEvent()
 			switch event := event.(type) {
@@ -221,7 +237,7 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 
 				case tcell.KeyBackspace, tcell.KeyDEL, tcell.KeyDelete:
 					delchan <- true
-					return
+					// do not return after any of these keys are hit, as an entry is being edited.
 
 				case tcell.KeyPgUp, tcell.KeyUp:
 					upchan <- true
@@ -248,10 +264,9 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 					return
 
 				case tcell.KeyRune:
-					keystruct.r = event.Rune()
-					keystruct.name = event.Name()
-					keychannl <- keystruct
-                    if keystruct.r == ' ' {
+					r := event.Rune()
+					keychannl <- r
+					if r == ' ' {
 						return
 					}
 				}
@@ -277,6 +292,9 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 			if len(bs) > 0 {
 				bs = bs[:len(bs)-1]
 			}
+			puts(scrn,style,x+len(bs),y," ")
+			scrn.ShowCursor(x+len(bs),y)
+			scrn.Show()
 
 		case <-upchan:
 			return "up key, pgup, upleft, upright"
@@ -297,12 +315,18 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 			return "left arrow"
 
 		case key := <-keychannl:
-			if key.r == ' ' {
-				return string(bs)
+			if key == ' ' {
+				if len(bs) > 0 {
+					return string(bs)
+				} else {
+					go pollevent() // need to restart the go routine to fetch more keys.
+					continue       // discard this extaneous space
+				}
 			}
-			bs = append(bs, byte(key.r))
+			bs = append(bs, byte(key))
 			puts(scrn, style, x, y, string(bs))
-			scrn.ShowCursor(x+len(bs),y)
+
+			scrn.ShowCursor(x+len(bs), y)
 			scrn.Show()
 		}
 	}
