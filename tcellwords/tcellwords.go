@@ -297,13 +297,9 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 			return "left arrow"
 
 		case key := <-keychannl:
-			if key.r == ' ' && len(bs) > 0 {
+			if key.r == ' ' {
 				return string(bs)
-			} // else if key.r == ' ' {
-				// do nothing but ignore this space.
-//			} else {
-//				bs = append(bs, byte(key.r))
-//			}
+			}
 			bs = append(bs, byte(key.r))
 			puts(scrn, style, x, y, string(bs))
 			scrn.ShowCursor(x+len(bs),y)
