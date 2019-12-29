@@ -126,6 +126,8 @@ REVISION HISTORY
  3 Jun 19 -- Added T as abbreviation for today in GetNameStr rtn, and in hpcalc since I liked the idea so much.
 14 Dec 19 -- Moved prompt for register name string to top, from middle of screen where it's easy to miss.
 29 Dec 19 -- Defer statement executes in a LIFO stack.  I have to reverse the order of the defer closing statements, and remove from explicit call at end.
+               And checkmsg now uses fmt.Errorf so that I will see a message even if termbox is still active.  And need to respect output mode for registers.
+               And fixed the condition that used to be INBUF != "CLEAR" || INBUF != "CLS", as that needed to be && there.  Picked up by go vet.
 */
 
 func main() {
@@ -170,7 +172,7 @@ func main() {
 	sigfig = -1 // now only applies to WriteRegToScreen
 	StartRow := 0
 	StartCol := 0
-	outputmode = 0
+	outputmode = outputfix
 
 	if runtime.GOOS == "linux" {
 		HomeDir = os.Getenv("HOME")
@@ -348,12 +350,12 @@ func main() {
 		} else if INBUF == "HELP" || INBUF == "?" {
 			WriteHelp(StartCol+2, StackRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
-			// do nothing, but don't send it into hpcalc.GetResult
-		} else if strings.HasPrefix(INBUF, "OUTPUTFIX") { // allow outputfix or outputfixed
+			// do nothing, ie, don't send it into hpcalc.GetResult
+		} else if strings.HasPrefix(INBUF, "OUTPUTFIX") { // allow outputfixed
 			outputmode = outputfix
 		} else if INBUF == "OUTPUTFLOAT" {
 			outputmode = outputfloat
-		} else if INBUF == "OUTPUTGEN" {
+		} else if strings.HasPrefix(INBUF, "OUTPUTGEN") { // allow outputgeneral
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			HardClearScreen()
@@ -361,6 +363,7 @@ func main() {
 			if err != nil {
 				log.Println(" error from termbox sync()", err)
 				Printf_tb(1, OutputRow+8, BrightCyan, Black, " termbox sync failed w/ err %v", err)
+				_ = fmt.Errorf("termbox sync failed w/ error %v \n", err)
 			}
 			//      err = termbox.Clear(BrightYellow,Black);
 			//      check(err);
@@ -443,8 +446,9 @@ func main() {
 		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
 			Printf_tb(x, OutputRow+1, BrightYellow, Black, " Last altered rpnterm %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
-		} // if INBUF
-		if INBUF != "CLEAR" || INBUF != "CLS" {
+		}
+
+		if !(INBUF == "CLEAR" || INBUF == "CLS") {
 			RepaintScreen(StartCol)
 		}
 		x = StartCol
@@ -464,12 +468,12 @@ func main() {
 	// Rotate StorageFileNames and write
 	err = os.Rename(Storage2FullFilename, Storage3FullFilename)
 	if err != nil {
-		fmt.Errorf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
+		_ = fmt.Errorf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
 	}
 
 	err = os.Rename(StorageFullFilename, Storage2FullFilename)
 	if err != nil {
-		fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
+		_ = fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
 	}
 
 	thefile, err = os.Create(StorageFullFilename)        // for writing
@@ -512,11 +516,11 @@ func main() {
 	checkmsg(err, "after DisplayTapeFile close")
 
 	// These are already deferred, so this essentially calls them twice.
-//	err = termbox.Sync()
-//	checkmsg(err, "after termbox.Sync")
-//	err = termbox.Flush()
-//	checkmsg(err, "after termbox.flush")
-//	termbox.Close()
+	//	err = termbox.Sync()
+	//	checkmsg(err, "after termbox.Sync")
+	//	err = termbox.Flush()
+	//	checkmsg(err, "after termbox.flush")
+	//	termbox.Close()
 
 } // main in rpnterm.go
 
@@ -558,11 +562,19 @@ func WriteRegToScreen(x, y int) int { // Outputs the number of reg's that are no
 				FirstNonZeroStorageFlag = false
 			} // if firstnonzerostorageflag
 			ch := GetRegChar(i)
-			s := strconv.FormatFloat(r.Value, 'g', sigfig, 64) // sigfig of -1 means max sigfig.
-			s = hpcalc.CropNStr(s)
-			if r.Value >= 10000 {
-				s = hpcalc.AddCommas(s)
+			s := ""
+			if outputmode == outputfix {
+				s = strconv.FormatFloat(r.Value, 'f', sigfig, 64) // sigfig of -1 means max sigfig.
+				s = hpcalc.CropNStr(s)
+				if r.Value >= 10000 {
+					s = hpcalc.AddCommas(s)
+				}
+			} else if outputmode == outputfloat {
+				s = strconv.FormatFloat(r.Value, 'e', sigfig, 64) // sigfig of -1 means max sigfig.
+			} else { // outputmode has to be outputgen
+				s = strconv.FormatFloat(r.Value, 'g', sigfig, 64) // sigfig of -1 means max sigfig.
 			}
+
 			Printf_tb(x, y, BrightCyan, Black, " Reg [%s], %s =  %s", ch, r.Name, s)
 			y++
 			n++
@@ -595,7 +607,7 @@ func check(err error) {
 // ------------------------------------------------------- checkmsg -------------------------------
 func checkmsg(err error, msg string) {
 	if err != nil {
-		fmt.Println(msg, err)
+		_ = fmt.Errorf("%s %v \n", msg, err) // writes to stderr instead of stdout.
 		panic(err)
 	}
 }
@@ -778,6 +790,8 @@ func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while a
 	helpstringslice = append(helpstringslice, fmt.Sprintf(" :w, wr -- write X register to text file %s.", TextFilenameOut))
 	helpstringslice = append(helpstringslice, fmt.Sprintf(" :r, rd, read -- read X register from first line of %s.", TextFilenameIn))
 	helpstringslice = append(helpstringslice, " Debug -- Print debugging message to screen.")
+	helpstringslice = append(helpstringslice, " SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
+	helpstringslice = append(helpstringslice, " outputfix, outputfloat, outputgen -- sets output mode for displayed numbers.")
 
 	FI, err := os.Stat(HelpFileName)
 	if err != nil {

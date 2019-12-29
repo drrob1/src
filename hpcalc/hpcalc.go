@@ -11,14 +11,13 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "28 June 2019"
+const LastAlteredDate = "29 Dec 2019"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
 ----------------
  1 Dec 89 -- Added the help command.
-24 Dec 91 -- Converted to M-2 V 4.00.  Also changed the params to the
-              GETRESULT proc to be more reasonable.
+24 Dec 91 -- Converted to M-2 V 4.00.  Also changed the params to the GETRESULT proc to be more reasonable.
 21 Mar 93 -- Added exponentiation and MOD, INT, FRAC and ROUND, as well as used the UL2 procs again.
 25 Jul 93 -- Added JUL and GREG commands.
 18 May 03 -- Win32 version using Stony Brook Modula-2 v 4
@@ -83,6 +82,7 @@ REVISION HISTORY
  1 May 19 -- Noticed that the character substitutions were never listed here in help as they are in the cpp version.  Now added that.
  3 Jun 19 -- Added t as an abbreviation for today
 28 Jun 19 -- Added prev or previous as synonym for before
+29 Dec 19 -- For dumpfloat and dunpgen, crupn and addcommas do not make sense, so I took them out.  Finally!
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -246,17 +246,17 @@ func DumpStackFloat() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	for SRN = T1; SRN >= X; SRN-- {
 		str = strconv.FormatFloat(Stack[SRN], 'e', sigfig, 64)
-		str = CropNStr(str)
-		if Stack[SRN] > 10000 {
-			str = AddCommas(str)
-		}
+		//		str = CropNStr(str)  makes no sense for numbers in exponential format
+		//		if Stack[SRN] > 10000 {
+		//			str = AddCommas(str)
+		//		}
 		ss = append(ss, fmt.Sprintf("%2s: %20.9e %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 	}
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
 } // DumpStackFloat
 //************************************************* OutputFixedOrFloat *******************************
-func OutputFixedOrFloat(r float64) {
+func OutputFixedOrFloat(r float64) { // Since all output is thru a string slice, I think I stopped using this.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -274,10 +274,10 @@ func DumpStackGeneral() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	for SRN = T1; SRN >= X; SRN-- {
 		str = strconv.FormatFloat(Stack[SRN], 'g', sigfig, 64)
-		str = CropNStr(str)
-		if Stack[SRN] > 10000 {
-			str = AddCommas(str)
-		}
+		//		str = CropNStr(str)  makes no sense for numbers in exponential format
+		//		if Stack[SRN] > 10000 {
+		//			str = AddCommas(str)
+		//		}
 		ss = append(ss, fmt.Sprintf("%2s: %10.4g %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 	}
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
@@ -448,13 +448,9 @@ func usqrt(u uint) uint {
 }
 
 // ---------------------------------------- PWRI -------------------------------------------------
+//POWER OF I.
+// This is a power function with a real base and integer exponent, using the optimized algorithm as discussed in PIM-2, V.  2.
 func PWRI(R float64, I int) float64 {
-	/*
-	   -------------------------- PWRI -----------------------------------
-	   POWER OF I.
-	   This is a power function with a real base and integer exponent.
-	   it uses the optimized algorithm as discussed in PIM-2, V.  2.
-	*/
 	Z := 1.0
 	NEGFLAG := false
 	if I < 0 {
@@ -723,7 +719,7 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				Stack[X] = math.Ceil(LastX)
 			} else if Token.Str == "HEX" {
-				if (Stack[X] >= -2.0E9) && (Stack[X] <= 1.80E19) {
+				if (Stack[X] >= -2.0e9) && (Stack[X] <= 1.80e19) {
 					ss = append(ss, fmt.Sprintf(" Value of X reg in hex: %s", ToHex(Stack[X])))
 				} else {
 					ss = append(ss, fmt.Sprintf(" Cannot convert X register to hex string, as number is out of range."))
