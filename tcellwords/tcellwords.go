@@ -198,7 +198,8 @@ func main() {
 			break
 		}
 	}
-	scrn.Fini()
+
+//	scrn.Fini()  I don't need this because I already deferred a scrn.Fini() right after a successful init.
 }
 
 // --------------------------------------------------- GetInputString --------------------------------------

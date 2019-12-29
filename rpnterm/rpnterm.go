@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "Dec 25, 2019"
+const LastAltered = "Dec 29, 2019"
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
 type Register struct {
@@ -125,6 +125,7 @@ REVISION HISTORY
 15 Apr 19 -- Changing the look somewhat.  I want the input to be on the top, like I did in C++.
  3 Jun 19 -- Added T as abbreviation for today in GetNameStr rtn, and in hpcalc since I liked the idea so much.
 14 Dec 19 -- Moved prompt for register name string to top, from middle of screen where it's easy to miss.
+29 Dec 19 -- Defer statement executes in a LIFO stack.  I have to reverse the order of the defer closing statements, and remove from explicit call at end.
 */
 
 func main() {
@@ -146,9 +147,11 @@ func main() {
 		log.Printf(" TermBox init failed with error of %s.", termerr)
 		return // I got from Mastering Go 2nd ed that return from main is same as os.Exit(0)
 	}
-	defer termbox.Sync()  // added 12/24/2019 3:17:56 PM
-	defer termbox.Flush() // added 12/24/2019 2:37:47 PM
+
 	defer termbox.Close()
+	defer termbox.Flush() // added 12/24/2019 2:37:47 PM, and then rearranged 12/29/19
+	defer termbox.Sync()  // added 12/24/2019 3:17:56 PM, and then rearranged 12/29/19
+
 	BrightYellow = termbox.ColorYellow | termbox.AttrBold
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	Black = termbox.ColorBlack
@@ -508,11 +511,12 @@ func main() {
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
 
-	err = termbox.Sync()
-	checkmsg(err, "after termbox.Sync")
-	err = termbox.Flush()
-	checkmsg(err, "after termbox.flush")
-	termbox.Close()
+	// These are already deferred, so this essentially calls them twice.
+//	err = termbox.Sync()
+//	checkmsg(err, "after termbox.Sync")
+//	err = termbox.Flush()
+//	checkmsg(err, "after termbox.flush")
+//	termbox.Close()
 
 } // main in rpnterm.go
 
