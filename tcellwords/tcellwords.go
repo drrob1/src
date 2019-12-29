@@ -114,9 +114,12 @@ func main() {
 	plain := tcell.StyleDefault
 	bold := style.Bold(true)
 
-	scrn.SetStyle(tcell.StyleDefault.
-		Foreground(tcell.ColorBlack).
-		Background(tcell.ColorWhite))
+//	scrn.SetStyle(tcell.StyleDefault.
+//		Foreground(tcell.ColorBlack).
+//		Background(tcell.ColorWhite))
+	scrn.SetStyle(tcell.StyleDefault.            // reversing the colors
+		Foreground(tcell.ColorWhite).
+		Background(tcell.ColorBlack))
 	scrn.Clear()
 
 	style = bold
