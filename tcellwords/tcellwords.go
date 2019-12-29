@@ -113,6 +113,8 @@ func main() {
 
 	plain := tcell.StyleDefault
 	bold := style.Bold(true)
+	reverse := style.Reverse(true)
+	reversedBlue := style.Background(tcell.ColorWhite).Foreground(tcell.ColorBlue)
 
 //	scrn.SetStyle(tcell.StyleDefault.
 //		Foreground(tcell.ColorBlack).
@@ -181,8 +183,9 @@ func main() {
 	}))
 
 	width, height := scrn.Size()
-	putfln(scrn, "from putfln.  Screen width: %d, height: %d", width, height)
-	putf(scrn, style, 1, 17, " testing putf with a %s", "string I just typed.")
+	putf(scrn, reversedBlue,0,row,"from putfln.  Screen width: %d, height: %d", width, height)
+	row++
+	putf(scrn, reverse, 1, 17, " testing putf with a %s", "string I just typed.")
 
 	scrn.Show()
 
@@ -194,7 +197,7 @@ func main() {
 		if len(str) == 0 {
 			break // return from main is same as os.Exit(0)
 		}
-		putln(scrn, str)
+//		putln(scrn, str)   don't need to duplicate lines anymore
 		putfln(scrn, "from putfln: %s", str)
 		scrn.Show()
 		if row >= height {
