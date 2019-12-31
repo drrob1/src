@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "29 Dec 2019"
+const LastAlteredDate = "30 Dec 2019"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -82,7 +82,8 @@ REVISION HISTORY
  1 May 19 -- Noticed that the character substitutions were never listed here in help as they are in the cpp version.  Now added that.
  3 Jun 19 -- Added t as an abbreviation for today
 28 Jun 19 -- Added prev or previous as synonym for before
-29 Dec 19 -- For dumpfloat and dunpgen, crupn and addcommas do not make sense, so I took them out.  Finally!
+29 Dec 19 -- For dumpfloat and dumpgen, CropNstr and addcommas do not make sense, so I took them out.  Finally!
+30 Dec 19 -- Reordered command tests, moving up PRIMEFAC
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -824,6 +825,20 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Sqrt(Stack[X])
+			} else if strings.HasPrefix(Token.Str, "PRIMEFAC") {
+				// Intended for PrimeFactors or PrimeFactorization
+				PushMatrixStacks()
+				//				N := int(Round(Stack[X]))
+				//				PrimeFactors := PrimeFactorization(N)
+				U := uint(Round(Stack[X]))
+				PrimeUfactors := PrimeFactorMemoized(U)
+
+				stringslice := make([]string, 0, 10)
+				for _, pf := range PrimeUfactors {
+					stringslice = append(stringslice, fmt.Sprintf("%d", pf))
+				}
+				ss = append(ss, strings.Join(stringslice, ", "))
+
 			} else if Token.Str == "EXP" {
 				PushMatrixStacks()
 				LastX = Stack[X]
@@ -864,20 +879,6 @@ func GetResult(s string) (float64, []string) {
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] *= 180.0 / PI
-			} else if strings.HasPrefix(Token.Str, "PRIMEFAC") {
-				// Intended for PrimeFactors or PrimeFactorization
-				PushMatrixStacks()
-				//				N := int(Round(Stack[X]))
-				//				PrimeFactors := PrimeFactorization(N)
-				U := uint(Round(Stack[X]))
-				PrimeUfactors := PrimeFactorMemoized(U)
-
-				stringslice := make([]string, 0, 10)
-				for _, pf := range PrimeUfactors {
-					stringslice = append(stringslice, fmt.Sprintf("%d", pf))
-				}
-				ss = append(ss, strings.Join(stringslice, ", "))
-
 			} else {
 				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
 			} // main text command selection if statement

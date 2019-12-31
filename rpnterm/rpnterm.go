@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "Dec 29, 2019"
+const LastAltered = "Dec 30, 2019"
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
 type Register struct {
@@ -128,6 +128,7 @@ REVISION HISTORY
 29 Dec 19 -- Defer statement executes in a LIFO stack.  I have to reverse the order of the defer closing statements, and remove from explicit call at end.
                And checkmsg now uses fmt.Errorf so that I will see a message even if termbox is still active.  And need to respect output mode for registers.
                And fixed the condition that used to be INBUF != "CLEAR" || INBUF != "CLS", as that needed to be && there.  Picked up by go vet.
+30 Dec 19 -- Generalizing outputfix, outputfloat, and outputgen
 */
 
 func main() {
@@ -204,26 +205,29 @@ func main() {
 
 	DisplayTape = make([]string, 0, 100)
 	theFileExists := true
-
+	// {{{
 	//	StorageFullFilenameSlice := make([]string, 5)                          \
 	//	StorageFullFilenameSlice[0] = HomeDir                                   \  Don't remember what I was thinking to do this nonsense.
 	//	StorageFullFilenameSlice[1] = string(os.PathSeparator)                  /  again and again
 	//	StorageFullFilenameSlice[2] = Storage1FileName                         /
 	//	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")     /
+	/// }}}
 	StorageFullFilename := HomeDir + string(os.PathSeparator) + Storage1FileName
-
+	// {{{
 	//	Storage2FullFilenameSlice := make([]string, 5)
 	//	Storage2FullFilenameSlice[0] = HomeDir
 	//	Storage2FullFilenameSlice[1] = string(os.PathSeparator)
 	//	Storage2FullFilenameSlice[2] = Storage2FileName
 	//	Storage2FullFilename := strings.Join(Storage2FullFilenameSlice, "")
+	/// }}}
 	Storage2FullFilename := HomeDir + string(os.PathSeparator) + Storage2FileName
-
+	// {{{
 	//	Storage3FullFilenameSlice := make([]string, 5)
 	//	Storage3FullFilenameSlice[0] = HomeDir
 	//	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
 	//	Storage3FullFilenameSlice[2] = Storage3FileName
 	//	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
+	/// }}}
 	Storage3FullFilename := HomeDir + string(os.PathSeparator) + Storage3FileName
 
 	thefile, err := os.Open(StorageFullFilename) // open for reading
@@ -263,7 +267,8 @@ func main() {
 		INBUF = getcommandline.GetCommandLineString()
 	} else {
 		Print_tb(x, PromptRow, BrightCyan, Black, InputPrompt)
-		x = x + len(InputPrompt) + 2
+		//		x = x + len(InputPrompt) + 2
+		x += len(InputPrompt) + 2 // this will either compile or it won't.
 		termbox.SetCursor(x, PromptRow)
 		INBUF = GetInputString(x, PromptRow)
 		if strings.HasPrefix(INBUF, "Q") {
@@ -351,11 +356,11 @@ func main() {
 			WriteHelp(StartCol+2, StackRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			// do nothing, ie, don't send it into hpcalc.GetResult
-		} else if strings.HasPrefix(INBUF, "OUTPUTFIX") { // allow outputfixed
+		} else if strings.HasPrefix(INBUF, "OUTPUTFI") { // allow outputfix, etc
 			outputmode = outputfix
-		} else if INBUF == "OUTPUTFLOAT" {
+		} else if strings.HasPrefix(INBUF, "OUTPUTFL") { // allow outputfloat, etc
 			outputmode = outputfloat
-		} else if strings.HasPrefix(INBUF, "OUTPUTGEN") { // allow outputgeneral
+		} else if strings.HasPrefix(INBUF, "OUTPUTGE") { // allow outputgen, etc.
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			HardClearScreen()
