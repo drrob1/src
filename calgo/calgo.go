@@ -34,6 +34,7 @@ package main
   8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
  22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
  25 Dec 19 -- Fixed termbox, I hope.
+ 10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
 */
 
 import (
@@ -61,7 +62,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Dec 25, 2019"
+const LastCompiled = "Jan 10, 2020"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -1073,8 +1074,8 @@ func main() {
 	termbox.SetCursor(26, LineNum)
 	_ = GetInputString(26, LineNum)
 
-	termbox.Flush() // added 12/25/2019
-	termbox.Close() // added 12/25/2019
+//	termbox.Flush() // added 12/25/2019 and removed 1/10/20 as duplicating deferred statements, making Windows unhappy.
+//	termbox.Close() // added 12/25/2019
 
 } // end main func
 
