@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/gdamore/tcell"
-	"github.com/gdamore/tcell/encoding"
 	runewidth "github.com/mattn/go-runewidth"
 )
 
@@ -102,7 +101,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	encoding.Register()
+//	encoding.Register()   Don't know why this is here.  This code works without this line, so I'll keep it out.
 
 	if e = scrn.Init(); e != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
