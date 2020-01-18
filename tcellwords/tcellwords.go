@@ -94,7 +94,6 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 }
 
 func main() {
-
 	scrn, e := tcell.NewScreen()
 	if e != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
@@ -114,6 +113,58 @@ func main() {
 	bold := style.Bold(true)
 	reverse := style.Reverse(true)
 	reversedBlue := style.Background(tcell.ColorWhite).Foreground(tcell.ColorBlue)
+	Blue := style.Foreground(tcell.ColorBlue)
+	Green := style.Foreground(tcell.ColorGreen)
+	AquaBlue := style.Foreground(tcell.ColorAqua)
+	Yellow := style.Foreground(tcell.ColorYellow)
+	Maroon := style.Foreground(tcell.ColorMaroon)
+	NavyBlue := style.Foreground(tcell.ColorNavy)
+	Purple := style.Foreground(tcell.ColorPurple)
+	Red := style.Foreground(tcell.ColorRed)
+	BoldBlue := Blue.Bold(true)
+	BoldGreen := Green.Bold(true)
+	BoldYellow := Yellow.Bold(true)
+	BoldRed := Red.Bold(true)
+	BoldNavy := NavyBlue.Bold(true)
+	BoldMaroon := Maroon.Bold(true)
+	BoldPurple := Purple.Bold(true)
+	BoldAquaBlue := Blue.Bold(true)
+	Color16 := style.Foreground(tcell.Color16)
+	Color17 := style.Foreground(tcell.Color17)
+	Color18 := style.Foreground(tcell.Color18)
+	Color19 := style.Foreground(tcell.Color19)
+	Color20 := style.Foreground(tcell.Color20)
+	Color21 := style.Foreground(tcell.Color21)
+
+	colorslice := make([]tcell.Style,30)
+	for i:=0; i < 30; i++ {
+		colorslice[i] = plain
+	}
+
+	colorslice[0] = plain // white
+	colorslice[1] = Blue  // ok color but dark
+	colorslice[2] = Green // best color
+	colorslice[3] = AquaBlue // cyan in other naming systems.  best color.
+	colorslice[4] = Yellow // best color
+	colorslice[5] = Maroon // bad color
+	colorslice[6] = NavyBlue // bad color
+	colorslice[7] = Purple // bad color
+	colorslice[8] = Red // best color
+	colorslice[9] = BoldBlue // ok color, but still dark.
+	colorslice[10]= BoldGreen  // best color
+	colorslice[11]= BoldYellow // best color
+	colorslice[12]= BoldRed // best color
+	colorslice[13]= BoldNavy // bad color
+	colorslice[14]= BoldMaroon // bad color
+	colorslice[15]= BoldPurple // pad color
+	colorslice[16]= BoldAquaBlue // bad color
+	colorslice[17]= Color16 // bad color
+	colorslice[18]= Color17 // bad color
+	colorslice[19]= Color18 // bad color
+	colorslice[20]= Color19 // bad color
+	colorslice[21]= Color20 // bad color
+	colorslice[22]= Color21 // bad color
+	colorslice[23]= style.Foreground(tcell.ColorAliceBlue) // shows as white
 
 //	scrn.SetStyle(tcell.StyleDefault.
 //		Foreground(tcell.ColorBlack).
@@ -186,17 +237,21 @@ func main() {
 	row++
 	putf(scrn, reverse, 1, 17, " testing putf with a %s", "string I just typed.")
 
+	colors := scrn.Colors()
+	putfln(scrn, " Number of colors is %d", colors )
+
 	scrn.Show()
 
 	prompt := "enter a word:"
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 30; i++ {
 		puts(scrn, style, 1, height-1, prompt)
 		str := GetInputString(scrn, len(prompt)+4, height-1)
 		if len(str) == 0 {
 			break // return from main is same as os.Exit(0)
 		}
 //		putln(scrn, str)   don't need to duplicate lines anymore
+        style = colorslice[i]
 		putfln(scrn, "from putfln: %s", str)
 		scrn.Show()
 		if row >= height {
