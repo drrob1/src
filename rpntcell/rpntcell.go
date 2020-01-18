@@ -7,11 +7,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/gdamore/tcell"
-	"github.com/gdamore/tcell/encoding"
 	"github.com/mattn/go-runewidth"
 	"log"
 	"os"
-	"os/exec" // for the clear screen functions.
+
 	"runtime"
 	"strconv"
 	"strings"
@@ -21,11 +20,10 @@ import (
 	"getcommandline"
 	"hpcalc"
 	"tokenize"
-
-//	"github.com/gdamore/tcell"
-//	"github.com/gdamore/tcell/encoding"
-//	runewidth "github.com/mattn/go-runewidth"
-
+	//  "os/exec"      // for the clear screen functions.
+	//	"github.com/gdamore/tcell"
+	//	"github.com/gdamore/tcell/encoding"
+	//	runewidth "github.com/mattn/go-runewidth"
 )
 
 const LastAltered = "Jan 18, 2020"
@@ -119,6 +117,7 @@ var Divider string
 var clear map[string]func()
 
 var StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol, PromptRow, outputmode, n int
+
 // var BrightYellow, BrightCyan, Black termbox.Attribute
 
 const SpaceFiller = "     |     "
@@ -143,16 +142,8 @@ type keyStructType struct {
 }
 
 var gblrow = 0
-var style = tcell.StyleDefault
-var plain = tcell.StyleDefault
-var bold = style.Bold(true)
-var reverse = style.Reverse(true)
-var BrightCyanBlack =  style.Background(tcell.ColorBlack).Foreground(tcell.ColorLightCyan)
-var BrightYellowBlack = style.Background(tcell.ColorBlack).Foreground(tcell.ColorLightYellow)
-var brightcyanblack = style.Foreground(tcell.ColorLightCyan).Background(tcell.ColorBlack)
-var brightyellowblack = style.Foreground(tcell.ColorLightYellow).Background(tcell.ColorBlack)
-var BoldCyanBlack = style.Foreground(tcell.ColorLightCyan).Background(tcell.ColorBlack).Bold(true)
-var BoldYellowBlack = style.Foreground(tcell.ColorLightYellow).Background(tcell.ColorBlack).Bold(true)
+
+var style, plain, bold, reverse, BrightCyanBlack, BrightYellowBlack, BoldCyanBlack, BoldYellowBlack tcell.Style
 var scrn tcell.Screen
 
 func putln(str string) {
@@ -171,10 +162,10 @@ func putf(x, y int, format string, args ...interface{}) {
 	puts(scrn, style, x, y, s)
 }
 
-func deleol(x, y int)  {
-	width, _ := scrn.Size()  // don't need height for this calculation.
-	empty := width - x       // don't care if this is off by 1.
-	blanks := make([]byte,empty)
+func deleol(x, y int) {
+	width, _ := scrn.Size() // don't need height for this calculation.
+	empty := width - x      // don't care if this is off by 1.
+	blanks := make([]byte, empty)
 	for i := range blanks {
 		blanks[i] = ' '
 	}
@@ -183,7 +174,7 @@ func deleol(x, y int)  {
 }
 
 func clearline(line int) {
-	deleol( 0, line)
+	deleol(0, line)
 }
 
 func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
@@ -233,8 +224,8 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 		scrn.SetContent(x+i, y, deferred[0], deferred[1:], style)
 		i += dwidth
 	}
+	scrn.Show()
 }
-
 
 func main() {
 	var INBUF, HomeDir string
@@ -244,16 +235,16 @@ func main() {
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 	var err error
 
-//    encoding.Register()   // I don't know why this is here.  It came from the test tcell code.
+	//    encoding.Register()   // I don't know why this is here.  It came from the test tcell code.
 
-	scrn, e := tcell.NewScreen()
-	if e != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", e)
+	scrn, err = tcell.NewScreen()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
-	if e = scrn.Init(); e != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", e)
+	if err = scrn.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
@@ -265,6 +256,21 @@ func main() {
 		Foreground(tcell.ColorWhite).
 		Background(tcell.ColorBlack))
 	scrn.Clear()
+
+	style = tcell.StyleDefault
+	plain = tcell.StyleDefault
+	bold = style.Bold(true)
+	reverse = style.Reverse(true)
+	BrightCyanBlack = style.Background(tcell.ColorBlack).Foreground(tcell.ColorLightCyan)
+	BrightYellowBlack = style.Background(tcell.ColorBlack).Foreground(tcell.ColorLightYellow)
+	BoldCyanBlack = style.Foreground(tcell.ColorLightCyan).Background(tcell.ColorBlack).Bold(true)
+	BoldYellowBlack = style.Foreground(tcell.ColorLightYellow).Background(tcell.ColorBlack).Bold(true)
+
+	style = bold
+	putln("RPN Calculator written in Go.  Last updated")
+	putln(LastAltered)
+	putln("")
+	style = plain
 
 	stringslice = make([]string, 0, 35)
 	sigfig = -1 // now only applies to WriteRegToScreen
@@ -305,7 +311,7 @@ func main() {
 		theFileExists = false
 	} else if err != nil {
 		log.Printf(" Error from os.Open(Storage1FileName).  Possibly because no Stack File found: %v\n", err)
-		putfln( "Error from os.Open(Storage1FileName.  Possibly because nostack file found: %v ", err)
+		putfln("Error from os.Open(Storage1FileName.  Possibly because nostack file found: %v ", err)
 		theFileExists = false
 	}
 	if theFileExists {
@@ -336,7 +342,7 @@ func main() {
 	if len(os.Args) > 1 {
 		INBUF = getcommandline.GetCommandLineString()
 	} else {
-//		Print_tb(x, PromptRow, BrightCyan, Black, InputPrompt)
+		//		Print_tb(x, PromptRow, BrightCyan, Black, InputPrompt)
 		puts(scrn, BrightCyanBlack, x, PromptRow, InputPrompt)
 		x += len(InputPrompt) + 2
 		scrn.ShowCursor(x, PromptRow)
@@ -370,8 +376,8 @@ func main() {
 			Storage[i].Value = hpcalc.READX()
 			n = WriteRegToScreen(x, RegRow)
 			if n > 8 {
-				clearline(scrn, style, PromptRow)
-				clearline(scrn, style, OutputRow)
+				clearline(PromptRow)
+				clearline(OutputRow)
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
 				PromptRow = StartRow + 1   // used to be OutputRow -1
 			}
@@ -422,11 +428,13 @@ func main() {
 		} else if strings.HasPrefix(INBUF, "OUTPUTGE") { // allow outputgen, etc.
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
-			HardClearScreen()
-			err := termbox.Sync() // added 12/24/19
+			//			HardClearScreen()
+			//			err := termbox.Sync() // added 12/24/19
+			scrn.Clear()
 			if err != nil {
 				log.Println(" error from termbox sync()", err)
-				Printf_tb(1, OutputRow+8, BrightCyan, Black, " termbox sync failed w/ err %v", err)
+				//				Printf_tb(1, OutputRow+8, BrightCyan, Black, " termbox sync failed w/ err %v", err)
+				putf(1, OutputRow+8, " termbox sync failed w/ err %v", err)
 				_ = fmt.Errorf("termbox sync failed w/ error %v \n", err)
 			}
 			//      err = termbox.Clear(BrightYellow,Black);
@@ -434,20 +442,25 @@ func main() {
 		} else if INBUF == "REPAINT" {
 			RepaintScreen(StartCol)
 		} else if INBUF == "DEBUG" {
-			Printf_tb(x, OutputRow+8, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
+			//			Printf_tb(x, OutputRow+8, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
+			style = BrightCyanBlack
+			putf(x, OutputRow+8, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
+			//			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
+			putf(0, OutputRow+9, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
 
-			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
-
-			Printf_tb(StartCol, OutputRow+10, BrightYellow, Black, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d",
+			style = BrightYellowBlack
+			putf(StartCol, OutputRow+10, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d",
 				StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
-			Printf_tb(StartCol, OutputRow+11, BrightYellow, Black, " DisplayCol=%d", DisplayCol)
-			Printf_tb(x, OutputRow+13, BrightYellow, Black, " StorageFullFilename 1:%s, 2:%s, 3:%s", StorageFullFilename, Storage2FullFilename, Storage3FullFilename)
+			putf(StartCol, OutputRow+11, " DisplayCol=%d", DisplayCol)
+			putf(x, OutputRow+13, " StorageFullFilename 1:%s, 2:%s, 3:%s", StorageFullFilename, Storage2FullFilename, Storage3FullFilename)
+			style = BrightCyanBlack
 		} else if strings.HasPrefix(INBUF, ":W") || strings.HasPrefix(INBUF, "WR") {
 			xstring := GetXstring()
 			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 			if err != nil {
-				Printf_tb(0, OutputRow, BrightYellow, Black, " Error %v while opening %s", err, TextFilenameOut)
-				os.Exit(1)
+				style = BrightYellowBlack
+				putf(0, OutputRow, " Error %v while opening %s", err, TextFilenameOut)
+				//os.Exit(1)
 			}
 			defer XStringFile.Close()
 			XstringWriter := bufio.NewWriter(XStringFile)
@@ -469,12 +482,17 @@ func main() {
 			XstringFileExists := true
 			XstringFile, err := os.Open(TextFilenameIn) // open for reading
 			if os.IsNotExist(err) {
-				Printf_tb(0, OutputRow, BrightYellow, Black, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				style = BrightYellowBlack
+				putf(0, OutputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				style = BrightCyanBlack
 				XstringFileExists = false
 			} else if err != nil {
-				Printf_tb(0, OutputRow, BrightYellow, Black, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				style = BrightYellowBlack
+				putf(0, OutputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+				style = BrightCyanBlack
 				XstringFileExists = false
 			}
+
 			if XstringFileExists {
 				defer XstringFile.Close()
 				XstringScanner := bufio.NewScanner(XstringFile)
@@ -496,29 +514,33 @@ func main() {
 			// ----------------------------------------------------------------------------------------------
 			y := OutputRow
 			for _, s := range stringslice {
-				Print_tb(x, y, BrightYellow, Black, s)
+				puts(scrn, BrightYellowBlack, x, y, s)
 				y++
 			}
+
 			for y < MaxRow {
-				ClearLine(y)
+				clearline(y)
 				y++
 			}
 		}
 		// Don't understand why this next line helps stabilize the output display, but it does.
-		Print_tb(x, OutputRow+len(stringslice)+1, BrightCyan, Black, "-------------")
+		//Print_tb(x, OutputRow+len(stringslice)+1, BrightCyan, Black, "-------------")
 
 		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
-			Printf_tb(x, OutputRow+1, BrightYellow, Black, " Last altered rpnterm %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
+			style = BrightYellowBlack
+			putf(x, OutputRow+1, " Last altered rpnterm %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
+			style = BrightCyanBlack
 		}
 
 		if !(INBUF == "CLEAR" || INBUF == "CLS") {
 			RepaintScreen(StartCol)
 		}
 		x = StartCol
-		Print_tb(x, PromptRow, BrightCyan, Black, InputPrompt)
+		puts(scrn, BrightCyanBlack, x, PromptRow, InputPrompt)
 		x += len(InputPrompt) + 2
-		termbox.SetCursor(x, PromptRow)
+		scrn.ShowCursor(x, PromptRow)
+		scrn.Show()
 		ans := GetInputString(x, PromptRow)
 		INBUF = strings.ToUpper(ans)
 		if len(INBUF) == 0 || strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" {
@@ -578,14 +600,6 @@ func main() {
 
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
-
-	// These are already deferred, so this essentially calls them twice.
-	//	err = termbox.Sync()
-	//	checkmsg(err, "after termbox.Sync")
-	//	err = termbox.Flush()
-	//	checkmsg(err, "after termbox.flush")
-	//	termbox.Close()
-
 } // main in rpnterm.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
@@ -621,7 +635,8 @@ func WriteRegToScreen(x, y int) int { // Outputs the number of reg's that are no
 	for i, r := range Storage {
 		if r.Value != 0.0 {
 			if FirstNonZeroStorageFlag {
-				Print_tb(x, y, BrightYellow, Black, "The following storage registers are not zero")
+				//				Print_tb(x, y, BrightYellow, Black, "The following storage registers are not zero")
+				puts(scrn, BrightYellowBlack, x, y, "The following storage registers are not zero")
 				y++
 				FirstNonZeroStorageFlag = false
 			} // if firstnonzerostorageflag
@@ -639,24 +654,30 @@ func WriteRegToScreen(x, y int) int { // Outputs the number of reg's that are no
 				s = strconv.FormatFloat(r.Value, 'g', sigfig, 64) // sigfig of -1 means max sigfig.
 			}
 
-			Printf_tb(x, y, BrightCyan, Black, " Reg [%s], %s =  %s", ch, r.Name, s)
+			//			Printf_tb(x, y, BrightCyan, Black, " Reg [%s], %s =  %s", ch, r.Name, s)
+			style = BrightCyanBlack
+			putf(x, y, " Reg [%s], %s =  %s", ch, r.Name, s)
 			y++
 			n++
 		} // if storage value is not zero
 	} // for range over Storage
 	if FirstNonZeroStorageFlag {
-		Print_tb(x, y, BrightYellow, Black, " All storage registers are zero.")
+		//		Print_tb(x, y, BrightYellow, Black, " All storage registers are zero.")
+		puts(scrn, BrightYellowBlack, x, y, " All storage registers are zero.")
 		y++
 	}
+	style = BrightCyanBlack
 	return n
 } // WriteRegToScreen
 
 // --------------------------------------------------------- WriteDisplayTapeToScreen ----------------
 func WriteDisplayTapeToScreen(x, y int) {
-	Print_tb(x, y, BrightCyan, Black, "DisplayTape")
+	//	Print_tb(x, y, BrightCyan, Black, "DisplayTape")
+	puts(scrn, BrightCyanBlack, x, y, "DisplayTape")
 	y++
 	for _, s := range DisplayTape {
-		Print_tb(x, y, BrightYellow, Black, s)
+		//		Print_tb(x, y, BrightYellow, Black, s)
+		puts(scrn, BoldYellowBlack, x, y, s)
 		y++
 	} // for ranging over DisplayTape slice of strings
 } // WriteDisplayTapeToScreen
@@ -676,49 +697,11 @@ func checkmsg(err error, msg string) {
 	}
 }
 
-// ------------------------------------------------------- init -----------------------------------
-func init() { // start termbox in the init code doesn't work.  Don't know why.  But this init does work.
-	clear = make(map[string]func())
-	clear["linux"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("clear")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
-
-	clear["windows"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("cmd", "/c", "cls")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
-}
-
 // --------------------------------------------------- Cap -----------------------------------------
 func Cap(c rune) rune {
 	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
 	return r
 } // Cap
-
-/*
-// --------------------------------------------------- Print_tb -----------------------------------termbox
-func Print_tb(x, y int, fg, bg termbox.Attribute, msg string) {
-	for _, c := range msg {
-		termbox.SetCell(x, y, c, fg, bg)
-		x++
-	}
-	ClearEOL(x, y)
-	e := termbox.Flush()
-	if e != nil {
-		panic(e)
-	}
-}
-
-//----------------------------------------------------- Printf_tb ---------------------------------bermbox
-func Printf_tb(x, y int, fg, bg termbox.Attribute, format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
-	Print_tb(x, y, fg, bg, s)
-}
-*/
-
 
 // --------------------------------------------------- GetInputString for tcell--------------------------------------
 
@@ -804,15 +787,15 @@ func GetInputString(x, y int) string {
 			return string(bs)
 
 		case <-helpchan:
-			putfln( "help message received.  %s", "enter key is delimiter")
+			putfln("help message received.  %s", "enter key is delimiter")
 			return "help"
 
 		case <-delchan:
 			if len(bs) > 0 {
 				bs = bs[:len(bs)-1]
 			}
-			puts(scrn,style,x+len(bs),y," ")
-			scrn.ShowCursor(x+len(bs),y)
+			puts(scrn, style, x+len(bs), y, " ")
+			scrn.ShowCursor(x+len(bs), y)
 			scrn.Show()
 
 		case <-upchan:
@@ -851,7 +834,202 @@ func GetInputString(x, y int) string {
 	}
 } // GetInputString for tcell
 
+// ------------------------------------------- GetXstring ------------------------------------------
+func GetXstring() string {
 
+	if outputmode == outputfix {
+		_, stringslice = hpcalc.GetResult("DUMPFIXED")
+	} else if outputmode == outputfloat {
+		_, stringslice = hpcalc.GetResult("DUMPFLOAT")
+	} else if outputmode == outputgen {
+		_, stringslice = hpcalc.GetResult("DUMP")
+	}
+	return stringslice[len(stringslice)-2]
+}
+
+// ------------------------------------------- WriteStack ------------------------------------------
+func WriteStack(x, y int) {
+
+	if outputmode == outputfix {
+		_, stringslice = hpcalc.GetResult("DUMPFIXED")
+	} else if outputmode == outputfloat {
+		_, stringslice = hpcalc.GetResult("DUMPFLOAT")
+	} else if outputmode == outputgen {
+		_, stringslice = hpcalc.GetResult("DUMP")
+	}
+
+	puts(scrn, BrightYellowBlack, x+10, y, stringslice[len(stringslice)-2])
+	y++
+	for _, s := range stringslice {
+		puts(scrn, BrightCyanBlack, x, y, s)
+		y++
+	}
+} // end WriteStack
+
+//--------------------------------------------- WriteHelp -------------------------------------------
+func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while ago, but I didn't log when.
+	var HelpFile *bufio.Writer
+
+	_, helpstringslice := hpcalc.GetResult("HELP")
+	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
+	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
+	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
+	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
+	helpstringslice = append(helpstringslice, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
+	helpstringslice = append(helpstringslice, fmt.Sprintf(" :w, wr -- write X register to text file %s.", TextFilenameOut))
+	helpstringslice = append(helpstringslice, fmt.Sprintf(" :r, rd, read -- read X register from first line of %s.", TextFilenameIn))
+	helpstringslice = append(helpstringslice, " Debug -- Print debugging message to screen.")
+	helpstringslice = append(helpstringslice, " SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
+	helpstringslice = append(helpstringslice, " outputfix, outputfloat, outputgen -- sets output mode for displayed numbers.")
+
+	// Will always open this file in the current working directory instead of the HomeDir.
+	// This is different than rpnterm, which only writes this file if it's not already there.
+	HelpOut, err := os.Create(HelpFileName)
+	check(err)
+	defer HelpOut.Close()
+	HelpFile = bufio.NewWriter(HelpOut)
+	defer HelpFile.Flush()
+
+	for _, s := range helpstringslice {
+		HelpFile.WriteString(s)
+		HelpFile.WriteRune('\n')
+	}
+
+	HelpFile.Flush()
+	HelpOut.Close()
+
+	if y+len(helpstringslice) >= MaxRow {
+		FI, err := os.Stat(HelpFileName)
+		check(err)
+		//		Printf_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  See %s.", HelpFileName)
+		style = BrightYellowBlack
+		putf(x, y, " Too many help lines for this small screen.  See %s.", HelpFileName)
+		yr, m, d := FI.ModTime().Date()
+		putf(x, y, "%s from %d/%d/%d is in current directory.", FI.Name(), m, d, yr)
+		style = BrightCyanBlack
+		return
+	}
+
+	scrn.SetStyle(tcell.StyleDefault.
+		Foreground(tcell.ColorWhite).
+		Background(tcell.ColorBlack))
+	scrn.Clear()
+
+	for _, s := range helpstringslice {
+		putln(s)
+	}
+
+	style = BrightCyanBlack
+	putln(" pausing ")
+	scrn.ShowCursor(x+11, y)
+	_ = GetInputString(x+11, y)
+	y++
+
+	scrn.SetStyle(tcell.StyleDefault.
+		Foreground(tcell.ColorWhite).
+		Background(tcell.ColorBlack))
+	scrn.Clear()
+
+	RepaintScreen(x)
+} // end WriteHelp
+
+// ------------------------------------------------------- Repaint ----------------------------------
+func RepaintScreen(x int) {
+
+	// Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)  Removed 4/15/19
+	WriteStack(x, StackRow)
+	n = WriteRegToScreen(x, RegRow)
+	if n > 8 {
+		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
+		PromptRow = StartRow + 1   // PromptRow = OutputRow - 1 was prev assignment.
+	}
+	WriteDisplayTapeToScreen(DisplayCol, StackRow)
+	//	Printf_tb(x, MaxRow-1, BrightCyan, Black, Divider)  Not needed for tcell
+}
+
+// -------------------------------------------------- GetNameStr --------------------------------
+func GetNameStr() string {
+	var ans string
+	promptstr := "   Input name string, making - or = into a space : "
+	puts(scrn, BrightYellowBlack, 1, PromptRow, promptstr)
+	ans = GetInputString(len(promptstr)+2, PromptRow)
+	answer := strings.ToUpper(ans) // don't return a ToUpper(ans)
+	if answer == "TODAY" || answer == "T" {
+		m, d, y := timlibg.TIME2MDY()
+		ans = timlibg.MDY2STR(m, d, y)
+	} else {
+		ans = StrSubst(ans) // will make - or = into a space.
+	}
+	return ans
+}
+
+// -------------------------------------------------- StrSubst -----------------------------------
+func StrSubst(instr string) string { // copied from makesubst package.
+
+	instr = strings.TrimSpace(instr)
+	inRune := make([]rune, len(instr))
+
+	for i, s := range instr {
+		switch s {
+		case '+':
+			s = ' '
+		case '-':
+			s = ' '
+		}
+		inRune[i] = s // was byte(s) before I made this a slice of runes.
+	}
+	return string(inRune)
+} // makesubst
+
+/*
+// ----------------------------------------------------- ClearLine -----------------------------------
+func ClearLine(y int) {
+	if y > MaxRow {
+		y = MaxRow
+	}
+	for x := StartCol; x <= MaxCol; x++ {
+		termbox.SetCell(x, y, 0, Black, Black) // Don't know if it matters if the char is ' ' or nil.
+	}
+	err := termbox.Flush()
+	check(err)
+} // end ClearLine
+
+// ----------------------------------------------------- HardClearScreen -----------------------------
+func HardClearScreen() {
+	err := termbox.Clear(Black, Black)
+	check(err)
+	for row := StartRow; row <= MaxRow; row++ {
+		ClearLine(row)
+	}
+	err = termbox.Flush()
+	check(err)
+}
+
+// ------------------------------------------------------ ClearEOL -----------------------------------
+func ClearEOL(x, y int) {
+	if y > MaxRow {
+		y = MaxRow
+	}
+	if x > MaxCol {
+		return
+	}
+	for i := x; i <= MaxCol; i++ {
+		termbox.SetCell(i, y, 0, Black, Black) // Don't know if it matters if the char is ' ' or nil.
+	}
+	err := termbox.Flush()
+	check(err)
+}
+// ---------------------------------------------------- ClearScreen ------------------------------------
+func ClearScreen() {
+	clearfunc, ok := clear[runtime.GOOS]
+	if ok {
+		clearfunc()
+	} else { // unsupported platform
+		panic(" The ClearScreen platform is only supported on linux or windows, at the moment")
+	}
+}
+
+*/
 
 /*
 // --------------------------------------------------- GetInputString for termbox--------------------------------------
@@ -929,211 +1107,41 @@ MainEventLoop:
 } // end GetInputString for termbox
 */
 
-// ------------------------------------------- GetXstring ------------------------------------------
-func GetXstring() string {
-
-	if outputmode == outputfix {
-		_, stringslice = hpcalc.GetResult("DUMPFIXED")
-	} else if outputmode == outputfloat {
-		_, stringslice = hpcalc.GetResult("DUMPFLOAT")
-	} else if outputmode == outputgen {
-		_, stringslice = hpcalc.GetResult("DUMP")
-	}
-	return stringslice[len(stringslice)-2]
-}
-
-// ------------------------------------------- WriteStack ------------------------------------------
-func WriteStack(x, y int) {
-
-	if outputmode == outputfix {
-		_, stringslice = hpcalc.GetResult("DUMPFIXED")
-	} else if outputmode == outputfloat {
-		_, stringslice = hpcalc.GetResult("DUMPFLOAT")
-	} else if outputmode == outputgen {
-		_, stringslice = hpcalc.GetResult("DUMP")
-	}
-
-//	Print_tb(x+10, y, BrightYellow, Black, stringslice[len(stringslice)-2])
-	puts(scrn, BrightYellowBlack, x+10, y, stringslice[len(stringslice)-2])
-	y++
-	for _, s := range stringslice {
-//		Print_tb(x, y, BrightCyan, Black, s)
-		puts(scrn, BrightCyanBlack, x, y, s)
-		y++
-	}
-} // end WriteStack
-
-//--------------------------------------------- WriteHelp -------------------------------------------
-func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while ago, but I didn't log when.
-	var HelpFile *bufio.Writer
-
-	_, helpstringslice := hpcalc.GetResult("HELP")
-	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
-	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
-	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
-	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
-	helpstringslice = append(helpstringslice, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
-	helpstringslice = append(helpstringslice, fmt.Sprintf(" :w, wr -- write X register to text file %s.", TextFilenameOut))
-	helpstringslice = append(helpstringslice, fmt.Sprintf(" :r, rd, read -- read X register from first line of %s.", TextFilenameIn))
-	helpstringslice = append(helpstringslice, " Debug -- Print debugging message to screen.")
-	helpstringslice = append(helpstringslice, " SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
-	helpstringslice = append(helpstringslice, " outputfix, outputfloat, outputgen -- sets output mode for displayed numbers.")
-
-
-	// Will always open this file in the current working directory instead of the HomeDir.
-	// This is different than rpnterm, which only writes this file if it's not already there.
-	HelpOut, err := os.Create(HelpFileName)
-	check(err)
-	defer HelpOut.Close()
-	HelpFile = bufio.NewWriter(HelpOut)
-	defer HelpFile.Flush()
-
-	for _, s := range helpstringslice {
-		HelpFile.WriteString(s)
-		HelpFile.WriteRune('\n')
-	}
-
-	HelpFile.Flush()
-	HelpOut.Close()
-
-
-	if y+len(helpstringslice) >= MaxRow {
-		FI, err := os.Stat(HelpFileName)
-		check(err)
-		//		Printf_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  See %s.", HelpFileName)
-        style = BrightYellowBlack
-		putf( x, y,  " Too many help lines for this small screen.  See %s.", HelpFileName)
-		yr, m, d := FI.ModTime().Date()
-		putf(x, y,  "%s from %d/%d/%d is in current directory.", FI.Name(), m, d, yr)
-		style = BrightCyanBlack
-		return
-	}
-
-	scrn.SetStyle(tcell.StyleDefault.
-		Foreground(tcell.ColorWhite).
-		Background(tcell.ColorBlack))
-	scrn.Clear()
-
-	P := putf
-
-
-	y = 1
-	for _, s := range helpstringslice {
-		P(x, y, s)
-		y++
-	}
-
-	style = BrightCyanBlack
-	P(x, y,  " pausing ")
-	scrn.ShowCursor(x+11, y)
-	_ = GetInputString(x+11, y)
-	y++
-
-	scrn.SetStyle(tcell.StyleDefault.
-		Foreground(tcell.ColorWhite).
-		Background(tcell.ColorBlack))
-	scrn.Clear()
-
-	RepaintScreen(x)
-} // end WriteHelp
-
 /*
-// ----------------------------------------------------- ClearLine -----------------------------------
-func ClearLine(y int) {
-	if y > MaxRow {
-		y = MaxRow
+// ------------------------------------------------------- init -----------------------------------
+func init() { // start termbox in the init code doesn't work.  Don't know why.  But this init does work.
+	clear = make(map[string]func())
+	clear["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
 	}
-	for x := StartCol; x <= MaxCol; x++ {
-		termbox.SetCell(x, y, 0, Black, Black) // Don't know if it matters if the char is ' ' or nil.
-	}
-	err := termbox.Flush()
-	check(err)
-} // end ClearLine
 
-// ----------------------------------------------------- HardClearScreen -----------------------------
-func HardClearScreen() {
-	err := termbox.Clear(Black, Black)
-	check(err)
-	for row := StartRow; row <= MaxRow; row++ {
-		ClearLine(row)
+	clear["windows"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
 	}
-	err = termbox.Flush()
-	check(err)
 }
 
-// ------------------------------------------------------ ClearEOL -----------------------------------
-func ClearEOL(x, y int) {
-	if y > MaxRow {
-		y = MaxRow
+// --------------------------------------------------- Print_tb -----------------------------------termbox
+func Print_tb(x, y int, fg, bg termbox.Attribute, msg string) {
+	for _, c := range msg {
+		termbox.SetCell(x, y, c, fg, bg)
+		x++
 	}
-	if x > MaxCol {
-		return
+	ClearEOL(x, y)
+	e := termbox.Flush()
+	if e != nil {
+		panic(e)
 	}
-	for i := x; i <= MaxCol; i++ {
-		termbox.SetCell(i, y, 0, Black, Black) // Don't know if it matters if the char is ' ' or nil.
-	}
-	err := termbox.Flush()
-	check(err)
+}
+
+//----------------------------------------------------- Printf_tb ---------------------------------bermbox
+func Printf_tb(x, y int, fg, bg termbox.Attribute, format string, args ...interface{}) {
+	s := fmt.Sprintf(format, args...)
+	Print_tb(x, y, fg, bg, s)
 }
 */
-// ------------------------------------------------------- Repaint ----------------------------------
-func RepaintScreen(x int) {
-
-	// Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)  Removed 4/15/19
-	WriteStack(x, StackRow)
-	n = WriteRegToScreen(x, RegRow)
-	if n > 8 {
-		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = StartRow + 1   // PromptRow = OutputRow - 1 was prev assignment.
-	}
-	WriteDisplayTapeToScreen(DisplayCol, StackRow)
-//	Printf_tb(x, MaxRow-1, BrightCyan, Black, Divider)  Not needed for tcell
-}
-
-// ---------------------------------------------------- ClearScreen ------------------------------------
-func ClearScreen() {
-	clearfunc, ok := clear[runtime.GOOS]
-	if ok {
-		clearfunc()
-	} else { // unsupported platform
-		panic(" The ClearScreen platform is only supported on linux or windows, at the moment")
-	}
-}
-
-// -------------------------------------------------- GetNameStr --------------------------------
-func GetNameStr() string {
-	var ans string
-	promptstr := "   Input name string, making - or = into a space : "
-	puts(scrn, BrightYellowBlack,1, PromptRow, promptstr)
-	ans = GetInputString(len(promptstr)+2, PromptRow)
-	answer := strings.ToUpper(ans)  // don't return a ToUpper(ans)
-	if answer == "TODAY" || answer == "T" {
-		m, d, y := timlibg.TIME2MDY()
-		ans = timlibg.MDY2STR(m, d, y)
-	} else {
-		ans = StrSubst(ans) // will make - or = into a space.
-	}
-	return ans
-}
-
-// -------------------------------------------------- StrSubst -----------------------------------
-func StrSubst(instr string) string { // copied from makesubst package.
-
-	instr = strings.TrimSpace(instr)
-	inRune := make([]rune, len(instr))
-
-	for i, s := range instr {
-		switch s {
-		case '+':
-			s = ' '
-		case '-':
-			s = ' '
-		}
-		inRune[i] = s // was byte(s) before I made this a slice of runes.
-	}
-	return string(inRune)
-} // makesubst
-
-
 
 // ---------------------------------------------------- End rpnterm.go ------------------------------
