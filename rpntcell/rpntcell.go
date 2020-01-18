@@ -798,22 +798,22 @@ func GetInputString(x, y int) string {
 			scrn.Show()
 
 		case <-upchan:
-			return "up key, pgup, upleft, upright"
+			return "up"
 
 		case <-downchan:
-			return "down key, pgdn, downleft, downright"
+			return "dn"
 
 		case <-homechan:
-			return "home key"
+			return  "up"   // "home key"
 
 		case <-endchan:
-			return "end key"
+			return  "dn"   //"end key"
 
 		case <-rightchan:
-			return "right arrow"
+			return "~"
 
 		case <-leftchan:
-			return "left arrow"
+			return "~"
 
 		case key := <-keychannl:
 			if key == ' ' {
