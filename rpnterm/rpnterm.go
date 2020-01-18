@@ -24,7 +24,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "Dec 30, 2019"
+const LastAltered = "Jan 18, 2020"
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
 type Register struct {
@@ -129,6 +129,7 @@ REVISION HISTORY
                And checkmsg now uses fmt.Errorf so that I will see a message even if termbox is still active.  And need to respect output mode for registers.
                And fixed the condition that used to be INBUF != "CLEAR" || INBUF != "CLS", as that needed to be && there.  Picked up by go vet.
 30 Dec 19 -- Generalizing outputfix, outputfloat, and outputgen
+18 Jan 20 -- Changed naming storage registers to not force upper case.
 */
 
 func main() {
@@ -913,8 +914,8 @@ func GetNameStr() string {
 	//	ans = GetInputString(len(promptstr)+2, OutputRow)
 	Print_tb(1, PromptRow, BrightYellow, Black, promptstr)
 	ans = GetInputString(len(promptstr)+2, PromptRow)
-	ans = strings.ToUpper(ans)
-	if ans == "TODAY" || ans == "T" {
+	answer := strings.ToUpper(ans)  // don't return a forced upper case string
+	if answer == "TODAY" || answer == "T" {
 		m, d, y := timlibg.TIME2MDY()
 		ans = timlibg.MDY2STR(m, d, y)
 	} else {
