@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "Jan 18, 2020"
+const LastAltered = "Jan 19, 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -101,6 +101,7 @@ REVISION HISTORY
                And fixed the condition that used to be INBUF != "CLEAR" || INBUF != "CLS", as that needed to be && there.  Picked up by go vet.
 30 Dec 19 -- Generalizing outputfix, outputfloat, and outputgen
 17 Jan 20 -- Started converting from termbox to tcell
+19 Jan 20 -- Fixed bug in deleol
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -182,7 +183,7 @@ func deleol(x, y int) {
 	width, _ := scrn.Size() // don't need height for this calculation.
 	empty := width - x - 1
 	for i := 0; i < empty; i++ {
-		scrn.SetContent(x+i,y,' ',nil, style)  // making a blank slice kept crashing.  This direct method works.
+		scrn.SetContent(x+i,y,' ',nil, plain)  // making a blank slice kept crashing.  This direct method works.
 	}
 }
 
