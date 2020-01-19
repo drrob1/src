@@ -980,7 +980,7 @@ func main() {
 		defer OutCal12file.Flush()
 	}
 
-	// WRITE 12 PAGE CALENDAR, ONE MONTH PER PAGE
+	// write to file 12 page calendar, one month/page
 	if Cal12FilenameFlag {
 		for MN := JAN; MN <= DCM; MN++ {
 			WrMonthForXL(MN)
@@ -989,7 +989,7 @@ func main() {
 		OutCal12.Close()
 	}
 
-	// Write One Page Calendar
+	// Write to file One Page Calendar
 	if Cal1FilenameFlag {
 		WrOnePageYear()
 		OutCal1file.Flush()
@@ -1001,27 +1001,28 @@ func main() {
 
 	putf(MaxCol/3, gblrow, " Year %4d", year)
 	gblrow++
-	ShowMonth(0, LineNum, RequestedMonthNumber)
+	LineNum = gblrow // easy solution.  Harder is to replace all occurences of one w/ the other.
+	ShowMonth(0, gblrow, RequestedMonthNumber)
 	if MaxCol > 48 && RequestedMonthNumber < DEC {
-		ShowMonth(25, LineNum, RequestedMonthNumber+1)
+		ShowMonth(25, gblrow, RequestedMonthNumber+1)
 	}
 	if MaxCol > 72 && RequestedMonthNumber < NOV {
-		ShowMonth(50, LineNum, RequestedMonthNumber+2)
+		ShowMonth(50, gblrow, RequestedMonthNumber+2)
 	}
 	if MaxCol > 98 && RequestedMonthNumber < OCT {
-		ShowMonth(75, LineNum, RequestedMonthNumber+3)
+		ShowMonth(75, gblrow, RequestedMonthNumber+3)
 	}
 	if MaxCol > 122 && RequestedMonthNumber < SEP {
-		ShowMonth(100, LineNum, RequestedMonthNumber+4)
+		ShowMonth(100, gblrow, RequestedMonthNumber+4)
 	}
 	if MaxCol > 148 && RequestedMonthNumber < AUG {
-		ShowMonth(125, LineNum, RequestedMonthNumber+5)
+		ShowMonth(125, gblrow, RequestedMonthNumber+5)
 	}
 	if MaxCol > 172 && RequestedMonthNumber < JUL {
-		ShowMonth(150, LineNum, RequestedMonthNumber+6)
+		ShowMonth(150, gblrow, RequestedMonthNumber+6)
 	}
 	if MaxCol > 198 && RequestedMonthNumber < JUN {
-		ShowMonth(175, LineNum, RequestedMonthNumber+7)
+		ShowMonth(175, gblrow, RequestedMonthNumber+7)
 	}
 
 	// Now disploy next year.  No file writing.  Min 10 lines/calendar.
@@ -1030,39 +1031,39 @@ func main() {
 		YEARSTR = strconv.Itoa(year)
 		AssignYear(year)
 		HolidayAssign(year)
-		LineNum += 10
+		gblrow += 10
 		RequestedMonthNumber = 0
 
-		putf(MaxCol/3, LineNum, " Year %4d", year)
-		LineNum++
-		ShowMonth(0, LineNum, RequestedMonthNumber)
+		putf(MaxCol/3, gblrow, " Year %4d", year)
+		gblrow++
+		ShowMonth(0, gblrow, RequestedMonthNumber)
 		if MaxCol > 48 && RequestedMonthNumber < DEC {
-			ShowMonth(25, LineNum, RequestedMonthNumber+1)
+			ShowMonth(25, gblrow, RequestedMonthNumber+1)
 		}
 		if MaxCol > 72 && RequestedMonthNumber < NOV {
-			ShowMonth(50, LineNum, RequestedMonthNumber+2)
+			ShowMonth(50, gblrow, RequestedMonthNumber+2)
 		}
 		if MaxCol > 98 && RequestedMonthNumber < OCT {
-			ShowMonth(75, LineNum, RequestedMonthNumber+3)
+			ShowMonth(75, gblrow, RequestedMonthNumber+3)
 		}
 		if MaxCol > 122 && RequestedMonthNumber < SEP {
-			ShowMonth(100, LineNum, RequestedMonthNumber+4)
+			ShowMonth(100, gblrow, RequestedMonthNumber+4)
 		}
 		if MaxCol > 148 && RequestedMonthNumber < AUG {
-			ShowMonth(125, LineNum, RequestedMonthNumber+5)
+			ShowMonth(125, gblrow, RequestedMonthNumber+5)
 		}
 		if MaxCol > 172 && RequestedMonthNumber < JUL {
-			ShowMonth(150, LineNum, RequestedMonthNumber+6)
+			ShowMonth(150, gblrow, RequestedMonthNumber+6)
 		}
 		if MaxCol > 198 && RequestedMonthNumber < JUN {
-			ShowMonth(175, LineNum, RequestedMonthNumber+7)
+			ShowMonth(175, gblrow, RequestedMonthNumber+7)
 		}
 	}
 
-	LineNum := gblrow + 20
-	puts(scrn, style, 0, LineNum, " Hit <enter> to continue.")
-	scrn.ShowCursor(26, LineNum)
-	_ = GetInputString(26, LineNum)
+	gblrow += 20
+	putf(0, gblrow, " Hit <enter> to continue.")
+	scrn.ShowCursor(26, gblrow)
+	_ = GetInputString(26, gblrow)
 } // end main func
 
 // -------------------------------------------- check ---------------------------------------------
