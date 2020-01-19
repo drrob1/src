@@ -178,7 +178,7 @@ func deleol(x, y int) {
 	width, _ := scrn.Size() // don't need height for this calculation.
 	empty := width - x - 1
 	for i := 0; i < empty; i++ {
-		scrn.SetContent(x+i, y, ' ', nil, style) // making a blank slice kept crashing.  This direct method works.
+		scrn.SetContent(x+i, y, ' ', nil, plain) // making a blank slice kept crashing.  This direct method works.
 	}
 }
 
@@ -471,10 +471,11 @@ func ShowMonth(col, row, mn int) {
 			style = EntireYear[mn][W][I].styl
 			putf(x, y, EntireYear[mn][W][I].DateStr)
 			x += 3
+			style = plain
 		}
 		y++
 	}
-	style = plain
+//	style = plain
 } // END ShowMonth
 
 // ----------------------------- HolidayAssign ---------------------------------
