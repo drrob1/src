@@ -32,8 +32,7 @@ func main() {
 
 	// Connect event for button using my preferred syntax
 	onclicked := func(checked bool) {
-		widgets.QMessageBox_Information(nil, "OK", input.Text(),
-			widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		widgets.QMessageBox_Information(nil, "OK", input.Text(), widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 	}
 	button.ConnectClicked(onclicked)
 

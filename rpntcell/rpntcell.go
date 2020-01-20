@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "Jan 19, 2020"
+const LastAltered = "Jan 20, 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -99,9 +99,10 @@ REVISION HISTORY
 29 Dec 19 -- Defer statement executes in a LIFO stack.  I have to reverse the order of the defer closing statements, and remove from explicit call at end.
                And checkmsg now uses fmt.Errorf so that I will see a message even if termbox is still active.  And need to respect output mode for registers.
                And fixed the condition that used to be INBUF != "CLEAR" || INBUF != "CLS", as that needed to be && there.  Picked up by go vet.
-30 Dec 19 -- Generalizing outputfix, outputfloat, and outputgen
-17 Jan 20 -- Started converting from termbox to tcell
-19 Jan 20 -- Fixed bug in deleol
+30 Dec 19 -- Generalizing outputfix, outputfloat, and outputgen.
+17 Jan 20 -- Started converting from termbox to tcell.
+19 Jan 20 -- Fixed bug in deleol.
+20 Jan 10 -- Removed empiric fix in puts that was replaced by fixing deleol.  And decided that regular yellow is easier to see than boldyellow.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -173,8 +174,7 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig 
 		scrn.SetContent(x+i, y, r, nil, style)
 	}
 	x += len(str)
-	scrn.SetContent(x, y, ' ', nil, style) // empirically needed.  Not sure why.
-	scrn.SetContent(x+1,y,' ',nil, style)  // empirically needed.  Not sure why.
+
 	deleol(x, y) // no longer crashes here.
 	scrn.Show()
 }
@@ -446,7 +446,7 @@ func main() {
 			//			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
 			putf(0, OutputRow+9, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
 
-			style = BoldYellow
+			style = Yellow
 			putf(StartCol, OutputRow+10, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d",
 				StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
 			putf(StartCol, OutputRow+11, " DisplayCol=%d", DisplayCol)
@@ -456,7 +456,7 @@ func main() {
 			xstring := GetXstring()
 			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 			if err != nil {
-				style = BoldYellow
+				style = Yellow
 				putf(0, OutputRow, " Error %v while opening %s", err, TextFilenameOut)
 				style = Cyan
 				//os.Exit(1)
@@ -481,7 +481,7 @@ func main() {
 			XstringFileExists := true
 			XstringFile, err := os.Open(TextFilenameIn) // open for reading
 			if os.IsNotExist(err) {
-				style = BoldYellow
+				style = Yellow
 				putf(0, OutputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
 				style = Cyan
 				XstringFileExists = false
@@ -858,7 +858,7 @@ func WriteStack(x, y int) {
 		_, stringslice = hpcalc.GetResult("DUMP")
 	}
 
-	puts(scrn, BoldYellow, x+10, y, stringslice[len(stringslice)-2]) // just gets X register to be output in BoldYellow
+	puts(scrn, Yellow, x+10, y, stringslice[len(stringslice)-2]) // just gets X register to be output in Yellow
 	//	deleol(x+10+len(GetXstring()), y)
 	y++
 	for _, s := range stringslice {

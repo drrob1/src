@@ -36,6 +36,7 @@ package main
  25 Dec 19 -- Fixed termbox, I hope.
  10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
  19 Jan 20 -- Now moved to tcell as terminal interface.  Mostly copied code from rpntcell.go.
+ 20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
 */
 
 import (
@@ -61,7 +62,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Jan 19, 2020"
+const LastCompiled = "Jan 20, 2020"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -168,9 +169,8 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig 
 		scrn.SetContent(x+i, y, r, nil, style)
 	}
 	x += len(str)
-	scrn.SetContent(x, y, ' ', nil, style)   // empirically needed.  Not sure why.
-	scrn.SetContent(x+1, y, ' ', nil, style) // empirically needed.  Not sure why.
-	deleol(x, y)                             // no longer crashes here.
+
+//	deleol(x, y)   Not needed when scrn is written only once.
 	scrn.Show()
 }
 
