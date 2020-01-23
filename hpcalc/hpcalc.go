@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "30 Dec 2019"
+const LastAlteredDate = "22 Jan 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -84,6 +84,7 @@ REVISION HISTORY
 28 Jun 19 -- Added prev or previous as synonym for before
 29 Dec 19 -- For dumpfloat and dumpgen, CropNstr and addcommas do not make sense, so I took them out.  Finally!
 30 Dec 19 -- Reordered command tests, moving up PRIMEFAC
+22 Jan 20 -- Noticed that holiday command, hol, only works if X register is a valid year.  Now prints a message to remind me of that.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -814,6 +815,9 @@ func GetResult(s string) (float64, []string) {
 					ChristmasD := timlibg.JULIAN(12, 25, Y) % 7
 					ss = append(ss, fmt.Sprintf("Election Day is November %d, Veteran's Day is a %s, Thanksgiving is November %d, and Christmas Day is a %s.",
 						Holiday.Election.D, timlibg.DayNames[VetD], Holiday.Thanksgiving.D, timlibg.DayNames[ChristmasD]))
+				} else { // added 1/22/20.
+					s := " X register is not a valid year.  Command ignored."
+					ss = append(ss, s)
 				}
 			} else if Token.Str == "ABOUT" {
 				ss = append(ss, fmt.Sprintf(" last changed hpcalc.go %s", LastAlteredDate))
