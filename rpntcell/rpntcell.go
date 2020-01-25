@@ -132,8 +132,8 @@ const Storage1FileName = "RPNStorageName.gob" // Allows for a rotation of Storag
 const Storage2FileName = "RPNStorageName2.gob"
 const Storage3FileName = "RPNStorageName3.gob"
 const DisplayTapeFilename = "displaytape.txt"
-const TextFilenameOut = "rpntermoutput.txt"
-const TextFilenameIn = "rpnterminput.txt"
+const TextFilenameOut = "rpntcelloutput.txt"
+const TextFilenameIn = "rpntcellinput.txt"
 const HelpFileName = "helprpn.txt"
 
 type keyStructType struct {
@@ -529,7 +529,7 @@ func main() {
 		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
 			style = Yellow
-			putf(x, OutputRow+1, " Last altered rpnterm %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
+			putf(x, OutputRow+1, " Last altered rpntcell %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
 			style = Cyan
 		}
 
@@ -600,7 +600,7 @@ func main() {
 
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
-} // main in rpnterm.go
+} // main in rpntcell.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
 func GetRegIdx(chr byte) int {
@@ -985,4 +985,4 @@ func StrSubst(instr string) string { // copied from makesubst package.
 	return string(inRune)
 } // makesubst
 
-// ---------------------------------------------------- End rpnterm.go ------------------------------
+// ---------------------------------------------------- End rpntcell.go ------------------------------
