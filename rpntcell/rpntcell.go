@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "Jan 20, 2020"
+const LastAltered = "Jan 25, 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -103,6 +103,7 @@ REVISION HISTORY
 17 Jan 20 -- Started converting from termbox to tcell.
 19 Jan 20 -- Fixed bug in deleol.
 20 Jan 10 -- Removed empiric fix in puts that was replaced by fixing deleol.  And decided that regular yellow is easier to see than boldyellow.
+25 Jan 20 -- Substituted '=' to '+' and ';' to '*'.  Forgot about that earlier.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -824,6 +825,10 @@ func GetInputString(x, y int) string {
 					go pollevent() // need to restart the go routine to fetch more keys.
 					continue       // discard this extaneous space
 				}
+			} else if key == '=' {
+				key = '+'
+			} else if key == ';' {
+				key = '*'
 			}
 			bs = append(bs, byte(key))
 			puts(scrn, style, x, y, string(bs))
