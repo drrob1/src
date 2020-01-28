@@ -1,5 +1,5 @@
 // (C) 1990-2016.  Robert W.  Solomon.  All rights reserved.
-// rpnterm.go
+// rpntcell.go
 package main
 
 import (
