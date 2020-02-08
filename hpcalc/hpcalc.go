@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "22 Jan 2020"
+const LastAlteredDate = "8 Feb 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -85,6 +85,7 @@ REVISION HISTORY
 29 Dec 19 -- For dumpfloat and dumpgen, CropNstr and addcommas do not make sense, so I took them out.  Finally!
 30 Dec 19 -- Reordered command tests, moving up PRIMEFAC
 22 Jan 20 -- Noticed that holiday command, hol, only works if X register is a valid year.  Now prints a message to remind me of that.
+ 8 Feb 20 -- Added PopX, because discovered that ROLLDN does not affect X, by design.  I don't remember why.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -147,7 +148,17 @@ func STACKROLLDN() {
 	STACKDN()
 	Stack[T1] = TEMP
 } // STACKROLLDN
-//------------------------------------------------------ PUSHX
+
+// ----------------------------------------------------- PopX ---------------------
+func PopX() float64 {
+	x := Stack[X]
+	for S := X; S < T1; S++ {
+		Stack[S] = Stack[S+1]
+	}
+	return x
+} // PopX
+
+// ------------------------------------------------------ PUSHX
 func PUSHX(R float64) {
 	STACKUP()
 	Stack[X] = R
@@ -696,6 +707,11 @@ func GetResult(s string) (float64, []string) {
 				PushMatrixStacks()
 				Stack[X] = Stack[Y]
 				STACKDN()
+			} else if strings.HasPrefix(Token.Str, "POP") {
+				PushMatrixStacks()
+				x := PopX()
+				str := strconv.FormatFloat(x, 'g', sigfig, 64)
+				ss = append(ss, str)
 			} else if Token.Str == "INT" {
 				PushMatrixStacks()
 				LastX = Stack[X]

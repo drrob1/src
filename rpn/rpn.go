@@ -23,7 +23,7 @@ import (
 	//}}}
 )
 
-const LastCompiled = "2 Oct 18"
+const LastCompiled = "8 Feb 2020"
 
 func main() {
 	/*
@@ -61,6 +61,7 @@ func main() {
 	   26 Mar 17 -- Changed startup message to include written in Go.
 	   22 Aug 18 -- Learning about code folding
 	    2 Oct 18 -- Now using code folding.  za normal mode command toggles the fold mode where cursor is.
+	    8 Feb 20 -- Added PopX to hpcalc.go, and will test it here.
 	*/
 
 	var R float64
