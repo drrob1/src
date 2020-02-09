@@ -87,6 +87,7 @@ REVISION HISTORY
 22 Jan 20 -- Noticed that holiday command, hol, only works if X register is a valid year.  Now prints a message to remind me of that.
  8 Feb 20 -- Added PopX, because discovered that ROLLDN does not affect X, by design.  I don't remember why.
  9 Feb 20 -- HCF now reports a message and does not alter the stack.  This one I coded in cpp first, as it turns out.
+               And only a command that changes the stack needs to call PushMatrixStacks.  I removed that call from hol and a few others.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -719,7 +720,7 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				Stack[X] = math.Floor(Stack[X])
 			} else if Token.Str == "PRIME" {
-				PushMatrixStacks()
+				// PushMatrixStacks()  not needed as stack is not altered.
 				n := Round(Stack[X])
 				if IsPrime(n) {
 					ss = append(ss, fmt.Sprintf("%d is prime.", int64(n)))
@@ -745,7 +746,7 @@ func GetResult(s string) (float64, []string) {
 					ss = append(ss, fmt.Sprintf(" Cannot convert X register to hex string, as number is out of range."))
 				} // Hex command
 			} else if Token.Str == "HCF" {
-				PushMatrixStacks()
+				// PushMatrixStacks()  no longer changes the stack
 				c1 := int(math.Abs(Round(Stack[X])))
 				c2 := int(math.Abs(Round(Stack[Y])))
 				c := HCF(c2, c1)
@@ -810,7 +811,7 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				Stack[X] = -1 * Stack[X]
 			} else if Token.Str == "HOL" {
-				PushMatrixStacks()
+				// PushMatrixStacks()  Doesn't change the stack.  I don't think it ever did.
 				year := int(Round(Stack[X]))
 				if year < 40 {
 					year += 2000
@@ -850,9 +851,7 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] = math.Sqrt(Stack[X])
 			} else if strings.HasPrefix(Token.Str, "PRIMEFAC") {
 				// Intended for PrimeFactors or PrimeFactorization
-				PushMatrixStacks()
-				//				N := int(Round(Stack[X]))
-				//				PrimeFactors := PrimeFactorization(N)
+				// PushMatrixStacks()        doesn't change the stack.
 				U := uint(Round(Stack[X]))
 				PrimeUfactors := PrimeFactorMemoized(U)
 
