@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "8 Feb 2020"
+const LastAlteredDate = "9 Feb 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -86,6 +86,7 @@ REVISION HISTORY
 30 Dec 19 -- Reordered command tests, moving up PRIMEFAC
 22 Jan 20 -- Noticed that holiday command, hol, only works if X register is a valid year.  Now prints a message to remind me of that.
  8 Feb 20 -- Added PopX, because discovered that ROLLDN does not affect X, by design.  I don't remember why.
+ 9 Feb 20 -- HCF now reports a message and does not alter the stack.  This one I coded in cpp first, as it turns out.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -546,11 +547,11 @@ func HCF(a, b int) int {
 
 //------------------------------------------------------------------------- GetResults -----------
 func GetResult(s string) (float64, []string) {
-	var c, c1, c2, c3 int // these are used for the HCF command, and c3 is for the time arith commands
+	// var c, c1, c2, c3 int // these were used for the HCF and date arith commands, but were moved into a more narrow scope 9 Feb 20.
 	var I, year int
 	var Token tokenize.TokenType
 	var EOL bool
-	var Holiday holidaycalc.HolType
+	// var Holiday holidaycalc.HolType  Moved into a more narrow scope, as it's only used in the hol command.  Done 9 Feb 20.
 	ss := make([]string, 0, 100) // stringslice is too long to keep having to type, esp in the help section.
 
 	tokenize.INITKN(s)
@@ -660,6 +661,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 				ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
 				ss = append(ss, " , or UP -- stack up.  | or DN -- stack down.")
+				ss = append(ss, " Pop -- displays X and then moves stack down.")
 				ss = append(ss, " Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.")
 				ss = append(ss, " EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.")
 				ss = append(ss, " ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X")
@@ -744,11 +746,12 @@ func GetResult(s string) (float64, []string) {
 				} // Hex command
 			} else if Token.Str == "HCF" {
 				PushMatrixStacks()
-				c1 = int(math.Abs(Round(Stack[X])))
-				c2 = int(math.Abs(Round(Stack[Y])))
-				c = HCF(c2, c1)
-				STACKUP()
-				Stack[X] = float64(c)
+				c1 := int(math.Abs(Round(Stack[X])))
+				c2 := int(math.Abs(Round(Stack[Y])))
+				c := HCF(c2, c1)
+				ss = append(ss, fmt.Sprintf("HCF of %d and %d is %d.", c1, c2, c))
+				//STACKUP()
+				//Stack[X] = float64(c)
 			} else if Token.Str == "P" {
 				//  essentially do nothing but print RESULT= line again.
 			} else if Token.Str == "FRAC" {
@@ -779,14 +782,14 @@ func GetResult(s string) (float64, []string) {
 				PushMatrixStacks()
 				LastX = Stack[X]
 				STACKUP()
-				c1, c2, c3 = timlibg.TIME2MDY()
+				c1, c2, c3 := timlibg.TIME2MDY()
 				Stack[X] = float64(timlibg.JULIAN(c1, c2, c3))
 			} else if Token.Str == "GREG" {
 				PushMatrixStacks()
 				LastX = Stack[X]
 				STACKUP()
 				STACKUP()
-				c1, c2, c3 = timlibg.GREGORIAN(int(Round(Stack[X])))
+				c1, c2, c3 := timlibg.GREGORIAN(int(Round(Stack[X])))
 				Stack[Z] = float64(c1)
 				Stack[Y] = float64(c2)
 				Stack[X] = float64(c3)
@@ -808,14 +811,14 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] = -1 * Stack[X]
 			} else if Token.Str == "HOL" {
 				PushMatrixStacks()
-				year = int(Round(Stack[X]))
+				year := int(Round(Stack[X]))
 				if year < 40 {
 					year += 2000
 				} else if year < 100 {
 					year += 1900
 				}
 				if (year >= 1900) && (year <= 2100) {
-					Holiday = holidaycalc.GetHolidays(year)
+					Holiday := holidaycalc.GetHolidays(year)
 					Holiday.Valid = true
 					ss = append(ss, fmt.Sprintf(" For year %d:", Holiday.Year))
 					Y := Holiday.Year
