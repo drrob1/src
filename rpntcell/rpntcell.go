@@ -105,6 +105,7 @@ REVISION HISTORY
 20 Jan 10 -- Removed empiric fix in puts that was replaced by fixing deleol.  And decided that regular yellow is easier to see than boldyellow.
 25 Jan 20 -- Substituted '=' to '+' and ';' to '*'.  Forgot about that earlier.
 16 Feb 20 -- Will use ! to recall a command in the history string slice.  Like what bash can do.  I don't need a factorial command anyway.
+               Now it counts from bottom, where ! is last command, and !1 is next cmd.  Not sure if I want it to count from the top.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -686,9 +687,9 @@ func WriteDisplayTapeToScreen(x, y int) {
 	//	Print_tb(x, y, BrightCyan, Black, "DisplayTape")
 	puts(scrn, Cyan, x, y, "DisplayTape")
 	y++
-	for _, s := range DisplayTape {
-		//		Print_tb(x, y, BrightYellow, Black, s)
-		puts(scrn, Green, x, y, s)
+	for i, s := range DisplayTape {
+		str := fmt.Sprintf("%d  %s", i, s)
+		puts(scrn, Green, x, y, str)
 		y++
 	} // for ranging over DisplayTape slice of strings
 } // WriteDisplayTapeToScreen
@@ -1006,6 +1007,9 @@ func GetHx(posn int) string {
 
 	// posn 0 is last entry, not first.  If it is to be the first entry then I have to allow multidigit int, not just 1 char.
 	i := len(DisplayTape) - 1 - posn
+	if i < 0 {
+		return ""
+	}
 	str = DisplayTape[i]
 	return str
 } // GetHx
