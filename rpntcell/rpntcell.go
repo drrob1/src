@@ -899,6 +899,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	helpstringslice = append(helpstringslice, " Debug -- Print debugging message to screen.")
 	helpstringslice = append(helpstringslice, " SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
 	helpstringslice = append(helpstringslice, " outputfix, outputfloat, outputgen -- sets output mode for displayed numbers.")
+	helpstringslice = append(helpstringslice, " !N -- Recall history, hx.  N=0 means last command.")
 
 	// Will always open this file in the current working directory instead of the HomeDir.
 	// This is different than rpnterm, which only writes this file if it's not already there.
