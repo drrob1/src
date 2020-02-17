@@ -688,7 +688,11 @@ func WriteDisplayTapeToScreen(x, y int) {
 	puts(scrn, Cyan, x, y, "DisplayTape")
 	y++
 	for i, s := range DisplayTape {
-		str := fmt.Sprintf("%d  %s", i, s)
+		idx := len(DisplayTape) - 1 - i
+		if idx < 0 {
+			idx = 0
+		}
+		str := fmt.Sprintf("%d  %s", idx, s)
 		puts(scrn, Green, x, y, str)
 		y++
 	} // for ranging over DisplayTape slice of strings
