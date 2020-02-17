@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "Jan 25, 2020"
+const LastAltered = "17 Feb 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -104,6 +104,7 @@ REVISION HISTORY
 19 Jan 20 -- Fixed bug in deleol.
 20 Jan 10 -- Removed empiric fix in puts that was replaced by fixing deleol.  And decided that regular yellow is easier to see than boldyellow.
 25 Jan 20 -- Substituted '=' to '+' and ';' to '*'.  Forgot about that earlier.
+16 Feb 20 -- Will use ! to recall a command in the history string slice.  Like what bash can do.  I don't need a factorial command anyway.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -184,7 +185,7 @@ func deleol(x, y int) {
 	width, _ := scrn.Size() // don't need height for this calculation.
 	empty := width - x - 1
 	for i := 0; i < empty; i++ {
-		scrn.SetContent(x+i,y,' ',nil, plain)  // making a blank slice kept crashing.  This direct method works.
+		scrn.SetContent(x+i, y, ' ', nil, plain) // making a blank slice kept crashing.  This direct method works.
 	}
 }
 
@@ -276,7 +277,7 @@ func main() {
 	bold = style.Bold(true)
 	reverse = style.Reverse(true)
 
-//	style = bold     looks ugly.  I'm removing it.
+	//	style = bold     looks ugly.  I'm removing it.
 	putfln("RPN Calculator written in Go.  Last updated %s.", LastAltered)
 	style = plain
 
@@ -367,7 +368,18 @@ func main() {
 	hpcalc.PushMatrixStacks()
 
 	for len(INBUF) > 0 { // Main processing loop
-		DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
+		// check for new use history command patterned after bash, ie, using ! to start it.
+		if strings.HasPrefix(INBUF, "!") {
+			i := 0
+			if len(INBUF) > 1 {
+				ch := INBUF[1] // the 2nd position
+				i = GetRegIdx(ch)
+			}
+			INBUF = GetHx(i)
+		} else { // only put typed command lines into the hx.
+			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
+		}
+
 		x = StartCol
 		// These commands are not run thru hpcalc as they are processed before calling GetResult.
 		if INBUF == "ZEROREG" {
@@ -523,8 +535,6 @@ func main() {
 				y++
 			}
 		}
-		// Don't understand why this next line helps stabilize the output display, but it does.
-		//Print_tb(x, OutputRow+len(stringslice)+1, BrightCyan, Black, "-------------")
 
 		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
@@ -806,10 +816,10 @@ func GetInputString(x, y int) string {
 			return "dn"
 
 		case <-homechan:
-			return  "up"   // "home key"
+			return "up" // "home key"
 
 		case <-endchan:
-			return  "dn"   //"end key"
+			return "dn" //"end key"
 
 		case <-rightchan:
 			return "~"
@@ -984,5 +994,20 @@ func StrSubst(instr string) string { // copied from makesubst package.
 	}
 	return string(inRune)
 } // makesubst
+
+// ------------------------------------------------ GetHx --------------------------------------
+func GetHx(posn int) string {
+	// DisplayTape is global
+	var str string
+
+	if len(DisplayTape) < posn {
+		return " " // need a space else the pgm will exit
+	}
+
+	// posn 0 is last entry, not first.  If it is to be the first entry then I have to allow multidigit int, not just 1 char.
+	i := len(DisplayTape) - 1 - posn
+	str = DisplayTape[i]
+	return str
+} // GetHx
 
 // ---------------------------------------------------- End rpntcell.go ------------------------------
