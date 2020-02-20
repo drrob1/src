@@ -28,6 +28,6 @@ func main() {
    widget.Layout().AddWidget(button)
 
    window.Show()
-   
+
    widgets.QApplication_Exec()
 }
