@@ -32,6 +32,7 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create labes to be displayed by itself, as another example of widgets without a parent are displayed in their own window.
+	// And the Show() method gets called on a variable (object) of this type.
 
 	text := "What do you know about this business? the King said to Alice. \n Nothing said Alice. \n Nothing whatever? persisted the King.\n'Nothing whatever,' said Alice."
 	label := widgets.NewQLabel2(text, nil, 0)
