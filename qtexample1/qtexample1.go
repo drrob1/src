@@ -2,8 +2,27 @@ package main
 
 import (
 	"github.com/therecipe/qt/widgets"
+	"github.com/therecipe/qt/gui"
 	"os"
 )
+
+/*
+Widgets-getting started w/ Qt 5, first example I found in the book.  Its purpose is to show that a widget without a parent object becomes the main window.
+
+#include <QApplication>
+#include <QPushButton>
+int main(int argc, char *argv[])
+{
+   QApplication app(argc, argv);
+   QPushButton myButton(QIcon("filesaveas.png"),"Push Me");
+   myButton.setToolTip("Click this to turn back the hands of time");
+   myButton.show();
+return app.exec();
+}
+
+
+ */
+
 
 // these are going to be annotated with the definitations now present in widgets.go that I d/l from github.com on 02/19/2020 9:38:34 PM
 func main() {
@@ -27,8 +46,14 @@ func main() {
 	input.SetPlaceholderText("1. write something")  //   func (ptr *QLineEdit) SetPlaceholderText(vqs string)
 	layout.AddWidget(input, 0, 0)  //  func (ptr *QBoxLayout) AddWidget(widget QWidget_ITF, stretch int, alignment core.Qt__AlignmentFlag)
 
+	// create a QIcon
+//	icon := gui.NewQIcon5("Nike.jpg")  this works
+	icon := gui.NewQIcon5("Nike.tif")  // this works, too
+
 	// Create a button and add it to the layout
-	button := widgets.NewQPushButton2("2. click me", mainWidget)  //  func NewQPushButton(parent QWidget_ITF) *QPushButton
+//	button := widgets.NewQPushButton2("2. click me", mainWidget)  //  func NewQPushButton2(text string, parent QWidget_ITF) *QPushButton
+	button := widgets.NewQPushButton3(icon,"2. click me", mainWidget)  //  func NewQPushButton3(icon gui.QIcon_ITF, text string, parent QWidget_ITF) *QPushButton
+	button.SetToolTip("Click this to turn back the hands of time.")
 	layout.AddWidget(button, 0, 0)  //  func (ptr *QBoxLayout) AddWidget(widget QWidget_ITF, stretch int, alignment core.Qt__AlignmentFlag)
 
 	// Connect event for button using my preferred syntax
