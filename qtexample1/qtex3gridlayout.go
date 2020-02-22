@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
    layout->addWidget(firstNameLineEdit, 0, 1);
    layout->addWidget(lastNameLineEdit, 0, 2);
    layout->addWidget(ageSpinBox, 1, 0);
-   layout->addWidget(employmentStatusComboBox, 1, 1,1,2);
+   layout->addWidget(employmentStatusComboBox, 1, 1,1,2);   // this is intended as a row span from (1,1) to (1,2)
    window->setLayout(layout);
    window->show();
 return app.exec();
@@ -72,7 +72,7 @@ func main() {
 	layout.AddWidget2(firstNameLineEdit, 0, 1, core.Qt__AlignLeft)
 	layout.AddWidget2(lastNameLineEdit, 0, 2, core.Qt__AlignLeft)
 	layout.AddWidget2(ageSpinBox, 1, 0, core.Qt__AlignLeft)
-	layout.AddWidget2(employmentStatusComboBox, 1, 1, core.Qt__AlignLeft)
+	layout.AddWidget3(employmentStatusComboBox, 1, 1,1,2, core.Qt__AlignLeft) // a row span
 
 	window.SetCentralWidget(mainwidget)
 //	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
