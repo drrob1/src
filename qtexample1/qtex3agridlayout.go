@@ -45,7 +45,8 @@ return app.exec();
 */
 
 // this one will be closer to the book, using nil as parent and see if it works without a mainwidget as central widget.
-// Turns out that it does not work, but does not give any errors.
+// Turns out that it does not work when I use nil, but does not give any errors.
+// And it doesn't work without a mainwidget, even when I create the widgets with window as the parent.
 func main() {
 	// Create application
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
@@ -57,18 +58,18 @@ func main() {
 
 	//mainwidget := widgets.NewQWidget(nil, 0)
 
-	nameLabel := widgets.NewQLabel2("Open Happiness", nil, 0)
-	firstNameLineEdit := widgets.NewQLineEdit(nil)
-	lastNameLineEdit := widgets.NewQLineEdit(nil)
-	ageSpinBox := widgets.NewQSpinBox(nil)
+	nameLabel := widgets.NewQLabel2("Open Happiness", window, 0)
+	firstNameLineEdit := widgets.NewQLineEdit(window)
+	lastNameLineEdit := widgets.NewQLineEdit(window)
+	ageSpinBox := widgets.NewQSpinBox(window)
 	ageSpinBox.SetRange(1,100)
 
-	employmentStatusComboBox := widgets.NewQComboBox(nil)
+	employmentStatusComboBox := widgets.NewQComboBox(window)
 	employmentStatusStringSlice := []string{"Unemployed", "Employed", "NA"}
 	employmentStatusComboBox.AddItems(employmentStatusStringSlice)
 
 	// Create grid layout
-	layout := widgets.NewQGridLayout(nil)
+	layout := widgets.NewQGridLayout(window)
 	layout.AddWidget2(nameLabel, 0, 0, core.Qt__AlignLeft)
 	layout.AddWidget2(firstNameLineEdit, 0, 1, core.Qt__AlignLeft)
 	layout.AddWidget2(lastNameLineEdit, 0, 2, core.Qt__AlignLeft)
