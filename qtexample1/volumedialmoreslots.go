@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/therecipe/qt/core"
+	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
 	"os"
 )
@@ -10,6 +12,7 @@ import (
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QDial>
+#include <QLCDNumber>
 int main(int argc, char *argv[])
 {
    QApplication app(argc, argv);
@@ -17,10 +20,19 @@ int main(int argc, char *argv[])
    QVBoxLayout *layout = new QVBoxLayout;
    QLabel *volumeLabel = new QLabel("0");
    QDial *volumeDial= new QDial;
+   QLCDNumber *volumeLCD = new QLCDNumber;
+   volumeLCD->setPalette(Qt::red);
+   volumeLabel->setAlignment(Qt::AlignHCenter);
+   volumeDial->setNotchesVisible(true);
+   volumeDial->setMinimum(0);
+   volumeDial->setMaximum(100);
    layout->addWidget(volumeDial);
    layout->addWidget(volumeLabel);
+   layout->addWidget(volumeLCD);
    QObject::connect(volumeDial, SIGNAL(valueChanged(int)), volumeLabel,
    SLOT(setNum(int)));
+   QObject::connect(volumeDial, SIGNAL(valueChanged(int)), volumeLCD ,
+   SLOT(display(int)));
    window->setLayout(layout);
    window->show();
 return app.exec();
@@ -44,15 +56,29 @@ func main() {
 	volumeLabel := widgets.NewQLabel2("0", centralwidget, 0)
 	volumeDial := widgets.NewQDial(centralwidget)
 
+	volumeLCD := widgets.NewQLCDNumber2(3,centralwidget)
+	paletteRed := gui.NewQPalette3(core.Qt__red)
+	volumeLCD.SetPalette(paletteRed)
+	volumeLabel.SetAlignment(core.Qt__AlignCenter)
+	volumeDial.SetNotchesVisible(true)
+	volumeDial.SetMinimum(0)
+	volumeDial.SetMaximum(100)
+
 	centralwidget.Layout().AddWidget(volumeDial)
 	centralwidget.Layout().AddWidget(volumeLabel)
+	centralwidget.Layout().AddWidget(volumeLCD)
 
-	slotsetnum := func (n int) {
+	labelsetnum := func (n int) {
 		volumeLabel.SetNum(n)
 	}
 
-	volumeDial.ConnectValueChanged(slotsetnum)
+	LCDdisplaynum := func (n int) {
+		volumeLCD.Display2(n)
+	}
 
+	volumeDial.ConnectValueChanged(labelsetnum)
+	volumeDial.ConnectValueChanged(LCDdisplaynum)
+	
 //	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
