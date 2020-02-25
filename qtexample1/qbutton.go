@@ -58,7 +58,7 @@ func main() {
 
 	// Create main window
 	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("QVBox Layout Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetWindowTitle("QButton Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
 	window.SetMinimumSize2(200, 200) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	centralwidget := widgets.NewQWidget(nil, 0)
