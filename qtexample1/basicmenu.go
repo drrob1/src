@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
 	"os"
@@ -36,7 +35,6 @@ MainWindow::MainWindow()
    connect(quitAction, &QAction::triggered, this, &QApplication::quit);
 }
 
-
 */
 
 func main() {
@@ -51,9 +49,47 @@ func main() {
 	openIcon := gui.QIcon_FromTheme2("document-open", gui.NewQIcon5("open.png"))
 	closeIcon := gui.QIcon_FromTheme2("document-close", gui.NewQIcon5("close.png"))
 
-	// set up file menu
+	// set up menu bar, and maybe toolbar
+	menubar := window.MenuBar()
 
-	fileMenu := widgets.NewQMenuBar(window)
+	qactionpointerslice := make([]*widgets.QAction,0,5)
+	// set up file menu option
+
+	fileMenu := menubar.AddMenu2("&File")
+    a := fileMenu.AddAction2(newIcon,"&New")  // a has type *QAction
+    filenewmenuoption := func () {
+    	// need a function here.  I'll make it a dummy function
+		return
+	}
+	a.ConnectTriggered(func(checked bool) { filenewmenuoption() })  // function to execute when option is triggered
+	qactionpointerslice = append(qactionpointerslice, a)
+
+	a.SetPriority(widgets.QAction__LowPriority)
+	a.SetShortcuts2(gui.QKeySequence__New)
+
+    b := fileMenu.AddAction2(openIcon, "&Open") // b has type *QAction
+    fileopenmenuoption := func () {
+    	// need a function here.  I'll make it a dummy function
+		return
+	}
+	b.ConnectTriggered(func(checked bool) { fileopenmenuoption() }) // function to execute when option is triggered
+	qactionpointerslice = append(qactionpointerslice, b)
+	b.SetPriority(widgets.QAction__LowPriority)
+	b.SetShortcuts2(gui.QKeySequence__Open)
+	fileMenu.AddActions(qactionpointerslice)
+
+	// I stopped here.  I'm too tired to continue.  Wed Feb 4 9 pm
+	openAction := widgets.NewQAction3(openIcon,"&Open", window)
+	openAction.SetShortcuts2(gui.QKeySequence__Open)
+	fileMenu.AddAction2(openIcon, "&Open")
+
+	fileMenu.AddSeparator()
+	fileMenu.AddAction2("Quit", quitAction, "quit")
+
+
+	helpmenu := menubar.AddMenu2("Help")
+	helpmenu.AddAction2(newIcon, "Help")
+
 
 	quitAction := widgets.NewQAction3(closeIcon, "Quit", window)
 	quitAction.SetShortcuts2(gui.QKeySequence__Quit)
@@ -62,25 +98,14 @@ func main() {
 	}
 	quitAction.ConnectTrigger(quitclicked)
 
-	newAction := widgets.NewQAction3(openIcon,"&New", window)
-	newAction.SetShortcuts2(gui.QKeySequence__New)
 
-	openAction := widgets.NewQAction3(openIcon,"&Open", window)
-	openAction.SetShortcuts2(gui.QKeySequence__Open)
-
-	fileMenu.AddAction2("New", newAction,"newAction")
-	fileMenu.AddAction2("Open", openAction, "openAction")
-
-	fileMenu.AddSeparator()
-	fileMenu.AddAction2("Quit", quitAction, "quit")
-
-	menubar := window.MenuBar()
-	helpmenu := menubar.AddMenu2("Help")
-
+	aboutMenu := menubar.AddMenu2("About")
 	aboutAction := widgets.NewQAction2("About", window)
 	aboutAction.SetShortcuts2(gui.QKeySequence__WhatsThis)
-	
-	helpmenu.AddActions(aboutAction)
+	aboutMenu.AddAction("About")
+
+
+
 
 
 
