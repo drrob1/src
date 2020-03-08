@@ -45,6 +45,7 @@ func main() {
 	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
 	window.SetWindowTitle("SRM System Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
 	window.SetFixedSize2(500, 500) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
+
 	newIcon := gui.QIcon_FromTheme2("document-new", gui.NewQIcon5("new.png"))
 	openIcon := gui.QIcon_FromTheme2("document-open", gui.NewQIcon5("open.png"))
 	closeIcon := gui.QIcon_FromTheme2("document-close", gui.NewQIcon5("close.png"))
@@ -53,93 +54,102 @@ func main() {
 	menubar := window.MenuBar()
 
 	qactionpointerslice := make([]*widgets.QAction,0,5)
-	// set up file menu option
 
+	// set up file menu option
 	fileMenu := menubar.AddMenu2("&File")
     a := fileMenu.AddAction2(newIcon,"&New")  // a has type *QAction
     filenewmenuoption := func () {
     	// need a function here.  I'll make it a dummy function
+    	widgets.QMessageBox_About(window, "File New", "File New Menu option was selected")
 		return
 	}
-	a.ConnectTriggered(func(checked bool) { filenewmenuoption() })  // function to execute when option is triggered
-	qactionpointerslice = append(qactionpointerslice, a)
+	a.ConnectTriggered(func(checked bool) {
+		filenewmenuoption()
+		return
+	})  // function to execute when option is triggered
 
 	a.SetPriority(widgets.QAction__LowPriority)
 	a.SetShortcuts2(gui.QKeySequence__New)
 
-    b := fileMenu.AddAction2(openIcon, "&Open") // b has type *QAction
+	qactionpointerslice = append(qactionpointerslice, a)
+
+	b := fileMenu.AddAction2(openIcon, "&Open") // b has type *QAction
     fileopenmenuoption := func () {
     	// need a function here.  I'll make it a dummy function
+    	widgets.QMessageBox_About(window, "File Open", "File Open Menu option was selected")
 		return
 	}
-	b.ConnectTriggered(func(checked bool) { fileopenmenuoption() }) // function to execute when option is triggered
-	qactionpointerslice = append(qactionpointerslice, b)
+	b.ConnectTriggered(func(checked bool) {
+		fileopenmenuoption()
+		return
+	}) // function to execute when option is triggered
+
 	b.SetPriority(widgets.QAction__LowPriority)
 	b.SetShortcuts2(gui.QKeySequence__Open)
-	fileMenu.AddActions(qactionpointerslice)
 
-	// I stopped here.  I'm too tired to continue.  Wed Feb 4 9 pm
-	openAction := widgets.NewQAction3(openIcon,"&Open", window)
-	openAction.SetShortcuts2(gui.QKeySequence__Open)
-	fileMenu.AddAction2(openIcon, "&Open")
+	qactionpointerslice = append(qactionpointerslice, b)
 
 	fileMenu.AddSeparator()
-	fileMenu.AddAction2("Quit", quitAction, "quit")
+
+	e := fileMenu.AddAction2(closeIcon, "&Close")
+	fileclosemenuoption := func() {
+		widgets.QMessageBox_About(window, "File Close", "File Close menu option was selected")
+		return
+	}
+	e.ConnectTriggered(func(checked bool) {
+		fileclosemenuoption()
+		return
+	})
+	e.SetPriority(widgets.QAction__LowPriority)
+	e.SetShortcuts2(gui.QKeySequence__Close)
+	qactionpointerslice = append(qactionpointerslice, e)
 
 
-	helpmenu := menubar.AddMenu2("Help")
-	helpmenu.AddAction2(newIcon, "Help")
-
-
-	quitAction := widgets.NewQAction3(closeIcon, "Quit", window)
-	quitAction.SetShortcuts2(gui.QKeySequence__Quit)
-	quitclicked := func () {
+	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
+	c := fileMenu.AddAction2(quitIcon, "&Quit")
+	filequitmenuoption := func() {
+		widgets.QMessageBox_About(window, "File Quit", "File Quit Menu option was selected")
 		app.Quit()
+		return
 	}
-	quitAction.ConnectTrigger(quitclicked)
+	c.ConnectTriggered(func(checked bool) {
+		filequitmenuoption()
+		return
+	})
+	c.SetPriority(widgets.QAction__LowPriority)
+	c.SetShortcuts2(gui.QKeySequence__Quit)
+	qactionpointerslice = append(qactionpointerslice, c)
 
-
-	aboutMenu := menubar.AddMenu2("About")
-	aboutAction := widgets.NewQAction2("About", window)
-	aboutAction.SetShortcuts2(gui.QKeySequence__WhatsThis)
-	aboutMenu.AddAction("About")
-
-
-
-
-
-
-/*
-	centralwidget := widgets.NewQWidget(nil, 0)
-	centralwidget.SetLayout(widgets.NewQVBoxLayout()) // from example code above
-	window.SetCentralWidget(centralwidget)
-
-	volumeLabel := widgets.NewQLabel2("0", centralwidget, 0)
-	volumeDial := widgets.NewQDial(centralwidget)
-
-	volumeLCD := widgets.NewQLCDNumber2(3,centralwidget)
-	paletteRed := gui.NewQPalette3(core.Qt__red)
-	volumeLCD.SetPalette(paletteRed)
-	volumeLabel.SetAlignment(core.Qt__AlignCenter)
-	volumeDial.SetNotchesVisible(true)
-	volumeDial.SetMinimum(0)
-	volumeDial.SetMaximum(100)
-
-	centralwidget.Layout().AddWidget(volumeDial)
-	centralwidget.Layout().AddWidget(volumeLabel)
-	centralwidget.Layout().AddWidget(volumeLCD)
-
-	labelsetnum := func (n int) {
-		volumeLabel.SetNum(n)
+	helpIcon := gui.QIcon_FromTheme2("document-help", gui.NewQIcon5("help2.png"))
+	d := fileMenu.AddAction2(helpIcon, "&Help")
+	filehelpmenuoption := func() {
+		widgets.QMessageBox_About(window, "Help", "File Help menu option was selected")
+		return
 	}
+	d.ConnectTriggered(func(checked bool) {
+		filehelpmenuoption()
+		return
+	})
+	d.SetPriority(widgets.QAction__LowPriority)
+	d.SetShortcuts2(gui.QKeySequence__HelpContents)
+	qactionpointerslice = append(qactionpointerslice, d)
 
-	LCDdisplaynum := func (n int) {
-		volumeLCD.Display2(n)
+	aboutIcon := gui.QIcon_FromTheme2("document-about", gui.NewQIcon5("about.png"))
+	f := fileMenu.AddAction2(aboutIcon, "&About")
+	fileaboutmenuoption := func() {
+		widgets.QMessageBox_About(window, "about", "File About menu option was selected")
+		return
 	}
+	f.ConnectTriggered(func(checked bool) {
+		fileaboutmenuoption()
+		return
+	})
+	f.SetPriority(widgets.QAction__LowPriority)
+	f.SetShortcuts2(gui.QKeySequence__WhatsThis)
+	qactionpointerslice = append(qactionpointerslice, f)
 
-	volumeDial.ConnectValueChanged(labelsetnum)
-	volumeDial.ConnectValueChanged(LCDdisplaynum)
-*/
+
+	fileMenu.AddActions(qactionpointerslice)
 
 //	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
