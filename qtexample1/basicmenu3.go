@@ -35,7 +35,8 @@ MainWindow::MainWindow()
    connect(quitAction, &QAction::triggered, this, &QApplication::quit);
 }
 
-Now that basicmenu.go works, I'm going to try to define several menu entries.
+Now that basicmenu.go  and basicmenu2.go both work, I'm going to try to define a toolbar.\
+
 */
 
 func main() {
@@ -107,25 +108,6 @@ func main() {
 
 	fileMenu.AddActions(fileactionpointerslice)
 
-	QuitMenu := menubar.AddMenu2("&Quit")
-	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
-	c := QuitMenu.AddAction2(quitIcon, "&Quit")
-	filequitmenuoption := func() {
-		widgets.QMessageBox_About(window, "File Quit", "Quit Menu option was selected")
-		app.Quit()
-		return
-	}
-	c.ConnectTriggered(func(checked bool) {
-		filequitmenuoption()
-		return
-	})
-	c.SetPriority(widgets.QAction__LowPriority)
-	c.SetShortcuts2(gui.QKeySequence__Quit)
-
-	quitactionpointerslice := make([]*widgets.QAction,0,5)
-	quitactionpointerslice = append(quitactionpointerslice, c)
-	QuitMenu.AddActions(quitactionpointerslice)
-
 	HelpMenu := menubar.AddMenu2("&Help")
 	helpIcon := gui.QIcon_FromTheme2("document-help", gui.NewQIcon5("help2.png"))
 	d := HelpMenu.AddAction2(helpIcon, "&Help")
@@ -161,6 +143,62 @@ func main() {
 	aboutactionpointerslice = append(aboutactionpointerslice, f)
 	AboutMenu.AddActions(aboutactionpointerslice)
 
+	QuitMenu := menubar.AddMenu2("&Quit")
+	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
+	c := QuitMenu.AddAction2(quitIcon, "&Quit")
+	filequitmenuoption := func() {
+		widgets.QMessageBox_About(window, "File Quit", "Quit Menu option was selected")
+		app.Quit()
+		return
+	}
+	c.ConnectTriggered(func(checked bool) {
+		filequitmenuoption()
+		return
+	})
+	c.SetPriority(widgets.QAction__LowPriority)
+	c.SetShortcuts2(gui.QKeySequence__Quit)
+
+	quitactionpointerslice := make([]*widgets.QAction,0,5)
+	quitactionpointerslice = append(quitactionpointerslice, c)
+	QuitMenu.AddActions(quitactionpointerslice)
+
+
+	// toolbar stuff based on Hands on GUI programming in Go
+	// not working.  Will remove for now.  The toolbar clobbers the menubar on screen.
+	/*
+	toolbar := widgets.NewQToolBar("tools", window)
+	toolbar.SetToolButtonStyle(core.Qt__ToolButtonTextUnderIcon)
+
+	docNew := toolbar.AddAction2(newIcon, "New")
+	docNew.ConnectTriggered(func(checked bool) {
+		filenewmenuoption()
+		return
+	})
+
+	docOpen := toolbar.AddAction2(openIcon, "Open")
+	docOpen.ConnectTriggered(func(checked bool) {
+		fileopenmenuoption()
+		return
+	})
+
+	Help := toolbar.AddAction2(helpIcon, "Help")
+	Help.ConnectTriggered(func(checked bool) {
+		filehelpmenuoption()
+		return
+	})
+
+	About := toolbar.AddAction2(aboutIcon, "About")
+	About.ConnectTriggered(func(checked bool) {
+		fileaboutmenuoption()
+		return
+	})
+
+	Quit := toolbar.AddAction2(quitIcon, "Quit")
+	Quit.ConnectTriggered(func(checked bool) {
+		filequitmenuoption()
+		return
+	})
+*/
 
 //	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
