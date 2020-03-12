@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "17 Feb 2020"
+const LastAltered = "11 Mar 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -106,6 +106,8 @@ REVISION HISTORY
 25 Jan 20 -- Substituted '=' to '+' and ';' to '*'.  Forgot about that earlier.
 16 Feb 20 -- Will use ! to recall a command in the history string slice.  Like what bash can do.  I don't need a factorial command anyway.
                Now it counts from bottom, where ! is last command, and !1 is next cmd.  Not sure if I want it to count from the top.
+11 Mar 20 -- Noticed that my linux code runs on WSL on bash, except for this pgm.  I'm expanding the error reporting to see if I can track this and
+               maybe file an issue.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -256,11 +258,33 @@ func main() {
 	scrn, err = tcell.NewScreen()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, " error from tcell.NewScreen %v \n", err)
+		log.Println(" error from tcell.NewScreen call ",err)
+		errorfile, e := os.Create("errorfile.txt")
+		if e != nil {
+			log.Println(" error while creating errorfile.txt.  Looks like I'm fucked.", e)
+		}
+		defer errorfile.Close()
+		errorfilebuffered := bufio.NewWriter(errorfile)
+		s := fmt.Sprintf(" Error from tcell.NewScreen is %v \n", err)
+		errorfilebuffered.WriteString(s)
+		errorfilebuffered.Flush()
 		os.Exit(1)
 	}
 
 	if err = scrn.Init(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, " error from scrn.Init %v \n", err)
+		log.Println(" error from scrn.Init is ", err)
+		error2file, e2 := os.Create("error2file.txt")
+		if e2 != nil {
+			log.Println(" error creating error2file.txt.  Looks like I'm fucked again.  ", e2 )
+		}
+		defer error2file.Close()
+		error2filebuffered := bufio.NewWriter(error2file)
+		s := fmt.Sprintf(" Error from scrn.Init is %v \n", err)
+		error2filebuffered.WriteString(s)
+		error2filebuffered.Flush()
 		os.Exit(1)
 	}
 
