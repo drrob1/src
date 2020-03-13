@@ -148,8 +148,8 @@ func main() {
 	f.SetShortcuts2(gui.QKeySequence__WhatsThis)
 	qactionpointerslice = append(qactionpointerslice, f)
 
-
-	fileMenu.AddActions(qactionpointerslice)
+// turns out that this is not needed
+	//fileMenu.AddActions(qactionpointerslice)
 
 //	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()

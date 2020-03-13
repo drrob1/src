@@ -54,7 +54,7 @@ func main() {
 	// set up menu bar, and maybe toolbar
 	menubar := window.MenuBar()
 
-	fileactionpointerslice := make([]*widgets.QAction,0,5)
+	//fileactionpointerslice := make([]*widgets.QAction,0,5)
 
 	// set up file menu option
 	fileMenu := menubar.AddMenu2("&File")
@@ -72,7 +72,7 @@ func main() {
 	a.SetPriority(widgets.QAction__LowPriority)
 	a.SetShortcuts2(gui.QKeySequence__New)
 
-	fileactionpointerslice = append(fileactionpointerslice, a)
+	//fileactionpointerslice = append(fileactionpointerslice, a)
 
 	b := fileMenu.AddAction2(openIcon, "&Open") // b has type *QAction
     fileopenmenuoption := func () {
@@ -88,7 +88,7 @@ func main() {
 	b.SetPriority(widgets.QAction__LowPriority)
 	b.SetShortcuts2(gui.QKeySequence__Open)
 
-	fileactionpointerslice = append(fileactionpointerslice, b)
+	//fileactionpointerslice = append(fileactionpointerslice, b)
 
 	fileMenu.AddSeparator()
 
@@ -103,9 +103,9 @@ func main() {
 	})
 	e.SetPriority(widgets.QAction__LowPriority)
 	e.SetShortcuts2(gui.QKeySequence__Close)
-	fileactionpointerslice = append(fileactionpointerslice, e)
+	//fileactionpointerslice = append(fileactionpointerslice, e)
 
-	fileMenu.AddActions(fileactionpointerslice)
+	//fileMenu.AddActions(fileactionpointerslice)
 
 	QuitMenu := menubar.AddMenu2("&Quit")
 	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
@@ -122,9 +122,9 @@ func main() {
 	c.SetPriority(widgets.QAction__LowPriority)
 	c.SetShortcuts2(gui.QKeySequence__Quit)
 
-	quitactionpointerslice := make([]*widgets.QAction,0,5)
-	quitactionpointerslice = append(quitactionpointerslice, c)
-	QuitMenu.AddActions(quitactionpointerslice)
+	//quitactionpointerslice := make([]*widgets.QAction,0,5)
+	//quitactionpointerslice = append(quitactionpointerslice, c)
+	//QuitMenu.AddActions(quitactionpointerslice)
 
 	HelpMenu := menubar.AddMenu2("&Help")
 	helpIcon := gui.QIcon_FromTheme2("document-help", gui.NewQIcon5("help2.png"))
@@ -139,9 +139,9 @@ func main() {
 	})
 	d.SetPriority(widgets.QAction__LowPriority)
 	d.SetShortcuts2(gui.QKeySequence__HelpContents)
-	helpactionpointerslice := make([]*widgets.QAction,0,5)
-	helpactionpointerslice = append(helpactionpointerslice, d)
-	HelpMenu.AddActions(helpactionpointerslice)
+	//helpactionpointerslice := make([]*widgets.QAction,0,5)
+	//helpactionpointerslice = append(helpactionpointerslice, d)
+	//HelpMenu.AddActions(helpactionpointerslice)
 
 
 	AboutMenu := menubar.AddMenu2("&About")
@@ -157,9 +157,9 @@ func main() {
 	})
 	f.SetPriority(widgets.QAction__LowPriority)
 	f.SetShortcuts2(gui.QKeySequence__WhatsThis)
-	aboutactionpointerslice := make([]*widgets.QAction,0,5)
-	aboutactionpointerslice = append(aboutactionpointerslice, f)
-	AboutMenu.AddActions(aboutactionpointerslice)
+	//aboutactionpointerslice := make([]*widgets.QAction,0,5)
+	//aboutactionpointerslice = append(aboutactionpointerslice, f)
+	// AboutMenu.AddActions(aboutactionpointerslice)  not needed
 
 
 //	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
