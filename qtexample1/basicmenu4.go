@@ -187,6 +187,10 @@ func main() {
 		//return
 	})
 
+	window.Layout().SetAlignment(toolbar, core.Qt__AlignBottom)
+
+	//toolbar.SetMovable(false)  this made things worse.
+
 	//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
