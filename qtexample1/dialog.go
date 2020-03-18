@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/therecipe/qt/core"
 	"github.com/therecipe/qt/gui"
 	"github.com/therecipe/qt/widgets"
 	"os"
@@ -197,15 +198,51 @@ func main() {
 	// Create application
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
-	// Start from here, ie the beginning.
 	// Create main window
 	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("SRM System Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetWindowTitle("Dialog Example translated into Go")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
 	window.SetFixedSize2(500, 500) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
 
-	newIcon := gui.QIcon_FromTheme2("document-new", gui.NewQIcon5("new.png"))
-	openIcon := gui.QIcon_FromTheme2("document-open", gui.NewQIcon5("open.png"))
-	closeIcon := gui.QIcon_FromTheme2("document-close", gui.NewQIcon5("close.png"))
+	windowIcon := gui.QIcon_FromTheme2("window-icon", gui.NewQIcon5("window_logo.png"))
+	window.SetWindowIcon(windowIcon)
+
+	newIcon := gui.QIcon_FromTheme2("new", gui.NewQIcon5("new.png"))
+	openIcon := gui.QIcon_FromTheme2("open", gui.NewQIcon5("open.png"))
+	closeIcon := gui.QIcon_FromTheme2("close", gui.NewQIcon5("close.png"))
+	clearIcon := gui.QIcon_FromTheme2("clear", gui.NewQIcon5("clear.png"))
+	deleteIcon := gui.QIcon_FromTheme2("delete", gui.NewQIcon5("delete.png"))
+
+	centralwidget := widgets.NewQWidget(nil, 0)
+	vboxLayout := widgets.NewQVBoxLayout()  // this more closely matches the example code above
+	formLayout := widgets.NewQGridLayout2()
+	buttonsLayout := widgets.NewQHBoxLayout()
+
+	nameLabel := widgets.NewQLabel2("Name:", centralwidget, 0)
+	DOBLabel := widgets.NewQLabel2("Date of Birth:", centralwidget, 0)
+	phoneNumberLabel := widgets.NewQLabel2("Phone Number", centralwidget, 0)
+	savePushButton :=  widgets.NewQPushButton2("Save", centralwidget)
+	clearPushButton := widgets.NewQPushButton2("Clear All", centralwidget)
+	nameLineEdit := widgets.NewQLineEdit(centralwidget)
+	DOBEdit := widgets.NewQDateEdit2(core.NewQDate3(1980,1,1),centralwidget)
+	phoneNumberLineEdit := widgets.NewQLineEdit(centralwidget)
+
+    // table view
+    appTable := widgets.NewQTableView(centralwidget)
+    model := gui.NewQStandardItemModel2(1,3,centralwidget)
+    appTable.SetContextMenuPolicy(core.Qt__CustomContextMenu)
+    appTable.HorizontalHeader().SetSectionResizeMode(widgets.QHeaderView__Stretch)
+    
+
+	centralwidget.SetLayout(hboxlayout)  // this line gives an error of attempting to set layout which already has a layout
+	window.SetCentralWidget(centralwidget)
+
+
+	urlLineEdit.SetPlaceholderText("Enter Url to export")
+	urlLineEdit.SetFixedWidth(200)
+	centralwidget.Layout().AddWidget(urlLineEdit)
+
+
+	centralwidget.Layout().AddWidget(exportbutton)
 
 	// set up menu bar, and maybe toolbar
 	menubar := window.MenuBar()
@@ -262,8 +299,8 @@ func main() {
 	qactionpointerslice = append(qactionpointerslice, e)
 
 
-	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
-	c := fileMenu.AddAction2(quitIcon, "&Quit")
+	//quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
+	c := fileMenu.AddAction2(windowIcon, "&Quit")
 	filequitmenuoption := func() {
 		widgets.QMessageBox_About(window, "File Quit", "File Quit Menu option was selected")
 		app.Quit()
