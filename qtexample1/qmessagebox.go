@@ -27,7 +27,7 @@ func main() {
 	fmt.Println(" first messagebox answer is", answer, "using fmt.Println before calling window.Show() or app.Exec()")
 	widgets.QMessageBox_About(window, "About box first answer",s)
 
-    answer = widgets.QMessageBox_Information(window, "2nd title", "2nd information text", widgets.QMessageBox__Cancel, widgets.QMessageBox__Ok)
+    answer = widgets.QMessageBox_Question(window, "2nd title", "2nd information text", widgets.QMessageBox__No, widgets.QMessageBox__Ok)
 
 
 	hboxlayout := widgets.NewQHBoxLayout()  // this more closely matches the example code above
@@ -48,8 +48,8 @@ func main() {
 	app.Exec()
 
 
-	s1 := fmt.Sprintf(" 2nd sprintf messagebox answer is %v", answer)
+	s1 := fmt.Sprintf(" 2nd (question) sprintf messagebox answer is %v", answer)
 	_, _ = fmt.Fprintln(os.Stderr, s1)
-	fmt.Println(" 2nd message box answer is", answer, "using fmt.Println")
+	fmt.Println(" 2nd (question) message box answer is", answer, "using fmt.Println")
 
 }
