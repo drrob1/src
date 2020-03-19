@@ -51,9 +51,13 @@ func main() {
 	window.SetWindowTitle("Basic Menu 4th Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
 	window.SetFixedSize2(500, 500)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
 
-	newIcon := gui.QIcon_FromTheme2("document-new", gui.NewQIcon5("new.png"))
-	openIcon := gui.QIcon_FromTheme2("document-open", gui.NewQIcon5("open.png"))
-	closeIcon := gui.QIcon_FromTheme2("document-close", gui.NewQIcon5("close.png"))
+	// turns out that some of these icons didn't display because the text was too long.  Now they all work.
+	newIcon := gui.QIcon_FromTheme2("new", gui.NewQIcon5("new.png"))
+	openIcon := gui.QIcon_FromTheme2("open", gui.NewQIcon5("open.png"))
+	closeIcon := gui.QIcon_FromTheme2("close", gui.NewQIcon5("close.png"))
+	helpIcon := gui.QIcon_FromTheme2("help", gui.NewQIcon5("help2.png"))
+	aboutIcon := gui.QIcon_FromTheme2("about", gui.NewQIcon5("about.png"))
+	quitIcon := gui.QIcon_FromTheme2("quit", gui.NewQIcon5("quit.png"))
 
 	// set up menu bar, and maybe toolbar
 	menubar := window.MenuBar()
@@ -103,7 +107,6 @@ func main() {
 	e.SetShortcuts2(gui.QKeySequence__Close)
 
 	HelpMenu := menubar.AddMenu2("&Help")
-	helpIcon := gui.QIcon_FromTheme2("document-help", gui.NewQIcon5("help2.png"))
 	d := HelpMenu.AddAction2(helpIcon, "&Help")
 	filehelpmenuoption := func() {
 		widgets.QMessageBox_About(window, "Help", "Help menu option was selected")
@@ -117,7 +120,6 @@ func main() {
 	d.SetShortcuts2(gui.QKeySequence__HelpContents)
 
 	AboutMenu := menubar.AddMenu2("&About")
-	aboutIcon := gui.QIcon_FromTheme2("document-about", gui.NewQIcon5("about.png"))
 	f := AboutMenu.AddAction2(aboutIcon, "&About")
 	fileaboutmenuoption := func() {
 		widgets.QMessageBox_About(window, "about", "About menu option was selected")
@@ -131,7 +133,6 @@ func main() {
 	f.SetShortcuts2(gui.QKeySequence__WhatsThis)
 
 	QuitMenu := menubar.AddMenu2("&Quit")
-	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
 	c := QuitMenu.AddAction2(quitIcon, "&Quit")
 	filequitmenuoption := func() {
 		//widgets.QMessageBox_About(window, "File Quit", "Quit Menu option was selected")  Don't need this anymore.
@@ -147,7 +148,8 @@ func main() {
 
 	// toolbar stuff based on Hands on GUI programming in Go
 	toolbar := widgets.NewQToolBar("tools", window)
-	toolbar.SetToolButtonStyle(core.Qt__ToolButtonTextUnderIcon)
+	window.Layout().AddWidget(toolbar)
+	//toolbar.SetToolButtonStyle(core.Qt__ToolButtonTextUnderIcon)
 	//toolbar.SetToolButtonStyle(core.Qt__ToolButtonIconOnly)
 	//toolbar.SetToolButtonStyle(core.Qt__ToolButtonTextOnly)
 	//toolbar.SetToolButtonStyle(core.Qt__ToolButtonFollowStyle)

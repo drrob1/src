@@ -52,4 +52,13 @@ func main() {
 	_, _ = fmt.Fprintln(os.Stderr, s1)
 	fmt.Println(" 2nd (question) message box answer is", answer, "using fmt.Println")
 
+	if answer == widgets.QMessageBox__No {
+		fmt.Println(" No was selected.")
+	} else if answer == widgets.QMessageBox__Default {
+		fmt.Println( "Default button was selected.")
+	} else if answer == widgets.QMessageBox__Ok {
+		fmt.Println( "Ok was selected.")
+	}
+
+
 }
