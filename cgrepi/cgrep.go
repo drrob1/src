@@ -16,7 +16,7 @@
 //
 // REVISION HISTORY
 // ----------------
-// 20 Mar 20 -- Made comparisons case insensitive.
+// 20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go
 
 package main
 

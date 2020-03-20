@@ -29,10 +29,11 @@ func main() {
 
 	// table view
 	appTable := widgets.NewQTableView(centralwidget)
-	model := gui.NewQStandardItemModel2(1, 3, appTable)
 	appTable.SetContextMenuPolicy(core.Qt__CustomContextMenu)
 	appTable.HorizontalHeader().SetSectionResizeMode(widgets.QHeaderView__Stretch)
 
+	// model := widgets.NewQTableView(appTable)   Now a bunch of other code doesn't work.  Nevermind.
+	model := gui.NewQStandardItemModel2(1, 3, appTable)
 	model.SetHorizontalHeaderItem(0, gui.NewQStandardItem2("Name"))
 	model.SetHorizontalHeaderItem(1, gui.NewQStandardItem2("Date of Birth"))
 	model.SetHorizontalHeaderItem(2, gui.NewQStandardItem2("Phone Number"))
