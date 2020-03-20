@@ -18,8 +18,7 @@
   ----------------
   20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
                  And then I figured I could not improve performance by using more packages.
-
-
+                 But I can change the side effect of displaying altered case.
 
  */
 package main
@@ -37,6 +36,8 @@ import (
 	"strings"
 	"time"
 )
+
+const LastAltered  = "20 Mar 2020"
 
 var workers = runtime.NumCPU()
 
@@ -63,12 +64,12 @@ func (job Job) Do(lineRx *regexp.Regexp) {
 		line, err := reader.ReadBytes('\n')
 		line = bytes.TrimRight(line, "\n\r")
 
-		// this is the change I made to make every comparison case insensitive
+		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
 		linestr := string(line)
 		linestr = strings.ToLower(linestr)
-		line = []byte(linestr)
+		linelowercase := []byte(linestr)
 
-		if lineRx.Match(line) {
+		if lineRx.Match(linelowercase) {
 			job.results <- Result{job.filename, lino, string(line)}
 		}
 		if err != nil {
@@ -101,6 +102,7 @@ func main() {
 	if lineRx, err := regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	} else {
+		fmt.Println(" Concurrent grep insensitive case last altered", LastAltered, ".")
 		var timeout int64 = 1e9 * 60 * 10 // 10 minutes!
 		if *timeoutOpt != 0 {
 			timeout = *timeoutOpt * 1e9
