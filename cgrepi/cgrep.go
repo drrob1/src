@@ -13,11 +13,15 @@
 
 // The approach taken here was inspired by an example on the gonuts mailing
 // list by Roger Peppe.
-//
-// REVISION HISTORY
-// ----------------
-// 20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go
+/*
+  REVISION HISTORY
+  ----------------
+  20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
+                 And then I figured I could not improve performance by using more packages.
 
+
+
+ */
 package main
 
 import (
