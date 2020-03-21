@@ -28,7 +28,6 @@ package gogrep
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
 	"github.com/pkg/errors"
 	"io"
@@ -96,12 +95,13 @@ func Gogrep(pattern string, files []string, timeoutOpt int) error {
 
 	if len(pattern) < 1 {
 //		log.Fatalln("a regexp to match must be specified")
-		var e error = errors.New("regexp must be specified")
+		e := errors.New("regexp must be specified")
 		return e
 	}
 
 	if len(files) < 1 {
-		var e error = errors.New("files directory must be defined") // I'll leave it to the calling rtn to expand the directory.  to be continued ...
+		var e error = errors.New("files must be defined") // I'll leave it to the calling rtn to expand the directory.  to be continued ...
+		return e
 	}
 
 	if lineRx, err := regexp.Compile(pattern); err != nil {
