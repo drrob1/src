@@ -120,7 +120,7 @@ func main() {
 			}
 		} else if fi.Mode().IsRegular() {
 			for _, ext := range extensions {
-				if strings.Contains(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary files.
+				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
 					if lineRx, err := regexp.Compile(pattern); err != nil { // this is the regex compile line.
 						log.Fatalf("invalid regexp: %s\n", err)
 					} else {
