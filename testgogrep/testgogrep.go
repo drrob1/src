@@ -20,6 +20,7 @@
                  And then I figured I could not improve performance by using more packages.
                  But I can change the side effect of displaying altered case.
   21 Mar 20 -- Now called testgogrep, to test the separate module I wrote.  So most of the original code has been moved to gogrep.
+                 It works, but is not helpful.  I had to rethink the problem and anack is the result.  And this works.
 */
 package main
 

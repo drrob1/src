@@ -50,10 +50,13 @@ type Result struct {
 func main() {
 	//	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
-	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 240, where 0 means no timeout")
+	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 240, where 0 means max timeout of 240 sec.")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 240 {
 		log.Fatalln("timeout must be in the range [0,240] seconds")
+	}
+	if *timeoutOpt == 0 {
+		*timeoutOpt = 240
 	}
 	args := flag.Args()
 	if len(args) < 1 {
@@ -65,9 +68,16 @@ func main() {
 	if len(extensions) < 1 {
 		log.Fatalln("must provide at least one filename extension")
 	}
-	for _, ext := range extensions {  // validate extensions, as this is likely forgotten to be needed.
-		if len(ext) != 3 {
-			fmt.Println(" Need filename extensions only.  Not filenames, not wildcards.  Is", ext,"an extension?")
+	for i, ext := range extensions { // validate extensions, as this is likely forgotten to be needed.
+		if ! strings.ContainsAny(ext, ".") {
+			extensions[i] = "." + ext
+			fmt.Println(" Added dot to extension to give", extensions[i])
+		}
+	}
+
+	for _, ext := range extensions {
+		if len(ext) != 4 {
+			fmt.Println(" Need dotted extensions only.  Not filenames, not wildcards.  A missing dot will be prepended.  Is", ext,"an extension?")
 			fmt.Print(" Proceed? ")
 			ans := ""
 			_, err := fmt.Scanln(&ans)
@@ -80,6 +90,11 @@ func main() {
 			}
 		}
 	}
+
+//	for _, ext := range extensions {   It works, so I can remove this.
+//		fmt.Println(" debug for dot ext.  Ext is ", ext)
+//	}
+
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
 	fmt.Println(" Another ack, written in Go.  Last altered", LastAltered, "and will start in", startDirectory)
@@ -89,7 +104,7 @@ func main() {
 	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
 
 	t0 := time.Now()
-	tfinal := t0.Add(10 * time.Second)
+	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 	// walkfunc closure
 	var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
