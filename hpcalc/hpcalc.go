@@ -88,6 +88,7 @@ REVISION HISTORY
  8 Feb 20 -- Added PopX, because discovered that ROLLDN does not affect X, by design.  I don't remember why.
  9 Feb 20 -- HCF now reports a message and does not alter the stack.  This one I coded in cpp first, as it turns out.
                And only a command that changes the stack needs to call PushMatrixStacks.  I removed that call from hol and a few others.
+22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -849,7 +850,7 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Sqrt(Stack[X])
-			} else if strings.HasPrefix(Token.Str, "PRIMEFAC") {
+			} else if strings.HasPrefix(Token.Str, "PRIMEF") {
 				// Intended for PrimeFactors or PrimeFactorization
 				// PushMatrixStacks()        doesn't change the stack.
 				U := uint(Round(Stack[X]))
