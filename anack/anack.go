@@ -66,7 +66,7 @@ func main() {
 	pattern = strings.ToLower(pattern)
 	extensions := args[1:]
 	if len(extensions) < 1 {
-		log.Fatalln("must provide at least one filename extension")
+		log.Fatalln("must provide at least one dotted filename extension")
 	}
 	for i, ext := range extensions { // validate extensions, as this is likely forgotten to be needed.
 		if ! strings.ContainsAny(ext, ".") {
