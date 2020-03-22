@@ -97,7 +97,7 @@ func main() {
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Println(" Another ack, written in Go.  Last altered", LastAltered, "and will start in", startDirectory)
+	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s.", LastAltered, startDirectory)
 	fmt.Println()
 	fmt.Println()
 	DirAlreadyWalked := make(map[string]bool, 500)

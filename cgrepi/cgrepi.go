@@ -19,6 +19,7 @@
   20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
                  And then I figured I could not improve performance by using more packages.
                  But I can change the side effect of displaying altered case.
+  22 Mar 20 -  Will add timing code that I wrote for anack.
 
  */
 package main
@@ -37,7 +38,7 @@ import (
 	"time"
 )
 
-const LastAltered  = "20 Mar 2020"
+const LastAltered  = "22 Mar 2020"
 
 var workers = runtime.NumCPU()
 
@@ -99,16 +100,22 @@ func main() {
 	if len(files) < 1 {
 		log.Fatalln("must provide at least one filename")
 	}
+	t0 := time.Now()
 	if lineRx, err := regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	} else {
-		fmt.Println(" Concurrent grep insensitive case last altered", LastAltered, ".")
+		fmt.Println()
+		fmt.Printf(" Concurrent grep insensitive case last altered %s. \n", LastAltered)
+		fmt.Println()
 		var timeout int64 = 1e9 * 60 * 10 // 10 minutes!
 		if *timeoutOpt != 0 {
 			timeout = *timeoutOpt * 1e9
 		}
 		grep(timeout, lineRx, commandLineFiles(files))  // this fails vet because it's in the platform specific code files.
 	}
+	elapsed := time.Since(t0)
+	fmt.Println(" Elapsed time is", elapsed)
+	fmt.Println()
 }
 
 func grep(timeout int64, lineRx *regexp.Regexp, filenames []string) {
