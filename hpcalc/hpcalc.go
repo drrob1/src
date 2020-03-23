@@ -852,11 +852,11 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] = math.Sqrt(Stack[X])
 			} else if strings.HasPrefix(Token.Str, "PRIMEF") {
 				// Intended for PrimeFactors or PrimeFactorization
-								
-				if math.Abs(Stack[X]) < 1e-30 {
-					ss = append(ss, "PrimeFactors of zero or almost zero is ignored.")
+				U := uint(Round(Stack[X]))
+				if U < 2 {
+					ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
 				} else {
-					U := uint(Round(Stack[X]))
+
 					PrimeUfactors := PrimeFactorMemoized(U)
 					stringslice := make([]string, 0, 10)
 
