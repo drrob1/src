@@ -88,7 +88,7 @@ REVISION HISTORY
  8 Feb 20 -- Added PopX, because discovered that ROLLDN does not affect X, by design.  I don't remember why.
  9 Feb 20 -- HCF now reports a message and does not alter the stack.  This one I coded in cpp first, as it turns out.
                And only a command that changes the stack needs to call PushMatrixStacks.  I removed that call from hol and a few others.
-22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.
+22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.  And fix bug of primefac of zero or a number near zero.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -852,16 +852,19 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] = math.Sqrt(Stack[X])
 			} else if strings.HasPrefix(Token.Str, "PRIMEF") {
 				// Intended for PrimeFactors or PrimeFactorization
-				// PushMatrixStacks()        doesn't change the stack.
-				U := uint(Round(Stack[X]))
-				PrimeUfactors := PrimeFactorMemoized(U)
+								
+				if math.Abs(Stack[X]) < 1e-30 {
+					ss = append(ss, "PrimeFactors of zero or almost zero is ignored.")
+				} else {
+					U := uint(Round(Stack[X]))
+					PrimeUfactors := PrimeFactorMemoized(U)
+					stringslice := make([]string, 0, 10)
 
-				stringslice := make([]string, 0, 10)
-				for _, pf := range PrimeUfactors {
-					stringslice = append(stringslice, fmt.Sprintf("%d", pf))
+					for _, pf := range PrimeUfactors {
+						stringslice = append(stringslice, fmt.Sprintf("%d", pf))
+					}
+					ss = append(ss, strings.Join(stringslice, ", "))
 				}
-				ss = append(ss, strings.Join(stringslice, ", "))
-
 			} else if Token.Str == "EXP" {
 				PushMatrixStacks()
 				LastX = Stack[X]
