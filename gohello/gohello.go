@@ -42,4 +42,13 @@ func main() {
   go outputText(hello)
   outputText(world)
 
+  // I now realize why the use of new() looked odd to me.  The idiom is to use a different syntax.
+
+  hello2 := &Job{}
+  fmt.Printf(" hello2 is of type %T, initialized using a more idiomatic syntax. \n", hello2)
+  hello2.text = "hello2"
+  hello2.i = 0
+  hello2.max = 5
+  outputText(hello2)
+
 }
