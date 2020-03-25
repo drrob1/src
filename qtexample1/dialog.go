@@ -29,16 +29,14 @@ func main() {
 
 	// table view
 	appTable := widgets.NewQTableView(centralwidget)
+	model := gui.NewQStandardItemModel2(1, 3, centralwidget)
 	appTable.SetContextMenuPolicy(core.Qt__CustomContextMenu)
 	appTable.HorizontalHeader().SetSectionResizeMode(widgets.QHeaderView__Stretch)
 
-	// model := widgets.NewQTableView(appTable)   Now a bunch of other code doesn't work.  Nevermind.
-	model := gui.NewQStandardItemModel2(1, 3, appTable)
 	model.SetHorizontalHeaderItem(0, gui.NewQStandardItem2("Name"))
 	model.SetHorizontalHeaderItem(1, gui.NewQStandardItem2("Date of Birth"))
 	model.SetHorizontalHeaderItem(2, gui.NewQStandardItem2("Phone Number"))
 
-	appTable.SetModel(model)
 	firstItem := gui.NewQStandardItem2("G. Sohne")
 	dateOfBirth := core.NewQDate3(1980, 1, 1)
 	//seconditem := gui.NewQStandardItem2(dateOfBirth.ToString2(core.Qt__TextDate))  // I'll pick one of these
@@ -48,9 +46,10 @@ func main() {
 	model.SetItem(0, 0, firstItem)
 	model.SetItem(0, 1, seconditem)
 	model.SetItem(0, 2, thirditem)
+	appTable.SetModel(model)
+
 
 	// layouts
-
 	window.SetCentralWidget(centralwidget)
 	nameLabel := widgets.NewQLabel2("Name:", centralwidget, 0)
 	DOBLabel := widgets.NewQLabel2("Date of Birth:", centralwidget, 0)
