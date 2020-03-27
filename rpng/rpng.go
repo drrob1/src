@@ -21,7 +21,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "26 Mar 2020"
+const LastAlteredDate = "27 Mar 2020"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -92,7 +92,7 @@ func main() {
 	2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
 	7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, afterall.
 	1 Jan 19 -- There is a bug in entering several space delimited terms.  So I removed a trimspace and I'll see what happens next.
-   25 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
+   26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
 */
 
 	//  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
@@ -282,14 +282,27 @@ func main() {
 				cmdfromclip := exec.Command("xclip", "-o")
 				cmdfromclip.Stdout = &w
 				cmdfromclip.Run()
+				R, err := strconv.ParseFloat(w.String(), 64)
+				if err != nil {
+					log.Println(" fromclip on linux conversion returned error", err, ".  Value ignored.")
+				} else {
+					hpcalc.PUSHX(R)
+				}
+			} else if runtime.GOOS == "windows" {
+				cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd25/tcc.exe", "-C", "echo", "%@clip[0]")
+				cmdfromclip.Stdout = &w
+				cmdfromclip.Run()
+				lines := w.String()
+				linessplit := strings.Split(lines, "\n")
+				str := strings.ReplaceAll(linessplit[1], "\"", "")
+				R, err := strconv.ParseFloat(str, 64)
+				if err != nil {
+					log.Println(" fromclip on windows conversion returned error", err, ".  Value ignored.")
+				} else {
+					hpcalc.PUSHX(R)
+				}
 			}
-			R, err := strconv.ParseFloat(w.String(), 64)
-			if err != nil {
-				log.Println(" fromclip conversion returned error",err, ".  Value ignored.")
-			} else {
-				hpcalc.PUSHX(R)
-			}
-
+			AllowDumpFlag = true
 
 		} else {
 			// -------------------------------------------------------------------------------------
@@ -316,6 +329,7 @@ func main() {
 			AllowDumpFlag = false
 		} else if INBUF == "HELP" || INBUF == "?" { // have more help lines to print
 			fmt.Println(" NO,OFF,YES,ON -- Manually change a Dump flag for commands like PRIME and HEX.")
+			fmt.Println(" toclip, fromclip -- uses shell commands to access the clipboard")
 			AllowDumpFlag = false
 		} else if INBUF == "HOL" {
 			AllowDumpFlag = false
