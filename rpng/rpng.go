@@ -295,6 +295,8 @@ func main() {
 				lines := w.String()
 				linessplit := strings.Split(lines, "\n")
 				str := strings.ReplaceAll(linessplit[1], "\"", "")
+				str = strings.ReplaceAll(str, "\n", "")
+				str = strings.ReplaceAll(str, "\r", "")
 				R, err := strconv.ParseFloat(str, 64)
 				if err != nil {
 					log.Println(" fromclip on windows conversion returned error", err, ".  Value ignored.")
