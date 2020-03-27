@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-//	"io"
+	"strings"
+
+	//	"io"
 //	"log"
 
 	//	"io"
@@ -13,7 +15,7 @@ import (
 )
 
 func main() {
-/*
+
 	buf := []byte(" values written to stdin to go to clipboard ...  ")
 	rdr := bytes.NewReader(buf)
 
@@ -26,10 +28,10 @@ func main() {
 	fmt.Println(" written to stdin thru xclip")
 	fmt.Println()
 
- */
+
 
 	// Both of these now work on z76.  It just depends on which clip pgm I like better.
-
+/*
 	buf := []byte(" string written to stdin to go to xsel ... ")
 	rdr := bytes.NewReader(buf)
 	cmdsel := exec.Command("xsel", "--clipboard", "-i")
@@ -43,5 +45,14 @@ func main() {
 	fmt.Println()
 
 
+ */
+
+    fmt.Println(" now to test from clip")
+    var w strings.Builder
+    cmdfromclip := exec.Command("xclip", "-o")
+    cmdfromclip.Stdout = &w
+    cmdfromclip.Run()
+
+    fmt.Println(" fromclip is:", w.String())
 
 }

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -112,6 +113,7 @@ func main() {
 	SuppressDump["HOL"] = true
 	SuppressDump["ABOUT"] = true
 	SuppressDump["HELP"] = true
+	SuppressDump["TOCLIP"] = true
 
 	P := fmt.Println // a cute trick I just learned, from gobyexample.com.
 	ClearScreen()
@@ -253,7 +255,7 @@ func main() {
 			ManualDump = true
 		} else if INBUF == "TOCLIP" {
 			R := hpcalc.READX()
-			s := strconv.FormatFloat(R,'g',-1,64)
+			s := strconv.FormatFloat(R, 'g', -1, 64)
 			if runtime.GOOS == "linux" {
 				linuxclippy := func(s string) {
 					buf := []byte(s)
@@ -274,6 +276,21 @@ func main() {
 				}
 				winclippy(s)
 			}
+		} else if INBUF == "FROMCLIP" {
+			var w strings.Builder
+			if runtime.GOOS == "linux" {
+				cmdfromclip := exec.Command("xclip", "-o")
+				cmdfromclip.Stdout = &w
+				cmdfromclip.Run()
+			}
+			R, err := strconv.ParseFloat(w.String(), 64)
+			if err != nil {
+				log.Println(" fromclip conversion returned error",err, ".  Value ignored.")
+			} else {
+				hpcalc.PUSHX(R)
+			}
+
+
 		} else {
 			// -------------------------------------------------------------------------------------
 			_, stringslice = hpcalc.GetResult(INBUF) //   Here is where GetResult is called
