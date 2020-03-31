@@ -42,7 +42,7 @@ import (
 	"time"
 )
 
-const LastAltered = "30 Mar 2020"
+const LastAltered = "31 Mar 2020"
 
 type Result struct {
 	filename string
@@ -79,7 +79,7 @@ func main() {
 	} else {
 		extensions = args[1:]
 	}
-    fmt.Println(" NArg", flag.NArg(), ", pattern=",pattern, ", extensions=", extensions)
+    //fmt.Println(", pattern=",pattern, ", extensions=", extensions)
 /*
 	for i, ext := range extensions { // validate extensions, as this is likely forgotten to be needed.
 		if !strings.ContainsAny(ext, ".") {
@@ -110,9 +110,9 @@ func main() {
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s.", LastAltered, startDirectory)
-	fmt.Println()
-	fmt.Println()
+	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern-%s, extensions=%v. \n\n\n ",
+		LastAltered, startDirectory,pattern, extensions)
+
 	DirAlreadyWalked := make(map[string]bool, 500)
 	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
 
@@ -206,10 +206,10 @@ func extractExtensions(files []string) []string {
 				continue
 			}
 			if strings.EqualFold(extensions[i-1], extensions[i]) {
-				extensions[i] = ""
+				extensions[i-1] = ""  // This needs to be [i-1] because when it was [i] it interferred w/ the next iteration.
 			}
 		}
-		fmt.Println(" in extractExtensions before sort:", extensions)
+		//fmt.Println(" in extractExtensions before sort:", extensions)
 		sort.Sort(sort.Reverse(extensions))
 		// sort.Sort(sort.Reverse(sort.IntSlice(s)))
 		trimmedExtensions := make([]string, 0, len(extensions))
@@ -218,12 +218,12 @@ func extractExtensions(files []string) []string {
 				trimmedExtensions = append(trimmedExtensions, ext)
 			}
 		}
-		fmt.Println(" in extractExtensions after sort trimmedExtensions:", trimmedExtensions)
-		fmt.Println()
+		//fmt.Println(" in extractExtensions after sort trimmedExtensions:", trimmedExtensions)
+		//fmt.Println()
 		return trimmedExtensions
 	}
-	fmt.Println(" in extractExtensions without a sort:", extensions)
-	fmt.Println()
+	//fmt.Println(" in extractExtensions without a sort:", extensions)
+	//fmt.Println()
 	return extensions
 
 } // end extractExtensions
