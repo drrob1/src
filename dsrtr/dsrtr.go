@@ -19,10 +19,12 @@
   20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
                  And then I figured I could not improve performance by using more packages.
                  But I can change the side effect of displaying altered case.
-  21 Mar 20 -- Another ack name change.  My plan is to reproduce the function of ack, but on windows not require
+  21 Mar 20 -- Another ack name change, to anack.go.  My plan is to reproduce the function of ack, but on windows not require
                  the complex installation that I cannot do at work.
                  I'll use multiple processes for the grep work.  For the dir walking I'll just do that in main.
   30 Mar 20 -- Started work on extracting the extensions from a slice of input filenames.  And will assume .txt extension if none is provided.
+
+                  Now used as the template for dsrt recursive, named dsrtr.go
 */
 package main
 
@@ -36,13 +38,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"sort"
 	"strings"
 	"time"
+        "runtime"
+        "sort"
 )
 
-const LastAltered = "30 Mar 2020"
+const LastAltered = "31 Mar 2020"
 
 type Result struct {
 	filename string
@@ -68,21 +70,21 @@ func main() {
 	pattern := args[0]
 	pattern = strings.ToLower(pattern)
 
-	extensions := make([]string, 0, 100)
-	if flag.NArg() < 2 {
-		extensions = append(extensions, ".txt")
-	} else if runtime.GOOS == "linux" {
-		files := args[1:]
-		if len(files) > 1 {
-			extensions = extractExtensions(files)
-		}
-	} else {
-		extensions = args[1:]
-	}
-    fmt.Println(" NArg", flag.NArg(), ", pattern=",pattern, ", extensions=", extensions)
-/*
+        extensions := make([]string,0,100)
+        if flag.Nargs() < 2 {
+           extensions = append(extensions, ".txt")
+        } else if runtime.GOOS == "linux" {
+            files := args[1:]
+            if len(files) > 1 {
+               extensions = extractExtensions(files)
+            }
+        } else {
+	    extensions = args[1:]
+        }
+
+
 	for i, ext := range extensions { // validate extensions, as this is likely forgotten to be needed.
-		if !strings.ContainsAny(ext, ".") {
+		if ! strings.ContainsAny(ext, ".") {
 			extensions[i] = "." + ext
 			fmt.Println(" Added dot to extension to give", extensions[i])
 		}
@@ -90,7 +92,7 @@ func main() {
 
 	for _, ext := range extensions {
 		if len(ext) != 4 {
-			fmt.Println(" Need dotted extensions only.  Not filenames, not wildcards.  A missing dot will be prepended.  Is", ext, "an extension?")
+			fmt.Println(" Need dotted extensions only.  Not filenames, not wildcards.  A missing dot will be prepended.  Is", ext,"an extension?")
 			fmt.Print(" Proceed? ")
 			ans := ""
 			_, err := fmt.Scanln(&ans)
@@ -98,19 +100,19 @@ func main() {
 				log.Fatalln(" Error from ScanLn.  It figures.", err)
 			}
 			ans = strings.ToUpper(ans)
-			if !strings.Contains(ans, "Y") {
+			if ! strings.Contains(ans,"Y") {
 				os.Exit(1)
 			}
 		}
 	}
-*/
-	//	for _, ext := range extensions {   It works, so I can remove this.
-	//		fmt.Println(" debug for dot ext.  Ext is ", ext)
-	//	}
+
+//	for _, ext := range extensions {   It works, so I can remove this.
+//		fmt.Println(" debug for dot ext.  Ext is ", ext)
+//	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s.", LastAltered, startDirectory)
+	fmt.Printf(" dsrt recursive, written in Go.  Last altered %s, and will start in %s.", LastAltered, startDirectory)
 	fmt.Println()
 	fmt.Println()
 	DirAlreadyWalked := make(map[string]bool, 500)
@@ -119,7 +121,7 @@ func main() {
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 	// walkfunc closure
-	var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
+	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk is %v. \n ", err)
 			return nil
@@ -132,17 +134,23 @@ func main() {
 				DirAlreadyWalked[fpath] = true
 			}
 		} else if fi.Mode().IsRegular() {
-			for _, ext := range extensions {
-				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-					if lineRx, err := regexp.Compile(pattern); err != nil { // this is the regex compile line.
-						log.Fatalf("invalid regexp: %s\n", err)
-					} else {
-						//fullname := fpath + string(filepath.Separator) + fi.Name()  Turns out that fpath is the full file name path.
-						grepFile(lineRx, fpath)
-					}
-				}
-			}
-		}
+
+                    if runtime.GOOS == "linux" {
+                        if fpath matches one of the filenames in extensions THEN {
+                            s := fi.ModTime().Format("Jan-02-2006_15:04:05")
+                            usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
+                            fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+                        }
+                    } else if runtime.GOOS == "windows" {
+                       if fpath matches a filename pattern given in extensions THEN {
+              
+                       }
+                    }
+
+
+
+
+
 		//log.Println(" Need to debug this.  Filepath is", fpath, ", fi is", fi.Name(), fi.IsDir())
 		now := time.Now()
 		if now.After(tfinal) {
@@ -191,39 +199,92 @@ func grepFile(lineRx *regexp.Regexp, fpath string) {
 	}
 } // end grepFile
 
+
 func extractExtensions(files []string) []string {
 
-	var extensions sort.StringSlice
-	extensions = make([]string, 0, 100)
-	for _, file := range files {
-		ext := filepath.Ext(file)
-		extensions = append(extensions, ext)
-	}
-	if len(extensions) > 1 {
-		extensions.Sort()
-		for i := range extensions {
-			if i == 0 {
-				continue
-			}
-			if strings.EqualFold(extensions[i-1], extensions[i]) {
-				extensions[i] = ""
-			}
-		}
-		fmt.Println(" in extractExtensions before sort:", extensions)
-		sort.Sort(sort.Reverse(extensions))
-		// sort.Sort(sort.Reverse(sort.IntSlice(s)))
-		trimmedExtensions := make([]string, 0, len(extensions))
-		for _, ext := range extensions {
-			if ext != "" {
-				trimmedExtensions = append(trimmedExtensions, ext)
-			}
-		}
-		fmt.Println(" in extractExtensions after sort trimmedExtensions:", trimmedExtensions)
-		fmt.Println()
-		return trimmedExtensions
-	}
-	fmt.Println(" in extractExtensions without a sort:", extensions)
-	fmt.Println()
-	return extensions
+    var extensions sort.StringSlice
+    extensions = make([]string,0,100)
+    for _, file := range files {
+       ext := "." + filepath.Ext(file)
+       extensions = append(extensions, ext)
+    }
+    if len(extensions) > 1 {
+       extensions.Sort()
+       for i := range extensions {
+          if i == 0 { continue }
+          if extensions[i-1] == extensions[i] {
+              extensions[i] = ""
+          }
+       }
+       extensions.Sort().Reverse()
 
+       trimmedExtensions := make([]string,0,len(extensions))
+       for _, ext := range extensions {
+           if ext != "" {
+               trimmedExtensions = append(trimmedExtensions, ext)
+           }
+       }
+       return trimmedExtensions
+    }
+    return extensions
 } // end extractExtensions
+/*
+{{{
+	if linuxflag {
+		for _, f := range files {
+			s := f.ModTime().Format("Jan-02-2006_15:04:05")
+			sizeint := 0
+			sizestr := ""
+			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
+			if FilenameList && f.Mode().IsRegular() {
+				SizeTotal += f.Size()
+				sizeint = int(f.Size())
+				sizestr = strconv.Itoa(sizeint)
+				if sizeint > 100000 {
+					sizestr = AddCommas(sizestr)
+				}
+				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
+			} else if IsSymlink(f.Mode()) {
+				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
+			} else if Dirlist && f.IsDir() {
+				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				count++
+			}
+			if count >= NumLines {
+				break
+			}
+		}
+	} else if winflag {
+		for _, f := range files {
+			NAME := strings.ToUpper(f.Name())
+			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+				s := f.ModTime().Format("Jan-02-2006_15:04:05")
+				sizeint := 0
+				sizestr := ""
+				if FilenameList && f.Mode().IsRegular() {
+					SizeTotal += f.Size()
+					sizeint = int(f.Size())
+					sizestr = strconv.Itoa(sizeint)
+					if sizeint > 100000 {
+						sizestr = AddCommas(sizestr)
+					}
+					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+					count++
+				} else if IsSymlink(f.Mode()) {
+					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					count++
+				} else if Dirlist && f.IsDir() {
+					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
+					count++
+				}
+				if count >= NumLines {
+					break
+				}
+			}
+		}
+	}
+
+}}}
+*/
