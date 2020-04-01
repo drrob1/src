@@ -23,6 +23,7 @@
                  the complex installation that I cannot do at work.
                  I'll use multiple processes for the grep work.  For the dir walking I'll just do that in main.
   30 Mar 20 -- Started work on extracting the extensions from a slice of input filenames.  And will assume .txt extension if none is provided.
+   1 Apr 20 -- Moved the regexp compile line out of main loop.
 */
 package main
 
@@ -42,13 +43,9 @@ import (
 	"time"
 )
 
-const LastAltered = "31 Mar 2020"
+const lastAltered = "1 Apr 2020"
 
-type Result struct {
-	filename string
-	lino     int
-	line     string
-}
+//var workers = runtime.NumCPU()
 
 func main() {
 	//	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
@@ -65,8 +62,16 @@ func main() {
 	if len(args) < 1 {
 		log.Fatalln("a regexp to match must be specified")
 	}
+
+	startDirectory, _ := os.Getwd() // startDirectory is a string
+
 	pattern := args[0]
 	pattern = strings.ToLower(pattern)
+	var lineRegex *regexp.Regexp
+	var err error
+	if lineRegex, err = regexp.Compile(pattern); err != nil {
+		log.Fatalf("invalid regexp: %s\n", err)
+	}
 
 	extensions := make([]string, 0, 100)
 	if flag.NArg() < 2 {
@@ -82,45 +87,17 @@ func main() {
 			extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
 		}
 	}
-    //fmt.Println(", pattern=",pattern, ", extensions=", extensions)
-/*
-	for i, ext := range extensions { // validate extensions, as this is likely forgotten to be needed.
-		if !strings.ContainsAny(ext, ".") {
-			extensions[i] = "." + ext
-			fmt.Println(" Added dot to extension to give", extensions[i])
-		}
-	}
 
-	for _, ext := range extensions {
-		if len(ext) != 4 {
-			fmt.Println(" Need dotted extensions only.  Not filenames, not wildcards.  A missing dot will be prepended.  Is", ext, "an extension?")
-			fmt.Print(" Proceed? ")
-			ans := ""
-			_, err := fmt.Scanln(&ans)
-			if err != nil {
-				log.Fatalln(" Error from ScanLn.  It figures.", err)
-			}
-			ans = strings.ToUpper(ans)
-			if !strings.Contains(ans, "Y") {
-				os.Exit(1)
-			}
-		}
-	}
-*/
-	//	for _, ext := range extensions {   It works, so I can remove this.
-	//		fmt.Println(" debug for dot ext.  Ext is ", ext)
-	//	}
-
-	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
 	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern-%s, extensions=%v. \n\n\n ",
-		LastAltered, startDirectory,pattern, extensions)
+		lastAltered, startDirectory, pattern, extensions)
 
 	DirAlreadyWalked := make(map[string]bool, 500)
 	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+
 	// walkfunc closure
 	var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -137,12 +114,8 @@ func main() {
 		} else if fi.Mode().IsRegular() {
 			for _, ext := range extensions {
 				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-					if lineRx, err := regexp.Compile(pattern); err != nil { // this is the regex compile line.
-						log.Fatalf("invalid regexp: %s\n", err)
-					} else {
-						//fullname := fpath + string(filepath.Separator) + fi.Name()  Turns out that fpath is the full file name path.
-						grepFile(lineRx, fpath)
-					}
+					grepFile(lineRegex, fpath)
+
 				}
 			}
 		}
@@ -154,7 +127,7 @@ func main() {
 		return nil
 	}
 
-	err := filepath.Walk(startDirectory, filepathwalkfunction)
+	err = filepath.Walk(startDirectory, filepathwalkfunction)
 
 	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
@@ -165,7 +138,7 @@ func main() {
 	fmt.Println()
 } // end main
 
-func grepFile(lineRx *regexp.Regexp, fpath string) {
+func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
@@ -182,7 +155,7 @@ func grepFile(lineRx *regexp.Regexp, fpath string) {
 		linestr = strings.ToLower(linestr)
 		linelowercase := []byte(linestr)
 
-		if lineRx.Match(linelowercase) {
+		if lineRegex.Match(linelowercase) {
 			fmt.Printf("%s:%d:%s \n", fpath, lino, string(line))
 		}
 		if err != nil {
@@ -209,7 +182,7 @@ func extractExtensions(files []string) []string {
 				continue
 			}
 			if strings.EqualFold(extensions[i-1], extensions[i]) {
-				extensions[i-1] = ""  // This needs to be [i-1] because when it was [i] it interferred w/ the next iteration.
+				extensions[i-1] = "" // This needs to be [i-1] because when it was [i] it interferred w/ the next iteration.
 			}
 		}
 		//fmt.Println(" in extractExtensions before sort:", extensions)

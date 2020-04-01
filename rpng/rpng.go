@@ -21,7 +21,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "30 Mar 2020"
+const lastAlteredDate = "1 Apr 2020"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -30,7 +30,7 @@ var clippy map[string]func(s string)
 var SuppressDump map[string]bool
 
 /*
- runtime.GOOS returns either linux or windows.  I have not tested mac.
+ runtime.GOOS returns either linux or windows.  I have not tested darwin (macOS).
  I want either $HOME or %userprofile to set the write dir.
 */
 
@@ -97,7 +97,6 @@ func main() {
 	   30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
 	*/
 
-	//  var Y,NYD,July4,VetD,ChristmasD int;     //  For Holiday cmd
 	var INBUF, HomeDir string
 
 	const Storage1FileName = "RPNStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
@@ -180,7 +179,7 @@ func main() {
 
 	hpcalc.PushMatrixStacks()
 
-	fmt.Println(" HP-type RPN calculator written in Go.  Code was last altered ", LastAlteredDate)
+	fmt.Println(" HP-type RPN calculator written in Go.  Code was last altered ", lastAlteredDate)
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
@@ -265,16 +264,16 @@ func main() {
 					cmd := exec.Command("xclip")
 					cmd.Stdin = rdr
 					cmd.Stdout = os.Stdout
-					//	fmt.Println("GOOS=", runtime.GOOS, " debugging string from clippy is:", cmd.String())
 					cmd.Run()
+					fmt.Printf(" sent %s to xclip \n", s)
 				}
 				linuxclippy(s)
 			} else if runtime.GOOS == "windows" {
 				winclippy := func(s string) {
 					cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
 					cmd.Stdout = os.Stdout
-					//	fmt.Println("GOOS=", runtime.GOOS, " debugging string from clippy is:", cmd.String())
 					cmd.Run()
+					fmt.Printf(" sent %s to tcc v22 \n", s)
 				}
 				winclippy(s)
 			}
@@ -285,35 +284,38 @@ func main() {
 				cmdfromclip.Stdout = &w
 				cmdfromclip.Run()
 				str := w.String()
+				fmt.Printf(" received %s from xclip ", str)
 				str = strings.ReplaceAll(str, ",", "")
+				fmt.Printf(", after removing all commas it becomes %s", str)
 				R, err := strconv.ParseFloat(str, 64)
 				if err != nil {
 					log.Println(" fromclip on linux conversion returned error", err, ".  Value ignored.")
 					AllowDumpFlag = false // need to see the error msg.
 				} else {
 					hpcalc.PUSHX(R)
-					AllowDumpFlag = true // there is no error msg to see.
+					AllowDumpFlag = false // need to see the displayed msg.
 				}
 			} else if runtime.GOOS == "windows" {
 				cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
 				cmdfromclip.Stdout = &w
 				cmdfromclip.Run()
 				lines := w.String()
+				fmt.Print(" received ", lines, "from tcc v12")
 				linessplit := strings.Split(lines, "\n")
 				str := strings.ReplaceAll(linessplit[1], "\"", "")
 				str = strings.ReplaceAll(str, "\n", "")
 				str = strings.ReplaceAll(str, "\r", "")
 				str = strings.ReplaceAll(str, ",", "")
+				fmt.Println(", after post processing the string becomes", str)
 				R, err := strconv.ParseFloat(str, 64)
 				if err != nil {
 					fmt.Println(" fromclip", err, ".  Value ignored.")
 					AllowDumpFlag = false // need to see the error msg.
 				} else {
 					hpcalc.PUSHX(R)
-					AllowDumpFlag = true // there's no error msg to see.
+					AllowDumpFlag = false // need to see the displayed msg.
 				}
 			}
-			// AllowDumpFlag = true
 
 		} else {
 			// -------------------------------------------------------------------------------------
@@ -334,7 +336,7 @@ func main() {
 
 		//  These commands are processed thru hpcalc first, then these are processed here.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
-			fmt.Println(" Last altered the source of rpng.go", LastAlteredDate)
+			fmt.Println(" Last altered the source of rpng.go", lastAlteredDate)
 			AllowDumpFlag = false
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			AllowDumpFlag = false
@@ -519,7 +521,7 @@ func ClearScreen() {
 
 // ---------------------------------------------------- RepaintScreen ----------------------------------
 func RepaintScreen() { // ExecFI, ExecTimeStamp and execname are not global.  I'll not print them here.
-	fmt.Println(" HP-type RPN calculator written in Go.  Last altered source of rpng.go", LastAlteredDate)
+	fmt.Println(" HP-type RPN calculator written in Go.  Last altered source of rpng.go", lastAlteredDate)
 	//	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 	_, stringslice := hpcalc.GetResult("DUMPFIXED")

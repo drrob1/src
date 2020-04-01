@@ -19,9 +19,9 @@
   20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
                  And then I figured I could not improve performance by using more packages.
                  But I can change the side effect of displaying altered case.
-  22 Mar 20 -  Will add timing code that I wrote for anack.
-
- */
+  22 Mar 20 -- Will add timing code that I wrote for anack.
+   1 Apr 20 -- Change some variable names to include where they are channels, and lineRx to LineRegex
+*/
 package main
 
 import (
@@ -38,7 +38,7 @@ import (
 	"time"
 )
 
-const LastAltered  = "22 Mar 2020"
+const LastAltered = "1 Apr 2020"
 
 var workers = runtime.NumCPU()
 
@@ -53,7 +53,7 @@ type Job struct {
 	results  chan<- Result
 }
 
-func (job Job) Do(lineRx *regexp.Regexp) {
+func (job Job) Do(lineRegex *regexp.Regexp) {
 	file, err := os.Open(job.filename)
 	if err != nil {
 		log.Printf("error: %s\n", err)
@@ -70,7 +70,7 @@ func (job Job) Do(lineRx *regexp.Regexp) {
 		linestr = strings.ToLower(linestr)
 		linelowercase := []byte(linestr)
 
-		if lineRx.Match(linelowercase) {
+		if lineRegex.Match(linelowercase) {
 			job.results <- Result{job.filename, lino, string(line)}
 		}
 		if err != nil {
@@ -101,7 +101,7 @@ func main() {
 		log.Fatalln("must provide at least one filename")
 	}
 	t0 := time.Now()
-	if lineRx, err := regexp.Compile(pattern); err != nil {
+	if lineRegex, err := regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	} else {
 		fmt.Println()
@@ -111,59 +111,57 @@ func main() {
 		if *timeoutOpt != 0 {
 			timeout = *timeoutOpt * 1e9
 		}
-		grep(timeout, lineRx, commandLineFiles(files))  // this fails vet because it's in the platform specific code files.
+		grep(timeout, lineRegex, commandLineFiles(files)) // this fails vet because it's in the platform specific code files.
 	}
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
 	fmt.Println()
 }
 
-func grep(timeout int64, lineRx *regexp.Regexp, filenames []string) {
-	jobs := make(chan Job, workers)
-	results := make(chan Result, minimum(1000, len(filenames)))
-	done := make(chan struct{}, workers)
+func grep(timeout int64, lineRegex *regexp.Regexp, filenames []string) {
+	jobsChan := make(chan Job, workers)
+	resultsChan := make(chan Result, minimum(1000, len(filenames)))
+	doneChan := make(chan struct{}, workers)
 
-	go addJobs(jobs, filenames, results)
+	go addJobs(jobsChan, filenames, resultsChan)
 	for i := 0; i < workers; i++ {
-		go doJobs(done, lineRx, jobs)
+		go doJobs(doneChan, lineRegex, jobsChan)
 	}
-	waitAndProcessResults(timeout, done, results)
+	waitAndProcessResults(timeout, doneChan, resultsChan)
 }
 
-func addJobs(jobs chan<- Job, filenames []string, results chan<- Result) {
+func addJobs(jobsChan chan<- Job, filenames []string, resultsChan chan<- Result) {
 	for _, filename := range filenames {
-		jobs <- Job{filename, results}
+		jobsChan <- Job{filename, resultsChan}
 	}
-	close(jobs)
+	close(jobsChan)
 }
 
-func doJobs(done chan<- struct{}, lineRx *regexp.Regexp, jobs <-chan Job) {
-	for job := range jobs {
-		job.Do(lineRx)
+func doJobs(doneChan chan<- struct{}, lineRegex *regexp.Regexp, jobsChan <-chan Job) {
+	for job := range jobsChan {
+		job.Do(lineRegex)
 	}
-	done <- struct{}{}
+	doneChan <- struct{}{}
 }
 
-func waitAndProcessResults(timeout int64, done <-chan struct{},
-	results <-chan Result) {
+func waitAndProcessResults(timeout int64, doneChan <-chan struct{}, resultsChan <-chan Result) {
 	finish := time.After(time.Duration(timeout))
 	for working := workers; working > 0; {
 		select { // Blocking
-		case result := <-results:
+		case result := <-resultsChan:
 			fmt.Printf("%s:%d:%s\n", result.filename, result.lino,
 				result.line)
 		case <-finish:
 			fmt.Println("timed out")
 			return // Time's up so finish with what results there were
-		case <-done:
+		case <-doneChan:
 			working--
 		}
 	}
 	for {
 		select { // Nonblocking
-		case result := <-results:
-			fmt.Printf("%s:%d:%s\n", result.filename, result.lino,
-				result.line)
+		case result := <-resultsChan:
+			fmt.Printf("%s:%d:%s\n", result.filename, result.lino, result.line)
 		case <-finish:
 			fmt.Println("timed out")
 			return // Time's up so finish with what results there were
