@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -26,7 +25,6 @@ const lastAlteredDate = "1 Apr 2020"
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var clear map[string]func()
-var clippy map[string]func(s string)
 var SuppressDump map[string]bool
 
 /*
@@ -95,6 +93,7 @@ func main() {
 	   26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
 	   29 Mar 20 -- Need to removed commas from a number string received from the clip.
 	   30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
+	    1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
 	*/
 
 	var INBUF, HomeDir string
@@ -285,11 +284,14 @@ func main() {
 				cmdfromclip.Run()
 				str := w.String()
 				fmt.Printf(" received %s from xclip ", str)
+				str = strings.ReplaceAll(str, "\n", "")
+				str = strings.ReplaceAll(str, "\r", "")
 				str = strings.ReplaceAll(str, ",", "")
-				fmt.Printf(", after removing all commas it becomes %s", str)
+				str = strings.ReplaceAll(str, " ", "")
+				fmt.Printf(", after removing all commas and spaces it becomes %s", str)
 				R, err := strconv.ParseFloat(str, 64)
 				if err != nil {
-					log.Println(" fromclip on linux conversion returned error", err, ".  Value ignored.")
+					fmt.Println(" fromclip on linux conversion returned error", err, ".  Value ignored.")
 					AllowDumpFlag = false // need to see the error msg.
 				} else {
 					hpcalc.PUSHX(R)
@@ -306,6 +308,7 @@ func main() {
 				str = strings.ReplaceAll(str, "\n", "")
 				str = strings.ReplaceAll(str, "\r", "")
 				str = strings.ReplaceAll(str, ",", "")
+				str = strings.ReplaceAll(str, " ", "")
 				fmt.Println(", after post processing the string becomes", str)
 				R, err := strconv.ParseFloat(str, 64)
 				if err != nil {
