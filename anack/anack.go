@@ -89,7 +89,7 @@ func main() {
 	}
 
 	fmt.Println()
-	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern-%s, extensions=%v. \n\n\n ",
+	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
 		lastAltered, startDirectory, pattern, extensions)
 
 	DirAlreadyWalked := make(map[string]bool, 500)
