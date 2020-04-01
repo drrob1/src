@@ -16,16 +16,13 @@
 /*
   REVISION HISTORY
   ----------------
-  20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
-                 And then I figured I could not improve performance by using more packages.
-                 But I can change the side effect of displaying altered case.
-  21 Mar 20 -- Another ack name change.  My plan is to reproduce the function of ack, but on windows not require
-                 the complex installation that I cannot do at work.
-                 I'll use multiple processes for the grep work.  For the dir walking I'll just do that in main.
-  30 Mar 20 -- Started work on extracting the extensions from a slice of input filenames.  And will assume .txt extension if none is provided.
    1 Apr 20 -- Making it multi-threaded by using go routines by copying cgrepi.go and multimap.go.
-
-               Now created multack.go, derived from anack.go.  It works, but is not faster than anack.  I need more go routines.
+               Now created multack.go, derived from anack.go.
+               With a ResultType buffer of   1,024 items, it's  <1% faster than anack, if that much.
+               With a ResultType buffer of  10,000 items, it's  ~5% faster than anack.
+               With a ResultType buffer of  50,000 items, it's ~15% faster than anack.
+               With a ResultType buffer of 100,000 items, it's ~24% faster than anack.
+               I'll stop at 100,000 items.  It's great it works.
 */
 package main
 
@@ -140,7 +137,7 @@ func main() {
 
 	// goroutine to collect results from resultsChan
 	doneChan := make(chan bool)
-	resultsChan := make(chan ResultType, 1024)
+	resultsChan := make(chan ResultType, 100_000)
 	go func() {
 		for r := range resultsChan {
 			 fmt.Printf(" %s:%d:%s\n",r.filename, r.lino, r.line)
@@ -179,6 +176,7 @@ func main() {
 
 	err = filepath.Walk(startDirectory, filepathwalkfunction)
 	close(resultsChan)
+	<- doneChan
 
 	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
@@ -209,9 +207,11 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 
 		if lineRegex.Match(linelowercase) {
 			var r ResultType
-			r.filename = fpath
-			r.lino = lino
-			r.line = string(line)
+			r = ResultType{
+				filename: fpath,
+				lino:     lino,
+				line:     string(line),
+			}
 			resultChan <- r  // I think this is what makes this a concurrent walk function.
 			// fmt.Printf("%s:%d:%s \n", fpath, lino, string(line)) from orig code
 		}
