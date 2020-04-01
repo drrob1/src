@@ -78,6 +78,9 @@ func main() {
 		}
 	} else {
 		extensions = args[1:]
+		for i := range extensions {
+			extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
+		}
 	}
     //fmt.Println(", pattern=",pattern, ", extensions=", extensions)
 /*

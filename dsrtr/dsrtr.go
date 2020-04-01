@@ -1,18 +1,3 @@
-// Copyright (C) 2011-12 Qtrac Ltd.
-//
-// This program or package and any associated files are licensed under the
-// Apache License, Version 2.0 (the "License"); you may not use these files
-// except in compliance with the License. You can get a copy of the License
-// at: http://www.apache.org/licenses/LICENSE-2.0.
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// The approach taken here was inspired by an example on the gonuts mailing
-// list by Roger Peppe.
 /*
   REVISION HISTORY
   ----------------
@@ -29,28 +14,19 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
-	"regexp"
+	"strconv"
 	"strings"
 	"time"
-        "runtime"
-        "sort"
+	"runtime"
 )
 
-const LastAltered = "31 Mar 2020"
-
-type Result struct {
-	filename string
-	lino     int
-	line     string
-}
+const lastAltered = "31 Mar 2020"
 
 func main() {
 	//	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
@@ -63,56 +39,23 @@ func main() {
 	if *timeoutOpt == 0 {
 		*timeoutOpt = 240
 	}
+
 	args := flag.Args()
+	pattern := strings.ToLower(args[0])
+
 	if len(args) < 1 {
-		log.Fatalln("a regexp to match must be specified")
-	}
-	pattern := args[0]
-	pattern = strings.ToLower(pattern)
-
-        extensions := make([]string,0,100)
-        if flag.Nargs() < 2 {
-           extensions = append(extensions, ".txt")
-        } else if runtime.GOOS == "linux" {
-            files := args[1:]
-            if len(files) > 1 {
-               extensions = extractExtensions(files)
-            }
-        } else {
-	    extensions = args[1:]
-        }
-
-
-	for i, ext := range extensions { // validate extensions, as this is likely forgotten to be needed.
-		if ! strings.ContainsAny(ext, ".") {
-			extensions[i] = "." + ext
-			fmt.Println(" Added dot to extension to give", extensions[i])
-		}
+		log.Fatalln("a pattern to match must be specified")
+	} else if len(args) == 1 {
+		//pattern = strings.ToLower(pattern)
+		//fmt.Println(" pattern=", pattern)
+	} else {
+		// I cannot think of anything to put here at the moment.  I'll say that args must be a slice of strings of filenames, and on linux.
 	}
 
-	for _, ext := range extensions {
-		if len(ext) != 4 {
-			fmt.Println(" Need dotted extensions only.  Not filenames, not wildcards.  A missing dot will be prepended.  Is", ext,"an extension?")
-			fmt.Print(" Proceed? ")
-			ans := ""
-			_, err := fmt.Scanln(&ans)
-			if err != nil {
-				log.Fatalln(" Error from ScanLn.  It figures.", err)
-			}
-			ans = strings.ToUpper(ans)
-			if ! strings.Contains(ans,"Y") {
-				os.Exit(1)
-			}
-		}
-	}
-
-//	for _, ext := range extensions {   It works, so I can remove this.
-//		fmt.Println(" debug for dot ext.  Ext is ", ext)
-//	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" dsrt recursive, written in Go.  Last altered %s, and will start in %s.", LastAltered, startDirectory)
+	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, and will start in %s.", lastAltered, startDirectory)
 	fmt.Println()
 	fmt.Println()
 	DirAlreadyWalked := make(map[string]bool, 500)
@@ -120,6 +63,7 @@ func main() {
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+
 	// walkfunc closure
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -134,27 +78,38 @@ func main() {
 				DirAlreadyWalked[fpath] = true
 			}
 		} else if fi.Mode().IsRegular() {
-
-                    if runtime.GOOS == "linux" {
-                        if fpath matches one of the filenames in extensions THEN {
-                            s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-                            usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
-                            fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-                        }
-                    } else if runtime.GOOS == "windows" {
-                       if fpath matches a filename pattern given in extensions THEN {
-              
-                       }
-                    }
-
-
-
-
-
-		//log.Println(" Need to debug this.  Filepath is", fpath, ", fi is", fi.Name(), fi.IsDir())
-		now := time.Now()
-		if now.After(tfinal) {
-			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			if runtime.GOOS == "linux" {
+				for _, fp := range args {
+					fp = strings.ToLower(fp)
+					NAME := strings.ToLower(fi.Name())
+					if BOOL, _ := filepath.Match(fp, NAME); BOOL {
+						s := fi.ModTime().Format("Jan-02-2006_15:04:05")
+						sizeint := int(fi.Size())
+						sizestr := strconv.Itoa(sizeint)
+						if sizeint > 100000 {
+							sizestr = AddCommas(sizestr)
+						}
+						usernameStr, groupnameStr := GetUserGroupStr(fi) // util function in platform specific removed Oct 4, 2019 and then unremoved.
+						fmt.Printf("%10v %s:%s %15s %s %s\n", fi.Mode(), usernameStr, groupnameStr, sizestr, s, fpath)
+					}
+				}
+			} else if runtime.GOOS == "windows" {
+				//NAME := strings.ToLower(fi.Name())  Not a case sensitive filesystem
+				//fmt.Println(" pattern=", pattern, ", fi.Name=", fi.Name(), ", fpath=", fpath)
+				if BOOL, _ := filepath.Match(pattern, fi.Name()); BOOL {
+					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
+					sizeint := int(fi.Size())
+					sizestr := strconv.Itoa(sizeint)
+					if sizeint > 100000 {
+						sizestr = AddCommas(sizestr)
+					}
+					fmt.Printf("%15s %s %s\n", sizestr, s, fpath)
+				}
+			}
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
 		}
 		return nil
 	}
@@ -170,64 +125,42 @@ func main() {
 	fmt.Println()
 } // end main
 
-func grepFile(lineRx *regexp.Regexp, fpath string) {
-	file, err := os.Open(fpath)
+//-------------------------------------------------------------------- InsertByteSlice
+func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
+	return append(slice[:index], append(insertion, slice[index:]...)...)
+} // InsertIntoByteSlice
+
+//---------------------------------------------------------------------- AddCommas
+func AddCommas(instr string) string {
+	var Comma []byte = []byte{','}
+
+	BS := make([]byte, 0, 15)
+	BS = append(BS, instr...)
+
+	i := len(BS)
+
+	for NumberOfCommas := i / 3; (NumberOfCommas > 0) && (i > 3); NumberOfCommas-- {
+		i -= 3
+		BS = InsertIntoByteSlice(BS, Comma, i)
+	}
+	return string(BS)
+} // AddCommas
+
+// ---------------------------- GetIDname -----------------------------------------------------------
+func GetIDname(uidStr string) string {
+
+	if len(uidStr) == 0 {
+		return ""
+	}
+	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
-		log.Printf("grepFile os.Open error : %s\n", err)
-		return
+		panic("uid not found")
 	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	for lino := 1; ; lino++ {
-		line, err := reader.ReadBytes('\n')
-		line = bytes.TrimRight(line, "\n\r")
 
-		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
-		linestr := string(line)
-		linestr = strings.ToLower(linestr)
-		linelowercase := []byte(linestr)
+	idname := ptrToUser.Username
+	return idname
 
-		if lineRx.Match(linelowercase) {
-			fmt.Printf("%s:%d:%s \n", fpath, lino, string(line))
-		}
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("error from reader.ReadBytes in grepfile:%d: %s\n", lino, err)
-			}
-			break // just exit when hit EOF condition.
-		}
-	}
-} // end grepFile
-
-
-func extractExtensions(files []string) []string {
-
-    var extensions sort.StringSlice
-    extensions = make([]string,0,100)
-    for _, file := range files {
-       ext := "." + filepath.Ext(file)
-       extensions = append(extensions, ext)
-    }
-    if len(extensions) > 1 {
-       extensions.Sort()
-       for i := range extensions {
-          if i == 0 { continue }
-          if extensions[i-1] == extensions[i] {
-              extensions[i] = ""
-          }
-       }
-       extensions.Sort().Reverse()
-
-       trimmedExtensions := make([]string,0,len(extensions))
-       for _, ext := range extensions {
-           if ext != "" {
-               trimmedExtensions = append(trimmedExtensions, ext)
-           }
-       }
-       return trimmedExtensions
-    }
-    return extensions
-} // end extractExtensions
+} // GetIDname
 /*
 {{{
 	if linuxflag {
@@ -286,5 +219,15 @@ func extractExtensions(files []string) []string {
 		}
 	}
 
+}}}
+*/
+/*
+{{{
+// ------------------------------ IsSymlink ---------------------------
+func IsSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+} // IsSymlink
 }}}
 */
