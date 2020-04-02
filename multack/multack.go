@@ -23,6 +23,8 @@
                With a ResultType buffer of  50,000 items, it's ~15% faster than anack.
                With a ResultType buffer of 100,000 items, it's ~24% faster than anack.
                I'll stop at 100,000 items.  It's great it works.
+
+   2 Apr 20 -- Updated it's start string to declare its correct name.  I forgot to change that yesterday.
 */
 package main
 
@@ -42,7 +44,7 @@ import (
 	"time"
 )
 
-const lastAltered = "1 Apr 2020"
+const lastAltered = "2 Apr 2020"
 
 var workers = runtime.NumCPU()
 
@@ -51,7 +53,7 @@ type ResultType struct {
 	lino     int
 	line     string
 }
-
+/*  This is not being used, anyway
 type Job struct {
 	filename string
 	results  chan<- ResultType
@@ -84,7 +86,7 @@ func (job Job) Do(lineRegex *regexp.Regexp) {
 		}
 	}
 }
-
+*/
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
@@ -126,7 +128,7 @@ func main() {
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
 	fmt.Println()
-	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
 		lastAltered, startDirectory,pattern, extensions)
 
 	DirAlreadyWalked := make(map[string]bool, 500)
