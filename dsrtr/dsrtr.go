@@ -1,15 +1,10 @@
 /*
+dsrtr.go
   REVISION HISTORY
   ----------------
-  20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
-                 And then I figured I could not improve performance by using more packages.
-                 But I can change the side effect of displaying altered case.
-  21 Mar 20 -- Another ack name change, to anack.go.  My plan is to reproduce the function of ack, but on windows not require
-                 the complex installation that I cannot do at work.
-                 I'll use multiple processes for the grep work.  For the dir walking I'll just do that in main.
-  30 Mar 20 -- Started work on extracting the extensions from a slice of input filenames.  And will assume .txt extension if none is provided.
-
-                  Now used as the template for dsrt recursive, named dsrtr.go
+   1 Apr 20 -- dsrt recursive, named dsrtr.go.
+   2 Apr 20 -- Tracking down bug of not finding .pdf files, and probably also not finding .epub or .mobi
+                 Turned out to be case sensitivity in the comparisons.
 */
 package main
 
@@ -26,7 +21,7 @@ import (
 	"runtime"
 )
 
-const lastAltered = "1 Apr 2020"
+const lastAltered = "2 Apr 2020"
 
 func main() {
 	//	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
@@ -41,7 +36,6 @@ func main() {
 	}
 
 	args := flag.Args()
-	pattern := strings.ToLower(args[0])
 
 	if len(args) < 1 {
 		log.Fatalln("a pattern to match must be specified")
@@ -52,10 +46,11 @@ func main() {
 		// I cannot think of anything to put here at the moment.  I'll say that args must be a slice of strings of filenames, and on linux.
 	}
 
+	pattern := strings.ToLower(args[0])
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, and will start in %s.", lastAltered, startDirectory)
+	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, will use pattern of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
 	fmt.Println()
 	fmt.Println()
 	DirAlreadyWalked := make(map[string]bool, 500)
@@ -77,7 +72,7 @@ func main() {
 			} else {
 				DirAlreadyWalked[fpath] = true
 			}
-		} else if fi.Mode().IsRegular() {
+		} else  /* if fi.Mode().IsRegular()  */ {
 			if runtime.GOOS == "linux" {
 				for _, fp := range args {
 					fp = strings.ToLower(fp)
@@ -94,9 +89,9 @@ func main() {
 					}
 				}
 			} else if runtime.GOOS == "windows" {
-				//NAME := strings.ToLower(fi.Name())  Not a case sensitive filesystem
-				//fmt.Println(" pattern=", pattern, ", fi.Name=", fi.Name(), ", fpath=", fpath)
-				if BOOL, _ := filepath.Match(pattern, fi.Name()); BOOL {
+				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
+				if BOOL, _ := filepath.Match(pattern, NAME); BOOL {
+
 					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
 					sizeint := int(fi.Size())
 					sizestr := strconv.Itoa(sizeint)
