@@ -89,7 +89,7 @@ func main() {
 					}
 				}
 			} else if runtime.GOOS == "windows" {
-				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
+				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?copy
 				if BOOL, _ := filepath.Match(pattern, NAME); BOOL {
 
 					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
