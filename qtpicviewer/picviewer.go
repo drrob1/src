@@ -29,9 +29,11 @@ func imageViewer() *widgets.QWidget {
 	displayArea = widgets.NewQWidget(nil, 0)
 	scene = widgets.NewQGraphicsScene(nil)
 	view = widgets.NewQGraphicsView(nil)
+	var width, height int
+	var halfwidth, halfheight float64
 
 	var imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0))
-	var angle float64 = 90
+	var angle float64 = 0
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
@@ -51,6 +53,14 @@ func imageViewer() *widgets.QWidget {
 
 		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
 		//item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
+		size := pixmap.Size()
+		width = size.Width()
+		height = size.Height()
+		halfwidth = float64(width)/2
+		halfheight = float64(height)/2
+		//rheight := size.Rheight() Don't know how rheight and rwidth are different
+		//rwidth := size.Rwidth()
+		//fmt.Printf(" Pixmap width=%d, height=%d, rwidth=%d, rheight=%d \n", width, height, rwidth, rheight)
 		itemrotated = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
 		itemrotated.SetTransformationMode(core.Qt__SmoothTransformation)
 		itemrotated.SetRotation(angle)
@@ -60,6 +70,8 @@ func imageViewer() *widgets.QWidget {
 	}
 
 	view.SetScene(scene)
+	// view.SetAlignment(core.Qt__AlignCenter)  doesn't do anything.
+	view.CenterOn2(halfwidth, halfheight)
 
 	//create a button and connect the clicked signal
 	var quitbutton = widgets.NewQPushButton2("Quit", nil)
@@ -80,7 +92,10 @@ func imageViewer() *widgets.QWidget {
 	rotateclicked := func(flag bool) {
 		angle = angle + 90
 		itemrotated.SetRotation(angle)
+
 		view.SetScene(scene)
+		// view.SetAlignment(core.Qt__AlignCenter)  doesn't work
+		view.CenterOn2(halfwidth, halfheight)
 	}
 	rotatebutton.ConnectClicked(rotateclicked)
 
