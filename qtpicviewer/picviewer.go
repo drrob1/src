@@ -1,5 +1,12 @@
 package main
 
+/*
+  REVISION HISTORY
+  -------- -------
+   3 Apr 20 -- Attempting to be able to rotate an image 90 deg by a push button press.
+
+*/
+
 import (
 	"fmt"
 	"github.com/therecipe/qt/core"
@@ -13,6 +20,7 @@ var (
 	scene         *widgets.QGraphicsScene
 	view          *widgets.QGraphicsView
 	item          *widgets.QGraphicsPixmapItem
+	itemrotated   *widgets.QGraphicsPixmapItem
 	mainApp       *widgets.QApplication
 	imageFileName string
 )
@@ -23,6 +31,7 @@ func imageViewer() *widgets.QWidget {
 	view = widgets.NewQGraphicsView(nil)
 
 	var imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0))
+	var angle float64 = 90
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
@@ -31,7 +40,7 @@ func imageViewer() *widgets.QWidget {
 		// instead of reading from file(disk) again, we take from memory
 		// HOWEVER, this will cause segmentation violation error ! :(
 		//var movie = gui.NewQMovieFromPointer(imageReader.Pointer())
-		var movie = gui.NewQMovie3(imageFileName, core.NewQByteArray2("",0), nil)
+		var movie = gui.NewQMovie3(imageFileName, core.NewQByteArray2("", 0), nil)
 
 		// see http://stackoverflow.com/questions/5769766/qt-how-to-show-gifanimated-image-in-qgraphicspixmapitem
 		var movieLabel = widgets.NewQLabel(nil, core.Qt__Widget)
@@ -40,33 +49,46 @@ func imageViewer() *widgets.QWidget {
 		scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
 
-		var pixmap = gui.NewQPixmap3(imageFileName, "", core.Qt__AutoColor)
-		item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
+		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
+		//item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
+		itemrotated = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
+		itemrotated.SetTransformationMode(core.Qt__SmoothTransformation)
+		itemrotated.SetRotation(angle)
 
-		scene.AddItem(item)
+		//scene.AddItem(item)
+		scene.AddItem(itemrotated)
 	}
 
 	view.SetScene(scene)
 
 	//create a button and connect the clicked signal
-	var button = widgets.NewQPushButton2("Quit", nil)
+	var quitbutton = widgets.NewQPushButton2("Quit", nil)
+	var rotatebutton = widgets.NewQPushButton2("Rotate", nil)
 
-	btnclicked := func(flag bool) {
+	quitbtnclicked := func(flag bool) {
 		//os.Exit(0)
 
 		widgets.QApplication_Beep()
-		widgets.QMessageBox_Information(nil, "OK", "You clicked quit button!", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		//widgets.QMessageBox_Information(nil, "OK", "You clicked quit button!", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 
 		// errmm... proper way to quit Qt application
 		// https://godoc.org/github.com/therecipe/qt/widgets#QApplication.Quit
 		mainApp.Quit()
 	}
-	button.ConnectClicked(btnclicked)
+	quitbutton.ConnectClicked(quitbtnclicked)
+
+	rotateclicked := func(flag bool) {
+		angle = angle + 90
+		itemrotated.SetRotation(angle)
+		view.SetScene(scene)
+	}
+	rotatebutton.ConnectClicked(rotateclicked)
 
 	var layout = widgets.NewQVBoxLayout()
 
 	layout.AddWidget(view, 0, core.Qt__AlignCenter)
-	layout.AddWidget(button, 0, core.Qt__AlignCenter)
+	layout.AddWidget(quitbutton, 0, core.Qt__AlignCenter)
+	layout.AddWidget(rotatebutton, 0, core.Qt__AlignCenter)
 
 	displayArea.SetLayout(layout)
 
