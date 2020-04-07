@@ -1,10 +1,10 @@
+//              picviewer2.go
 package main
 
 /*
-  REVISION HISTORY
-  -------- -------
-   3 Apr 20 -- Attempting to be able to rotate an image 90 deg by a push button press.
-
+   REVISION HISTORY
+   ======== =======
+    7 Apr 20 -- Now called picviewer2.go.  I'm going to try the image reading trick I learned from the Qt example imageviewer.
 */
 
 import (
@@ -20,7 +20,6 @@ var (
 	scene         *widgets.QGraphicsScene
 	view          *widgets.QGraphicsView
 	item          *widgets.QGraphicsPixmapItem
-	itemrotated   *widgets.QGraphicsPixmapItem
 	mainApp       *widgets.QApplication
 	imageFileName string
 )
@@ -30,9 +29,12 @@ func imageViewer() *widgets.QWidget {
 	scene = widgets.NewQGraphicsScene(nil)
 	view = widgets.NewQGraphicsView(nil)
 
-	var imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0))
-	//var angle float64 = 0
+	var imageReader *gui.QImageReader // one of these won't work
+	//var imageReader gui.QImageReader
+
 	imageReader.SetAutoTransform(true)
+
+	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0))
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
@@ -50,28 +52,23 @@ func imageViewer() *widgets.QWidget {
 		scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
 
-		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
-		item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
-		size := pixmap.Size()
-		width := size.Width()
-		height := size.Height()
-		halfwidth := float64(width)/2
-		halfheight := float64(height)/2
-		fmt.Println(" Picture width=", width, ", picture height=", height, ", half width and height are", halfwidth, halfheight)
+		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // this was changed fromNewQPixmap3 in before I had to redo Qt and therecipe.
+		//size := pixmap.Size()
+		width := pixmap.Width()
+		height := pixmap.Height()
+		fmt.Printf(" Image from file %s is %d wide and %d high \n", imageFileName, width, height)
 
-				//scene.AddItem(item)
+		item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
+
 		scene.AddItem(item)
 	}
 
 	view.SetScene(scene)
-	// view.SetAlignment(core.Qt__AlignCenter)  doesn't do anything.
-	//view.CenterOn2(halfwidth, halfheight)
 
 	//create a button and connect the clicked signal
-	var quitbutton = widgets.NewQPushButton2("Quit", nil)
-	//var rotatebutton = widgets.NewQPushButton2("Rotate", nil)
+	var button = widgets.NewQPushButton2("Quit", nil)
 
-	quitbtnclicked := func(flag bool) {
+	btnclicked := func(flag bool) {
 		//os.Exit(0)
 
 		widgets.QApplication_Beep()
@@ -81,23 +78,12 @@ func imageViewer() *widgets.QWidget {
 		// https://godoc.org/github.com/therecipe/qt/widgets#QApplication.Quit
 		mainApp.Quit()
 	}
-	quitbutton.ConnectClicked(quitbtnclicked)
-/*
-	rotateclicked := func(flag bool) {
-		angle = angle + 90
-		itemrotated.SetRotation(angle)
+	button.ConnectClicked(btnclicked)
 
-		view.SetScene(scene)
-		// view.SetAlignment(core.Qt__AlignCenter)  doesn't work
-		view.CenterOn2(halfwidth, halfheight)
-	}
-	rotatebutton.ConnectClicked(rotateclicked)
-*/
 	var layout = widgets.NewQVBoxLayout()
 
 	layout.AddWidget(view, 0, core.Qt__AlignCenter)
-	layout.AddWidget(quitbutton, 0, core.Qt__AlignCenter)
-//	layout.AddWidget(rotatebutton, 0, core.Qt__AlignCenter)
+	layout.AddWidget(button, 0, core.Qt__AlignCenter)
 
 	displayArea.SetLayout(layout)
 
