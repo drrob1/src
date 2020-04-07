@@ -11,7 +11,7 @@ import (
 	"tokenize"
 )
 
-const LastAlteredDate = "22 Mar 2020"
+const LastAlteredDate = "7 Apr 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -89,6 +89,8 @@ REVISION HISTORY
  9 Feb 20 -- HCF now reports a message and does not alter the stack.  This one I coded in cpp first, as it turns out.
                And only a command that changes the stack needs to call PushMatrixStacks.  I removed that call from hol and a few others.
 22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.  And fix bug of primefac of zero or a number near zero.
+ 7 Apr 20 -- Decided to comment out the break statements in the GetResult case statement, which is held over from my C++ code.  Doesn't belong here.
+
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -567,11 +569,11 @@ func GetResult(s string) (float64, []string) {
 		I = Token.Isum
 		switch Token.State {
 		case tokenize.DELIM:
-			break /* do nothing */
+			//break /* do nothing */
 		case tokenize.DGT:
 			PUSHX(Token.Rsum)
 			PushMatrixStacks()
-			break
+			//break
 		case tokenize.OP:
 			if (I == 6) || (I == 20) || (I == 1) || (I == 3) { // <>, ><, <, > will all SWAP
 				SWAPXY()
@@ -581,27 +583,27 @@ func GetResult(s string) (float64, []string) {
 				switch I {
 				case 8:
 					Stack[X] += Stack[Y]
-					break
+					//break
 				case 10:
 					Stack[X] = Stack[Y] - Stack[X]
-					break
+					//break
 				case 12:
 					Stack[X] *= Stack[Y]
-					break
+					//break
 				case 14:
 					Stack[X] = Stack[Y] / Stack[X]
-					break
+					//break
 				case 16:
 					Stack[X] = PWRI(Stack[Y], int(Round(Stack[X]))) // ^ op -> PWRI
 					//   case 16 : Stack[X] = math.Pow(Stack[Y], Round(Stack[X])); // ^ op
-					break
+					//break
 				case 18:
 					Stack[X] = math.Pow(Stack[Y], Stack[X]) // **
 					//     case 18 : Stack[X] = math.Pow(math.Abs(Stack[Y]), Stack[X]); // **
-					break
+					//break
 				case 22:
 					Stack[X] *= Stack[Y] / 100.0 // percent
-					break
+					//break
 				default:
 					ss = append(ss, fmt.Sprintf("%s is an unrecognized operation.", Token.Str))
 					STACKUP()
@@ -662,7 +664,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
 				ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 				ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
-				ss = append(ss, " , or UP -- stack up.  | or DN -- stack down.")
+				ss = append(ss, " , comma -- stack up.  | vertical bar -- stack down.")
 				ss = append(ss, " Pop -- displays X and then moves stack down.")
 				ss = append(ss, " Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.")
 				ss = append(ss, " EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.")

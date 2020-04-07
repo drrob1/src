@@ -4,11 +4,13 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"github.com/gdamore/tcell"
 	"log"
 	"os"
+	"os/exec"
 
 	"runtime"
 	"strconv"
@@ -25,7 +27,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "11 Mar 2020"
+const LastAltered = "7 Apr 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -108,6 +110,7 @@ REVISION HISTORY
                Now it counts from bottom, where ! is last command, and !1 is next cmd.  Not sure if I want it to count from the top.
 11 Mar 20 -- Noticed that my linux code runs on WSL on bash, except for this pgm.  I'm expanding the error reporting to see if I can track this and
                maybe file an issue.
+ 7 Apr 20 -- Will add the clipboard code I first wrote for rpng, and will have PgUp/PgDn manipulate the stack, while Up and Dn will allow command recall.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -197,6 +200,7 @@ func clearline(line int) {
 }
 
 /*
+{{{
 func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 	i := 0
 	var deferred []rune
@@ -246,6 +250,7 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 	}
 	scrn.Show()
 }
+}}}
 */
 func main() {
 	var INBUF, HomeDir string
@@ -259,7 +264,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		fmt.Fprintf(os.Stderr, " error from tcell.NewScreen %v \n", err)
-		log.Println(" error from tcell.NewScreen call ",err)
+		log.Println(" error from tcell.NewScreen call ", err)
 		errorfile, e := os.Create("errorfile.txt")
 		if e != nil {
 			log.Println(" error while creating errorfile.txt.  Looks like I'm fucked.", e)
@@ -278,7 +283,7 @@ func main() {
 		log.Println(" error from scrn.Init is ", err)
 		error2file, e2 := os.Create("error2file.txt")
 		if e2 != nil {
-			log.Println(" error creating error2file.txt.  Looks like I'm fucked again.  ", e2 )
+			log.Println(" error creating error2file.txt.  Looks like I'm fucked again.  ", e2)
 		}
 		defer error2file.Close()
 		error2filebuffered := bufio.NewWriter(error2file)
@@ -394,6 +399,7 @@ func main() {
 
 	for len(INBUF) > 0 { // Main processing loop
 		// check for new use history command patterned after bash, ie, using ! to start it.
+		INBUF = strings.ToUpper(INBUF)
 		if strings.HasPrefix(INBUF, "!") {
 			i := 0
 			if len(INBUF) > 1 {
@@ -401,6 +407,18 @@ func main() {
 				i = GetRegIdx(ch)
 			}
 			INBUF = GetHx(i)
+		} else if INBUF == "UP" {
+			INBUF = GetHx(1)
+
+		} else if INBUF == "DN" {
+			// don't know what to do yet, but by leaving it alone it should pop the stack down.
+			// I'm leaving the case alone to see what happens.  GetResult should make the case to all upper case.
+		} else if INBUF == "PGUP" {
+			INBUF = "UP" // and sent into GetResult to push the stack up
+
+		} else if INBUF == "PGDN" {
+			INBUF = "DN" // and sent into GetResult to pop the stack down
+
 		} else { // only put typed command lines into the hx.
 			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 		}
@@ -466,6 +484,80 @@ func main() {
 			WriteHelp(StartCol+2, StackRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			// do nothing, ie, don't send it into hpcalc.GetResult
+		} else if INBUF == "TOCLIP" {
+			R := hpcalc.READX()
+			s := strconv.FormatFloat(R, 'g', -1, 64)
+			if runtime.GOOS == "linux" {
+				linuxclippy := func(s string) {
+					buf := []byte(s)
+					rdr := bytes.NewReader(buf)
+					cmd := exec.Command("xclip")
+					cmd.Stdin = rdr
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+					s1 := fmt.Sprintf(" sent %s to xclip \n", s)
+					putf(StartCol, OutputRow, s1)
+				}
+				linuxclippy(s)
+			} else if runtime.GOOS == "windows" {
+				winclippy := func(s string) {
+					cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+					s1 := fmt.Sprintf(" sent %s to tcc v22 \n", s)
+					putf(StartCol, OutputRow, s1)
+				}
+				winclippy(s)
+			}
+		} else if INBUF == "FROMCLIP" {
+			var w strings.Builder
+			if runtime.GOOS == "linux" {
+				cmdfromclip := exec.Command("xclip", "-o")
+				cmdfromclip.Stdout = &w
+				cmdfromclip.Run()
+				str := w.String()
+				s1 := fmt.Sprintf(" received %s from xclip ", str)
+				gblrow = OutputRow
+				putln(s1)
+				str = strings.ReplaceAll(str, "\n", "")
+				str = strings.ReplaceAll(str, "\r", "")
+				str = strings.ReplaceAll(str, ",", "")
+				str = strings.ReplaceAll(str, " ", "")
+				s2 := fmt.Sprintf("after removing all commas and spaces it becomes %s", str)
+				putln(s2)
+				putf(StartCol, OutputRow+1, s2)
+				R, err := strconv.ParseFloat(str, 64)
+				if err != nil {
+					s := fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored.")
+					putln(s)
+				} else {
+					hpcalc.PUSHX(R)
+				}
+			} else if runtime.GOOS == "windows" {
+				cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
+				cmdfromclip.Stdout = &w
+				cmdfromclip.Run()
+				lines := w.String()
+				gblrow = OutputRow
+				s1 := fmt.Sprint(" received ", lines, "from tcc v12")
+				putln(s1)
+				linessplit := strings.Split(lines, "\n")
+				str := strings.ReplaceAll(linessplit[1], "\"", "")
+				str = strings.ReplaceAll(str, "\n", "")
+				str = strings.ReplaceAll(str, "\r", "")
+				str = strings.ReplaceAll(str, ",", "")
+				str = strings.ReplaceAll(str, " ", "")
+				s2 := fmt.Sprintln("after post processing the string becomes", str)
+				putln(s2)
+				R, err := strconv.ParseFloat(str, 64)
+				if err != nil {
+					s := fmt.Sprintln(" fromclip", err, ".  Value ignored.")
+					putln(s)
+				} else {
+					hpcalc.PUSHX(R)
+				}
+			}
+
 		} else if strings.HasPrefix(INBUF, "OUTPUTFI") { // allow outputfix, etc
 			outputmode = outputfix
 		} else if strings.HasPrefix(INBUF, "OUTPUTFL") { // allow outputfloat, etc
@@ -474,7 +566,7 @@ func main() {
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			scrn.Clear()
-			RepaintScreen(0)
+			RepaintScreen(StartCol)
 		} else if INBUF == "REPAINT" {
 			RepaintScreen(StartCol)
 		} else if INBUF == "DEBUG" {
@@ -567,10 +659,13 @@ func main() {
 			putf(x, OutputRow+1, " Last altered rpntcell %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
 			style = Cyan
 		}
-
-		if !(INBUF == "CLEAR" || INBUF == "CLS") {
-			RepaintScreen(StartCol)
-		}
+		/*
+		   This is to clear the screen between each iteration of the loop.  But I will move this to after the GetInputString call
+		   		if !(INBUF == "CLEAR" || INBUF == "CLS") {
+		   			RepaintScreen(StartCol)
+		   		}
+		*/
+		RepaintScreen(StartCol) // I forgot 04/07/2020 3:02:52 PM how the screen keeps getting cleared.  I finally found how, and then I changed it.
 		x = StartCol
 		puts(scrn, Cyan, x, PromptRow, InputPrompt)
 		x += len(InputPrompt) + 2
@@ -582,6 +677,7 @@ func main() {
 			fmt.Println()
 			break
 		}
+
 	} // End Main Processing For Loop
 
 	// Time to write files before exiting.
@@ -756,6 +852,8 @@ func GetInputString(x, y int) string {
 	delchan := make(chan bool)
 	upchan := make(chan bool)
 	downchan := make(chan bool)
+	pgupchan := make(chan bool)
+	pgdnchan := make(chan bool)
 	homechan := make(chan bool)
 	endchan := make(chan bool)
 	leftchan := make(chan bool)
@@ -781,12 +879,20 @@ func GetInputString(x, y int) string {
 					delchan <- true
 					// do not return after any of these keys are hit, as an entry is being edited.
 
-				case tcell.KeyPgUp, tcell.KeyUp:
+				case tcell.KeyUp:
 					upchan <- true
 					return
 
-				case tcell.KeyPgDn, tcell.KeyDown:
+				case tcell.KeyDown:
 					downchan <- true
+					return
+
+				case tcell.KeyPgUp:
+					pgupchan <- true
+					return
+
+				case tcell.KeyPgDn:
+					pgdnchan <- true
 					return
 
 				case tcell.KeyRight, tcell.KeyUpRight, tcell.KeyDownRight:
@@ -844,11 +950,17 @@ func GetInputString(x, y int) string {
 		case <-downchan:
 			return "dn"
 
+		case <-pgupchan:
+			return "pgup"
+
+		case <-pgdnchan:
+			return "pgdn"
+
 		case <-homechan:
-			return "up" // "home key"
+			return "pgup" // "home key"
 
 		case <-endchan:
-			return "dn" //"end key"
+			return "pgdn" //"end key"
 
 		case <-rightchan:
 			return "~"
@@ -928,6 +1040,8 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	helpstringslice = append(helpstringslice, " SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
 	helpstringslice = append(helpstringslice, " outputfix, outputfloat, outputgen -- sets output mode for displayed numbers.")
 	helpstringslice = append(helpstringslice, " !N -- Recall history, hx.  N=0 means last command.")
+	helpstringslice = append(helpstringslice, " up -- execute command !1.")
+	helpstringslice = append(helpstringslice, " dn, pgdn, pgup, home, end -- manipulate the stack.")
 
 	// Will always open this file in the current working directory instead of the HomeDir.
 	// This is different than rpnterm, which only writes this file if it's not already there.
