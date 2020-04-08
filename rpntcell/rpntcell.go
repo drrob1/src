@@ -21,13 +21,10 @@ import (
 	"getcommandline"
 	"hpcalc"
 	"tokenize"
-	//  "os/exec"      // for the clear screen functions.
-	//	"github.com/gdamore/tcell"
-	//	"github.com/gdamore/tcell/encoding"
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "7 Apr 2020"
+const LastAltered = "8 Apr 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -1042,6 +1039,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	helpstringslice = append(helpstringslice, " !N -- Recall history, hx.  N=0 means last command.")
 	helpstringslice = append(helpstringslice, " up -- execute command !1.")
 	helpstringslice = append(helpstringslice, " dn, pgdn, pgup, home, end -- manipulate the stack.")
+	helpstringslice = append(helpstringslice, " toclip, fromclip -- access to clip is by shelling out to xclip or tcc.")
 
 	// Will always open this file in the current working directory instead of the HomeDir.
 	// This is different than rpnterm, which only writes this file if it's not already there.
