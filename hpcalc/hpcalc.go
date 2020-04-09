@@ -8,10 +8,11 @@ import (
 	//
 	"holidaycalc"
 	"timlibg"
-	"tokenize"
+	//	"tokenize"
+	"tknptr"
 )
 
-const LastAlteredDate = "7 Apr 2020"
+const LastAlteredDate = "9 Apr 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -90,6 +91,7 @@ REVISION HISTORY
                And only a command that changes the stack needs to call PushMatrixStacks.  I removed that call from hol and a few others.
 22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.  And fix bug of primefac of zero or a number near zero.
  7 Apr 20 -- Decided to comment out the break statements in the GetResult case statement, which is held over from my C++ code.  Doesn't belong here.
+ 9 Apr 20 -- Switched to tknptr from tokenize package.  I guess mostly to test it.  I should have done this when I first wrote it.
 
 */
 
@@ -553,14 +555,14 @@ func HCF(a, b int) int {
 func GetResult(s string) (float64, []string) {
 	// var c, c1, c2, c3 int // these were used for the HCF and date arith commands, but were moved into a more narrow scope 9 Feb 20.
 	var I, year int
-	var Token tokenize.TokenType
+	var Token tknptr.TokenType
 	var EOL bool
 	// var Holiday holidaycalc.HolType  Moved into a more narrow scope, as it's only used in the hol command.  Done 9 Feb 20.
 	ss := make([]string, 0, 100) // stringslice is too long to keep having to type, esp in the help section.
 
-	tokenize.INITKN(s)
+	tokenPointer := tknptr.INITKN(s)
 	for { //  UNTIL reached EOL
-		Token, EOL = tokenize.GETTKNREAL()
+		Token, EOL = tokenPointer.GETTKNREAL()
 		//    fmt.Println(" In GetResult after GetTknReal and R =",Token.Rsum,", Token.Str =",Token.Str,  ", TokenState = ", FSATypeString[Token.State]);
 		fmt.Println()
 		if EOL {
@@ -568,13 +570,13 @@ func GetResult(s string) (float64, []string) {
 		}
 		I = Token.Isum
 		switch Token.State {
-		case tokenize.DELIM:
+		case tknptr.DELIM:
 			//break /* do nothing */
-		case tokenize.DGT:
+		case tknptr.DGT:
 			PUSHX(Token.Rsum)
 			PushMatrixStacks()
 			//break
-		case tokenize.OP:
+		case tknptr.OP:
 			if (I == 6) || (I == 20) || (I == 1) || (I == 3) { // <>, ><, <, > will all SWAP
 				SWAPXY()
 			} else {
@@ -613,7 +615,7 @@ func GetResult(s string) (float64, []string) {
 				} // Do not move stack for % operator
 			} // opcode value condition
 			break
-		case tokenize.ALLELSE:
+		case tknptr.ALLELSE:
 			if false { // do nothing but allow all conditions to be in the else if form
 			} else if Token.Str == "DUMP" {
 				ss = append(ss, DumpStackGeneral()...)
@@ -919,7 +921,7 @@ func GetResult(s string) (float64, []string) {
 func GetRegIdx(chr byte) int {
 	/* Return 0..35 w/ A = 10 and Z = 35.  Copied from main. */
 
-	ch := tokenize.CAP(chr)
+	ch := tknptr.CAP(chr)
 	if (ch >= '0') && (ch <= '9') {
 		ch = ch - '0'
 	} else if (ch >= 'A') && (ch <= 'Z') {

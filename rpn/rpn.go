@@ -23,7 +23,9 @@ import (
 	//}}}
 )
 
-const LastCompiled = "8 Feb 2020"
+const LastCompiled = "9 Apr 2020"
+
+var suppressDump map[string]bool
 
 func main() {
 	/*
@@ -62,6 +64,7 @@ func main() {
 	   22 Aug 18 -- Learning about code folding
 	    2 Oct 18 -- Now using code folding.  za normal mode command toggles the fold mode where cursor is.
 	    8 Feb 20 -- Added PopX to hpcalc.go, and will test it here.
+	    9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
 	*/
 
 	var R float64
@@ -79,11 +82,29 @@ func main() {
 	//    var stackFileHandle *os.File  --  ioutil does not use this.
 
 	var err error
+
+	suppressDump = make(map[string]bool)
+	suppressDump["PRIME"] = true
+	suppressDump["HEX"] = true
+	suppressDump["DOW"] = true
+	suppressDump["HOL"] = true
+	suppressDump["ABOUT"] = true
+	suppressDump["HELP"] = true
+	suppressDump["TOCLIP"] = true
+	suppressDump["DUMP"] = true
+	suppressDump["DUMPFIX"] = true
+	suppressDump["DUMPFIXED"] = true
+	suppressDump["DUMPFLOAT"] = true
+	suppressDump["?"] = true
+	//        suppressDump[""] = true
+
+	allowDumpFlag := true
+
 	StackFileExists := true
 	InputByteSlice := make([]byte, 8*hpcalc.StackSize) // I hope this is a slice of 64 bytes, ie, 8*8.
 
 	if InputByteSlice, err = ioutil.ReadFile(StackFileName); err != nil {
-		fmt.Errorf(" Error from ioutil.ReadFile.  Probably because no Stack File found: %v\n", err)
+		fmt.Printf(" Error from ioutil.ReadFile.  Probably because no Stack File found: %v\n", err)
 		StackFileExists = false
 	}
 	if StackFileExists { // I'll read all into memory.
@@ -91,7 +112,7 @@ func main() {
 			buf := bytes.NewReader(InputByteSlice[i : i+8])
 			err := binary.Read(buf, binary.LittleEndian, &R)
 			if err != nil {
-				fmt.Errorf(" binary.Read failed with error of %v \n", err)
+				fmt.Printf(" binary.Read failed with error of %v \n", err)
 				StackFileExists = false
 			}
 			hpcalc.PUSHX(R)
@@ -135,14 +156,21 @@ func main() {
 		fmt.Println()
 		for _, ss := range stringslice {
 			fmt.Println(ss)
+
+			allowDumpFlag = false // Don't update stack if any strings were returned from hpcalc.GetResult()
 		}
 
 		if strings.ToLower(INBUF) == "about" {
 			fmt.Println(" Last compiled rpn.go ", LastCompiled)
+			allowDumpFlag = false
 		}
 
 		INBUF = strings.ToUpper(INBUF)
-		if !(strings.HasPrefix(INBUF, "DUMP") || INBUF == "HELP" || INBUF == "?") { // don't DUMP again if just did it, or if HELP called to not scroll help off screen.
+		if suppressDump[INBUF] {
+			allowDumpFlag = false
+		}
+		//		if !(strings.HasPrefix(INBUF, "DUMP") || INBUF == "HELP" || INBUF == "?") { // old way of suppressing DUMP: if just did it, or if HELP called to not scroll help off screen.
+		if allowDumpFlag {
 			_, stringslice = hpcalc.GetResult("DUMP") // discard result.  Only need stack dump general executed.
 			for _, ss := range stringslice {
 				fmt.Println(ss)
@@ -161,6 +189,7 @@ func main() {
 			os.Exit(1)
 		}
 		INBUF = makesubst.MakeSubst(INBUF)
+		allowDumpFlag = true
 	}
 
 	// Now that I've got this working, I'm taking notes.  The binary.Write appends to the buf after each
@@ -178,7 +207,7 @@ func main() {
 		r := Stk[i]
 		err := binary.Write(buf, binary.LittleEndian, r)
 		if err != nil {
-			fmt.Errorf(" binary.write into buf failed with error %v \n", err)
+			fmt.Printf(" binary.write into buf failed with error %v \n", err)
 			os.Exit(1)
 		}
 		// {{{
@@ -190,6 +219,6 @@ func main() {
 	}
 	err = ioutil.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {
-		fmt.Errorf(" ioutil.WriteFile failed with error %v \n", err)
+		fmt.Printf(" ioutil.WriteFile failed with error %v \n", err)
 	}
 } // main in rpn.go
