@@ -5,6 +5,7 @@ package main
    REVISION HISTORY
    ======== =======
     7 Apr 20 -- Now called picviewer2.go.  I'm going to try the image reading trick I learned from the Qt example imageviewer.
+    9 Apr 20 -- Will try to handle arrow keys.
 */
 
 import (
@@ -29,12 +30,31 @@ func imageViewer() *widgets.QWidget {
 	scene = widgets.NewQGraphicsScene(nil)
 	view = widgets.NewQGraphicsView(nil)
 
-	var imageReader *gui.QImageReader // one of these won't work
-	//var imageReader gui.QImageReader
+	var imageReader *gui.QImageReader
 
 	imageReader.SetAutoTransform(true)
 
 	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0))
+
+//	arrowEvent := gui.NewQKeyEvent(core.QEvent__KeyPress, int(core.Qt__Key_Up), core.Qt__NoModifier, "", false, 0)
+	arrowEventclosure := func(ev *gui.QKeyEvent) {
+		if ev.Key() == int(core.Qt__Key_N) {
+			widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		} else if ev.Key() == int(core.Qt__Key_B) {
+			widgets.QMessageBox_Information(nil, "B key", "B key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		} else if ev.Matches(gui.QKeySequence__Forward) {
+			widgets.QMessageBox_Information(nil, "key forward", "forward key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		} else if ev.Matches(gui.QKeySequence__Back) {
+			widgets.QMessageBox_Information(nil, "key back", "back key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+		}
+	}
+	displayArea.ConnectKeyPressEvent(arrowEventclosure)
+
+
+//	displayArea.ConnectKeyPressEvent(func(ev *gui.QKeyEvent) {
+//		widgets.QMessageBox_Information(nil, "OK", "Up arrow key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+//	})(arrowEvent)
+
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
