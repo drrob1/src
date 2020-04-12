@@ -6,6 +6,7 @@ package main
     7 Apr 20 -- Now called picviewer2.go.  I'm going to try the image reading trick I learned from the Qt example imageviewer.
     9 Apr 20 -- Will try to handle arrow keys.
    11 Apr 20 -- Won't handle arrow keys that I can get to work.  Will use N and B, I think.
+   12 Apr 20 -- Now that the keys are working, I don't need a pushbutton.
 */
 
 import (
@@ -15,6 +16,7 @@ import (
 	"github.com/therecipe/qt/widgets"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -73,7 +75,8 @@ func imageViewer() *widgets.QWidget {
 
 	view.SetScene(scene)
 
-	//create a button and connect the clicked signal
+	/*
+	//create a button and connect the clicked signal.  Or not.
 	var button = widgets.NewQPushButton2("Quit", nil)
 
 	btnclicked := func(flag bool) {
@@ -82,13 +85,13 @@ func imageViewer() *widgets.QWidget {
 		mainApp.Quit()
 	}
 	button.ConnectClicked(btnclicked)
-
+*/
 	var layout = widgets.NewQVBoxLayout()
 
 	layout.AddWidget(view, 0, core.Qt__AlignCenter)
-	layout.AddWidget(button, 0, core.Qt__AlignCenter)
+//	layout.AddWidget(button, 0, core.Qt__AlignCenter)
 
-	displayArea.SetLayout(layout)
+	displayArea.SetLayout(layout)  // I tried not using a layout, but displayArea does not have an AddItem method.
 
 	// Must test combo keys before indiv keys, as indiv key test ignore the modifiers.
 	// I discovered that testing N before Ctrl-N always found N and never ctrl-N.
@@ -232,11 +235,26 @@ func displayImageByNumber() {
 	var pic = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
 	scene.RemoveItem(item)
 	item = widgets.NewQGraphicsPixmapItem2(pic, nil)
-	scene.AddItem(item)
 	width := pic.Width()
 	height := pic.Height()
-	fmt.Printf(" displayImageByNumber %s is %d wide and %d high \n", imageFileName, width, height)
-	displayArea.AdjustSize()
+	var fwidth float64 = math.Trunc(float64(width) * 1.1)
+	var fheight float64 = math.Trunc(float64(height) * 1.1)
+	fmt.Printf(" displayImageByNumber %s is %d wide and %d high, goes to %g wide and %g high \n",
+		imageFileName, width, height, fwidth, fheight)
+	width1 := int(fwidth)
+	if fwidth < 300 {
+		width1 += 100
+	}
+	height1 := int(fheight)
+	if fheight < 300 {
+		height1 += 100
+	}
 
+	scene.AddItem(item)
+	//fmt.Printf(" displayImageByNumber %s is %d wide and %d high \n", imageFileName, width, height)
+	//displayArea.AdjustSize()  didn't do anything
+	displayArea.Resize2(width1, height1) // slightly too small.
+//	displayArea.SetContentsMargins(0,0,width,height)  Doen't do what I want.
+    //displayArea.Scroll(-width/2, -height/2)  Doesn't do what I want, at all.
 	displayArea.Show()
 }
