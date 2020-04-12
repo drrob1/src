@@ -7,6 +7,7 @@ package main
     9 Apr 20 -- Will try to handle arrow keys.
    11 Apr 20 -- Won't handle arrow keys that I can get to work.  Will use N and B, I think.
    12 Apr 20 -- Now that the keys are working, I don't need a pushbutton.
+                  And will make less dependent on globals.
 */
 
 import (
@@ -100,7 +101,9 @@ func imageViewer() *widgets.QWidget {
 			// do nothing, just so I can test this.
 		} else if ev.Matches(gui.QKeySequence__New) { // ctrl-n
 			//widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			nextPic()
+			i := nextPic(currImgIdx)
+			currImgIdx = i
+			displayImageByNumber(i)
 		} else if ev.Matches(gui.QKeySequence__Quit) { // ctrl-q
 			//widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			mainApp.Quit()
@@ -108,17 +111,21 @@ func imageViewer() *widgets.QWidget {
 			//widgets.QMessageBox_Information(nil, "cancel", "cancel <Esc> hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			mainApp.Quit()
 		} else if ev.Matches(gui.QKeySequence__Open) { // ctrl-oh
-			widgets.QMessageBox_Information(nil, "key Open", "Ctrl-O key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			//widgets.QMessageBox_Information(nil, "key Open", "Ctrl-O key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			origImgIdx, currImgIdx = currImgIdx, origImgIdx
+			displayImageByNumber(currImgIdx)
 		} else if ev.Matches(gui.QKeySequence__HelpContents) {
 			widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		} else if ev.Key() == int(core.Qt__Key_B) {
 			//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			prevPic()
-			displayImageByNumber()
+			i := prevPic(currImgIdx)
+			currImgIdx = i
+			displayImageByNumber(i)
 		} else if ev.Key() == int(core.Qt__Key_N) {
 			//widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			nextPic()
-			displayImageByNumber()
+			i := nextPic(currImgIdx)
+			currImgIdx = i
+			displayImageByNumber(i)
 		} else if ev.Key() == int(core.Qt__Key_Q) {
 			mainApp.Quit()
 		}
@@ -211,25 +218,28 @@ func isPicFile(filename string) bool {
 //	})(arrowEvent)
 
 // -------------------------- NextPic --------------------------------
-func nextPic() {
-	prevImgIdx = currImgIdx
-	if currImgIdx < len(picfiles)-1 {
-		currImgIdx++
+func nextPic(i int) int {
+	j := i
+	if j < len(picfiles)-1 {
+		j++
 	}
-	fmt.Println(" In NexPic.  prevImgIdx=", prevImgIdx, ", and currImgIdx=", currImgIdx)
+	//fmt.Println(" In NexPic.  prevImgIdx=", prevImgIdx, ", and currImgIdx=", currImgIdx)
+	return j
 }
 
 // ------------------------- PrevPic -------------------------------
-func prevPic()()  {
-	prevImgIdx = currImgIdx
-	if currImgIdx > 0 {
-		currImgIdx--
+func prevPic(i int)(int) {
+	j := i
+	if j > 0 {
+		j--
 	}
-	fmt.Println(" In NexPic.  prevImgIdx=", prevImgIdx, ", and currImgIdx=", currImgIdx)
+	//fmt.Println(" In NexPic.  prevImgIdx=", prevImgIdx, ", and currImgIdx=", currImgIdx)
+	return j
 }
 
 // ------------------------- DisplayImageByNumber ----------------------
-func displayImageByNumber() {
+func displayImageByNumber(i int) {
+	currImgIdx = i
 	imageFileName = picfiles[currImgIdx]
 	fmt.Println(" in displayImageByNumber.  currImgIdx=", currImgIdx, ", imageFileName=", imageFileName)
 	var pic = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
