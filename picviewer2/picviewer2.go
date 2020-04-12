@@ -1,6 +1,5 @@
 //              picviewer2.go
 package main
-
 /*
    REVISION HISTORY
    ======== =======
@@ -30,12 +29,14 @@ var (
 	imageFileName string
 	picfiles      sort.StringSlice
 	currImgIdx    int
+	origImgIdx    int
+	prevImgIdx    int
 )
 
 func imageViewer() *widgets.QWidget {
 	displayArea = widgets.NewQWidget(nil, 0)
-	scene = widgets.NewQGraphicsScene(nil)
-	view = widgets.NewQGraphicsView(nil)
+	scene = widgets.NewQGraphicsScene(displayArea)
+	view = widgets.NewQGraphicsView(displayArea)
 
 	var imageReader *gui.QImageReader
 
@@ -94,21 +95,29 @@ func imageViewer() *widgets.QWidget {
 	arrowEventclosure := func(ev *gui.QKeyEvent) {
 		if false {
 			// do nothing, just so I can test this.
-		} else if ev.Matches(gui.QKeySequence__New) {
+		} else if ev.Matches(gui.QKeySequence__New) { // ctrl-n
 			widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		} else if ev.Matches(gui.QKeySequence__Quit) {
-			widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		} else if ev.Matches(gui.QKeySequence__Cancel) {
-			widgets.QMessageBox_Information(nil, "cancel", "cancel <Esc> hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			nextPic()
+		} else if ev.Matches(gui.QKeySequence__Quit) { // ctrl-q
+			//widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			mainApp.Quit()
-		} else if ev.Matches(gui.QKeySequence__Open) {
+		} else if ev.Matches(gui.QKeySequence__Cancel) { // ESC
+			//widgets.QMessageBox_Information(nil, "cancel", "cancel <Esc> hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			mainApp.Quit()
+		} else if ev.Matches(gui.QKeySequence__Open) { // ctrl-oh
 			widgets.QMessageBox_Information(nil, "key Open", "Ctrl-O key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		} else if ev.Matches(gui.QKeySequence__HelpContents) {
 			widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		} else if ev.Key() == int(core.Qt__Key_B) {
 			widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			prevPic()
+			displayImageByNumber()
 		} else if ev.Key() == int(core.Qt__Key_N) {
 			widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			nextPic()
+			displayImageByNumber()
+		} else if ev.Key() == int(core.Qt__Key_Q) {
+			mainApp.Quit()
 		}
 	}
 	displayArea.ConnectKeyPressEvent(arrowEventclosure)
@@ -148,11 +157,12 @@ func main() {
 	}
 	picfiles.Sort()
 	currImgIdx = picfiles.Search(imageFileName)
-	fmt.Println(" current image index in the picfiles slice is", currImgIdx)
+	fmt.Println(" Current image index in the picfiles slice is", currImgIdx, "; there are", len(picfiles), "picture files in", workingdir)
+	origImgIdx = currImgIdx
 
 	widgets.QApplication_Exec()
 	//      mainApp.exec()    // also works.}
-}
+} // end main
 
 // ------------------------------- MyReadDir -----------------------------------
 func MyReadDir(dir string) []os.FileInfo {
@@ -196,3 +206,37 @@ func isPicFile(filename string) bool {
 //	displayArea.ConnectKeyPressEvent(func(ev *gui.QKeyEvent) {  This doesn't work.
 //		widgets.QMessageBox_Information(nil, "OK", "Up arrow key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 //	})(arrowEvent)
+
+// -------------------------- NextPic --------------------------------
+func nextPic() {
+	prevImgIdx = currImgIdx
+	if currImgIdx < len(picfiles)-1 {
+		currImgIdx++
+	}
+	fmt.Println(" In NexPic.  prevImgIdx=", prevImgIdx, ", and currImgIdx=", currImgIdx)
+}
+
+// ------------------------- PrevPic -------------------------------
+func prevPic()()  {
+	prevImgIdx = currImgIdx
+	if currImgIdx > 0 {
+		currImgIdx--
+	}
+	fmt.Println(" In NexPic.  prevImgIdx=", prevImgIdx, ", and currImgIdx=", currImgIdx)
+}
+
+// ------------------------- DisplayImageByNumber ----------------------
+func displayImageByNumber() {
+	imageFileName = picfiles[currImgIdx]
+	fmt.Println(" in displayImageByNumber.  currImgIdx=", currImgIdx, ", imageFileName=", imageFileName)
+	var pic = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
+	scene.RemoveItem(item)
+	item = widgets.NewQGraphicsPixmapItem2(pic, nil)
+	scene.AddItem(item)
+	width := pic.Width()
+	height := pic.Height()
+	fmt.Printf(" displayImageByNumber %s is %d wide and %d high \n", imageFileName, width, height)
+	displayArea.AdjustSize()
+
+	displayArea.Show()
+}
