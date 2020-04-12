@@ -93,10 +93,10 @@ func imageViewer() *widgets.QWidget {
 	// Must test combo keys before indiv keys, as indiv key test ignore the modifiers.
 	// I discovered that testing N before Ctrl-N always found N and never ctrl-N.
 	arrowEventclosure := func(ev *gui.QKeyEvent) {
-		if false {
+		if false { // only keys without events will still call qmessagebox
 			// do nothing, just so I can test this.
 		} else if ev.Matches(gui.QKeySequence__New) { // ctrl-n
-			widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			//widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			nextPic()
 		} else if ev.Matches(gui.QKeySequence__Quit) { // ctrl-q
 			//widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
@@ -109,11 +109,11 @@ func imageViewer() *widgets.QWidget {
 		} else if ev.Matches(gui.QKeySequence__HelpContents) {
 			widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 		} else if ev.Key() == int(core.Qt__Key_B) {
-			widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			prevPic()
 			displayImageByNumber()
 		} else if ev.Key() == int(core.Qt__Key_N) {
-			widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			//widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			nextPic()
 			displayImageByNumber()
 		} else if ev.Key() == int(core.Qt__Key_Q) {
