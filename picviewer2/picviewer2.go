@@ -29,6 +29,7 @@ var (
 	view          *widgets.QGraphicsView
 	item          *widgets.QGraphicsPixmapItem
 	mainApp       *widgets.QApplication
+	imageReader   *gui.QImageReader
 	imageFileName string
 	picfiles      sort.StringSlice
 	currImgIdx    int
@@ -41,11 +42,13 @@ func imageViewer() *widgets.QWidget {
 	scene = widgets.NewQGraphicsScene(displayArea)
 	view = widgets.NewQGraphicsView(displayArea)
 
-	var imageReader *gui.QImageReader
+	//var imageReader *gui.QImageReader
+	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0)) // format is set by core.NewQByteArray2
 
 	imageReader.SetAutoTransform(true)
+//	imageReader.SetAutoDetectImageFormat(true)  this is on by default.  Format refers to image file format.
 
-	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0))
+
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
@@ -64,6 +67,7 @@ func imageViewer() *widgets.QWidget {
 	} else {
 
 		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // this was changed fromNewQPixmap3 in before I had to redo Qt and therecipe.
+
 		//size := pixmap.Size()
 		width := pixmap.Width()
 		height := pixmap.Height()
@@ -242,6 +246,8 @@ func displayImageByNumber(i int) {
 	currImgIdx = i
 	imageFileName = picfiles[currImgIdx]
 	fmt.Println(" in displayImageByNumber.  currImgIdx=", currImgIdx, ", imageFileName=", imageFileName)
+	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0)) // format is set by core.NewQByteArray2 and means image file format.
+	imageReader.SetAutoTransform(true)
 	var pic = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
 	scene.RemoveItem(item)
 	item = widgets.NewQGraphicsPixmapItem2(pic, nil)
