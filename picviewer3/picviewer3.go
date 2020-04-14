@@ -1,13 +1,11 @@
-//              picviewer2.go
+//              picviewer3.go
 package main
+
 /*
    REVISION HISTORY
    ======== =======
-    7 Apr 20 -- Now called picviewer2.go.  I'm going to try the image reading trick I learned from the Qt example imageviewer.
-    9 Apr 20 -- Will try to handle arrow keys.
-   11 Apr 20 -- Won't handle arrow keys that I can get to work.  Will use N and B, I think.
-   12 Apr 20 -- Now that the keys are working, I don't need a pushbutton.
-                  And will make less dependent on globals.
+   12 Apr 20 -- Now picviewer3.go.  I want change it completely so that I only have one func imageViewer.
+                  But I want to not lose the other version that mostly works, except that the view size does not match the displayArea on supsequent reads.
 */
 
 import (
@@ -17,59 +15,56 @@ import (
 	"github.com/therecipe/qt/widgets"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"sort"
 	"strings"
 )
 
 var (
-	displayArea   *widgets.QWidget
-	scene         *widgets.QGraphicsScene
-	view          *widgets.QGraphicsView
-	item          *widgets.QGraphicsPixmapItem
 	mainApp       *widgets.QApplication
-	imageReader   *gui.QImageReader
 	imageFileName string
 	picfiles      sort.StringSlice
 	currImgIdx    int
 	origImgIdx    int
 	prevImgIdx    int
 )
+var (
+	imageReader   *gui.QImageReader
+	displayArea   *widgets.QWidget
+	scene         *widgets.QGraphicsScene
+	view          *widgets.QGraphicsView
+	item          *widgets.QGraphicsPixmapItem
+	layout        *widgets.QVBoxLayout
+)
 
 func imageViewer() *widgets.QWidget {
-	if displayArea != nil {
-		fmt.Println(" displayArea is not nil.")
-	} else {
-		fmt.Println(" displayArea is nil.")
-	}
-	if scene != nil {
-		fmt.Println(" scene is not nil.")
-	} else {
-		fmt.Println(" scene is nil.")
-	}
-	if view == nil {
-		fmt.Println(" view is nil.")
-	} else {
-		fmt.Println(" view is not nil.")
-	}
-
-
-	displayArea = widgets.NewQWidget(nil, 0)
-	scene = widgets.NewQGraphicsScene(displayArea)
-	view = widgets.NewQGraphicsView(displayArea)
 
 	//var imageReader *gui.QImageReader
 	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0)) // format is set by core.NewQByteArray2
+	size := imageReader.Size()
+	width := size.Width()
+	fwidth := float64(width)
+	height := size.Height()
+	fheight := float64(height)
+	fmt.Println(" imagereader width=", width, ", height=", height, ", fwidth, fheight -", fwidth, fheight)
+
+	firstTimeThru := false
+	if displayArea == nil { // must be first pass thru this rtn.
+		displayArea = widgets.NewQWidget(nil, 0)
+		firstTimeThru = true
+		//scene = widgets.NewQGraphicsScene3(0, 0, fwidth, fheight, displayArea)
+		scene = widgets.NewQGraphicsScene(displayArea)
+		view = widgets.NewQGraphicsView(displayArea)
+	} else {
+		scene.Clear()
+		//view.Close()
+	}
 
 	imageReader.SetAutoTransform(true)
-//	imageReader.SetAutoDetectImageFormat(true)  this is on by default.  Format refers to image file format.
-
-
+	//	imageReader.SetAutoDetectImageFormat(true)  this is on by default.  Format refers to image file format.
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
-
 
 	if imageReader.SupportsAnimation() {
 		// instead of reading from file(disk) again, we take from memory
@@ -89,7 +84,7 @@ func imageViewer() *widgets.QWidget {
 		//size := pixmap.Size()
 		width := pixmap.Width()
 		height := pixmap.Height()
-		fmt.Printf(" Image from file %s is %d wide and %d high \n", imageFileName, width, height)
+		fmt.Printf(" Pixmap image %s is %d wide and %d high \n", imageFileName, width, height)
 
 		item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
 
@@ -99,60 +94,70 @@ func imageViewer() *widgets.QWidget {
 	view.SetScene(scene)
 
 	/*
-	//create a button and connect the clicked signal.  Or not.
-	var button = widgets.NewQPushButton2("Quit", nil)
+		//create a button and connect the clicked signal.  Or not.
+		var button = widgets.NewQPushButton2("Quit", nil)
 
-	btnclicked := func(flag bool) {
-		widgets.QApplication_Beep()
-		//widgets.QMessageBox_Information(nil, "OK", "You clicked quit button!", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		mainApp.Quit()
-	}
-	button.ConnectClicked(btnclicked)
-*/
-	var layout = widgets.NewQVBoxLayout()
-
-	layout.AddWidget(view, 0, core.Qt__AlignCenter)
-//	layout.AddWidget(button, 0, core.Qt__AlignCenter)
-
-	displayArea.SetLayout(layout)  // I tried not using a layout, but displayArea does not have an AddItem method.
-
-	// Must test combo keys before indiv keys, as indiv key test ignore the modifiers.
-	// I discovered that testing N before Ctrl-N always found N and never ctrl-N.
-	arrowEventclosure := func(ev *gui.QKeyEvent) {
-		if false { // only keys without events will still call qmessagebox
-			// do nothing, just so I can test this.
-		} else if ev.Matches(gui.QKeySequence__New) { // ctrl-n
-			//widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			i := nextPic(currImgIdx)
-			currImgIdx = i
-			displayImageByNumber(i)
-		} else if ev.Matches(gui.QKeySequence__Quit) { // ctrl-q
-			//widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			mainApp.Quit()
-		} else if ev.Matches(gui.QKeySequence__Cancel) { // ESC
-			//widgets.QMessageBox_Information(nil, "cancel", "cancel <Esc> hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			mainApp.Quit()
-		} else if ev.Matches(gui.QKeySequence__Open) { // ctrl-oh
-			//widgets.QMessageBox_Information(nil, "key Open", "Ctrl-O key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			origImgIdx, currImgIdx = currImgIdx, origImgIdx
-			displayImageByNumber(currImgIdx)
-		} else if ev.Matches(gui.QKeySequence__HelpContents) {
-			widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		} else if ev.Key() == int(core.Qt__Key_B) {
-			//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			i := prevPic(currImgIdx)
-			currImgIdx = i
-			displayImageByNumber(i)
-		} else if ev.Key() == int(core.Qt__Key_N) {
-			//widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-			i := nextPic(currImgIdx)
-			currImgIdx = i
-			displayImageByNumber(i)
-		} else if ev.Key() == int(core.Qt__Key_Q) {
+		btnclicked := func(flag bool) {
+			widgets.QApplication_Beep()
+			//widgets.QMessageBox_Information(nil, "OK", "You clicked quit button!", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			mainApp.Quit()
 		}
+		button.ConnectClicked(btnclicked)
+	*/
+	if firstTimeThru {
+		layout = widgets.NewQVBoxLayout()
+
+		layout.AddWidget(view, 0, core.Qt__AlignCenter)
+		//layout.AddWidget(button, 0, core.Qt__AlignCenter)
+
+		displayArea.SetLayout(layout) // I tried not using a layout, but displayArea does not have an AddItem method.
+
+		// Must test for combo keys before indiv keys, as indiv key test ignore the modifiers.
+		// I discovered that testing N before Ctrl-N always found N and never ctrl-N.
+		arrowEventclosure := func(ev *gui.QKeyEvent) {
+			if false { // only keys without events will still call qmessagebox
+				// do nothing, just so I can test this.
+			} else if ev.Matches(gui.QKeySequence__New) { // ctrl-n
+				//widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				if currImgIdx < len(picfiles)-1 {
+					currImgIdx++
+				}
+				imageFileName = picfiles[currImgIdx]
+				imageViewer()
+			} else if ev.Matches(gui.QKeySequence__Quit) { // ctrl-q
+				//widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				mainApp.Quit()
+			} else if ev.Matches(gui.QKeySequence__Cancel) { // ESC
+				//widgets.QMessageBox_Information(nil, "cancel", "cancel <Esc> hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				mainApp.Quit()
+			} else if ev.Matches(gui.QKeySequence__Open) { // ctrl-oh
+				//widgets.QMessageBox_Information(nil, "key Open", "Ctrl-O key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				origImgIdx, currImgIdx = currImgIdx, origImgIdx
+				//scene.RemoveItem(item)
+				imageFileName = picfiles[currImgIdx]
+				imageViewer()
+			} else if ev.Matches(gui.QKeySequence__HelpContents) {
+				widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			} else if ev.Key() == int(core.Qt__Key_B) {
+				//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				if currImgIdx > 0 {
+					currImgIdx--
+				}
+				imageFileName = picfiles[currImgIdx]
+				imageViewer()
+			} else if ev.Key() == int(core.Qt__Key_N) {
+				//widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				if currImgIdx < len(picfiles)-1 {
+					currImgIdx++
+				}
+				imageFileName = picfiles[currImgIdx]
+				imageViewer()
+			} else if ev.Key() == int(core.Qt__Key_Q) {
+				mainApp.Quit()
+			}
+		}
+		displayArea.ConnectKeyPressEvent(arrowEventclosure)
 	}
-	displayArea.ConnectKeyPressEvent(arrowEventclosure)
 
 	return displayArea
 }
@@ -171,6 +176,8 @@ func main() {
 	mainApp = widgets.NewQApplication(len(os.Args), os.Args)
 
 	imageViewer().Show()
+
+	// widgets.QApplication_Exec() doesn't work when placed here.  The code that follows looks like it doesn't get executed.
 
 	workingdir, _ := os.Getwd()
 
@@ -239,6 +246,7 @@ func isPicFile(filename string) bool {
 //		widgets.QMessageBox_Information(nil, "OK", "Up arrow key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 //	})(arrowEvent)
 
+/*
 // -------------------------- NextPic --------------------------------
 func nextPic(i int) int {
 	j := i
@@ -250,7 +258,7 @@ func nextPic(i int) int {
 }
 
 // ------------------------- PrevPic -------------------------------
-func prevPic(i int)(int) {
+func prevPic(i int) int {
 	j := i
 	if j > 0 {
 		j--
@@ -259,6 +267,9 @@ func prevPic(i int)(int) {
 	return j
 }
 
+ */
+
+/*
 // ------------------------- DisplayImageByNumber ----------------------
 func displayImageByNumber(i int) {
 	currImgIdx = i
@@ -292,3 +303,5 @@ func displayImageByNumber(i int) {
     //displayArea.Scroll(-width/2, -height/2)  Doesn't do what I want, at all.
 	displayArea.Show()
 }
+
+*/
