@@ -17,6 +17,7 @@ import (
 	"github.com/therecipe/qt/widgets"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -29,6 +30,7 @@ var (
 	currImgIdx    int
 	origImgIdx    int
 	prevImgIdx    int
+	scaleFactor   float64 = 1  // running scalefactor
 )
 var (
 	imageReader *gui.QImageReader
@@ -40,7 +42,11 @@ var (
 	window *widgets.QMainWindow
 	scrollArea   *widgets.QScrollArea
 	displayLabel *widgets.QLabel
+    pixmap       *gui.QPixmap
 )
+
+const maxWidth = 1440
+const maxHeight = 960
 
 func imageViewer() *widgets.QMainWindow {
 
@@ -59,12 +65,14 @@ func imageViewer() *widgets.QMainWindow {
 		window = widgets.NewQMainWindow(nil, 0)
 		scrollArea = widgets.NewQScrollArea(window)
 		//window.SetMinimumSize2(1920, 1080)
-		window.SetMinimumSize2(1440, 960)
+		//window.SetBaseSize2(1440, 960)  this didn't do what I want.
+		window.SetMinimumSize2(maxWidth, maxHeight)
 		window.SetCentralWidget(scrollArea)
 		firstTimeThru = true
 		displayLabel = widgets.NewQLabel(scrollArea, core.Qt__Widget)
 		scrollArea.SetWidget(displayLabel)
 		scrollArea.SetWidgetResizable(true)
+		pixmap = gui.NewQPixmap()
 	} // else {
 	//	scene.Clear()
 	//	//view.Close()
@@ -85,12 +93,18 @@ func imageViewer() *widgets.QMainWindow {
 		//scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
 
-		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)
+		//var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)  scaling isn't working, so let me try something else
+		//var pixmap = gui.NewQPixmap()  Now a global.
+
+		pixmap.Load(imageFileName,"", core.Qt__AutoColor)
+		scaleFactor = 1
 
 		//size := pixmap.Size()
 		width := pixmap.Width()
 		height := pixmap.Height()
-		fmt.Printf(" Pixmap image %s is %d wide and %d high \n", imageFileName, width, height)
+
+		fmt.Printf(" Pixmap image %s is %d wide and %d high \n",
+			imageFileName, width, height)
 
 		displayLabel.SetPixmap(pixmap)
 		window.SetWindowTitle(imageFileName)
@@ -104,11 +118,7 @@ func imageViewer() *widgets.QMainWindow {
 				// do nothing, just so I can test this.
 			} else if ev.Matches(gui.QKeySequence__New) { // ctrl-n
 				//widgets.QMessageBox_Information(nil, "key New", "Ctrl-N hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				if currImgIdx < len(picfiles)-1 {
-					currImgIdx++
-				}
-				imageFileName = picfiles[currImgIdx]
-				imageViewer()
+				scaleFactor = 1
 			} else if ev.Matches(gui.QKeySequence__Quit) { // ctrl-q
 				//widgets.QMessageBox_Information(nil, "quit Key", "Ctrl-q hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 				mainApp.Quit()
@@ -122,23 +132,46 @@ func imageViewer() *widgets.QMainWindow {
 				imageFileName = picfiles[currImgIdx]
 				imageViewer()
 			} else if ev.Matches(gui.QKeySequence__HelpContents) {
-				widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				helpmsg := " n -- next image \n"
+				helpmsg += " b -- prev image \n"
+				helpmsg += " ctrl-o -- original image \n"
+				helpmsg += " Esc, q, ctrl-q -- quit \n"
+				helpmsg += " ctrl-n -- scalefactor = 1 \n"
+				helpmsg += " zoom in -- by 1.25, or 5/4 \n"
+				helpmsg += " zoom out -- by 0.8, or 4/5 \n"
+				widgets.QMessageBox_Information(nil, "key Help", helpmsg, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			} else if ev.Matches(gui.QKeySequence__ZoomIn) {
+				//widgets.QMessageBox_Information(nil, "zoom in key", "zoom in key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				scaleFactor *= 1.25  // factor is 5/4
+				imageViewer().Show()
+			} else if ev.Matches(gui.QKeySequence__ZoomOut) {
+				//widgets.QMessageBox_Information(nil, "zoom out key", "zoom out key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				scaleFactor *= 0.8  // factor is 4/5
+				imageViewer().Show()
 			} else if ev.Key() == int(core.Qt__Key_B) {
 				//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 				if currImgIdx > 0 {
 					currImgIdx--
 				}
 				imageFileName = picfiles[currImgIdx]
-				imageViewer()
+				imageViewer().Show()
 			} else if ev.Key() == int(core.Qt__Key_N) {
 				//widgets.QMessageBox_Information(nil, "N key", "N key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 				if currImgIdx < len(picfiles)-1 {
 					currImgIdx++
 				}
 				imageFileName = picfiles[currImgIdx]
-				imageViewer()
+				imageViewer().Show()
 			} else if ev.Key() == int(core.Qt__Key_Q) {
 				mainApp.Quit()
+			} else if ev.Key() == int(core.Qt__Key_Equal) {
+				//widgets.QMessageBox_Information(nil, "= key", "equal key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				scaleFactor *= 1.25  // factor is 5/4
+				zoomIn(scaleFactor)
+			} else if ev.Key() == int(core.Qt__Key_Minus) {
+				//widgets.QMessageBox_Information(nil, "- key", "minus key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				scaleFactor *= 0.8  // factor is 4/5
+				zoomOut(scaleFactor)
 			}
 		}
 		window.ConnectKeyPressEvent(arrowEventclosure)
@@ -225,3 +258,48 @@ func isPicFile(filename string) bool {
 	}
 	return false
 }
+
+// ----------------------------------- ZoomIn --------------------------------
+func zoomIn(factor float64)  {
+	width := pixmap.Width()
+	height := pixmap.Height()
+
+	scaledwidth := int(math.Trunc(factor*float64(width)))
+	if scaledwidth > maxWidth {
+		scaledwidth = maxWidth
+	}
+	scaledheight := int(math.Trunc(factor*float64(height)))
+	if scaledheight > maxHeight {
+		scaledheight = maxHeight
+	}
+	fmt.Printf(" From Zoomin: Pixmap image %s is %d wide and %d high, scalefactor=%g, scaled w x h= %d x %d \n",
+		imageFileName, width, height, scaleFactor, scaledwidth, scaledheight)
+
+	pixmap.Scaled2(scaledwidth, scaledheight, core.Qt__KeepAspectRatio, core.Qt__SmoothTransformation)
+	displayLabel.SetPixmap(pixmap)
+	displayLabel.Resize2(scaledwidth, scaledheight)
+	window.Show()
+} // end zoomIn
+
+// ---------------------------------- ZoomOut --------------------------------------
+func zoomOut(factor float64)  {
+	width := pixmap.Width()
+	height := pixmap.Height()
+
+	scaledwidth := int(math.Trunc(factor*float64(width)))
+	if scaledwidth > maxWidth {
+		scaledwidth = maxWidth
+	}
+	scaledheight := int(math.Trunc(factor*float64(height)))
+	if scaledheight > maxHeight {
+		scaledheight = maxHeight
+	}
+	fmt.Printf(" From ZoomOut: Pixmap image %s is %d wide and %d high, scalefactor=%g, scaled w x h= %d x %d \n",
+		imageFileName, width, height, scaleFactor, scaledwidth, scaledheight)
+
+	pixmap.Scaled2(scaledwidth, scaledheight, core.Qt__KeepAspectRatio, core.Qt__SmoothTransformation)
+	displayLabel.SetPixmap(pixmap)
+	displayLabel.Resize2(scaledwidth, scaledheight)
+	window.Show()
+}
+

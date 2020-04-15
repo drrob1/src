@@ -12,7 +12,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "9 Apr 2020"
+const LastAlteredDate = "15 Apr 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -92,7 +92,7 @@ REVISION HISTORY
 22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.  And fix bug of primefac of zero or a number near zero.
  7 Apr 20 -- Decided to comment out the break statements in the GetResult case statement, which is held over from my C++ code.  Doesn't belong here.
  9 Apr 20 -- Switched to tknptr from tokenize package.  I guess mostly to test it.  I should have done this when I first wrote it.
-
+15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', ie, string is in scientific notation.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -195,6 +195,12 @@ func AddCommas(instr string) string {
 	var i, decptposn int
 	var Comma []byte = []byte{','}
 
+        capstr := strings.ToUpper(instr)
+
+        if strings.Contains(capstr, "E") {
+             return instr
+        }
+
 	BS := make([]byte, 0, 100)
 	//  outBS := make([]byte,0,100);
 	decptposn = strings.LastIndex(instr, ".")
@@ -276,11 +282,11 @@ func DumpStackFloat() []string {
 	return ss
 } // DumpStackFloat
 //************************************************* OutputFixedOrFloat *******************************
-func OutputFixedOrFloat(r float64) { // Since all output is thru a string slice, I think I stopped using this.
+func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now only rpn.go still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
-		str := strconv.FormatFloat(r, 'g', sigfig, 64)
+		str := strconv.FormatFloat(r, 'g', sigfig, 64) // when r >= 1e6 this switches to scientific notation.
 		CropNStr(str)
 		fmt.Print(str)
 	}
