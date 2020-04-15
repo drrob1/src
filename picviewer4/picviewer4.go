@@ -58,7 +58,8 @@ func imageViewer() *widgets.QMainWindow {
 	if window == nil { // must be first pass thru this rtn.
 		window = widgets.NewQMainWindow(nil, 0)
 		scrollArea = widgets.NewQScrollArea(window)
-		window.SetMinimumSize2(1920, 1080)
+		//window.SetMinimumSize2(1920, 1080)
+		window.SetMinimumSize2(1440, 960)
 		window.SetCentralWidget(scrollArea)
 		firstTimeThru = true
 		displayLabel = widgets.NewQLabel(scrollArea, core.Qt__Widget)
