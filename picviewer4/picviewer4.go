@@ -92,6 +92,7 @@ func imageViewer() *widgets.QMainWindow {
 		fmt.Printf(" Pixmap image %s is %d wide and %d high \n", imageFileName, width, height)
 
 		displayLabel.SetPixmap(pixmap)
+		window.SetWindowTitle(imageFileName)
 	}
 
 	if firstTimeThru {
