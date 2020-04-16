@@ -58,7 +58,7 @@ func imageViewer() *widgets.QMainWindow {
 	fwidth := float64(width)
 	height := size.Height()
 	fheight := float64(height)
-	fmt.Println(" imagereader width=", width, ", height=", height, ", fwidth, fheight -", fwidth, fheight)
+	fmt.Println(" imagereader width=", width, ", height=", height, ", fwidth, fheight =", fwidth, fheight)
 
 	firstTimeThru := false
 	if window == nil { // must be first pass thru this rtn.
@@ -72,7 +72,7 @@ func imageViewer() *widgets.QMainWindow {
 		displayLabel = widgets.NewQLabel(scrollArea, core.Qt__Widget)
 		scrollArea.SetWidget(displayLabel)
 		scrollArea.SetWidgetResizable(true)
-		pixmap = gui.NewQPixmap()
+		//pixmap = gui.NewQPixmap()
 	} // else {
 	//	scene.Clear()
 	//	//view.Close()
@@ -95,18 +95,20 @@ func imageViewer() *widgets.QMainWindow {
 
 		//var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)  scaling isn't working, so let me try something else
 		//var pixmap = gui.NewQPixmap()  Now a global.
+		//pixmap.Load(imageFileName,"", core.Qt__AutoColor)
 
-		pixmap.Load(imageFileName,"", core.Qt__AutoColor)
+		pixmap = gui.QPixmap_FromImageReader(imageReader, core.Qt__AutoColor)
 		scaleFactor = 1
 
 		//size := pixmap.Size()
 		width := pixmap.Width()
 		height := pixmap.Height()
 
-		fmt.Printf(" Pixmap image %s is %d wide and %d high \n",
+		fmt.Printf(" Initial pixmap image %s is %d wide and %d high \n",
 			imageFileName, width, height)
 
 		displayLabel.SetPixmap(pixmap)
+		//displayLabel.SetScaledContents(true)  // This does not keep aspect ratio.
 		window.SetWindowTitle(imageFileName)
 	}
 
@@ -261,6 +263,7 @@ func isPicFile(filename string) bool {
 
 // ----------------------------------- ZoomIn --------------------------------
 func zoomIn(factor float64)  {
+	size := pixmap.Size()
 	width := pixmap.Width()
 	height := pixmap.Height()
 
@@ -272,12 +275,18 @@ func zoomIn(factor float64)  {
 	if scaledheight > maxHeight {
 		scaledheight = maxHeight
 	}
-	fmt.Printf(" From Zoomin: Pixmap image %s is %d wide and %d high, scalefactor=%g, scaled w x h= %d x %d \n",
+	fmt.Printf(" From Zoomin: Pixmap image %s is %d wide and %d high, scalefactor=%.4g, scaled w x h= %d x %d \n",
 		imageFileName, width, height, scaleFactor, scaledwidth, scaledheight)
 
-	pixmap.Scaled2(scaledwidth, scaledheight, core.Qt__KeepAspectRatio, core.Qt__SmoothTransformation)
+	newsize := size.Scaled(scaledwidth, scaledheight, core.Qt__KeepAspectRatioByExpanding)
+	pixmap.Scaled(newsize, core.Qt__KeepAspectRatio, core.Qt__SmoothTransformation)
+	//pixmap.Scaled2(scaledwidth, scaledheight, core.Qt__KeepAspectRatio, core.Qt__SmoothTransformation)
+	finalwidth := pixmap.Width()
+	finalheight := pixmap.Height()
+	fmt.Printf(" Still from ZoomIn:  FinalWidth=%d and FinalHeight=%d \n", finalwidth, finalheight)
+
 	displayLabel.SetPixmap(pixmap)
-	displayLabel.Resize2(scaledwidth, scaledheight)
+	//displayLabel.Resize2(scaledwidth, scaledheight)
 	window.Show()
 } // end zoomIn
 
@@ -294,7 +303,7 @@ func zoomOut(factor float64)  {
 	if scaledheight > maxHeight {
 		scaledheight = maxHeight
 	}
-	fmt.Printf(" From ZoomOut: Pixmap image %s is %d wide and %d high, scalefactor=%g, scaled w x h= %d x %d \n",
+	fmt.Printf(" From ZoomOut: Pixmap image %s is %d wide and %d high, scalefactor=%.4g, scaled w x h= %d x %d \n",
 		imageFileName, width, height, scaleFactor, scaledwidth, scaledheight)
 
 	pixmap.Scaled2(scaledwidth, scaledheight, core.Qt__KeepAspectRatio, core.Qt__SmoothTransformation)
