@@ -6,6 +6,7 @@ package main
    ======== =======
    12 Apr 20 -- Now picviewer3.go.  I want change it completely so that I only have one func imageViewer.
                   But I want to not lose the other version that mostly works, except that the view size does not match the displayArea on supsequent reads.
+   17 Apr 20 -- func (*QGraphicsView) SetDragMode(mode QGraphicsView__DragMode) --> [ __NoDrag | __ScrollHandDrag | __RubberBandDrag ]
 */
 
 import (
@@ -92,6 +93,8 @@ func imageViewer() *widgets.QWidget {
 	}
 
 	view.SetScene(scene)
+	//view.SetDragMode(widgets.QGraphicsView__RubberBandDrag)
+	view.SetDragMode(widgets.QGraphicsView__ScrollHandDrag)
 
 	/*
 		//create a button and connect the clicked signal.  Or not.
