@@ -140,6 +140,23 @@ func imageViewer() *widgets.QWidget {
 				imageFileName = picfiles[currImgIdx]
 				imageViewer()
 			} else if ev.Matches(gui.QKeySequence__HelpContents) {
+				helpmsg := " n -- next image \n"
+				helpmsg += " b -- prev image \n"
+				helpmsg += " ctrl-o -- original image \n"
+				helpmsg += " Esc, q, ctrl-q -- quit \n"
+				helpmsg += " ctrl-n -- scalefactor = 1 \n"
+				helpmsg += " zoom in -- by 1.25, or 5/4 \n"
+				helpmsg += " zoom out -- by 0.8, or 4/5 \n"
+				widgets.QMessageBox_Information(nil, "key Help", helpmsg, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			} else if ev.Matches(gui.QKeySequence__ZoomIn) {
+				//widgets.QMessageBox_Information(nil, "zoom in key", "zoom in key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				view.Scale(1.25, 1.25)  // factor is 5/4
+				imageViewer().Show()
+			} else if ev.Matches(gui.QKeySequence__ZoomOut) {
+				//widgets.QMessageBox_Information(nil, "zoom out key", "zoom out key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				view.Scale(0.8, 0.8)  // factor is 4/5
+				imageViewer().Show()
+			} else if ev.Matches(gui.QKeySequence__HelpContents) {
 				widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			} else if ev.Key() == int(core.Qt__Key_B) {
 				//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
@@ -157,6 +174,14 @@ func imageViewer() *widgets.QWidget {
 				imageViewer()
 			} else if ev.Key() == int(core.Qt__Key_Q) {
 				mainApp.Quit()
+			} else if ev.Key() == int(core.Qt__Key_Equal) {
+				//widgets.QMessageBox_Information(nil, "= key", "equal key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				view.Scale(1.25, 1.25)  // factor is 5/4
+				imageViewer().Show()
+			} else if ev.Key() == int(core.Qt__Key_Minus) {
+				//widgets.QMessageBox_Information(nil, "- key", "minus key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+				view.Scale(0.8, 0.8)  // factor is 4/5
+				imageViewer().Show()
 			}
 		}
 		displayArea.ConnectKeyPressEvent(arrowEventclosure)
