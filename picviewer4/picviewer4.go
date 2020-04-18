@@ -45,7 +45,7 @@ var (
 )
 
 const maxWidth = 1440
-const maxHeight = 960
+const maxHeight = 1000
 
 func imageViewer() *widgets.QMainWindow {
 
@@ -62,11 +62,15 @@ func imageViewer() *widgets.QMainWindow {
 	firstTimeThru := false
 	if window == nil { // must be first pass thru this rtn.
 		window = widgets.NewQMainWindow(nil, 0)
-		scrollArea = widgets.NewQScrollArea(window)
 		//window.SetMinimumSize2(1920, 1080)
 		//window.SetBaseSize2(1440, 960)  this didn't do what I want.
-		window.SetMinimumSize2(maxWidth, maxHeight)
+		window.SetMinimumSize2(maxWidth, maxHeight)//  With ignored policies I may not need this now.  Nevermind
+
+		scrollArea = widgets.NewQScrollArea(window)
+		scrollArea.SetSizePolicy2(widgets.QSizePolicy__Expanding, widgets.QSizePolicy__Expanding) // I think this line worked.
+		//scrollArea.SetVisible(false)  nothing is seen when this is used.
 		window.SetCentralWidget(scrollArea)
+
 		firstTimeThru = true
 		displayLabel = widgets.NewQLabel(scrollArea, core.Qt__Widget)
 		scrollArea.SetWidget(displayLabel)
@@ -91,12 +95,11 @@ func imageViewer() *widgets.QMainWindow {
 		movie.Start()
 		//scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
-
-		//var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)  scaling isn't working, so let me try something else
+		pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)// scaling still isn't working, so I put this back.
 		//var pixmap = gui.NewQPixmap()  Now a global.
 		//pixmap.Load(imageFileName,"", core.Qt__AutoColor)
 
-		pixmap = gui.QPixmap_FromImageReader(imageReader, core.Qt__AutoColor)
+		//pixmap = gui.QPixmap_FromImageReader(imageReader, core.Qt__AutoColor)
 		scaleFactor = 1
 
 		//size := pixmap.Size()
@@ -106,6 +109,8 @@ func imageViewer() *widgets.QMainWindow {
 		fmt.Printf(" Initial pixmap image %s is %d wide and %d high \n",
 			imageFileName, width, height)
 
+		//displayLabel.SetSizePolicy2(widgets.QSizePolicy__Expanding, widgets.QSizePolicy__Expanding)
+		displayLabel.SetSizePolicy2(widgets.QSizePolicy__MinimumExpanding, widgets.QSizePolicy__MinimumExpanding)
 		displayLabel.SetPixmap(pixmap)
 		//displayLabel.SetScaledContents(true)  // This does not keep aspect ratio.
 		window.SetWindowTitle(imageFileName)
@@ -143,12 +148,12 @@ func imageViewer() *widgets.QMainWindow {
 				widgets.QMessageBox_Information(nil, "key Help", helpmsg, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			} else if ev.Matches(gui.QKeySequence__ZoomIn) {
 				//widgets.QMessageBox_Information(nil, "zoom in key", "zoom in key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				scaleFactor *= 1.25  // factor is 5/4
-				imageViewer().Show()
+				//scaleFactor *= 1.25  // factor is 5/4
+				//imageViewer().Show()  now it's panicing
 			} else if ev.Matches(gui.QKeySequence__ZoomOut) {
 				//widgets.QMessageBox_Information(nil, "zoom out key", "zoom out key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				scaleFactor *= 0.8  // factor is 4/5
-				imageViewer().Show()
+				//scaleFactor *= 0.8  // factor is 4/5
+				//imageViewer().Show()  now it's panicing
 			} else if ev.Key() == int(core.Qt__Key_B) {
 				//widgets.QMessageBox_Information(nil, "B key", "B key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 				if currImgIdx > 0 {
@@ -167,12 +172,12 @@ func imageViewer() *widgets.QMainWindow {
 				mainApp.Quit()
 			} else if ev.Key() == int(core.Qt__Key_Equal) {
 				//widgets.QMessageBox_Information(nil, "= key", "equal key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				scaleFactor *= 1.25  // factor is 5/4
-				zoomIn(scaleFactor)
+				//scaleFactor *= 1.25  // factor is 5/4
+				//zoomIn(scaleFactor) // now it panics, before it just did nothing
 			} else if ev.Key() == int(core.Qt__Key_Minus) {
 				//widgets.QMessageBox_Information(nil, "- key", "minus key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				scaleFactor *= 0.8  // factor is 4/5
-				zoomOut(scaleFactor)
+				//scaleFactor *= 0.8  // factor is 4/5
+				//zoomOut(scaleFactor)  now it panics, before it just did nothing.
 			}
 		}
 		window.ConnectKeyPressEvent(arrowEventclosure)

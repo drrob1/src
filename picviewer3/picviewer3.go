@@ -38,7 +38,7 @@ var (
 	view        *widgets.QGraphicsView
 	item        *widgets.QGraphicsPixmapItem
 	layout      *widgets.QVBoxLayout
-	//maxqsize    *core.QSize
+	maxqsize    *core.QSize
 )
 
 const maxQWidth = 1440
@@ -62,7 +62,7 @@ func imageViewer() *widgets.QWidget {
 	if displayArea == nil { // must be first pass thru this rtn.
 		displayArea = widgets.NewQWidget(nil, 0)
 		firstTimeThru = true
-		displayArea.SetFixedSize2(maxQWidth, maxQHeight) // displayArea has to be slightly bigger than the pixmap.
+		displayArea.SetMinimumSize2(maxQWidth, maxQHeight) // displayArea has to be slightly bigger than the pixmap.
 		//scene = widgets.NewQGraphicsScene3(0, 0, fwidth, fheight, displayArea)
 		scene = widgets.NewQGraphicsScene(displayArea)
 		view = widgets.NewQGraphicsView(displayArea)
@@ -110,8 +110,13 @@ func imageViewer() *widgets.QWidget {
 
 	view.SetScene(scene)
 	//view.SetDragMode(widgets.QGraphicsView__RubberBandDrag)
+	//view.SetSizePolicy2(widgets.QSizePolicy__Ignored, widgets.QSizePolicy__Ignored)  This distorts the image.
+	//view.SetSizePolicy2(widgets.QSizePolicy__Expanding, widgets.QSizePolicy__Expanding)
+	view.SetSizePolicy2(widgets.QSizePolicy__MinimumExpanding, widgets.QSizePolicy__MinimumExpanding)
+
 	view.SetDragMode(widgets.QGraphicsView__ScrollHandDrag)
 	view.EnsureVisible2(0, 0, fwidth, fheight, 10, 10)
+	displayArea.SetSizePolicy2(widgets.QSizePolicy__MinimumExpanding, widgets.QSizePolicy__MinimumExpanding)
 	displayArea.SetWindowTitle(imageFileName)
 	/*
 		//create a button and connect the clicked signal.  Or not.
@@ -126,6 +131,9 @@ func imageViewer() *widgets.QWidget {
 	*/
 	if firstTimeThru {
 		layout = widgets.NewQVBoxLayout()
+		//layout.SetSizeConstraint(widgets.QLayout__SetNoConstraint)
+		layout.SetSizeConstraint(widgets.QLayout__SetMinimumSize)
+		layout.SetContentsMargins(0,0,0,0)
 
 		layout.AddWidget(view, 0, core.Qt__AlignCenter)
 		//layout.AddWidget(button, 0, core.Qt__AlignCenter)
