@@ -7,6 +7,8 @@ package main
    12 Apr 20 -- Now picviewer3.go.  I want change it completely so that I only have one func imageViewer.
                   But I want to not lose the other version that mostly works, except that the view size does not match the displayArea on supsequent reads.
    17 Apr 20 -- func (*QGraphicsView) SetDragMode(mode QGraphicsView__DragMode) --> [ __NoDrag | __ScrollHandDrag | __RubberBandDrag ]
+   18 Apr 20 -- func (*QGraphicsView) Scale(sx, sy float64) which is working.
+                 and now trying to see what SetResizeAnchor does.
 */
 
 import (
@@ -30,13 +32,17 @@ var (
 	prevImgIdx    int
 )
 var (
-	imageReader   *gui.QImageReader
-	displayArea   *widgets.QWidget
-	scene         *widgets.QGraphicsScene
-	view          *widgets.QGraphicsView
-	item          *widgets.QGraphicsPixmapItem
-	layout        *widgets.QVBoxLayout
+	imageReader *gui.QImageReader
+	//displayArea *widgets.QMainWindow // was a QWidget, but I want something else, but it didn't work.  The scene was distorted.
+	displayArea *widgets.QWidget
+	scene  *widgets.QGraphicsScene
+	view   *widgets.QGraphicsView
+	item   *widgets.QGraphicsPixmapItem
+	layout *widgets.QVBoxLayout
 )
+
+const maxWidth = 1440
+const maxHeight = 960
 
 func imageViewer() *widgets.QWidget {
 
@@ -53,6 +59,7 @@ func imageViewer() *widgets.QWidget {
 	if displayArea == nil { // must be first pass thru this rtn.
 		displayArea = widgets.NewQWidget(nil, 0)
 		firstTimeThru = true
+		displayArea.SetFixedSize2(maxWidth, maxHeight)
 		//scene = widgets.NewQGraphicsScene3(0, 0, fwidth, fheight, displayArea)
 		scene = widgets.NewQGraphicsScene(displayArea)
 		view = widgets.NewQGraphicsView(displayArea)
@@ -150,11 +157,13 @@ func imageViewer() *widgets.QWidget {
 				widgets.QMessageBox_Information(nil, "key Help", helpmsg, widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
 			} else if ev.Matches(gui.QKeySequence__ZoomIn) {
 				//widgets.QMessageBox_Information(nil, "zoom in key", "zoom in key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				view.Scale(1.25, 1.25)  // factor is 5/4
+				view.SetResizeAnchor(widgets.QGraphicsView__AnchorViewCenter)
+				view.Scale(1.25, 1.25) // factor is 5/4
 				imageViewer().Show()
 			} else if ev.Matches(gui.QKeySequence__ZoomOut) {
 				//widgets.QMessageBox_Information(nil, "zoom out key", "zoom out key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				view.Scale(0.8, 0.8)  // factor is 4/5
+				view.SetResizeAnchor(widgets.QGraphicsView__AnchorViewCenter)
+				view.Scale(0.8, 0.8) // factor is 4/5
 				imageViewer().Show()
 			} else if ev.Matches(gui.QKeySequence__HelpContents) {
 				widgets.QMessageBox_Information(nil, "key Help", "F1 key kit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
@@ -176,11 +185,13 @@ func imageViewer() *widgets.QWidget {
 				mainApp.Quit()
 			} else if ev.Key() == int(core.Qt__Key_Equal) {
 				//widgets.QMessageBox_Information(nil, "= key", "equal key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				view.Scale(1.25, 1.25)  // factor is 5/4
+				view.SetResizeAnchor(widgets.QGraphicsView__AnchorViewCenter)
+				view.Scale(1.25, 1.25) // factor is 5/4
 				imageViewer().Show()
 			} else if ev.Key() == int(core.Qt__Key_Minus) {
 				//widgets.QMessageBox_Information(nil, "- key", "minus key hit", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-				view.Scale(0.8, 0.8)  // factor is 4/5
+				view.SetResizeAnchor(widgets.QGraphicsView__AnchorViewCenter)
+				view.Scale(0.8, 0.8) // factor is 4/5
 				imageViewer().Show()
 			}
 		}
@@ -295,7 +306,7 @@ func prevPic(i int) int {
 	return j
 }
 
- */
+*/
 
 /*
 // ------------------------- DisplayImageByNumber ----------------------
