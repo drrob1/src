@@ -29,7 +29,6 @@ var (
 	picfiles      sort.StringSlice
 	currImgIdx    int
 	origImgIdx    int
-	prevImgIdx    int
 	scaleFactor   float64 = 1  // running scalefactor
 )
 var (

@@ -29,23 +29,22 @@ var (
 	picfiles      sort.StringSlice
 	currImgIdx    int
 	origImgIdx    int
-	prevImgIdx    int
 )
 var (
 	imageReader *gui.QImageReader
 	//displayArea *widgets.QMainWindow // was a QWidget, but I want something else, but it didn't work.  The scene was distorted.
 	displayArea *widgets.QWidget
-	scene  *widgets.QGraphicsScene
-	view   *widgets.QGraphicsView
-	item   *widgets.QGraphicsPixmapItem
-	layout *widgets.QVBoxLayout
-	maxqsize *core.QSize
+	scene       *widgets.QGraphicsScene
+	view        *widgets.QGraphicsView
+	item        *widgets.QGraphicsPixmapItem
+	layout      *widgets.QVBoxLayout
+	//maxqsize    *core.QSize
 )
 
 const maxQWidth = 1440
-const maxQHeight = 960
+const maxQHeight = 1050
 const maxWidth = 1400
-const maxHeight = 900
+const maxHeight = 1024
 
 func imageViewer() *widgets.QWidget {
 
@@ -56,7 +55,8 @@ func imageViewer() *widgets.QWidget {
 	fwidth := float64(width)
 	height := size.Height()
 	fheight := float64(height)
-	fmt.Println(" imagereader width=", width, ", height=", height, ", fwidth, fheight -", fwidth, fheight)
+	fmt.Println()
+	fmt.Println(" New Image: imagereader width=", width, ", height=", height, ", fwidth, fheight =", fwidth, fheight)
 
 	firstTimeThru := false
 	if displayArea == nil { // must be first pass thru this rtn.
@@ -76,6 +76,8 @@ func imageViewer() *widgets.QWidget {
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
+	var pixmap = gui.NewQPixmap3(maxWidth, maxHeight)
+	fmt.Printf(" pixmap just created to be %d wide and %d high. \n", pixmap.Width(), pixmap.Height())
 
 	if imageReader.SupportsAnimation() {
 		// instead of reading from file(disk) again, we take from memory
@@ -90,9 +92,11 @@ func imageViewer() *widgets.QWidget {
 		scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
 
-		var pixmap = gui.NewQPixmap3(maxWidth, maxHeight)
-		pixmap.Load(imageFileName, "", core.Qt__AutoColor)
-		//pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // this was changed fromNewQPixmap3 in before I had to redo Qt and therecipe.
+		//var pixmap = gui.NewQPixmap3(maxWidth, maxHeight)
+		pixmap.DestroyQPixmap()
+		//pixmap = gui.NewQPixmap3(maxWidth, maxHeight)
+		//pixmap.Load(imageFileName, "", core.Qt__AutoColor)
+		pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // this was changed fromNewQPixmap3 in before I had to redo Qt and therecipe.
 
 		//size := pixmap.Size()
 		width = pixmap.Width()
@@ -107,7 +111,7 @@ func imageViewer() *widgets.QWidget {
 	view.SetScene(scene)
 	//view.SetDragMode(widgets.QGraphicsView__RubberBandDrag)
 	view.SetDragMode(widgets.QGraphicsView__ScrollHandDrag)
-	view.EnsureVisible2(0,0, fwidth, fheight, 10, 10)
+	view.EnsureVisible2(0, 0, fwidth, fheight, 10, 10)
 	displayArea.SetWindowTitle(imageFileName)
 	/*
 		//create a button and connect the clicked signal.  Or not.
