@@ -39,10 +39,13 @@ var (
 	view   *widgets.QGraphicsView
 	item   *widgets.QGraphicsPixmapItem
 	layout *widgets.QVBoxLayout
+	maxqsize *core.QSize
 )
 
-const maxWidth = 1440
-const maxHeight = 960
+const maxQWidth = 1440
+const maxQHeight = 960
+const maxWidth = 1400
+const maxHeight = 900
 
 func imageViewer() *widgets.QWidget {
 
@@ -59,7 +62,7 @@ func imageViewer() *widgets.QWidget {
 	if displayArea == nil { // must be first pass thru this rtn.
 		displayArea = widgets.NewQWidget(nil, 0)
 		firstTimeThru = true
-		displayArea.SetFixedSize2(maxWidth, maxHeight)
+		displayArea.SetFixedSize2(maxQWidth, maxQHeight) // displayArea has to be slightly bigger than the pixmap.
 		//scene = widgets.NewQGraphicsScene3(0, 0, fwidth, fheight, displayArea)
 		scene = widgets.NewQGraphicsScene(displayArea)
 		view = widgets.NewQGraphicsView(displayArea)
@@ -87,11 +90,13 @@ func imageViewer() *widgets.QWidget {
 		scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
 
-		var pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // this was changed fromNewQPixmap3 in before I had to redo Qt and therecipe.
+		var pixmap = gui.NewQPixmap3(maxWidth, maxHeight)
+		pixmap.Load(imageFileName, "", core.Qt__AutoColor)
+		//pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // this was changed fromNewQPixmap3 in before I had to redo Qt and therecipe.
 
 		//size := pixmap.Size()
-		width := pixmap.Width()
-		height := pixmap.Height()
+		width = pixmap.Width()
+		height = pixmap.Height()
 		fmt.Printf(" Pixmap image %s is %d wide and %d high \n", imageFileName, width, height)
 
 		item = widgets.NewQGraphicsPixmapItem2(pixmap, nil)
@@ -102,7 +107,8 @@ func imageViewer() *widgets.QWidget {
 	view.SetScene(scene)
 	//view.SetDragMode(widgets.QGraphicsView__RubberBandDrag)
 	view.SetDragMode(widgets.QGraphicsView__ScrollHandDrag)
-
+	view.EnsureVisible2(0,0, fwidth, fheight, 10, 10)
+	displayArea.SetWindowTitle(imageFileName)
 	/*
 		//create a button and connect the clicked signal.  Or not.
 		var button = widgets.NewQPushButton2("Quit", nil)
@@ -209,6 +215,7 @@ func main() {
 	}
 
 	imageFileName = os.Args[1]
+	maxqsize = core.NewQSize2(maxWidth, maxHeight)
 
 	fmt.Println("Loading image : ", imageFileName)
 
