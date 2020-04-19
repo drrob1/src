@@ -9,6 +9,7 @@ package main
    17 Apr 20 -- func (*QGraphicsView) SetDragMode(mode QGraphicsView__DragMode) --> [ __NoDrag | __ScrollHandDrag | __RubberBandDrag ]
    18 Apr 20 -- func (*QGraphicsView) Scale(sx, sy float64) which is working.
                  and now trying to see what SetResizeAnchor does.
+   19 Apr 20 -- Will add display of currImgIdx number to output.
 */
 
 import (
@@ -56,7 +57,8 @@ func imageViewer() *widgets.QWidget {
 	height := size.Height()
 	fheight := float64(height)
 	fmt.Println()
-	fmt.Println(" New Image: imagereader width=", width, ", height=", height, ", fwidth, fheight =", fwidth, fheight)
+	fmt.Printf(" New Image: %s, imagereader width=%d, height=%d, fwidth, fheight =%g %g, idx=%d out of %d \n",
+		imageFileName, width, height, fwidth, fheight, currImgIdx, len(picfiles))
 
 	firstTimeThru := false
 	if displayArea == nil { // must be first pass thru this rtn.
