@@ -30,7 +30,7 @@ func main() {
 	for _, url := range urls {
 		resp, err := http.Get(url)
 		if err != nil {
-			log.Panicln(err)
+			log.Println(err)
 		}
 
 		// Print HTTP Status
