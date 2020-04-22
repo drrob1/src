@@ -31,6 +31,7 @@ func main() {
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		// Print HTTP Status
@@ -49,4 +50,7 @@ func main() {
 		fmt.Scanln(&ans)
 		fmt.Print(ans)
 	}
+	fmt.Println()
+	fmt.Println(" Finished.")
+	fmt.Println()
 }
