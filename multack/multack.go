@@ -25,6 +25,9 @@
                I'll stop at 100,000 items.  It's great it works.
 
    2 Apr 20 -- Updated it's start string to declare its correct name.  I forgot to change that yesterday.
+  23 Apr 20 -- 2 edge cases don't work on linux.  If there is a filepattern but no matching files in the start directory,
+                and if there is only 1 matching file in the start directory.
+                And also if there appears to be more than one extension, like gastric.txt.out.
 */
 package main
 
@@ -44,7 +47,7 @@ import (
 	"time"
 )
 
-const lastAltered = "2 Apr 2020"
+const lastAltered = "23 Apr 2020"
 
 var workers = runtime.NumCPU()
 
@@ -115,10 +118,8 @@ func main() {
 		extensions = append(extensions, ".txt")
 	} else if runtime.GOOS == "linux" {
 		files := args[1:]
-		if len(files) > 1 {
-			extensions = extractExtensions(files)
-		}
-	} else {
+		extensions = extractExtensions(files)
+	} else { // on windows
 		extensions = args[1:]
 		for i := range extensions {
 			extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
@@ -227,7 +228,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 } // end grepFile
 
 func extractExtensions(files []string) []string {
-
 	var extensions sort.StringSlice
 	extensions = make([]string, 0, 100)
 	for _, file := range files {
@@ -240,13 +240,13 @@ func extractExtensions(files []string) []string {
 			if i == 0 {
 				continue
 			}
-			if strings.EqualFold(extensions[i-1], extensions[i]) {
+			if extensions[i-1] == extensions[i] {
 				extensions[i-1] = ""  // This needs to be [i-1] because when it was [i] it interferred w/ the next iteration.
 			}
 		}
-		//fmt.Println(" in extractExtensions before sort:", extensions)
+		//fmt.Println(" in extractExtensions before 2nd sort:", extensions)
 		sort.Sort(sort.Reverse(extensions))
-		// sort.Sort(sort.Reverse(sort.IntSlice(s)))
+
 		trimmedExtensions := make([]string, 0, len(extensions))
 		for _, ext := range extensions {
 			if ext != "" {
