@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "15 May 2020"
+const LastAlteredDate = "16 May 2020"
 
 /*
   REVISION HISTORY
@@ -28,6 +28,7 @@ const LastAlteredDate = "15 May 2020"
   29 July 19 -- Changing some formating of the output.
   15 May  20 -- Fixed ShellSort after starting to read High Performance Go by Ron Stephen.  I then remembered that ShellSort
                   is a modified BubbleSort, so I coded it as such.  And now it works.
+  16 May  20 -- Decided to try to fix the old ShellSort, now called BadShellSort.
 */
 
 // -----------------------------------------------------------
@@ -88,7 +89,7 @@ func StraightSelection(a []string) []string {
 } // END StraightSelection
 
 // -----------------------------------------------------------
-func BadShellSort(a []string) []string {
+func BadShellSort(a []string) []string { // still does not include a[0] in the sort.
 	const T = 4
 	var h [T]int
 
@@ -99,10 +100,10 @@ func BadShellSort(a []string) []string {
 	n := len(a)
 	for m := 0; m < T; m++ {
 		k := h[m]
-		for i := k + 1; i < n; i++ {
+		for i := k; i < n; i++ {
 			x := a[i]
 			j := i - k
-			for (j >= k) && (x <= a[j]) {
+			for (j >= k) && (x < a[j]) {  // worse if I change first condition to (j>k)
 				a[j+k] = a[j]
 				j = j - k
 			} // END for/while (j >= k) & (x < a[j]) DO
@@ -641,7 +642,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	// ShellSort --   05/15/2020 1:01:16 PM will try again.  It works.
+	// ShellSort --   05/15/2020 1:01:16 PM will try again, from scratch.  It works.
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
@@ -662,7 +663,33 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
-	/*  */
+
+	/*
+	// BadShellSort -- still doesn't work
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before BadShellSort:", sliceofwords)
+	}
+	t3a := time.Now()
+	BadShellSortedWords := BadShellSort(sliceofwords)
+	BadShellSortedTime := time.Since(t3a)
+	s = fmt.Sprintf(" After BadShellSort: %s \n", BadShellSortedTime.String())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println(" BadShellSort:", BadShellSortedTime)
+	if allowoutput {
+		for _, w := range BadShellSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+
+	 */
+
+
 
 	// HeapSort
 	copy(sliceofwords, mastersliceofwords)
