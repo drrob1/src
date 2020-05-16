@@ -89,7 +89,7 @@ func StraightSelection(a []string) []string {
 } // END StraightSelection
 
 // -----------------------------------------------------------
-func BadShellSort(a []string) []string { // still does not include a[0] in the sort.
+func BadShellSort(a []string) []string { // finally does include a[0] in the sort.
 	const T = 4
 	var h [T]int
 
