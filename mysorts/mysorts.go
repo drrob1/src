@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "29 July 2019"
+const LastAlteredDate = "15 May 2020"
 
 /*
   REVISION HISTORY
@@ -22,10 +22,11 @@ const LastAlteredDate = "29 July 2019"
   July 2017 -- First version
   26 July 17 -- Will try to learn delve (dlv) by using it to debug the routines here that don't work.
    7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
-   8 Nov 17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
+   8 Nov  17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
   10 July 19 -- Added better comments and output strings.
   28 July 19 -- Adding Stable, and SliceStable
   29 July 19 -- Changing some formating of the output.
+  15 May  20 -- Trying to fix shellsort
 */
 
 // -----------------------------------------------------------
@@ -86,7 +87,7 @@ func StraightSelection(a []string) []string {
 } // END StraightSelection
 
 // -----------------------------------------------------------
-func ShellSort(a []string) []string {
+func BadShellSort(a []string) []string {
 	const T = 4
 	var h [T]int
 
@@ -107,6 +108,66 @@ func ShellSort(a []string) []string {
 			a[j+k] = x
 		} // END FOR i := k+1 TO n-1 DO
 	} // END FOR m := 0 TO T-1 DO
+	return a
+} //END BadShellSort
+
+/* -----------------------------------------------------------
+{{{
+   Bubblesort from "Essential Algorithms" by Rod Stephens.  This is pseudo-code
+
+Bubblesort(Data: values[])
+    // Repeat until the array is sorted.
+    Boolean: not_sorted = True
+    While (not_sorted)
+        // Assume we won't find a pair to swap.
+        not_sorted = False
+        // Search the array for adjacent items that are out of order.
+        For i = 0 To <length of values> - 1
+            // See if items i and i - 1 are out of order.
+            If (values[i] < values[i - 1]) Then
+                // Swap them.
+                Data: temp = values[i]
+                values[i] = values[i - 1]
+                values[i - 1] = temp
+                // The array isn't sorted after all.
+                not_sorted = True
+            End If
+        Next i
+    End While
+End Bubblesort
+}}}
+*/
+
+// -----------------------------------------------------------
+func ShellSort(a []string) []string { // revisiting this as I'm reading "High Performance Go."
+	var h = []int{9, 5, 3, 1}
+
+	n := len(a)
+    //	t0 := time.Now()
+
+	for _, k := range h {
+		//k := h[m] when m is the index into h.  I decided that this form of the for range loop made more sense, as I do not need the actual index into h.
+        //		fmt.Println(" ShellSort:  k=", k, ", n =", n)
+		if k >= n {
+			continue
+		}
+
+		for { // loop until sorted
+			sorted := true
+			for i := k; i < n; i++ {
+				if a[i] < a[i-k] {
+					a[i], a[i-k] = a[i-k], a[i]
+					sorted = false
+					//fmt.Println("  ShellSort:  i =", i, ", sorted=", sorted)
+				}
+			} // END FOR i := k TO last item DO
+			if sorted {
+				break
+			}
+			//elapsed := time.Since(t0)
+			//if elapsed > 30*time.Second { return a }
+		} // end loop until sorted
+	} // END FOR range h
 	return a
 } //END ShellSort
 
@@ -475,7 +536,6 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 
-
 	// sort.StringSlice method
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -486,7 +546,7 @@ func main() {
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
 	NativeSortTimeNano := NativeSortTime.Nanoseconds()
-	s = fmt.Sprintf(" after NativeSort: %s, %d ns \n", NativeSortTime.String(),NativeSortTimeNano)
+	s = fmt.Sprintf(" after NativeSort: %s, %d ns \n", NativeSortTime.String(), NativeSortTimeNano)
 	fmt.Println(s)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
@@ -516,7 +576,7 @@ func main() {
 	sortedsliceofwords := StraightSelection(sliceofwords)
 	StraightSelectionTime := time.Since(t0)
 	StraightSelectionTimeNano := StraightSelectionTime.Nanoseconds()
-	s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(),StraightSelectionTimeNano)
+	s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(), StraightSelectionTimeNano)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
@@ -541,7 +601,7 @@ func main() {
 	t1 := time.Now()
 	sliceofsortedwords := StraightInsertion(sliceofwords)
 	StraightInsertionTime := time.Since(t1)
-	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(),StraightInsertionTime.Nanoseconds())
+	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
@@ -566,7 +626,7 @@ func main() {
 	t2 := time.Now()
 	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
 	BinaryInsertionTime := time.Since(t2)
-	s = fmt.Sprintf(" After BinaryInsertion: %s, %d ns \n", BinaryInsertionTime.String(),BinaryInsertionTime.Nanoseconds())
+	s = fmt.Sprintf(" After BinaryInsertion: %s, %d ns \n", BinaryInsertionTime.String(), BinaryInsertionTime.Nanoseconds())
 	fmt.Println(s)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
@@ -580,9 +640,8 @@ func main() {
 	check(err)
 	fmt.Println()
 
-
 	// ShellSort -- doesn't work
-	/* Does not sort correctly, but doesn't panic
+	/* Does not sort correctly, but doesn't panic.  05/15/2020 1:01:16 PM will try again. */
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
@@ -601,7 +660,7 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
-	*/
+	/*  */
 
 	// HeapSort
 	copy(sliceofwords, mastersliceofwords)
@@ -611,7 +670,7 @@ func main() {
 	t4 := time.Now()
 	HeapSortedWords := HeapSort(sliceofwords)
 	HeapSortedTime := time.Since(t4)
-	s = fmt.Sprintf(" After HeapSort: %s, %d ns \n", HeapSortedTime.String(),HeapSortedTime.Nanoseconds())
+	s = fmt.Sprintf(" After HeapSort: %s, %d ns \n", HeapSortedTime.String(), HeapSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
@@ -697,7 +756,7 @@ func main() {
 	t7a := time.Now()
 	ModifiedMergeSortedWords := ModifiedMergeSort(sliceofwords)
 	ModifiedMergeSortTime := time.Since(t7a)
-	s = fmt.Sprintf(" After ModifiedMergeSort: %s, %d ns \n", ModifiedMergeSortTime.String(),ModifiedMergeSortTime.Nanoseconds())
+	s = fmt.Sprintf(" After ModifiedMergeSort: %s, %d ns \n", ModifiedMergeSortTime.String(), ModifiedMergeSortTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
@@ -753,7 +812,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
-// sort.Sort
+	// sort.Sort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.Sort:", sliceofwords)
@@ -799,8 +858,6 @@ func main() {
 	check(err)
 	fmt.Println()
 
-
-
 	// sort.Strings
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -828,11 +885,11 @@ func main() {
 	if allowoutput {
 		fmt.Println("before sort.Slice:", sliceofwords)
 	}
-	lessfunction := func (i,j int) bool {
+	lessfunction := func(i, j int) bool {
 		return sliceofwords[i] < sliceofwords[j]
 	}
 	t11 := time.Now()
-	sort.Slice(sliceofwords,lessfunction)
+	sort.Slice(sliceofwords, lessfunction)
 	SliceSortTime := time.Since(t11)
 	s = fmt.Sprintf(" After sort.Slice: %s, %d ns \n", SliceSortTime.String(), SliceSortTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
@@ -848,14 +905,13 @@ func main() {
 	check(err)
 	fmt.Println()
 
-
 	// sort.SliceStable
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.SliceStable:", sliceofwords)
 	}
 	t12 := time.Now()
-	sort.SliceStable(sliceofwords,lessfunction)
+	sort.SliceStable(sliceofwords, lessfunction)
 	SliceStableSortTime := time.Since(t12)
 	s = fmt.Sprintf(" After sort.SliceStable: %s, %d ns \n", SliceStableSortTime.String(), SliceStableSortTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
@@ -870,8 +926,6 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
-
-
 
 	// Wrap it up by writing number of words, etc.
 	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
