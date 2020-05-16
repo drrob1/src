@@ -26,7 +26,8 @@ const LastAlteredDate = "15 May 2020"
   10 July 19 -- Added better comments and output strings.
   28 July 19 -- Adding Stable, and SliceStable
   29 July 19 -- Changing some formating of the output.
-  15 May  20 -- Trying to fix shellsort
+  15 May  20 -- Fixed ShellSort after starting to read High Performance Go by Ron Stephen.  I then remembered that ShellSort
+                  is a modified BubbleSort, so I coded it as such.  And now it works.
 */
 
 // -----------------------------------------------------------
@@ -640,8 +641,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	// ShellSort -- doesn't work
-	/* Does not sort correctly, but doesn't panic.  05/15/2020 1:01:16 PM will try again. */
+	// ShellSort --   05/15/2020 1:01:16 PM will try again.  It works.
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
@@ -649,8 +649,10 @@ func main() {
 	t3 := time.Now()
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
-	s = fmt.Sprintf(" After HeapSort: %s \n", ShellSortedTime.String())
+	s = fmt.Sprintf(" After ShellSort: %s \n", ShellSortedTime.String())
 	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println(" ShellSort:", ShellSortedTime)
 	if allowoutput {
