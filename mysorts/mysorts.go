@@ -103,7 +103,8 @@ func BadShellSort(a []string) []string { // finally does include a[0] in the sor
 		for i := k; i < n; i++ {
 			x := a[i]
 			j := i - k
-			for (j+1 >= k) && (x < a[j]) {  // this works, but I don't understand why.
+			// this works, and now I recognize this is the straight insertion sort pattern.
+			for (j+1 >= k) && (x < a[j]) {
 				a[j+k] = a[j]
 				j = j - k
 			} // END for/while (j >= k) & (x < a[j]) DO
