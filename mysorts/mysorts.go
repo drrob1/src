@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "16 May 2020"
+const LastAlteredDate = "18 May 2020"
 
 /*
   REVISION HISTORY
@@ -29,6 +29,7 @@ const LastAlteredDate = "16 May 2020"
   15 May  20 -- Fixed ShellSort after starting to read High Performance Go by Ron Stephen.  I then remembered that ShellSort
                   is a modified BubbleSort, so I coded it as such.  And now it works.
   16 May  20 -- Decided to try to fix the old ShellSort, now called BadShellSort.
+  18 May  20 -- Made 12 the break point in Modified merge sort.
 */
 
 // -----------------------------------------------------------
@@ -395,7 +396,7 @@ func merge(left, right []string) []string {
 // -----------------------------------------------------------
 // modified mergesort.go
 func ModifiedMergeSort(L []string) []string {
-	if len(L) < 6 {
+	if len(L) < 12 {
 		L = StraightInsertion(L)
 		return L
 	} else {
