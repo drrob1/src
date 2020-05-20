@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "9 July 2019"
+const LastAlteredDate = "20 May 2020"
 
 /*
   REVISION HISTORY
@@ -25,6 +25,7 @@ const LastAlteredDate = "9 July 2019"
    8 Nov 17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
   30 Dec 17 -- Added comparing to sort.Strings.  Nevermind.  It's already done.
    9 Jul 19 -- Looking at fixing the routines that don't work.  And now it's called mysorts2.go
+  20 May 20 -- Looking at fixing the version of ShellSort that's here.  Then I decided NEVERMIND.
 */
 
 func StraightInsertion(input []string) []string {
@@ -99,19 +100,18 @@ func ShellSort(a []string) []string {
 		h = 1
 	}
 
-loop:
 	for ; h > 0; h -= 2 {
-		for i = h; i <= n; i++ { // FOR i = h+1 TO n DO
+		for i = h; i < n; i++ {
 			v := a[i-1]
 			j = i
 			for a[j-h] > v {
-				a[j-1] = a[j-h]
+				a[j] = a[j-h] // was j-1 that I changed 5/20/20
 				j -= h
 				if j < h { // IF j <= h THEN continue
-					continue loop
+					continue
 				}
 			}
-			a[j-1] = v
+			a[j] = v  // was j-1 that I changed 5/20/20
 		}
 	} // end for h
 	return a
