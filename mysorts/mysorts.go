@@ -33,6 +33,7 @@ const LastAlteredDate = "19 May 2020"
   19 May  20 -- Created ModifiedHeapSort which also uses InsertionSort for < 12 items.  And took another crack at fixing AnotherHeapSort.
                 Neither of these work.
                 However, I also took another crack at NonRecursiveQuickSort.
+  21 May  20 -- Removed unneeded commented out code.  I'm not recompiling.
 */
 
 // -----------------------------------------------------------
@@ -683,9 +684,6 @@ func main() {
 	fmt.Println(s)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	//	s = fmt.Sprintf("%v\n", NativeWords)
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
 	if allowoutput {
 		for _, w := range NativeWords {
 			fmt.Print(w, " ")
@@ -708,9 +706,6 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
-	//	s = fmt.Sprintf("%v\n", sortedsliceofwords)
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
 	if allowoutput {
 		for _, w := range sortedsliceofwords {
 			fmt.Print(w, " ")
@@ -733,9 +728,6 @@ func main() {
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
-	//	s = fmt.Sprintf("%v \n", sliceofsortedwords)
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
 	if allowoutput {
 		for _, w := range sliceofsortedwords {
 			fmt.Print(w, " ")

@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "20 May 2020"
+const LastAlteredDate = "21 May 2020"
 
 /*
   REVISION HISTORY
@@ -26,6 +26,8 @@ const LastAlteredDate = "20 May 2020"
   30 Dec 17 -- Added comparing to sort.Strings.  Nevermind.  It's already done.
    9 Jul 19 -- Looking at fixing the routines that don't work.  And now it's called mysorts2.go
   20 May 20 -- Looking at fixing the version of ShellSort that's here.  Then I decided NEVERMIND.
+  21 May 20 -- Decided to try again, but remove those that don't work.
+                 Now that Sedgewick's ShellSort works, I'm adding BadShellSort to compare more directly.
 */
 
 func StraightInsertion(input []string) []string {
@@ -83,9 +85,9 @@ func StraightSelection(a []string) []string {
 	return a
 } // END StraightSelection
 
-// From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1989.  Code based on Pascal and 1 origin arrays.  So I subt 1 for each subscript reference.
+// From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
 func ShellSort(a []string) []string {
-	var i, j, h int
+	var h int
 
 	n := len(a)
 	if n > 9 {
@@ -94,80 +96,55 @@ func ShellSort(a []string) []string {
 		h = 7
 	} else if n > 5 {
 		h = 5
-	} else if n > 3{
+	} else if n > 3 {
 		h = 3
 	} else {
 		h = 1
 	}
 
 	for ; h > 0; h -= 2 {
-		for i = h; i < n; i++ {
-			v := a[i-1]
-			j = i
+		// original code has this line as for i := h+1 to N do.  Here is the conversion to zero origin array
+		for i := h; i < n; i++ {
+			j := i
+			v := a[j]
 			for a[j-h] > v {
-				a[j] = a[j-h] // was j-1 that I changed 5/20/20
+				a[j] = a[j-h]
 				j -= h
-				if j < h { // IF j <= h THEN continue
-					continue
+				if j < h {
+					break
 				}
 			}
-			a[j] = v  // was j-1 that I changed 5/20/20
+			a[j] = v
 		}
 	} // end for h
 	return a
 } //END ShellSort
 
 // -----------------------------------------------------------
-//------------------------------------------------------------------------
-func siftup(items []string, n int) []string { // items is global to this function which is called as an anonymous closure.
-	i := n
-	done := false
-	for (i > 0) && !done { // Originally a while statement
-		p := (i - 1) / 2
-		if items[i] <= items[p] {
-			done = true
-		} else {
-			items[i], items[p] = items[p], items[i]
-			i = p
-		} // END (* end if *)
-	} // END (* end for-while *)
-	return items
-} // END siftup;
+func BadShellSort(a []string) []string { // From Wirth's Algorithms and Data Structures, don't remember which edition.
+	const T = 4
+	var h [T]int
 
-func siftdown(items []string, n int) []string { // items is global to this function which is called as an anonymous closure.
-	i := 0
-	c := 0
-	done := false
-	for (c < n) && !done { // originally a while statement
-		c = 2*i + 1
-		if c <= n {
-			if (c < n) && (items[c] <= items[c+1]) {
-				c++
-			} // END if
-			if items[c] <= items[i] {
-				done = true
-			} else {
-				items[c], items[i] = items[i], items[c]
-				i = c
-			} // END if items[c] <= items[i]
-		} // END if c <= n
-	} // END (* for-while *);
-	return items
-} // END siftdown;
-
-func anotherheapsort(items []string) []string { // doesn't work, but doesn't panic, either.
-	size := len(items)
-	number := size - 1
-	for index := 1; index <= number; index++ {
-		items = siftup(items, index)
-	} // END for
-
-	for index := number; index >= 1; index-- {
-		items[0], items[index] = items[index], items[0]
-		items = siftdown(items, index)
-	} // END for
-	return items
-} // END anotherheapsort;
+	h[0] = 9
+	h[1] = 5
+	h[2] = 3
+	h[3] = 1
+	n := len(a)
+	for m := 0; m < T; m++ {
+		k := h[m]
+		for i := k; i < n; i++ {
+			x := a[i]
+			j := i - k
+			// this works, and now I recognize this is the straight insertion sort pattern.
+			for (j+1 >= k) && (x < a[j]) {
+				a[j+k] = a[j]
+				j = j - k
+			} // END for/while (j >= k) & (x < a[j]) DO
+			a[j+k] = x
+		} // END FOR i := k+1 TO n-1 DO
+	} // END FOR m := 0 TO T-1 DO
+	return a
+} //END BadShellSort
 
 //-------------------------------------------------------------
 
@@ -203,63 +180,13 @@ func QuickSort(a []string) []string {
 	return a
 } // END QuickSort
 
-func NonRecursiveQuickSort(a []string) []string { // this paniced
-	const M = 12
-	var low, high [M]int // index stack
-
-	n := len(a)
-	s := 0
-	low[0] = 0
-	high[0] = n - 1
-
-	for { // REPEAT take top request from stack
-		L := low[s]
-		R := high[s]
-		s--
-		for { // REPEAT (*partition a[L] ...  a[R]*)
-			i := L
-			j := R
-			x := a[(L+R)/2]
-			for { // REPEAT
-				for a[i] < x {
-					i++
-				}
-				for x < a[j] {
-					j--
-				}
-				if i <= j {
-					a[i], a[j] = a[j], a[i]
-					i++
-					j--
-				}
-				if i > j { // UNTIL i > j;
-					break
-				}
-			}
-			if i < R { // stack request to sort right partition
-				s++
-				low[s] = i
-				high[s] = R
-			}
-			R := j      // now L and R delimit the left partition
-			if L >= R { // UNTIL L >= R
-				break
-			}
-		}
-		if s == 0 { // UNTIL s = 0
-			break
-		}
-	}
-	return a
-} // END NonRecursiveQuickSort
-
 //-----------------------------------------------------------------------+
 //                               MAIN PROGRAM                            |
 //-----------------------------------------------------------------------+
 
 func main() {
 	var filesize int64
-	fmt.Println(" Sort a slice of strings, using the different algorithms.  Last altered", LastAlteredDate)
+	fmt.Println(" Mysorts2: Sort a slice of strings, using the different algorithms.  Last altered", LastAlteredDate)
 	fmt.Println()
 
 	if len(os.Args) <= 1 {
@@ -361,7 +288,6 @@ func main() {
 			break
 		}
 		word = strings.TrimSpace(word)
-		//	word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 4 {
 			continue
 		}
@@ -388,12 +314,9 @@ func main() {
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
 	s = fmt.Sprintf(" after sort.StringSlice: %s \n", NativeSortTime.String())
-	fmt.Println(s)
+	fmt.Println(s) // notice that s has a newline, and Println also prints a newline.  That's why I see 2 newlines.
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	//	s = fmt.Sprintf("%v\n", NativeWords)
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
 	if allowoutput {
 		for _, w := range NativeWords {
 			fmt.Print(w, " ")
@@ -412,17 +335,13 @@ func main() {
 		}
 		fmt.Println()
 	}
-
 	t0 := time.Now()
 	sortedsliceofwords := StraightSelection(sliceofwords)
 	StraightSelectionTime := time.Since(t0)
-	s = fmt.Sprintf(" After StraightSelection: %s \n", StraightSelectionTime.String())
+	s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(), StraightSelectionTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	fmt.Println(" after StraightSelection:", StraightSelectionTime)
-	//	s = fmt.Sprintf("%v\n", sortedsliceofwords)
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range sortedsliceofwords {
 			fmt.Print(w, " ")
@@ -440,13 +359,9 @@ func main() {
 	t1 := time.Now()
 	sliceofsortedwords := StraightInsertion(sliceofwords)
 	StraightInsertionTime := time.Since(t1)
-	s = fmt.Sprintf(" After StraightInsertion: %s \n", StraightInsertionTime.String())
+	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Println(" after StraightInsertion:", StraightInsertionTime)
-	//	s = fmt.Sprintf("%v \n", sliceofsortedwords)
-	//	_, err = OutBufioWriter.WriteString(s)
-	//	check(err)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range sliceofsortedwords {
 			fmt.Print(w, " ")
@@ -464,7 +379,7 @@ func main() {
 	t2 := time.Now()
 	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
 	BinaryInsertionTime := time.Since(t2)
-	s = fmt.Sprintf(" After BinaryInsertion: %s \n", BinaryInsertionTime.String())
+	s = fmt.Sprintf(" After BinaryInsertion: %s, %d ns \n", BinaryInsertionTime.String(), BinaryInsertionTime.Nanoseconds())
 	fmt.Println(s)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
@@ -476,7 +391,6 @@ func main() {
 	}
 	fmt.Println()
 
-	/* Does not sort correctly, but doesn't panic.  Now debugging it */
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
@@ -484,10 +398,10 @@ func main() {
 	t3 := time.Now()
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
-	s = fmt.Sprintf(" After ShellSort: %s \n", ShellSortedTime.String())
+	s = fmt.Sprintf(" After ShellSort: %s, %d ns \n", ShellSortedTime.String(), ShellSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	fmt.Println(" ShellSort:", ShellSortedTime)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range ShellSortedWords {
 			fmt.Print(w, " ")
@@ -495,26 +409,28 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
-	/**/
 
-	/*	Does not sort correctly, but does not panic.
-		copy(sliceofwords, mastersliceofwords)
-		if allowoutput {
-			fmt.Println("before:", sliceofwords)
-		}
-		t5 := time.Now()
-		AnotherHeapSortedWords := anotherheapsort(sliceofwords)
-		AnotherHeapTime := time.Since(t5)
-		fmt.Println(" anotherheapsort:", AnotherHeapTime)
-		if allowoutput {
-			for _, w := range AnotherHeapSortedWords {
-				fmt.Print(w, " ")
-			}
-			fmt.Println()
+
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before BadShellSort:", sliceofwords)
+	}
+	t3a := time.Now()
+	BadShellSortedWords := ShellSort(sliceofwords)
+	BadShellSortedTime := time.Since(t3a)
+	s = fmt.Sprintf(" After BadShellSort: %s, %d ns \n", BadShellSortedTime.String(), BadShellSortedTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range BadShellSortedWords {
+			fmt.Print(w, " ")
 		}
 		fmt.Println()
+	}
+	fmt.Println()
 
-	*/
+
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before QuickSort:", sliceofwords)
@@ -524,7 +440,6 @@ func main() {
 	QuickSortedTime := time.Since(t6)
 	s = fmt.Sprintf(" After QuickSort: %s \n", QuickSortedTime.String())
 	_, err = OutBufioWriter.WriteString(s)
-	check(err)
 	fmt.Println(" QuickSort:", QuickSortedTime)
 	if allowoutput {
 		for _, w := range QuickSortedWords {
@@ -536,23 +451,6 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	/*	I think this paniced
-		copy(sliceofwords, mastersliceofwords)
-		if allowoutput {
-			fmt.Println("before:", sliceofwords)
-		}
-		t8 := time.Now()
-		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
-		NonRecursiveQuickedTime := time.Since(t8)
-		fmt.Println(" NonRecursiveQuickSort:", NonRecursiveQuickedTime)
-		if allowoutput {
-			for _, w := range NonRecursiveQuickSortedWords {
-				fmt.Print(w, " ")
-			}
-			fmt.Println()
-		}
-		fmt.Println()
-	*/
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.StringSlice again:", sliceofwords)
@@ -575,14 +473,6 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
-		requestedwordcount, numberofwords, len(mastersliceofwords))
-	_, err = OutBufioWriter.WriteString(s)
-	if len(mastersliceofwords) > 1000 {
-		fmt.Println(s)
-		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
-	}
-
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.Strings:", sliceofwords)
@@ -593,7 +483,7 @@ func main() {
 	s = fmt.Sprintf(" After sort.Strings: %s \n", StringsSortTime.String())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	fmt.Println(" StringsSortTime:", StringsSortTime)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range NativeWords {
 			fmt.Print(w, " ")
@@ -604,6 +494,15 @@ func main() {
 	check(err)
 	fmt.Println()
 
+	// Wrap up
+	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
+		requestedwordcount, numberofwords, len(mastersliceofwords))
+	_, err = OutBufioWriter.WriteString(s)
+	if len(mastersliceofwords) > 1000 {
+		fmt.Println(s)
+	}
+
+	/*  I think this is duplicated code.
 	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
 		requestedwordcount, numberofwords, len(mastersliceofwords))
 	_, err = OutBufioWriter.WriteString(s)
@@ -613,6 +512,8 @@ func main() {
 	}
 	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
 	check(err)
+
+	*/
 
 } // end main
 
