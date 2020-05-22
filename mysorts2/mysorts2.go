@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "21 May 2020"
+const LastAlteredDate = "22 May 2020"
 
 /*
   REVISION HISTORY
@@ -28,6 +28,7 @@ const LastAlteredDate = "21 May 2020"
   20 May 20 -- Looking at fixing the version of ShellSort that's here.  Then I decided NEVERMIND.
   21 May 20 -- Decided to try again, but remove those that don't work.
                  Now that Sedgewick's ShellSort works, I'm adding BadShellSort to compare more directly.
+  22 May 20 -- Adding ModifiedQuickSort to see if it's faster to insertionsort when < 12 items.
 */
 
 func StraightInsertion(input []string) []string {
@@ -43,6 +44,8 @@ func StraightInsertion(input []string) []string {
 	} // for i := 1 TO n-1
 	return input
 } // END StraightInsertion
+
+// -----------------------------------------------------------
 
 func BinaryInsertion(a []string) []string {
 	n := len(a)
@@ -68,6 +71,8 @@ func BinaryInsertion(a []string) []string {
 	return a
 } // END BinaryInsertion
 
+// -----------------------------------------------------------
+
 func StraightSelection(a []string) []string {
 	n := len(a)
 	for i := 0; i < n-1; i++ {
@@ -84,6 +89,8 @@ func StraightSelection(a []string) []string {
 	} // END for i := 0 to n-2
 	return a
 } // END StraightSelection
+
+// -----------------------------------------------------------
 
 // From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
 func ShellSort(a []string) []string {
@@ -121,6 +128,7 @@ func ShellSort(a []string) []string {
 } //END ShellSort
 
 // -----------------------------------------------------------
+
 func BadShellSort(a []string) []string { // From Wirth's Algorithms and Data Structures, don't remember which edition.
 	const T = 4
 	var h [T]int
@@ -177,6 +185,45 @@ func qsort(a []string, L, R int) []string {
 func QuickSort(a []string) []string {
 	n := len(a) - 1
 	a = qsort(a, 0, n)
+	return a
+} // END QuickSort
+
+//-------------------------------------------------------------
+
+func modified12Qsort(a []string, L, R int) []string {
+	if R-L < 12 {
+		b := StraightInsertion(a[L : R+1])
+		return b
+	}
+
+	i := L
+	j := R
+	x := a[(L+R)/2]
+	for i <= j { // REPEAT in original code
+		for a[i] < x {
+			i++
+		} // END a sub i < x
+		for x < a[j] {
+			j--
+		} // END x < a sub j
+		if i <= j {
+			a[i], a[j] = a[j], a[i]
+			i++
+			j--
+		} // end if i <= j
+	} // UNTIL i > j;
+	if L < j {
+		a = qsort(a, L, j)
+	}
+	if i < R {
+		a = qsort(a, i, R)
+	}
+	return a
+} // END qsort;
+
+func ModifiedQuickSort(a []string) []string {
+	n := len(a) - 1
+	a = modified12Qsort(a, 0, n)
 	return a
 } // END QuickSort
 
@@ -282,7 +329,8 @@ func main() {
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
-	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
+	// Main processing loop where the mastersliceofwords is constructed.
+	for totalwords := 0; totalwords < requestedwordcount; totalwords++ {
 		word, err := bytesbuffer.ReadString('\n')
 		if err != nil {
 			break
@@ -305,6 +353,8 @@ func main() {
 		fmt.Println("master before:", mastersliceofwords)
 	}
 	sliceofwords := make([]string, numberofwords)
+
+	// sort.StringSlice
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("slice before sort.StringSlice:", sliceofwords)
@@ -327,6 +377,7 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 
+	// StraightSelection
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Print(" sliceofwords before StraightSelection: ")
@@ -352,6 +403,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
+	// StraightInsertion
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before StraightInsertion:", sliceofwords)
@@ -372,6 +424,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
+	// BinaryInsertion
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before BinaryInsertion:", sliceofwords)
@@ -391,6 +444,7 @@ func main() {
 	}
 	fmt.Println()
 
+	// ShellSort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
@@ -410,7 +464,7 @@ func main() {
 	}
 	fmt.Println()
 
-
+	// BadShellSort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before BadShellSort:", sliceofwords)
@@ -430,7 +484,7 @@ func main() {
 	}
 	fmt.Println()
 
-
+	// QuickSort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before QuickSort:", sliceofwords)
@@ -438,9 +492,9 @@ func main() {
 	t6 := time.Now()
 	QuickSortedWords := QuickSort(sliceofwords)
 	QuickSortedTime := time.Since(t6)
-	s = fmt.Sprintf(" After QuickSort: %s \n", QuickSortedTime.String())
+	s = fmt.Sprintf(" After QuickSort: %s, %d ns \n", QuickSortedTime.String(), QuickSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
-	fmt.Println(" QuickSort:", QuickSortedTime)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range QuickSortedWords {
 			fmt.Print(w, " ")
@@ -451,6 +505,28 @@ func main() {
 	check(err)
 	fmt.Println()
 
+	// ModifiedQuickSort
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before ModifiedQuickSort:", sliceofwords)
+	}
+	t6a := time.Now()
+	ModifiedQuickSortedWords := ModifiedQuickSort(sliceofwords)
+	ModifiedQuickSortedTime := time.Since(t6a)
+	s = fmt.Sprintf(" After ModifiedQuickSort: %s, %d ns \n", ModifiedQuickSortedTime.String(), ModifiedQuickSortedTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range ModifiedQuickSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
+
+	// sort.StringSlice again
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.StringSlice again:", sliceofwords)
@@ -462,7 +538,7 @@ func main() {
 	s = fmt.Sprintf(" After sort.StringSlice again: %s \n", NativeSortTime.String())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	fmt.Println(" NativeSort:", NativeSortTime)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range NativeWords {
 			fmt.Print(w, " ")
@@ -473,6 +549,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
+	// sort.Strings
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.Strings:", sliceofwords)
@@ -503,16 +580,17 @@ func main() {
 	}
 
 	/*  I think this is duplicated code.
-	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
-		requestedwordcount, numberofwords, len(mastersliceofwords))
-	_, err = OutBufioWriter.WriteString(s)
-	if len(mastersliceofwords) > 1000 {
-		fmt.Println(s)
-		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
-	}
-	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
-	check(err)
-
+	{{{
+		s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
+			requestedwordcount, numberofwords, len(mastersliceofwords))
+		_, err = OutBufioWriter.WriteString(s)
+		if len(mastersliceofwords) > 1000 {
+			fmt.Println(s)
+			//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
+		}
+		_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
+		check(err)
+	}}}
 	*/
 
 } // end main
