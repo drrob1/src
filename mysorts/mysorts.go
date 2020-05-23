@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "19 May 2020"
+const LastAlteredDate = "23 May 2020"
 
 /*
   REVISION HISTORY
@@ -34,6 +34,7 @@ const LastAlteredDate = "19 May 2020"
                 Neither of these work.
                 However, I also took another crack at NonRecursiveQuickSort.
   21 May  20 -- Removed unneeded commented out code.  I'm not recompiling.
+  23 May  20 -- Copied ShellSort by Sedgewick here.  Renamed ShellSort that I based on bubble sort to MyShellSort
 */
 
 // -----------------------------------------------------------
@@ -147,15 +148,16 @@ End Bubblesort
 */
 
 // -----------------------------------------------------------
-func ShellSort(a []string) []string { // revisiting this as I'm reading "High Performance Go."
+// revisiting this as I'm reading "High Performance Go."
+// I based this on bubble sort pseudo-code above that I found in "Essential Algorithms", by Rod Stephens.
+// I have this as an ebook.
+func MyShellSort(a []string) []string {
 	var h = []int{9, 5, 3, 1}
 
 	n := len(a)
 	//	t0 := time.Now()
 
 	for _, k := range h {
-		//k := h[m] when m is the index into h.  I decided that this form of the for range loop made more sense, as I do not need the actual index into h.
-		//		fmt.Println(" ShellSort:  k=", k, ", n =", n)
 		if k >= n {
 			continue
 		}
@@ -176,6 +178,45 @@ func ShellSort(a []string) []string { // revisiting this as I'm reading "High Pe
 			//if elapsed > 30*time.Second { return a }
 		} // end loop until sorted
 	} // END FOR range h
+	return a
+} //END MyShellSort
+
+// -----------------------------------------------------------
+
+// From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
+func ShellSort(a []string) []string {
+	var h int
+
+	n := len(a)
+	// for h = 1; h > n; h = h*3 + 1 { 	} Measurements indicate this to be much slower on a large file.
+
+	if n > 9 {
+		h = 9
+	} else if n > 7 {
+		h = 7
+	} else if n > 5 {
+		h = 5
+	} else if n > 3 {
+		h = 3
+	} else {
+		h = 1
+	}
+
+	for ; h > 0; h -= 2 {
+		// original code has this line as for i := h+1 to N do.  Here is the conversion to zero origin array
+		for i := h; i < n; i++ {
+			j := i
+			v := a[j]
+			for a[j-h] > v {
+				a[j] = a[j-h]
+				j -= h
+				if j < h {
+					break
+				}
+			}
+			a[j] = v
+		}
+	} // end for h
 	return a
 } //END ShellSort
 
@@ -340,6 +381,10 @@ func QuickSort(a []string) []string {
 // From Wirth p. 94ff in my copy of "Algorithms and Data Structures," (C) 1986.  In Modula-2.
 // The code declares S : [0 .. M];  I don't know what happens if try to increment beyond M.
 // That request may be ignored, hence the code Wirth wrote.
+// Other books also have a nonrecursive quicksort, and makes the algorithm nonrecursive by creating a stack of
+// subarrays that are to be sorted.  IE, these create their own recursion.  Sedgewick says that this is what a
+// compiler does, since computer architecture is not inherently recursive.
+
 func NonRecursiveQuickSort(a []string) []string {
 	const M = 20 // in book =12, but uses range 0 .. 12, which is 13 elements.
 	type StackType struct {
@@ -760,7 +805,7 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	// ShellSort --  05/15/2020 1:01:16 PM will try again, from scratch.  It works.
+	// ShellSort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
@@ -768,12 +813,12 @@ func main() {
 	t3 := time.Now()
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
-	s = fmt.Sprintf(" After ShellSort: %s \n", ShellSortedTime.String())
+	s = fmt.Sprintf(" After ShellSort: %s, %d ns \n", ShellSortedTime.String(), ShellSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	fmt.Println(" ShellSort:", ShellSortedTime)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range ShellSortedWords {
 			fmt.Print(w, " ")
@@ -782,7 +827,7 @@ func main() {
 	}
 	fmt.Println()
 
-	// BadShellSort -- Now it works, and in fact, is faster than ShellSort above.
+	// BadShellSort -- now a misnomer as it finally works.
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before BadShellSort:", sliceofwords)
@@ -790,14 +835,36 @@ func main() {
 	t3a := time.Now()
 	BadShellSortedWords := BadShellSort(sliceofwords)
 	BadShellSortedTime := time.Since(t3a)
-	s = fmt.Sprintf(" After BadShellSort: %s \n", BadShellSortedTime.String())
+	s = fmt.Sprintf(" After BadShellSort: %s, %d ns \n", BadShellSortedTime.String(), BadShellSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-	fmt.Println(" BadShellSort:", BadShellSortedTime)
+	fmt.Println(s)
 	if allowoutput {
 		for _, w := range BadShellSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+
+	// MyShellSort
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before MyShellSort:", sliceofwords)
+	}
+	t3b := time.Now()
+	MyShellSortedWords := BadShellSort(sliceofwords)
+	MyShellSortedTime := time.Since(t3b)
+	s = fmt.Sprintf(" After MyShellSort: %s, %d ns \n", MyShellSortedTime.String(), MyShellSortedTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range MyShellSortedWords {
 			fmt.Print(w, " ")
 		}
 		fmt.Println()
@@ -943,51 +1010,51 @@ func main() {
 
 	// NonRecursiveQuickSort (from Modula-2) -- doesn't work, but doesn't panic.
 	/*
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before nonrecursiveQuickSort:", sliceofwords)
-	}
-	t8 := time.Now()
-	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
-	NonRecursiveQuickedTime := time.Since(t8)
-	s = fmt.Sprintf("After NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
-	fmt.Println(s)
-	if allowoutput {
-		for _, w := range NonRecursiveQuickSortedWords {
-			fmt.Print(w, " ")
+		copy(sliceofwords, mastersliceofwords)
+		if allowoutput {
+			fmt.Println("before nonrecursiveQuickSort:", sliceofwords)
 		}
+		t8 := time.Now()
+		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
+		NonRecursiveQuickedTime := time.Since(t8)
+		s = fmt.Sprintf("After NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
+		fmt.Println(s)
+		if allowoutput {
+			for _, w := range NonRecursiveQuickSortedWords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
+		}
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
+		_, err = OutBufioWriter.WriteRune('\n')
+		check(err)
 		fmt.Println()
-	}
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
-	 */
+	*/
 
 	// NonRecursiveQuickSortOberon -- doesn't work, but doesn't panic.  Different problem than the Modula-2 based version.
 	/*
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
-	}
-	t8a := time.Now()
-	NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
-	NonRecursiveQuickOberonTime := time.Since(t8a)
-	s = fmt.Sprintf("After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
-	fmt.Println(s)
-	if allowoutput {
-		for _, w := range NonRecursiveQuickSortedOberonWords {
-			fmt.Print(w, " ")
+		copy(sliceofwords, mastersliceofwords)
+		if allowoutput {
+			fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
 		}
+		t8a := time.Now()
+		NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
+		NonRecursiveQuickOberonTime := time.Since(t8a)
+		s = fmt.Sprintf("After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
+		fmt.Println(s)
+		if allowoutput {
+			for _, w := range NonRecursiveQuickSortedOberonWords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
+		}
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
+		_, err = OutBufioWriter.WriteRune('\n')
+		check(err)
 		fmt.Println()
-	}
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
-	 */
+	*/
 
 	// sort.StringSlice
 	copy(sliceofwords, mastersliceofwords)
