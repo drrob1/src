@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "22 May 2020"
+const LastAlteredDate = "24 May 2020"
 
 /*
   REVISION HISTORY
@@ -29,6 +29,8 @@ const LastAlteredDate = "22 May 2020"
   21 May 20 -- Decided to try again, but remove those that don't work.
                  Now that Sedgewick's ShellSort works, I'm adding BadShellSort to compare more directly.
   22 May 20 -- Adding ModifiedQuickSort to see if it's faster to insertionsort when < 12 items.
+  24 May 20 -- ModifiedQuickSort slightly slower than QuickSort.
+
 */
 
 func StraightInsertion(input []string) []string {
@@ -470,7 +472,7 @@ func main() {
 		fmt.Println("before BadShellSort:", sliceofwords)
 	}
 	t3a := time.Now()
-	BadShellSortedWords := ShellSort(sliceofwords)
+	BadShellSortedWords := BadShellSort(sliceofwords)
 	BadShellSortedTime := time.Since(t3a)
 	s = fmt.Sprintf(" After BadShellSort: %s, %d ns \n", BadShellSortedTime.String(), BadShellSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)

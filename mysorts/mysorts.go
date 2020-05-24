@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "23 May 2020"
+const LastAlteredDate = "24 May 2020"
 
 /*
   REVISION HISTORY
@@ -35,7 +35,17 @@ const LastAlteredDate = "23 May 2020"
                 However, I also took another crack at NonRecursiveQuickSort.
   21 May  20 -- Removed unneeded commented out code.  I'm not recompiling.
   23 May  20 -- Copied ShellSort by Sedgewick here.  Renamed ShellSort that I based on bubble sort to MyShellSort
+  24 May  20 -- All the nonrecursive Quicksort routines I found create their own stack of indices.  I'll try
+                  my hand at creating my own stack operations push and pop.  I was not able to write a routine based on code inSedgewick.
 */
+
+var intStack []int
+
+type hiloIndexType struct {
+	lo, hi int
+}
+
+var hiloStack []hiloIndexType
 
 // -----------------------------------------------------------
 func StraightInsertion(input []string) []string {
@@ -377,6 +387,42 @@ func QuickSort(a []string) []string {
 	return a
 } // END QuickSort
 
+func intStackInit(n int) {
+	intStack = make([]int, 0, n)
+}
+
+func intStackPush(i int) {
+	intStack = append(intStack, i)
+}
+
+func intStackPop() int {
+	i := intStack[len(intStack)-1]
+	intStack = intStack[:len(intStack)-1]
+	return i
+}
+
+func intStackLen() int {
+	return len(intStack)
+}
+
+func hiloInit(n int) {
+	hiloStack = make([]hiloIndexType, 0, n)
+}
+
+func hiloStackPush(i hiloIndexType) {
+	hiloStack = append(hiloStack, i)
+}
+
+func hiloStackPop() hiloIndexType {
+	i := hiloStack[len(hiloStack)-1]
+	hiloStack = hiloStack[:len(hiloStack)-1]
+	return i
+}
+
+func hiloStackLen() int {
+	return len(hiloStack)
+}
+
 // -----------------------------------------------------------
 // From Wirth p. 94ff in my copy of "Algorithms and Data Structures," (C) 1986.  In Modula-2.
 // The code declares S : [0 .. M];  I don't know what happens if try to increment beyond M.
@@ -390,100 +436,46 @@ func NonRecursiveQuickSort(a []string) []string {
 	type StackType struct {
 		L, R int
 	}
-	var stack [M]StackType // index stack, defined in book as ARRAY [1 .. M].  stack[0] may be unused.
 
+	var k hiloIndexType
 	t0 := time.Now()
-	n := len(a)
-	s := 1
-	stack[1].L = 1 //
-	stack[s].R = n - 1
+	n := len(a) - 1
+	hiloInit(n / 2)
 
-	for { // REPEAT take top request from stack
-		L := stack[s].L
-		R := stack[s].R
+	k.lo = 0
+	k.hi = n
+	hiloStackPush(k)
+	//fmt.Println(" initial hi lo stack push.  Stack is", hiloStack)
+
+	for hiloStackLen() > 0 {
+		i0 := hiloStackPop()
+		lo := i0.lo
+		hi := i0.hi
+		//fmt.Println(" outer for loop, for stack not empty.  Stack is", hiloStack)
 
 		if time.Since(t0) > 10*time.Second {
-			fmt.Printf(" timeout outer loop.  s=%d, L=%d, R=%d, stack[%d]=%d \n", s, L, R, s, stack[s])
+			fmt.Printf(" timeout outer loop.  i0= %v, lo=%d, hi=%d \n", i0, lo, hi)
 			return a
 		}
 
-		s--
-		for { // REPEAT partition a[L] ...  a[R]
-			i := L
-			j := R
-			x := a[(L+R)/2]
+		for lo < hi { // REPEAT partition a[L] ...  a[R]
+			i := lo
+			j := hi
+			x := a[(hi+lo)/2] // x is mid point element
+			//fmt.Println(" inner for lo < hi.  Stack is", hiloStack)
 
-			if time.Since(t0) > 10*time.Second {
-				fmt.Printf(" timeout inner loop.  s=%d, L=%d, R=%d, stack[%d]=%d, i=%d, j=%d, x=%s \n", s, L, R, s, stack[s], i, j, x)
+			if time.Since(t0) > 100*time.Second { // 100 seconds effectively removes it
+				fmt.Printf(" timeout inner loop.  lo=%d, hi=%d, i=%d, j=%d, x=%s \n", lo, hi, i, j, x)
 			}
 
-			for { // REPEAT UNTIL i > j
-				if time.Since(t0) > 10*time.Second {
-					fmt.Printf(" timeout innermost loop.  s=%d, L=%d, R=%d, stack[%d]=%d, i=%d, j=%d, x=%s, a[%d]=%s \n",
-						s, L, R, s, stack[s], i, j, x, i, a[i])
+			for i <= j { // REPEAT UNTIL i > j
+				if time.Since(t0) > 100*time.Second { // 100 seconds effective removes it
+					fmt.Printf(" timeout innermost loop.  lo=%d, hi=%d, i=%d, , j=%d,  x=%s \n", lo, hi, i, j, x)
 					return a
 				}
+				//fmt.Println(" innermost for loop for i <= j.  Stack is", hiloStack)
+				//pause()
 
-				for a[i] < x { // WHILE
-					i++
-				}
-				for x < a[j] { // WHILE
-					j--
-				}
-				if i <= j {
-					a[i], a[j] = a[j], a[i]
-					i++
-					j--
-				}
-				if i > j { // UNTIL i > j
-					break
-				}
-			} // REPEAT ... UNTIL i > j
-			if j-L < R-i {
-				if i < R { // stack request to sort right partition
-					s++
-					stack[s].L = i
-					stack[s].R = R
-				}
-				R = j // now L and R delimit the left partition, and continue sorting the left partition.
-			} else {
-				if L < j { // push request for sorting left partition onto the stack
-					s++
-					stack[s].L = L
-					stack[s].R = j
-				}
-				L = i // continue sorting right partition
-			}
-
-			if L >= R { // UNTIL L >= R
-				break
-			}
-		} // REPEAT ... UNTIL L >= R
-		if s == 0 || s >= M { // UNTIL s == 0, I'm adding the 2nd condition because this line panics.
-			break
-		}
-	} // REPEAT ... UNTIL s == 0
-	return a
-} // END NonRecursiveQuickSort
-
-func NonRecursiveQuickSortOberon(a []string) []string {
-	const M = 12
-	var L, R, s int
-	var low, high [M]int //  index stack
-
-	n := len(a)
-	s = 0
-	low[0] = 0
-	high[0] = n - 1
-	for { // REPEAT (*take top request from stack*)
-		L = low[s]
-		R = high[s]
-		s--
-		for { // REPEAT(*partition a[L] ... a[R] *)
-			i := L
-			j := R
-			x := a[(L+R)/2]
-			for { //REPEAT
 				for a[i] < x {
 					i++
 				}
@@ -495,34 +487,85 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 					i++
 					j--
 				}
-				if i > j {
-					break
+				//				if i > j { // UNTIL i > j
+				//					break
+				//				}
+			} // REPEAT ... UNTIL i > j
+			if j-lo < hi-i {
+				if i < hi { // push request to sort right partition
+					k.lo = i
+					k.hi = hi
+					hiloStackPush(k)
 				}
-			} //UNTIL i > j;
+				hi = j // now L and R delimit the left partition, and continue sorting the left partition.
+			} else {
+				if lo < j { // push request for sorting left partition onto the stack
+					k.lo = lo
+					k.hi = j
+					hiloStackPush(k)
+				}
+				lo = i // continue sorting right partition
+			}
+
+			//			if L >= R { // UNTIL L >= R
+			//				break
+			//			}
+		} // REPEAT ... UNTIL L >= R
+
+	} // REPEAT ... UNTIL hiloStack is empty
+	return a
+} // END NonRecursiveQuickSort
+
+func NonRecursiveQuickSortOberon(a []string) []string {
+	n := len(a)
+	intStackInit(n / 2)
+	intStackPush(0)
+	intStackPush(n - 1)
+	for intStackLen() > 0 { // REPEAT (*take top request from stack*)
+		R := intStackPop()
+		L := intStackPop()
+		for L < R { // REPEAT partition a[L] ... a[R]
+			i := L
+			j := R
+			x := a[(L+R)/2]
+			for i <= j { //REPEAT
+				for a[i] < x {
+					i++
+				}
+				for x < a[j] {
+					j--
+				}
+				if i <= j {
+					a[i], a[j] = a[j], a[i]
+					i++
+					j--
+				}
+				//				if i > j {
+				//					break
+				//				}
+			} // for i <= j, or UNTIL i > j;
 			if j-L < R-i {
 				if i < R { // THEN push request to sort right partition onto the stack
-					s++
-					low[s] = i
-					high[s] = R
+					intStackPush(i)
+					intStackPush(R)
 				}
 				R = j // (*now L and R delimit the left partition*)
 			} else {
 				if L < j { // push request for sorting left partition onto the atack
-					s++
-					low[s] = L
-					high[s] = j
+					intStackPush(L)
+					intStackPush(j)
 				}
 				L = i // continue sorting right partition
 			}
-			if L >= R {
-				break
-			}
-		} //UNTIL L >= R
+			//			if L >= R {
+			//				break
+			//			}
+		} // for L < R
 
-		if s == 0 {
-			break
-		}
-	} //	UNTIL s = 0
+		//		if s == 0 {
+		//			break
+		//		}
+	} // for stack not empty
 	return a
 } // 	END NonRecursiveQuickSortOberon
 
@@ -1008,53 +1051,49 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	// NonRecursiveQuickSort (from Modula-2) -- doesn't work, but doesn't panic.
-	/*
-		copy(sliceofwords, mastersliceofwords)
-		if allowoutput {
-			fmt.Println("before nonrecursiveQuickSort:", sliceofwords)
+	// NonRecursiveQuickSort (from Modula-2)
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before Modula-2 nonrecursiveQuickSort:", sliceofwords)
+	}
+	t8 := time.Now()
+	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
+	NonRecursiveQuickedTime := time.Since(t8)
+	s = fmt.Sprintf("After Modula-2 NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range NonRecursiveQuickSortedWords {
+			fmt.Print(w, " ")
 		}
-		t8 := time.Now()
-		NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
-		NonRecursiveQuickedTime := time.Since(t8)
-		s = fmt.Sprintf("After NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
-		fmt.Println(s)
-		if allowoutput {
-			for _, w := range NonRecursiveQuickSortedWords {
-				fmt.Print(w, " ")
-			}
-			fmt.Println()
-		}
-		_, err = OutBufioWriter.WriteString(s)
-		check(err)
-		_, err = OutBufioWriter.WriteRune('\n')
-		check(err)
 		fmt.Println()
-	*/
+	}
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
 
-	// NonRecursiveQuickSortOberon -- doesn't work, but doesn't panic.  Different problem than the Modula-2 based version.
-	/*
-		copy(sliceofwords, mastersliceofwords)
-		if allowoutput {
-			fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
+	// NonRecursiveQuickSortOberon
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
+	}
+	t8a := time.Now()
+	NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
+	NonRecursiveQuickOberonTime := time.Since(t8a)
+	s = fmt.Sprintf("After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range NonRecursiveQuickSortedOberonWords {
+			fmt.Print(w, " ")
 		}
-		t8a := time.Now()
-		NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
-		NonRecursiveQuickOberonTime := time.Since(t8a)
-		s = fmt.Sprintf("After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
-		fmt.Println(s)
-		if allowoutput {
-			for _, w := range NonRecursiveQuickSortedOberonWords {
-				fmt.Print(w, " ")
-			}
-			fmt.Println()
-		}
-		_, err = OutBufioWriter.WriteString(s)
-		check(err)
-		_, err = OutBufioWriter.WriteRune('\n')
-		check(err)
 		fmt.Println()
-	*/
+	}
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+	fmt.Println()
 
 	// sort.StringSlice
 	copy(sliceofwords, mastersliceofwords)
@@ -1208,13 +1247,18 @@ func main() {
 	// Close the output file and exit
 	OutBufioWriter.Flush()
 	OutputFile.Close()
-}
+} // end main
 
 //===========================================================
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
+}
+
+func pause() {
+	fmt.Print(" hit <enter> to continue")
+	fmt.Scanln()
 }
 
 /*
