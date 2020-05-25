@@ -37,6 +37,15 @@ const LastAlteredDate = "24 May 2020"
   23 May  20 -- Copied ShellSort by Sedgewick here.  Renamed ShellSort that I based on bubble sort to MyShellSort
   24 May  20 -- All the nonrecursive Quicksort routines I found create their own stack of indices.  I'll try
                   my hand at creating my own stack operations push and pop.  I was not able to write a routine based on code inSedgewick.
+  25 May  20 -- Thoughts on mysorts.go and mysorts2.go.
+               Over the last 2 weeks I've been able to get the bad code working.  I now have 3 versions of ShellSort, and 2 versions of nonrecursive quick sort.
+        I got ShellSort working by noticing a non idiomatic for loop, and Rob Pike in his book says the advantages of using idioms is that they help avoid bugs.
+         The idiom is a pattern known to work.  Look closely at non-idiomatic code for the source of bugs.  I did and that's where I found the bug in ShellSort.
+               The non-recursive quick sort routines depend on creating a stack themselves instead of relying on recursion to use the system's stack.
+               When I switched to idiomatic stack code using push and pop, the code started working.  One reason for this is that I made the stack much
+               bigger, so one of the issues may have been that the stack was too small in the code published in these books.  Mostly, I used Wirth's code which
+          differs between his Modula-2 and Oberon versions of "Programs and Data Structures."  The idea to use explicit push and pop came from Sedgewick's book.
+
 */
 
 var intStack []int
