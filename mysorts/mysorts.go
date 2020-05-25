@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "24 May 2020"
+const LastAlteredDate = "25 May 2020"
 
 /*
   REVISION HISTORY
@@ -46,6 +46,8 @@ const LastAlteredDate = "24 May 2020"
                bigger, so one of the issues may have been that the stack was too small in the code published in these books.  Mostly, I used Wirth's code which
           differs between his Modula-2 and Oberon versions of "Programs and Data Structures."  The idea to use explicit push and pop came from Sedgewick's book.
 
+               I will have the non-recursive quick sort routines print out the max size of their respective stacks, so I can gauge if
+               a stack too small was my problem all along.
 */
 
 var intStack []int
@@ -55,6 +57,11 @@ type hiloIndexType struct {
 }
 
 var hiloStack []hiloIndexType
+
+// var maxStackSize int // so I can determine the max stack size.
+//                         Using PaulKrugman.dat full file, Modula-2 version showed 12, and Oberon version showed 24.
+//                         Oberon version would have blown its stack as it defined a stack of 0..12.
+//                         The Modula-2 version would have made it w/ one element to spare.
 
 // -----------------------------------------------------------
 func StraightInsertion(input []string) []string {
@@ -389,13 +396,13 @@ func qsort(a []string, L, R int) []string {
 	return a
 } // END qsort;
 
-// -----------------------------------------------------------
 func QuickSort(a []string) []string {
 	n := len(a) - 1
 	a = qsort(a, 0, n)
 	return a
 } // END QuickSort
-
+// -----------------------------------------------------------
+// -----------------------------------------------------------
 func intStackInit(n int) {
 	intStack = make([]int, 0, n)
 }
@@ -441,11 +448,6 @@ func hiloStackLen() int {
 // compiler does, since computer architecture is not inherently recursive.
 
 func NonRecursiveQuickSort(a []string) []string {
-	const M = 20 // in book =12, but uses range 0 .. 12, which is 13 elements.
-	type StackType struct {
-		L, R int
-	}
-
 	var k hiloIndexType
 	t0 := time.Now()
 	n := len(a) - 1
@@ -457,6 +459,11 @@ func NonRecursiveQuickSort(a []string) []string {
 	//fmt.Println(" initial hi lo stack push.  Stack is", hiloStack)
 
 	for hiloStackLen() > 0 {
+//		stacksize := hiloStackLen()
+//		if stacksize > maxStackSize {
+//			maxStackSize = stacksize
+//		}
+
 		i0 := hiloStackPop()
 		lo := i0.lo
 		hi := i0.hi
@@ -522,6 +529,7 @@ func NonRecursiveQuickSort(a []string) []string {
 		} // REPEAT ... UNTIL L >= R
 
 	} // REPEAT ... UNTIL hiloStack is empty
+	// fmt.Println(" Modula-2 NonRecursiveQuickSort maxStackSize =", maxStackSize)  This showed 12 on the full PaulKrugman.dat file.
 	return a
 } // END NonRecursiveQuickSort
 
@@ -531,6 +539,11 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 	intStackPush(0)
 	intStackPush(n - 1)
 	for intStackLen() > 0 { // REPEAT (*take top request from stack*)
+//		stacksize := intStackLen()
+//		if stacksize > maxStackSize {
+//			maxStackSize = stacksize
+//		}
+
 		R := intStackPop()
 		L := intStackPop()
 		for L < R { // REPEAT partition a[L] ... a[R]
@@ -575,6 +588,7 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 		//			break
 		//		}
 	} // for stack not empty
+	// fmt.Println(" NonRecursiveQuickSortOberan maxStackSize=", maxStackSize) This showed 24 on the full PaulKrugman.dat file.
 	return a
 } // 	END NonRecursiveQuickSortOberon
 
