@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "25 May 2020"
+const LastAlteredDate = "26 May 2020"
 
 /*
   REVISION HISTORY
@@ -52,15 +52,57 @@ const LastAlteredDate = "25 May 2020"
                And I fixed a bug in that MyShellSort was not being tested after all.
                When I correctly tested Sedgewick's approch to the ShellSort interval, I found it to be substantially better than what
                Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
+  26 May  20 -- Only updating some comments.
+                Now called fastsorts, in which I will only compare the n*log(n) sorts.  I will leave in the binary insertion sort.
+                I will use more idiomatic Go for my stack routines in the nonrecursive quick sort routines.
 */
 
-var intStack []int
+type intStackType []int
+
+func NewIntStack(n int) *intStackType {
+	s := make(intStackType, 0, n)
+	return &s
+}
+
+func (s *intStackType) push(i int) {
+	*s = append(*s, i)
+}
+
+func (s *intStackType) pop() int {
+	i := (*s)[len(*s)-1]
+	*s = (*s)[:len(*s)-1]
+	return i
+}
+
+func (s *intStackType) len() int {
+	return len(*s)
+}
 
 type hiloIndexType struct {
 	lo, hi int
 }
 
-var hiloStack []hiloIndexType
+type hiloStackType []hiloIndexType
+
+func NewHiloStack(n int) *hiloStackType {
+	s := make(hiloStackType, 0, n) // this did not work for me as one line.
+	return &s
+}
+
+func (s *hiloStackType) push(i hiloIndexType) {
+	*s = append(*s, i)
+}
+
+func (s *hiloStackType) pop() hiloIndexType {
+	i := (*s)[len(*s)-1]
+	*s = (*s)[:len(*s)-1]
+	return i
+}
+
+func (s *hiloStackType) len() int {
+	length := len(*s) // this did not work for me as one line.
+	return length
+}
 
 // var maxStackSize int // so I can determine the max stack size.
 //                         Using PaulKrugman.dat full file, Modula-2 version showed 12, and Oberon version showed 24.
@@ -68,7 +110,8 @@ var hiloStack []hiloIndexType
 //                         The Modula-2 version would have made it w/ one element to spare.
 
 // -----------------------------------------------------------
-func StraightInsertion(input []string) []string {
+
+func StraightInsertion(input []string) []string { // keeping this here as it's needed in some rtn's below.
 	n := len(input)
 	for i := 1; i < n; i++ {
 		x := input[i]
@@ -81,7 +124,7 @@ func StraightInsertion(input []string) []string {
 	} // for i := 1 TO n-1
 	return input
 } // END StraightInsertion
-
+/*
 // -----------------------------------------------------------
 func BinaryInsertion(a []string) []string {
 	n := len(a)
@@ -123,6 +166,7 @@ func StraightSelection(a []string) []string {
 	} // END for i := 0 to n-2
 	return a
 } // END StraightSelection
+*/
 
 // -----------------------------------------------------------
 func BadShellSort(a []string) []string {
@@ -309,23 +353,6 @@ func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn'
 } // END ModifiedHeapSort
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
-/*  Don't remember where this came from
-func siftup(items []string, n int) []string {
-	i := n
-	done := false
-	for (i > 0) && !done { // Originally a while statement
-		p := (i - 1) / 2
-		if items[i] <= items[p] {
-			done = true
-		} else {
-			items[i], items[p] = items[p], items[i]
-			i = p
-		} // END (* end if *)
-	} // END (* end for-while *)
-	return items
-} // END siftup;
-
-*/
 
 func NRsiftdown(items []string, L, R int) []string { // Numerical Recipes 3rd ed (C) 2007, p 428
 	// execute the sift down on element ra[L] to maintain heap structure.
@@ -334,17 +361,17 @@ func NRsiftdown(items []string, L, R int) []string { // Numerical Recipes 3rd ed
 	x := items[L]
 	j := 2*L + 1
 	for j <= R {
-		if j < R && items[j] < items[j+1] { // if next element is better, use it.
+		if j < R && items[j] < items[j+1] { // if the next item is a more suitable comparison, switch to that.
 			j++
 		}
-		if x >= items[j] { // found correct level/location for x, so terminate the sift-down.  Else demote x (by swapping) and continue.
+		if x >= items[j] {
 			break
 		}
 		items[i] = items[j]
 		i = j
 		j = 2*j + 1
 	}
-	items[i] = x  // put x into its correct level/location.
+	items[i] = x
 	return items
 } // END siftdown;
 
@@ -361,7 +388,7 @@ func NRheapsort(items []string) []string { // copied from Numerical Recipes 3rd 
 	for i := n - 1; i > 0; i-- {
 		// clear a space at the end of the array and retire the top of the heap into it, by swapping
 		items[0], items[i] = items[i], items[0]
-		NRsiftdown(items, 0, i - 1)
+		NRsiftdown(items, 0, i-1)
 	}
 	return items
 } // END NRheapsort;
@@ -400,6 +427,7 @@ func QuickSort(a []string) []string {
 } // END QuickSort
 // -----------------------------------------------------------
 // -----------------------------------------------------------
+/*  I'm coding idiomatic Go code for stacks.  Or just playing with functions, whatever.
 func intStackInit(n int) {
 	intStack = make([]int, 0, n)
 }
@@ -435,6 +463,7 @@ func hiloStackPop() hiloIndexType {
 func hiloStackLen() int {
 	return len(hiloStack)
 }
+*/
 
 // -----------------------------------------------------------
 // From Wirth p. 94ff in my copy of "Algorithms and Data Structures," (C) 1986.  In Modula-2.
@@ -448,20 +477,21 @@ func NonRecursiveQuickSort(a []string) []string {
 	var k hiloIndexType
 	t0 := time.Now()
 	n := len(a) - 1
-	hiloInit(n / 2)
+
+	s := NewHiloStack(n / 2)
 
 	k.lo = 0
 	k.hi = n
-	hiloStackPush(k)
-	//fmt.Println(" initial hi lo stack push.  Stack is", hiloStack)
+	s.push(k)
+	//fmt.Println(" initial hi lo stack push.  Stack is", s.hiloStack)
 
-	for hiloStackLen() > 0 {
+	for s.len() > 0 {
 		//		stacksize := hiloStackLen()
 		//		if stacksize > maxStackSize {
 		//			maxStackSize = stacksize
 		//		}
 
-		i0 := hiloStackPop()
+		i0 := s.pop()
 		lo := i0.lo
 		hi := i0.hi
 		//fmt.Println(" outer for loop, for stack not empty.  Stack is", hiloStack)
@@ -508,14 +538,14 @@ func NonRecursiveQuickSort(a []string) []string {
 				if i < hi { // push request to sort right partition
 					k.lo = i
 					k.hi = hi
-					hiloStackPush(k)
+					s.push(k)
 				}
 				hi = j // now L and R delimit the left partition, and continue sorting the left partition.
 			} else {
 				if lo < j { // push request for sorting left partition onto the stack
 					k.lo = lo
 					k.hi = j
-					hiloStackPush(k)
+					s.push(k)
 				}
 				lo = i // continue sorting right partition
 			}
@@ -532,17 +562,17 @@ func NonRecursiveQuickSort(a []string) []string {
 
 func NonRecursiveQuickSortOberon(a []string) []string {
 	n := len(a)
-	intStackInit(n / 2)
-	intStackPush(0)
-	intStackPush(n - 1)
-	for intStackLen() > 0 { // REPEAT (*take top request from stack*)
+	s := NewIntStack(n / 2)
+	s.push(0)
+	s.push(n - 1)
+	for s.len() > 0 { // REPEAT (*take top request from stack*)
 		//		stacksize := intStackLen()
 		//		if stacksize > maxStackSize {
 		//			maxStackSize = stacksize
 		//		}
 
-		R := intStackPop()
-		L := intStackPop()
+		R := s.pop()
+		L := s.pop()
 		for L < R { // REPEAT partition a[L] ... a[R]
 			i := L
 			j := R
@@ -565,14 +595,14 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 			} // for i <= j, or UNTIL i > j;
 			if j-L < R-i {
 				if i < R { // THEN push request to sort right partition onto the stack
-					intStackPush(i)
-					intStackPush(R)
+					s.push(i)
+					s.push(R)
 				}
 				R = j // (*now L and R delimit the left partition*)
 			} else {
 				if L < j { // push request for sorting left partition onto the atack
-					intStackPush(L)
-					intStackPush(j)
+					s.push(L)
+					s.push(j)
 				}
 				L = i // continue sorting right partition
 			}
@@ -788,7 +818,7 @@ func main() {
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
 	NativeSortTimeNano := NativeSortTime.Nanoseconds()
-	s = fmt.Sprintf(" after NativeSort: %s, %d ns \n", NativeSortTime.String(), NativeSortTimeNano)
+	s = fmt.Sprintf(" after first sort.StringSlice: %s, %d ns \n", NativeSortTime.String(), NativeSortTimeNano)
 	fmt.Println(s)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
@@ -797,77 +827,83 @@ func main() {
 			fmt.Print(w, " ")
 		}
 	}
+	fmt.Println()
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 	fmt.Println()
 
-	// StraightSelection
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println(" sliceofwords before StraightSelection: ", sliceofwords)
-	}
-	t0 := time.Now()
-	sortedsliceofwords := StraightSelection(sliceofwords)
-	StraightSelectionTime := time.Since(t0)
-	StraightSelectionTimeNano := StraightSelectionTime.Nanoseconds()
-	s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(), StraightSelectionTimeNano)
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Println(s)
-	if allowoutput {
-		for _, w := range sortedsliceofwords {
-			fmt.Print(w, " ")
-		}
-		fmt.Println()
-	}
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
+	/* not in fastsorts.go
+	   {{{
+	   	// StraightSelection
+	   	copy(sliceofwords, mastersliceofwords)
+	   	if allowoutput {
+	   		fmt.Println(" sliceofwords before StraightSelection: ", sliceofwords)
+	   	}
+	   	t0 := time.Now()
+	   	sortedsliceofwords := StraightSelection(sliceofwords)
+	   	StraightSelectionTime := time.Since(t0)
+	   	StraightSelectionTimeNano := StraightSelectionTime.Nanoseconds()
+	   	s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(), StraightSelectionTimeNano)
+	   	_, err = OutBufioWriter.WriteString(s)
+	   	check(err)
+	   	fmt.Println(s)
+	   	if allowoutput {
+	   		for _, w := range sortedsliceofwords {
+	   			fmt.Print(w, " ")
+	   		}
+	   		fmt.Println()
+	   	}
+	   	_, err = OutBufioWriter.WriteRune('\n')
+	   	check(err)
+	   	fmt.Println()
 
-	// StraightInsertion
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before StraightInsertion:", sliceofwords)
-	}
-	t1 := time.Now()
-	sliceofsortedwords := StraightInsertion(sliceofwords)
-	StraightInsertionTime := time.Since(t1)
-	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Println(s)
-	if allowoutput {
-		for _, w := range sliceofsortedwords {
-			fmt.Print(w, " ")
-		}
-		fmt.Println()
-	}
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
+	   	// StraightInsertion
+	   	copy(sliceofwords, mastersliceofwords)
+	   	if allowoutput {
+	   		fmt.Println("before StraightInsertion:", sliceofwords)
+	   	}
+	   	t1 := time.Now()
+	   	sliceofsortedwords := StraightInsertion(sliceofwords)
+	   	StraightInsertionTime := time.Since(t1)
+	   	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
+	   	_, err = OutBufioWriter.WriteString(s)
+	   	check(err)
+	   	fmt.Println(s)
+	   	if allowoutput {
+	   		for _, w := range sliceofsortedwords {
+	   			fmt.Print(w, " ")
+	   		}
+	   		fmt.Println()
+	   	}
+	   	_, err = OutBufioWriter.WriteRune('\n')
+	   	check(err)
+	   	fmt.Println()
 
-	// BinaryInsertion
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before BinaryInsertion:", sliceofwords)
-	}
-	t2 := time.Now()
-	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
-	BinaryInsertionTime := time.Since(t2)
-	s = fmt.Sprintf(" After BinaryInsertion: %s, %d ns \n", BinaryInsertionTime.String(), BinaryInsertionTime.Nanoseconds())
-	fmt.Println(s)
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	if allowoutput {
-		for _, w := range BinaryInsertionSortedWords {
-			fmt.Print(w, " ")
-		}
-		fmt.Println()
-	}
-	_, err = OutBufioWriter.WriteRune('\n')
-	check(err)
-	fmt.Println()
+	   	// BinaryInsertion
+	   	copy(sliceofwords, mastersliceofwords)
+	   	if allowoutput {
+	   		fmt.Println("before BinaryInsertion:", sliceofwords)
+	   	}
+	   	t2 := time.Now()
+	   	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
+	   	BinaryInsertionTime := time.Since(t2)
+	   	s = fmt.Sprintf(" After BinaryInsertion: %s, %d ns \n", BinaryInsertionTime.String(), BinaryInsertionTime.Nanoseconds())
+	   	fmt.Println(s)
+	   	_, err = OutBufioWriter.WriteString(s)
+	   	check(err)
+	   	if allowoutput {
+	   		for _, w := range BinaryInsertionSortedWords {
+	   			fmt.Print(w, " ")
+	   		}
+	   		fmt.Println()
+	   	}
+	   	_, err = OutBufioWriter.WriteRune('\n')
+	   	check(err)
+	   	fmt.Println()
+	   }}}
+	*/
 
+/* removed due to slowness.
 	// ShellSort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -889,6 +925,7 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
+ */
 
 	// BadShellSort -- now a misnomer as it finally works.
 	copy(sliceofwords, mastersliceofwords)
@@ -957,8 +994,6 @@ func main() {
 	fmt.Println()
 
 	// NRHeapSort which is from Numerical Recipies and converted from C++ coce.
-
-	/*	Did not sort correctly, but did not panic. */
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before NRHeapSort:", sliceofwords)
@@ -974,13 +1009,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	fmt.Println()
 	_, err = OutBufioWriter.WriteString(s)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
-
 	fmt.Println()
-	/* */
 
 	// ModifiedHeapSort -- doesn't work.
 	/*
@@ -1075,12 +1107,12 @@ func main() {
 	// NonRecursiveQuickSort (from Modula-2)
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
-		fmt.Println("before Modula-2 nonrecursiveQuickSort:", sliceofwords)
+		fmt.Println(" before Modula-2 nonrecursiveQuickSort:", sliceofwords)
 	}
 	t8 := time.Now()
 	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
 	NonRecursiveQuickedTime := time.Since(t8)
-	s = fmt.Sprintf("After Modula-2 NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
+	s = fmt.Sprintf(" After Modula-2 NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
 	fmt.Println(s)
 	if allowoutput {
 		for _, w := range NonRecursiveQuickSortedWords {
@@ -1097,12 +1129,12 @@ func main() {
 	// NonRecursiveQuickSortOberon
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
-		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
+		fmt.Println(" before nonrecursiveQuickSortOberon:", sliceofwords)
 	}
 	t8a := time.Now()
 	NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
 	NonRecursiveQuickOberonTime := time.Since(t8a)
-	s = fmt.Sprintf("After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
+	s = fmt.Sprintf(" After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
 	fmt.Println(s)
 	if allowoutput {
 		for _, w := range NonRecursiveQuickSortedOberonWords {
