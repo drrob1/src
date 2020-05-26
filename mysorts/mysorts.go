@@ -48,6 +48,10 @@ const LastAlteredDate = "25 May 2020"
 
                I will have the non-recursive quick sort routines print out the max size of their respective stacks, so I can gauge if
                a stack too small was my problem all along.
+
+               And I fixed a bug in that MyShellSort was not being tested after all.
+               When I correctly tested Sedgewick's approch to the ShellSort interval, I found it to be substantially better than what
+               Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
 */
 
 var intStack []int
@@ -121,28 +125,25 @@ func StraightSelection(a []string) []string {
 } // END StraightSelection
 
 // -----------------------------------------------------------
-func BadShellSort(a []string) []string { // finally does include a[0] in the sort.
-	const T = 4
-	var h [T]int
+func BadShellSort(a []string) []string {
+	var h int
 
-	h[0] = 9
-	h[1] = 5
-	h[2] = 3
-	h[3] = 1
 	n := len(a)
-	for m := 0; m < T; m++ {
-		k := h[m]
-		for i := k; i < n; i++ {
+	for h = 1; h < n; h = h*3 + 1 {
+	}
+
+	for ; h > 0; h /= 3 {
+		for i := h; i < n; i++ {
 			x := a[i]
-			j := i - k
+			j := i - h
 			// this works, and now I recognize this is the straight insertion sort pattern.
-			for (j+1 >= k) && (x < a[j]) {
-				a[j+k] = a[j]
-				j = j - k
+			for (j+1 >= h) && (x < a[j]) {
+				a[j+h] = a[j]
+				j = j - h
 			} // END for/while (j >= k) & (x < a[j]) DO
-			a[j+k] = x
+			a[j+h] = x
 		} // END FOR i := k+1 TO n-1 DO
-	} // END FOR m := 0 TO T-1 DO
+	} // END FOR k ranges over h
 	return a
 } //END BadShellSort
 
@@ -177,31 +178,33 @@ End Bubblesort
 // revisiting this as I'm reading "High Performance Go."
 // I based this on bubble sort pseudo-code above that I found in "Essential Algorithms", by Rod Stephens.
 // I have this as an ebook.
+// Now I'm going to add the improvement used by Sedgewick in the determination of h.
 func MyShellSort(a []string) []string {
-	var h = []int{9, 5, 3, 1}
+	var h int
 
 	n := len(a)
-	//	t0 := time.Now()
+	for h = 1; h < n; h = h*3 + 1 {
+	}
+	//	fmt.Println(" in MyShellSort: h=", h)
 
-	for _, k := range h {
-		if k >= n {
-			continue
-		}
-
+	// t0 := time.Now()
+	for ; h > 0; h /= 3 {
+		//		fmt.Println(" in MyShellSort sorting loop: h=",h)
+		//		pause()
 		for { // loop until sorted
 			sorted := true
-			for i := k; i < n; i++ {
-				if a[i] < a[i-k] {
-					a[i], a[i-k] = a[i-k], a[i]
+			for i := h; i < n; i++ {
+				if a[i] < a[i-h] {
+					a[i], a[i-h] = a[i-h], a[i]
 					sorted = false
 					//fmt.Println("  ShellSort:  i =", i, ", sorted=", sorted)
 				}
-			} // END FOR i := k TO last item DO
+			} // END FOR i := h TO last item DO
 			if sorted {
 				break
 			}
-			//elapsed := time.Since(t0)
-			//if elapsed > 30*time.Second { return a }
+			// elapsed := time.Since(t0)
+			// if elapsed > 30*time.Second { return a }
 		} // end loop until sorted
 	} // END FOR range h
 	return a
@@ -214,21 +217,10 @@ func ShellSort(a []string) []string {
 	var h int
 
 	n := len(a)
-	// for h = 1; h > n; h = h*3 + 1 { 	} Measurements indicate this to be much slower on a large file.
-
-	if n > 9 {
-		h = 9
-	} else if n > 7 {
-		h = 7
-	} else if n > 5 {
-		h = 5
-	} else if n > 3 {
-		h = 3
-	} else {
-		h = 1
+	for h = 1; h > n; h = h*3 + 1 {
 	}
 
-	for ; h > 0; h -= 2 {
+	for ; h > 0; h /= 3 {
 		// original code has this line as for i := h+1 to N do.  Here is the conversion to zero origin array
 		for i := h; i < n; i++ {
 			j := i
@@ -247,27 +239,27 @@ func ShellSort(a []string) []string {
 } //END ShellSort
 
 // -----------------------------------------------------------
+// -----------------------------------------------------------
 func sift(a []string, L, R int) []string {
 	i := L
 	j := 2*i + 1
 	x := a[i]
 	if (j < R) && (a[j] < a[j+1]) {
-		j += 1
+		j++
 	} // end if
 	for (j <= R) && (x < a[j]) {
 		a[i] = a[j]
 		i = j
 		j = 2*j + 1
 		if (j < R) && (a[j] < a[j+1]) {
-			j += 1
+			j++
 		} // end if
 	} //END for (j <= R) & (x < a[j])
 	a[i] = x
 	return a
 } // END sift;
 
-// -----------------------------------------------------------
-func HeapSort(a []string) []string {
+func HeapSort(a []string) []string { // I think this is based on Wirth's code in either Oberon or Modula-2.
 	n := len(a)
 	L := n / 2
 	R := n - 1
@@ -282,9 +274,9 @@ func HeapSort(a []string) []string {
 	} // END for-while R > 0
 	return a
 } // END HeapSort
-
 // -----------------------------------------------------------
-func ModifiedHeapSort(a []string) []string { // doesn't work.
+// -----------------------------------------------------------
+func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn't work.
 	n := len(a)
 	L := n / 2
 	R := n - 1
@@ -314,10 +306,11 @@ func ModifiedHeapSort(a []string) []string { // doesn't work.
 		}
 	} // END for-while R > 0
 	return a
-} // END HeapSort
-
+} // END ModifiedHeapSort
 //------------------------------------------------------------------------
-func siftup(items []string, n int) []string { // items is global to this function which is called as an anonymous closure.
+//------------------------------------------------------------------------
+/*  Don't remember where this came from
+func siftup(items []string, n int) []string {
 	i := n
 	done := false
 	for (i > 0) && !done { // Originally a while statement
@@ -332,44 +325,48 @@ func siftup(items []string, n int) []string { // items is global to this functio
 	return items
 } // END siftup;
 
-// -----------------------------------------------------------
-func siftdown(items []string, n int) []string { // items is global to this function which is called as an anonymous closure.
-	i := 0
-	c := 0
-	done := false
-	for (c < n) && !done { // originally a while statement
-		c = 2*i + 1
-		if c <= n {
-			if (c < n) && (items[c] <= items[c+1]) {
-				c++
-			} // END if
-			if items[c] <= items[i] {
-				done = true
-			} else {
-				items[c], items[i] = items[i], items[c]
-				i = c
-			} // END if items[c] <= items[i]
-		} // END if c <= n
-	} // END (* for-while *);
+*/
+
+func NRsiftdown(items []string, L, R int) []string { // Numerical Recipes 3rd ed (C) 2007, p 428
+	// execute the sift down on element ra[L] to maintain heap structure.
+
+	i := L
+	x := items[L]
+	j := 2*L + 1
+	for j <= R {
+		if j < R && items[j] < items[j+1] {
+			j++
+		}
+		if x >= items[j] {
+			break
+		}
+		items[i] = items[j]
+		i = j
+		j = 2*j + 1
+	}
+	items[i] = x
 	return items
 } // END siftdown;
 
-// -----------------------------------------------------------
-func anotherheapsort(items []string) []string { // doesn't work
-	size := len(items)
-	for index := 0; index < size; index++ {
-		items = siftup(items, index)
+func NRheapsort(items []string) []string { // copied from Numerical Recipes 3rd ed (C) 2007, p 428
+	// sort array[0 .. n-1] using HeapSort.
+	n := len(items)
+	// the index i determines the left range of the siftdown.  Heap creation phase is also call hiring phase.
+	for i := n/2 - 1; i >= 0; i-- {
+		items = NRsiftdown(items, i, n-1)
 	}
 
-	for index := size - 1; index > 0; index-- {
-		items[0], items[index] = items[index], items[0]
-		items = siftdown(items, index)
+	// Right range of the siftdown is decremented from n-2 to 0 during the retirement and promotion phase,
+	// also called heap selection
+	for i := n - 1; i > 0; i-- {
+		// clear a space at the end of the array and retire the top of the heap into it, by swapping
+		items[0], items[i] = items[i], items[0]
+		NRsiftdown(items, 0, i - 1)
 	}
 	return items
-} // END anotherheapsort;
-
-//-------------------------------------------------------------
-
+} // END NRheapsort;
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
 func qsort(a []string, L, R int) []string {
 	i := L
 	j := R
@@ -459,10 +456,10 @@ func NonRecursiveQuickSort(a []string) []string {
 	//fmt.Println(" initial hi lo stack push.  Stack is", hiloStack)
 
 	for hiloStackLen() > 0 {
-//		stacksize := hiloStackLen()
-//		if stacksize > maxStackSize {
-//			maxStackSize = stacksize
-//		}
+		//		stacksize := hiloStackLen()
+		//		if stacksize > maxStackSize {
+		//			maxStackSize = stacksize
+		//		}
 
 		i0 := hiloStackPop()
 		lo := i0.lo
@@ -539,10 +536,10 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 	intStackPush(0)
 	intStackPush(n - 1)
 	for intStackLen() > 0 { // REPEAT (*take top request from stack*)
-//		stacksize := intStackLen()
-//		if stacksize > maxStackSize {
-//			maxStackSize = stacksize
-//		}
+		//		stacksize := intStackLen()
+		//		if stacksize > maxStackSize {
+		//			maxStackSize = stacksize
+		//		}
 
 		R := intStackPop()
 		L := intStackPop()
@@ -921,7 +918,7 @@ func main() {
 		fmt.Println("before MyShellSort:", sliceofwords)
 	}
 	t3b := time.Now()
-	MyShellSortedWords := BadShellSort(sliceofwords)
+	MyShellSortedWords := MyShellSort(sliceofwords)
 	MyShellSortedTime := time.Since(t3b)
 	s = fmt.Sprintf(" After MyShellSort: %s, %d ns \n", MyShellSortedTime.String(), MyShellSortedTime.Nanoseconds())
 	_, err = OutBufioWriter.WriteString(s)
@@ -959,30 +956,31 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	// AnotherHeapSort -- didn't work,  but I'm taking another crack at this on 05/19/2020 10:22:26 AM.
-	//                    Nope, still doesn't work.
-	/*	Did not sort correctly, but did not panic.
-		copy(sliceofwords, mastersliceofwords)
-		if allowoutput {
-			fmt.Println("before AnotherHeapSort:", sliceofwords)
-		}
-		t5 := time.Now()
-		AnotherHeapSortedWords := anotherheapsort(sliceofwords)
-		AnotherHeapTime := time.Since(t5)
-		s = fmt.Sprintf(" After anotherheapsort: %s, %d ns \n", AnotherHeapTime.String(), AnotherHeapTime.Nanoseconds())
-		if allowoutput {
-			for _, w := range AnotherHeapSortedWords {
-				fmt.Print(w, " ")
-			}
-			fmt.Println()
+	// NRHeapSort which is from Numerical Recipies and converted from C++ coce.
+
+	/*	Did not sort correctly, but did not panic. */
+	copy(sliceofwords, mastersliceofwords)
+	if allowoutput {
+		fmt.Println("before NRHeapSort:", sliceofwords)
+	}
+	t5 := time.Now()
+	NRHeapSortedWords := NRheapsort(sliceofwords)
+	NRHeapTime := time.Since(t5)
+	s = fmt.Sprintf(" After NRheapsort: %s, %d ns \n", NRHeapTime.String(), NRHeapTime.Nanoseconds())
+	fmt.Println(s)
+	if allowoutput {
+		for _, w := range NRHeapSortedWords {
+			fmt.Print(w, " ")
 		}
 		fmt.Println()
-		_, err = OutBufioWriter.WriteString(s)
-		_, err = OutBufioWriter.WriteRune('\n')
-		check(err)
-		fmt.Println(s)
-		fmt.Println()
-	*/
+	}
+	fmt.Println()
+	_, err = OutBufioWriter.WriteString(s)
+	_, err = OutBufioWriter.WriteRune('\n')
+	check(err)
+
+	fmt.Println()
+	/* */
 
 	// ModifiedHeapSort -- doesn't work.
 	/*
