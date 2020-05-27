@@ -52,6 +52,7 @@ const LastAlteredDate = "25 May 2020"
                And I fixed a bug in that MyShellSort was not being tested after all.
                When I correctly tested Sedgewick's approch to the ShellSort interval, I found it to be substantially better than what
                Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
+  27 May 20 -- Fixing some comments.  I won't recompile.
 */
 
 var intStack []int
@@ -140,10 +141,10 @@ func BadShellSort(a []string) []string {
 			for (j+1 >= h) && (x < a[j]) {
 				a[j+h] = a[j]
 				j = j - h
-			} // END for/while (j >= k) & (x < a[j]) DO
+			} // END for/while originally (j >= k) & (x < a[j]) DO
 			a[j+h] = x
-		} // END FOR i := k+1 TO n-1 DO
-	} // END FOR k ranges over h
+		} // END FOR i := h; ...     originally i := k+1 TO n-1 DO in original code based on Pascal
+	} // END FOR h
 	return a
 } //END BadShellSort
 
@@ -206,7 +207,7 @@ func MyShellSort(a []string) []string {
 			// elapsed := time.Since(t0)
 			// if elapsed > 30*time.Second { return a }
 		} // end loop until sorted
-	} // END FOR range h
+	} // END FOR h
 	return a
 } //END MyShellSort
 
@@ -240,6 +241,8 @@ func ShellSort(a []string) []string {
 
 // -----------------------------------------------------------
 // -----------------------------------------------------------
+// The principal of heapsort is that in phase 1, the array to be sorted is turned into a heap.  In phase 2, the items
+// are removed from the heap in the order just created.
 func sift(a []string, L, R int) []string {
 	i := L
 	j := 2*i + 1
@@ -263,11 +266,11 @@ func HeapSort(a []string) []string { // I think this is based on Wirth's code in
 	n := len(a)
 	L := n / 2
 	R := n - 1
-	for L > 0 {
+	for L > 0 { // heap creation phase.
 		L--
 		a = sift(a, L, R)
 	} // END for-while L>0
-	for R > 0 {
+	for R > 0 { // heap removal phase.
 		a[0], a[R] = a[R], a[0]
 		R--
 		a = sift(a, L, R)
@@ -276,7 +279,9 @@ func HeapSort(a []string) []string { // I think this is based on Wirth's code in
 } // END HeapSort
 // -----------------------------------------------------------
 // -----------------------------------------------------------
-func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn't work.
+// I did this myself, but it doesn't work.  I'm keeping this here so I don't do this again.  I didn't understand how
+// a heap sort works, so this idea was wrong headed.
+func ModifiedHeapSort(a []string) []string {
 	n := len(a)
 	L := n / 2
 	R := n - 1
@@ -309,7 +314,7 @@ func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn'
 } // END ModifiedHeapSort
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
-/*  Don't remember where this came from
+/*  Don't remember where this came from, but I'm leaving it here in case I find out some day.
 func siftup(items []string, n int) []string {
 	i := n
 	done := false
@@ -324,12 +329,9 @@ func siftup(items []string, n int) []string {
 	} // END (* end for-while *)
 	return items
 } // END siftup;
-
 */
 
 func NRsiftdown(items []string, L, R int) []string { // Numerical Recipes 3rd ed (C) 2007, p 428
-	// execute the sift down on element ra[L] to maintain heap structure.
-
 	i := L
 	x := items[L]
 	j := 2*L + 1
@@ -344,24 +346,23 @@ func NRsiftdown(items []string, L, R int) []string { // Numerical Recipes 3rd ed
 		i = j
 		j = 2*j + 1
 	}
-	items[i] = x  // put x into its correct level/location.
+	items[i] = x // put x into its correct level/location.
 	return items
 } // END siftdown;
 
 func NRheapsort(items []string) []string { // copied from Numerical Recipes 3rd ed (C) 2007, p 428
-	// sort array[0 .. n-1] using HeapSort.
 	n := len(items)
 	// the index i determines the left range of the siftdown.  Heap creation phase is also call hiring phase.
 	for i := n/2 - 1; i >= 0; i-- {
 		items = NRsiftdown(items, i, n-1)
 	}
 
-	// Right range of the siftdown is decremented from n-2 to 0 during the retirement and promotion phase,
+	// Right range of the siftdown is decremented from n-1 to 0 during the retirement and promotion phase,
 	// also called heap selection
 	for i := n - 1; i > 0; i-- {
 		// clear a space at the end of the array and retire the top of the heap into it, by swapping
 		items[0], items[i] = items[i], items[0]
-		NRsiftdown(items, 0, i - 1)
+		NRsiftdown(items, 0, i-1)
 	}
 	return items
 } // END NRheapsort;
