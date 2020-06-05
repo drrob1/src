@@ -163,7 +163,7 @@ func ReadStrategy(buf *bytes.Buffer) {
 			case 66:
 				PairStrategy[6] = row
 			case 77:
-				PairStrategy[9] = row
+				PairStrategy[7] = row
 			case 88:
 				PairStrategy[8] = row
 			case 99:
@@ -251,7 +251,7 @@ func WriteStrategy(filehandle *bufio.Writer) {
 		if i < 3 { // ignore row 0, 1 and 2, as these are not a valid blackjack hand or are in PairStrategy
 			continue
 		}
-		outputline := fmt.Sprintf(" %d: ", i)
+		outputline := fmt.Sprintf(" s%d: ", i)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
 			outputline += s
@@ -263,10 +263,10 @@ func WriteStrategy(filehandle *bufio.Writer) {
 	// Now write out Pair Strategy
 	filehandle.WriteString(" \n \n Pair Strategy Matrix: \n")
 	for i, row := range PairStrategy {
-		if i < 2 { // ignore row 0 and 1 as these are not a valid blackjack hand
+		if i < 1 { // ignore row 0 as it is not a valid blackjack hand
 			continue
 		}
-		outputline := fmt.Sprintf(" %d: ", i)
+		outputline := fmt.Sprintf(" %d-%d: ", i, i)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
 			outputline += s
@@ -359,10 +359,15 @@ func main() {
 	defer bufOutputFileWriter.Flush()
 	defer OutputHandle.Close()
 
-	WriteStrategy(bufOutputFileWriter)
-	str := fmt.Sprintf(" Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n", DealerHitsSoft17, ResplitAces)
+    date := time.Now()
+    datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+    str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n", datestring, DealerHitsSoft17, ResplitAces)
+
 	_, err = bufOutputFileWriter.WriteString(str)
-	_, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
+
+    WriteStrategy(bufOutputFileWriter)
+
+    _, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
@@ -388,6 +393,7 @@ func main() {
         deck[i], deck[j] = deck[j], deck[i]
     }
     rand.Shuffle(len(deck), swapfnt)
+    rand.Shuffle(len(deck), swapfnt)
 
     timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
     fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(),"ns to shuffle.")
@@ -395,6 +401,5 @@ func main() {
 
     fmt.Println(" Shuffled deck still has", len(deck), "cards.")
     fmt.Println(deck)
-
 
 }
