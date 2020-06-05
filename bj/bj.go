@@ -4,8 +4,12 @@ package main
   Translated from Modula-2 that I wrote ca 95, and then converted to Windows in 2005.
 
   The strategy matrix is read in and consists of columns 1 .. 10 (here, 0 .. 9) where ace is first, and last is all 10 value cards.
-  Each row is what strategy to follow when your hand totals that row number.  Since I'm dealing w/ integers, I'll discard what is not
-  convenient.  IE, I'll not convert to a zero origin array as I think that would be too confusing.  If as I write the code, I change
+  Each row begins w/ a hand total, and means what strategy to follow when your hand totals that hand total.
+  These are the integers from 5 .. 21, then S2 .. S10, meaning soft 2 thru soft 10.  Soft 2 would be 2 aces, but since that's a pair,
+  this row is ignored.  Then we have the pairs AA thru 99 and 1010.  I don't think I coded to allow A2 to mean an ace and a two,
+  instead, this would be a soft 3.
+  Since I'm dealing w/ integers, I'll discard what is not convenient.
+  IE, I'll not convert to a zero origin array as I think that would be too confusing.  If as I write the code, I change
   my mind, so be it.
  */
 import (
