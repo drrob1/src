@@ -14,6 +14,7 @@ package main
  */
 import (
 	"fmt"
+	"tknptr"
 )
 
 const lastAltered = "June 10, 2020"
@@ -33,9 +34,11 @@ const (
 	Double
 	Split
 	Surrender
+	ErrorValue
 )
 
-type OptionRowType [10]int // first element is for the ace, last element is for all 10 value cards (10, jack, queen, king)
+type OptionRowType []int // first element is for the ace, last element is for all 10 value cards (10, jack, queen, king)
+                        // by making this a slice, I can append the rows as I read them from the input strategy file.
 
 var Strategy [22]OptionRowType // Modula-2 ARRAY [5..21] OF OptionRowType.  I'm going to ignore rows that are not used.
 var SoftStrategy [12]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
@@ -78,6 +81,22 @@ var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwo
     totalDoubles, totalSurrenders, totalBusts, totalHands int
 var score, winsInARow, lossesInARow int
 var runs []int
+
+func GetOption(tkn tknptr.TokenType) int {
+	if tkn.Str == "S" {
+		return Stand
+	} else if tkn.Str == "H" {
+		return Hit
+	} else if tkn.Str == "D" {
+		return Double
+	} else if tkn.Str == "SP" {
+		return Split
+	} else if tkn.Str == "SUR" {
+		return Surrender
+	} else {
+		return ErrorValue
+	}
+}
 
 func ReadStrategy() {
 
