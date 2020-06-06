@@ -18,15 +18,15 @@ import (
 	"bytes"
 	"fmt"
 	"getcommandline"
-    "io"
-    "io/ioutil"
-    "math/rand"
-    "os"
+	"io"
+	"io/ioutil"
+	"math/rand"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-    "time"
-    "tknptr"
+	"time"
+	"tknptr"
 )
 
 const lastAltered = "June 10, 2020"
@@ -68,7 +68,7 @@ type OptionRowType []int // first element is for the ace, last element is for al
 var Strategy [22]OptionRowType     // Modula-2 ARRAY [5..21] OF OptionRowType.  I'm going to ignore rows that are not used.
 var SoftStrategy [12]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
 var PairStrategy [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
-var StrategyErrorFlag bool         // not sure if I'll need this yet.
+//var StrategyErrorFlag bool         // not sure if I'll need this yet.
 
 const numOfDecks = 8
 const maxNumOfPlayers = 7
@@ -87,10 +87,11 @@ type handType struct {
 var resplitAcesFlag, lastHandWinLoseFlag, readyToShuffleFlag bool
 
 var player []handType
+var hand handType
 var dealer handType
 var splitsArray []int // well, slice, actually.  But nevermind this.
 var prevResult []int
-var numOfPlayers int
+var numOfPlayers, currentCard int
 var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 var score, winsInARow, lossesInARow int
@@ -117,9 +118,9 @@ func GetOption(tkn tknptr.TokenType) int {
 func ReadStrategy(buf *bytes.Buffer) {
 	for {
 		rowbuf, err := buf.ReadString('\n')
-		if err == io.EOF{
-		    break
-        } else if err != nil {
+		if err == io.EOF {
+			break
+		} else if err != nil {
 			fmt.Println(" Error from bytes.Buffer ReadString is", err)
 			os.Exit(1)
 		}
@@ -136,8 +137,8 @@ func ReadStrategy(buf *bytes.Buffer) {
 		for {
 			token, eol := tknbuf.GetToken(true) // force upper case token
 			if eol {
-			    break
-            }
+				break
+			}
 			if EOL || token.State != tknptr.ALLELSE {
 				return
 			}
@@ -291,13 +292,37 @@ func InitDeck() { // Initalize the deck of cards.
 	}
 }
 
+func getCard() int {
+	currentCard++ // This will ignore the first card, in position zero.
+	return deck[currentCard]
+}
+
+func dealCards() {
+	for i := range player {
+		player[i].card1 = getCard()
+		player[i].softflag = (player[i].card1 == 1)
+	}
+	dealer.card1 = getCard()
+	dealer.softflag = (dealer.card1 == 1)
+	for i := range player {
+		player[i].card2 = getCard()
+		player[i].total = player[i].card1 + player[i].card2
+		player[i].BJflag = (player[i].total == 11)
+		player[i].softflag = (player[i].softflag || (player[i].card2) == 1)
+	}
+	dealer.card2 = getCard()
+	dealer.total = dealer.card1 + dealer.card2
+	dealer.BJflag = (dealer.total == 11)
+	dealer.softflag = (dealer.softflag || (dealer.card2 == 1))
+}
+
 func main() {
 	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s \n", lastAltered)
 
-    InputExtDefault := ".strat"
-    OutputExtDefault := ".results"
+	InputExtDefault := ".strat"
+	OutputExtDefault := ".results"
 
-    if len(os.Args) < 2 {
+	if len(os.Args) < 2 {
 		fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
 		os.Exit(1)
 	}
@@ -359,15 +384,15 @@ func main() {
 	defer bufOutputFileWriter.Flush()
 	defer OutputHandle.Close()
 
-    date := time.Now()
-    datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
-    str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n", datestring, DealerHitsSoft17, ResplitAces)
+	date := time.Now()
+	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n", datestring, DealerHitsSoft17, ResplitAces)
 
 	_, err = bufOutputFileWriter.WriteString(str)
 
-    WriteStrategy(bufOutputFileWriter)
+	WriteStrategy(bufOutputFileWriter)
 
-    _, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
+	_, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
@@ -379,27 +404,58 @@ func main() {
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
 
-// Init and shuffle the deck
-    InitDeck()
+	// Init and shuffle the deck
+	InitDeck()
 
-    fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
+	fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
 	fmt.Println(deck)
 	fmt.Println()
 
-    t0 := time.Now()
+	t0 := time.Now()
 
-//       need to shuffle here
-    swapfnt := func(i, j int) {
-        deck[i], deck[j] = deck[j], deck[i]
-    }
-    rand.Shuffle(len(deck), swapfnt)
-    rand.Shuffle(len(deck), swapfnt)
+	rand.Seed(int64(time.Now().Nanosecond()))
+	//       need to shuffle here
+	swapfnt := func(i, j int) {
+		deck[i], deck[j] = deck[j], deck[i]
+	}
+	rand.Shuffle(len(deck), swapfnt)
+	rand.Shuffle(len(deck), swapfnt)
 
-    timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-    fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(),"ns to shuffle.")
-    fmt.Println()
+	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
+	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(), "ns to shuffle.")
+	fmt.Println()
 
-    fmt.Println(" Shuffled deck still has", len(deck), "cards.")
-    fmt.Println(deck)
+	fmt.Println(" Shuffled deck still has", len(deck), "cards.")
+	fmt.Println(deck)
+
+	fmt.Print(" How many hands to play: ")
+	fmt.Scanln(&numOfPlayers)
+	player = make([]handType, 0, maxNumOfPlayers)
+	for h := 0; h < numOfPlayers; h++ {
+		hand = handType{
+			card1:           0,
+			card2:           0,
+			total:           0,
+			doubledflag:     false,
+			surrenderedflag: false,
+			bustedflag:      false,
+			BJflag:          false,
+			softflag:        false,
+			result:          0,
+		}
+		player = append(player, hand)
+	}
+
+	fmt.Println(" number of hands is", len(player))
+	fmt.Println()
+
+	dealCards()
+
+	fmt.Println(" after cards were dealt.  Player(s) first")
+	fmt.Println(player)
+	fmt.Println()
+	fmt.Println(" Dealer last.")
+	fmt.Println(dealer)
+	fmt.Println()
 
 }
