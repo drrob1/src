@@ -14,19 +14,19 @@ package main
 
 */
 import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"getcommandline"
-	"io"
-	"io/ioutil"
-	"math/rand"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
-	"tknptr"
+    "bufio"
+    "bytes"
+    "fmt"
+    "getcommandline"
+    "io"
+    "io/ioutil"
+    "math/rand"
+    "os"
+    "path/filepath"
+    "strconv"
+    "strings"
+    "time"
+    "tknptr"
 )
 
 const lastAltered = "June 10, 2020"
@@ -40,7 +40,7 @@ const lastAltered = "June 10, 2020"
 
 var OptionName = []string{"S  ", "H  ", "D  ", "SP ", "SUR"} // Stand, Hit, Double, Split, Surrender
 
-const Ace = iota
+const Ace = 1
 const (
 	Stand = iota
 	Hit
@@ -79,16 +79,16 @@ const NumOfCards = 52 * numOfDecks
 var resultNames = []string{"  lost", "  pushed", "  won", "  surrend", "  LostDbl", "  WonDbl", "  LostToBJ", "  PushedBJ", "  WonBJ"}
 
 type handType struct {
-	card1, card2, total                                        int
-	doubledflag, surrenderedflag, bustedflag, BJflag, softflag bool
-	result                                                     int
+	card1, card2, total                                              int
+	doubledflag, surrenderedflag, bustedflag, pair, softflag, BJflag bool
+	result                                                           int
 }
 
-var resplitAcesFlag, lastHandWinLoseFlag, readyToShuffleFlag bool
+var resplitAcesFlag, lastHandWinLoseFlag, readyToShuffleFlag, dealerHistsSoft17 bool
 
-var player []handType
+var playerHand []handType
 var hand handType
-var dealer handType
+var dealerHand handType
 var splitsArray []int // well, slice, actually.  But nevermind this.
 var prevResult []int
 var numOfPlayers, currentCard int
@@ -96,7 +96,6 @@ var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwo
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 var score, winsInARow, lossesInARow int
 var runs []int
-var DealerHitsSoft17, ResplitAces bool
 var deck []int
 
 func GetOption(tkn tknptr.TokenType) int {
@@ -212,6 +211,11 @@ func ReadStrategy(buf *bytes.Buffer) {
 					}
 				}
 				SoftStrategy[i+1] = row
+			} else if rowID.Str == "DEALER17" {
+				dealerHistsSoft17 = true
+			} else if rowID.Str == "RESPLIT" {
+				resplitAcesFlag = true
+
 			} else {
 				fmt.Println(" Invalid Row value:", rowID) // rowID is a struct, so all of it will be output.
 
@@ -298,23 +302,48 @@ func getCard() int {
 }
 
 func dealCards() {
-	for i := range player {
-		player[i].card1 = getCard()
-		player[i].softflag = (player[i].card1 == 1)
+	for i := range playerHand {
+		playerHand[i].card1 = getCard()
+		playerHand[i].softflag = (playerHand[i].card1 == Ace)
 	}
-	dealer.card1 = getCard()
-	dealer.softflag = (dealer.card1 == 1)
-	for i := range player {
-		player[i].card2 = getCard()
-		player[i].total = player[i].card1 + player[i].card2
-		player[i].BJflag = (player[i].total == 11)
-		player[i].softflag = (player[i].softflag || (player[i].card2) == 1)
+	dealerHand.card1 = getCard()
+	dealerHand.softflag = (dealerHand.card1 == Ace)
+	for i := range playerHand {
+		playerHand[i].card2 = getCard()
+		playerHand[i].total = playerHand[i].card1 + playerHand[i].card2
+		playerHand[i].pair = (playerHand[i].card1 == playerHand[i].card2)
+		playerHand[i].softflag = (playerHand[i].softflag || (playerHand[i].card2) == Ace)
+		playerHand[i].BJflag = (playerHand[i].total == 11 && playerHand[i].softflag)
 	}
-	dealer.card2 = getCard()
-	dealer.total = dealer.card1 + dealer.card2
-	dealer.BJflag = (dealer.total == 11)
-	dealer.softflag = (dealer.softflag || (dealer.card2 == 1))
+	dealerHand.card2 = getCard()
+	dealerHand.total = dealerHand.card1 + dealerHand.card2
+	dealerHand.pair = (dealerHand.card1 == dealerHand.card2)
+	dealerHand.softflag = (dealerHand.softflag || (dealerHand.card2 == Ace))
+	dealerHand.BJflag = (dealerHand.total == 11 && dealerHand.softflag)
 }
+
+/*
+func playRound() {
+    var alreadySplitAces bool
+
+    if dealerHand.BJflag {
+        dealerHand.total = 21
+    }
+
+    fmt.Println(" Dealer hand:", dealerHand)
+    for i := 0; i < len(playerHand); i++ {
+
+    }
+
+
+
+}
+
+func showDown() {
+
+}
+
+*/
 
 func main() {
 	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s \n", lastAltered)
@@ -327,6 +356,7 @@ func main() {
 		os.Exit(1)
 	}
 
+/*  These are now set in the .strat file.
 	fmt.Print(" Simulate dealer hitting on a soft 17? y/n ")
 	ans := ""
 	_, _ = fmt.Scanln(&ans)
@@ -343,6 +373,7 @@ func main() {
 		ResplitAces = true
 	}
 	fmt.Println(" Value of Re-split aces flag is", ResplitAces)
+ */
 
 	deck = make([]int, 0, NumOfCards)
 
@@ -386,7 +417,8 @@ func main() {
 
 	date := time.Now()
 	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
-	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n", datestring, DealerHitsSoft17, ResplitAces)
+	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n",
+	    datestring, dealerHistsSoft17, resplitAcesFlag)
 
 	_, err = bufOutputFileWriter.WriteString(str)
 
@@ -406,10 +438,11 @@ func main() {
 
 	// Init and shuffle the deck
 	InitDeck()
-
+/*
 	fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
 	fmt.Println(deck)
 	fmt.Println()
+ */
 
 	t0 := time.Now()
 
@@ -424,38 +457,46 @@ func main() {
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
 	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(), "ns to shuffle.")
 	fmt.Println()
-
+/*
 	fmt.Println(" Shuffled deck still has", len(deck), "cards.")
 	fmt.Println(deck)
+ */
 
 	fmt.Print(" How many hands to play: ")
-	fmt.Scanln(&numOfPlayers)
-	player = make([]handType, 0, maxNumOfPlayers)
+	_, err = fmt.Scanln(&numOfPlayers)
+	if err != nil {
+	    numOfPlayers = 1
+    }
+    
+	playerHand = make([]handType, 0, maxNumOfPlayers)
+	/* Just a demo of what GoLand can do automatically
+	   hand = handType{
+	       card1:           0,
+	       card2:           0,
+	       total:           0,
+	       doubledflag:     false,
+	       surrenderedflag: false,
+	       bustedflag:      false,
+	       BJflag:          false,
+	       softflag:        false,
+	       result:          0,
+	   }
+	*/
+	hand = handType{}
 	for h := 0; h < numOfPlayers; h++ {
-		hand = handType{
-			card1:           0,
-			card2:           0,
-			total:           0,
-			doubledflag:     false,
-			surrenderedflag: false,
-			bustedflag:      false,
-			BJflag:          false,
-			softflag:        false,
-			result:          0,
-		}
-		player = append(player, hand)
+		playerHand = append(playerHand, hand)
 	}
 
-	fmt.Println(" number of hands is", len(player))
+	fmt.Println(" number of hands is", len(playerHand))
 	fmt.Println()
 
 	dealCards()
 
 	fmt.Println(" after cards were dealt.  Player(s) first")
-	fmt.Println(player)
+	fmt.Println(playerHand)
 	fmt.Println()
 	fmt.Println(" Dealer last.")
-	fmt.Println(dealer)
+	fmt.Println(dealerHand)
 	fmt.Println()
 
 }
