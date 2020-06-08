@@ -15,6 +15,9 @@ package main
   I changed the underslying logic a lot from what I wrote 25 years ago in Modula-2.  Now I use recursion to solve the problem of splitting.
 
   Now, when PairStrategy says to hit, it gets passed to Strategy which has to have an entry for it.  This was a problem for deuces.
+
+  Getting it right when player pulls an Ace is hard.
+  I added the clearscreen logic from rpng to help me w/ the debugging screen.
 */
 import (
 	"bufio"
@@ -25,7 +28,9 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -69,11 +74,15 @@ type OptionRowType []int // first element is for the ace, last element is for al
 // by making this a slice, I can append the rows as I read them from the input strategy file.
 
 var Strategy [22]OptionRowType     // Modula-2 ARRAY [5..21] OF OptionRowType.  I'm going to ignore rows that are not used.
-var SoftStrategy [12]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
+
+// Because of change in logic, SoftStrategy needs enough rows to handle more cases.  Maybe.  I changed the soft hand logic also.
+var SoftStrategy [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
+
 var PairStrategy [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
 //var StrategyErrorFlag bool         // not sure if I'll need this yet.
 
-const numOfDecks = 8
+//const numOfDecks = 8
+const numOfDecks = 1 // for testing of shuffles.  When I'm confident shuffling works correctly, I'll return it to 8 decks.
 const maxNumOfPlayers = 100
 const maxNumOfHands = 1_000_000_000 // 1 million, for now.
 const NumOfCards = 52 * numOfDecks
@@ -99,6 +108,23 @@ var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwo
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 var winsInARow, lossesInARow int
 var score float64
+var clearscreen map[string]func()
+
+// ------------------------------------------------------- init -----------------------------------
+func init() {
+	clearscreen = make(map[string]func())
+	clearscreen["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+
+	clearscreen["windows"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
 
 func GetOption(tkn tknptr.TokenType) int {
 	if tkn.Str == "S" {
@@ -311,60 +337,77 @@ func getCard() int {
 }
 
 // This plays until stand or bust.
-func hitMeDealer() {
-    fmt.Printf(" DealerHit.  Hand is: %d %d \n", dealerHand.card1, dealerHand.card2)
+func hitDealer() {
+	fmt.Printf(" Entering DealerHit.  Hand is: %d %d, total=%d \n", dealerHand.card1, dealerHand.card2, dealerHand.total)
 	if dealerHand.BJflag {
 		return
-	} else if dealerHand.softflag && dealerHitsSoft17 {
-        if dealerHand.total > 7 && dealerHand.total <= 11 {
-            dealerHand.total += 10
+	}
+	for dealerHand.total < 18 { // always exit if >= 18.  Loop if < 18.
+        fmt.Printf("\n Top of for Dealerhand total.  Hand is: %d %d, total=%d, soft=%t \n",
+            dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.softflag)
+        if dealerHand.softflag && dealerHand.total <= 11 && dealerHitsSoft17 {
+            if dealerHand.total > 7 && dealerHand.total <= 11 {
+                dealerHand.total += 10
+            }
+            if dealerHand.total <= 17 {
+                fmt.Printf(" Dealer soft17 hit loop.  Total=%d \n", dealerHand.total)
+                dealerHand.total += getCard()
+                if dealerHand.total > 21 {
+                    dealerHand.bustedflag = true
+                    return
+                } else if dealerHand.total > 7 && dealerHand.total <= 11 {
+                    dealerHand.total += 10
+                    return
+                }
+            } // until busted or stand
+        } else if dealerHand.softflag && dealerHand.total <= 11 { // he must stand on a soft 17.
+            if dealerHand.total >= 7 && dealerHand.total <= 11 {
+                dealerHand.total += 10
+            }
+            if dealerHand.total < 17 { // until busted or stand
+                fmt.Printf(" Dealer soft no hit soft17 loop.  Total=%d \n", dealerHand.total)
+                dealerHand.total += getCard()
+                if dealerHand.total > 21 {
+                    dealerHand.bustedflag = true
+                    return
+                } else if dealerHand.total >= 7 && dealerHand.total <= 11 {
+                    dealerHand.total += 10
+                    return
+                }
+            } // until busted or stand
+        } else { // not soft, or Ace cannot be 11, only can be 1.
+            if dealerHand.total < 17 {
+                fmt.Printf(" Dealer hard hand hit loop.  Total=%d \n", dealerHand.total)
+                newcard := getCard()
+                if newcard == 1 {
+                    dealerHand.softflag = true
+                }
+                dealerHand.total += newcard
+                if dealerHand.total > 21 {
+                    dealerHand.bustedflag = true
+                    return
+                }
+            } // until busted or stand
+        } // if soft hand or not.
+        if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
+            return
+        } else if dealerHand.total >= 17 {
+            return
         }
-		for dealerHand.total <= 17 {
-		    fmt.Printf(" Dealer soft17 hit loop.  Total=%d \n", dealerHand.total)
-			dealerHand.total += getCard()
-			if dealerHand.total > 21 {
-				dealerHand.bustedflag = true
-				return
-			} else if dealerHand.total > 7 && dealerHand.total <= 11 {
-				dealerHand.total += 10
-				return
-			}
-		} // until busted or stand
-
-	} else if dealerHand.softflag { // he must stand on a soft 17.
-        if dealerHand.total >= 7 && dealerHand.total <= 11 {
-            dealerHand.total += 10
-        }
-		for dealerHand.total < 17 { // until busted or stand
-            fmt.Printf(" Dealer soft no hit soft17 loop.  Total=%d \n", dealerHand.total)
-			dealerHand.total += getCard()
-			if dealerHand.total > 21 {
-				dealerHand.bustedflag = true
-				return
-			} else if dealerHand.total >= 7 && dealerHand.total <= 11 {
-				dealerHand.total += 10
-				return
-			}
-		} // until busted or stand
-
-	} else { // not soft
-		for dealerHand.total < 17 {
-            fmt.Printf(" Dealer hard hand hit loop.  Total=%d \n", dealerHand.total)
-			dealerHand.total += getCard()
-			if dealerHand.total > 21 {
-				dealerHand.bustedflag = true
-				return
-			}
-		} // until busted or stand
-		return
-	} // if soft hand or not.
-} // hitMeDealer
+    } // for loop, which allows hands to jump for the hard to soft category.
+    return
+} // hitDealer
 
 // This only takes one card for the playerHand, but for the dealer it plays until stand or bust.
 // Note that blackjack has already been checked for, in playAhand().
 func hitMePlayer(i int) {
+MainLoop:
 	for { // until stand or bust.  Recall that player hands that need to check the strategy matrices for each iteration, unlike the dealer.
-		if playerHand[i].softflag {
+		fmt.Printf(" Top of hitMePlayer: playerHand[%d]: card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n\n",
+			i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
+			playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag)
+
+		if playerHand[i].softflag && playerHand[i].total <= 11 {  // if total > 11, Ace can only be 1 and not a 10.
 			strategy := SoftStrategy[playerHand[i].total][dealerHand.card1-1]
 			fmt.Printf(" SoftStrategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
 			switch strategy {
@@ -372,13 +415,13 @@ func hitMePlayer(i int) {
 				if playerHand[i].total <= 11 { // here is the logic of a soft hand
 					playerHand[i].total += 10
 				}
-				return
+				break MainLoop
 			case Hit:
 				card := getCard()
 				playerHand[i].total += card
 				if playerHand[i].total > 21 { // if you hit and bust a soft hand, then the Ace must be 1
 					playerHand[i].bustedflag = true
-					return
+					break MainLoop
 				}
 			case Double: // here this means hit.
 				if !playerHand[i].doubledflag {
@@ -390,7 +433,7 @@ func hitMePlayer(i int) {
 					}
 				}
 				playerHand[i].doubledflag = true
-				return
+				break MainLoop
 			case Surrender:
 				fmt.Printf(" in hitMePlayer for soft hands and got a surrender option.  I=%d, hand=%v \n", i, playerHand[i])
 				return
@@ -398,41 +441,54 @@ func hitMePlayer(i int) {
 				fmt.Printf(" in hitMePlayer and got errorValue.  I is %d, and hand is %v \n", i, playerHand[i])
 				return
 			} // switch-case
-		} else { // not a soft hand
+		} else { // not a soft hand where Ace can represent 11.
 			strategy := Strategy[playerHand[i].total][dealerHand.card1-1]
-            fmt.Printf(" Strategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			fmt.Printf(" Strategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
 			switch strategy {
 			case Stand:
-                fmt.Printf(" HitMe - stand.  total= \n", playerHand[i].total)
+				fmt.Printf(" Hard HitMe - stand.  total= %d \n", playerHand[i].total)
 				return
 			case Hit:
-			    fmt.Printf(" HitMe - hit.  total= \n", playerHand[i].total)
-				playerHand[i].total += getCard()
+				fmt.Printf(" Hard HitMe - hit.  total= %d \n", playerHand[i].total)
+				newcard := getCard()
+				playerHand[i].total += newcard
+				if newcard == 1 { // if pulled an Ace, next time around this is considered a soft hand.
+					playerHand[i].softflag = true
+				}
 				if playerHand[i].total > 21 {
 					playerHand[i].bustedflag = true
 					return
+				} else if playerHand[i].softflag && playerHand[i].total >= 9 && playerHand[i].total <= 11 {
+					playerHand[i].total += 10
 				}
 			case Double:
-                fmt.Printf(" HitMe - double.  total= \n", playerHand[i].total)
+				fmt.Printf(" Hard HitMe - double.  total= %d \n", playerHand[i].total)
 				if !playerHand[i].doubledflag { // must only draw 1 card.
-					playerHand[i].total += getCard()
+					newcard := getCard()
+					playerHand[i].total += newcard
 					if playerHand[i].total > 21 {
 						playerHand[i].bustedflag = true
 						return
+					} else if newcard == 1 && playerHand[i].total <= 11 { // make sure total is correct when the one allowed card is an Ace.
+						playerHand[i].total += 10
+						playerHand[i].softflag = true
 					}
 				}
 				playerHand[i].doubledflag = true
 				return
 			case Surrender:
-                fmt.Printf(" HitMe - surrender.  total= \n", playerHand[i].total)
+				fmt.Printf(" Hard HitMe - surrender.  total= %d \n", playerHand[i].total)
 				playerHand[i].surrenderedflag = true
 				return
 			case ErrorValue:
-				fmt.Printf(" in hitMe and got errorValue.  I is %d, and hand is %v \n", i, playerHand[i])
+				fmt.Printf(" in hard hitMe and got errorValue.  I is %d, and hand is %v \n", i, playerHand[i])
 				return
-			}
+			} // switch case on Strategy.
 		} // if soft or not.
 	} // until finished taking cards.  This is either standing pat or busted.  There are no other options.
+	if playerHand[i].total <= 11 && playerHand[i].softflag {
+		dealerHand.total += 10
+	}
 } // hitMePlayer
 
 func dealCards() {
@@ -459,15 +515,15 @@ func dealCards() {
 } // dealCards
 
 func splitHand(i int) {
-    fmt.Printf(" In splithand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
-    hnd := handType{}
-    hnd.card1 = playerHand[i].card2
-    hnd.card2 = getCard()
-    hnd.pair = (hnd.card2 == hnd.card1)
-    hnd.softflag = (hnd.card1 == Ace) || (hnd.card2 == Ace)
-    playerHand = append(playerHand, hnd) // can't get blackjack after a split.
+	fmt.Printf(" In splithand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
+	hnd := handType{}
+	hnd.card1 = playerHand[i].card2
+	hnd.card2 = getCard()
+	hnd.pair = (hnd.card2 == hnd.card1)
+	hnd.softflag = (hnd.card1 == Ace) || (hnd.card2 == Ace)
+	playerHand = append(playerHand, hnd) // can't get blackjack after a split.
 
-    playerHand[i].card2 = getCard()
+	playerHand[i].card2 = getCard()
 	if playerHand[i].card1 == playerHand[i].card2 {
 		playerHand[i].pair = true
 	} else {
@@ -476,6 +532,13 @@ func splitHand(i int) {
 } // splitHand
 
 func playAhand(i int) {
+	fmt.Printf(" Top of playAhand: playerHand[%d]: card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
+		i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
+		playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag)
+    fmt.Printf(" Top of playAhand: dealerHand is card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
+        dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.doubledflag, dealerHand.surrenderedflag,
+        dealerHand.bustedflag, dealerHand.pair, dealerHand.softflag, dealerHand.BJflag)
+	fmt.Println()
 	if playerHand[i].BJflag && !dealerHand.BJflag {
 		playerHand[i].result = wonBJ
 		return
@@ -487,7 +550,7 @@ func playAhand(i int) {
 		return
 	} else if playerHand[i].pair {
 		if playerHand[i].softflag { // this must be the AA, or a pair of aces hand.  This is a special case.
-		    fmt.Println(" About to consider splitting aces.  Have not yet checked to see about resplitting aces.")
+			fmt.Println(" About to consider splitting aces.  Have not yet checked to see about resplitting aces.")
 			if alreadySplitAces && !resplitAcesFlag { // not allowed to resplit aces.
 				return
 			}
@@ -496,8 +559,8 @@ func playAhand(i int) {
 			playAhand(i) // I'm trying out recursion to solve this problem.  The split-off additional hand will be handled by playAllHands.
 			return
 		} else {
-			strategy := PairStrategy[playerHand[i].card1][dealerHand.card1]
-            fmt.Printf("playAhand for hand=%d, PairStrategy[%d][%d] = %s \n\n", i, playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			strategy := PairStrategy[playerHand[i].card1][dealerHand.card1-1]
+			fmt.Printf("playAhand for hand=%d, PairStrategy[%d][%d] = %s \n\n", i, playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
 			switch strategy {
 			case Stand:
 				return
@@ -527,11 +590,11 @@ func playAhand(i int) {
 
 func playAllhands() {
 	for i := 0; i < len(playerHand); i++ { // can't range over hands because splits add to the hands slice.
-        alreadySplitAces = false
+		alreadySplitAces = false
 		dealCards()
 		playAhand(i)
 	}
-	hitMeDealer() // play the dealer's hand.  i is ignored so I'm just using the zero as a filler.
+	hitDealer() // play the dealer's hand.  i is ignored so I'm just using the zero as a filler.
 }
 
 func showDown() {
@@ -693,13 +756,13 @@ func main() {
 
 	// Init and shuffle the deck
 	InitDeck()
-	/*
+	/* */
 		fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
 		fmt.Println(deck)
 		fmt.Println()
-	*/
+	/* */
 
-//	t0 := time.Now()
+	t0 := time.Now()
 
 	rand.Seed(int64(time.Now().Nanosecond()))
 	//       need to shuffle here
@@ -709,13 +772,13 @@ func main() {
 	rand.Shuffle(len(deck), swapfnt)
 	rand.Shuffle(len(deck), swapfnt)
 
-//	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-//	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(), "ns to shuffle.")
+	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
+	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(), "ns to shuffle.")
 	fmt.Println()
-	/*
+	/* */
 		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
 		fmt.Println(deck)
-	*/
+	/* */
 
 	fmt.Print(" How many hands to play: ")
 	_, err = fmt.Scanln(&numOfPlayers)
@@ -758,7 +821,6 @@ func main() {
 PlayAllRounds:
 	for j := 0; j < maxNumOfHands; j++ {
 		playAllhands()
-		hitMeDealer()
 		showDown()
 
 		if displayRound {
@@ -768,9 +830,10 @@ PlayAllRounds:
 					i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
 					playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag, resultNames[playerHand[i].result])
 			}
-            fmt.Printf(" dealerHand is card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
-                dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.doubledflag, dealerHand.surrenderedflag,
-                dealerHand.bustedflag, dealerHand.pair, dealerHand.softflag, dealerHand.BJflag)
+			fmt.Printf(" dealerHand is card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
+				dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.doubledflag, dealerHand.surrenderedflag,
+				dealerHand.bustedflag, dealerHand.pair, dealerHand.softflag, dealerHand.BJflag)
+			fmt.Println(" ------------------------------------------------------------------")
 			fmt.Println()
 			fmt.Print(" Hit <enter> to continue.  Enter n, stop or exit if needed.  ")
 			fmt.Println()
@@ -781,6 +844,8 @@ PlayAllRounds:
 			if ans == "n" || ans == "stop" || ans == "exit" {
 				break PlayAllRounds
 			}
+			fmt.Println(" ------------------------------------------------------------------")
+			clearscreen[runtime.GOOS]()
 		}
 
 		// Need to remove splits, if any, from the player hand slice.
@@ -788,6 +853,9 @@ PlayAllRounds:
 
 		if currentCard > len(deck)*3/4 { // shuffle if 3/4 of the deck has been played thru.
 			doTheShuffle()
+			if displayRound {
+				fmt.Println(" shuffling ...")
+			}
 		}
 	}
 
@@ -795,8 +863,8 @@ PlayAllRounds:
 	// stats.
 
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
-	    float64(totalSurrenders)/2
-	fmt.Printf(" Score=%.2f, BJ won=%d, Double wins=%d, wins=%d, double losses=%d, losses=%d, surrendered=%d \n\n",
+		float64(totalSurrenders)/2
+	fmt.Printf(" Score=  %.2f, BJ won=%d, Double wins=%d, wins=%d, double losses=%d, losses=%d, surrendered=%d \n\n",
 		score, totalBJwon, totalDblWins, totalWins, totalDblLosses, totalLosses, totalSurrenders)
 
 } // main
