@@ -81,8 +81,8 @@ var SoftStrategy [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  
 var PairStrategy [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
 //var StrategyErrorFlag bool         // not sure if I'll need this yet.
 
-//const numOfDecks = 8
-const numOfDecks = 1 // for testing of shuffles.  When I'm confident shuffling works correctly, I'll return it to 8 decks.
+const numOfDecks = 8
+//const numOfDecks = 1 // for testing of shuffles.  When I'm confident shuffling works correctly, I'll return it to 8 decks.
 const maxNumOfPlayers = 100
 const maxNumOfHands = 1_000_000_000 // 1 million, for now.
 const NumOfCards = 52 * numOfDecks
@@ -126,6 +126,7 @@ func init() {
 	}
 }
 
+// ------------------------------------------------------- GetOption -----------------------------------
 func GetOption(tkn tknptr.TokenType) int {
 	if tkn.Str == "S" {
 		return Stand
@@ -142,6 +143,7 @@ func GetOption(tkn tknptr.TokenType) int {
 	}
 }
 
+// ------------------------------------------------------- ReadStrategy -----------------------------------
 func ReadStrategy(buf *bytes.Buffer) {
 	for {
 		rowbuf, err := buf.ReadString('\n')
@@ -260,6 +262,7 @@ func ReadStrategy(buf *bytes.Buffer) {
 	}
 } // ReadStrategy
 
+// ------------------------------------------------------- WriteStrategy -----------------------------------
 func WriteStrategy(filehandle *bufio.Writer) {
 	filehandle.WriteString(" Regular Strategy Matrix: \n")
 
@@ -312,6 +315,7 @@ func WriteStrategy(filehandle *bufio.Writer) {
 	filehandle.WriteRune('\n')
 } // WriteStrategy
 
+// ------------------------------------------------------- InitDeck -----------------------------------
 func InitDeck() { // Initalize the deck of cards.
 	for i := 0; i < 4*numOfDecks; i++ {
 		for j := 1; j <= 10; j++ { // There is no card Zero
@@ -323,6 +327,7 @@ func InitDeck() { // Initalize the deck of cards.
 	}
 }
 
+// ------------------------------------------------------- doTheShuffle -----------------------------------
 func doTheShuffle() {
 	currentCard = 0
 	swapfnt := func(i, j int) {
@@ -331,11 +336,13 @@ func doTheShuffle() {
 	rand.Shuffle(len(deck), swapfnt)
 }
 
+// ------------------------------------------------------- getCard -----------------------------------
 func getCard() int {
 	currentCard++ // This will ignore the first card, in position zero.
 	return deck[currentCard]
 }
 
+// ------------------------------------------------------- hitDealer -----------------------------------
 // This plays until stand or bust.
 func hitDealer() {
 	fmt.Printf(" Entering DealerHit.  Hand is: %d %d, total=%d \n", dealerHand.card1, dealerHand.card2, dealerHand.total)
@@ -398,6 +405,7 @@ func hitDealer() {
     return
 } // hitDealer
 
+// ------------------------------------------------------- hitMePlayer -----------------------------------
 // This only takes one card for the playerHand, but for the dealer it plays until stand or bust.
 // Note that blackjack has already been checked for, in playAhand().
 func hitMePlayer(i int) {
@@ -491,6 +499,7 @@ MainLoop:
 	}
 } // hitMePlayer
 
+// ------------------------------------------------------- dealCards -----------------------------------
 func dealCards() {
 	for i := range playerHand {
 		playerHand[i] = handType{} // init the new hand.
@@ -531,6 +540,7 @@ func splitHand(i int) {
 	}
 } // splitHand
 
+// ------------------------------------------------------- playAhand -----------------------------------
 func playAhand(i int) {
 	fmt.Printf(" Top of playAhand: playerHand[%d]: card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
 		i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
@@ -588,15 +598,17 @@ func playAhand(i int) {
 	} // if playerhand is blackjack, etc
 } // playAhand
 
-func playAllhands() {
+// ------------------------------------------------------- playAllHands -----------------------------------
+func playAllHands() {
 	for i := 0; i < len(playerHand); i++ { // can't range over hands because splits add to the hands slice.
 		alreadySplitAces = false
 		dealCards()
 		playAhand(i)
 	}
 	hitDealer() // play the dealer's hand.  i is ignored so I'm just using the zero as a filler.
-}
+} // playAllHands
 
+// ------------------------------------------------------- showDown -----------------------------------
 func showDown() {
 	// Here is where I will check the player[i] result field, and splits result field, if there are any splits in this round.
 	for i := range playerHand {
@@ -654,124 +666,128 @@ func showDown() {
 	} // for range over all hands, incl'g split hands.
 } // showDown
 
+// ------------------------------------------------------- main -----------------------------------
+// ------------------------------------------------------- main -----------------------------------
 func main() {
-	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s \n", lastAltered)
+    fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s \n", lastAltered)
 
-	InputExtDefault := ".strat"
-	OutputExtDefault := ".results"
+    InputExtDefault := ".strat"
+    OutputExtDefault := ".results"
 
-	if len(os.Args) < 2 {
-		fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
-		os.Exit(1)
-	}
+    if len(os.Args) < 2 {
+        fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
+        os.Exit(1)
+    }
 
-	fmt.Print(" Display each round? Y/n ")
-	ans := ""
-	_, e := fmt.Scanln(&ans)
-	if e != nil {
-		displayRound = true
-	} else if ans == "y" {
-		displayRound = true
-	}
+    fmt.Print(" Display each round? Y/n ")
+    ans := ""
+    _, e := fmt.Scanln(&ans)
+    if e != nil {
+        displayRound = true
+    } else if ans == "y" {
+        displayRound = true
+    }
 
-	/*  These are now set in the .strat file.
-	fmt.Print(" Simulate dealer hitting on a soft 17? y/n ")
-	ans := ""
-	_, _ = fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if ans == "y" {
-		DealerHitsSoft17 = true
-	}
-	fmt.Println(" Value of Dealer Hit Soft 17 flag is", DealerHitsSoft17)
+    /*  These are now set in the .strat file.
+    fmt.Print(" Simulate dealer hitting on a soft 17? y/n ")
+    ans := ""
+    _, _ = fmt.Scanln(&ans)
+    ans = strings.ToLower(ans)
+    if ans == "y" {
+    	DealerHitsSoft17 = true
+    }
+    fmt.Println(" Value of Dealer Hit Soft 17 flag is", DealerHitsSoft17)
 
-	fmt.Print(" Allow the re-splitting of aces? y/n ")
-	_, _ = fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if ans == "y" {
-		ResplitAces = true
-	}
-	fmt.Println(" Value of Re-split aces flag is", ResplitAces)
-	*/
+    fmt.Print(" Allow the re-splitting of aces? y/n ")
+    _, _ = fmt.Scanln(&ans)
+    ans = strings.ToLower(ans)
+    if ans == "y" {
+    	ResplitAces = true
+    }
+    fmt.Println(" Value of Re-split aces flag is", ResplitAces)
+    */
 
-	deck = make([]int, 0, NumOfCards)
+    deck = make([]int, 0, NumOfCards)
 
-	commandline := getcommandline.GetCommandLineString()
-	BaseFilename := filepath.Clean(commandline)
-	Filename := ""
+    commandline := getcommandline.GetCommandLineString()
+    BaseFilename := filepath.Clean(commandline)
+    Filename := ""
 
-	if strings.Contains(BaseFilename, ".") {
-		Filename = BaseFilename
-	} else {
-		Filename = BaseFilename + InputExtDefault
-	}
+    if strings.Contains(BaseFilename, ".") {
+        Filename = BaseFilename
+    } else {
+        Filename = BaseFilename + InputExtDefault
+    }
 
-	FI, err := os.Stat(Filename)
-	if err != nil {
-		fmt.Println(Filename, "does not exist.  Exiting.")
-		os.Exit(1)
-	}
+    FI, err := os.Stat(Filename)
+    if err != nil {
+        fmt.Println(Filename, "does not exist.  Exiting.")
+        os.Exit(1)
+    }
 
-	byteslice := make([]byte, 0, FI.Size()+50)
-	byteslice, err = ioutil.ReadFile(Filename)
-	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile: ", err, ".  Exiting.")
-		os.Exit(1)
-	}
+    byteslice := make([]byte, 0, FI.Size()+50)
+    byteslice, err = ioutil.ReadFile(Filename)
+    if err != nil {
+        fmt.Println(" Error from ioutil.ReadFile: ", err, ".  Exiting.")
+        os.Exit(1)
+    }
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
+    bytesbuffer := bytes.NewBuffer(byteslice)
 
-	ReadStrategy(bytesbuffer)
+    ReadStrategy(bytesbuffer)
 
-	// Construct results filename to receive the results.
-	OutputFilename := BaseFilename + OutputExtDefault
-	OutputHandle, err := os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
-		os.Exit(1)
-	}
-	bufOutputFileWriter := bufio.NewWriter(OutputHandle)
-	defer bufOutputFileWriter.Flush()
-	defer OutputHandle.Close()
+    // Construct results filename to receive the results.
+    OutputFilename := BaseFilename + OutputExtDefault
+    OutputHandle, err := os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+    if err != nil {
+        fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
+        os.Exit(1)
+    }
+    bufOutputFileWriter := bufio.NewWriter(OutputHandle)
+    defer bufOutputFileWriter.Flush()
+    defer OutputHandle.Close()
 
-	date := time.Now()
-	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
-	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n",
-		datestring, dealerHitsSoft17, resplitAcesFlag)
+    date := time.Now()
+    datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+    str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n",
+        datestring, dealerHitsSoft17, resplitAcesFlag)
 
-	_, err = bufOutputFileWriter.WriteString(str)
+    _, err = bufOutputFileWriter.WriteString(str)
 
-	WriteStrategy(bufOutputFileWriter)
+    WriteStrategy(bufOutputFileWriter)
 
-	_, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
-	_, err = bufOutputFileWriter.WriteRune('\n')
-	if err != nil {
-		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
-		os.Exit(1)
-	}
+    _, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
+    _, err = bufOutputFileWriter.WriteRune('\n')
+    if err != nil {
+        fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
+        os.Exit(1)
+    }
 
-	// just in case there is a panic of some type, this file will be closed so I can inspect it,
-	// so far.
-	bufOutputFileWriter.Flush()
-	OutputHandle.Close()
+    // just in case there is a panic of some type, this file will be closed so I can inspect it,
+    // so far.
+    bufOutputFileWriter.Flush()
+    OutputHandle.Close()
 
-	// Init and shuffle the deck
-	InitDeck()
-	/* */
-		fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
-		fmt.Println(deck)
-		fmt.Println()
-	/* */
+    // Init and shuffle the deck
+    InitDeck()
+    /* */
+    fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
+    fmt.Println(deck)
+    fmt.Println()
+    /* */
 
-	t0 := time.Now()
+    t0 := time.Now()
 
-	rand.Seed(int64(time.Now().Nanosecond()))
-	//       need to shuffle here
-	swapfnt := func(i, j int) {
-		deck[i], deck[j] = deck[j], deck[i]
-	}
-	rand.Shuffle(len(deck), swapfnt)
-	rand.Shuffle(len(deck), swapfnt)
-
+    rand.Seed(int64(time.Now().Nanosecond()))
+    //       need to shuffle here
+    swapfnt := func(i, j int) {
+        deck[i], deck[j] = deck[j], deck[i]
+    }
+    millisec := date.Nanosecond() / 1e6
+    for i := 0; i < millisec; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
+        rand.Shuffle(len(deck), swapfnt)
+        rand.Shuffle(len(deck), swapfnt)
+    }
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
 	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(), "ns to shuffle.")
 	fmt.Println()
@@ -820,11 +836,11 @@ func main() {
 	// Main loop of this simulator, to play all rounds
 PlayAllRounds:
 	for j := 0; j < maxNumOfHands; j++ {
-		playAllhands()
+		playAllHands()
 		showDown()
 
 		if displayRound {
-			fmt.Printf(" There are %d hands, including splits \n\n", len(playerHand))
+			fmt.Printf(" There are %d hand(s), including splits \n\n", len(playerHand))
 			for i := range playerHand {
 				fmt.Printf(" playerHand[%d]: card1=%d, card2=%d, total=%d, dbld=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t, result=%s \n",
 					i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
@@ -835,7 +851,7 @@ PlayAllRounds:
 				dealerHand.bustedflag, dealerHand.pair, dealerHand.softflag, dealerHand.BJflag)
 			fmt.Println(" ------------------------------------------------------------------")
 			fmt.Println()
-			fmt.Print(" Hit <enter> to continue.  Enter n, stop or exit if needed.  ")
+			fmt.Print(" Continue? Y/n:  Stop or Exit also work.  ")
 			fmt.Println()
 			_, err := fmt.Scanln(&ans)
 			if err != nil {
@@ -851,6 +867,7 @@ PlayAllRounds:
 		// Need to remove splits, if any, from the player hand slice.
 		playerHand = playerHand[:numOfPlayers]
 
+		fmt.Println(" deck current position is", currentCard)
 		if currentCard > len(deck)*3/4 { // shuffle if 3/4 of the deck has been played thru.
 			doTheShuffle()
 			if displayRound {
