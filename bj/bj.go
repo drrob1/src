@@ -101,8 +101,8 @@ var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because 
 const numOfDecks = 8
 
 //const numOfDecks = 1 // for testing of shuffles.  When I'm confident shuffling works correctly, I'll return it to 8 decks.
-const maxNumOfPlayers = 100
-const maxNumOfHands = 1_000_000_000 // 1 million, for now.
+const maxNumOfPlayers = 100      // used for the make function on playerHand.
+const maxNumOfHands = 10_000_000 // 10 million, for now.
 const NumOfCards = 52 * numOfDecks
 
 var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
@@ -113,15 +113,16 @@ type handType struct {
 	result                                                                                      int
 }
 
-var displayRound, resplitAcesFlag, lastHandWinLoseFlag, dealerHitsSoft17 bool
-
+var displayRound, resplitAcesFlag, dealerHitsSoft17 bool
 var playerHand []handType
 var hand handType
 var dealerHand handType
 var numOfPlayers, currentCard int
 var deck []int
 var prevResult []int
-var runs []int
+var runsWon, runsLost []int
+var lastHandWinLoseFlag bool
+var currentRunWon, currentRunLost int
 var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 var winsInARow, lossesInARow int
@@ -134,6 +135,9 @@ type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards 
 // I will use the first 2 card totals as the row of the matrix, and the column will be dealer.card1, where Ace is 1.  This will have
 // empty rows.  But this is too small an amount of waste to bother about.
 var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
+
+var OutputFilename string
+var OutputHandle *os.File
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {
@@ -381,19 +385,25 @@ func getCard() int {
 // ------------------------------------------------------- hitDealer -----------------------------------
 // This plays until stand or bust.
 func hitDealer() {
-	fmt.Printf(" Entering DealerHit.  Hand is: %d %d, total=%d \n", dealerHand.card1, dealerHand.card2, dealerHand.total)
+	if displayRound {
+		fmt.Printf(" Entering DealerHit.  Hand is: %d %d, total=%d \n", dealerHand.card1, dealerHand.card2, dealerHand.total)
+	}
 	if dealerHand.BJflag {
 		return
 	}
 	for dealerHand.total < 18 { // always exit if >= 18.  Loop if < 18.
-		fmt.Printf("\n Top of for Dealerhand total.  Hand is: %d %d, total=%d, soft=%t \n",
-			dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.softflag)
+		if displayRound {
+			fmt.Printf("\n Top of for Dealerhand total.  Hand is: %d %d, total=%d, soft=%t \n",
+				dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.softflag)
+		}
 		if dealerHand.softflag && dealerHand.total <= 11 && dealerHitsSoft17 {
 			if dealerHand.total > 7 && dealerHand.total <= 11 {
 				dealerHand.total += 10
 			}
 			if dealerHand.total <= 17 {
-				fmt.Printf(" Dealer soft17 hit loop.  Total=%d \n", dealerHand.total)
+				if displayRound {
+					fmt.Printf(" Dealer soft17 hit loop.  Total=%d \n", dealerHand.total)
+				}
 				dealerHand.total += getCard()
 				if dealerHand.total > 21 {
 					dealerHand.bustedflag = true
@@ -408,7 +418,9 @@ func hitDealer() {
 				dealerHand.total += 10
 			}
 			if dealerHand.total < 17 { // until busted or stand
-				fmt.Printf(" Dealer soft no hit soft17 loop.  Total=%d \n", dealerHand.total)
+				if displayRound {
+					fmt.Printf(" Dealer soft no hit soft17 loop.  Total=%d \n", dealerHand.total)
+				}
 				dealerHand.total += getCard()
 				if dealerHand.total > 21 {
 					dealerHand.bustedflag = true
@@ -420,7 +432,9 @@ func hitDealer() {
 			} // until busted or stand
 		} else { // not soft, or Ace cannot be 11, only can be 1.
 			if dealerHand.total < 17 {
-				fmt.Printf(" Dealer hard hand hit loop.  Total=%d \n", dealerHand.total)
+				if displayRound {
+					fmt.Printf(" Dealer hard hand hit loop.  Total=%d \n", dealerHand.total)
+				}
 				newcard := getCard()
 				if newcard == 1 {
 					dealerHand.softflag = true
@@ -452,9 +466,11 @@ func hitMePlayer(i int) {
 
 MainLoop:
 	for { // until stand or bust.  Recall that player hands that need to check the strategy matrices for each iteration, unlike the dealer.
-		fmt.Printf(" Top of hitMePlayer: playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, split=%t, BJ=%t \n\n",
-			i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
-			playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].splitflag, playerHand[i].BJflag)
+		if displayRound {
+			fmt.Printf(" Top of hitMePlayer: playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, split=%t, BJ=%t \n\n",
+				i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
+				playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].splitflag, playerHand[i].BJflag)
+		}
 
 		if playerHand[i].softflag && playerHand[i].total <= 11 { // if total > 11, Ace can only be 1 and not a 10.
 			strategy := SoftStrategyMatrix[playerHand[i].total][dealerHand.card1-1]
@@ -463,7 +479,9 @@ MainLoop:
 			} else {
 				cannotDouble = true // so next time thru the loop cannot double
 			}
-			fmt.Printf(" SoftStrategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			if displayRound {
+				fmt.Printf(" SoftStrategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			}
 			switch strategy { //SoftStrategyMatrix
 			case Stand: //SoftStrategyMatrix
 				if playerHand[i].total <= 11 { // here is the logic of a soft hand
@@ -512,14 +530,20 @@ MainLoop:
 			if strategy == Surrender && playerHand[i].notAvirginflag {
 				strategy = SurrenderStrategyMatrix[playerHand[i].total][dealerHand.card1-1]
 			}
-			fmt.Printf(" StrategyMatrix[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			if displayRound {
+				fmt.Printf(" StrategyMatrix[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			}
 			switch strategy { // StrategyMatrix
 			case Stand: // StrategyMatrix
-				fmt.Printf(" Hard HitMe - stand.  total= %d \n", playerHand[i].total)
+				if displayRound {
+					fmt.Printf(" Hard HitMe - stand.  total= %d \n", playerHand[i].total)
+				}
 				return
 
 			case Hit: // Hard StrategyMatrix
-				fmt.Printf(" Hard HitMe - hit.  total= %d \n", playerHand[i].total)
+				if displayRound {
+					fmt.Printf(" Hard HitMe - hit.  total= %d \n", playerHand[i].total)
+				}
 				newcard := getCard()
 				playerHand[i].total += newcard
 				if newcard == 1 { // if pulled an Ace, next time around this is considered a soft hand.
@@ -534,7 +558,9 @@ MainLoop:
 				}
 
 			case Double: // Hard hit only once.  Hard StrategyMatrix
-				fmt.Printf(" Hard HitMe - double.  total= %d \n", playerHand[i].total)
+				if displayRound {
+					fmt.Printf(" Hard HitMe - double.  total= %d \n", playerHand[i].total)
+				}
 				if !playerHand[i].doubledflag { // must only draw 1 card.
 					newcard := getCard()
 					playerHand[i].total += newcard
@@ -551,7 +577,9 @@ MainLoop:
 				return
 
 			case Surrender: // Hard StrategyMatrix
-				fmt.Printf(" Hard HitMe - surrender.  total= %d \n", playerHand[i].total)
+				if displayRound {
+					fmt.Printf(" Hard HitMe - surrender.  total= %d \n", playerHand[i].total)
+				}
 				playerHand[i].surrenderedflag = true
 				playerHand[i].notAvirginflag = true
 				playerHand[i].result = surrend
@@ -594,7 +622,9 @@ func dealCards() {
 
 // ------------------------------------------------------- splitHand -----------------------------------
 func splitHand(i int) {
-	fmt.Printf("\n Entering splitHand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
+	if displayRound {
+		fmt.Printf("\n Entering splitHand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
+	}
 	hnd := handType{}
 	hnd.card1 = playerHand[i].card2
 	hnd.card2 = getCard()
@@ -613,23 +643,28 @@ func splitHand(i int) {
 	playerHand[i].softflag = playerHand[i].card1 == 1 || playerHand[i].card2 == 1
 	playerHand[i].splitflag = true
 
-	fmt.Printf(" splitHand: 1st hand.card1=%d, 1st hand.card2=%d, 1st hand.total=%d; split-off hnd.card1=%d, hnd.card2=%d, hnd.total=%d \n\n ",
-		playerHand[i].card1, playerHand[i].card2, playerHand[i].total, hnd.card1, hnd.card2, hnd.total)
-
 	playerHand = append(playerHand, hnd) // can't get blackjack after a split.
 	totalSplits++
-	fmt.Println(" Exiting splitHand: playerHand slice =", playerHand)
+
+	if displayRound {
+		fmt.Printf(" splitHand: 1st hand.card1=%d, 1st hand.card2=%d, 1st hand.total=%d; split-off hnd.card1=%d, hnd.card2=%d, hnd.total=%d \n\n ",
+			playerHand[i].card1, playerHand[i].card2, playerHand[i].total, hnd.card1, hnd.card2, hnd.total)
+		fmt.Println(" Exiting splitHand: playerHand slice =", playerHand)
+	}
 } // splitHand
 
 // ------------------------------------------------------- playAhand -----------------------------------
 func playAhand(i int) {
-	fmt.Printf(" Top of playAhand: playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
-		i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
-		playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag)
-	fmt.Printf(" Top of playAhand: dealerHand is card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
-		dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.doubledflag, dealerHand.surrenderedflag,
-		dealerHand.bustedflag, dealerHand.pair, dealerHand.softflag, dealerHand.BJflag)
-	fmt.Println()
+	if displayRound {
+		fmt.Printf(" Top of playAhand: playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
+			i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
+			playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag)
+		fmt.Printf(" Top of playAhand: dealerHand is card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
+			dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.doubledflag, dealerHand.surrenderedflag,
+			dealerHand.bustedflag, dealerHand.pair, dealerHand.softflag, dealerHand.BJflag)
+		fmt.Println()
+	}
+
 	if playerHand[i].BJflag && !dealerHand.BJflag {
 		playerHand[i].result = wonBJ
 		return
@@ -641,7 +676,9 @@ func playAhand(i int) {
 		return
 	} else if playerHand[i].pair {
 		if playerHand[i].softflag { // this must be the AA, or a pair of aces hand.  This is a special case.
-			fmt.Println(" About to consider splitting aces.  Have not yet checked to see about resplitting aces.")
+			if displayRound {
+				fmt.Println(" About to consider splitting aces.  Have not yet checked to see about resplitting aces.")
+			}
 			if playerHand[i].splitflag && !resplitAcesFlag { // not allowed to resplit aces (or double the hand).
 				return
 			}
@@ -650,7 +687,10 @@ func playAhand(i int) {
 			return
 		} else {
 			strategy := PairStrategyMatrix[playerHand[i].card1][dealerHand.card1-1]
-			fmt.Printf("playAhand for hand=%d, PairStrategyMatrix[%d][%d] = %s \n\n", i, playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			if displayRound {
+				fmt.Printf("playAhand for hand=%d, PairStrategyMatrix[%d][%d] = %s \n\n", i, playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			}
+
 			switch strategy {
 			case Stand:
 				return
@@ -750,6 +790,7 @@ func showDown() {
 				}
 			}
 		} // seitch-case
+
 	} // for range over all hands, incl'g split hands.
 } // showDown
 
@@ -761,8 +802,309 @@ func showDown() {
 // And to compute and store the runs of wins and losses.  Ignore pushes or surrenders.  BJ is a win, double is a single win or loss for sake of runs since
 // it's still just 1 hand.  I think I'll include each and every split hand it this as a separate hand.
 func incrementStats() {
+	for i := range playerHand { // range over all hannds, including split hands.
+		initialPlayerTotal := playerHand[i].card1 + playerHand[i].card2
+		initialDealerCard := dealerHand.card1
+		SoftFlag := playerHand[i].softflag
+		switch playerHand[i].result {
+		case lost:
+			if SoftFlag {
+				SoftLostStats[initialPlayerTotal][initialDealerCard]++
+			} else {
+				LostStats[initialPlayerTotal][initialDealerCard]++
+			}
 
-}
+			if lastHandWinLoseFlag {
+				lastHandWinLoseFlag = false
+				if currentRunWon > 4 {
+					runsWon = append(runsWon, currentRunWon)
+				}
+				currentRunWon = 0
+			} else {
+				currentRunLost++
+			}
+
+		case pushed:
+			// nothing for now
+		case won:
+			if SoftFlag {
+				SoftWonStats[initialPlayerTotal][initialDealerCard]++
+			} else {
+				WonStats[initialPlayerTotal][initialDealerCard]++
+			}
+			if lastHandWinLoseFlag {
+				currentRunWon++
+			} else {
+				lastHandWinLoseFlag = true
+				if currentRunLost > 4 {
+					runsLost = append(runsLost, currentRunLost)
+				}
+				currentRunLost = 0
+			}
+
+		case surrend:
+			// nothing for now
+		case lostdbl:
+			if SoftFlag {
+				SoftDoubleLostStats[initialPlayerTotal][initialDealerCard]++
+			} else {
+				DoubleLostStats[initialPlayerTotal][initialDealerCard]++
+			}
+			if lastHandWinLoseFlag {
+				lastHandWinLoseFlag = false
+				if currentRunWon > 4 {
+					runsWon = append(runsWon, currentRunWon)
+				}
+				currentRunWon = 0
+			} else {
+				currentRunLost++
+			}
+		case wondbl:
+			if SoftFlag {
+				SoftDoubleWonStats[initialPlayerTotal][initialDealerCard]++
+			} else {
+				DoubleWonStats[initialPlayerTotal][initialDealerCard]++
+			}
+			if lastHandWinLoseFlag {
+				currentRunWon++
+			} else {
+				lastHandWinLoseFlag = true
+				if currentRunLost > 4 {
+					runsLost = append(runsLost, currentRunLost)
+				}
+				currentRunLost = 0
+			}
+		case losttoBJ:
+			if lastHandWinLoseFlag {
+				lastHandWinLoseFlag = false
+				if currentRunWon > 4 {
+					runsWon = append(runsWon, currentRunWon)
+				}
+				currentRunWon = 0
+			} else {
+				currentRunLost++
+			}
+		case pushedBJ:
+			// nothing for now
+		case wonBJ:
+			if lastHandWinLoseFlag {
+				currentRunWon++
+			} else {
+				lastHandWinLoseFlag = true
+				if currentRunLost > 4 {
+					runsLost = append(runsLost, currentRunLost)
+				}
+				currentRunLost = 0
+			}
+
+		} // end switch-case
+	} // end for range all hands.
+
+} // end incrementStats
+
+// ------------------------------------------------------- wrStatsToFile -----------------------------------
+func wrStatsToFile() {
+	// declared above
+	//type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards as column numbers without subtracting 1.
+	//var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
+
+	var err error
+
+	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
+		os.Exit(1)
+	}
+	bufOutputFileWriter := bufio.NewWriter(OutputHandle)
+	defer bufOutputFileWriter.Flush()
+	defer OutputHandle.Close()
+
+	bufOutputFileWriter.WriteString(" Won Stats Array \n        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("------------------------------------------------------------------------------------\n")
+	for i := range WonStats {
+		if i < 2 {
+			continue
+		}
+
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range WonStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a WonStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Lost Stats Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("---------------------------------------------------------------------\n")
+	for i := range LostStats {
+		if i < 2 {
+			continue
+		}
+
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range LostStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a LostStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Double Won Stats Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("---------------------------------------------------------------------\n")
+	for i := range DoubleWonStats {
+		if i == 0 {
+			continue
+		}
+
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range DoubleWonStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a DoubleWonStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Double Lost Stats Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("---------------------------------------------------------------------\n")
+	for i := range DoubleLostStats {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j := 1; j < len(DoubleLostStats[i]); j++ {
+			rowString := fmt.Sprintf(" %5d", DoubleLostStats[i][j]) // just to see if this works
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a DoubleLostStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Soft Won Stats Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range SoftWonStats {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range SoftWonStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a SoftWonStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Soft Lost Stats Array \n")
+	bufOutputFileWriter.WriteString("       A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("-------------------------------------------------------------------\n")
+	for i := range SoftLostStats {
+		if i < 2 {
+			continue
+		}
+
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range SoftLostStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a SoftLostStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Soft Double Won Stats Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range SoftDoubleWonStats {
+		if i < 2 {
+			continue
+		}
+
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range SoftDoubleWonStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a SoftDoubleWonStats row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Soft Double Lost Stats Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range SoftLostStats {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range SoftDoubleLostStats[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5d", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a SoftDoubleLostStats row.  Error is", err)
+		}
+	}
+
+	_, err = bufOutputFileWriter.WriteRune('\n')
+	_, err = bufOutputFileWriter.WriteRune('\n')
+	_, err = bufOutputFileWriter.WriteRune('\n')
+	bufOutputFileWriter.Flush()
+	OutputHandle.Close()
+
+	//var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
+
+} // wrStatsToFile
 
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
@@ -816,7 +1158,7 @@ func main() {
 	ReadStrategyMatrix(bytesbuffer)
 
 	// Construct results filename to receive the results.
-	OutputFilename := BaseFilename + OutputExtDefault
+	OutputFilename = BaseFilename + OutputExtDefault
 	OutputHandle, err := os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
@@ -835,7 +1177,7 @@ func main() {
 
 	WriteStrategyMatrix(bufOutputFileWriter)
 
-	_, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
+	_, err = bufOutputFileWriter.WriteString("==============================================================================\n")
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
@@ -883,6 +1225,8 @@ func main() {
 	}
 
 	playerHand = make([]handType, 0, maxNumOfPlayers)
+	runsWon = make([]int, 0, maxNumOfPlayers)
+	runsLost = make([]int, 0, maxNumOfPlayers)
 	/* Just a demo of what GoLand can do automatically
 	   hand = handType{
 	       card1:           0,
@@ -903,21 +1247,22 @@ func main() {
 
 	fmt.Println(" Initial number of hands is", len(playerHand))
 	fmt.Println()
-	/*
-		dealCards()
-		fmt.Println(" after cards were first dealt.  Player(s) first")
-		fmt.Println(playerHand)
-		fmt.Println()
-		fmt.Println(" Dealer last.")
-		fmt.Println(dealerHand)
-		fmt.Println()
-	*/
-
+	/* {{{
+			dealCards()
+			fmt.Println(" after cards were first dealt.  Player(s) first")
+			fmt.Println(playerHand)
+			fmt.Println()
+			fmt.Println(" Dealer last.")
+			fmt.Println(dealerHand)
+			fmt.Println()
+	           }}} */
+	t1 := time.Now()
 	// Main loop of this simulator, to play all rounds
 PlayAllRounds:
 	for j := 0; j < maxNumOfHands; j++ {
 		playAllHands()
 		showDown()
+		incrementStats()
 
 		if displayRound {
 			fmt.Printf("\n\n There are %d hand(s), including splits \n\n", len(playerHand))
@@ -947,7 +1292,6 @@ PlayAllRounds:
 		// Need to remove splits, if any, from the player hand slice.
 		playerHand = playerHand[:numOfPlayers]
 
-		fmt.Println(" deck current position is", currentCard)
 		if currentCard > len(deck)*3/4 { // shuffle if 3/4 of the deck has been played thru.
 			doTheShuffle()
 			if displayRound {
@@ -955,17 +1299,40 @@ PlayAllRounds:
 			}
 		}
 		if displayRound {
+			fmt.Println(" deck current position is, possibly after a shuffle.", currentCard)
 			fmt.Printf(" %d hands were planned; %d were actually played. \n\n", j, totalHands)
 		}
+		//		if j > 100_000 {  Not needed.  It seems it takes ~ 1/3 - 1/2 sec to run thru 1 million hands.
+		//			break         A lot has changed over 20 years, when it took about 20 min to run thru 1 million hands, IIRC.
+		//		}                 On z76, 1 billion took ~5 min.  But then the stats were each 6 figures, so I would need to make this change if I do that.
+		//                        On z76, 10 million hands took ~2 sec.
 	}
+
+	elapsed := time.Since(t1)
+	elapsedString := fmt.Sprintf(" Playing %d hands took %s \n", maxNumOfHands, elapsed.String())
+	fmt.Println(elapsedString)
 
 	// time for the stats.
 	// need to remember to display totalsplits, totaldoubles, totalbusts, totalHands.
 	// need to calculate a run, how long it ran, and display these.  That's in the runs slice of int.
 
+	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println(" Could not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
+		os.Exit(1)
+	}
+	bufOutputFileWriter = bufio.NewWriter(OutputHandle)
+	defer bufOutputFileWriter.Flush()
+	defer OutputHandle.Close()
+
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
 		float64(totalSurrenders)/2
-	fmt.Printf(" Score=  %.2f, BJ won=%d, Double wins=%d, wins=%d, double losses=%d, losses=%d, surrendered=%d \n\n",
+	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, Double wins=%d, wins=%d, double losses=%d, losses=%d, surrendered=%d \n\n",
 		score, totalBJwon, totalDblWins, totalWins, totalDblLosses, totalLosses, totalSurrenders)
+	fmt.Println(surrend)
+	OutputHandle.WriteString(elapsedString)
+	OutputHandle.WriteString(scoreString)
+
+	wrStatsToFile()
 
 } // main
