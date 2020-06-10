@@ -24,6 +24,14 @@ package main
 
   Split aces cannot double sometimes.  I'll assume that if re-splitting aces is allowed, then they can double also.
   Otherwise, not.
+
+  Surrendering is more complex and has to be re-thought and tested.  I have to make sure that the strategy doesn't surrender after cards have been taken in that round.
+  I just added the moreCardsTaken flag, and I'll see if that approach works.  But I just saw that I already have a cannotDouble local flag that may serve the same purpose.
+  This may be the reason that Modula-2 got surrender wrong -- all totals of 16 were surrendered, not just when the first 2 cards totaled 16, for example.
+  I have to still test dealer standing on soft 17.
+  I have to still test the variations on splitting aces, re-splitting aces, doubling split aces
+  The 2 flags in the strategy file are dealer17 and resplit.
+  Looks like these work as intended.
 */
 import (
 	"bufio"
@@ -49,10 +57,12 @@ const lastAltered = "June 10, 2020"
   REVISION HISTORY
   ======== =======
    4 Jun 20 -- Started to convert the old blackjack Modula-2 code to Go.  This will take a while.
-
+   8 Jun 20 -- First working version in which the logic is correct (I think).  I'm going to test further before
+                 coding the collection and display of stats.  Of course, this is all about the stats.
+   9 Jun 20 -- I believe the logic is correct.  I'm going to start coding the statistics.
 */
 
-var OptionName = []string{"S  ", "H  ", "D  ", "SP ", "SUR"} // Stand, Hit, Double, Split, Surrender
+var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
 const Ace = 1
 const ( // strategy codes, originally an enumeration
@@ -79,13 +89,14 @@ const ( // result codes, originally an enumeration
 type OptionRowType []int // first element is for the ace, last element is for all 10 value cards (10, jack, queen, king)
 // by making this a slice, I can append the rows as I read them from the input strategy file.
 
-var Strategy [22]OptionRowType // Modula-2 ARRAY [5..21] OF OptionRowType.  I'm going to ignore rows that are not used.
+var StrategyMatrix [22]OptionRowType // Modula-2 ARRAY [5..21] OF OptionRowType.  I'm going to ignore rows that are not used.
 
-// Because of change in logic, SoftStrategy needs enough rows to handle more cases.  Maybe.  I changed the soft hand logic also.
-var SoftStrategy [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
+// Because of change in logic, SoftStrategyMatrix needs enough rows to handle more cases.  Maybe.  I changed the soft hand logic also.
+var SoftStrategyMatrix [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
 
-var PairStrategy [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
-//var StrategyErrorFlag bool         // not sure if I'll need this yet.
+var PairStrategyMatrix [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
+
+var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because I only consider surrendering 14, 15, 16.
 
 const numOfDecks = 8
 
@@ -94,12 +105,12 @@ const maxNumOfPlayers = 100
 const maxNumOfHands = 1_000_000_000 // 1 million, for now.
 const NumOfCards = 52 * numOfDecks
 
-var resultNames = []string{"  lost", "  pushed", "  won", "  surrend", "  LostDbl", "  WonDbl", "  LostToBJ", "  PushedBJ", "  WonBJ"}
+var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
 
 type handType struct {
-	card1, card2, total                                                         int
-	doubledflag, surrenderedflag, bustedflag, pair, softflag, splitflag, BJflag bool
-	result                                                                      int
+	card1, card2, total                                                                         int
+	notAvirginflag, doubledflag, surrenderedflag, bustedflag, pair, softflag, splitflag, BJflag bool
+	result                                                                                      int
 }
 
 var displayRound, resplitAcesFlag, lastHandWinLoseFlag, dealerHitsSoft17 bool
@@ -117,6 +128,13 @@ var winsInARow, lossesInARow int
 var score float64
 var clearscreen map[string]func()
 
+// Stats arrays
+type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards as column numbers.  Using card-1 is confusing to look at.
+
+// I will use the first 2 card totals as the row of the matrix, and the column will be dealer.card1, where Ace is 1.  This will have
+// empty rows.  But this is too small an amount of waste to bother about.
+var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
+
 // ------------------------------------------------------- init -----------------------------------
 func init() {
 	clearscreen = make(map[string]func())
@@ -131,6 +149,17 @@ func init() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
+}
+
+// ------------------------------------------------------- InitSurrenderStrategy -----------------------------------
+func initSurrenderStrategyMatrix() {
+	var row14 = OptionRowType{Hit, Stand, Stand, Stand, Stand, Stand, Hit, Hit, Hit, Hit}
+	var row15 = OptionRowType{Hit, Stand, Stand, Stand, Stand, Stand, Hit, Hit, Hit, Hit}
+	var row16 = OptionRowType{Hit, Stand, Stand, Stand, Stand, Stand, Hit, Hit, Hit, Hit}
+
+	SurrenderStrategyMatrix[14] = row14
+	SurrenderStrategyMatrix[15] = row15
+	SurrenderStrategyMatrix[16] = row16
 }
 
 // ------------------------------------------------------- GetOption -----------------------------------
@@ -150,8 +179,8 @@ func GetOption(tkn tknptr.TokenType) int {
 	}
 }
 
-// ------------------------------------------------------- ReadStrategy -----------------------------------
-func ReadStrategy(buf *bytes.Buffer) {
+// ------------------------------------------------------- ReadStrategyMatrix -----------------------------------
+func ReadStrategyMatrix(buf *bytes.Buffer) {
 	for {
 		rowbuf, err := buf.ReadString('\n')
 		if err == io.EOF {
@@ -169,7 +198,7 @@ func ReadStrategy(buf *bytes.Buffer) {
 		if EOL {
 			return
 		}
-		row := make([]int, 0, 10) // a single strategy row.
+		row := make([]int, 0, 10) // a single StrategyMatrix row.
 		for {
 			token, eol := tknbuf.GetToken(true) // force upper case token
 			if eol {
@@ -179,34 +208,34 @@ func ReadStrategy(buf *bytes.Buffer) {
 				return
 			}
 			i := GetOption(token)
-			if i == ErrorValue { // allow for comments after the strategy codes on same line.
+			if i == ErrorValue { // allow for comments after the StrategyMatrix codes on same line.
 				return
 			}
 			row = append(row, i)
 		}
 
-		if rowID.Isum >= 4 && rowID.Isum <= 21 { // assign Strategy codes to proper row in Strategy Decision Matrix
-			Strategy[rowID.Isum] = row
+		if rowID.Isum >= 4 && rowID.Isum <= 21 { // assign StrategyMatrix codes to proper row in StrategyMatrix Decision Matrix
+			StrategyMatrix[rowID.Isum] = row
 		} else if rowID.State == tknptr.DGT {
 			switch rowID.Isum {
 			case 22:
-				PairStrategy[2] = row
+				PairStrategyMatrix[2] = row
 			case 33:
-				PairStrategy[3] = row
+				PairStrategyMatrix[3] = row
 			case 44:
-				PairStrategy[4] = row
+				PairStrategyMatrix[4] = row
 			case 55:
-				PairStrategy[5] = row
+				PairStrategyMatrix[5] = row
 			case 66:
-				PairStrategy[6] = row
+				PairStrategyMatrix[6] = row
 			case 77:
-				PairStrategy[7] = row
+				PairStrategyMatrix[7] = row
 			case 88:
-				PairStrategy[8] = row
+				PairStrategyMatrix[8] = row
 			case 99:
-				PairStrategy[9] = row
+				PairStrategyMatrix[9] = row
 			case 1010:
-				PairStrategy[10] = row
+				PairStrategyMatrix[10] = row
 			default:
 				fmt.Println(" Invalid Pair Row value:", rowID) // rowID is a struct, so all of it will be output.
 				fmt.Print(" continue? y/n ")
@@ -219,7 +248,7 @@ func ReadStrategy(buf *bytes.Buffer) {
 			} // end switch-case
 		} else if rowID.State == tknptr.ALLELSE {
 			if rowID.Str == "AA" {
-				PairStrategy[1] = row
+				PairStrategyMatrix[1] = row
 			} else if rowID.Str[0] == 'S' { // soft hand
 				s := rowID.Str[1:] // chop off the "S" and convert rest to int
 				i, err := strconv.Atoi(s)
@@ -233,7 +262,7 @@ func ReadStrategy(buf *bytes.Buffer) {
 						os.Exit(1)
 					}
 				}
-				SoftStrategy[i] = row
+				SoftStrategyMatrix[i] = row
 			} else if rowID.Str[0] == 'A' { // First card is an Ace, ie a soft hand, but notation is different.
 				A := rowID.Str[1:]        // chop off the "A" and convert rest to int
 				i, err := strconv.Atoi(A) // i is off by one b/o value of Ace is 11, not 10.
@@ -247,7 +276,7 @@ func ReadStrategy(buf *bytes.Buffer) {
 						os.Exit(1)
 					}
 				}
-				SoftStrategy[i+1] = row
+				SoftStrategyMatrix[i+1] = row
 			} else if rowID.Str == "DEALER17" {
 				dealerHitsSoft17 = true
 			} else if rowID.Str == "RESPLIT" {
@@ -267,14 +296,14 @@ func ReadStrategy(buf *bytes.Buffer) {
 		}
 
 	}
-} // ReadStrategy
+} // ReadStrategyMatrix
 
 // ------------------------------------------------------- WriteStrategy -----------------------------------
-func WriteStrategy(filehandle *bufio.Writer) {
+func WriteStrategyMatrix(filehandle *bufio.Writer) {
 	filehandle.WriteString(" Regular Strategy Matrix: \n")
 
-	// First write out regular Strategy
-	for i, row := range Strategy {
+	// First write out regular StrategyMatrix
+	for i, row := range StrategyMatrix {
 		if i < 5 { // ignore rows < 5, as these are special cases and are in the other matrixes
 			continue
 		}
@@ -287,10 +316,10 @@ func WriteStrategy(filehandle *bufio.Writer) {
 		filehandle.WriteRune('\n')
 	}
 
-	// Now write out Soft Strategy
+	// Now write out Soft StrategyMatrix
 	filehandle.WriteString(" \n \n Soft Strategy Matrix, IE, Strategy for soft hands: \n")
-	for i, row := range SoftStrategy {
-		if i < 3 { // ignore row 0, 1 and 2, as these are not a valid blackjack hand or are in PairStrategy
+	for i, row := range SoftStrategyMatrix {
+		if i < 3 { // ignore row 0, 1 and 2, as these are not a valid blackjack hand or are in PairStrategyMatrix
 			continue
 		}
 		outputline := fmt.Sprintf(" s%d: ", i)
@@ -302,9 +331,9 @@ func WriteStrategy(filehandle *bufio.Writer) {
 		filehandle.WriteRune('\n')
 	}
 
-	// Now write out Pair Strategy
+	// Now write out Pair StrategyMatrix
 	filehandle.WriteString(" \n \n Pair Strategy Matrix: \n")
-	for i, row := range PairStrategy {
+	for i, row := range PairStrategyMatrix {
 		if i < 1 { // ignore row 0 as it is not a valid blackjack hand
 			continue
 		}
@@ -320,7 +349,7 @@ func WriteStrategy(filehandle *bufio.Writer) {
 	filehandle.WriteRune('\n')
 	filehandle.WriteRune('\n')
 	filehandle.WriteRune('\n')
-} // WriteStrategy
+} // WriteStrategyMatrix
 
 // ------------------------------------------------------- InitDeck -----------------------------------
 func InitDeck() { // Initalize the deck of cards.
@@ -423,35 +452,36 @@ func hitMePlayer(i int) {
 
 MainLoop:
 	for { // until stand or bust.  Recall that player hands that need to check the strategy matrices for each iteration, unlike the dealer.
-		fmt.Printf(" Top of hitMePlayer: playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n\n",
+		fmt.Printf(" Top of hitMePlayer: playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, split=%t, BJ=%t \n\n",
 			i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
-			playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag)
+			playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].splitflag, playerHand[i].BJflag)
 
 		if playerHand[i].softflag && playerHand[i].total <= 11 { // if total > 11, Ace can only be 1 and not a 10.
-			strategy := SoftStrategy[playerHand[i].total][dealerHand.card1-1]
+			strategy := SoftStrategyMatrix[playerHand[i].total][dealerHand.card1-1]
 			if strategy == Double && cannotDouble { // can only double on first time thru, else have more than 2 cards.
 				strategy = Hit
 			} else {
 				cannotDouble = true // so next time thru the loop cannot double
 			}
 			fmt.Printf(" SoftStrategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
-			switch strategy {
-			case Stand:
+			switch strategy { //SoftStrategyMatrix
+			case Stand: //SoftStrategyMatrix
 				if playerHand[i].total <= 11 { // here is the logic of a soft hand
 					playerHand[i].total += 10
 				}
 				break MainLoop
 
-			case Hit:
+			case Hit: //SoftStrategyMatrix
 				card := getCard()
 				playerHand[i].total += card
+				playerHand[i].notAvirginflag = true
 				if playerHand[i].total > 21 { // if you hit and bust a soft hand, then the Ace must be 1
 					playerHand[i].bustedflag = true
 					break MainLoop
 				}
 				cannotDouble = true
 
-			case Double: // here this means hit only once.
+			case Double: // here this means hit only once.  SoftStrategyMatrix
 				if !playerHand[i].doubledflag {
 					playerHand[i].total += getCard()
 					if playerHand[i].total > 21 { // since Ace is initially treated as a 1, this should never bust.  Unless doubling 12+
@@ -461,36 +491,41 @@ MainLoop:
 					}
 				}
 				playerHand[i].doubledflag = true
+				playerHand[i].notAvirginflag = true
 				break MainLoop
 
-			case Surrender:
+			case Surrender: //SoftStrategyMatrix
 				fmt.Printf(" in hitMePlayer for soft hands and got a surrender option.  I=%d, hand=%v \n", i, playerHand[i])
 				return
 
-			case ErrorValue:
+			case ErrorValue: //SoftStrategyMatrix
 				fmt.Printf(" in hitMePlayer and got errorValue.  I is %d, and hand is %v \n", i, playerHand[i])
 				return
 			} // switch-case
 		} else { // not a soft hand where Ace can represent 11.
-			strategy := Strategy[playerHand[i].total][dealerHand.card1-1]
+			strategy := StrategyMatrix[playerHand[i].total][dealerHand.card1-1]
 			if strategy == Double && cannotDouble { // can only double on first time thru, else have more than 2 cards.
 				strategy = Hit
 			} else {
 				cannotDouble = true // so next time thru the loop cannot double
 			}
-			fmt.Printf(" Strategy[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
-			switch strategy {
-			case Stand:
+			if strategy == Surrender && playerHand[i].notAvirginflag {
+				strategy = SurrenderStrategyMatrix[playerHand[i].total][dealerHand.card1-1]
+			}
+			fmt.Printf(" StrategyMatrix[%d][%d] = %s \n\n", playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			switch strategy { // StrategyMatrix
+			case Stand: // StrategyMatrix
 				fmt.Printf(" Hard HitMe - stand.  total= %d \n", playerHand[i].total)
 				return
 
-			case Hit:
+			case Hit: // Hard StrategyMatrix
 				fmt.Printf(" Hard HitMe - hit.  total= %d \n", playerHand[i].total)
 				newcard := getCard()
 				playerHand[i].total += newcard
 				if newcard == 1 { // if pulled an Ace, next time around this is considered a soft hand.
 					playerHand[i].softflag = true
 				}
+				playerHand[i].notAvirginflag = true
 				if playerHand[i].total > 21 {
 					playerHand[i].bustedflag = true
 					return
@@ -498,11 +533,12 @@ MainLoop:
 					playerHand[i].total += 10
 				}
 
-			case Double: // hit only once.
+			case Double: // Hard hit only once.  Hard StrategyMatrix
 				fmt.Printf(" Hard HitMe - double.  total= %d \n", playerHand[i].total)
 				if !playerHand[i].doubledflag { // must only draw 1 card.
 					newcard := getCard()
 					playerHand[i].total += newcard
+					playerHand[i].notAvirginflag = true
 					if playerHand[i].total > 21 {
 						playerHand[i].bustedflag = true
 						return
@@ -514,12 +550,14 @@ MainLoop:
 				playerHand[i].doubledflag = true
 				return
 
-			case Surrender:
+			case Surrender: // Hard StrategyMatrix
 				fmt.Printf(" Hard HitMe - surrender.  total= %d \n", playerHand[i].total)
 				playerHand[i].surrenderedflag = true
+				playerHand[i].notAvirginflag = true
+				playerHand[i].result = surrend
 				return
 
-			case ErrorValue:
+			case ErrorValue: // Hard StrategyMatrix
 				fmt.Printf(" in hard hitMe and got errorValue.  I is %d, and hand is %v \n", i, playerHand[i])
 				return
 			} // switch case on Strategy.
@@ -579,6 +617,7 @@ func splitHand(i int) {
 		playerHand[i].card1, playerHand[i].card2, playerHand[i].total, hnd.card1, hnd.card2, hnd.total)
 
 	playerHand = append(playerHand, hnd) // can't get blackjack after a split.
+	totalSplits++
 	fmt.Println(" Exiting splitHand: playerHand slice =", playerHand)
 } // splitHand
 
@@ -610,15 +649,15 @@ func playAhand(i int) {
 			playAhand(i) // I'm trying out recursion to solve this problem.  The split-off additional hand will be handled by playAllHands.
 			return
 		} else {
-			strategy := PairStrategy[playerHand[i].card1][dealerHand.card1-1]
-			fmt.Printf("playAhand for hand=%d, PairStrategy[%d][%d] = %s \n\n", i, playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
+			strategy := PairStrategyMatrix[playerHand[i].card1][dealerHand.card1-1]
+			fmt.Printf("playAhand for hand=%d, PairStrategyMatrix[%d][%d] = %s \n\n", i, playerHand[i].total, dealerHand.card1-1, OptionName[strategy])
 			switch strategy {
 			case Stand:
 				return
 			case Hit:
 				hitMePlayer(i)
 			case Double:
-				// playerHand[i].doubledflag = true  This prevents taking a card in HitMePlayer.  I'll let Strategy for 10 take over here.
+				// playerHand[i].doubledflag = true  This prevents taking a card in HitMePlayer.  I'll let StrategyMatrix for 10 take over here.
 				// No other pair doubles.
 				hitMePlayer(i)
 				return // double takes 1 card at most.
@@ -630,7 +669,7 @@ func playAhand(i int) {
 				playerHand[i].surrenderedflag = true
 				return
 			case ErrorValue:
-				fmt.Printf(" PairStrategy returned ErrorValue.  i=%d, hand= %v \n", i, playerHand[i])
+				fmt.Printf(" PairStrategyMatrix returned ErrorValue.  i=%d, hand= %v \n", i, playerHand[i])
 				return
 			} // switch-case
 		} // if hand is soft
@@ -653,6 +692,7 @@ func playAllHands() {
 func showDown() {
 	// Here is where I will check the player[i] result field, and splits result field, if there are any splits in this round.
 	for i := range playerHand {
+		totalHands++
 		switch playerHand[i].result {
 		case wonBJ:
 			totalBJwon++
@@ -666,8 +706,11 @@ func showDown() {
 			}
 		case losttoBJ:
 			totalLosses++
+		case surrend:
+			totalSurrenders++
 		default:
 			if playerHand[i].bustedflag {
+				totalBusts++
 				if playerHand[i].doubledflag {
 					playerHand[i].result = lostdbl
 					totalDblLosses++
@@ -679,6 +722,7 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = wondbl
 					totalDblWins++
+					totalDoubles++
 				} else {
 					playerHand[i].result = won
 					totalWins++
@@ -687,6 +731,7 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = wondbl
 					totalDblWins++
+					totalDoubles++
 				} else {
 					playerHand[i].result = won
 					totalWins++
@@ -698,6 +743,7 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = lostdbl
 					totalDblLosses++
+					totalDoubles++
 				} else {
 					playerHand[i].result = lost
 					totalLosses++
@@ -706,6 +752,17 @@ func showDown() {
 		} // seitch-case
 	} // for range over all hands, incl'g split hands.
 } // showDown
+
+// ------------------------------------------------------- IncrementStats -----------------------------------
+// type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards as column numbers.  Using card-1 is confusing to look at.
+// var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
+// var lastHandWinLoseFlag bool
+// var winsInARow, lossesInARow int
+// And to compute and store the runs of wins and losses.  Ignore pushes or surrenders.  BJ is a win, double is a single win or loss for sake of runs since
+// it's still just 1 hand.  I think I'll include each and every split hand it this as a separate hand.
+func incrementStats() {
+
+}
 
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
@@ -728,25 +785,6 @@ func main() {
 	} else if ans == "y" {
 		displayRound = true
 	}
-
-	/*  These are now set in the .strat file.
-	    fmt.Print(" Simulate dealer hitting on a soft 17? y/n ")
-	    ans := ""
-	    _, _ = fmt.Scanln(&ans)
-	    ans = strings.ToLower(ans)
-	    if ans == "y" {
-	    	DealerHitsSoft17 = true
-	    }
-	    fmt.Println(" Value of Dealer Hit Soft 17 flag is", DealerHitsSoft17)
-
-	    fmt.Print(" Allow the re-splitting of aces? y/n ")
-	    _, _ = fmt.Scanln(&ans)
-	    ans = strings.ToLower(ans)
-	    if ans == "y" {
-	    	ResplitAces = true
-	    }
-	    fmt.Println(" Value of Re-split aces flag is", ResplitAces)
-	*/
 
 	deck = make([]int, 0, NumOfCards)
 
@@ -775,7 +813,7 @@ func main() {
 
 	bytesbuffer := bytes.NewBuffer(byteslice)
 
-	ReadStrategy(bytesbuffer)
+	ReadStrategyMatrix(bytesbuffer)
 
 	// Construct results filename to receive the results.
 	OutputFilename := BaseFilename + OutputExtDefault
@@ -795,7 +833,7 @@ func main() {
 
 	_, err = bufOutputFileWriter.WriteString(str)
 
-	WriteStrategy(bufOutputFileWriter)
+	WriteStrategyMatrix(bufOutputFileWriter)
 
 	_, err = bufOutputFileWriter.WriteString("------------------------------------------------------\n")
 	_, err = bufOutputFileWriter.WriteRune('\n')
@@ -804,18 +842,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	// just in case there is a panic of some type, this file will be closed so I can inspect it,
-	// so far.
+	// just in case there is a panic of some type, this file will be closed so I can inspect it, so far.
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
 
-	// Init and shuffle the deck
+	// Init the deck and SurrenderStrategyMatrix, and shuffle the deck
 	InitDeck()
-	/* */
-	fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
-	fmt.Println(deck)
-	fmt.Println()
-	/* */
+	initSurrenderStrategyMatrix() // only used when the surrender option is wanted in the Strategy matrix.
+
+	if displayRound {
+		fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
+		fmt.Println(deck)
+		fmt.Println()
+	}
 
 	t0 := time.Now()
 
@@ -830,12 +869,12 @@ func main() {
 		rand.Shuffle(len(deck), swapfnt)
 	}
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  Or", timeToShuffle.Nanoseconds(), "ns to shuffle.")
-	fmt.Println()
-	/* */
-	fmt.Println(" Shuffled deck still has", len(deck), "cards.")
-	fmt.Println(deck)
-	/* */
+	if displayRound {
+		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  millisec=", millisec, ".")
+		fmt.Println()
+		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
+		fmt.Println(deck)
+	}
 
 	fmt.Print(" How many hands to play: ")
 	_, err = fmt.Scanln(&numOfPlayers)
@@ -883,9 +922,9 @@ PlayAllRounds:
 		if displayRound {
 			fmt.Printf("\n\n There are %d hand(s), including splits \n\n", len(playerHand))
 			for i := range playerHand {
-				fmt.Printf(" playerHand[%d]: card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t, result=%s \n",
-					i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
-					playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].BJflag, resultNames[playerHand[i].result])
+				fmt.Printf(" playerHand[%d]: card1=%d, card2=%d, total=%d, notAvirgin=%t, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, split=%t, BJ=%t, result=%s \n",
+					i, playerHand[i].card1, playerHand[i].card2, playerHand[i].total, playerHand[i].notAvirginflag, playerHand[i].doubledflag, playerHand[i].surrenderedflag,
+					playerHand[i].bustedflag, playerHand[i].pair, playerHand[i].softflag, playerHand[i].splitflag, playerHand[i].BJflag, resultNames[playerHand[i].result])
 			}
 			fmt.Printf(" dealerHand is card1=%d, card2=%d, total=%d, dbldn=%t, sur=%t, busted=%t, pair=%t, soft=%t, BJ=%t \n",
 				dealerHand.card1, dealerHand.card2, dealerHand.total, dealerHand.doubledflag, dealerHand.surrenderedflag,
@@ -898,7 +937,7 @@ PlayAllRounds:
 			if err != nil {
 				ans = ""
 			}
-			if ans == "n" || ans == "stop" || ans == "exit" {
+			if ans == "n" || ans == "stop" || ans == "exit" || ans == "q" {
 				break PlayAllRounds
 			}
 			fmt.Println(" ------------------------------------------------------------------")
@@ -915,10 +954,14 @@ PlayAllRounds:
 				fmt.Println(" shuffling ...")
 			}
 		}
+		if displayRound {
+			fmt.Printf(" %d hands were planned; %d were actually played. \n\n", j, totalHands)
+		}
 	}
 
-	// time for the stats.  I have a fair amount of work to do for this.  Maybe I'll first test the basic BJ logic before I worry about
-	// stats.
+	// time for the stats.
+	// need to remember to display totalsplits, totaldoubles, totalbusts, totalHands.
+	// need to calculate a run, how long it ran, and display these.  That's in the runs slice of int.
 
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
 		float64(totalSurrenders)/2
