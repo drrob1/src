@@ -48,6 +48,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -141,6 +142,7 @@ var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLost
 
 var OutputFilename string
 var OutputHandle *os.File
+var bufOutputFileWriter *bufio.Writer
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {
@@ -911,16 +913,7 @@ func wrStatsToFile() {
 	//type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards as column numbers without subtracting 1.
 	//var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
 
-	var err error
-
-	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
-		os.Exit(1)
-	}
-	bufOutputFileWriter := bufio.NewWriter(OutputHandle)
-	defer bufOutputFileWriter.Flush()
-	defer OutputHandle.Close()
+var err error
 
 	bufOutputFileWriter.WriteString(" Won Stats Array \n        A     2     3     4     5     6     7     8     9    10 \n")
 	bufOutputFileWriter.WriteString("------------------------------------------------------------------------------------\n")
@@ -1162,12 +1155,12 @@ func main() {
 
 	// Construct results filename to receive the results.
 	OutputFilename = BaseFilename + OutputExtDefault
-	OutputHandle, err := os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
 		os.Exit(1)
 	}
-	bufOutputFileWriter := bufio.NewWriter(OutputHandle)
+	bufOutputFileWriter = bufio.NewWriter(OutputHandle)
 	defer bufOutputFileWriter.Flush()
 	defer OutputHandle.Close()
 
@@ -1343,13 +1336,25 @@ PlayAllRounds:
 	ratioTotalWins = float64(totalWins) / float64(totalWins+totalLosses)
 	ratioTotalLosses = float64(totalLosses) / float64(totalWins+totalLosses)
 	ratioScore := 100 * score / float64(totalHands)
-	ratioString := fmt.Sprintf(" RatioScore=%.6f%%,  TotalDblWins= %.4f, TotalDblLosses= %.4f, TotalWins= %.4f, TotalLosses= %.4f \n",
+	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalDblWins= %.4f, TotalDblLosses= %.4f, TotalWins= %.4f, TotalLosses= %.4f \n",
 		ratioScore, ratioTotalDblWins, ratioTotalDblLosses, ratioTotalWins, ratioTotalLosses)
 	fmt.Println(ratioString)
-	OutputHandle.WriteString(ratioString)
+	bufOutputFileWriter.WriteString(ratioString)
 
-	OutputHandle.WriteString(elapsedString)
-	OutputHandle.WriteString(scoreString)
+	bufOutputFileWriter.WriteString(elapsedString)
+	bufOutputFileWriter.WriteString(scoreString)
+
+	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
+	sort.Sort(sort.Reverse(sort.IntSlice(runsLost)))
+	runswonstring := fmt.Sprintf(" runs of won hands: %v \n", runsWon)
+	runsloststring := fmt.Sprintf(" runs of lost hands: %v \n", runsLost)
+	bufOutputFileWriter.WriteString(runswonstring)
+	bufOutputFileWriter.WriteString(runsloststring)
+
+	runswonstring = fmt.Sprintf(" runs of won hands: %v \n", runsWon[:20])
+	runsloststring = fmt.Sprintf(" runs of lost hands: %v \n", runsLost[:20])
+	fmt.Println(runswonstring)
+	fmt.Println(runsloststring)
 
 	wrStatsToFile()
 
