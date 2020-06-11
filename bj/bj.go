@@ -55,7 +55,7 @@ import (
 	"tknptr"
 )
 
-const lastAltered = "June 10, 2020"
+const lastAltered = "June 11, 2020"
 
 /*
   REVISION HISTORY
@@ -139,6 +139,9 @@ type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards 
 // I will use the first 2 card totals as the row of the matrix, and the column will be dealer.card1, where Ace is 1.  This will have
 // empty rows.  But this is too small an amount of waste to bother about.
 var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
+
+type ratioRowType [11]float64
+var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
 
 var OutputFilename string
 var OutputHandle *os.File
@@ -1092,14 +1095,152 @@ var err error
 		}
 	}
 
+
+// Compute Ratio Matricies
+// type ratioRowType [11]float64
+// var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
+// And remember, don't divide by zero
+    for i := 2; i < len(ratioWon); i++ {
+    	for j := 1; j < 11; j++ {
+    		denom := WonStats[i][j] + LostStats[i][j]
+    		if denom == 0 {
+    			ratioWon[i][j] = 0
+    			continue
+			}
+			ratio := float64(WonStats[i][j]) / float64(denom)
+			ratioWon[i][j] = ratio
+		}
+	}
+
+	for i := 2; i < len(ratioDoubleWon); i++ {
+		for j := 1; j < 11; j++ {
+			denom := DoubleWonStats[i][j] + DoubleLostStats[i][j]
+			if denom == 0 {
+				ratioDoubleWon[i][j] = 0
+				continue
+			}
+			ratio := float64(DoubleWonStats[i][j]) / float64(denom)
+			ratioDoubleWon[i][j] = ratio
+		}
+	}
+
+	for i := 2; i < len(ratioSoftWon); i++ {
+		for j := 1; j < 11; j++ {
+			denom := SoftWonStats[i][j] + SoftLostStats[i][j]
+			if denom == 0 {
+				ratioSoftWon[i][j] = 0
+				continue
+			}
+			ratio := float64(SoftWonStats[i][j]) / float64(denom)
+			ratioSoftWon[i][j] = ratio
+		}
+	}
+
+	for i := 2; i < len(ratioSoftDoubleWon); i++ {
+		for j := 1; j < 11; j++ {
+			denom := SoftDoubleWonStats[i][j] + SoftDoubleLostStats[i][j]
+			if denom == 0 {
+				ratioSoftDoubleWon[i][j] = 0
+				continue
+			}
+			ratio := float64(SoftDoubleWonStats[i][j]) / float64(denom)
+			ratioWon[i][j] = ratio
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Ratio Won Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range ratioWon {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range ratioWon[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5.2f", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a ratioWon row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Ratio Double Won Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range ratioDoubleWon {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range ratioDoubleWon[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5.2f", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a ratioDoubleWon row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Ratio Soft Won Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range ratioSoftWon {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range ratioSoftWon[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5.2f", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a ratioSoftWon row.  Error is", err)
+		}
+	}
+
+	bufOutputFileWriter.WriteString("\n Ratio Soft Double Won Array \n")
+	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	for i := range ratioSoftDoubleWon {
+		if i < 2 {
+			continue
+		}
+		s := fmt.Sprintf("%2d:", i)
+		bufOutputFileWriter.WriteString(s)
+		for j, stats := range ratioSoftDoubleWon[i] {
+			if j == 0 {
+				continue
+			}
+			rowString := fmt.Sprintf(" %5.2f", stats)
+			bufOutputFileWriter.WriteString(rowString)
+		}
+		_, err = bufOutputFileWriter.WriteRune('\n')
+		if err != nil {
+			fmt.Println(" Error while writing a ratioSoftDoubleWon row.  Error is", err)
+		}
+	}
+
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
-
-	//var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
-
 } // wrStatsToFile
 
 // ------------------------------------------------------- main -----------------------------------
