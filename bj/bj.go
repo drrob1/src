@@ -32,6 +32,9 @@ package main
   I have to still test the variations on splitting aces, re-splitting aces, doubling split aces
   The 2 flags in the strategy file are dealer17 and resplit.
   Looks like these work as intended.
+
+  I forgot to compute the maxruns, and output the slices of runs.
+  And for tomorrow, I'll create and output ratio matricies, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
 */
 import (
 	"bufio"
@@ -1245,8 +1248,11 @@ func main() {
 		playerHand = append(playerHand, hand)
 	}
 
-	fmt.Println(" Initial number of hands is", len(playerHand))
-	fmt.Println()
+	if displayRound {
+		fmt.Println(" Initial number of hands is", len(playerHand))
+		fmt.Println()
+	}
+
 	/* {{{
 			dealCards()
 			fmt.Println(" after cards were first dealt.  Player(s) first")
@@ -1309,7 +1315,7 @@ PlayAllRounds:
 	}
 
 	elapsed := time.Since(t1)
-	elapsedString := fmt.Sprintf(" Playing %d hands took %s \n", maxNumOfHands, elapsed.String())
+	elapsedString := fmt.Sprintf(" Playing %d hands took %s \n", totalHands, elapsed.String())
 	fmt.Println(elapsedString)
 
 	// time for the stats.
@@ -1329,7 +1335,19 @@ PlayAllRounds:
 		float64(totalSurrenders)/2
 	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, Double wins=%d, wins=%d, double losses=%d, losses=%d, surrendered=%d \n\n",
 		score, totalBJwon, totalDblWins, totalWins, totalDblLosses, totalLosses, totalSurrenders)
-	fmt.Println(surrend)
+	fmt.Println(scoreString)
+
+	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
+	ratioTotalDblWins = float64(totalDblWins) / float64(totalDblWins+totalDblLosses)
+	ratioTotalDblLosses = float64(totalDblLosses) / float64(totalDblWins+totalDblLosses)
+	ratioTotalWins = float64(totalWins) / float64(totalWins+totalLosses)
+	ratioTotalLosses = float64(totalLosses) / float64(totalWins+totalLosses)
+	ratioScore := 100 * score / float64(totalHands)
+	ratioString := fmt.Sprintf(" RatioScore=%.6f%%,  TotalDblWins= %.4f, TotalDblLosses= %.4f, TotalWins= %.4f, TotalLosses= %.4f \n",
+		ratioScore, ratioTotalDblWins, ratioTotalDblLosses, ratioTotalWins, ratioTotalLosses)
+	fmt.Println(ratioString)
+	OutputHandle.WriteString(ratioString)
+
 	OutputHandle.WriteString(elapsedString)
 	OutputHandle.WriteString(scoreString)
 
