@@ -35,6 +35,8 @@ package main
 
   I forgot to compute the maxruns, and output the slices of runs.
   And for tomorrow, I'll create and output ratio matricies, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
+
+  Looks like my original classic strategy is correct.  But if surrender is allowed, sur1516.strat is optimal.
 */
 import (
 	"bufio"
@@ -64,6 +66,7 @@ const lastAltered = "June 11, 2020"
    8 Jun 20 -- First working version in which the logic is correct (I think).  I'm going to test further before
                  coding the collection and display of stats.  Of course, this is all about the stats.
    9 Jun 20 -- I believe the logic is correct.  I'm going to start coding the statistics.
+  11 Jun 20 -- Fixing computation of runs if surrender is allowed.  Can't have only 2 states for last hand.
 */
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
@@ -125,7 +128,7 @@ var numOfPlayers, currentCard int
 var deck []int
 var prevResult []int
 var runsWon, runsLost []int
-var lastHandWinLoseFlag bool
+var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
 var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
@@ -141,6 +144,7 @@ type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards 
 var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
 
 type ratioRowType [11]float64
+
 var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
 
 var OutputFilename string
@@ -319,7 +323,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 		if i < 5 { // ignore rows < 5, as these are special cases and are in the other matrixes
 			continue
 		}
-		outputline := fmt.Sprintf(" %d: ", i)
+		outputline := fmt.Sprintf(" %2d: ", i)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
 			outputline += s
@@ -334,7 +338,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 		if i < 3 { // ignore row 0, 1 and 2, as these are not a valid blackjack hand or are in PairStrategyMatrix
 			continue
 		}
-		outputline := fmt.Sprintf(" s%d: ", i)
+		outputline := fmt.Sprintf(" s%2d: ", i)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
 			outputline += s
@@ -349,7 +353,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 		if i < 1 { // ignore row 0 as it is not a valid blackjack hand
 			continue
 		}
-		outputline := fmt.Sprintf(" %d-%d: ", i, i)
+		outputline := fmt.Sprintf(" %2d-%2d: ", i, i)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
 			outputline += s
@@ -809,100 +813,122 @@ func showDown() {
 // var winsInARow, lossesInARow int
 // And to compute and store the runs of wins and losses.  Ignore pushes or surrenders.  BJ is a win, double is a single win or loss for sake of runs since
 // it's still just 1 hand.  I think I'll include each and every split hand it this as a separate hand.
+// The local SoftFlag must be used because the playerHand[i].SoftFlag is set if ANY subsequent cards are an Ace, so it can properly handle soft hands.
 func incrementStats() {
 	for i := range playerHand { // range over all hannds, including split hands.
 		initialPlayerTotal := playerHand[i].card1 + playerHand[i].card2
-		initialDealerCard := dealerHand.card1
-		SoftFlag := playerHand[i].softflag
+		FirstDealerCard := dealerHand.card1
+		SoftFlag := playerHand[i].card1 == Ace || playerHand[i].card2 == Ace
 		switch playerHand[i].result {
 		case lost:
 			if SoftFlag {
-				SoftLostStats[initialPlayerTotal][initialDealerCard]++
+				SoftLostStats[initialPlayerTotal][FirstDealerCard]++
 			} else {
-				LostStats[initialPlayerTotal][initialDealerCard]++
+				LostStats[initialPlayerTotal][FirstDealerCard]++
 			}
 
-			if lastHandWinLoseFlag {
-				lastHandWinLoseFlag = false
-				if currentRunWon > 4 {
+			if lastHandWinLose == won {
+				lastHandWinLose = lost
+				if currentRunWon > 10 {
 					runsWon = append(runsWon, currentRunWon)
 				}
 				currentRunWon = 0
-			} else {
+			} else if lastHandWinLose == lost {
 				currentRunLost++
+			} else { // either pushed or ErrorValue
+				lastHandWinLose = lost
 			}
 
 		case pushed:
-			// nothing for now
+			lastHandWinLose = pushed
+
 		case won:
 			if SoftFlag {
-				SoftWonStats[initialPlayerTotal][initialDealerCard]++
+				SoftWonStats[initialPlayerTotal][FirstDealerCard]++
 			} else {
-				WonStats[initialPlayerTotal][initialDealerCard]++
+				WonStats[initialPlayerTotal][FirstDealerCard]++
 			}
-			if lastHandWinLoseFlag {
+
+			if lastHandWinLose == won {
 				currentRunWon++
-			} else {
-				lastHandWinLoseFlag = true
-				if currentRunLost > 4 {
+			} else if lastHandWinLose == lost {
+				lastHandWinLose = won
+				if currentRunLost > 10 {
 					runsLost = append(runsLost, currentRunLost)
 				}
 				currentRunLost = 0
+			} else { // either pushed or ErrorValue
+				lastHandWinLose = won
 			}
 
 		case surrend:
-			// nothing for now
+			lastHandWinLose = surrend // not keeping a run of surrenders.
+
 		case lostdbl:
 			if SoftFlag {
-				SoftDoubleLostStats[initialPlayerTotal][initialDealerCard]++
+				SoftDoubleLostStats[initialPlayerTotal][FirstDealerCard]++
 			} else {
-				DoubleLostStats[initialPlayerTotal][initialDealerCard]++
+				DoubleLostStats[initialPlayerTotal][FirstDealerCard]++
 			}
-			if lastHandWinLoseFlag {
-				lastHandWinLoseFlag = false
-				if currentRunWon > 4 {
+
+			if lastHandWinLose == won {
+				lastHandWinLose = lost
+				if currentRunWon > 10 {
 					runsWon = append(runsWon, currentRunWon)
 				}
 				currentRunWon = 0
-			} else {
+			} else if lastHandWinLose == lost {
 				currentRunLost++
+			} else { // pushed or ErrorValue
+				lastHandWinLose = lost
 			}
+
 		case wondbl:
 			if SoftFlag {
-				SoftDoubleWonStats[initialPlayerTotal][initialDealerCard]++
+				SoftDoubleWonStats[initialPlayerTotal][FirstDealerCard]++
 			} else {
-				DoubleWonStats[initialPlayerTotal][initialDealerCard]++
+				DoubleWonStats[initialPlayerTotal][FirstDealerCard]++
 			}
-			if lastHandWinLoseFlag {
+
+			if lastHandWinLose == won {
 				currentRunWon++
-			} else {
-				lastHandWinLoseFlag = true
-				if currentRunLost > 4 {
+			} else if lastHandWinLose == lost {
+				lastHandWinLose = won
+				if currentRunLost > 10 {
 					runsLost = append(runsLost, currentRunLost)
 				}
 				currentRunLost = 0
+			} else { // either pushed or ErrorValue
+				lastHandWinLose = won
 			}
+
 		case losttoBJ:
-			if lastHandWinLoseFlag {
-				lastHandWinLoseFlag = false
-				if currentRunWon > 4 {
+			if lastHandWinLose == won {
+				lastHandWinLose = lost
+				if currentRunWon > 10 {
 					runsWon = append(runsWon, currentRunWon)
 				}
 				currentRunWon = 0
-			} else {
+			} else if lastHandWinLose == lost {
 				currentRunLost++
+			} else { // either pushed or ErrorValue
+				lastHandWinLose = lost
 			}
+
 		case pushedBJ:
-			// nothing for now
+			lastHandWinLose = pushed
+
 		case wonBJ:
-			if lastHandWinLoseFlag {
+			if lastHandWinLose == won {
 				currentRunWon++
-			} else {
-				lastHandWinLoseFlag = true
+			} else if lastHandWinLose == lost{
+				lastHandWinLose = won
 				if currentRunLost > 4 {
 					runsLost = append(runsLost, currentRunLost)
 				}
 				currentRunLost = 0
+			} else { // either pushed or ErrorValue
+				lastHandWinLose = won
 			}
 
 		} // end switch-case
@@ -916,10 +942,10 @@ func wrStatsToFile() {
 	//type statsRowType [11]int // Here, unlike the strategy matrices, I'll use cards as column numbers without subtracting 1.
 	//var WonStats, LostStats, DoubleWonStats, DoubleLostStats, SoftWonStats, SoftLostStats, SoftDoubleWonStats, SoftDoubleLostStats [22]statsRowType
 
-var err error
+	var err error
 
-	bufOutputFileWriter.WriteString(" Won Stats Array \n        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("------------------------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString(" Won Stats Array \n         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------------------------------\n")
 	for i := range WonStats {
 		if i < 2 {
 			continue
@@ -931,7 +957,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -941,8 +967,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Lost Stats Array \n")
-	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("---------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("---------------------------------------------------------------------------\n")
 	for i := range LostStats {
 		if i < 2 {
 			continue
@@ -954,7 +980,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -964,8 +990,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Double Won Stats Array \n")
-	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("---------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------------\n")
 	for i := range DoubleWonStats {
 		if i == 0 {
 			continue
@@ -977,7 +1003,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -987,8 +1013,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Double Lost Stats Array \n")
-	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("---------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------------\n")
 	for i := range DoubleLostStats {
 		if i < 2 {
 			continue
@@ -996,7 +1022,7 @@ var err error
 		s := fmt.Sprintf("%2d:", i)
 		bufOutputFileWriter.WriteString(s)
 		for j := 1; j < len(DoubleLostStats[i]); j++ {
-			rowString := fmt.Sprintf(" %5d", DoubleLostStats[i][j]) // just to see if this works
+			rowString := fmt.Sprintf(" %6d", DoubleLostStats[i][j]) // just to see if this works
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -1006,8 +1032,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Soft Won Stats Array \n")
-	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------------\n")
 	for i := range SoftWonStats {
 		if i < 2 {
 			continue
@@ -1018,7 +1044,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -1028,8 +1054,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Soft Lost Stats Array \n")
-	bufOutputFileWriter.WriteString("       A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("-------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("        A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("-------------------------------------------------------------------------\n")
 	for i := range SoftLostStats {
 		if i < 2 {
 			continue
@@ -1041,7 +1067,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -1051,8 +1077,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Soft Double Won Stats Array \n")
-	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------------\n")
 	for i := range SoftDoubleWonStats {
 		if i < 2 {
 			continue
@@ -1064,7 +1090,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -1074,8 +1100,8 @@ var err error
 	}
 
 	bufOutputFileWriter.WriteString("\n Soft Double Lost Stats Array \n")
-	bufOutputFileWriter.WriteString("        A     2     3     4     5     6     7     8     9    10 \n")
-	bufOutputFileWriter.WriteString("--------------------------------------------------------------------\n")
+	bufOutputFileWriter.WriteString("         A      2      3      4      5      6      7      8      9     10 \n")
+	bufOutputFileWriter.WriteString("--------------------------------------------------------------------------\n")
 	for i := range SoftLostStats {
 		if i < 2 {
 			continue
@@ -1086,7 +1112,7 @@ var err error
 			if j == 0 {
 				continue
 			}
-			rowString := fmt.Sprintf(" %5d", stats)
+			rowString := fmt.Sprintf(" %6d", stats)
 			bufOutputFileWriter.WriteString(rowString)
 		}
 		_, err = bufOutputFileWriter.WriteRune('\n')
@@ -1095,17 +1121,16 @@ var err error
 		}
 	}
 
-
-// Compute Ratio Matricies
-// type ratioRowType [11]float64
-// var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
-// And remember, don't divide by zero
-    for i := 2; i < len(ratioWon); i++ {
-    	for j := 1; j < 11; j++ {
-    		denom := WonStats[i][j] + LostStats[i][j]
-    		if denom == 0 {
-    			ratioWon[i][j] = 0
-    			continue
+	// Compute Ratio Matricies
+	// type ratioRowType [11]float64
+	// var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
+	// And remember, don't divide by zero
+	for i := 2; i < len(ratioWon); i++ {
+		for j := 1; j < 11; j++ {
+			denom := WonStats[i][j] + LostStats[i][j]
+			if denom == 0 {
+				ratioWon[i][j] = 0
+				continue
 			}
 			ratio := float64(WonStats[i][j]) / float64(denom)
 			ratioWon[i][j] = ratio
@@ -1144,7 +1169,7 @@ var err error
 				continue
 			}
 			ratio := float64(SoftDoubleWonStats[i][j]) / float64(denom)
-			ratioWon[i][j] = ratio
+			ratioSoftDoubleWon[i][j] = ratio
 		}
 	}
 
@@ -1304,6 +1329,14 @@ func main() {
 	bufOutputFileWriter = bufio.NewWriter(OutputHandle)
 	defer bufOutputFileWriter.Flush()
 	defer OutputHandle.Close()
+
+	_, _ = bufOutputFileWriter.WriteString("==============================================================================\n")
+	_, _ = bufOutputFileWriter.WriteString("==============================================================================\n")
+	_, err = bufOutputFileWriter.WriteRune('\n')
+	if err != nil {
+		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
+		os.Exit(1)
+	}
 
 	date := time.Now()
 	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
@@ -1467,8 +1500,8 @@ PlayAllRounds:
 
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
 		float64(totalSurrenders)/2
-	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, Double wins=%d, wins=%d, double losses=%d, losses=%d, surrendered=%d \n\n",
-		score, totalBJwon, totalDblWins, totalWins, totalDblLosses, totalLosses, totalSurrenders)
+	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n\n",
+		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
 	fmt.Println(scoreString)
 
 	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
@@ -1477,8 +1510,8 @@ PlayAllRounds:
 	ratioTotalWins = float64(totalWins) / float64(totalWins+totalLosses)
 	ratioTotalLosses = float64(totalLosses) / float64(totalWins+totalLosses)
 	ratioScore := 100 * score / float64(totalHands)
-	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalDblWins= %.4f, TotalDblLosses= %.4f, TotalWins= %.4f, TotalLosses= %.4f \n",
-		ratioScore, ratioTotalDblWins, ratioTotalDblLosses, ratioTotalWins, ratioTotalLosses)
+	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.4f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
+		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
 	fmt.Println(ratioString)
 	bufOutputFileWriter.WriteString(ratioString)
 
@@ -1487,8 +1520,8 @@ PlayAllRounds:
 
 	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
 	sort.Sort(sort.Reverse(sort.IntSlice(runsLost)))
-	runswonstring := fmt.Sprintf(" runs of won hands: %v \n", runsWon)
-	runsloststring := fmt.Sprintf(" runs of lost hands: %v \n", runsLost)
+	runswonstring := fmt.Sprintf(" runs of won hands: %v \n", runsWon[:25]) // Else there are too many of them
+	runsloststring := fmt.Sprintf(" runs of lost hands: %v \n", runsLost[:25])
 	bufOutputFileWriter.WriteString(runswonstring)
 	bufOutputFileWriter.WriteString(runsloststring)
 
