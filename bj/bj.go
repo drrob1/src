@@ -57,7 +57,7 @@ import (
 	"tknptr"
 )
 
-const lastAltered = "June 11, 2020"
+const lastAltered = "June 12, 2020"
 
 /*
   REVISION HISTORY
@@ -109,7 +109,7 @@ const numOfDecks = 8
 
 //const numOfDecks = 1 // for testing of shuffles.  When I'm confident shuffling works correctly, I'll return it to 8 decks.
 const maxNumOfPlayers = 100      // used for the make function on playerHand.
-const maxNumOfHands = 10_000_000 // 10 million, for now.
+const maxNumOfHands = 100_000_000 // 100 million, for now.  Should be about 20 sec.
 const NumOfCards = 52 * numOfDecks
 
 var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
@@ -1500,7 +1500,7 @@ PlayAllRounds:
 
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
 		float64(totalSurrenders)/2
-	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n\n",
+	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
 		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
 	fmt.Println(scoreString)
 
