@@ -67,6 +67,7 @@ const lastAltered = "June 12, 2020"
                  coding the collection and display of stats.  Of course, this is all about the stats.
    9 Jun 20 -- I believe the logic is correct.  I'm going to start coding the statistics.
   11 Jun 20 -- Fixing computation of runs if surrender is allowed.  Can't have only 2 states for last hand.
+  12 Jun 20 -- Working as needed.  I'll consider this the first fully working version.
 */
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
