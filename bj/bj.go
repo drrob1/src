@@ -37,6 +37,9 @@ package main
   And for tomorrow, I'll create and output ratio matricies, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
 
   Looks like my original classic strategy is correct.  But if surrender is allowed, sur1516.strat is optimal.
+
+  And I'll add something just learned w/ the stats output Jun 15, 2020.  This reinforces not to call "even money" when have BJ and dealer shows an Ace.
+  Simulator shows 0.075 of getting BJ when dealer ace is showing.  And .046 of BJ pushes.
 */
 import (
 	"bufio"
@@ -57,7 +60,7 @@ import (
 	"tknptr"
 )
 
-const lastAltered = "June 12, 2020"
+const lastAltered = "June 15, 2020"
 
 /*
   REVISION HISTORY
@@ -68,6 +71,7 @@ const lastAltered = "June 12, 2020"
    9 Jun 20 -- I believe the logic is correct.  I'm going to start coding the statistics.
   11 Jun 20 -- Fixing computation of runs if surrender is allowed.  Can't have only 2 states for last hand.
   12 Jun 20 -- Working as needed.  I'll consider this the first fully working version.
+  15 Jun 20 -- Now to putput some more stats.
 */
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
@@ -1595,6 +1599,23 @@ PlayAllRounds:
 
 	bufOutputFileWriter.WriteString(elapsedString)
 	bufOutputFileWriter.WriteString(scoreString)
+
+	totalHandsFloat := float64(totalHands)
+	totalBJhandFloat := float64(totalBJwon + totalBJpushed)
+	ratioBJwon := float64(totalBJwon) / totalBJhandFloat
+	ratioBJpushed := float64(totalBJpushed) / totalBJhandFloat
+	ratioHandsWon := float64(totalWins) / totalHandsFloat
+	ratioBJdealerAce := float64(totalBJwithDealerAce) / totalBJhandFloat
+	ratioBusts := float64(totalBusts) / totalHandsFloat
+	ratioSplits := float64(totalSplits) / totalHandsFloat
+	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n\n", ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
+	fmt.Print(outputratiostring)
+	bufOutputFileWriter.WriteString(outputratiostring)
+	outputratiostring = fmt.Sprintf(
+		" ratio Hands Won/total hands= %.3f, total busts= %d, ratio Busts/total hands= %.3f, total splits= %d, ratio splits= %.4f \n\n",
+		ratioHandsWon, totalBusts, ratioBusts, totalSplits, ratioSplits)
+	fmt.Print(outputratiostring)
+	bufOutputFileWriter.WriteString(outputratiostring)
 
 	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
 	sort.Sort(sort.Reverse(sort.IntSlice(runsLost)))
