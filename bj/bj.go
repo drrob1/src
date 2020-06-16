@@ -40,6 +40,9 @@ package main
 
   And I'll add something just learned w/ the stats output Jun 15, 2020.  This reinforces not to call "even money" when have BJ and dealer shows an Ace.
   Simulator shows 0.075 of getting BJ when dealer ace is showing.  And .046 of BJ pushes.
+  Thinking about this some more, I realized that "getting BJ w/ dealer ace showing" includes Bj pushes.  So about 60% of the time I get BJ w/ dealer ace
+  showing, I push a BJ.  But BJ pays 3:2.  That makes it ~ 60:60.  So evan odds is close enough to being right.  In the future, I'll take evan money.
+
 */
 import (
 	"bufio"
