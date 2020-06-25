@@ -12,7 +12,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "15 Apr 2020"
+const LastAlteredDate = "25 June 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -93,6 +93,7 @@ REVISION HISTORY
  7 Apr 20 -- Decided to comment out the break statements in the GetResult case statement, which is held over from my C++ code.  Doesn't belong here.
  9 Apr 20 -- Switched to tknptr from tokenize package.  I guess mostly to test it.  I should have done this when I first wrote it.
 15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', ie, string is in scientific notation.
+25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -195,11 +196,11 @@ func AddCommas(instr string) string {
 	var i, decptposn int
 	var Comma []byte = []byte{','}
 
-        capstr := strings.ToUpper(instr)
+	capstr := strings.ToUpper(instr)
 
-        if strings.Contains(capstr, "E") {
-             return instr
-        }
+	if strings.Contains(capstr, "E") {
+		return instr
+	}
 
 	BS := make([]byte, 0, 100)
 	//  outBS := make([]byte,0,100);
@@ -658,17 +659,22 @@ func GetResult(s string) (float64, []string) {
 				PushMatrixStacks()
 				Stack[X] = math.Cbrt(Stack[X]) // Just noticed that there is a Cbrt func in math package
 				//                                                                           Stack[X] = math.Exp(math.Log(Stack[X])/3.0);
-			} else if Token.Str == "VOL" {
+			} else if Token.Str == "DIA" {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
 				//                                                                           Stack[X] = math.Exp(math.Log(2.0*Stack[X])/3.0);
+			} else if Token.Str == "VOL" {
+				LastX = Stack[X]
+				PushMatrixStacks()
+				Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
 			} else if Token.Str == "HELP" || Token.Str == "?" {
 				ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
 				ss = append(ss, " CURT -- X = cuberoot(X).")
 				ss = append(ss, " RECIP -- X = 1/X.")
 				ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
-				ss = append(ss, " VOL -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.")
+				ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
+				ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
 				ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
 				ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 				ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
