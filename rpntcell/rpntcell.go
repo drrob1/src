@@ -24,7 +24,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "8 Apr 2020"
+const LastAltered = "2 July 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -108,6 +108,7 @@ REVISION HISTORY
 11 Mar 20 -- Noticed that my linux code runs on WSL on bash, except for this pgm.  I'm expanding the error reporting to see if I can track this and
                maybe file an issue.
  7 Apr 20 -- Will add the clipboard code I first wrote for rpng, and will have PgUp/PgDn manipulate the stack, while Up and Dn will allow command recall.
+ 2 Jul 20 -- Removed a duplicate help line.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -1027,7 +1028,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 
 	_, helpstringslice := hpcalc.GetResult("HELP")
 	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
-	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")
+//	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")  duplicate.
 	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
 	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
 	helpstringslice = append(helpstringslice, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
