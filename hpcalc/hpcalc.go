@@ -12,7 +12,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "25 June 2020"
+const LastAlteredDate = "3 July 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -94,6 +94,7 @@ REVISION HISTORY
  9 Apr 20 -- Switched to tknptr from tokenize package.  I guess mostly to test it.  I should have done this when I first wrote it.
 15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', ie, string is in scientific notation.
 25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
+ 3 Jul 20 -- Added cbrt as synonym for curt.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -145,7 +146,7 @@ func STACKUP() {
 } // STACKUP
 //------------------------------------------------------ STACKDN
 func STACKDN() {
-	for S := Y; S < T1; S++ {
+	for S := Y; S < T1; S++ { // Does not affect X, so can do calculations and then remove Y and Z as needed.
 		Stack[S] = Stack[S+1]
 	}
 } // STACKDN
@@ -654,7 +655,7 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = 1 / Stack[X]
-			} else if Token.Str == "CURT" {
+			} else if Token.Str == "CURT" || Token.Str == "CBRT" {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Cbrt(Stack[X]) // Just noticed that there is a Cbrt func in math package
@@ -668,9 +669,11 @@ func GetResult(s string) (float64, []string) {
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
+				STACKDN()
+				STACKDN()
 			} else if Token.Str == "HELP" || Token.Str == "?" {
 				ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
-				ss = append(ss, " CURT -- X = cuberoot(X).")
+				ss = append(ss, " CURT,CBRT -- X = cuberoot(X).")
 				ss = append(ss, " RECIP -- X = 1/X.")
 				ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
 				ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
