@@ -24,7 +24,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "2 July 2020"
+const LastAltered = "3 July 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -109,6 +109,7 @@ REVISION HISTORY
                maybe file an issue.
  7 Apr 20 -- Will add the clipboard code I first wrote for rpng, and will have PgUp/PgDn manipulate the stack, while Up and Dn will allow command recall.
  2 Jul 20 -- Removed a duplicate help line.
+ 3 Jul 20 -- FIX command also sets output mode to be fixed.  So to use FIXn to set digits for float or gen, have to change outputmode AFTER using FIXn.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -478,6 +479,7 @@ func main() {
 				sigfig = -1
 			}
 			_, _ = hpcalc.GetResult(INBUF) // Have to send this into hpcalc also
+			outputmode = outputfix
 		} else if INBUF == "HELP" || INBUF == "?" {
 			WriteHelp(StartCol+2, StackRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
