@@ -40,9 +40,10 @@ import (
   26 Jan 18 -- Changed tokenize so that SetMapDelim change sticks.
   13 Nov 18 -- Will use "-" and "_" also to detech a filename token.
   10 Nov 19 -- Now uses ToLower to compare the string hashes, to ignore case.
+  15 Jul 20 -- Decided to make better guesses.  Sha1 has 40 digits, Sha256 has 64 digits and Sha512 has 128 digits.
 */
 
-const LastCompiled = "10 Nov 2019"
+const LastCompiled = "15 July 2020"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -51,18 +52,17 @@ func main() {
 	const M = 1024 * 1024
 
 	const (
-		md5hash = iota
+		undetermined = iota
+		md5hash
 		sha1hash
 		sha256hash
 		sha384hash
 		sha512hash
-		HashType
 	)
 
 	const ReadBufferSize = M
-	//  const ReadBufferSize = 80 * M;
 
-	var HashName = [...]string{"md5", "sha1", "sha256", "sha384", "sha512"}
+	var HashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "sha512"}
 	var inbuf, ans, Filename string
 	var WhichHash int
 	var readErr error
@@ -128,8 +128,8 @@ func main() {
 	default:
 		fmt.Println()
 		fmt.Println()
-		fmt.Println(" Not a recognized hash extension.  Will assume sha1.")
-		WhichHash = sha1hash
+		fmt.Println(" Not a recognized hash extension.  Will determine by hash length.")
+		//WhichHash = sha256hash
 	} // switch case on extension for HashType
 
 	fmt.Println()
@@ -176,25 +176,28 @@ func main() {
 		FirstToken, EOL := tokenize.GetTokenString(false)
 
 		if EOL {
-			fmt.Errorf(" Error while getting 1st token in the hashing file.  Skipping")
+			fmt.Println(" EOL or other Error while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
+		hashlength := 0
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
 			strings.ContainsRune(FirstToken.Str, '_') { /* have filename first on line */
 			TargetFilename = FirstToken.Str
 			SecondToken, EOL := tokenize.GetTokenString(false) // Get hash string from the line in the file
 			if EOL {
-				fmt.Errorf(" Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping \n")
+				fmt.Println(" Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping")
 				continue
 			} /* if EOL */
 			HashValueReadFromFile = SecondToken.Str
+			hashlength = len(SecondToken.Str)
 
 		} else { /* have hash first on line */
 			HashValueReadFromFile = FirstToken.Str
+			hashlength = len(FirstToken.Str)
 			SecondToken, EOL := tokenize.GetTokenString(false) // Get name of file on which to compute the hash
 			if EOL {
-				fmt.Errorf(" Error while gatting TargetFilename token in the hashing file.  Skipping \n")
+				fmt.Println(" Error while gatting TargetFilename token in the hashing file.  Skipping")
 				continue
 			} /* if EOL */
 
@@ -222,6 +225,18 @@ func main() {
 		}
 
 		defer TargetFile.Close()
+
+		if WhichHash == undetermined {
+			if hashlength == 64 {
+				WhichHash = sha256hash
+			} else if hashlength == 128 {
+				WhichHash = sha512hash
+			} else {
+				WhichHash = sha1hash
+			}
+			fmt.Println(" hash determined by length to be", HashName[WhichHash])
+			fmt.Println()
+		}
 
 		switch WhichHash { // Initialing case switch on WhichHash
 		case md5hash:
@@ -282,7 +297,7 @@ func main() {
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
 	if e != nil {
-		fmt.Errorf("%s : ", msg)
+		fmt.Println(msg)
 		panic(e)
 	}
 }
