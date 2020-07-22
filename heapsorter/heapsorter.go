@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "July 21, 2020"
+const LastAlteredDate = "July 22, 2020"
 
 /*
   REVISION HISTORY
@@ -79,12 +79,21 @@ func (h stringHeap) Len() int           { return len(h) }
 func (h stringHeap) Less(i, j int) bool { return h[i] < h[j] }
 func (h stringHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
+// Push and Pop use pointer receivers because they modify the slice's length, not just its contents.
+// Note that Push and Pop in this interface are for package heap's implementation to call.
+// To add and remove things from the heap, use heap.Push and heap.Pop.  I missed this point my first time thru the documentation.
 func (h *stringHeap) Push(x interface{}) {
-	// Push and Pop use pointer receivers because they modify the slice's length,
-	// not just its contents.
 	*h = append(*h, x.(string))
 }
 
+func (h *stringHeap) Pop() interface{} {
+	n := len(*h)
+	x := (*h)[n-1]
+	*h = (*h)[:n-1]
+	return x
+}
+
+/*
 func (h *stringHeap) Pop() interface{} {
 	old := *h
 	n := len(old)
@@ -92,6 +101,7 @@ func (h *stringHeap) Pop() interface{} {
 	*h = old[0 : n-1]
 	return x
 }
+*/
 
 // -----------------------------------------------------------
 // -----------------------------------------------------------
@@ -804,14 +814,11 @@ func main() {
 		fmt.Println("master before:", mastersliceofwords)
 	}
 	sliceofwords := make([]string, numberofwords)
-	heapofwords := make(stringHeap, numberofwords) // doesn't need to be a separate type, but it makes my intent clear.
-
 	fmt.Println()
 	fmt.Println()
 
 	// sort.StringSlice method
 	copy(sliceofwords, mastersliceofwords)
-	copy(heapofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("slice before first sort.StringSlice:", sliceofwords)
 	}
@@ -1287,28 +1294,35 @@ func main() {
 	fmt.Println()
 
 	// container/heap
-	if allowoutput {
-		fmt.Println("before container/heap sort", heapofwords)
-	}
-	t13 := time.Now()
+	heapofwords := make(stringHeap, 0, numberofwords) // doesn't need to be a separate type, but it makes my intent clear.
 	sortedheapofwords := make(stringHeap, 0, numberofwords)
+	if allowoutput {
+		fmt.Println("before container/heap sort. The heap is empty at the moment.")
+	}
+
 	heap.Init(&heapofwords)
-	heap.Push(&heapofwords,"zzzzzzzzzzzz") // perhaps a sentinal to get the party started?
-	if allowoutput { // I'm only filling sortedheap of words if a small number is being requested.  I wonder if this is cheating on the timing?
-		var str string
-		for i := 0; i < heapofwords.Len(); i++ {
-			// str = string(heapofwords.Pop().(string))  this works
-			str = heapofwords.Pop().(string)          // as does this
-			sortedheapofwords = append(sortedheapofwords, str)
-		}
+	t13 := time.Now()
+	for _, wrd := range mastersliceofwords {
+		heap.Push(&heapofwords, wrd)
+	}
+	fmt.Println(" length of heapofwords slice is",
+		len(heapofwords), ", len of master slice is ", len(mastersliceofwords), ", heapofwords.Len is", heapofwords.Len(), ". ")
+	var str string
+	for heapofwords.Len() > 0 { // Note: as items are popped off of the heap, it's length gets smaller.  So using i < heapofwords.Len() didn't work.
+		// str = string(heapofwords.Pop().(string))  this works to make the interface type treated as the string that it is.
+		//str = heapofwords.Pop().(string) // as does this
+		str = heap.Pop(&heapofwords).(string)
+		sortedheapofwords = append(sortedheapofwords, str)
 	}
 	sortedheapofwordsTime := time.Since(t13)
-	s = fmt.Sprintf(" after sortedheapofwords: time=%s for %d entries \n", sortedheapofwordsTime.String(), sortedheapofwords.Len())
+	s = fmt.Sprintf(" after sortedheapofwords: time=%s for %d entries by heapofwords.Len(), and %d by Len(sortedheapofworda) \n",
+		sortedheapofwordsTime.String(), heapofwords.Len(), len(sortedheapofwords))
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Println(s)
 	if allowoutput {
-		for _, w := range sortedheapofwords {
+		for i := 0; i < len(sortedheapofwords); i++ {
+			w := sortedheapofwords[i]
 			fmt.Print(w, " ")
 		}
 		fmt.Println()
@@ -1373,7 +1387,7 @@ StraightSelection: 45.28 s
    HeapSort is faster than MergeSort, by a factor of about 1.35, or 35%
    StraightInsertion is faster than StraightSelection, by about a factor of ~1.6
 
-
+After adding and debugging container/heap, it is the slowest of the n*log(n) methods.  But it does work, once I uderstood how it is expected to be used.
 ----------------------------------------------------------------------------------------------------
 From the documentation at golang.org for container/heap
 
