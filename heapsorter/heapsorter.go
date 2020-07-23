@@ -1119,7 +1119,7 @@ func main() {
 	t8 := time.Now()
 	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
 	NonRecursiveQuickedTime := time.Since(t8)
-	s = fmt.Sprintf("After Modula-2 NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
+	s = fmt.Sprintf(" After Modula-2 NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
 	fmt.Println(s)
 	if allowoutput {
 		for _, w := range NonRecursiveQuickSortedWords {
@@ -1141,7 +1141,7 @@ func main() {
 	t8a := time.Now()
 	NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
 	NonRecursiveQuickOberonTime := time.Since(t8a)
-	s = fmt.Sprintf("After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
+	s = fmt.Sprintf(" After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
 	fmt.Println(s)
 	if allowoutput {
 		for _, w := range NonRecursiveQuickSortedOberonWords {
@@ -1299,7 +1299,6 @@ func main() {
 	if allowoutput {
 		fmt.Println("before container/heap sort. The heap is empty at the moment.")
 	}
-
 	heap.Init(&heapofwords)
 	t13 := time.Now()
 	for _, wrd := range mastersliceofwords {
@@ -1387,7 +1386,10 @@ StraightSelection: 45.28 s
    HeapSort is faster than MergeSort, by a factor of about 1.35, or 35%
    StraightInsertion is faster than StraightSelection, by about a factor of ~1.6
 
-After adding and debugging container/heap, it is the slowest of the n*log(n) methods.  But it does work, once I uderstood how it is expected to be used.
+After adding and debugging container/heap, it is the slowest of the n*log(n) methods.
+But it does work, once I uderstood how it is expected to be used.
+Now I think the slowest measurement is an artifact of how I measured.  This sort is not in place, so the timing includes the for loops that
+are not included in the measurement in the other methods.
 ----------------------------------------------------------------------------------------------------
 From the documentation at golang.org for container/heap
 
