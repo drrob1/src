@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "July 22, 2020"
+const LastAlteredDate = "July 23, 2020"
 
 /*
   REVISION HISTORY
@@ -55,6 +55,8 @@ const LastAlteredDate = "July 22, 2020"
                Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
   27 May 20 -- Fixing some comments.  I won't recompile.
   21 Jul 20 -- Now called heapsorter.go, and will compare against the container heap, which is essentially a heapsort.
+  23 Jul 20 -- Got it to work yesterday when I noticed something in the documentation that I initially missed.  Now I'm playing with
+                 the code to Pop to see if my understanding is correct and the modification also works.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -95,12 +97,21 @@ func (h *stringHeap) Pop() interface{} {
 
 /*
 func (h *stringHeap) Pop() interface{} {
+	H := *h // this immediately dereferences the passed pointer.  I want to see if this works as a way to essentially create a ref param as in C++ and D.
+	n := len(H)
+	x := (H)[n-1]
+	H = (H)[:n-1]  Nope, this did not work because it did not return a shorter length slice so there was an infinite loop waiting for length == 0
+	return x
+}
+
+func (h *stringHeap) Pop() interface{} {
 	old := *h
 	n := len(old)
 	x := old[n-1]
 	*h = old[0 : n-1]
 	return x
 }
+
 */
 
 // -----------------------------------------------------------
@@ -1304,13 +1315,10 @@ func main() {
 	for _, wrd := range mastersliceofwords {
 		heap.Push(&heapofwords, wrd)
 	}
-	fmt.Println(" length of heapofwords slice is",
-		len(heapofwords), ", len of master slice is ", len(mastersliceofwords), ", heapofwords.Len is", heapofwords.Len(), ". ")
+	//	fmt.Println(" length of heapofwords slice is", len(heapofwords), ", len of master slice is ", len(mastersliceofwords), ", heapofwords.Len is", heapofwords.Len(), ". ")
 	var str string
 	for heapofwords.Len() > 0 { // Note: as items are popped off of the heap, it's length gets smaller.  So using i < heapofwords.Len() didn't work.
-		// str = string(heapofwords.Pop().(string))  this works to make the interface type treated as the string that it is.
-		//str = heapofwords.Pop().(string) // as does this
-		str = heap.Pop(&heapofwords).(string)
+		str = heap.Pop(&heapofwords).(string) // this works to make the interface type treated as the string that it is.
 		sortedheapofwords = append(sortedheapofwords, str)
 	}
 	sortedheapofwordsTime := time.Since(t13)
@@ -1386,10 +1394,34 @@ StraightSelection: 45.28 s
    HeapSort is faster than MergeSort, by a factor of about 1.35, or 35%
    StraightInsertion is faster than StraightSelection, by about a factor of ~1.6
 
-After adding and debugging container/heap, it is the slowest of the n*log(n) methods.
-But it does work, once I uderstood how it is expected to be used.
-Now I think the slowest measurement is an artifact of how I measured.  This sort is not in place, so the timing includes the for loops that
-are not included in the measurement in the other methods.
+After adding and debugging container/heap, it is the approx the same timing as sort.Stable and sort.SliceStable.
+But it does work once I understood how it is expected to be used.
+This sort is not in place, so the timing includes the for loops that are not included in the measurement in the other methods.
+
+Thu Jul 23 2020 17:16:06 EDT on z76
+ filesize = 834660, requestedwordcount = 119237, numberofwords= 104603, len(mastersliceofwords)= 104603
+ After QuickSort: 25.702455 ms
+ After NonRecursiveQuickSortOberon: 26.821662 ms
+ After sort.Slice: 27.491206 ms
+ After 2nd sort.StringSlice: 29.588204 ms
+ After sort.Strings: 29.732935 ms
+ After sort.Sort: 29.759328 ms
+ After sort.SliceStable: 74.335231 ms
+ after NativeSort: 30.757105 ms
+ After NRheapsort: 45.628029 ms
+ After HeapSort: 47.248887 ms
+ After Modula-2 NonRecursiveQuickSort: 50.680713 ms
+ After ModifiedMergeSort: 56.346407 ms
+ After BadShellSort: 61.245545 ms
+ After sort.Stable: 79.934308 ms
+ after container/heap based sort time=87.553214 ms
+ After mergeSort: 91.337021 ms
+ After MyShellSort: 386.692135 ms
+ After BinaryInsertion: 3.547058203 s
+ After StraightInsertion: 28.062582641 s
+ After ShellSort: 28.50378449 s
+ After StraightSelection: 47.00024184 s
+
 ----------------------------------------------------------------------------------------------------
 From the documentation at golang.org for container/heap
 
