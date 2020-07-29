@@ -1412,31 +1412,31 @@ After adding and debugging container/heap, it is the approx the same timing as s
 But it does work once I understood how it is expected to be used.
 This sort is not in place, so the timing includes the for loops that are not included in the measurement in the other methods.
 
-Thu Jul 23 2020 17:16:06 EDT on z76
+Thu Jul 23 2020 17:16:06 EDT, and then Tue Jul 28 2020 17:38:53 EDT on z76
  filesize = 834660, requestedwordcount = 119237, numberofwords= 104603, len(mastersliceofwords)= 104603
- After QuickSort: 25.702455 ms
- After NonRecursiveQuickSortOberon: 26.821662 ms
- After sort.Slice: 27.491206 ms
- After 2nd sort.StringSlice: 29.588204 ms
- After sort.Strings: 29.732935 ms
- After sort.Sort: 29.759328 ms
- After sort.SliceStable: 74.335231 ms
- after NativeSort: 30.757105 ms
- After NRheapsort: 45.628029 ms
- After HeapSort: 47.248887 ms
- After Modula-2 NonRecursiveQuickSort: 50.680713 ms
- After ModifiedMergeSort: 56.346407 ms
- After BadShellSort: 61.245545 ms
- After sort.Stable: 79.934308 ms
- after container/heap based sort time=87.553214 ms
- After mergeSort: 91.337021 ms
- After MyShellSort: 386.692135 ms
- After BinaryInsertion: 3.547058203 s
- After StraightInsertion: 28.062582641 s
- After ShellSort: 28.50378449 s
- After StraightSelection: 47.00024184 s
-
+ After QuickSort: 25.702455 ms -> 26.126064 ms
+ After NonRecursiveQuickSortOberon: 26.821662 ms -> 26.96439 ms
+ After sort.Slice: 27.491206 ms -> 17.238968 ms
+ After 2nd sort.StringSlice: 29.588204 ms -> 31.060037 ms
+ After sort.Strings: 29.732935 ms -> 30.637129 ms
+ After sort.Sort: 29.759328 ms -> 29.813508 ms
+ After sort.SliceStable: 74.335231 ms -> 75.846885 ms
+ after NativeSort: 30.757105 ms -> 33.118014 ms
+ After NRheapsort: 45.628029 ms -> 46.167062 ms
+ After HeapSort: 47.248887 ms -> 48.055007ms
+ After Modula-2 NonRecursiveQuickSort: 50.680713 ms ->  48.316853 ms
+ After ModifiedMergeSort: 56.346407 ms -> 67.006893 ms
+ After BadShellSort: 61.245545 ms -> 61.051531 ms
+ After sort.Stable: 79.934308 ms -> 80.047117 ms
+ after container/heap based sort time: 87.553214 ms -> 91.973921 ms
+ After mergeSort: 91.337021 ms -> 80.618479 ms
+ After MyShellSort: 386.692135 ms -> 386.779997 ms
+ After BinaryInsertion: 3.547058203 s -> 3.54911457 s
+ After StraightInsertion: 28.062582641 s -> 28.038693805 s
+ After ShellSort: 28.50378449 s -> 28.594864915 s
+ After StraightSelection: 47.00024184 s -> 47.048454729 s
 ----------------------------------------------------------------------------------------------------
+{{{
 From the documentation at golang.org for container/heap
 
 // This example demonstrates an integer heap built using the heap interface.
@@ -1574,4 +1574,5 @@ func main() {
 		fmt.Printf("%.2d:%s ", item.priority, item.value)
 	}
 }
+}}}
 */
