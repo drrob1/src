@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "July 23, 2020"
+const LastAlteredDate = "July 28, 2020"
 
 /*
   REVISION HISTORY
@@ -52,11 +52,12 @@ const LastAlteredDate = "July 23, 2020"
 
                And I fixed a bug in that MyShellSort was not being tested after all.
                When I correctly tested Sedgewick's approch to the ShellSort interval, I found it to be substantially better than what
-               Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
+               Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became much faster as a result.
   27 May 20 -- Fixing some comments.  I won't recompile.
   21 Jul 20 -- Now called heapsorter.go, and will compare against the container heap, which is essentially a heapsort.
   23 Jul 20 -- Got it to work yesterday when I noticed something in the documentation that I initially missed.  Now I'm playing with
                  the code to Pop to see if my understanding is correct and the modification also works.
+  28 Jul 20 -- Changing how the timing is measured for all.  I'm including the copy operation, so that the container/heap measurement is more fair.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -829,12 +830,13 @@ func main() {
 	fmt.Println()
 
 	// sort.StringSlice method
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("slice before first sort.StringSlice:", sliceofwords)
-	}
-	NativeWords := sort.StringSlice(sliceofwords)
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("slice before first sort.StringSlice:", sliceofwords)
+	//	}
 	t9 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	NativeWords := sort.StringSlice(sliceofwords)
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
 	NativeSortTimeNano := NativeSortTime.Nanoseconds()
@@ -852,11 +854,12 @@ func main() {
 	fmt.Println()
 
 	// StraightSelection
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println(" sliceofwords before StraightSelection: ", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println(" sliceofwords before StraightSelection: ", sliceofwords)
+	//	}
 	t0 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	sortedsliceofwords := StraightSelection(sliceofwords)
 	StraightSelectionTime := time.Since(t0)
 	StraightSelectionTimeNano := StraightSelectionTime.Nanoseconds()
@@ -875,11 +878,12 @@ func main() {
 	fmt.Println()
 
 	// StraightInsertion
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before StraightInsertion:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before StraightInsertion:", sliceofwords)
+	//	}
 	t1 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	sliceofsortedwords := StraightInsertion(sliceofwords)
 	StraightInsertionTime := time.Since(t1)
 	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
@@ -897,11 +901,12 @@ func main() {
 	fmt.Println()
 
 	// BinaryInsertion
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before BinaryInsertion:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before BinaryInsertion:", sliceofwords)
+	//	}
 	t2 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
 	BinaryInsertionTime := time.Since(t2)
 	s = fmt.Sprintf(" After BinaryInsertion: %s, %d ns \n", BinaryInsertionTime.String(), BinaryInsertionTime.Nanoseconds())
@@ -919,11 +924,12 @@ func main() {
 	fmt.Println()
 
 	// ShellSort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before ShellSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before ShellSort:", sliceofwords)
+	//	}
 	t3 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	ShellSortedWords := ShellSort(sliceofwords)
 	ShellSortedTime := time.Since(t3)
 	s = fmt.Sprintf(" After ShellSort: %s, %d ns \n", ShellSortedTime.String(), ShellSortedTime.Nanoseconds())
@@ -941,11 +947,12 @@ func main() {
 	fmt.Println()
 
 	// BadShellSort -- now a misnomer as it finally works.
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before BadShellSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before BadShellSort:", sliceofwords)
+	//	}
 	t3a := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	BadShellSortedWords := BadShellSort(sliceofwords)
 	BadShellSortedTime := time.Since(t3a)
 	s = fmt.Sprintf(" After BadShellSort: %s, %d ns \n", BadShellSortedTime.String(), BadShellSortedTime.Nanoseconds())
@@ -963,11 +970,12 @@ func main() {
 	fmt.Println()
 
 	// MyShellSort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before MyShellSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before MyShellSort:", sliceofwords)
+	//	}
 	t3b := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	MyShellSortedWords := MyShellSort(sliceofwords)
 	MyShellSortedTime := time.Since(t3b)
 	s = fmt.Sprintf(" After MyShellSort: %s, %d ns \n", MyShellSortedTime.String(), MyShellSortedTime.Nanoseconds())
@@ -985,11 +993,12 @@ func main() {
 	fmt.Println()
 
 	// HeapSort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before HeapSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before HeapSort:", sliceofwords)
+	//	}
 	t4 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	HeapSortedWords := HeapSort(sliceofwords)
 	HeapSortedTime := time.Since(t4)
 	s = fmt.Sprintf(" After HeapSort: %s, %d ns \n", HeapSortedTime.String(), HeapSortedTime.Nanoseconds())
@@ -1006,14 +1015,13 @@ func main() {
 	check(err)
 	fmt.Println()
 
-	// NRHeapSort which is from Numerical Recipies and converted from C++ coce.
-
-	/*	Did not sort correctly, but did not panic. */
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before NRHeapSort:", sliceofwords)
-	}
+	// NRHeapSort which is from Numerical Recipies and converted from C++ code.
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before NRHeapSort:", sliceofwords)
+	//	}
 	t5 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	NRHeapSortedWords := NRheapsort(sliceofwords)
 	NRHeapTime := time.Since(t5)
 	s = fmt.Sprintf(" After NRheapsort: %s, %d ns \n", NRHeapTime.String(), NRHeapTime.Nanoseconds())
@@ -1030,10 +1038,9 @@ func main() {
 	check(err)
 
 	fmt.Println()
-	/* */
 
 	// ModifiedHeapSort -- doesn't work.
-	/*
+	/* {{{
 		copy(sliceofwords, mastersliceofwords)
 		if allowoutput {
 			fmt.Println("before ModifiedHeapSort:", sliceofwords)
@@ -1054,14 +1061,15 @@ func main() {
 		check(err)
 		fmt.Println(s)
 		fmt.Println()
-	*/
+	}}}  */
 
 	// QuickSort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before QuickSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before QuickSort:", sliceofwords)
+	//	}
 	t6 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	QuickSortedWords := QuickSort(sliceofwords)
 	QuickSortedTime := time.Since(t6)
 	s = fmt.Sprintf(" After QuickSort: %s, %d ns \n", QuickSortedTime.String(), QuickSortedTime.Nanoseconds())
@@ -1079,11 +1087,12 @@ func main() {
 	fmt.Println()
 
 	// MergeSort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before MergeSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before MergeSort:", sliceofwords)
+	//	}
 	t7 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	MergeSortedWords := mergeSort(sliceofwords)
 	MergeSortTime := time.Since(t7)
 	s = fmt.Sprintf(" After mergeSort: %s, %d ns \n", MergeSortTime.String(), MergeSortTime.Nanoseconds())
@@ -1101,11 +1110,12 @@ func main() {
 	fmt.Println()
 
 	// ModifiedMergeSort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before ModifiedMergeSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before ModifiedMergeSort:", sliceofwords)
+	//	}
 	t7a := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	ModifiedMergeSortedWords := ModifiedMergeSort(sliceofwords)
 	ModifiedMergeSortTime := time.Since(t7a)
 	s = fmt.Sprintf(" After ModifiedMergeSort: %s, %d ns \n", ModifiedMergeSortTime.String(), ModifiedMergeSortTime.Nanoseconds())
@@ -1123,11 +1133,12 @@ func main() {
 	fmt.Println()
 
 	// NonRecursiveQuickSort (from Modula-2)
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before Modula-2 nonrecursiveQuickSort:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before Modula-2 nonrecursiveQuickSort:", sliceofwords)
+	//	}
 	t8 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
 	NonRecursiveQuickedTime := time.Since(t8)
 	s = fmt.Sprintf(" After Modula-2 NonRecursiveQuickSort: %s, %d ns \n", NonRecursiveQuickedTime.String(), NonRecursiveQuickedTime.Nanoseconds())
@@ -1145,11 +1156,12 @@ func main() {
 	fmt.Println()
 
 	// NonRecursiveQuickSortOberon
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
-	}
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
+	//	}
 	t8a := time.Now()
+	copy(sliceofwords, mastersliceofwords)
 	NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
 	NonRecursiveQuickOberonTime := time.Since(t8a)
 	s = fmt.Sprintf(" After NonRecursiveQuickSortOberon: %s, %d ns \n", NonRecursiveQuickOberonTime.String(), NonRecursiveQuickOberonTime.Nanoseconds())
@@ -1167,12 +1179,13 @@ func main() {
 	fmt.Println()
 
 	// sort.StringSlice
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before 2nd sort.StringSlice:", sliceofwords)
-	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before 2nd sort.StringSlice:", sliceofwords)
+	//	}
 	t9 = time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	NativeWords = sort.StringSlice(sliceofwords)
 	NativeWords.Sort()
 	NativeSortTime = time.Since(t9)
 	s = fmt.Sprintf(" After 2nd sort.StringSlice: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
@@ -1190,12 +1203,13 @@ func main() {
 	fmt.Println()
 
 	// sort.Sort
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before sort.Sort:", sliceofwords)
-	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before sort.Sort:", sliceofwords)
+	//	}
 	t9 = time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	NativeWords = sort.StringSlice(sliceofwords)
 	sort.Sort(NativeWords)
 	NativeSortTime = time.Since(t9)
 	s = fmt.Sprintf(" After sort.Sort: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
@@ -1213,12 +1227,12 @@ func main() {
 	fmt.Println()
 
 	// sort.Stable
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before sort.Stable:", sliceofwords)
-	}
-	NativeWords = sort.StringSlice(sliceofwords)
 	t9 = time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before sort.Stable:", sliceofwords)
+	//	}
+	NativeWords = sort.StringSlice(sliceofwords)
 	sort.Stable(NativeWords)
 	NativeSortTime = time.Since(t9)
 	s = fmt.Sprintf(" After sort.Stable: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
@@ -1236,11 +1250,11 @@ func main() {
 	fmt.Println()
 
 	// sort.Strings
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before sort.Strings:", sliceofwords)
-	}
 	t10 := time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before sort.Strings:", sliceofwords)
+	//	}
 	sort.Strings(sliceofwords)
 	StringsSortTime := time.Since(t10)
 	s = fmt.Sprintf(" After sort.Strings: %s, %d ns \n", StringsSortTime.String(), StringsSortTime.Nanoseconds())
@@ -1258,14 +1272,14 @@ func main() {
 	fmt.Println()
 
 	// sort.Slice
-	copy(sliceofwords, mastersliceofwords)
-	if allowoutput {
-		fmt.Println("before sort.Slice:", sliceofwords)
-	}
+	t11 := time.Now()
+	//	copy(sliceofwords, mastersliceofwords)
+	//	if allowoutput {
+	//		fmt.Println("before sort.Slice:", sliceofwords)
+	//	}
 	lessfunction := func(i, j int) bool {
 		return sliceofwords[i] < sliceofwords[j]
 	}
-	t11 := time.Now()
 	sort.Slice(sliceofwords, lessfunction)
 	SliceSortTime := time.Since(t11)
 	s = fmt.Sprintf(" After sort.Slice: %s, %d ns \n", SliceSortTime.String(), SliceSortTime.Nanoseconds())
@@ -1283,11 +1297,11 @@ func main() {
 	fmt.Println()
 
 	// sort.SliceStable
+	t12 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
 		fmt.Println("before sort.SliceStable:", sliceofwords)
 	}
-	t12 := time.Now()
 	sort.SliceStable(sliceofwords, lessfunction)
 	SliceStableSortTime := time.Since(t12)
 	s = fmt.Sprintf(" After sort.SliceStable: %s, %d ns \n", SliceStableSortTime.String(), SliceStableSortTime.Nanoseconds())
@@ -1315,10 +1329,10 @@ func main() {
 	for _, wrd := range mastersliceofwords {
 		heap.Push(&heapofwords, wrd)
 	}
-	//	fmt.Println(" length of heapofwords slice is", len(heapofwords), ", len of master slice is ", len(mastersliceofwords), ", heapofwords.Len is", heapofwords.Len(), ". ")
+	//                                                fmt.Println(" length of heapofwords slice is", len(heapofwords), ", len of master slice is ", len(mastersliceofwords), ", heapofwords.Len is", heapofwords.Len(), ". ")
 	var str string
 	for heapofwords.Len() > 0 { // Note: as items are popped off of the heap, it's length gets smaller.  So using i < heapofwords.Len() didn't work.
-		str = heap.Pop(&heapofwords).(string) // this works to make the interface type treated as the string that it is.
+		str = heap.Pop(&heapofwords).(string) // this works to force the interface type treated as the string that it is.
 		sortedheapofwords = append(sortedheapofwords, str)
 	}
 	sortedheapofwordsTime := time.Since(t13)
