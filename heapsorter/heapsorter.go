@@ -1372,7 +1372,7 @@ Thu Jul 23 2020 17:16:06 EDT, and then Tue Jul 28 2020 17:38:53 EDT on z76
  filesize = 834660, requestedwordcount = 119237, numberofwords= 104603, len(mastersliceofwords)= 104603
  After QuickSort: 25.702455 ms -> 26.126064 ms
  After NonRecursiveQuickSortOberon: 26.821662 ms -> 26.96439 ms
- After sort.Slice: 27.491206 ms -> 17.238968 ms
+ After sort.Slice: 27.491206 ms -> 27.702159 ms
  After 2nd sort.StringSlice: 29.588204 ms -> 31.060037 ms
  After sort.Strings: 29.732935 ms -> 30.637129 ms
  After sort.Sort: 29.759328 ms -> 29.813508 ms
