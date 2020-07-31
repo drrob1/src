@@ -23,8 +23,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-  "strconv"
-  "strings"
+	"strconv"
+	"strings"
 	"tokenize"
 )
 
@@ -200,114 +200,124 @@ CountLinesLoop:
 		fmt.Println(" Error from newX.Solve is", er)
 	}
 	ss = write(newX, 5)
-	fmt.Println(" newX:")
+	fmt.Println(" write newX:")
 	for _, s := range ss {
 		fmt.Print(s)
 	}
 	fmt.Println()
 
 	ss = writeZero(newX, 5)
-    fmt.Println(" newX:")
-    for _, s := range ss {
-      fmt.Print(s)
-    }
-    fmt.Println()
+	fmt.Println(" writeZero newX:")
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+	fmt.Println()
 
 	fmt.Println()
 
 	pause()
 
+	// Now to make B a vector (well, a column vector, but still a vector) and then use vector routines.  Just to see if I can get it to work, too.
 
-  // Now to make B a vector (well, a column vector, but still a vector) and then use vector routines.  Just to see if I can get it to work, too.
+	vecB := mat.NewVecDense(N, nil)
+	for i := 0; i < N; i++ {
+		vecB.SetVec(i, newB.At(i, 0))
+	}
 
-    vecB := mat.NewVecDense(N, nil)
-    for i := 0; i < N; i++ {
-      vecB.SetVec(i, newB.At(i, 0))
-    }
+	var vecX mat.VecDense
+	er = vecX.SolveVec(newA, vecB)
+	if er != nil {
+		fmt.Println(" Error from vecX.Solve is", er)
+	}
 
-    var vecX mat.VecDense
-    er = vecX.SolveVec(newA, vecB)
-    if er != nil {
-      fmt.Println(" Error from vecX.Solve is", er)
-    }
+	fmt.Println(" B and X are now vectors instead of matricies")
+	ss = vectorWrite(*vecB, 5)
+	fmt.Println(" B: ")
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+	fmt.Println()
+	fmt.Println()
 
-    fmt.Println(" B and X are now vectors instead of matricies")
-    vectorB := *vecB
-    ss = vectorWrite(vectorB, 5)
-    fmt.Println(" B: ")
+	ss = vectorWrite(vecX, 5)
+	fmt.Println(" X: ")
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+	fmt.Println()
+	fmt.Println()
+
+	var inverseA mat.Dense
+	err = inverseA.Inverse(newA)
+	if err != nil {
+		fmt.Println(" Error from inverseA.Inverse is", err)
+	}
+	var newX2 mat.Dense // empty matrix is constructed
+	newX2.Mul(&inverseA, newB)
+	fmt.Println(" Using inverse of A to solve for X:")
+	ss = write(newX2, 5)
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+
+	fmt.Println()
+	fmt.Println()
+
+	pause()
+
+	fmt.Println(" Do the gonum.org computations look right?  First newA * newX - newB by solve, then by inverse")
+
+	var newE, newF mat.Dense
+	newE.Mul(newA, &newX) // compute newE = newA * newX
+	newE.Sub(newB, &newE) // compute newA * newX - newB which should be all zeros
+	fmt.Println(" newA * newX - newB should be all zeros")
+	ss = write(newE, 5)
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+
+	fmt.Println(" should still be all zeros")
+	ss = writeZero(newE, 5)
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+
+	fmt.Println()
+	fmt.Println()
+
+	pause()
+
+	newF.Mul(newA, &newX2) // compute newF = NewA * newX2
+	newF.Sub(newB, &newF)  // compute newA * newX2 - newB which should also be all zeros
+	ss = write(newF, 5)
+	fmt.Println(" newA * newX2 - newB should be matrix of all zeros")
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+
+	ss = writeZero(newF, 5)
+	fmt.Println(" should still be matrix of all zeros")
+	for _, s := range ss {
+		fmt.Print(s)
+	}
+
+	fmt.Println()
+	fmt.Println()
+
+	pause()
+
+	fmt.Println(" newA * vecX - vecB should be all zeros")
+	var checkVec mat.VecDense
+	checkVec.MulVec(newA, &vecX)
+	checkVec.SubVec(vecB, &checkVec)
+
     for _, s := range ss {
       fmt.Print(s)
     }
+
     fmt.Println()
     fmt.Println()
 
-
-    ss = vectorWrite(vecX, 5)
-      fmt.Println(" X: ")
-      for _, s := range ss {
-        fmt.Print(s)
-      }
-      fmt.Println()
-      fmt.Println()
-
-
-
-/*
-		  var inverseA mat.Dense
-		  err = inverseA.Inverse(newA)
-		  if err != nil {
-			  fmt.Println(" Error from inverseA.Inverse is", err)
-		  }
-		  var newX2 mat.Dense // empty matrix is constructed
-		  newX2.Mul(inverseA, newB)
-		  ss = write(newX2, 5)
-		  for _, s := range ss {
-			  fmt.Print(s)
-		  }
-
-		  fmt.Println()
-		  fmt.Println()
-
-		  pause()
-
-	  fmt.Println(" Do the gonum.org computations look right?  First newA * newX - newB by solve, then by inverse")
-
-	  var newE, newF mat.Dense
-	  newE.Mul(newA, newX) // compute newE = newA * newX
-	  newE.Sub(newB)       // compute newA * newX - newB which should be all zeros
-	  ss = write(newE)
-	  for _, s := range ss {
-		  fmt.Print(s)
-	  }
-
-	  ss = writeZero(newE)
-	  for _, s := range ss {
-		  fmt.Print(s)
-	  }
-
-	  fmt.Println()
-	  fmt.Println()
-
-	  pause()
-
-	  newF.Mul(newA, newX2) // compute newF = NewA * newX2
-	  newF.Sub(newB)        // compute newA * newX2 - newB which should also be all zeros
-	  ss = write(newF)
-
-	  for _, s := range ss {
-		  fmt.Print(s)
-	  }
-
-	  ss = writeZero(newF)
-	  for _, s := range ss {
-		  fmt.Print(s)
-	  }
-
-	  fmt.Println()
-	  fmt.Println()
-
-
- */
 } // END Solve.
 
 func pause() {
@@ -328,33 +338,33 @@ func write(M mat.Dense, places int) []string {
 
 	// Writes the r x c matrix M to a string slice which is returned.  Each string represents a field "places" characters wide.
 
-    rows, cols := M.Dims()
-    OutputStringSlice := make([]string, 0, rows * cols)
+	rows, cols := M.Dims()
+	OutputStringSlice := make([]string, 0, rows*cols)
 
-    for i := 0; i < rows; i++ {
-          for j := 0; j < cols; j++ {
-              ss := strconv.FormatFloat(M.At(i, j), 'G', places, 64)
-              OutputStringSlice = append(OutputStringSlice, fmt.Sprintf("%10s", ss))
-          } // END FOR j
-          OutputStringSlice = append(OutputStringSlice, "\n")
-    } // END FOR i
-    OutputStringSlice = append(OutputStringSlice, "\n")
-    return OutputStringSlice
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			ss := strconv.FormatFloat(M.At(i, j), 'G', places, 64)
+			OutputStringSlice = append(OutputStringSlice, fmt.Sprintf("%10s", ss))
+		} // END FOR j
+		OutputStringSlice = append(OutputStringSlice, "\n")
+	} // END FOR i
+	OutputStringSlice = append(OutputStringSlice, "\n")
+	return OutputStringSlice
 } // END write
 
 func writeZero(M mat.Dense, places int) []string {
 
 	// Writes the r x c matrix M to a string slice which is returned.  Each string represents a field "places" characters wide.
 
-    rows, cols := M.Dims()
-	OutputStringSlice := make([]string, 0, rows * cols)
+	rows, cols := M.Dims()
+	OutputStringSlice := make([]string, 0, rows*cols)
 
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
 			v := M.At(i, j)
 			ss := ""
 			if math.Abs(v) < toleranceFactor {
-				ss = "0.0"
+				ss = "0    "
 			} else {
 				ss = strconv.FormatFloat(M.At(i, j), 'G', places, 64)
 			}
@@ -367,13 +377,13 @@ func writeZero(M mat.Dense, places int) []string {
 } // END write
 
 func vectorWrite(M mat.VecDense, places int) []string {
-  rows, cols := M.Dims()
-  OutputStringSlice := make([]string, 0, rows * cols)
+	rows, cols := M.Dims()
+	OutputStringSlice := make([]string, 0, rows*cols)
 
-  for i := 0; i < rows; i++ {
-      ss := strconv.FormatFloat(M.At(i, 0), 'G', places, 64)
-      OutputStringSlice = append(OutputStringSlice, fmt.Sprintf("%10s", ss))
-  } // END FOR i
-  OutputStringSlice = append(OutputStringSlice, "\n")
-  return OutputStringSlice
+	for i := 0; i < rows; i++ {
+		ss := strconv.FormatFloat(M.At(i, 0), 'G', places, 64)
+		OutputStringSlice = append(OutputStringSlice, fmt.Sprintf("%10s", ss))
+	} // END FOR i
+	OutputStringSlice = append(OutputStringSlice, "\n")
+	return OutputStringSlice
 } // END write
