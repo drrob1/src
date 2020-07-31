@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"gonum.org/v1/gonum/stat"
 	"io/ioutil"
 	"math"
 	"os"
@@ -56,9 +57,10 @@ import (
    4 Nov 18 -- Realized that the intercept is log(counts), so exp(counts) is worth displaying.
    6 Nov 18 -- Will also account for a lag time.
   19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
+  31 Jul 20 -- Coding use of gonum.org, just for experience.
 */
 
-const LastAltered = "20 Nov 19"
+const LastAltered = "July 31, 2020"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -233,7 +235,12 @@ func main() {
 		}
 	} // END main input reading loop
 
-	// Now need to populate the Time And Counts Table
+	// Now need to populate the Time And Counts Table called rows.
+	// And now to construct xvector, yvector and wtvector for gonum.org stats package.
+	lenvector := len(im)
+	xvector := make([]float64, 0, lenvector)
+	yvector := make([]float64, 0, lenvector)
+	wtvector := make([]float64, 0, lenvector)
 	for c := range im {
 		point.x = im[c][0]
 		point.OrigY = im[c][1]
@@ -248,7 +255,13 @@ func main() {
 		}
 		point.sigy = point.stdev
 		rows = append(rows, point)
+
+		// added for gonum stats package
+		xvector = append(xvector, point.x)
+		yvector = append(yvector, point.y)
+		wtvector = append(wtvector, point.stdev)
 	}
+
 	// this is a closure, I think my first one.
 	writestr := func(s string) {
 		if bufioErr != nil {
@@ -342,16 +355,44 @@ func main() {
 	IteratedHalfLife := -ln2 / IteratedResults.Slope
 	fmt.Printf(" Old iterative method: halflife is %.2f minutes, exp(intercept) is %.2f.", IteratedHalfLife, exp(IteratedResults.Intercept))
 	fmt.Println()
-	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, R^2 = %.6f.",
+	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, R^2 = %.6f.",
 		IteratedHalfLife, IteratedResults.Slope, exp(IteratedResults.Intercept), IteratedResults.R2)
 	writestr(s)
 	writerune()
 	check(bufioErr)
 	fmt.Println()
+
+	// Adding code to use gonum stats package
+/*
+	fmt.Print(" xvector is: ")
+	for _, x := range xvector {
+		fmt.Print(x, "  ")
+	}
+	fmt.Println()
+	fmt.Print(" yvector is:  ")
+	for _, y := range yvector {
+		fmt.Print(y, "  ")
+	}
+	fmt.Println()
+	fmt.Print(" weighting factors vector is: ")
+	for _, wt := range wtvector {
+		fmt.Print(wt, "  ")
+	}
+	fmt.Println()
+*/
+
+	interceptStats, slopeStats := stat.LinearRegression(xvector, yvector, wtvector, false)
+	halfLifeStats := -ln2 / slopeStats
+	s = fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f counts. \n", halfLifeStats, exp(interceptStats))
+	fmt.Println(s)
+	writestr(s)
+	writerune()
+
+	fmt.Println()
 	fmt.Println()
 
 	// Separating output from peak, so it's easier to read.
-	// ask about lag time
+	// ask me about lag time for this patient.
 
 	proposedPeak := FindLocalCountsPeak(rows)
 	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "]  ")
@@ -380,6 +421,15 @@ func main() {
 	WeightedPeakHalflife3 := -ln2 / WeightedPeakResults3.Slope
 	IteratedPeakResults := DoOldWeightedLR(peakrows, stdpeakslope, stdpeakintercept)
 	IteratedPeakHalflife := -ln2 / IteratedPeakResults.Slope
+
+	peakxvector := xvector[peakpt:]
+	peakyvector := yvector[peakpt:]
+	peakwtvector := wtvector[peakpt:]
+	interceptPeakStats, slopePeakStats := stat.LinearRegression(peakxvector, peakyvector, peakwtvector, false)
+	halfLifePeakStats := -ln2 / slopePeakStats
+
+	fmt.Println()
+	fmt.Println()
 
 	if PeakNonZero {
 		fmt.Println()
@@ -422,6 +472,11 @@ func main() {
 			IteratedPeakHalflife, IteratedPeakResults.Slope, exp(IteratedPeakResults.Intercept), IteratedPeakResults.R2)
 		writestr(s)
 		writerune()
+		s = fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f. \n", halfLifePeakStats, exp(interceptPeakStats))
+		fmt.Println(s)
+		writestr(s)
+		writerune()
+
 		check(bufioErr)
 	}
 
