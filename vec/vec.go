@@ -1,25 +1,27 @@
 // IMPLEMENTATION MODULE Vec;
 package vec
 
-/********************************************************)
-  (*                                                      *)
-  (*                 Vector arithmetic                    *)
-  (*                                                      *)
-  (*  Programmer:         P. Moylan                       *)
-  (*  Last edited:        15 August 1996                  *)
-  (*  Status:             Seems to be working             *)
-  (*                                                      *)
-  (*      Portability note: this module contains some     *)
-  (*      open array operations which are a language      *)
-  (*      extension in XDS Modula-2 but not part of       *)
-  (*      ISO standard Modula-2.  So far I haven't worked *)
-  (*      out how to do this in the standard language.    *)
-  (*                                                      *)
-  (********************************************************/
+/*
+                  Vector arithmetic
 
-// REVISION HISTORY
-// ================
-// 20 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
+   Programmer:         P. Moylan
+   Last edited:        15 August 1996
+   Status:             Seems to be working
+
+       Portability note: this module contains some
+       open array operations which are a language
+       extension in XDS Modula-2 but not part of
+       ISO standard Modula-2.  So far I haven't worked
+       out how to do this in the standard language.
+*/
+
+/*
+ REVISION HISTORY
+ ================
+ 20 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
+  1 Aug 2020 -- Cleaned up code and comments, esp comments.
+
+*/
 
 import (
 	//  "os"
@@ -38,61 +40,39 @@ import (
 	//  "tokenize"
 )
 
-// type EltType float64;
-type VectorPtr []float64 // TYPE VectorPtr = POINTER TO ARRAY OF EltType;
+type VectorSlice []float64
 
-/************************************************************************/
+/*
+   CREATING VECTORS
+*/
 
-/************************************************************************)
-(*                  CREATING AND DESTROYING VECTORS                     *)
-(************************************************************************/
-
-//  PROCEDURE NewVector (N: CARDINAL): VectorPtr;
-func NewVector(N int) VectorPtr {
-
-	/* Creates a vector of N elements. */
+func NewVector(N int) VectorSlice {
+	// Creates a vector of N elements.
 	// old code basically did this: VAR result: VetorcPtr; NEW (result, N-1); RETURN result;
 
-	vector := make(VectorPtr, N)
+	vector := make(VectorSlice, N)
 	return vector
 }
 
-/************************************************************************
-Commented out as this is not needed in Go.  The garbage collector takes care of this.
-PROCEDURE DisposeVector (VAR (*INOUT*) V: VectorPtr;  N: CARDINAL);
+// PROCEDURE DisposeVector (VAR (*INOUT*) V: VectorSlice;  N: CARDINAL);  BEGIN DISPOSE (V); END DisposeVector;
 
-    (* Deallocates a vector of N elements. *)
+func Copy(A VectorSlice) VectorSlice {
+	var B VectorSlice
 
-    BEGIN
-        DISPOSE (V);
-    END DisposeVector;
-
-(************************************************************************)
-(*                          COPYING A VECTOR                            *)
-(************************************************************************/
-
-//                          PROCEDURE Copy (A: ARRAY OF EltType;  N: CARDINAL; VAR (*OUT*) B: ARRAY OF EltType);
-func Copy(A VectorPtr) VectorPtr {
-
-	// Copies an N-element vector A to B.
-	var B VectorPtr
-
-	for i := range A { // FOR i := 0 TO N-1 DO
+	for i := range A {
 		B[i] = A[i]
-	} //END FOR
+	}
 	return B
-} //    END Copy;
+}
 
-/************************************************************************)
-(*                          VECTOR ARITHMETIC                           *)
-(************************************************************************/
+/*
+   VECTOR ARITHMETIC
+*/
 
-//                     PROCEDURE Add (A, B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
-func Add(A, B VectorPtr) VectorPtr {
-
+func Add(A, B VectorSlice) VectorSlice {
 	// Computes C = A + B.
 
-	var C VectorPtr
+	var C VectorSlice
 
 	if len(A) != len(B) {
 		panic(" Vector Add and lengths of Vector A and Vector B are not the same.")
@@ -106,12 +86,10 @@ func Add(A, B VectorPtr) VectorPtr {
 
 /************************************************************************/
 
-//                     PROCEDURE Sub (A, B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
-func Sub(A, B VectorPtr) VectorPtr {
+func Sub(A, B VectorSlice) VectorSlice {
+	// Computes C = A - B.
 
-	// Computes C = A - B.  All vectors have elts elements.
-
-	var C VectorPtr
+	var C VectorSlice
 
 	if len(A) != len(B) {
 		panic(" Vector Sub and lengths of Vector A and Vector B are not the same.")
@@ -125,14 +103,12 @@ func Sub(A, B VectorPtr) VectorPtr {
 
 /************************************************************************/
 
-//PROCEDURE Mul(A:ARRAY OF ARRAY OF EltType;B:ARRAY OF EltType;N1,N2: CARDINAL;VAR(*OUT*)C: ARRAY OF EltType);
-func Mul(A []VectorPtr, B VectorPtr) VectorPtr {
-
+func Mul(A []VectorSlice, B VectorSlice) VectorSlice {
 	// Computes C = A*B, where A is N1xN2 and B is N2x1.
 	// C = A*B, where A is a 2D matrix, and B is a column vector, so result must also be a column vector
 
 	var sum float64
-	var C VectorPtr
+	var C VectorSlice
 
 	for i := range A { // FOR i := 0 TO N1-1 DO  range over the 2D matrix
 		sum = 0
@@ -146,12 +122,10 @@ func Mul(A []VectorPtr, B VectorPtr) VectorPtr {
 
 /************************************************************************/
 
-// PROCEDURE ScalarMul (A: EltType;  B: ARRAY OF EltType;  elts: CARDINAL; VAR (*OUT*) C: ARRAY OF EltType);
-func ScalarMul(A float64, B VectorPtr) VectorPtr {
-
+func ScalarMul(A float64, B VectorSlice) VectorSlice {
 	// Computes C = A*B, where A is scalar and B is a vector
 
-	var C VectorPtr
+	var C VectorSlice
 
 	for i := range B { // FOR i := 0 TO elts-1 DO  range over the B vector
 		C[i] = A * B[i]
@@ -159,17 +133,12 @@ func ScalarMul(A float64, B VectorPtr) VectorPtr {
 	return C
 } //    END ScalarMul;
 
-/************************************************************************)
-(*                              OUTPUT                                  *)
-(************************************************************************/
+/*
+   OUTPUT
+*/
 
-//                                      PROCEDURE Write (V: ARRAY OF EltType;  N: CARDINAL;  places: CARDINAL);
-func Write(V VectorPtr, places int) []string {
-
-	/* Writes the N-element vector V to the screen, where each  *)
-	   (* column occupies a field "places" characters wide.        */
-
-	// VAR i: CARDINAL;
+func Write(V VectorSlice, places int) []string {
+	// Writes the N-element vector V to a string slice (formerly the screen), where each column occupies a field "places" characters wide.
 
 	OutputStringSlice := make([]string, 0, 20)
 	for i := range V {
@@ -178,6 +147,6 @@ func Write(V VectorPtr, places int) []string {
 	}
 	OutputStringSlice = append(OutputStringSlice, "\n")
 	return OutputStringSlice
-} //    END Write;
+} // END Write;
 
 // END Vec.
