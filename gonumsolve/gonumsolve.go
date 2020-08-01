@@ -9,8 +9,8 @@ MODULE Solve;
    3 Mar 05 -- Made version 2 write lines like eqn w/o =.
    4 Mar 05 -- Don't need N as 1st line now.
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
-  24 Dec 16 -- Converted to Go.
-  31 Jul 20 -- Starting conversion to use gonum.org/mat code
+  24 Dec 16 -- Converted to Go.  Ignores non-numeric entries to allow for comments.  First non-numeric entry skips rest of line.
+  31 Jul 20 -- Added gonum.org/mat code.  I learned a few things about pointers.  More details below.
 */
 
 import (
@@ -112,7 +112,8 @@ CountLinesLoop:
 
 	N := lines // Note: lines is 0 origin, and therefore so is N
 
-	// Now need to create A and B matrices
+
+	// Now need to create A and B matrices, using my own code.
 
 	A := mymat.NewMatrix(N, N)
 	B := mymat.NewMatrix(N, 1)
@@ -156,6 +157,7 @@ CountLinesLoop:
 
 	pause()
 
+
 	// Check that the solution looks right.
 
 	C := mymat.NewMatrix(N, 1)
@@ -181,7 +183,11 @@ CountLinesLoop:
 
 	pause()
 
+
 	// Now for gonum.org mat code
+	// Some of the routines take a pointer, some do not.  mat.NewDense makes a pointer.  var mat.Dense does not.  So some
+	// of the routines needed the & adrof operator, and in one case, I had to dereference the pointer for it to work.
+	// This IDE helped me to sort this out by suggesting fixes to these errors.
 
 	fmt.Println(" Using gonum.org Solve")
 	newA := mat.NewDense(N, N, nil)

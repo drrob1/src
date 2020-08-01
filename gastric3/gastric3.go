@@ -363,7 +363,7 @@ func main() {
 	fmt.Println()
 
 	// Adding code to use gonum stats package
-/*
+/* It works, so I took this out.
 	fmt.Print(" xvector is: ")
 	for _, x := range xvector {
 		fmt.Print(x, "  ")
