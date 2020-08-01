@@ -10,7 +10,7 @@ MODULE Solve;
    4 Mar 05 -- Don't need N as 1st line now.
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
   24 Dec 16 -- Converted to Go.  Ignores non-numeric entries to allow for comments.  First non-numeric entry skips rest of line.
-  31 Jul 20 -- Added gonum.org/mat code.  I learned a few things about pointers.  More details below.
+  31 Jul 20 -- Added gonum.org/mat code, and now called gonumsolve.go.  I learned a few things about pointers.  More details below.
 */
 
 import (
