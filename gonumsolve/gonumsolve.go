@@ -254,7 +254,8 @@ CountLinesLoop:
 	fmt.Println()
 
 	var inverseA mat.Dense
-	err = inverseA.Inverse(newA)
+	err = inverseA.Inverse(newA) // I think this method has a pointer receiver, but syntatic sugar does not require me to dereference inverseA
+	                            // It compiles fine if I declare var inverseA *matDense and then remove the adrof operator in the call to Mul.
 	if err != nil {
 		fmt.Println(" Error from inverseA.Inverse is", err)
 	}
