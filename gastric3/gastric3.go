@@ -60,6 +60,7 @@ import (
   31 Jul 20 -- Coding use of gonum.org, just for experience.
    2 Aug 20 -- Got idea to vary uncertainty in counts as a function of i, so there is more uncertainty in later points.
                  And removed the check for error > number itself.  I think the results are better.
+                 Nevermind.  I'm reverting this change because the T-1/2 was higher than the orig in many runs of this.
 */
 
 const LastAltered = "Aug 2, 2020"
@@ -247,8 +248,8 @@ func main() {
 		point.x = im[c][0]
 		point.OrigY = im[c][1]
 		point.y = math.Log(point.OrigY)
-		errorFactor := StDevFac + 5 * float64(c)
-		point.stdev = math.Abs(math.Log(point.OrigY * errorFactor / 100)) // treating StDevFac as a %-age.
+		//errorFactor := StDevFac + 5 * float64(c)  Nevermind.  See note above
+		point.stdev = math.Abs(math.Log(point.OrigY * StDevFac / 100)) // treating StDevFac as a %-age.
 //		if math.Abs(point.y) < math.Abs(point.stdev) {
 //			point.stdev = math.Abs(point.y)
 //		}
