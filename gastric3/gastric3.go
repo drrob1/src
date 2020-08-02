@@ -337,7 +337,7 @@ func main() {
 	weightedhalflife2 := -ln2 / WeightedResults2.Slope
 	fmt.Printf(" fitful weighted: halflife is %.2f minutes, exp(intercept) is %.2f counts.", weightedhalflife2, exp(WeightedResults2.Intercept))
 	fmt.Println()
-	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exo(intercept) = %.2f, fit is %.6f.",
+	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
 		weightedhalflife2, WeightedResults2.Slope, exp(WeightedResults2.Intercept), WeightedResults2.GoodnessOfFit)
 	writestr(s)
 	writerune()
@@ -459,7 +459,7 @@ func main() {
 		writerune()
 		fmt.Printf(" fitful peak weighted: halflife is %.2f minutes, exp(intercept) is %.2f counts.", WeightedPeakHalflife2, exp(WeightedPeakResults2.Intercept))
 		fmt.Println()
-		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exo(intercept) = %.2f, fit is %.6f.",
+		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
 			WeightedPeakHalflife2, WeightedPeakResults2.Slope, exp(WeightedPeakResults2.Intercept), WeightedPeakResults2.GoodnessOfFit)
 		writestr(s)
 		writerune()
