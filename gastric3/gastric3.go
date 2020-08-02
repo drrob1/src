@@ -61,6 +61,8 @@ import (
    2 Aug 20 -- Got idea to vary uncertainty in counts as a function of i, so there is more uncertainty in later points.
                  And removed the check for error > number itself.  I think the results are better.
                  Nevermind.  I'm reverting this change because the T-1/2 was higher than the orig in many runs of this.
+                 So instead of changing the error values, I'll change the weights for the gonum computation.
+                 And I added an unweighted run of gonum's LinearRegression.
 */
 
 const LastAltered = "Aug 2, 2020"
@@ -244,15 +246,16 @@ func main() {
 	xvector := make([]float64, 0, lenvector)
 	yvector := make([]float64, 0, lenvector)
 	wtvector := make([]float64, 0, lenvector)
+	unwtvector := make([]float64, 0, lenvector)
 	for c := range im {
 		point.x = im[c][0]
 		point.OrigY = im[c][1]
 		point.y = math.Log(point.OrigY)
 		//errorFactor := StDevFac + 5 * float64(c)  Nevermind.  See note above
 		point.stdev = math.Abs(math.Log(point.OrigY * StDevFac / 100)) // treating StDevFac as a %-age.
-//		if math.Abs(point.y) < math.Abs(point.stdev) {
-//			point.stdev = math.Abs(point.y)
-//		}
+		//		if math.Abs(point.y) < math.Abs(point.stdev) {
+		//			point.stdev = math.Abs(point.y)
+		//		}
 		point.sigx = point.x * StDevTime / 100
 		if point.sigx < 2 {
 			point.sigx = 2
@@ -263,7 +266,9 @@ func main() {
 		// added for gonum stats package
 		xvector = append(xvector, point.x)
 		yvector = append(yvector, point.y)
-		wtvector = append(wtvector, point.stdev)
+		weight := float64(c) / 2            // these are weights, not uncertainties, so I'll try something so that the later points have more weight.
+		wtvector = append(wtvector, weight)
+		unwtvector = append(unwtvector, 1.0)
 	}
 
 	// this is a closure, I think my first one.
@@ -290,12 +295,14 @@ func main() {
 
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
-	fmt.Println(" i  X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev")
-	fmt.Println()
-	writestr(" i  X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev") // the closure from above
+	fmt.Println(" i  X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev   Wt Vector ")
+	fmt.Println(" =  ==============  ============  =====     =======   =======   =========")
+	writestr(" i  X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev   Wt Vector") // the closure from above
 	writerune()
 	for i, p := range rows {
-		s := fmt.Sprintf("%2d %11.0f %13.2f %10.4f %10.4f %10.4f\n", i, p.x, p.OrigY, p.y, p.sigx, p.stdev)
+		// The last format verb has a smaller width to look more balanced when displayed, as only 1 decimal place is shown.
+		s := fmt.Sprintf("%2d %11.0f %13.2f %10.4f %10.4f %10.4f %8.1f\n",
+			i, p.x, p.OrigY, p.y, p.sigx, p.stdev, wtvector[i])
 		fmt.Print(s)
 		writestr(s) // the closure from above
 	}
@@ -364,10 +371,10 @@ func main() {
 	writestr(s)
 	writerune()
 	check(bufioErr)
-	fmt.Println()
+	//fmt.Println()
 
 	// Adding code to use gonum stats package
-/* It works, so I took this out.
+	/* It works, so I took this out.
 	fmt.Print(" xvector is: ")
 	for _, x := range xvector {
 		fmt.Print(x, "  ")
@@ -383,15 +390,24 @@ func main() {
 		fmt.Print(wt, "  ")
 	}
 	fmt.Println()
-*/
+	*/
 
 	interceptStats, slopeStats := stat.LinearRegression(xvector, yvector, wtvector, false)
 	halfLifeStats := -ln2 / slopeStats
 	s = fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f counts. \n", halfLifeStats, exp(interceptStats))
-	fmt.Println(s)
+	fmt.Print(s)
 	writestr(s)
 	writerune()
+	check(bufioErr)
 
+	interceptUnWtStats, slopeUnWtStats := stat.LinearRegression(xvector, yvector, unwtvector, false)
+	halflifeUnWtStats := -ln2 / slopeUnWtStats
+	s = fmt.Sprintf(" gonum.org unweighted LinearRegression halflife is %.2f minutes, exp(intercpt) is %.2f counts. 'n",
+		halflifeUnWtStats, interceptUnWtStats)
+	// fmt.Print(s)  same as original unweighted slope and intercept.  So I won't display it but I will write it to the file.
+	writestr(s)
+	writerune()
+	check(bufioErr)
 	fmt.Println()
 	fmt.Println()
 
@@ -429,19 +445,23 @@ func main() {
 	peakxvector := xvector[peakpt:]
 	peakyvector := yvector[peakpt:]
 	peakwtvector := wtvector[peakpt:]
+	peakunwtvector := unwtvector[peakpt:]
 	interceptPeakStats, slopePeakStats := stat.LinearRegression(peakxvector, peakyvector, peakwtvector, false)
 	halfLifePeakStats := -ln2 / slopePeakStats
+
+	interceptPeakUnWtStats, slopePeakUnWtStats := stat.LinearRegression(peakxvector, peakyvector, peakunwtvector, false)
+	halfLifePeakUnWtStats := -ln2 / slopePeakUnWtStats
 
 	fmt.Println()
 	fmt.Println()
 
 	if PeakNonZero {
-		fmt.Println()
-		fmt.Println()
+		//	fmt.Println()
+		//	fmt.Println()
 		writerune()
 		writerune()
 		s = fmt.Sprintf(" Peak point is at %.3g minutes.\n", peakrows[0].x)
-		fmt.Println(s)
+		fmt.Print(s)
 		writestr(s)
 		fmt.Printf(" Original unweighted peak halflife is %.2f minutes, and exp(intercept) is %.2f counts.\n",
 			stdpeakhalflife, exp(stdpeakintercept))
@@ -476,8 +496,15 @@ func main() {
 			IteratedPeakHalflife, IteratedPeakResults.Slope, exp(IteratedPeakResults.Intercept), IteratedPeakResults.R2)
 		writestr(s)
 		writerune()
-		s = fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f. \n", halfLifePeakStats, exp(interceptPeakStats))
-		fmt.Println(s)
+		s = fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.2f minutes, exp(intercept) is %.2f. \n",
+			halfLifePeakStats, exp(interceptPeakStats))
+		fmt.Print(s)
+		writestr(s)
+		writerune()
+
+		s = fmt.Sprintf(" gonum.org UnWeighted LR peak halflife is %.2f minutes, exp(intrcpt) is %.2f. \n",
+			halfLifePeakUnWtStats, exp(interceptPeakUnWtStats))
+		// fmt.Print(s)  same as original unweighted slope and intercept.  So I won't display it but I will write it to the file.
 		writestr(s)
 		writerune()
 
