@@ -58,9 +58,11 @@ import (
    6 Nov 18 -- Will also account for a lag time.
   19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
   31 Jul 20 -- Coding use of gonum.org, just for experience.
+   2 Aug 20 -- Got idea to vary uncertainty in counts as a function of i, so there is more uncertainty in later points.
+                 And removed the check for error > number itself.  I think the results are better.
 */
 
-const LastAltered = "July 31, 2020"
+const LastAltered = "Aug 2, 2020"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -245,10 +247,11 @@ func main() {
 		point.x = im[c][0]
 		point.OrigY = im[c][1]
 		point.y = math.Log(point.OrigY)
-		point.stdev = math.Abs(math.Log(point.OrigY * StDevFac / 100)) // treating StDevFac as a %-age.
-		if math.Abs(point.y) < math.Abs(point.stdev) {
-			point.stdev = math.Abs(point.y)
-		}
+		errorFactor := StDevFac + 5 * float64(c)
+		point.stdev = math.Abs(math.Log(point.OrigY * errorFactor / 100)) // treating StDevFac as a %-age.
+//		if math.Abs(point.y) < math.Abs(point.stdev) {
+//			point.stdev = math.Abs(point.y)
+//		}
 		point.sigx = point.x * StDevTime / 100
 		if point.sigx < 2 {
 			point.sigx = 2
