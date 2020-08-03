@@ -266,7 +266,7 @@ func main() {
 		// added for gonum stats package
 		xvector = append(xvector, point.x)
 		yvector = append(yvector, point.y)
-		weight := float64(c) / 2            // these are weights, not uncertainties, so I'll try something so that the later points have more weight.
+		weight := 1 + float64(c) / 10            // these are weights, not uncertainties, so I'll try something so that the later points have more weight.
 		wtvector = append(wtvector, weight)
 		unwtvector = append(unwtvector, 1.0)
 	}
