@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "July 29, 2020"
+const LastAlteredDate = "Aug 3, 2020"
 
 /*
   REVISION HISTORY
@@ -59,6 +59,7 @@ const LastAlteredDate = "July 29, 2020"
                  the code to Pop to see if my understanding is correct and the modification also works.
   28 Jul 20 -- Changing how the timing is measured for all.  I'm including the copy operation, so that the container/heap measurement is more fair.
   29 Jul 20 -- Removing many of the newlines that are displayed and written to the file.  There are too many.
+   3 Aug 20 -- Fixing some comments, and in one place in StraightSelection I made code more idiomatic for Go.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -123,12 +124,12 @@ func StraightInsertion(input []string) []string {
 	for i := 1; i < n; i++ {
 		x := input[i]
 		j := i
-		for (j > 0) && (x < input[j-1]) {
-			input[j] = input[j-1]
+		for (j > 0) && (x < input[j-1]) { // looks like it's moving elements right until it comes to a smaller value entry.
+			input[j] = input[j-1]        // then it inserts the element at the spot at which it stopped moving elements.
 			j--
 		}
 		input[j] = x
-	} // for i := 1 TO n-1
+	}
 	return input
 } // END StraightInsertion
 
@@ -137,9 +138,9 @@ func BinaryInsertion(a []string) []string {
 	n := len(a)
 	for i := 1; i < n; i++ {
 		x := a[i]
-		L := 0 // I think the mistake was here, where I first set L to 1.
+		L := 0 //
 		R := i
-		for L < R {
+		for L < R { // look for smallest item in remaining range, to insert into the correct spot.
 			m := (L + R) / 2
 			if a[m] <= x {
 				L = m + 1
@@ -148,9 +149,9 @@ func BinaryInsertion(a []string) []string {
 			}
 		} //END while L < R
 
-		for j := i; j >= R+1; j-- {
-			a[j] = a[j-1]
-		} //END for j := i TO R+1 BY -1 DO
+		for j := i; j >= R+1; j-- { // it's moving elements right from current point to the right, to make room for the insertion.
+			a[j] = a[j-1]          // then it inserts the
+		}
 		a[R] = x
 	} // END for i :=
 	return a
@@ -159,18 +160,18 @@ func BinaryInsertion(a []string) []string {
 // -----------------------------------------------------------
 func StraightSelection(a []string) []string {
 	n := len(a)
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < n-1; i++ { // don't include the last element in this loop.
 		k := i
 		x := a[i]
-		for j := i + 1; j <= n-1; j++ {
+		for j := i + 1; j < n; j++ {  // include last element in this loop.  And this loop is now more idiomatic for Go.
 			if a[j] < x {
 				k = j
 				x = a[k]
 			}
-		} // END for j := i+1 TO n-1
+		}
 		a[k] = a[i]
 		a[i] = x
-	} // END for i := 0 to n-2
+	}
 	return a
 } // END StraightSelection
 
@@ -290,8 +291,8 @@ func ShellSort(a []string) []string {
 
 // -----------------------------------------------------------
 // -----------------------------------------------------------
-// The principal of heapsort is that in phase 1, the array to be sorted is turned into a heap.  In phase 2, the items
-// are removed from the heap in the order just created.
+// The principal of heapsort is that in phase 1, the array to be sorted is turned into a heap.
+// In phase 2, the items are removed from the heap in the order just created.
 func sift(a []string, L, R int) []string {
 	i := L
 	j := 2*i + 1
