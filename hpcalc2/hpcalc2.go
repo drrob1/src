@@ -1,4 +1,4 @@
-package hpcalc
+package hpcalc2
 
 import (
 	"fmt"
@@ -117,6 +117,7 @@ const Top = T1
 const Bottom = 0
 
 var StackRegNamesString []string = []string{" X", " Y", " Z", "T5", "T4", "T3", "T2", "T1"}
+
 //var FSATypeString []string = []string{"DELIM", "OP", "DGT", "AllElse"}  I am getting an unused variable, as the debugging statements are likely commented out.
 var cmdMap map[string]int
 
@@ -141,7 +142,7 @@ func init() {
 	cmdMap["NEXT"] = 50
 	cmdMap["AFTER"] = 50
 	cmdMap["BEFORE"] = 60
-	cmdMap["PREV"]  = 60
+	cmdMap["PREV"] = 60
 	cmdMap["PREVIOUS"] = 60
 	cmdMap["SIG"] = 70
 	cmdMap["SIGFIG"] = 70
@@ -154,12 +155,12 @@ func init() {
 	cmdMap["HELP"] = 120
 	cmdMap["?"] = 120
 	cmdMap["STO"] = 130
-	cmdMap["RCL"] = 130
+	cmdMap["RCL"] = 135 // mistake -- was 130, so instead of renumbering all of it, I used my escape hatch
 	cmdMap["UNDO"] = 140
 	cmdMap["REDO"] = 150
 	cmdMap["SWAP"] = 160
 	cmdMap["~"] = 160
-	cmdMap["`"] = 160  // that's a back tick
+	cmdMap["`"] = 160 // that's a back tick
 	cmdMap["LASTX"] = 170
 	cmdMap["@"] = 170
 	cmdMap["ROLLDN"] = 180
@@ -168,6 +169,7 @@ func init() {
 	cmdMap["|"] = 200
 	cmdMap["DN"] = 200
 	cmdMap["POP"] = 210
+	cmdMap["INT"] = 215 // Missed this one on first pass thru assigning numbers
 	cmdMap["PRIME"] = 220
 	cmdMap["PRIMEF"] = 230
 	cmdMap["PRIMEFA"] = 230
@@ -204,6 +206,7 @@ func init() {
 	cmdMap["D2R"] = 500
 	cmdMap["R2D"] = 510
 }
+
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
 func Round(f float64) float64 {
 	sign := 1.0
@@ -705,61 +708,59 @@ func GetResult(s string) (float64, []string) {
 			if cmdnum == 0 {
 				TokenStrShortened := Token.Str[:3] // First 3 characters, ie, characters at positions 0, 1 and 2
 				cmdnum, ok = cmdMap[TokenStrShortened]
-				if ! ok {
+				if !ok {
 					ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
 					break
 				}
 			}
-
+			//fmt.Println(" GetResult token state is ALLELSE.  Token.Str=", Token.Str,", cmdnum=", cmdnum)
 			switch cmdnum {
-			case 10 : // DUMP
+			case 10: // DUMP
 				ss = append(ss, DumpStackGeneral()...)
-			case 20 : // DUMPFIX
+			case 20: // DUMPFIX
 				ss = append(ss, DumpStackFixed()...)
-			case 30 : // DUMPFLOAT
+			case 30: // DUMPFLOAT
 				ss = append(ss, DumpStackFloat()...)
-			case 40 : // ADJ or ADJUST
+			case 40: // ADJ or ADJUST
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] *= 100
 				Stack[X] = Round(Stack[X]) // Decided to use round instead of math.Ceil(Stack[X]) in case error is .000001 instead of .9999997
 				Stack[X] /= 100
-			case 50 : // NEXT, AFTER, for math.Nextafter to go up to a large number, here I use 1 billion.
+			case 50: // NEXT, AFTER, for math.Nextafter to go up to a large number, here I use 1 billion.
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Nextafter(LastX, 1e9) // correct up.
-			case 60 : // BEFORE, PREV, PREVIOUS, for math.Nextafter to go towards zero.
+			case 60: // BEFORE, PREV, PREVIOUS, for math.Nextafter to go towards zero.
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Nextafter(LastX, 0) // correct down.
-			case 70: // SIG, SIGFIG, FIX
-			} else if strings.HasPrefix(Token.Str, "SIG") || strings.HasPrefix(Token.Str, "FIX") { // SigFigN command, or FIX
+			case 70: // SIGn, SIGFIGn, FIXn
 				ch := Token.Str[len(Token.Str)-1] // ie, the last character.
 				sigfig = GetRegIdx(ch)
 				if sigfig > 9 { // If sigfig greater than this max value, make it -1 again.
 					sigfig = -1
 				}
-			} else if Token.Str == "RECIP" {
+			case 80: // RECIP
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = 1 / Stack[X]
-			} else if Token.Str == "CURT" || Token.Str == "CBRT" {
+			case 90: // CURT or CBRT
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Cbrt(Stack[X]) // Just noticed that there is a Cbrt func in math package
 				//                                                                           Stack[X] = math.Exp(math.Log(Stack[X])/3.0);
-			} else if Token.Str == "DIA" {
+			case 100: // DIA
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
-				//                                                                           Stack[X] = math.Exp(math.Log(2.0*Stack[X])/3.0);
-			} else if Token.Str == "VOL" {
+			case 110: // VOL
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
 				STACKDN()
 				STACKDN()
-			} else if Token.Str == "HELP" || Token.Str == "?" {
+			case 120: // HELP or ?
 				ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
 				ss = append(ss, " CURT,CBRT -- X = cuberoot(X).")
 				ss = append(ss, " RECIP -- X = 1/X.")
@@ -794,91 +795,100 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " substitutions: = for +, ; for *.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
-			} else if Token.Str == "STO" {
+			case 130: // STO
 				MemReg = Stack[X]
-			} else if Token.Str == "RCL" {
+			case 135: // RCL
 				PUSHX(MemReg)
-			} else if Token.Str == "UNDO" {
+			case 140: // UNDO
 				UndoMatrixStacks()
-			} else if Token.Str == "REDO" {
+			case 150: // REDO
 				RedoMatrixStacks()
-			} else if Token.Str == "SWAP" || Token.Str == "SWAPXY" || Token.Str == "~" || Token.Str == "`" { // that's a back tick
+			case 160: // SWAP or ~ or backtick; I removed SWAPXY
 				PushMatrixStacks()
 				SWAPXY()
-			} else if Token.Str == "LASTX" || Token.Str == "@" {
+			case 170: // LASTX or @
 				PushMatrixStacks()
 				PUSHX(LastX)
-			} else if Token.Str == "ROLLDN" { // StackRolldn(), not StackDn
+			case 180: // StackRolldn(), not StackDn()
 				PushMatrixStacks()
 				STACKROLLDN()
-			} else if Token.Str == "," || Token.Str == "UP" {
+			case 190: // UP
 				PushMatrixStacks()
 				STACKUP()
-			} else if Token.Str == "|" || Token.Str == "DN" { // StackDn(), not StackRolldn
+			case 200: // DN or |
 				PushMatrixStacks()
 				Stack[X] = Stack[Y]
 				STACKDN()
-			} else if strings.HasPrefix(Token.Str, "POP") {
+			case 210: // POP
 				PushMatrixStacks()
 				x := PopX()
 				str := strconv.FormatFloat(x, 'g', sigfig, 64)
 				ss = append(ss, str)
-			} else if Token.Str == "INT" {
+			case 215: // INT
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Floor(Stack[X])
-			} else if Token.Str == "PRIME" {
-				// PushMatrixStacks()  not needed as stack is not altered.
+			case 220: // PRIME
 				n := Round(Stack[X])
 				if IsPrime(n) {
 					ss = append(ss, fmt.Sprintf("%d is prime.", int64(n)))
 				} else {
 					ss = append(ss, fmt.Sprintf("%d is NOT prime.", int64(n)))
 				}
-			} else if Token.Str == "TRUNC" {
+			case 230: // PRIMEFAC, PRIMEF or PRIMEFA  Intended for PrimeFactors or PrimeFactorization
+				U := uint(Round(Stack[X]))
+				if U < 2 {
+					ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
+				} else {
+
+					PrimeUfactors := PrimeFactorMemoized(U)
+					stringslice := make([]string, 0, 10)
+
+					for _, pf := range PrimeUfactors {
+						stringslice = append(stringslice, fmt.Sprintf("%d", pf))
+					}
+					ss = append(ss, strings.Join(stringslice, ", "))
+				}
+			case 240: // TRUNC
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Trunc(Stack[X])
-			} else if Token.Str == "ROUND" {
+			case 250: // ROUND
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = Round(LastX)
-			} else if Token.Str == "CEIL" {
+			case 260: // CEIL
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Ceil(LastX)
-			} else if Token.Str == "HEX" {
+			case 270: // HEX
 				if (Stack[X] >= -2.0e9) && (Stack[X] <= 1.80e19) {
 					ss = append(ss, fmt.Sprintf(" Value of X reg in hex: %s", ToHex(Stack[X])))
 				} else {
 					ss = append(ss, fmt.Sprintf(" Cannot convert X register to hex string, as number is out of range."))
 				} // Hex command
-			} else if Token.Str == "HCF" {
-				// PushMatrixStacks()  no longer changes the stack
+			case 280: // HCF
 				c1 := int(math.Abs(Round(Stack[X])))
 				c2 := int(math.Abs(Round(Stack[Y])))
 				c := HCF(c2, c1)
 				ss = append(ss, fmt.Sprintf("HCF of %d and %d is %d.", c1, c2, c))
-				//STACKUP()
-				//Stack[X] = float64(c)
-			} else if Token.Str == "P" {
+			case 290: // P
 				//  essentially do nothing but print RESULT= line again.
-			} else if Token.Str == "FRAC" {
+			case 300: // FRAC
 				PushMatrixStacks()
 				LastX = Stack[X]
 				_, frac := math.Modf(Stack[X])
 				Stack[X] = frac
-			} else if Token.Str == "MOD" {
+			case 310: // MOD
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Mod(Round(Stack[Y]), Round(Stack[X]))
 				STACKDN()
-			} else if Token.Str == "JUL" {
+			case 320: // JUL
 				PushMatrixStacks()
 				LastX = Stack[X]
 				// allow for 2 digit years
 				_, _, year = timlibg.TIME2MDY()
-				//                                                                                               IF Stack[X] <= 30.0 THEN
 				if Stack[X] <= float64(year%100) { // % is the MOD operator
 					Stack[X] += 2000.0
 				} else if Stack[X] < 100.0 {
@@ -887,13 +897,13 @@ func GetResult(s string) (float64, []string) {
 				Stack[X] = float64(timlibg.JULIAN(int(Round(Stack[Z])), int(Round(Stack[Y])), int(Round(Stack[X]))))
 				STACKDN()
 				STACKDN()
-			} else if Token.Str == "TODAY" || Token.Str == "T" {
+			case 330: // TODAY or T
 				PushMatrixStacks()
 				LastX = Stack[X]
 				STACKUP()
 				c1, c2, c3 := timlibg.TIME2MDY()
 				Stack[X] = float64(timlibg.JULIAN(c1, c2, c3))
-			} else if Token.Str == "GREG" {
+			case 340: // GREG
 				PushMatrixStacks()
 				LastX = Stack[X]
 				STACKUP()
@@ -902,23 +912,19 @@ func GetResult(s string) (float64, []string) {
 				Stack[Z] = float64(c1)
 				Stack[Y] = float64(c2)
 				Stack[X] = float64(c3)
-			} else if Token.Str == "DOW" { // no longer changes the stack
-				//                      PushMatrixStacks();
+			case 350: // DOW
 				dow := int(Round(Stack[X]))
 				i := dow % 7 // % is the MOD operator only for int's
 				s := fmt.Sprintf(" Day of Week for %d is a %s", dow, timlibg.DayNames[i])
 				ss = append(ss, s)
-			} else if Token.Str == "PI" {
+			case 360: // PI
 				PushMatrixStacks()
 				PUSHX(PI)
-			} else if Token.Str == "PIOVER6" { // sphere V = pi_over_6 * d^3
-				PushMatrixStacks()
-				PUSHX(PI / 6)
-			} else if Token.Str == "CHS" || Token.Str == "_" {
+			case 370: // CHS or _
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = -1 * Stack[X]
-			} else if Token.Str == "HOL" {
+			case 380: // HOL
 				// PushMatrixStacks()  Doesn't change the stack.  I don't think it ever did.
 				year := int(Round(Stack[X]))
 				if year < 40 {
@@ -947,73 +953,58 @@ func GetResult(s string) (float64, []string) {
 					s := " X register is not a valid year.  Command ignored."
 					ss = append(ss, s)
 				}
-			} else if Token.Str == "ABOUT" {
+			case 390: // ABOUT
 				ss = append(ss, fmt.Sprintf(" last changed hpcalc.go %s", LastAlteredDate))
-			} else if Token.Str == "SQR" {
+			case 400: // SQR
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] *= Stack[X]
-			} else if Token.Str == "SQRT" {
+			case 410: // SQRT
 				LastX = Stack[X]
 				PushMatrixStacks()
 				Stack[X] = math.Sqrt(Stack[X])
-			} else if strings.HasPrefix(Token.Str, "PRIMEF") {
-				// Intended for PrimeFactors or PrimeFactorization
-				U := uint(Round(Stack[X]))
-				if U < 2 {
-					ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
-				} else {
-
-					PrimeUfactors := PrimeFactorMemoized(U)
-					stringslice := make([]string, 0, 10)
-
-					for _, pf := range PrimeUfactors {
-						stringslice = append(stringslice, fmt.Sprintf("%d", pf))
-					}
-					ss = append(ss, strings.Join(stringslice, ", "))
-				}
-			} else if Token.Str == "EXP" {
+			case 420: // EXP
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Exp(Stack[X])
-			} else if Token.Str == "LN" || Token.Str == "LOG" {
+			case 430: // LOG or LN
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Log(math.Abs(Stack[X]))
-			} else if Token.Str == "SIN" {
+			case 440: // SIN
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Sin(Stack[X] * PI / 180.0)
-			} else if Token.Str == "COS" {
+			case 450: // COS
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Cos(Stack[X] * PI / 180.0)
-			} else if Token.Str == "TAN" {
+			case 460: // TAN
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Tan(Stack[X] * PI / 180.0)
-			} else if Token.Str == "ARCTAN" {
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Atan(Stack[X]) * 180.0 / PI
-			} else if Token.Str == "ARCSIN" {
+			case 470: // ARCSIN
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] = math.Asin(LastX) * 180.0 / PI
-			} else if Token.Str == "ARCCOS" {
+			case 480: // ARCCOS
 				PushMatrixStacks()
 				LastX = Stack[X]
-				Stack[X] = math.Acos(LastX) * 180.0 / PI
-			} else if Token.Str == "D2R" {
+				Stack[X] = math.Acos(Stack[X]) * 180.0 / PI
+			case 490: // ARCTAN
+				PushMatrixStacks()
+				LastX = Stack[X]
+				Stack[X] = math.Atan(LastX) * 180.0 / PI
+			case 500: // D2R
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] *= PI / 180.0
-			} else if Token.Str == "R2D" {
+			case 510: // R2D
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] *= 180.0 / PI
-			} else {
-				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
+			default:
+				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
 			} // main text command selection if statement
 		}
 	}
