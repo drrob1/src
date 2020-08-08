@@ -96,6 +96,7 @@ REVISION HISTORY
 25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
  3 Jul 20 -- Added cbrt as synonym for curt.
  7 Aug 20 -- Now called hpcal2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
+               And made a minimal change in GetResult for variable I to make code more idiomatic.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -641,7 +642,7 @@ func HCF(a, b int) int {
 //------------------------------------------------------------------------- GetResults -----------
 func GetResult(s string) (float64, []string) {
 	// var c, c1, c2, c3 int // these were used for the HCF and date arith commands, but were moved into a more narrow scope 9 Feb 20.
-	var I, year int
+	var year int
 	var Token tknptr.TokenType
 	var EOL bool
 	// var Holiday holidaycalc.HolType  Moved into a more narrow scope, as it's only used in the hol command.  Done 9 Feb 20.
@@ -655,7 +656,7 @@ func GetResult(s string) (float64, []string) {
 		if EOL {
 			break
 		}
-		I = Token.Isum
+
 		switch Token.State {
 		case tknptr.DELIM:
 			//break /* do nothing */
@@ -664,6 +665,7 @@ func GetResult(s string) (float64, []string) {
 			PushMatrixStacks()
 			//break
 		case tknptr.OP:
+			I := Token.Isum
 			if (I == 6) || (I == 20) || (I == 1) || (I == 3) { // <>, ><, <, > will all SWAP
 				SWAPXY()
 			} else {
@@ -697,18 +699,17 @@ func GetResult(s string) (float64, []string) {
 					ss = append(ss, fmt.Sprintf("%s is an unrecognized operation.", Token.Str))
 					STACKUP()
 				} // case on opcode
-				if I != 22 {
+				if I != 22 { // Do not move stack for % operator
 					STACKDN()
-				} // Do not move stack for % operator
+				}
 			} // opcode value condition
 			break
 		case tknptr.ALLELSE:
-			ok := false
 			cmdnum := cmdMap[Token.Str]
 			if cmdnum == 0 {
 				TokenStrShortened := Token.Str[:3] // First 3 characters, ie, characters at positions 0, 1 and 2
-				cmdnum, ok = cmdMap[TokenStrShortened]
-				if !ok {
+				cmdnum = cmdMap[TokenStrShortened]
+				if cmdnum == 0 {
 					ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
 					break
 				}
