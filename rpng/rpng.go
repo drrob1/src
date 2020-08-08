@@ -15,12 +15,12 @@ import (
 	"time"
 	//
 	"getcommandline"
-	"hpcalc"
+	hpcalc "hpcalc2"
 	"makesubst"
 	"tokenize"
 )
 
-const lastAlteredDate = "1 Apr 2020"
+const lastAlteredDate = "8 Aug 2020"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string

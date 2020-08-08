@@ -19,12 +19,12 @@ import (
 	"timlibg"
 
 	"getcommandline"
-	"hpcalc"
+	hpcalc "hpcalc2"
 	"tokenize"
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "3 July 2020"
+const LastAltered = "8 Aug 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -110,6 +110,7 @@ REVISION HISTORY
  7 Apr 20 -- Will add the clipboard code I first wrote for rpng, and will have PgUp/PgDn manipulate the stack, while Up and Dn will allow command recall.
  2 Jul 20 -- Removed a duplicate help line.
  3 Jul 20 -- FIX command also sets output mode to be fixed.  So to use FIXn to set digits for float or gen, have to change outputmode AFTER using FIXn.
+ 8 Aug 20 -- Now using hpcalc2 in place of hpcalc.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
