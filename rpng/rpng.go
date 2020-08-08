@@ -94,6 +94,7 @@ func main() {
 	   29 Mar 20 -- Need to removed commas from a number string received from the clip.
 	   30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
 	    1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
+	    8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
 	*/
 
 	var INBUF, HomeDir string
