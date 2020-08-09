@@ -641,7 +641,6 @@ func HCF(a, b int) int {
 
 //------------------------------------------------------------------------- GetResults -----------
 func GetResult(s string) (float64, []string) {
-	// var c, c1, c2, c3 int // these were used for the HCF and date arith commands, but were moved into a more narrow scope 9 Feb 20.
 	var year int
 	var Token tknptr.TokenType
 	var EOL bool
