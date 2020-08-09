@@ -12,7 +12,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "8 Aug 2020"
+const LastAlteredDate = "9 Aug 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -97,6 +97,7 @@ REVISION HISTORY
  3 Jul 20 -- Added cbrt as synonym for curt.
  7 Aug 20 -- Now called hpcal2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
                And made a minimal change in GetResult for variable I to make code more idiomatic.
+ 9 Aug 20 -- Cleaned out some old, unhelpful comments, and removed one extraneous "break" in GetResult tknptr.OP section.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -658,11 +659,11 @@ func GetResult(s string) (float64, []string) {
 
 		switch Token.State {
 		case tknptr.DELIM:
-			//break /* do nothing */
+
 		case tknptr.DGT:
 			PUSHX(Token.Rsum)
 			PushMatrixStacks()
-			//break
+
 		case tknptr.OP:
 			I := Token.Isum
 			if (I == 6) || (I == 20) || (I == 1) || (I == 3) { // <>, ><, <, > will all SWAP
@@ -673,36 +674,26 @@ func GetResult(s string) (float64, []string) {
 				switch I {
 				case 8:
 					Stack[X] += Stack[Y]
-					//break
 				case 10:
 					Stack[X] = Stack[Y] - Stack[X]
-					//break
 				case 12:
 					Stack[X] *= Stack[Y]
-					//break
 				case 14:
 					Stack[X] = Stack[Y] / Stack[X]
-					//break
 				case 16:
 					Stack[X] = PWRI(Stack[Y], int(Round(Stack[X]))) // ^ op -> PWRI
-					//   case 16 : Stack[X] = math.Pow(Stack[Y], Round(Stack[X])); // ^ op
-					//break
 				case 18:
 					Stack[X] = math.Pow(Stack[Y], Stack[X]) // **
-					//     case 18 : Stack[X] = math.Pow(math.Abs(Stack[Y]), Stack[X]); // **
-					//break
 				case 22:
 					Stack[X] *= Stack[Y] / 100.0 // percent
-					//break
 				default:
 					ss = append(ss, fmt.Sprintf("%s is an unrecognized operation.", Token.Str))
 					STACKUP()
-				} // case on opcode
+				}
 				if I != 22 { // Do not move stack for % operator
 					STACKDN()
 				}
 			} // opcode value condition
-			break
 		case tknptr.ALLELSE:
 			cmdnum := cmdMap[Token.Str]
 			if cmdnum == 0 {
@@ -725,7 +716,7 @@ func GetResult(s string) (float64, []string) {
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] *= 100
-				Stack[X] = Round(Stack[X]) // Decided to use round instead of math.Ceil(Stack[X]) in case error is .000001 instead of .9999997
+				Stack[X] = Round(Stack[X])
 				Stack[X] /= 100
 			case 50: // NEXT, AFTER, for math.Nextafter to go up to a large number, here I use 1 billion.
 				LastX = Stack[X]
@@ -748,8 +739,7 @@ func GetResult(s string) (float64, []string) {
 			case 90: // CURT or CBRT
 				LastX = Stack[X]
 				PushMatrixStacks()
-				Stack[X] = math.Cbrt(Stack[X]) // Just noticed that there is a Cbrt func in math package
-				//                                                                           Stack[X] = math.Exp(math.Log(Stack[X])/3.0);
+				Stack[X] = math.Cbrt(Stack[X])
 			case 100: // DIA
 				LastX = Stack[X]
 				PushMatrixStacks()
