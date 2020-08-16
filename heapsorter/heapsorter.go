@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Aug 3, 2020"
+const LastAlteredDate = "Aug 16, 2020"
 
 /*
   REVISION HISTORY
@@ -60,6 +60,7 @@ const LastAlteredDate = "Aug 3, 2020"
   28 Jul 20 -- Changing how the timing is measured for all.  I'm including the copy operation, so that the container/heap measurement is more fair.
   29 Jul 20 -- Removing many of the newlines that are displayed and written to the file.  There are too many.
    3 Aug 20 -- Fixing some comments, and in one place in StraightSelection I made code more idiomatic for Go.
+  16 Aug 20 -- Making StraightInsertion more idiomatic Go, based on code shown in High Performance Go.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -124,11 +125,10 @@ func StraightInsertion(input []string) []string {
 	for i := 1; i < n; i++ {
 		x := input[i]
 		j := i
-		for (j > 0) && (x < input[j-1]) { // looks like it's moving elements right until it comes to a smaller value entry.
-			input[j] = input[j-1]        // then it inserts the element at the spot at which it stopped moving elements.
-			j--
+		for ;(j > 0) && (x < input[j-1]); j-- { // looks like it's moving elements right
+			input[j] = input[j-1] //  until it comes to a smaller value entry.
 		}
-		input[j] = x
+		input[j] = x // then it inserts the element at the spot at which it stopped moving elements.
 	}
 	return input
 } // END StraightInsertion
@@ -150,7 +150,7 @@ func BinaryInsertion(a []string) []string {
 		} //END while L < R
 
 		for j := i; j >= R+1; j-- { // it's moving elements right from current point to the right, to make room for the insertion.
-			a[j] = a[j-1]          // then it inserts the
+			a[j] = a[j-1] // then it inserts the
 		}
 		a[R] = x
 	} // END for i :=
@@ -163,7 +163,7 @@ func StraightSelection(a []string) []string {
 	for i := 0; i < n-1; i++ { // don't include the last element in this loop.
 		k := i
 		x := a[i]
-		for j := i + 1; j < n; j++ {  // include last element in this loop.  And this loop is now more idiomatic for Go.
+		for j := i + 1; j < n; j++ { // include last element in this loop.  And this loop is now more idiomatic for Go.
 			if a[j] < x {
 				k = j
 				x = a[k]
