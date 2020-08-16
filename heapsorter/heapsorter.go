@@ -61,6 +61,7 @@ const LastAlteredDate = "Aug 16, 2020"
   29 Jul 20 -- Removing many of the newlines that are displayed and written to the file.  There are too many.
    3 Aug 20 -- Fixing some comments, and in one place in StraightSelection I made code more idiomatic for Go.
   16 Aug 20 -- Making StraightInsertion more idiomatic Go, based on code shown in High Performance Go.
+                 And I added BasicInsertion, also from High Poerformance Go.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -126,12 +127,22 @@ func StraightInsertion(input []string) []string {
 		x := input[i]
 		j := i
 		for ;(j > 0) && (x < input[j-1]); j-- { // looks like it's moving elements right
-			input[j] = input[j-1] //  until it comes to a smaller value entry.
+			input[j] = input[j-1] //  until it comes to a smaller value entry.  This line does not swap anything.
 		}
 		input[j] = x // then it inserts the element at the spot at which it stopped moving elements.
 	}
 	return input
 } // END StraightInsertion
+
+func BasicInsertion(input []string) []string {
+	n := len(input)
+	for i := 1; i < n; i++ {
+		for j := i; (j > 0) && (input[j] < input[j-1]); j-- {
+			input[j], input[j-1] = input[j-1], input[j]
+		}
+	}
+	return input
+}
 
 // -----------------------------------------------------------
 func BinaryInsertion(a []string) []string {
@@ -897,8 +908,21 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+
+	t1a := time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	sliceofsortedwords = BasicInsertion(sliceofwords)
+	BasicInsertionTime := time.Since(t1a)
+	s = fmt.Sprintf(" After BasicInsertion: %s, %d ns \n", BasicInsertionTime.String(), BasicInsertionTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Print(s)
+	if allowoutput {
+		for _, w := range sliceofsortedwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
 
 	// BinaryInsertion
 	//	copy(sliceofwords, mastersliceofwords)
@@ -1297,7 +1321,7 @@ func main() {
 		sortedheapofwordsTime.String(), heapofwords.Len(), len(sortedheapofwords))
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	fmt.Println(s)
+	fmt.Print(s)
 	if allowoutput {
 		for i := 0; i < len(sortedheapofwords); i++ {
 			w := sortedheapofwords[i]
