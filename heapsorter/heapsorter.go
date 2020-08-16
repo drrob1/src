@@ -61,7 +61,8 @@ const LastAlteredDate = "Aug 16, 2020"
   29 Jul 20 -- Removing many of the newlines that are displayed and written to the file.  There are too many.
    3 Aug 20 -- Fixing some comments, and in one place in StraightSelection I made code more idiomatic for Go.
   16 Aug 20 -- Making StraightInsertion more idiomatic Go, based on code shown in High Performance Go.
-                 And I added BasicInsertion, also from High Poerformance Go.
+                 I added BasicInsertion, also from High Performance Go.
+                 I changed the variable names in HeapSort and sift, to help me understand the code.  L is lo, and R is hi.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -126,7 +127,7 @@ func StraightInsertion(input []string) []string {
 	for i := 1; i < n; i++ {
 		x := input[i]
 		j := i
-		for ;(j > 0) && (x < input[j-1]); j-- { // looks like it's moving elements right
+		for ; (j > 0) && (x < input[j-1]); j-- { // looks like it's moving elements right
 			input[j] = input[j-1] //  until it comes to a smaller value entry.  This line does not swap anything.
 		}
 		input[j] = x // then it inserts the element at the spot at which it stopped moving elements.
@@ -304,18 +305,21 @@ func ShellSort(a []string) []string {
 // -----------------------------------------------------------
 // The principal of heapsort is that in phase 1, the array to be sorted is turned into a heap.
 // In phase 2, the items are removed from the heap in the order just created.
+// Orig code has L and R, that I made lo and hi, respectively, to help me understand it.
 func sift(a []string, L, R int) []string {
-	i := L
+	lo := L // left is lo
+	hi := R // right is hi
+	i := lo
 	j := 2*i + 1
 	x := a[i]
-	if (j < R) && (a[j] < a[j+1]) {
+	if (j < hi) && (a[j] < a[j+1]) {
 		j++
 	} // end if
-	for (j <= R) && (x < a[j]) {
+	for (j <= hi) && (x < a[j]) {
 		a[i] = a[j]
 		i = j
 		j = 2*j + 1
-		if (j < R) && (a[j] < a[j+1]) {
+		if (j < hi) && (a[j] < a[j+1]) {
 			j++
 		} // end if
 	} //END for (j <= R) & (x < a[j])
@@ -325,17 +329,17 @@ func sift(a []string, L, R int) []string {
 
 func HeapSort(a []string) []string { // I think this is based on Wirth's code in either Oberon or Modula-2.
 	n := len(a)
-	L := n / 2
-	R := n - 1
-	for L > 0 { // heap creation phase.
-		L--
-		a = sift(a, L, R)
-	} // END for-while L>0
-	for R > 0 { // heap removal phase.
-		a[0], a[R] = a[R], a[0]
-		R--
-		a = sift(a, L, R)
-	} // END for-while R > 0
+	lo := n / 2
+	hi := n - 1
+	for lo > 0 { // heap creation phase.
+		lo--
+		a = sift(a, lo, hi)
+	}
+	for hi > 0 { // heap removal phase.
+		a[0], a[hi] = a[hi], a[0]
+		hi--
+		a = sift(a, lo, hi)
+	}
 	return a
 } // END HeapSort
 // -----------------------------------------------------------
@@ -431,6 +435,27 @@ func NRheapsort(items []string) []string { // copied from Numerical Recipes 3rd 
 	return items
 } // END NRheapsort;
 //------------------------------------------------------------------------
+/*
+The author says that this code is from Go's standard library, so he is just illustrating the concept.  That may be why
+he does not define his siftDown.  data.Swap is obvious.
+func GoHeapSort(items []string) []string { // High Performance Go, by Bob Strecansky, Packt (C) 2020, p41ff
+	first := 0
+	lo := 0
+	hi := len(items) - 1
+
+	// build heap w/ largest item at top
+	for i := (hi - 1) / 2; i >= 0; i-- {
+		siftDown(items, i, hi, first)
+	}
+	// pop elements, largest first, onto the end of the data
+	for i := (hi - 1); i >= 0; i-- {
+		data.Swap(first, first+1)
+		siftDown(items, lo, i, first)
+	}
+	return items
+}
+*/
+
 //------------------------------------------------------------------------
 func qsort(a []string, L, R int) []string {
 	i := L
