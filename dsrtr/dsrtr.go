@@ -5,6 +5,8 @@ dsrtr.go
    1 Apr 20 -- dsrt recursive, named dsrtr.go.
    2 Apr 20 -- Tracking down bug of not finding .pdf files, and probably also not finding .epub or .mobi
                  Turned out to be case sensitivity in the comparisons.
+  17 Aug 20 -- I'm using this way more than I expected.  And it's slower than I expected.  I'm going to take a stab at
+                 multitasking here.
 */
 package main
 
@@ -15,16 +17,24 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
-	"runtime"
 )
 
-const lastAltered = "2 Apr 2020"
+const lastAltered = "17 Aug 2020"
+
+type ResultType struct {
+	// filename  string  Not needed, AFAICT (as far as I can tell)
+	path      string
+	datestamp string
+	sizeint   int
+	// fileinfo  os.FileInfo  Not needed, AFAICT
+}
 
 func main() {
-	//	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
+	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 240, where 0 means max timeout of 240 sec.")
 	flag.Parse()
@@ -50,7 +60,7 @@ func main() {
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, will use pattern of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
+	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, will use globbing pattern of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
 	fmt.Println()
 	fmt.Println()
 	DirAlreadyWalked := make(map[string]bool, 500)
@@ -58,6 +68,20 @@ func main() {
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+
+	// goroutine to collect results from resultsChan
+	doneChan := make(chan bool)
+	resultsChan := make(chan ResultType, 100_000)
+	go func() {
+		for r := range resultsChan {
+			sizestr := strconv.Itoa(r.sizeint)
+			if r.sizeint > 100000 {
+				sizestr = AddCommas(sizestr)
+			}
+			fmt.Printf("%15s %s %s\n", sizestr, r.datestamp, r.path)
+		}
+		doneChan <- true
+	}()
 
 	// walkfunc closure
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
@@ -72,33 +96,48 @@ func main() {
 			} else {
 				DirAlreadyWalked[fpath] = true
 			}
-		} else  /* if fi.Mode().IsRegular()  */ {
+		} else /* if fi.Mode().IsRegular()  */ {
 			if runtime.GOOS == "linux" {
 				for _, fp := range args {
 					fp = strings.ToLower(fp)
 					NAME := strings.ToLower(fi.Name())
 					if BOOL, _ := filepath.Match(fp, NAME); BOOL {
+						var r ResultType
 						s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-						sizeint := int(fi.Size())
-						sizestr := strconv.Itoa(sizeint)
-						if sizeint > 100000 {
-							sizestr = AddCommas(sizestr)
-						}
-						usernameStr, groupnameStr := GetUserGroupStr(fi) // util function in platform specific removed Oct 4, 2019 and then unremoved.
-						fmt.Printf("%10v %s:%s %15s %s %s\n", fi.Mode(), usernameStr, groupnameStr, sizestr, s, fpath)
+						//r.filename = NAME
+						r.path = fpath
+						r.datestamp = s
+						r.sizeint = int(fi.Size()) // fi.Size() is an int64
+						//r.fileinfo = fi
+						resultsChan <- r
+
+						//sizeint := int(fi.Size())
+						//sizestr := strconv.Itoa(sizeint)
+						//if sizeint > 100000 {
+						//	sizestr = AddCommas(sizestr)
+						//}
+						//usernameStr, groupnameStr := GetUserGroupStr(fi) // util function in platform specific removed Oct 4, 2019 and then unremoved.
+						//fmt.Printf("%10v %s:%s %15s %s %s\n", fi.Mode(), usernameStr, groupnameStr, sizestr, s, fpath)
 					}
 				}
 			} else if runtime.GOOS == "windows" {
 				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?copy
 				if BOOL, _ := filepath.Match(pattern, NAME); BOOL {
-
+					var r ResultType
 					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-					sizeint := int(fi.Size())
-					sizestr := strconv.Itoa(sizeint)
-					if sizeint > 100000 {
-						sizestr = AddCommas(sizestr)
-					}
-					fmt.Printf("%15s %s %s\n", sizestr, s, fpath)
+					//r.filename = NAME
+					r.path = fpath
+					r.datestamp = s
+					r.sizeint = int(fi.Size())
+					//r.fileinfo = fi
+					resultsChan <- r
+
+					//sizeint := int(fi.Size())
+					//sizestr := strconv.Itoa(sizeint)
+					//if sizeint > 100000 {
+					//	sizestr = AddCommas(sizestr)
+					//}
+					//fmt.Printf("%15s %s %s\n", sizestr, s, fpath)
 				}
 			}
 			now := time.Now()
@@ -110,10 +149,12 @@ func main() {
 	}
 
 	err := filepath.Walk(startDirectory, filepathwalkfunction)
-
 	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
+
+	close(resultsChan)
+	<-doneChan
 
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
