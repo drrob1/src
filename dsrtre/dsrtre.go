@@ -1,5 +1,5 @@
 /*
-dsrtr.go
+dsrtre.go
   REVISION HISTORY
   ----------------
    1 Apr 20 -- dsrt recursive, named dsrtr.go.
@@ -8,7 +8,8 @@ dsrtr.go
   17 Aug 20 -- I'm using this way more than I expected.  And it's slower than I expected.  I'm going to take a stab at
                  multitasking here.
   19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
-                 And made t as an option name for timeout.
+                 This forked from dsrtr and now called dsrtre as it takes a regular expression.
+                 Changed option to -t instead of -timeout, as I never remembered its name.
 */
 package main
 
@@ -19,6 +20,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -40,31 +42,31 @@ func main() {
 	log.SetFlags(0)
 	//var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
 	var timeoutOpt *int = flag.Int("t", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
+	//var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
-		log.Println("timeout must be in the range [0..1800] seconds.  Making default of 900")
-		*timeoutOpt = 900
+		log.Println("timeout must be in the range [0..1800] seconds")
+		*timeoutOpt = 0
 	}
-
 	if *timeoutOpt == 0 {
 		*timeoutOpt = 900
 	}
+
 	args := flag.Args()
 
 	if len(args) < 1 {
-		log.Fatalln("a globbing pattern to match must be specified")
-	} else if len(args) == 1 {
-		//pattern = strings.ToLower(pattern)
-		//fmt.Println(" pattern=", pattern)
-	} else {
-		// I cannot think of anything to put here at the moment.  I'll say that args must be a slice of strings of filenames, and on linux.
+		log.Fatalln("a regex to match must be specified")
 	}
 
-	pattern := strings.ToLower(args[0])
+	inputpattern := strings.ToLower(args[0])
+	pattern, err := regexp.Compile(inputpattern)
+	if err != nil {
+		log.Fatalln(" error from regex compile function is ", err)
+	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, will use globbing pattern of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
+	fmt.Printf(" dsrtre (recursive), written in Go.  Last altered %s, will use regex of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
 	fmt.Println()
 	fmt.Println()
 	DirAlreadyWalked := make(map[string]bool, 500)
@@ -105,43 +107,24 @@ func main() {
 				for _, fp := range args {
 					fp = strings.ToLower(fp)
 					NAME := strings.ToLower(fi.Name())
-					if BOOL, _ := filepath.Match(fp, NAME); BOOL {
+					if BOOL := pattern.MatchString(NAME); BOOL {
 						var r ResultType
 						s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-						//r.filename = NAME
 						r.path = fpath
 						r.datestamp = s
 						r.sizeint = int(fi.Size()) // fi.Size() is an int64
-						//r.fileinfo = fi
 						resultsChan <- r
-
-						//sizeint := int(fi.Size())
-						//sizestr := strconv.Itoa(sizeint)
-						//if sizeint > 100000 {
-						//	sizestr = AddCommas(sizestr)
-						//}
-						//usernameStr, groupnameStr := GetUserGroupStr(fi) // util function in platform specific removed Oct 4, 2019 and then unremoved.
-						//fmt.Printf("%10v %s:%s %15s %s %s\n", fi.Mode(), usernameStr, groupnameStr, sizestr, s, fpath)
 					}
 				}
 			} else if runtime.GOOS == "windows" {
 				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?copy
-				if BOOL, _ := filepath.Match(pattern, NAME); BOOL {
+				if BOOL := pattern.MatchString(NAME); BOOL {
 					var r ResultType
 					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-					//r.filename = NAME
 					r.path = fpath
 					r.datestamp = s
 					r.sizeint = int(fi.Size())
-					//r.fileinfo = fi
 					resultsChan <- r
-
-					//sizeint := int(fi.Size())
-					//sizestr := strconv.Itoa(sizeint)
-					//if sizeint > 100000 {
-					//	sizestr = AddCommas(sizestr)
-					//}
-					//fmt.Printf("%15s %s %s\n", sizestr, s, fpath)
 				}
 			}
 			now := time.Now()
@@ -152,8 +135,8 @@ func main() {
 		return nil
 	}
 
-	err := filepath.Walk(startDirectory, filepathwalkfunction)
-	if err != nil {
+	er := filepath.Walk(startDirectory, filepathwalkfunction)
+	if er != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
 
