@@ -9,6 +9,7 @@ dsrtr.go
                  multitasking here.
   19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
                  And made t as an option name for timeout.
+  20 Aug 20 -- Will write errors to os.Stderr
 */
 package main
 
@@ -25,7 +26,7 @@ import (
 	"time"
 )
 
-const lastAltered = "19 Aug 2020"
+const lastAltered = "20 Aug 2020"
 
 type ResultType struct {
 	// filename  string  Not needed, AFAICT (as far as I can tell)
@@ -90,7 +91,7 @@ func main() {
 	// walkfunc closure
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf(" Error from walk is %v. \n ", err)
+			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
 			return nil
 		}
 

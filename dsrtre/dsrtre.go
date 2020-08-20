@@ -10,6 +10,7 @@ dsrtre.go
   19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
                  This forked from dsrtr and now called dsrtre as it takes a regular expression.
                  Changed option to -t instead of -timeout, as I never remembered its name.
+  20 Aug 20 -- Will write errors to os.Stderr
 */
 package main
 
@@ -27,7 +28,7 @@ import (
 	"time"
 )
 
-const lastAltered = "19 Aug 2020"
+const lastAltered = "20 Aug 2020"
 
 type ResultType struct {
 	// filename  string  Not needed, AFAICT (as far as I can tell)
@@ -92,7 +93,7 @@ func main() {
 	// walkfunc closure
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf(" Error from walk is %v. \n ", err)
+			fmt.Fprintf(os.Stderr," Error from walk is %v.", err)
 			return nil
 		}
 
@@ -184,73 +185,3 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
-/*
-{{{
-	if linuxflag {
-		for _, f := range files {
-			s := f.ModTime().Format("Jan-02-2006_15:04:05")
-			sizeint := 0
-			sizestr := ""
-			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
-			if FilenameList && f.Mode().IsRegular() {
-				SizeTotal += f.Size()
-				sizeint = int(f.Size())
-				sizestr = strconv.Itoa(sizeint)
-				if sizeint > 100000 {
-					sizestr = AddCommas(sizestr)
-				}
-				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			} else if IsSymlink(f.Mode()) {
-				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			} else if Dirlist && f.IsDir() {
-				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			}
-			if count >= NumLines {
-				break
-			}
-		}
-	} else if winflag {
-		for _, f := range files {
-			NAME := strings.ToUpper(f.Name())
-			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-				s := f.ModTime().Format("Jan-02-2006_15:04:05")
-				sizeint := 0
-				sizestr := ""
-				if FilenameList && f.Mode().IsRegular() {
-					SizeTotal += f.Size()
-					sizeint = int(f.Size())
-					sizestr = strconv.Itoa(sizeint)
-					if sizeint > 100000 {
-						sizestr = AddCommas(sizestr)
-					}
-					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
-					count++
-				} else if IsSymlink(f.Mode()) {
-					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-					count++
-				} else if Dirlist && f.IsDir() {
-					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
-					count++
-				}
-				if count >= NumLines {
-					break
-				}
-			}
-		}
-	}
-
-}}}
-*/
-/*
-{{{
-// ------------------------------ IsSymlink ---------------------------
-func IsSymlink(m os.FileMode) bool {
-	intermed := m & os.ModeSymlink
-	result := intermed != 0
-	return result
-} // IsSymlink
-}}}
-*/
