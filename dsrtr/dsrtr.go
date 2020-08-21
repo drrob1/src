@@ -9,7 +9,7 @@ dsrtr.go
                  multitasking here.
   19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
                  And made t as an option name for timeout.
-  20 Aug 20 -- Will write errors to os.Stderr
+  20 Aug 20 -- Will write errors to os.Stderr.  And changed how the default timeout is set.
 */
 package main
 
@@ -40,16 +40,13 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	//var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
-	var timeoutOpt *int = flag.Int("t", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
+	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
 		log.Println("timeout must be in the range [0..1800] seconds.  Making default of 900")
 		*timeoutOpt = 900
 	}
 
-	if *timeoutOpt == 0 {
-		*timeoutOpt = 900
-	}
 	args := flag.Args()
 
 	if len(args) < 1 {

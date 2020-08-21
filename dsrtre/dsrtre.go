@@ -10,7 +10,7 @@ dsrtre.go
   19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
                  This forked from dsrtr and now called dsrtre as it takes a regular expression.
                  Changed option to -t instead of -timeout, as I never remembered its name.
-  20 Aug 20 -- Will write errors to os.Stderr
+  20 Aug 20 -- Will write errors to os.Stderr.  Changed how default timeout is set.
 */
 package main
 
@@ -42,15 +42,12 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	//var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
-	var timeoutOpt *int = flag.Int("t", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
+	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
 	//var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
 		log.Println("timeout must be in the range [0..1800] seconds")
 		*timeoutOpt = 0
-	}
-	if *timeoutOpt == 0 {
-		*timeoutOpt = 900
 	}
 
 	args := flag.Args()
