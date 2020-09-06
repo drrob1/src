@@ -1,3 +1,4 @@
+// multack.go
 // Copyright (C) 2011-12 Qtrac Ltd.
 //
 // This program or package and any associated files are licensed under the
@@ -28,6 +29,7 @@
   23 Apr 20 -- 2 edge cases don't work on linux.  If there is a filepattern but no matching files in the start directory,
                 and if there is only 1 matching file in the start directory.
                 And also if there appears to be more than one extension, like gastric.txt.out.
+   5 Sep 20 -- Will not search thru symlinked directories
 */
 package main
 
@@ -162,6 +164,8 @@ func main() {
 			} else {
 				DirAlreadyWalked[fpath] = true
 			}
+		} else if isSymlink(fi.Mode()) && fi.IsDir() {
+			return filepath.SkipDir
 		} else if fi.Mode().IsRegular() {
 			for _, ext := range extensions {
 				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
@@ -260,5 +264,12 @@ func extractExtensions(files []string) []string {
 	//fmt.Println(" in extractExtensions without a sort:", extensions)
 	//fmt.Println()
 	return extensions
-
 } // end extractExtensions
+
+// ------------------------------ isSymlink ---------------------------
+func isSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+} // IsSymlink
+
