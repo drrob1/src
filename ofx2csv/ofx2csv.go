@@ -1,3 +1,4 @@
+// ofx2csv.go
 package main
 
 import (
@@ -17,7 +18,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "31 Mar 2019"
+const lastModified = "5 Sep 20"
 
 /*
 MODULE qfx2xls;
@@ -62,6 +63,7 @@ MODULE qfx2xls;
                  to write out 2 different files, one for Access and one for Sqlite.db.  And I need to
 				 append 2 commas for the sqlite file.
   31 Mar 19 -- Noticed that this pgm defaults to .qfx files.  I decided to have it default to both .ofx and .qfx files.
+   5 Sep 20 -- Still not showing .ofx files, and removed default CHK part of the pattern.
 */
 
 const ( // intended for ofxCharType
@@ -141,7 +143,7 @@ func main() {
 
 	fmt.Println(" ofx2csv.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetFilenames("CHK*.?FX")
+		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 10); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}

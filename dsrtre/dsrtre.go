@@ -11,6 +11,8 @@ dsrtre.go
                  This forked from dsrtr and now called dsrtre as it takes a regular expression.
                  Changed option to -t instead of -timeout, as I never remembered its name.
   20 Aug 20 -- Will write errors to os.Stderr.  Changed how default timeout is set.
+  23 Aug 20 -- Make sure a newline is displayed after the error message.
+   5 Sep 20 -- Don't follow symlinked directories
 */
 package main
 
@@ -28,7 +30,7 @@ import (
 	"time"
 )
 
-const lastAltered = "20 Aug 2020"
+const lastAltered = "5 Sep 2020"
 
 type ResultType struct {
 	// filename  string  Not needed, AFAICT (as far as I can tell)
@@ -90,7 +92,7 @@ func main() {
 	// walkfunc closure
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr," Error from walk is %v.", err)
+			fmt.Fprintf(os.Stderr," Error from walk is %v. \n", err)
 			return nil
 		}
 
@@ -100,6 +102,8 @@ func main() {
 			} else {
 				DirAlreadyWalked[fpath] = true
 			}
+		} else if isSymlink(fi.Mode()) && fi.IsDir() {
+			return filepath.SkipDir
 		} else /* if fi.Mode().IsRegular()  */ {
 			if runtime.GOOS == "linux" {
 				for _, fp := range args {
@@ -182,3 +186,11 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
+
+// ------------------------------ isSymlink ---------------------------
+func isSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+} // IsSymlink
+

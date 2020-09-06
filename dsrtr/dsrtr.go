@@ -10,6 +10,7 @@ dsrtr.go
   19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
                  And made t as an option name for timeout.
   20 Aug 20 -- Will write errors to os.Stderr.  And changed how the default timeout is set.
+   5 Sep 20 -- Will look to not follow symlinks
 */
 package main
 
@@ -26,7 +27,7 @@ import (
 	"time"
 )
 
-const lastAltered = "20 Aug 2020"
+const lastAltered = "5 Sep 2020"
 
 type ResultType struct {
 	// filename  string  Not needed, AFAICT (as far as I can tell)
@@ -98,6 +99,8 @@ func main() {
 			} else {
 				DirAlreadyWalked[fpath] = true
 			}
+		} else if isSymlink(fi.Mode()) && fi.IsDir() { // don't follow symlinked directories
+			return filepath.SkipDir
 		} else /* if fi.Mode().IsRegular()  */ {
 			if runtime.GOOS == "linux" {
 				for _, fp := range args {
@@ -199,6 +202,15 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
+
+// ------------------------------ isSymlink ---------------------------
+func isSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+} // IsSymlink
+
+
 /*
 {{{
 	if linuxflag {
