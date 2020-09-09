@@ -20,7 +20,6 @@ import (
 
 const lastModified = "9 Sep 20"
 
-
 /*
 MODULE qfx2xls;
   REVISION HISTORY
