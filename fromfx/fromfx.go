@@ -1,4 +1,5 @@
 // fromfx.go based on ofx2csv.go.
+
 package main
 
 import (
