@@ -1,5 +1,4 @@
 // fromfx.go based on ofx2csv.go.
-
 package main
 
 import (
@@ -19,7 +18,8 @@ import (
 	"tokenize"
 )
 
-const lastModified = "9 Sep 20"
+const lastModified = "12 Sep 20"
+
 
 /*
 MODULE qfx2xls;
@@ -141,11 +141,14 @@ type generalTransactionType struct {
 
 type generalFooterType struct {
 	BalAmt string
+	BalAmtFloat float64
 	DTasof string
 }
 
 var Transactions []generalTransactionType
 var inputstate int
+var bankTranListEnd bool
+var EOF bool
 
 func main() {
 	var e error
@@ -153,7 +156,7 @@ func main() {
 	var BaseFilename, ans, InFilename, CSVOutFilename, TXTOutFilename string
 	InFileExists := false
 
-	fmt.Println(" tocsv.go lastModified is", lastModified)
+	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
 		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 20); i++ {
@@ -228,21 +231,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	//	fmt.Println(" Length of filebyteslice is ", len(filebyteslice))
-
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
-	//	fmt.Println(" Length of bytesbuffer is ", bytesbuffer.Len())
-
-	// This code started as qfx2xls.mod, but I really want more like CitiFilterQIF.mod.  So I have to merge
-	// in that code also.
+	// This code started as qfx2xls.mod, but I really want more like CitiFilterQIF.mod.  So I have to merge in that code also.
 	// And I need to use toascii because it deletes non UTF-8 code points, utf8toascii does not do this.
 
 	Transactions = make([]generalTransactionType, 0, 200)
 
 	header, footer := processOFXFile(bytesbuffer) // Transactions slice is passed and returned globally.
-	//	fmt.Println(" Header is ", header, ",  footer is ", footer, ", and number of transactions is ", len(Transactions))
 	fmt.Println(" Number of transactions is ", len(Transactions))
+	//fmt.Println("which are:", Transactions)
+	//Pause()
 
 	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
 		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ")
@@ -289,7 +288,6 @@ func main() {
 		}
 		*/
 
-
 		if inputstate == citichecking {
 			outputstringslice[0] = t.TRNTYPE
 			outputstringslice[1] = t.DTPOSTEDtxt
@@ -314,7 +312,9 @@ func main() {
 			Pause()
 		}
 	}
-	fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
+//	if footer.BalAmtFloat != 0 {  Don't need this output twice.
+//		fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
+//	}
 
 	if inputstate == citichecking {
 		csvwriter.Flush()
@@ -374,7 +374,19 @@ func main() {
 			Pause()
 		}
 	}
-	fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
+
+//	type generalHeaderType struct {  This is here as a reference for the printf below.
+//		DTSERVER, LANGUAGE, ORG, FID, CURDEF, BANKID, ACCTID, ACCTTYPE, DTSTART, DTEND    string
+//	}
+
+	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
+		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
+	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
+		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof ,footer.BalAmt)
+
+//	if footer.BalAmtFloat != 0 {
+//		fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
+//	}
 
 	csvwriter.Flush()
 	if err := csvwriter.Error(); err != nil {
@@ -384,7 +396,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-} // end main of this package
+} // end main
 
 //---------------------------------------------------------------------------------------------------
 
@@ -468,11 +480,12 @@ func DateFieldAccessToSQlite(datein string) string {
 } // END DateFieldAccessToSQlite
 
 //--------------------------------------------------------------------------------------------------
-func getOfxToken(buf *bytes.Buffer) ofxTokenType {
+func getOfxToken(buf *bytes.Buffer, allowEmptyToken bool) ofxTokenType {
 	// -------------------------------------------------- GetQfxToken ----------------------------------
 	// Delimiters are angle brackets and EOL.
-	//   I forgot that break applies to switch-case as well as for loop.  I had to be more
-	//   specific for this to work.
+	//   I forgot that break applies to switch-case as well as for loop.  I had to be more specific for this to work.
+	// allowEmptyToken is true to return an empty token if there are no more tokens on the line.
+	// allowEmptyToken is false is the initial behavior in that newlines are ignored.
 
 	var token ofxTokenType
 	var char ofxCharType
@@ -482,7 +495,8 @@ MainProcessingLoop:
 
 		// GetChar
 		r, size, err := buf.ReadRune()
-		if err != nil { // this includes the EOF condition
+		if err != nil { // this includes the EOF condition among others
+			EOF = true
 			break
 		}
 		for size > 1 { // discard non-ASCII runes
@@ -492,6 +506,7 @@ MainProcessingLoop:
 				//	  And name = Bill Payment is when I have to extract the number > 12000 at the end for the CHECKNUM field
 				//	  I'll have to code this later.
 				//
+				EOF = true
 				break MainProcessingLoop
 			}
 		}
@@ -513,7 +528,7 @@ MainProcessingLoop:
 		} // END switch case on ch
 
 		switch token.State {
-		case empty: // of token.State
+		case empty: // of token.State, which is the initial state.
 			switch char.State {
 			case plain, slash:
 				token.State = strng
@@ -521,7 +536,9 @@ MainProcessingLoop:
 			case openangle:
 				token.State = openinghtml
 			case eol:
-				// do nothing
+				if allowEmptyToken {
+					break MainProcessingLoop
+				} // else ignore newlines and just get next token on the next line
 			case closeangle:
 				fmt.Println(" In getOfxToken.  Empty token got closeangle char")
 			} // END case chstate is empty
@@ -573,61 +590,62 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 	var transaction generalTransactionType
 
 	for { // processing loop
-		OFXtoken = getOfxToken(buf)
-		if OFXtoken.State == empty {
+		OFXtoken = getOfxToken(buf, false) // get opening tag name, ie, <tagname>
+		//fmt.Println(" in gettransactiondata.  OFXtoken is", OFXtoken)
+		if OFXtoken.State == empty || EOF {
 			fmt.Println(" Trying to get transaction record and got unexpected EOF condition.")
-			break
+			break  // will return an empty transaction
 		}
 
 		if false {
 			// do nothing but it allows the rest of the conditions to be in the else if form
 
 		} else if OFXtoken.State == openinghtml && OFXtoken.Str == "TRNTYPE" {
-			OFXtoken = getOfxToken(buf)
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
-				break
-			} // if EOF or token state not a string
+			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
+			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			//	fmt.Println(" after TRNTYPE got unexpedted token:", OFXtoken)
+			//	break
+			//} // if EOF or token state not a string
 			transaction.TRNTYPE = OFXtoken.Str
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "DTPOSTED") {
-			OFXtoken = getOfxToken(buf) // Now need the string data of this token
+			OFXtoken = getOfxToken(buf,true)  // tag contents must be on same line as tagname
 			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
+				fmt.Println(" after DTPOSTED got token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
 			transaction.DTPOSTEDtxt, transaction.Juldate = DateFieldReformatAccess(OFXtoken.Str)
 			transaction.DTPOSTEDcsv = DateFieldAccessToSQlite(transaction.DTPOSTEDtxt)
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "TRNAMT") {
-			OFXtoken = getOfxToken(buf)
+			OFXtoken = getOfxToken(buf, true)  // tag contents must be on same line as tagname
 			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
+				fmt.Println(" after TRNAMT got unexpedted token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
 			transaction.TRNAMT = OFXtoken.Str
 			transaction.TRNAMTfloat, _ = strconv.ParseFloat(OFXtoken.Str, 64)
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "FITID") {
-			OFXtoken = getOfxToken(buf)
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
-				break
-			} // if EOF or token state not a string
+			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
+			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			//	fmt.Println(" after FITID got unexpedted token:", OFXtoken)
+			//	break
+			//} // if EOF or token state not a string
 			transaction.FITID = OFXtoken.Str
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "CHECKNUM") {
-			OFXtoken = getOfxToken(buf)
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
-				break
-			} // if EOF or token state not a string
+			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
+			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			//	fmt.Println(" after CHECKNUM got unexpedted token:", OFXtoken)
+			//	break
+			//} // if EOF or token state not a string
 			transaction.CHECKNUM = OFXtoken.Str
 			transaction.CHECKNUMint, _ = strconv.Atoi(OFXtoken.Str)
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "NAME") {
-			OFXtoken = getOfxToken(buf)
+			OFXtoken = getOfxToken(buf,true) // tag contents must be on same line as tagname
 			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
+				fmt.Println(" after NAME got unexpedted token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
 			if strings.ContainsRune(OFXtoken.Str, '&') {
@@ -636,11 +654,11 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 			transaction.NAME = OFXtoken.Str
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "MEMO") {
-			OFXtoken = getOfxToken(buf)
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
-				fmt.Println(" after get ofxtoken, got unexpedted EOF or token is not a string.")
-				break
-			} // if EOF or token state not a string
+			OFXtoken = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			//	fmt.Println(" after MEMO got unexpedted token:", OFXtoken)
+			//	break
+			//} // if EOF or token state not a string
 			if strings.ContainsRune(OFXtoken.Str, '&') {
 				OFXtoken.Str = strings.ReplaceAll(OFXtoken.Str, "amp;", "")
 			}
@@ -649,14 +667,10 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 		} else if (OFXtoken.State == closinghtml) && (OFXtoken.Str == "STMTTRN") {
 			break
 
-		} else if (OFXtoken.State == closinghtml) && (OFXtoken.Str == "BANKTRANLIST") { // should not happen
+		} else if (OFXtoken.State == closinghtml) && (OFXtoken.Str == "BANKTRANLIST") {
+			bankTranListEnd = true
 			break
 		} // END if OFXoken.State condition
-		/*  Nevermind, as I think this duplicates what is already there.
-		if len(transaction.FITID) > 0 {  // just in case FITID is set after MEMO.
-			transaction.MEMO = transaction.FITID + ": " + transaction.MEMO
-		}
-		*/
 	} // END processing loop for record contents
 	return transaction
 } // END getTransactionData
@@ -671,93 +685,94 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 	var footer generalFooterType
 
 	for { // loop to read the header
-		token = getOfxToken(buf)
-		if token.State == empty {
+		token = getOfxToken(buf, false) // get tagname, as in <tagname>
+		if token.State == empty || EOF {
 			fmt.Println(" Trying to get header info and got EOF condition.")
 			break
 		}
 
 		if (token.State == openinghtml) && (token.Str == "ORG") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get header ORG and got error.  Token is", token)
+			//	break
+			//}
 			header.ORG = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "ACCTID") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get ACCTID header and got error.  Token is", token)
+			//	break
+			//}
 			header.ACCTID = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "DTSERVER") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf, true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get DTSERVER header and got error.  Token is", token)
+			//	break
+			//}
 			header.DTSERVER = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "LANGUAGE") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf, true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get LANGUAGE header and got error.  Token is", token)
+			//	break
+			//}
 			header.LANGUAGE = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "FID") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get FID header and got error.  Token is", token)
+			//	break
+			//}
 			header.FID = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "CURDEF") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get CURDEF header and got error.  Token is", token)
+			//	break
+			//}
 			header.CURDEF = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "BANKID") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a strng.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get BANKID header and got error.  Token is", token)
+			//	break
+			//}
 			header.BANKID = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "ACCTTYPE") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a strng.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get ACCTTYPE header and got error. Token is", token)
+			//	break
+			//}
 			header.ACCTTYPE = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "DTSTART") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a strng.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get DTSTART header and got error. Token is", token)
+			//	break
+			//}
 			header.DTSTART = token.Str
 
 		} else if (token.State == openinghtml) && (token.Str == "DTEND") {
-			token = getOfxToken(buf)
-			if token.State == empty || (token.State != strng) {
-				fmt.Println(" Trying to get header info and got EOF condition or token is not a string.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty || (token.State != strng) {
+			//	fmt.Println(" Trying to get DTEND header and got error condition.  Token is", token,
+			//		", header is", header)
+			//	break
+			//}
 			header.DTEND = token.Str
 
-		} else if (token.State == openinghtml) && (token.Str == "STMTTRN") {
+		} else if (token.State == openinghtml) && (token.Str == "STMTTRN") {  // header finished, transactions will follow.
 			break
 
 		} // END if token.State AND token.Str
@@ -766,7 +781,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 	for { // LOOP to read multiple transactions
 		transaction = getTransactionData(buf)
 
-		if transaction.TRNTYPE == "" && transaction.DTPOSTEDtxt == "" {
+		if bankTranListEnd {
 			break // either at EOF or there was an error from getTransactionData
 		}
 
@@ -774,11 +789,17 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 
 	} // END LOOP for multiple transactions
 
+	if EOF {
+		fmt.Println(" Unexpected EOF.")
+		os.Exit(1)
+	}
+
 	//  Get Footer containing ledgerbal, balamt, dtasof.  Stop when come TO </OFX>
 
 	for { // loop to get the footer.   exit out of this loop at EOF or came to </OFX>
-		token = getOfxToken(buf)
-		if token.State == empty {
+		token = getOfxToken(buf, false) // get tagname, as in <tagname>
+		//fmt.Println(" footer loop")
+		if token.State == empty || EOF {
 			fmt.Println(" Trying to get footer info and got EOF condition.")
 			return header, footer
 		}
@@ -786,22 +807,26 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 		if false {
 			// do nothing
 		} else if token.State == openinghtml && token.Str == "BALAMT" {
-			token = getOfxToken(buf)
-			if token.State == empty {
-				fmt.Println(" Trying to get footer info and got an error.")
-				break
-			}
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
+			//if token.State == empty {
+			//	fmt.Println(" Trying to get footer BALAMT and got an error.")
+			//	break
+			//}
 			footer.BalAmt = token.Str
-			balance, _ := strconv.ParseFloat(footer.BalAmt, 64)
-			if balance > 9999 {
+			var err error
+			footer.BalAmtFloat, err = strconv.ParseFloat(footer.BalAmt, 64)
+			if err != nil {
+				fmt.Println(" error converting string footer.BalAmt to float:", err)
+			}
+			if footer.BalAmtFloat > 9999 {
 				footer.BalAmt = AddCommas(footer.BalAmt)
 			}
 
 		} else if token.State == openinghtml && token.Str == "DTASOF" {
-			token = getOfxToken(buf)
+			token = getOfxToken(buf,true) // tag contents must be on same line as tagname
 			if token.State == empty {
-				fmt.Println(" Trying to get footer info and got an error.")
-				break
+				fmt.Println(" Trying to get footer DTASOF and got an error.")
+				//break
 			}
 			footer.DTasof = token.Str
 

@@ -1,0 +1,118 @@
+// detox.go
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"unicode"
+)
+
+const lastModified = "14 Sep 20"
+
+/*
+  REVISION HISTORY
+  ----------------
+  14 Sep 20 -- First version, based on code from fromfx.go.
+*/
+
+func main() {
+	var e error
+	var globPattern string
+
+	fmt.Println()
+
+	if len(os.Args) <= 1 { // this means no arguments on line, as the program name is always first argument passed in os.Args
+		fmt.Println(" Usage: detox globPattern")
+		os.Exit(1)
+	}
+
+	globPattern = os.Args[1]
+	startDirectory, _ := os.Getwd() // startDirectory is a string
+	fmt.Println()
+	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s. \n", lastModified, globPattern, startDirectory)
+	fmt.Println()
+
+	files := myReadDirNames(startDirectory)
+	ctr := 0
+	for _, fn := range files {
+		name := strings.ToLower(fn)
+		if BOOL, _ := filepath.Match(globPattern, name); BOOL {
+			detoxedName, toxic := detoxFilename(fn)
+			if toxic {
+				err := os.Rename(fn, detoxedName)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, " Error from rename function for name %s -> %s: %v \n", fn, detoxedName, e)
+				}
+				ctr++
+				fmt.Printf(" filename %q -> %q \n", fn, detoxedName)
+			}
+		}
+	}
+	if ctr > 1 {
+		fmt.Printf("\n Total of %d files were renamed. \n", ctr)
+	} else if ctr == 1 {
+		fmt.Printf("\n One file was renamed. \n")
+	} else {
+		fmt.Println(" No files were renamed.")
+	}
+} // end main
+
+//---------------------------------------------------------------------------------------------------
+func detoxFilename(fname string) (string, bool) {
+	var toxic bool
+
+	buf := bytes.NewBufferString(fname)
+
+	byteslice := make([]byte, 0, 100)
+
+	for {
+		r, size, err := buf.ReadRune()
+		if err == io.EOF { // only valid exit from this loop
+			name := string(byteslice)
+			return name, toxic
+		} else if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from buf.ReadRune() is", err)
+			return "", false // returning toxic as false to not do anything with this name as it got an error of some type.
+		}
+		if size > 1 {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else if unicode.IsSpace(r) {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else if unicode.IsControl(r) {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else if r == '.' || r == '_' || r == '-' {
+			byteslice = append(byteslice, '_')
+		} else if unicode.IsSymbol(r) {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else {
+			byteslice = append(byteslice, byte(r))
+		}
+	}
+} // end detoxFilename
+
+// ------------------------------- myReadDirNames -----------------------------------
+func myReadDirNames(dir string) []string { // based on the code from dsrt and descendents
+
+	dirname, err := os.Open(dir)
+	if err != nil {
+		return nil
+	}
+	defer dirname.Close()
+
+	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
+	if err != nil {
+		return nil
+	}
+	dirname.Close()
+	return names
+} // myReadDirNames
+
+// END detox.go
