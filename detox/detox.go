@@ -11,23 +11,24 @@ import (
 	"unicode"
 )
 
-const lastModified = "14 Sep 20"
+const lastModified = "16 Sep 20"
 
 /*
   REVISION HISTORY
   ----------------
   14 Sep 20 -- First version, based on code from fromfx.go.
+  16 Sep 20 -- Fixed when it changed '-' to '_'.  I didn't want that.
 */
 
 func main() {
 	var e error
-	var globPattern string
+    var globPattern string
 
-	fmt.Println()
+    fmt.Println()
 
 	if len(os.Args) <= 1 { // this means no arguments on line, as the program name is always first argument passed in os.Args
-		fmt.Println(" Usage: detox globPattern")
-		os.Exit(1)
+                fmt.Println(" Usage: detox globPattern")
+                os.Exit(1)
 	}
 
 	globPattern = os.Args[1]
@@ -37,7 +38,7 @@ func main() {
 	fmt.Println()
 
 	files := myReadDirNames(startDirectory)
-	ctr := 0
+    ctr := 0
 	for _, fn := range files {
 		name := strings.ToLower(fn)
 		if BOOL, _ := filepath.Match(globPattern, name); BOOL {
@@ -48,7 +49,7 @@ func main() {
 					fmt.Fprintf(os.Stderr, " Error from rename function for name %s -> %s: %v \n", fn, detoxedName, e)
 				}
 				ctr++
-				fmt.Printf(" filename %q -> %q \n", fn, detoxedName)
+			fmt.Printf(" filename %q -> %q \n", fn, detoxedName)
 			}
 		}
 	}
@@ -62,40 +63,40 @@ func main() {
 } // end main
 
 //---------------------------------------------------------------------------------------------------
-func detoxFilename(fname string) (string, bool) {
-	var toxic bool
+func detoxFilename (fname string) (string, bool) {
+    var toxic bool
 
 	buf := bytes.NewBufferString(fname)
 
-	byteslice := make([]byte, 0, 100)
+    byteslice := make([]byte,0,100)
 
-	for {
+    for {
 		r, size, err := buf.ReadRune()
-		if err == io.EOF { // only valid exit from this loop
+		if err == io.EOF {  // only valid exit from this loop
 			name := string(byteslice)
 			return name, toxic
 		} else if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from buf.ReadRune() is", err)
+			fmt.Fprintln(os.Stderr, " Error from buf.ReadRune() is", err )
 			return "", false // returning toxic as false to not do anything with this name as it got an error of some type.
 		}
 		if size > 1 {
 			toxic = true
-			byteslice = append(byteslice, '_')
+			byteslice = append(byteslice,'_')
 		} else if unicode.IsSpace(r) {
 			toxic = true
-			byteslice = append(byteslice, '_')
+			byteslice = append(byteslice,'_')
 		} else if unicode.IsControl(r) {
 			toxic = true
-			byteslice = append(byteslice, '_')
+			byteslice = append(byteslice,'_')
 		} else if r == '.' || r == '_' || r == '-' {
-			byteslice = append(byteslice, '_')
+			byteslice = append(byteslice, byte(r))
 		} else if unicode.IsSymbol(r) {
 			toxic = true
-			byteslice = append(byteslice, '_')
+			byteslice = append(byteslice,'_')
 		} else {
 			byteslice = append(byteslice, byte(r))
 		}
-	}
+    }
 } // end detoxFilename
 
 // ------------------------------- myReadDirNames -----------------------------------
@@ -111,8 +112,8 @@ func myReadDirNames(dir string) []string { // based on the code from dsrt and de
 	if err != nil {
 		return nil
 	}
-	dirname.Close()
-	return names
+    dirname.Close()
+    return names
 } // myReadDirNames
 
 // END detox.go
