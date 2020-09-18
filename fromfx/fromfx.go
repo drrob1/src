@@ -79,7 +79,8 @@ MODULE qfx2xls;
                  I guess that Go makes dynamic arrays just so easy that I never did that in Modula-2.  I could have
                  defined a large enough static array.  I just never went down that road, I guess.
                  The Modula-2 code writes the memo field as FITID + "  " + memo + ": " + comment, where I enter comment
-                 myself w/ each run of the pgm.  I'm not going to do that because I don't need all the numbers of FITID.
+                 myself w/ each run of the pgm.  I'm trying out adding the FITID numbers to Descript and see how I
+                 like it.
 */
 
 const ( // intended for ofxCharType
@@ -255,7 +256,8 @@ func main() {
 	//Pause()
 
 	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
-		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ")
+		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ") +
+			" : " + Transactions[ctr].FITID
 		if inputstate == citichecking && t.CHECKNUMint == 0 {
 			if strings.Contains(t.NAME, "Bill Payment") {
 				Transactions[ctr].CHECKNUM, Transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
