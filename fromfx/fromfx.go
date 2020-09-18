@@ -18,7 +18,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "12 Sep 20"
+const lastModified = "17 Sep 20"
 
 
 /*
@@ -69,6 +69,17 @@ MODULE qfx2xls;
    6 Sep 20 -- Added a comment about passing Transactions slice globally.
    7 Sep 20 -- Now called fromfx, to mean from qfx or ofx.  My intent is to cover both the CHK files and cc files.
                  I'll look for CHK in the selected filename to distinguish.
+  17 Sep 20 -- Using the csv routines from Go did not work for SQLiteStudio.  It's not reading the date again.
+                 I have to explicitly quote the output.  And also always write Windows line endings \r\n.  Else
+                 SQLiteStudio does not process the lines of the file correctly.  I just checked, and the
+                 Modula-2 version always wrote Windows line endings.
+                 This Go routine reads all the lines into a slice of records/struct's.  I did not write it that way
+                 in Modula-2.  In Modula-2 I read 1 line and then wrote out 1 line, one by one.  I probably could
+                 have created an array of RECORD type, but I didn't.
+                 I guess that Go makes dynamic arrays just so easy that I never did that in Modula-2.  I could have
+                 defined a large enough static array.  I just never went down that road, I guess.
+                 The Modula-2 code writes the memo field as FITID + "  " + memo + ": " + comment, where I enter comment
+                 myself w/ each run of the pgm.  I'm not going to do that because I don't need all the numbers of FITID.
 */
 
 const ( // intended for ofxCharType
@@ -159,7 +170,7 @@ func main() {
 	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
 		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
-		for i := 0; i < min(len(filenames), 20); i++ {
+		for i := 0; i < min(len(filenames), 30); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
@@ -295,7 +306,7 @@ func main() {
 			outputstringslice[3] = t.Descript
 			outputstringslice[4] = t.TRNAMT
 			outputstringslice[5] = header.ACCTTYPE
-			fmt.Printf(" %d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
 				outputstringslice[3], outputstringslice[4], outputstringslice[5])
 			if e = csvwriter.Write(outputstringslice); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, e)
@@ -338,13 +349,13 @@ func main() {
 	check(err)
 	defer OutputFile.Close()
 
-	csvwriter = csv.NewWriter(OutputFile)
-	defer csvwriter.Flush()
-
 	if inputstate == citichecking {
 		outputstringslice = make([]string, 8, 10) // need to add 2 empty fields at the end of each line.
+		csvwriter = csv.NewWriter(OutputFile)
+		defer csvwriter.Flush()
 	} else {
 		outputstringslice = make([]string, 4, 10)
+		txtwriter = bufio.NewWriter(OutputFile)
 	}
 
 	for ctr, t := range Transactions {
@@ -357,18 +368,24 @@ func main() {
 			outputstringslice[5] = header.ACCTTYPE
 			outputstringslice[6] = ""
 			outputstringslice[7] = ""
-			fmt.Printf(" %d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
 				outputstringslice[3], outputstringslice[4], outputstringslice[5])
-		} else {
+			if e = csvwriter.Write(outputstringslice); e != nil {
+				log.Fatalln(" Error writing record to", OutFilename, ":", e)
+			}
+
+		} else {  // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
 			outputstringslice[0] = t.DTPOSTEDcsv
 			outputstringslice[1] = t.TRNAMT
 			outputstringslice[2] = t.Descript
 			outputstringslice[3] = BaseFilename
-			fmt.Printf(" %d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+			fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
 				outputstringslice[3])
-		}
-		if e = csvwriter.Write(outputstringslice); e != nil {
-			log.Fatalln(" Error writing record to", OutFilename, ":", e)
+			s := fmt.Sprintf("%q, %q, %q, %q \r\n", outputstringslice[0], outputstringslice[1], outputstringslice[2],
+				outputstringslice[3])
+			if _, e = txtwriter.WriteString(s); e != nil {
+				log.Fatalln(e)
+			}
 		}
 		if ctr%40 == 0 && ctr > 0 {
 			Pause()
@@ -379,19 +396,23 @@ func main() {
 //		DTSERVER, LANGUAGE, ORG, FID, CURDEF, BANKID, ACCTID, ACCTTYPE, DTSTART, DTEND    string
 //	}
 
+    fmt.Println()
 	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
 		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
 	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
 		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof ,footer.BalAmt)
 
-//	if footer.BalAmtFloat != 0 {
-//		fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
-//	}
-
-	csvwriter.Flush()
-	if err := csvwriter.Error(); err != nil {
-		log.Fatalln(err)
+	if inputstate == citichecking {
+		csvwriter.Flush()
+		if err := csvwriter.Error(); err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		if err := txtwriter.Flush(); err != nil {
+			log.Fatalln(err)
+		}
 	}
+
 	if err := OutputFile.Close(); err != nil {
 		log.Fatalln(err)
 	}

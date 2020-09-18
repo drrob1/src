@@ -11,17 +11,17 @@ import (
 	"unicode"
 )
 
-const lastModified = "16 Sep 20"
+const lastModified = "17 Sep 20"
 
 /*
   REVISION HISTORY
   ----------------
   14 Sep 20 -- First version, based on code from fromfx.go.
-  16 Sep 20 -- Fixed when it changed '-' to '_'.  I didn't want that.
+  16 Sep 20 -- Fixed when it changed '-' to '_'.  And I added IsPunct so it would change comma and other punctuations.
 */
 
 func main() {
-	var e error
+	//var e error
     var globPattern string
 
     fmt.Println()
@@ -46,7 +46,8 @@ func main() {
 			if toxic {
 				err := os.Rename(fn, detoxedName)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, " Error from rename function for name %s -> %s: %v \n", fn, detoxedName, e)
+					//fmt.Fprintf(os.Stderr, " Error from rename function for name %s -> %s: %v \n", fn, detoxedName, err)
+					fmt.Fprintln(os.Stderr, err)
 				}
 				ctr++
 			fmt.Printf(" filename %q -> %q \n", fn, detoxedName)
@@ -76,7 +77,7 @@ func detoxFilename (fname string) (string, bool) {
 			name := string(byteslice)
 			return name, toxic
 		} else if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from buf.ReadRune() is", err )
+			fmt.Fprintln(os.Stderr, err )
 			return "", false // returning toxic as false to not do anything with this name as it got an error of some type.
 		}
 		if size > 1 {
@@ -90,7 +91,7 @@ func detoxFilename (fname string) (string, bool) {
 			byteslice = append(byteslice,'_')
 		} else if r == '.' || r == '_' || r == '-' {
 			byteslice = append(byteslice, byte(r))
-		} else if unicode.IsSymbol(r) {
+		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
 			toxic = true
 			byteslice = append(byteslice,'_')
 		} else {
