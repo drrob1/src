@@ -11,13 +11,14 @@ import (
 	"unicode"
 )
 
-const lastModified = "17 Sep 20"
+const lastModified = "18 Sep 20"
 
 /*
   REVISION HISTORY
   ----------------
   14 Sep 20 -- First version, based on code from fromfx.go.
   16 Sep 20 -- Fixed when it changed '-' to '_'.  And I added IsPunct so it would change comma and other punctuations.
+  18 Sep 20 -- I had it ignore '~' and not change it, as it was included as a punctuation mark by IsPunct.
 */
 
 func main() {
@@ -89,7 +90,7 @@ func detoxFilename (fname string) (string, bool) {
 		} else if unicode.IsControl(r) {
 			toxic = true
 			byteslice = append(byteslice,'_')
-		} else if r == '.' || r == '_' || r == '-' {
+		} else if r == '.' || r == '_' || r == '-' || r == '~' {
 			byteslice = append(byteslice, byte(r))
 		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
 			toxic = true

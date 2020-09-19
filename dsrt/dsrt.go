@@ -1,4 +1,4 @@
-// dsrt.go -- directoy sort
+// dsrt.go -- directory sort
 
 package main
 
@@ -10,14 +10,14 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"unicode"
-	"runtime"
 )
 
-const LastAltered = "13 Oct 2019"
+const LastAltered = "18 Sep 2020"
 
 /*
 Revision History
@@ -74,17 +74,16 @@ Revision History
    4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
                  So as long as I want the exact same code for both platforms, I do need platform specific code.
    6 Oct 19 -- Removed -H and added -help flags
-  13 Oct 19 -- Commenting out dead code
+  25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
+  18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
 */
 
-// FISlice is a FileInfo slice, as in os.FileInfo
+// FIS is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
-
-// type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
-// type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
+type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
+type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
 type dirAliasMapType map[string]string
 
-/*  Sort interface methods, that are supplanted by the sortfcn closure.
 func (f FISliceDate) Less(i, j int) bool {
 	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
 }
@@ -108,7 +107,6 @@ func (f FISliceSize) Swap(i, j int) {
 func (f FISliceSize) Len() int {
 	return len(f)
 }
-*/
 
 type DsrtParamType struct {
 	numlines                                                        int
@@ -208,6 +206,11 @@ func main() {
 
 	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
 
+	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
+
+	var extflag = flag.Bool("e", false, "only print if there is no extension")
+	var extensionflag = flag.Bool("ext", false, "only print if there is no extension")
+
 	flag.Parse()
 
 	fmt.Println(" dsrt will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
@@ -243,8 +246,11 @@ func main() {
 		NumLines = NLines
 	}
 
+	noExtensionFlag := *extensionflag || *extflag
+
 	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
 	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
+	LongFileSizeList := *longflag
 
 	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
 
@@ -376,18 +382,27 @@ func main() {
 	if linuxflag {
 		for _, f := range files {
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
-			sizeint := 0
 			sizestr := ""
 			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
-				sizeint = int(f.Size())
-				sizestr = strconv.Itoa(sizeint)
-				if sizeint > 100000 {
-					sizestr = AddCommas(sizestr)
+				showthis := true
+				if noExtensionFlag && strings.ContainsRune(f.Name(), '.') {
+					showthis = false
 				}
-				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
+				if showthis {
+					if LongFileSizeList {
+						sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+						if f.Size() > 100000 {
+							sizestr = AddCommas(sizestr)
+						}
+						fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					} else {
+						sizestr = getMagnitudeString(f.Size())
+						fmt.Printf("%10v %s:%s %-15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					}
+					count++
+				}
 			} else if IsSymlink(f.Mode()) {
 				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				count++
@@ -401,19 +416,37 @@ func main() {
 		}
 	} else if winflag {
 		for _, f := range files {
+			showthis := false
 			NAME := strings.ToUpper(f.Name())
-			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
+			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
+			// This way, the condition below can be BOOL && thisNewFlag
+			BOOL, _ := filepath.Match(CleanFileName, NAME)
+			if BOOL {
+				showthis = true
+				if noExtensionFlag && strings.ContainsRune(NAME, '.') {
+					showthis = false
+				}
+			}
+			//			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
+			if showthis {
 				s := f.ModTime().Format("Jan-02-2006_15:04:05")
-				sizeint := 0
+				//sizeint := 0
 				sizestr := ""
 				if FilenameList && f.Mode().IsRegular() {
 					SizeTotal += f.Size()
-					sizeint = int(f.Size())
-					sizestr = strconv.Itoa(sizeint)
-					if sizeint > 100000 {
-						sizestr = AddCommas(sizestr)
+					//sizeint = int(f.Size())
+					if LongFileSizeList {
+						sizestr = strconv.FormatInt(f.Size(), 10)
+						if f.Size() > 100000 {
+							sizestr = AddCommas(sizestr)
+						}
+						fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+
+					} else {
+						sizestr = getMagnitudeString(f.Size())
+						fmt.Printf("%-15s %s %s\n", sizestr, s, f.Name())
 					}
-					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 					count++
 				} else if IsSymlink(f.Mode()) {
 					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
@@ -439,36 +472,7 @@ func main() {
 	}
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
-		s1 := ""
-		var i int64
-		switch {
-		case GrandTotal > 1000000000000: // 1 trillion, or TB
-			i = GrandTotal / 1000000000000               // I'm forcing an integer division.
-			if GrandTotal%1000000000000 > 500000000000 { // rounding up
-				i++
-			}
-			s1 = fmt.Sprintf("%d TB", i)
-		case GrandTotal > 1000000000: // 1 billion, or GB
-			i = GrandTotal / 1000000000
-			if GrandTotal%1000000000 > 500000000 { // rounding up
-				i++
-			}
-			s1 = fmt.Sprintf("%d GB", i)
-		case GrandTotal > 1000000: // 1 million, or MB
-			i = GrandTotal / 1000000
-			if GrandTotal%1000000 > 500000 {
-				i++
-			}
-			s1 = fmt.Sprintf("%d MB", i)
-		case GrandTotal > 1000: // KB
-			i = GrandTotal / 1000
-			if GrandTotal%1000 > 500 {
-				i++
-			}
-			s1 = fmt.Sprintf("%d KB", i)
-		default:
-			s1 = fmt.Sprintf("%d", GrandTotal)
-		}
+		s1 := getMagnitudeString(GrandTotal)
 		fmt.Println(", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
@@ -482,7 +486,8 @@ func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 
 //---------------------------------------------------------------------- AddCommas
 func AddCommas(instr string) string {
-	var Comma []byte = []byte{','}
+	//var Comma []byte = []byte{','}  Getting error that type can be omitted
+	Comma := []byte{','}
 
 	BS := make([]byte, 0, 15)
 	BS = append(BS, instr...)
@@ -519,6 +524,7 @@ func GetIDname(uidStr string) string {
 
 } // GetIDname
 
+/*
 // ------------------------------- GetEnviron ------------------------------------------------
 func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obsolete now but not gone.
 	var dsrtparam DsrtParamType
@@ -551,6 +557,8 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 	}
 	return dsrtparam
 } // GetEnviron
+
+*/
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
@@ -588,7 +596,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 }
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
-func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 	s := os.Getenv("diraliases")
 	if len(s) == 0 {
@@ -636,7 +644,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = GetDirectoryAliases()
+	aliasesMap = getDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {
@@ -674,6 +682,67 @@ func MyReadDir(dir string) []os.FileInfo {
 	}
 	return fi
 } // MyReadDir
+
+// ----------------------------- getMagnitudeString -------------------------------
+func getMagnitudeString(j int64) string {
+
+	var s1 string
+	var f float64
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		f = float64(j) / 1000000000000
+		s1 = fmt.Sprintf("%.4g tb", f)
+	case j > 1_000_000_000: // 1 billion, or GB
+		f = float64(j) / 1000000000
+		s1 = fmt.Sprintf("%6.4g gb", f)
+	case j > 1_000_000: // 1 million, or MB
+		f = float64(j) / 1000000
+		s1 = fmt.Sprintf("%9.4g mb", f)
+	case j > 1000: // KB
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("%12.4g kb", f)
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+	}
+	return s1
+}
+
+/*
+func getMagnitudeString(j int64) string {
+
+	var s1 string
+	var i int64
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		i = j / 1000000000000               // I'm forcing an integer division.
+		if j%1000000000000 > 500000000000 { // rounding up
+			i++
+		}
+		s1 = fmt.Sprintf("%3d TB", i)
+	case j > 1_000_000_000: // 1 billion, or GB
+		i = j / 1000000000
+		if j%1000000000 > 500000000 { // rounding up
+			i++
+		}
+		s1 = fmt.Sprintf("%6d GB", i)
+	case j > 1_000_000: // 1 million, or MB
+		i = j / 1000000
+		if j%1000000 > 500000 {
+			i++
+		}
+		s1 = fmt.Sprintf("%9d MB", i)
+	case j > 1000: // KB
+		i = j / 1000
+		if j%1000 > 500 {
+			i++
+		}
+		s1 = fmt.Sprintf("%12d kb", i)
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+	}
+	return s1
+}
+*/
 
 /*
  {{{
