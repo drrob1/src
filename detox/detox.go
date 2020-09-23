@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const lastModified = "18 Sep 20"
+const lastModified = "22 Sep 20"
 
 /*
   REVISION HISTORY
@@ -19,27 +19,28 @@ const lastModified = "18 Sep 20"
   14 Sep 20 -- First version, based on code from fromfx.go.
   16 Sep 20 -- Fixed when it changed '-' to '_'.  And I added IsPunct so it would change comma and other punctuations.
   18 Sep 20 -- I had it ignore '~' and not change it, as it was included as a punctuation mark by IsPunct.
+  22 Sep 20 -- Fixed case issue by converting pattern to all lower case also.  I forgot that before.  And I will allow no pattern to be entered.
 */
 
 func main() {
 	//var e error
-    var globPattern string
+	var globPattern string
 
-    fmt.Println()
+	fmt.Println()
 
 	if len(os.Args) <= 1 { // this means no arguments on line, as the program name is always first argument passed in os.Args
-                fmt.Println(" Usage: detox globPattern")
-                os.Exit(1)
+		globPattern = "*"
+	} else {
+		globPattern = strings.ToLower(os.Args[1])
 	}
 
-	globPattern = os.Args[1]
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
 	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s. \n", lastModified, globPattern, startDirectory)
 	fmt.Println()
 
 	files := myReadDirNames(startDirectory)
-    ctr := 0
+	ctr := 0
 	for _, fn := range files {
 		name := strings.ToLower(fn)
 		if BOOL, _ := filepath.Match(globPattern, name); BOOL {
@@ -51,7 +52,7 @@ func main() {
 					fmt.Fprintln(os.Stderr, err)
 				}
 				ctr++
-			fmt.Printf(" filename %q -> %q \n", fn, detoxedName)
+				fmt.Printf(" filename %q -> %q \n", fn, detoxedName)
 			}
 		}
 	}
@@ -65,40 +66,40 @@ func main() {
 } // end main
 
 //---------------------------------------------------------------------------------------------------
-func detoxFilename (fname string) (string, bool) {
-    var toxic bool
+func detoxFilename(fname string) (string, bool) {
+	var toxic bool
 
 	buf := bytes.NewBufferString(fname)
 
-    byteslice := make([]byte,0,100)
+	byteslice := make([]byte, 0, 100)
 
-    for {
+	for {
 		r, size, err := buf.ReadRune()
-		if err == io.EOF {  // only valid exit from this loop
+		if err == io.EOF { // only valid exit from this loop
 			name := string(byteslice)
 			return name, toxic
 		} else if err != nil {
-			fmt.Fprintln(os.Stderr, err )
+			fmt.Fprintln(os.Stderr, err)
 			return "", false // returning toxic as false to not do anything with this name as it got an error of some type.
 		}
 		if size > 1 {
 			toxic = true
-			byteslice = append(byteslice,'_')
+			byteslice = append(byteslice, '_')
 		} else if unicode.IsSpace(r) {
 			toxic = true
-			byteslice = append(byteslice,'_')
+			byteslice = append(byteslice, '_')
 		} else if unicode.IsControl(r) {
 			toxic = true
-			byteslice = append(byteslice,'_')
+			byteslice = append(byteslice, '_')
 		} else if r == '.' || r == '_' || r == '-' || r == '~' {
 			byteslice = append(byteslice, byte(r))
 		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
 			toxic = true
-			byteslice = append(byteslice,'_')
+			byteslice = append(byteslice, '_')
 		} else {
 			byteslice = append(byteslice, byte(r))
 		}
-    }
+	}
 } // end detoxFilename
 
 // ------------------------------- myReadDirNames -----------------------------------
@@ -114,8 +115,8 @@ func myReadDirNames(dir string) []string { // based on the code from dsrt and de
 	if err != nil {
 		return nil
 	}
-    dirname.Close()
-    return names
+	dirname.Close()
+	return names
 } // myReadDirNames
 
 // END detox.go
