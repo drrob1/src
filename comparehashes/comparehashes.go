@@ -41,7 +41,7 @@ import (
   13 Nov 18 -- Will use "-" and "_" also to detech a filename token.
   10 Nov 19 -- Now uses ToLower to compare the string hashes, to ignore case.
   15 Jul 20 -- Decided to make better guesses.  Sha1 has 40 digits, Sha256 has 64 digits and Sha512 has 128 digits.
-  27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the lengths of Sha256 and Sha512 are correct.
+  27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
                  And I'm going to change from tokenize to tknptr.  Just to see if it works.
 */
 
@@ -171,7 +171,7 @@ func main() {
 
 		//	inputline = strings.Replace(inputline, "*", " ", -1) // just blank out the * char
 		//tokenize.INITKN(inputline)
-		tokenPtr := tknptr.INITKN(inputline) // I need to declare a pointer receiver, not like the static tokenize rtn.
+		tokenPtr := tknptr.NewToken(inputline) // I need to declare a pointer receiver, not like the static tokenize rtn.  I'll use a Go idiom.
 
 		//tokenize.SetMapDelim('*') // this should now work, as of 01/26/2018
 		tokenPtr.SetMapDelim('*')
