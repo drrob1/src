@@ -17,7 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"tokenize"
+	"tknptr"
 )
 
 /*
@@ -41,9 +41,11 @@ import (
   13 Nov 18 -- Will use "-" and "_" also to detech a filename token.
   10 Nov 19 -- Now uses ToLower to compare the string hashes, to ignore case.
   15 Jul 20 -- Decided to make better guesses.  Sha1 has 40 digits, Sha256 has 64 digits and Sha512 has 128 digits.
+  27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the lengths of Sha256 and Sha512 are correct.
+                 And I'm going to change from tokenize to tknptr.  Just to see if it works.
 */
 
-const LastCompiled = "15 July 2020"
+const LastCompiled = "27 Sep 2020"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -129,7 +131,6 @@ func main() {
 		fmt.Println()
 		fmt.Println()
 		fmt.Println(" Not a recognized hash extension.  Will determine by hash length.")
-		//WhichHash = sha256hash
 	} // switch case on extension for HashType
 
 	fmt.Println()
@@ -146,7 +147,7 @@ func main() {
 	defer HashesFile.Close()
 
 	scanner := bufio.NewScanner(HashesFile)
-	//	scanner.Split(bufio.ScanLines) // I believe this is the default.  I may experiment to see if I need this line for my code to work, AFTER I debug it as it is.
+	//	scanner.Split(bufio.ScanLines)  This is the default.  I may experiment to see if I need this line for my code to work, AFTER I debug it as it is.
 
 	for { /* to read multiple lines */
 		FileSize = 0
@@ -169,11 +170,13 @@ func main() {
 		} /* allow comments and essentially blank lines */
 
 		//	inputline = strings.Replace(inputline, "*", " ", -1) // just blank out the * char
-		tokenize.INITKN(inputline)
+		//tokenize.INITKN(inputline)
+		tokenPtr := tknptr.INITKN(inputline) // I need to declare a pointer receiver, not like the static tokenize rtn.
 
-		tokenize.SetMapDelim('*') // this should now work, as of 01/26/2018
+		//tokenize.SetMapDelim('*') // this should now work, as of 01/26/2018
+		tokenPtr.SetMapDelim('*')
 
-		FirstToken, EOL := tokenize.GetTokenString(false)
+		FirstToken, EOL := tokenPtr.GetTokenString(false)
 
 		if EOL {
 			fmt.Println(" EOL or other Error while getting 1st token in the hashing file.  Skipping to next line.")
@@ -182,9 +185,9 @@ func main() {
 		hashlength := 0
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
-			strings.ContainsRune(FirstToken.Str, '_') { /* have filename first on line */
+			strings.ContainsRune(FirstToken.Str, '_') { // have filename first on line
 			TargetFilename = FirstToken.Str
-			SecondToken, EOL := tokenize.GetTokenString(false) // Get hash string from the line in the file
+			SecondToken, EOL := tokenPtr.GetTokenString(false) // Get hash string from the line in the file
 			if EOL {
 				fmt.Println(" Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping")
 				continue
@@ -195,7 +198,7 @@ func main() {
 		} else { /* have hash first on line */
 			HashValueReadFromFile = FirstToken.Str
 			hashlength = len(FirstToken.Str)
-			SecondToken, EOL := tokenize.GetTokenString(false) // Get name of file on which to compute the hash
+			SecondToken, EOL := tokenPtr.GetTokenString(false) // Get name of file on which to compute the hash
 			if EOL {
 				fmt.Println(" Error while gatting TargetFilename token in the hashing file.  Skipping")
 				continue
@@ -231,8 +234,15 @@ func main() {
 				WhichHash = sha256hash
 			} else if hashlength == 128 {
 				WhichHash = sha512hash
-			} else {
+			} else if hashlength == 40 {
 				WhichHash = sha1hash
+			} else if hashlength == 96 {
+				WhichHash = sha384hash
+			} else if hashlength == 32 {
+				WhichHash = md5hash
+			} else {
+				fmt.Fprintln(os.Stderr, " Could not determine hash type for file.  Exiting.")
+				os.Exit(1)
 			}
 			fmt.Println(" hash determined by length to be", HashName[WhichHash])
 			fmt.Println()
