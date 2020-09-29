@@ -11,7 +11,7 @@ import (
 	"tknptr"
 )
 
-const LastAltered = "30 Jan 2018"
+const LastAltered = "28 Sep 2020"
 
 /*
   REVISION HISTORY
@@ -22,6 +22,7 @@ const LastAltered = "30 Jan 2018"
   11 Aug 17 -- Now named testtokenptr, and will test using pointer receivers and scanning whole lines.
   13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
   30 Jan 18 -- Will use flags to set the mode now.
+  28 Sep 20 -- Testing new use code of tknptr, in which the StateMap is part of the pointer structure that is passed around.
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
@@ -98,6 +99,7 @@ func main() {
 			tokenbuffer.SetMapDelim('>')
 			tokenbuffer.SetMapDelim('%')
 			tokenbuffer.SetMapDelim('^')
+			*mapflag = false
 		}
 		EOL := false
 		token := tknptr.TokenType{}

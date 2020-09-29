@@ -64,6 +64,8 @@ import (
                  ignore this, so I'm writing SetMapDelim so I can.
   27 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
                  when I remap the characters.
+  28 Sep 20 -- Now that I'm using tknptr in comparehashes, I'm going to include the statemap in the bufferstate structure
+                 so it's not global.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -92,6 +94,7 @@ type CharType struct {
 type BufferState struct {
 	CURPOSN, HOLDCURPOSN, PREVPOSN int
 	lineByteSlice, HoldLineBS      []byte
+	StateMap                       map[byte]int // as of 9/28/20, StateMap is part of this structure.
 }
 
 // ---------------------------------------------------------------------
@@ -145,40 +148,41 @@ func CAP(c byte) byte {
 	return c
 }
 
-var StateMap map[byte]int
-
 // ----------------------------------------- init --------------------------------------------
+/* removed 9/28/20 when StateMap became part of BufferState
 func init() {
 	StateMap = make(map[byte]int, 128)
 	InitStateMap()
 }
 
+*/
+
 // ------------------------------------ InitStateMap ------------------------------------------------
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
-func InitStateMap() {
+func InitStateMap(bs *BufferState) {
+	bs.StateMap = make(map[byte]int, 128)
 	//	StateMap[NullChar] = DELIM
-	for i := 0; i < 33; i++ {
-		StateMap[byte(i)] = DELIM
+	for i := 0; i < 33; i++ { // note that this includes \t, HT, tab character.
+		bs.StateMap[byte(i)] = DELIM
 	}
 	for i := 33; i < 128; i++ {
-		StateMap[byte(i)] = ALLELSE // including comma
+		bs.StateMap[byte(i)] = ALLELSE // including comma
 	}
 	for c := Dgt0; c <= Dgt9; c++ {
-		StateMap[byte(c)] = DGT
+		bs.StateMap[byte(c)] = DGT
 	}
-	StateMap[' '] = DELIM
-	StateMap[';'] = DELIM
-	//	StateMap['\t'] = DELIM // this is the tab char, HT for horizontal tab.  This line is unnecessary after I changed the init loop above
-	StateMap['#'] = OP
-	StateMap['*'] = OP
-	StateMap['+'] = OP
-	StateMap['-'] = OP
-	StateMap['/'] = OP
-	StateMap['<'] = OP
-	StateMap['='] = OP
-	StateMap['>'] = OP
-	StateMap['%'] = OP
-	StateMap['^'] = OP
+	bs.StateMap[' '] = DELIM
+	bs.StateMap[';'] = DELIM
+	bs.StateMap['#'] = OP
+	bs.StateMap['*'] = OP
+	bs.StateMap['+'] = OP
+	bs.StateMap['-'] = OP
+	bs.StateMap['/'] = OP
+	bs.StateMap['<'] = OP
+	bs.StateMap['='] = OP
+	bs.StateMap['>'] = OP
+	bs.StateMap['%'] = OP
+	bs.StateMap['^'] = OP
 } // InitStateMap
 
 // ----------------------------------------- INITKN -------------------------------------------
@@ -189,8 +193,8 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 	// The buffer on which the tokenizing rtns operate is also initialized.
 	// CURPOSN is initialized to start at the first character on the line.
 
-	InitStateMap() // It's possible GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs := new(BufferState)
+	InitStateMap(bs) // It's possible GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied, not just a pointer.
@@ -207,8 +211,8 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 func NewToken(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
-	InitStateMap() // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs := new(BufferState)
+	InitStateMap(bs) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
@@ -216,11 +220,8 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 } // NewToken, copied from INITKN
 //------------------------------ STOTKNPOSN -----------------------------------
 func (bs *BufferState) STOTKNPOSN() {
-	/*
-	   STORE TOKEN POSITION.
-	   This routine will store the value of the curposn into a hold variable for
-	   later recall by RCLTKNPOSN.
-	*/
+	// STORE TOKEN POSITION.
+	// This routine will store the value of the curposn into a hold variable for later recall by RCLTKNPOSN.
 
 	if (bs.CURPOSN < 0) || (bs.CURPOSN > len(bs.lineByteSlice)) {
 		log.SetFlags(log.Llongfile)
@@ -246,7 +247,7 @@ func (bs *BufferState) RCLTKNPOSN() {
 } // RCLTKNPOSN
 
 // ---------------------------- PeekChr -------------------------------------------
-func (bs *BufferState) PeekChr() (C CharType, EOL bool) {
+func (bs *BufferState) PeekChr() (CharType, bool) {
 	/*
 	   -- This is the GET CHARACTER ROUTINE.  Its purpose is to get the next
 	   -- character from inbuf, determine its fsatyp (finite state automata type),
@@ -255,6 +256,8 @@ func (bs *BufferState) PeekChr() (C CharType, EOL bool) {
 	   -- other pointers in this program.
 	      As of 21 Sep 16, the CAP function was removed from here, and conditionally placed into GetToken.
 	*/
+	var C CharType
+	var EOL bool
 	EOL = false
 	if bs.CURPOSN >= len(bs.lineByteSlice) {
 		EOL = true
@@ -262,7 +265,7 @@ func (bs *BufferState) PeekChr() (C CharType, EOL bool) {
 		return C, EOL
 	}
 	C.Ch = bs.lineByteSlice[bs.CURPOSN] //  no longer use the Cap function here.
-	C.State = StateMap[C.Ch]            // state assignment, here using map access.
+	C.State = bs.StateMap[C.Ch]         // state assignment, here using map access.
 	return C, EOL
 } // PeekCHR
 
@@ -272,8 +275,8 @@ func (bs *BufferState) NextChr() {
 } // NextChr
 
 // --------------------------------- GetChr --------------------------------
-func (bs *BufferState) GETCHR() (C CharType, EOL bool) {
-	C, EOL = bs.PeekChr()
+func (bs *BufferState) GETCHR() (CharType, bool) {
+	C, EOL := bs.PeekChr()
 	bs.NextChr()
 	return C, EOL
 } // GETCHR
@@ -592,7 +595,7 @@ func FromHex(s string) int {
 
 // ---------------------------------------- SetMapDelim -----------------------------------------
 func (bs *BufferState) SetMapDelim(char byte) {
-	StateMap[char] = DELIM
+	bs.StateMap[char] = DELIM
 } // SetMapDelim
 
 //-------------------------------------------- GETTKNREAL ---------------------------------------
@@ -704,40 +707,40 @@ ExitLoop:
 func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var Char CharType
 	for c := Dgt0; c <= Dgt9; c++ {
-		StateMap[byte(c)] = ALLELSE
+		bs.StateMap[byte(c)] = ALLELSE
 	}
 
 	// remember that these map assignments could have been altered by SetMapDelim.  In that case I will not change the StateMap for that character
-	if StateMap['#'] == OP {
-		StateMap['#'] = ALLELSE
+	if bs.StateMap['#'] == OP {
+		bs.StateMap['#'] = ALLELSE
 	}
 
-	if StateMap['*'] == OP {
-		StateMap['*'] = ALLELSE
+	if bs.StateMap['*'] == OP {
+		bs.StateMap['*'] = ALLELSE
 	}
 
-	if StateMap['+'] == OP {
-		StateMap['+'] = ALLELSE
+	if bs.StateMap['+'] == OP {
+		bs.StateMap['+'] = ALLELSE
 	}
 
-	if StateMap['-'] == OP {
-		StateMap['-'] = ALLELSE
+	if bs.StateMap['-'] == OP {
+		bs.StateMap['-'] = ALLELSE
 	}
 
-	if StateMap['/'] == OP {
-		StateMap['/'] = ALLELSE
+	if bs.StateMap['/'] == OP {
+		bs.StateMap['/'] = ALLELSE
 	}
 
-	if StateMap['<'] == OP {
-		StateMap['<'] = ALLELSE
+	if bs.StateMap['<'] == OP {
+		bs.StateMap['<'] = ALLELSE
 	}
 
-	if StateMap['='] == OP {
-		StateMap['='] = ALLELSE /* plussign */
+	if bs.StateMap['='] == OP {
+		bs.StateMap['='] = ALLELSE /* plussign */
 	}
 
-	if StateMap['>'] == OP {
-		StateMap['>'] = ALLELSE /* minussign */
+	if bs.StateMap['>'] == OP {
+		bs.StateMap['>'] = ALLELSE /* minussign */
 	}
 
 	TOKEN, EOL = bs.GetToken(UpperCase)
@@ -758,7 +761,6 @@ func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool
 		if EOL || ((Char.State == DELIM) && (len(TOKEN.Str) > 0)) {
 			break // Ignore leading delims
 		}
-		//  NEED TO FIX THIS LATER !!!!!!                                       TOKEN.Str += Char.Ch;  // Here I will leave the code as is and not use a byte slice.
 		tokenByteSlice = append(tokenByteSlice, Char.Ch)
 		TOKEN.Isum += int(Char.Ch)
 	} // getting chars

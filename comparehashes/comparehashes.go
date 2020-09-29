@@ -37,8 +37,8 @@ import (
   19 Oct 17 -- Added ability to ignore the * that standard hash files for linux use.
   22 Oct 17 -- Added filepicker.
   21 Jan 18 -- Really ignore *.  Before method did not work.
-  26 Jan 18 -- Changed tokenize so that SetMapDelim change sticks.
-  13 Nov 18 -- Will use "-" and "_" also to detech a filename token.
+  26 Jan 18 -- Changed tokenize so that SetMapDelim change sticks and actually works.
+  13 Nov 18 -- Will use "-" and "_" also to detect a filename token.
   10 Nov 19 -- Now uses ToLower to compare the string hashes, to ignore case.
   15 Jul 20 -- Decided to make better guesses.  Sha1 has 40 digits, Sha256 has 64 digits and Sha512 has 128 digits.
   27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
