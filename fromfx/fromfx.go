@@ -18,7 +18,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "17 Sep 20"
+const lastModified = "2 Oct 20"
 
 
 /*
@@ -81,6 +81,7 @@ MODULE qfx2xls;
                  The Modula-2 code writes the memo field as FITID + "  " + memo + ": " + comment, where I enter comment
                  myself w/ each run of the pgm.  I'm trying out adding the FITID numbers to Descript and see how I
                  like it.
+   2 Oct 20 -- qbo files will populate the filepicker menu.  Filepicker now uses case insensitive flag.  Stop code added.
 */
 
 const ( // intended for ofxCharType
@@ -170,15 +171,19 @@ func main() {
 
 	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
+		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 30); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
-		fmt.Print(" Enter filename choice : ")
+		fmt.Print(" Enter filename choice (stop code=999) : ")
 		fmt.Scanln(&ans)
 		if len(ans) == 0 {
 			ans = "0"
+		} else if ans == "999" {
+			fmt.Println( " Stop code entered.")
+			os.Exit(0)
 		}
+
 		i, err := strconv.Atoi(ans)
 		if err == nil {
 			InFilename = filenames[i]

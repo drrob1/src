@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "5 Sep 20"
+const LastAltered = "2 Oct 20"
 
 /*
 Revision History
@@ -33,6 +33,7 @@ Revision History
 18 Oct 17 -- Now called filepicker, derived from dsrt.go.
 18 Oct 18 -- Added folding markers
  5 Sep 20 -- Added use of regex
+ 2 Oct 20 -- Made regex use the case insensitive flag
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -311,7 +312,8 @@ func GetRegexFilenames(pattern string) []string { // Not sure what I want this r
 	CleanDirName := "." + string(filepath.Separator)
 	CleanPattern := ""
 	CleanDirName, CleanPattern = filepath.Split(pattern)
-	CleanPattern = strings.ToUpper(CleanPattern)
+	//CleanPattern = strings.ToUpper(CleanPattern)
+	CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
 	if len(CleanDirName) == 0 {
 		CleanDirName = "." + string(filepath.Separator)
 	}
@@ -356,7 +358,8 @@ func GetRegexFilenames(pattern string) []string { // Not sure what I want this r
 	}
 
 	for _, f := range files {
-		NAME := strings.ToUpper(f.Name())
+		//NAME := strings.ToUpper(f.Name())
+		NAME := f.Name()                                                   // don't need the ToUpper as I'm using a case insensitive regex flag
 		if BOOL := regex.MatchString(NAME); BOOL && f.Mode().IsRegular() { // ignore directory names that happen to match the pattern
 			stringslice = append(stringslice, f.Name()) // needs to preserve case of filename for linux
 			/*

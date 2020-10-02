@@ -18,7 +18,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "30 Sep 2020"
+const lastModified = "2 Oct 2020"
 
 
 /*
@@ -85,6 +85,7 @@ MODULE qfx2xls;
                  I don't think I need the overhead of container/list.  Having an array of tokens will allow me to
                  easily undo a token.  The qbo format I found on the AmEx site does not have any newlines, so the
                  entire file is one line.  Fromfx did work on that file, but I want to play.
+   2 Oct 20 -- qbo files now will populate the filepicker menu.
 */
 
 const ( // intended for ofxCharType
@@ -175,7 +176,7 @@ func main() {
 
 	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
+		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)|(QBO$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 30); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
@@ -473,8 +474,8 @@ func makeQueue(buf *bytes.Buffer) {
 		ofxToken := getOfxToken(buf, false)
 		queueOfTokens = append(queueOfTokens, ofxToken)
 	}
-//    fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
-//    Pause()
+    fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
+    Pause()
 }
 
 //--------------------------------------------------------------------------------------------------
