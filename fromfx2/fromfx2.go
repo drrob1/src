@@ -18,7 +18,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "3 Oct 20"
+const lastModified = "4 Oct 20"
 
 /*
 MODULE qfx2xls;
@@ -83,6 +83,7 @@ MODULE qfx2xls;
    2 Oct 20 -- qbo files will populate the filepicker menu.  Filepicker now uses case insensitive flag.  Stop code added.
    3 Oct 20 -- Now called fromfx2, and I intend this to have an ungettoken, that I have to implement by storing a token
                  and checking if there is a valid token that was ungotten before fetching a new one.
+   4 Oct 20 -- Will skip empty tokens
 */
 
 const ( // intended for ofxCharType
@@ -605,6 +606,10 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 		if EOF {
 			fmt.Println(" Trying to get transaction record and got unexpected EOF condition.")
 			break // will return an empty transaction
+		}
+
+		if OFXtoken.State == empty {  // ignore empty tokens
+			continue
 		}
 
 		if false {

@@ -18,7 +18,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "2 Oct 2020"
+const lastModified = "4 Oct 2020"
 
 
 /*
@@ -85,7 +85,9 @@ MODULE qfx2xls;
                  I don't think I need the overhead of container/list.  Having an array of tokens will allow me to
                  easily undo a token.  The qbo format I found on the AmEx site does not have any newlines, so the
                  entire file is one line.  Fromfx did work on that file, but I want to play.
-   2 Oct 20 -- qbo files now will populate the filepicker menu.
+   2 Oct 20 -- qbo files now will populate the filepicker menu.  Filepicker adds the case insensitive flag.  And I
+                 created 999 as a stop code.
+   4 Oct 20 -- Will ignore empty tokens.
 */
 
 const ( // intended for ofxCharType
@@ -121,8 +123,8 @@ type ofxCharType struct {
 
 const KB = 1024
 const MB = KB * KB
-const ofxext = ".OFX"
-const qfxext = ".QFX"
+const ofxext = ".ofx"
+const qfxext = ".qfx"
 const sqliteoutfile = "citifile.csv"
 const accessoutfile = "citifile.txt"
 
@@ -176,14 +178,17 @@ func main() {
 
 	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)|(QBO$)") // $ matches end of line
+		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 30); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
-		fmt.Print(" Enter filename choice : ")
+		fmt.Print(" Enter filename choice (stop code=999) : ")
 		fmt.Scanln(&ans)
 		if len(ans) == 0 {
 			ans = "0"
+		} else if ans == "999" {
+			fmt.Println(" Stop code 999 entered.")
+			os.Exit(0)
 		}
 		i, err := strconv.Atoi(ans)
 		if err == nil {
@@ -251,7 +256,7 @@ func main() {
 
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
-	queueOfTokens = make([]ofxTokenType,0, KB)  // I don't think I need a MB here.
+	queueOfTokens = make([]ofxTokenType,0, 2*KB)  // I don't think I need a MB here.
 
 	Transactions = make([]generalTransactionType, 0, KB)
 
@@ -472,7 +477,9 @@ func makeQueue(buf *bytes.Buffer) {
 
 	for ! EOF {
 		ofxToken := getOfxToken(buf, false)
-		queueOfTokens = append(queueOfTokens, ofxToken)
+		if ofxToken.State != empty { // ignore the empty tokens.  Let's see how that goes.
+			queueOfTokens = append(queueOfTokens, ofxToken)
+		}
 	}
     fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
     Pause()
@@ -782,6 +789,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 		} else if (token.State == openinghtml) && (token.Str == "DTSTART") {
 			//token = getOfxToken(buf,true) // tag contents must be on same line as tagname
 			token = queueOfTokens[qCtr]
+			qCtr++
 			if token.State != strng {
 				qCtr--
 			}
@@ -790,6 +798,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 		} else if (token.State == openinghtml) && (token.Str == "DTEND") {
 			//token = getOfxToken(buf,true) // tag contents must be on same line as tagname
 			token = queueOfTokens[qCtr]
+			qCtr++
 			if token.State != strng {
 				fmt.Println(" Trying to get DTEND header and got error condition.  Token is", token, ", header is", header)
 				qCtr--
