@@ -18,11 +18,9 @@ import (
 	"tokenize"
 )
 
-const lastModified = "4 Oct 20"
-
+const lastModified = "17 Oct 20"
 
 /*
-MODULE qfx2xls;
   REVISION HISTORY
   ----------------
   13 Mar 04 -- It does not seem to be always creating the output file.
@@ -83,6 +81,7 @@ MODULE qfx2xls;
                  like it.
    2 Oct 20 -- qbo files will populate the filepicker menu.  Filepicker now uses case insensitive flag.  Stop code added.
    4 Oct 20 -- Will ignore empty tokens
+  17 Oct 20 -- Removed the strings.ToLower for output filenames.
 */
 
 const ( // intended for ofxCharType
@@ -236,8 +235,10 @@ func main() {
 		CSVOutFilename = sqliteoutfile
 		TXTOutFilename = accessoutfile
 	} else {
-		CSVOutFilename = strings.ToLower(BaseFilename + ".csv")
-		TXTOutFilename = strings.ToLower(BaseFilename + ".xls")
+//		CSVOutFilename = strings.ToLower(BaseFilename + ".csv")
+//		TXTOutFilename = strings.ToLower(BaseFilename + ".xls")
+		CSVOutFilename = BaseFilename + ".csv"
+		TXTOutFilename = BaseFilename + ".xls"
 	}
 
 	fmt.Println()

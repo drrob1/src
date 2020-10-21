@@ -20,7 +20,7 @@ import (
 	"tokenize"
 )
 
-const lastModified = "4 Oct 20"
+const lastModified = "19 Oct 20"
 
 /*
 MODULE qfx2xls;
@@ -86,6 +86,7 @@ MODULE qfx2xls;
    3 Oct 20 -- Now called fromfx2, and I intend this to have an ungettoken, that I have to implement by storing a token
                  and checking if there is a valid token that was ungotten before fetching a new one.
    4 Oct 20 -- Now called testfromfx2, to be able to test the ungettoken code I wrote yesterday.
+  19 Oct 20 -- Removed useless comments of dead code.
 */
 
 const ( // intended for ofxCharType
@@ -118,8 +119,6 @@ type ofxCharType struct {
 	Ch    byte
 	State int
 }
-
-// var err error  unused according to Goland, so I removed it.
 
 const KB = 1024
 const MB = KB * KB
@@ -248,7 +247,6 @@ func main() {
 
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
-//	scanner := bufio.NewScanner(os.Stdin)
 	const ( // intended for ofxTokenType
 		empty = iota
 		strng
@@ -264,7 +262,7 @@ func main() {
 			break
 		}
 		fmt.Print(" call UnGetTkn? (y,q,e,N) ")
-        fmt.Scanln(&ans) // ignore the error as <enter> by itself is an error of "unexpected newline"
+		fmt.Scanln(&ans) // ignore the error as <enter> by itself is an error of "unexpected newline"
 
 		ans = strings.TrimSpace(ans)
 		ans = strings.ToUpper(ans)
@@ -275,172 +273,18 @@ func main() {
 		}
 	}
 } // end main for test routine.
-/*
-	Transactions = make([]generalTransactionType, 0, 200)
-
-	header, footer := processOFXFile(bytesbuffer) // Transactions slice is passed and returned globally.
-	fmt.Println(" Number of transactions is ", len(Transactions))
-	//fmt.Println("which are:", Transactions)
-	//Pause()
-
-	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
-		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ") +
-			" : " + Transactions[ctr].FITID
-		if inputstate == citichecking && t.CHECKNUMint == 0 {
-			if strings.Contains(t.NAME, "Bill Payment") {
-				Transactions[ctr].CHECKNUM, Transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
-			} else {
-				Transactions[ctr].CHECKNUM = t.FITID[8:]
-				Transactions[ctr].CHECKNUMint, _ = strconv.Atoi(t.FITID[8:])
-			}
-		}
-	}
-
-	// Output to txt format file section for Excel or Access.
-
-	OutFilename := TXTOutFilename
-	OutputFile, err := os.Create(OutFilename)
-	check(err)
-	defer OutputFile.Close()
-
-	var outputstringslice []string
-	var csvwriter *csv.Writer
-	var txtwriter *bufio.Writer
-	if inputstate == citichecking {
-		outputstringslice = make([]string, 6, 10)
-		csvwriter = csv.NewWriter(OutputFile)
-		defer csvwriter.Flush()
-	} else {
-		txtwriter = bufio.NewWriter(OutputFile)
-		defer txtwriter.Flush()
-	}
-
-	for ctr, t := range Transactions {
-		if inputstate == citichecking {
-			outputstringslice[0] = t.TRNTYPE
-			outputstringslice[1] = t.DTPOSTEDtxt
-			outputstringslice[2] = t.CHECKNUM
-			outputstringslice[3] = t.Descript
-			outputstringslice[4] = t.TRNAMT
-			outputstringslice[5] = header.ACCTTYPE
-			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3], outputstringslice[4], outputstringslice[5])
-			if e = csvwriter.Write(outputstringslice); e != nil {
-				log.Fatalln(" Error writing record to", OutFilename, e)
-			}
-		} else {
-			str := fmt.Sprintf("%s \t %s \t %s \t %s \n", t.DTPOSTEDtxt, t.TRNAMT, t.Descript, BaseFilename)
-			if _, e = txtwriter.WriteString(str); e != nil {
-				log.Fatalln(" Error writing record to", OutFilename, e)
-			}
-			fmt.Print(str)
-		}
-
-		if ctr%40 == 0 && ctr > 0 {
-			Pause()
-		}
-	}
-	//	if footer.BalAmtFloat != 0 {  Don't need this output twice.
-	//		fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
-	//	}
-
-	if inputstate == citichecking {
-		csvwriter.Flush()
-		if err := csvwriter.Error(); err != nil {
-			log.Fatalln(err)
-		}
-	} else {
-		if err := txtwriter.Flush(); err != nil {
-			log.Fatalln(err)
-		}
-	}
-
-	if err := OutputFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
-
-	// Output for SQlite format.
-	OutFilename = CSVOutFilename
-
-	OutputFile, err = os.Create(OutFilename)
-	check(err)
-	defer OutputFile.Close()
-
-	if inputstate == citichecking {
-		outputstringslice = make([]string, 8, 10) // need to add 2 empty fields at the end of each line.
-		csvwriter = csv.NewWriter(OutputFile)
-		defer csvwriter.Flush()
-	} else {
-		outputstringslice = make([]string, 4, 10)
-		txtwriter = bufio.NewWriter(OutputFile)
-	}
-
-	for ctr, t := range Transactions {
-		if inputstate == citichecking {
-			outputstringslice[0] = t.TRNTYPE
-			outputstringslice[1] = t.DTPOSTEDcsv
-			outputstringslice[2] = t.CHECKNUM
-			outputstringslice[3] = t.Descript
-			outputstringslice[4] = t.TRNAMT
-			outputstringslice[5] = header.ACCTTYPE
-			outputstringslice[6] = ""
-			outputstringslice[7] = ""
-			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3], outputstringslice[4], outputstringslice[5])
-			if e = csvwriter.Write(outputstringslice); e != nil {
-				log.Fatalln(" Error writing record to", OutFilename, ":", e)
-			}
-
-		} else { // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
-			outputstringslice[0] = t.DTPOSTEDcsv
-			outputstringslice[1] = t.TRNAMT
-			outputstringslice[2] = t.Descript
-			outputstringslice[3] = BaseFilename
-			fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3])
-			s := fmt.Sprintf("%q, %q, %q, %q \r\n", outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3])
-			if _, e = txtwriter.WriteString(s); e != nil {
-				log.Fatalln(e)
-			}
-		}
-		if ctr%40 == 0 && ctr > 0 {
-			Pause()
-		}
-	}
-
-	fmt.Println()
-	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
-		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
-	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
-		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
-
-	if inputstate == citichecking {
-		csvwriter.Flush()
-		if err := csvwriter.Error(); err != nil {
-			log.Fatalln(err)
-		}
-	} else {
-		if err := txtwriter.Flush(); err != nil {
-			log.Fatalln(err)
-		}
-	}
-
-	if err := OutputFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
-
-}
-
-*/
 
 //---------------------------------------------------------------------------------------------------
 func translateTokenType(t ofxTokenType) string {
 	switch t.State {
-	case empty: return "empty"
-	case strng: return "strng"
-	case openinghtml: return "OpeningHTML"
-	case closinghtml: return "ClosingHTML"
+	case empty:
+		return "empty      "
+	case strng:
+		return "strng      "
+	case openinghtml:
+		return "OpeningHTML"
+	case closinghtml:
+		return "ClosingHTML"
 	default:
 		return "unknown value"
 	}
@@ -451,8 +295,6 @@ func translateTokenType(t ofxTokenType) string {
 func DateFieldReformatAccess(datein string) (string, int) {
 	//                                                                0123456789     01234567
 	//  This procedure changes the date as it is input in a qfx file: mm/dd/yyyy <-- YYYYMMDD
-	// I have to look into if I want a 2 or 4 digit year.  I'll make it a 4 digit year, as of
-	// Dec 2017, when I became interested in Sqlite because it's FOSS.
 
 	var dateout string
 

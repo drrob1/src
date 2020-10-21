@@ -18,10 +18,9 @@ import (
 	"tokenize"
 )
 
-const lastModified = "4 Oct 20"
+const lastModified = "17 Oct 20"
 
 /*
-MODULE qfx2xls;
   REVISION HISTORY
   ----------------
   13 Mar 04 -- It does not seem to be always creating the output file.
@@ -84,6 +83,7 @@ MODULE qfx2xls;
    3 Oct 20 -- Now called fromfx2, and I intend this to have an ungettoken, that I have to implement by storing a token
                  and checking if there is a valid token that was ungotten before fetching a new one.
    4 Oct 20 -- Will skip empty tokens
+  17 Oct 20 -- Removed strings.ToLower from output file names.
 */
 
 const ( // intended for ofxCharType
@@ -239,8 +239,8 @@ func main() {
 		CSVOutFilename = sqliteoutfile
 		TXTOutFilename = accessoutfile
 	} else {
-		CSVOutFilename = strings.ToLower(BaseFilename + ".csv")
-		TXTOutFilename = strings.ToLower(BaseFilename + ".xls")
+		CSVOutFilename = BaseFilename + ".csv"
+		TXTOutFilename = BaseFilename + ".xls"
 	}
 
 	fmt.Println()
@@ -254,15 +254,10 @@ func main() {
 
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
-	// This code started as qfx2xls.mod, but I really want more like CitiFilterQIF.mod.  So I have to merge in that code also.
-	// And I need to use toascii because it deletes non UTF-8 code points, utf8toascii does not do this.
-
 	Transactions = make([]generalTransactionType, 0, 200)
 
 	header, footer := processOFXFile(bytesbuffer) // Transactions slice is passed and returned globally.
 	fmt.Println(" Number of transactions is ", len(Transactions))
-	//fmt.Println("which are:", Transactions)
-	//Pause()
 
 	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
 		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ") +
