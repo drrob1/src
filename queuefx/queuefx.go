@@ -112,7 +112,7 @@ const ( // intended for inputstate
 
 type ofxTokenType struct {
 	Str   string // name or contents, depending on the State value
-	State int // empty, strng, openinghtml, closinghtml
+	State int    // empty, strng, openinghtml, closinghtml
 }
 
 type ofxCharType struct {
@@ -142,8 +142,8 @@ type generalHeaderType struct {
 
 type generalTransactionType struct {
 	TRNTYPE     string
-	DTPOSTEDtxt string  // intended for Excel or Access
-	DTPOSTEDcsv string  // intended for SQLite
+	DTPOSTEDtxt string // intended for Excel or Access
+	DTPOSTEDcsv string // intended for SQLite
 	TRNAMT      string
 	TRNAMTfloat float64
 	FITID       string
@@ -156,9 +156,9 @@ type generalTransactionType struct {
 }
 
 type generalFooterType struct {
-	BalAmt string
+	BalAmt      string
 	BalAmtFloat float64
-	DTasof string
+	DTasof      string
 }
 
 var Transactions []generalTransactionType
@@ -167,7 +167,6 @@ var bankTranListEnd bool
 var EOF bool
 var queueOfTokens []ofxTokenType
 var qCtr int
-
 
 func main() {
 	var e error
@@ -232,7 +231,7 @@ func main() {
 		fmt.Println(" input filename is ", InFilename)
 	}
 
-	if ! strings.HasPrefix(BaseFilename, "CHK") { // remember that inputstate starts as 0, so it starts as citichecking.
+	if !strings.HasPrefix(BaseFilename, "CHK") { // remember that inputstate starts as 0, so it starts as citichecking.
 		inputstate = cc
 	}
 
@@ -255,7 +254,7 @@ func main() {
 
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
-	queueOfTokens = make([]ofxTokenType,0, 2*KB)  // I don't think I need a MB here.
+	queueOfTokens = make([]ofxTokenType, 0, 2*KB) // I don't think I need a MB here.
 
 	Transactions = make([]generalTransactionType, 0, KB)
 
@@ -329,9 +328,9 @@ func main() {
 		if err := csvwriter.Error(); err != nil {
 			log.Fatalln(err)
 		}
- 	} else {
- 		if err := txtwriter.Flush(); err != nil {
- 			log.Fatalln(err)
+	} else {
+		if err := txtwriter.Flush(); err != nil {
+			log.Fatalln(err)
 		}
 	}
 
@@ -371,7 +370,7 @@ func main() {
 				log.Fatalln(" Error writing record to", OutFilename, ":", e)
 			}
 
-		} else {  // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
+		} else { // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
 			outputstringslice[0] = t.DTPOSTEDcsv
 			outputstringslice[1] = t.TRNAMT
 			outputstringslice[2] = t.Descript
@@ -389,15 +388,15 @@ func main() {
 		}
 	}
 
-//	type generalHeaderType struct {  This is here as a reference for the printf below.
-//		DTSERVER, LANGUAGE, ORG, FID, CURDEF, BANKID, ACCTID, ACCTTYPE, DTSTART, DTEND    string
-//	}
+	//	type generalHeaderType struct {  This is here as a reference for the printf below.
+	//		DTSERVER, LANGUAGE, ORG, FID, CURDEF, BANKID, ACCTID, ACCTTYPE, DTSTART, DTEND    string
+	//	}
 
-    fmt.Println()
+	fmt.Println()
 	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
 		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
 	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
-		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof ,footer.BalAmt)
+		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
 
 	if inputstate == citichecking {
 		csvwriter.Flush()
@@ -474,14 +473,14 @@ func DateFieldAccessToSQlite(datein string) string {
 func makeQueue(buf *bytes.Buffer) {
 	// queueOfTokens and EOF are passed globally.
 
-	for ! EOF {
+	for !EOF {
 		ofxToken := getOfxToken(buf, false)
 		if ofxToken.State != empty { // ignore the empty tokens.  Let's see how that goes.
 			queueOfTokens = append(queueOfTokens, ofxToken)
 		}
 	}
-    fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
-    Pause()
+	fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
+	Pause()
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -591,7 +590,7 @@ MainProcessingLoop:
 //func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 func getTransactionData() generalTransactionType {
 	// Returns nil as a sign of either normal or abnormal end.
-        // Input is from global queueOfTokens.
+	// Input is from global queueOfTokens.
 
 	var OFXtoken ofxTokenType
 	var transaction generalTransactionType
@@ -599,11 +598,11 @@ func getTransactionData() generalTransactionType {
 	for { // processing loop
 		//OFXtoken = getOfxToken(buf, false) // get opening tag name, ie, <tagname>
 		OFXtoken = queueOfTokens[qCtr]
-        qCtr++
+		qCtr++
 		//fmt.Println(" in gettransactiondata.  OFXtoken is", OFXtoken)
 		if qCtr >= len(queueOfTokens) {
 			fmt.Println(" Unexpected out of tokens when trying to get transaction record.")
-			break  // will return an empty transaction
+			break // will return an empty transaction
 		}
 
 		if false {
@@ -611,19 +610,19 @@ func getTransactionData() generalTransactionType {
 
 		} else if OFXtoken.State == openinghtml && OFXtoken.Str == "TRNTYPE" {
 			OFXtoken = queueOfTokens[qCtr]
-            qCtr++
+			qCtr++
 			if OFXtoken.State != strng { // TRNTYPE is blank as wrong type of token was fetched.
-			    qCtr--
+				qCtr--
 			} // if EOF or token state not a string
 			transaction.TRNTYPE = OFXtoken.Str
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "DTPOSTED") {
 			//OFXtoken = getOfxToken(buf,true)  // tag contents must be on same line as tagname
 			OFXtoken = queueOfTokens[qCtr]
-            qCtr++
-			if  OFXtoken.State != strng {
+			qCtr++
+			if OFXtoken.State != strng {
 				fmt.Println(" after DTPOSTED got token:", OFXtoken)
-                qCtr--
+				qCtr--
 				break
 			}
 			transaction.DTPOSTEDtxt, transaction.Juldate = DateFieldReformatAccess(OFXtoken.Str)
@@ -633,7 +632,7 @@ func getTransactionData() generalTransactionType {
 			OFXtoken = queueOfTokens[qCtr]
 			if OFXtoken.State != strng {
 				fmt.Println(" after TRNAMT got unexpedted token:", OFXtoken)
-                qCtr--
+				qCtr--
 				break
 			}
 			transaction.TRNAMT = OFXtoken.Str
@@ -651,7 +650,7 @@ func getTransactionData() generalTransactionType {
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "CHECKNUM") {
 			//OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
 			OFXtoken = queueOfTokens[qCtr]
-            qCtr++
+			qCtr++
 			if OFXtoken.State != strng {
 				qCtr--
 			}
@@ -697,7 +696,7 @@ func getTransactionData() generalTransactionType {
 
 //--------------------------------------------------------------------------------------------
 func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
-// transactions slice is passed as a global, as is queueOfTokens and its qCtr
+	// transactions slice is passed as a global, as is queueOfTokens and its qCtr
 
 	var header generalHeaderType
 	var token ofxTokenType
@@ -727,7 +726,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 			token = queueOfTokens[qCtr]
 			qCtr++
 			if token.State != strng {
-			        qCtr--
+				qCtr--
 			}
 			header.ACCTID = token.Str
 
@@ -804,7 +803,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 			}
 			header.DTEND = token.Str
 
-		} else if (token.State == openinghtml) && (token.Str == "STMTTRN") {  // header finished, transactions will follow.
+		} else if (token.State == openinghtml) && (token.Str == "STMTTRN") { // header finished, transactions will follow.
 			break
 
 		} // END if token.State AND token.Str
@@ -939,5 +938,5 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
- //---------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
 // END queuefx based on fromfx.go based on ofx2csv.go based on qfx2xls.mod

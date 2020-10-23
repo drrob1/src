@@ -603,7 +603,7 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 			break // will return an empty transaction
 		}
 
-		if OFXtoken.State == empty {  // ignore empty tokens
+		if OFXtoken.State == empty { // ignore empty tokens
 			continue
 		}
 

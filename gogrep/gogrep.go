@@ -22,7 +22,7 @@
 
   20 Mar 20 -- Now a separate module called gogrep.  I am going to try to use dirmap but run gogrep on each walked dir.
 
- */
+*/
 package gogrep
 
 import (
@@ -39,7 +39,7 @@ import (
 	"time"
 )
 
-const LastAltered  = "20 Mar 2020"
+const LastAltered = "20 Mar 2020"
 
 var workers = runtime.NumCPU()
 
@@ -94,7 +94,7 @@ func Gogrep(pattern string, files []string, timeoutOpt int) error {
 	}
 
 	if len(pattern) < 1 {
-//		log.Fatalln("a regexp to match must be specified")
+		//		log.Fatalln("a regexp to match must be specified")
 		e := errors.New("regexp must be specified")
 		return e
 	}
@@ -111,7 +111,7 @@ func Gogrep(pattern string, files []string, timeoutOpt int) error {
 		if timeoutOpt != 0 {
 			timeout = timeoutopt * 1e9
 		}
-		grep(timeout, lineRx, commandLineFiles(files))  // this fails vet because it's in the platform specific code files.
+		grep(timeout, lineRx, commandLineFiles(files)) // this fails vet because it's in the platform specific code files.
 	}
 	return nil
 }

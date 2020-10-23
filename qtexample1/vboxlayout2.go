@@ -43,9 +43,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("QVBox Layout Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(400, 400) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0)      //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("QVBox Layout Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(400, 400)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	vboxlayout := widgets.NewQVBoxLayout2(window)
 	mainwidget := widgets.NewQWidget(nil, 0)
@@ -61,12 +61,12 @@ func main() {
 	loginbutton := widgets.NewQPushButton2("Login", window)
 	registerbutton := widgets.NewQPushButton2("Register", window)
 
-	vboxlayout.AddWidget(usernameLabel,0,0)
+	vboxlayout.AddWidget(usernameLabel, 0, 0)
 	vboxlayout.AddWidget(usernameLineEdit, 0, 0)
-	vboxlayout.AddWidget(pwdLabel,0,0)
-	vboxlayout.AddWidget(pwdLineEdit,0,0)
-	vboxlayout.AddWidget(loginbutton,0,0)
-	vboxlayout.AddWidget(registerbutton,0,0)
+	vboxlayout.AddWidget(pwdLabel, 0, 0)
+	vboxlayout.AddWidget(pwdLineEdit, 0, 0)
+	vboxlayout.AddWidget(loginbutton, 0, 0)
+	vboxlayout.AddWidget(registerbutton, 0, 0)
 
 	// window.SetCentralWidget(vboxlayout)
 

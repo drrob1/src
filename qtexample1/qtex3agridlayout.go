@@ -52,9 +52,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("Grid Layout Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(300, 300) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0)     //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("Grid Layout Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(300, 300)             //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	//mainwidget := widgets.NewQWidget(nil, 0)
 
@@ -62,7 +62,7 @@ func main() {
 	firstNameLineEdit := widgets.NewQLineEdit(window)
 	lastNameLineEdit := widgets.NewQLineEdit(window)
 	ageSpinBox := widgets.NewQSpinBox(window)
-	ageSpinBox.SetRange(1,100)
+	ageSpinBox.SetRange(1, 100)
 
 	employmentStatusComboBox := widgets.NewQComboBox(window)
 	employmentStatusStringSlice := []string{"Unemployed", "Employed", "NA"}
@@ -76,7 +76,7 @@ func main() {
 	layout.AddWidget2(ageSpinBox, 1, 0, core.Qt__AlignLeft)
 	layout.AddWidget2(employmentStatusComboBox, 1, 1, core.Qt__AlignLeft)
 
-//	window.SetCentralWidget(mainwidget)
+	//	window.SetCentralWidget(mainwidget)
 	window.SetLayout(layout)
 	window.Show()
 

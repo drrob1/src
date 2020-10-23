@@ -26,8 +26,8 @@ func main() {
 		log.Fatal("init:", err)
 	}
 	defer goncurses.End()
-//	stdscr.Print("Press enter to continue...")
-//	stdscr.Refresh()
+	//	stdscr.Print("Press enter to continue...")
+	//	stdscr.Refresh()
 
 	maxrow, maxcol := stdscr.MaxYX()
 

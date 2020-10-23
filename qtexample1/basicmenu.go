@@ -42,9 +42,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("SRM System Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetFixedSize2(500, 500) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
+	window := widgets.NewQMainWindow(nil, 0)    //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("SRM System Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetFixedSize2(500, 500)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
 
 	newIcon := gui.QIcon_FromTheme2("document-new", gui.NewQIcon5("new.png"))
 	openIcon := gui.QIcon_FromTheme2("document-open", gui.NewQIcon5("open.png"))
@@ -53,20 +53,20 @@ func main() {
 	// set up menu bar, and maybe toolbar
 	menubar := window.MenuBar()
 
-	qactionpointerslice := make([]*widgets.QAction,0,5)
+	qactionpointerslice := make([]*widgets.QAction, 0, 5)
 
 	// set up file menu option
 	fileMenu := menubar.AddMenu2("&File")
-    a := fileMenu.AddAction2(newIcon,"&New")  // a has type *QAction
-    filenewmenuoption := func () {
-    	// need a function here.  I'll make it a dummy function
-    	widgets.QMessageBox_About(window, "File New", "File New Menu option was selected")
+	a := fileMenu.AddAction2(newIcon, "&New") // a has type *QAction
+	filenewmenuoption := func() {
+		// need a function here.  I'll make it a dummy function
+		widgets.QMessageBox_About(window, "File New", "File New Menu option was selected")
 		return
 	}
 	a.ConnectTriggered(func(checked bool) {
 		filenewmenuoption()
 		return
-	})  // function to execute when option is triggered
+	}) // function to execute when option is triggered
 
 	a.SetPriority(widgets.QAction__LowPriority)
 	a.SetShortcuts2(gui.QKeySequence__New)
@@ -74,9 +74,9 @@ func main() {
 	qactionpointerslice = append(qactionpointerslice, a)
 
 	b := fileMenu.AddAction2(openIcon, "&Open") // b has type *QAction
-    fileopenmenuoption := func () {
-    	// need a function here.  I'll make it a dummy function
-    	widgets.QMessageBox_About(window, "File Open", "File Open Menu option was selected")
+	fileopenmenuoption := func() {
+		// need a function here.  I'll make it a dummy function
+		widgets.QMessageBox_About(window, "File Open", "File Open Menu option was selected")
 		return
 	}
 	b.ConnectTriggered(func(checked bool) {
@@ -103,7 +103,6 @@ func main() {
 	e.SetPriority(widgets.QAction__LowPriority)
 	e.SetShortcuts2(gui.QKeySequence__Close)
 	qactionpointerslice = append(qactionpointerslice, e)
-
 
 	quitIcon := gui.QIcon_FromTheme2("document-quit", gui.NewQIcon5("quit-512.png"))
 	c := fileMenu.AddAction2(quitIcon, "&Quit")
@@ -148,10 +147,10 @@ func main() {
 	f.SetShortcuts2(gui.QKeySequence__WhatsThis)
 	qactionpointerslice = append(qactionpointerslice, f)
 
-// turns out that this is not needed
+	// turns out that this is not needed
 	//fileMenu.AddActions(qactionpointerslice)
 
-//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
+	//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
 	// Execute app

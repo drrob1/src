@@ -135,7 +135,7 @@ func imageViewer() *widgets.QWidget {
 		layout = widgets.NewQVBoxLayout()
 		//layout.SetSizeConstraint(widgets.QLayout__SetNoConstraint)
 		layout.SetSizeConstraint(widgets.QLayout__SetMinimumSize)
-		layout.SetContentsMargins(0,0,0,0)
+		layout.SetContentsMargins(0, 0, 0, 0)
 
 		layout.AddWidget(view, 0, core.Qt__AlignCenter)
 		//layout.AddWidget(button, 0, core.Qt__AlignCenter)

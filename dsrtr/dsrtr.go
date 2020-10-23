@@ -210,7 +210,6 @@ func isSymlink(m os.FileMode) bool {
 	return result
 } // IsSymlink
 
-
 /*
 {{{
 	if linuxflag {

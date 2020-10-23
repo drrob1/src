@@ -29,7 +29,7 @@ var (
 	picfiles      sort.StringSlice
 	currImgIdx    int
 	origImgIdx    int
-	scaleFactor   float64 = 1  // running scalefactor
+	scaleFactor   float64 = 1 // running scalefactor
 )
 var (
 	imageReader *gui.QImageReader
@@ -38,10 +38,10 @@ var (
 	//	view          *widgets.QGraphicsView
 	//	item          *widgets.QGraphicsPixmapItem
 	//	layout        *widgets.QVBoxLayout
-	window *widgets.QMainWindow
+	window       *widgets.QMainWindow
 	scrollArea   *widgets.QScrollArea
 	displayLabel *widgets.QLabel
-    pixmap       *gui.QPixmap
+	pixmap       *gui.QPixmap
 )
 
 const maxWidth = 1440
@@ -64,7 +64,7 @@ func imageViewer() *widgets.QMainWindow {
 		window = widgets.NewQMainWindow(nil, 0)
 		//window.SetMinimumSize2(1920, 1080)
 		//window.SetBaseSize2(1440, 960)  this didn't do what I want.
-		window.SetMinimumSize2(maxWidth, maxHeight)//  With ignored policies I may not need this now.  Nevermind
+		window.SetMinimumSize2(maxWidth, maxHeight) //  With ignored policies I may not need this now.  Nevermind
 
 		scrollArea = widgets.NewQScrollArea(window)
 		scrollArea.SetSizePolicy2(widgets.QSizePolicy__Expanding, widgets.QSizePolicy__Expanding) // I think this line worked.
@@ -95,7 +95,7 @@ func imageViewer() *widgets.QMainWindow {
 		movie.Start()
 		//scene.AddWidget(movieLabel, core.Qt__Widget)
 	} else {
-		pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor)// scaling still isn't working, so I put this back.
+		pixmap = gui.NewQPixmap5(imageFileName, "", core.Qt__AutoColor) // scaling still isn't working, so I put this back.
 		//var pixmap = gui.NewQPixmap()  Now a global.
 		//pixmap.Load(imageFileName,"", core.Qt__AutoColor)
 
@@ -266,16 +266,16 @@ func isPicFile(filename string) bool {
 }
 
 // ----------------------------------- ZoomIn --------------------------------
-func zoomIn(factor float64)  {
+func zoomIn(factor float64) {
 	size := pixmap.Size()
 	width := pixmap.Width()
 	height := pixmap.Height()
 
-	scaledwidth := int(math.Trunc(factor*float64(width)))
+	scaledwidth := int(math.Trunc(factor * float64(width)))
 	if scaledwidth > maxWidth {
 		scaledwidth = maxWidth
 	}
-	scaledheight := int(math.Trunc(factor*float64(height)))
+	scaledheight := int(math.Trunc(factor * float64(height)))
 	if scaledheight > maxHeight {
 		scaledheight = maxHeight
 	}
@@ -295,15 +295,15 @@ func zoomIn(factor float64)  {
 } // end zoomIn
 
 // ---------------------------------- ZoomOut --------------------------------------
-func zoomOut(factor float64)  {
+func zoomOut(factor float64) {
 	width := pixmap.Width()
 	height := pixmap.Height()
 
-	scaledwidth := int(math.Trunc(factor*float64(width)))
+	scaledwidth := int(math.Trunc(factor * float64(width)))
 	if scaledwidth > maxWidth {
 		scaledwidth = maxWidth
 	}
-	scaledheight := int(math.Trunc(factor*float64(height)))
+	scaledheight := int(math.Trunc(factor * float64(height)))
 	if scaledheight > maxHeight {
 		scaledheight = maxHeight
 	}
@@ -315,4 +315,3 @@ func zoomOut(factor float64)  {
 	displayLabel.Resize2(scaledwidth, scaledheight)
 	window.Show()
 }
-

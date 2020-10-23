@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	//	"io"
-//	"log"
+	//	"log"
 
 	//	"io"
-//	"log"
+	//	"log"
 	"os"
 	"os/exec"
 )
@@ -28,31 +28,29 @@ func main() {
 	fmt.Println(" written to stdin thru xclip")
 	fmt.Println()
 
-
-
 	// Both of these now work on z76.  It just depends on which clip pgm I like better.
-/*
-	buf := []byte(" string written to stdin to go to xsel ... ")
-	rdr := bytes.NewReader(buf)
-	cmdsel := exec.Command("xsel", "--clipboard", "-i")
-	cmdsel.Stdin = rdr
-	cmdsel.Stdout = os.Stdout
-	cmdsel.Run()
+	/*
+		buf := []byte(" string written to stdin to go to xsel ... ")
+		rdr := bytes.NewReader(buf)
+		cmdsel := exec.Command("xsel", "--clipboard", "-i")
+		cmdsel.Stdin = rdr
+		cmdsel.Stdout = os.Stdout
+		cmdsel.Run()
 
 
-	fmt.Println()
-	fmt.Println(" written to stdin thru xsel")
-	fmt.Println()
+		fmt.Println()
+		fmt.Println(" written to stdin thru xsel")
+		fmt.Println()
 
 
- */
+	*/
 
-    fmt.Println(" now to test from clip")
-    var w strings.Builder
-    cmdfromclip := exec.Command("xclip", "-o")
-    cmdfromclip.Stdout = &w
-    cmdfromclip.Run()
+	fmt.Println(" now to test from clip")
+	var w strings.Builder
+	cmdfromclip := exec.Command("xclip", "-o")
+	cmdfromclip.Stdout = &w
+	cmdfromclip.Run()
 
-    fmt.Println(" fromclip is:", w.String())
+	fmt.Println(" fromclip is:", w.String())
 
 }

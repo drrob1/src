@@ -45,7 +45,7 @@ func main() {
 	if len(os.Args) == 1 {
 		io.WriteString(os.Stdout, target)
 		os.Exit(0)
-	} 
+	}
 
 	// read or init directory bookmark file
 	_, err := os.Stat(fullbookmarkfilename)
@@ -61,14 +61,14 @@ func main() {
 			log.Fatalln(" cannot decode", fullbookmarkfilename, ", error is", err, ".  Aborting")
 		}
 		bookmarkfile.Close()
-/*
-		fmt.Println(" Bookmark's read in, and are:")
-		for idx, valu := range bookmark {
-			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
-		}
-		fmt.Println()
-		fmt.Println()
-*/
+		/*
+			fmt.Println(" Bookmark's read in, and are:")
+			for idx, valu := range bookmark {
+				fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
+			}
+			fmt.Println()
+			fmt.Println()
+		*/
 	} else { // need to init bookmarkfile
 		bookmark = make(map[string]string, 15)
 
@@ -84,21 +84,21 @@ func main() {
 		bookmark["winx"] = target + "Videos" + sep + "winxvideos"
 		bookmark["bin"] = target + "go" + sep + "bin"
 
-//		fmt.Println("Bookmark's initialized.")
+		//		fmt.Println("Bookmark's initialized.")
 	}
 
-        if strings.ToLower(os.Args[1]) == "help" || os.Args[1] == "about" {
+	if strings.ToLower(os.Args[1]) == "help" || os.Args[1] == "about" {
 		fmt.Println(" dirb, a Directory Bookmark program written in Go.  Last altered", LastAltered)
 		fmt.Println()
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
-                fmt.Println(" bookmark file is", fullbookmarkfilename)
-                fmt.Println()
-                for idx, valu := range bookmark {
-                   fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
-                }
+		fmt.Println(" bookmark file is", fullbookmarkfilename)
+		fmt.Println()
+		for idx, valu := range bookmark {
+			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
+		}
 		fmt.Println()
 		os.Exit(0)
 	}

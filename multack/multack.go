@@ -58,6 +58,7 @@ type ResultType struct {
 	lino     int
 	line     string
 }
+
 /*  This is not being used, anyway
 type Job struct {
 	filename string
@@ -132,7 +133,7 @@ func main() {
 
 	fmt.Println()
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
-		lastAltered, startDirectory,pattern, extensions)
+		lastAltered, startDirectory, pattern, extensions)
 
 	DirAlreadyWalked := make(map[string]bool, 500)
 	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
@@ -145,11 +146,10 @@ func main() {
 	resultsChan := make(chan ResultType, 100_000)
 	go func() {
 		for r := range resultsChan {
-			 fmt.Printf(" %s:%d:%s\n",r.filename, r.lino, r.line)
+			fmt.Printf(" %s:%d:%s\n", r.filename, r.lino, r.line)
 		}
 		doneChan <- true
 	}()
-
 
 	// walkfunc closure that I hope is parallel.  I stopped here
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
@@ -183,7 +183,7 @@ func main() {
 
 	err = filepath.Walk(startDirectory, filepathwalkfunction)
 	close(resultsChan)
-	<- doneChan
+	<-doneChan
 
 	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
@@ -219,7 +219,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 				lino:     lino,
 				line:     string(line),
 			}
-			resultChan <- r  // I think this is what makes this a concurrent walk function.
+			resultChan <- r // I think this is what makes this a concurrent walk function.
 			// fmt.Printf("%s:%d:%s \n", fpath, lino, string(line)) from orig code
 		}
 		if err != nil {
@@ -245,7 +245,7 @@ func extractExtensions(files []string) []string {
 				continue
 			}
 			if extensions[i-1] == extensions[i] {
-				extensions[i-1] = ""  // This needs to be [i-1] because when it was [i] it interferred w/ the next iteration.
+				extensions[i-1] = "" // This needs to be [i-1] because when it was [i] it interferred w/ the next iteration.
 			}
 		}
 		//fmt.Println(" in extractExtensions before 2nd sort:", extensions)
@@ -272,4 +272,3 @@ func isSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
-

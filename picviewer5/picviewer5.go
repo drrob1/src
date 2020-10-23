@@ -98,7 +98,7 @@ func main() {
 
 	imageFileName = os.Args[1]
 	filenamechan <- imageFileName
-	viewer := <-viewerchan  // just the first worker returning a viewer, for the filename entered on the command line.
+	viewer := <-viewerchan // just the first worker returning a viewer, for the filename entered on the command line.
 
 	// Must test for combo keys before indiv keys, as indiv key test ignore the modifiers.
 	// I discovered that testing N before Ctrl-N always found N and never ctrl-N.
@@ -180,7 +180,7 @@ func main() {
 	viewer.ConnectKeyPressEvent(arrowEventclosure)
 	viewer.Show()
 
-	workingdir, _:= os.Getwd()
+	workingdir, _ := os.Getwd()
 
 	// populate the string slice of all picture filenames, and the index in this slice of the initial displayed image.
 	files, err := ioutil.ReadDir(workingdir)

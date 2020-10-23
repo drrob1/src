@@ -1,5 +1,6 @@
 //              picviewer2.go
 package main
+
 /*
    REVISION HISTORY
    ======== =======
@@ -54,7 +55,6 @@ func imageViewer() *widgets.QWidget {
 		fmt.Println(" view is not nil.")
 	}
 
-
 	displayArea = widgets.NewQWidget(nil, 0)
 	scene = widgets.NewQGraphicsScene(displayArea)
 	view = widgets.NewQGraphicsView(displayArea)
@@ -63,13 +63,10 @@ func imageViewer() *widgets.QWidget {
 	imageReader = gui.NewQImageReader3(imageFileName, core.NewQByteArray2("", 0)) // format is set by core.NewQByteArray2
 
 	imageReader.SetAutoTransform(true)
-//	imageReader.SetAutoDetectImageFormat(true)  this is on by default.  Format refers to image file format.
-
-
+	//	imageReader.SetAutoDetectImageFormat(true)  this is on by default.  Format refers to image file format.
 
 	// test to see if we are dealing with animated GIF
 	fmt.Println("Animated GIF : ", imageReader.SupportsAnimation())
-
 
 	if imageReader.SupportsAnimation() {
 		// instead of reading from file(disk) again, we take from memory
@@ -99,22 +96,22 @@ func imageViewer() *widgets.QWidget {
 	view.SetScene(scene)
 
 	/*
-	//create a button and connect the clicked signal.  Or not.
-	var button = widgets.NewQPushButton2("Quit", nil)
+		//create a button and connect the clicked signal.  Or not.
+		var button = widgets.NewQPushButton2("Quit", nil)
 
-	btnclicked := func(flag bool) {
-		widgets.QApplication_Beep()
-		//widgets.QMessageBox_Information(nil, "OK", "You clicked quit button!", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
-		mainApp.Quit()
-	}
-	button.ConnectClicked(btnclicked)
-*/
+		btnclicked := func(flag bool) {
+			widgets.QApplication_Beep()
+			//widgets.QMessageBox_Information(nil, "OK", "You clicked quit button!", widgets.QMessageBox__Ok, widgets.QMessageBox__Ok)
+			mainApp.Quit()
+		}
+		button.ConnectClicked(btnclicked)
+	*/
 	var layout = widgets.NewQVBoxLayout()
 
 	layout.AddWidget(view, 0, core.Qt__AlignCenter)
-//	layout.AddWidget(button, 0, core.Qt__AlignCenter)
+	//	layout.AddWidget(button, 0, core.Qt__AlignCenter)
 
-	displayArea.SetLayout(layout)  // I tried not using a layout, but displayArea does not have an AddItem method.
+	displayArea.SetLayout(layout) // I tried not using a layout, but displayArea does not have an AddItem method.
 
 	// Must test combo keys before indiv keys, as indiv key test ignore the modifiers.
 	// I discovered that testing N before Ctrl-N always found N and never ctrl-N.
@@ -250,7 +247,7 @@ func nextPic(i int) int {
 }
 
 // ------------------------- PrevPic -------------------------------
-func prevPic(i int)(int) {
+func prevPic(i int) int {
 	j := i
 	if j > 0 {
 		j--
@@ -288,7 +285,7 @@ func displayImageByNumber(i int) {
 	//fmt.Printf(" displayImageByNumber %s is %d wide and %d high \n", imageFileName, width, height)
 	//displayArea.AdjustSize()  didn't do anything
 	displayArea.Resize2(width1, height1) // slightly too small.
-//	displayArea.SetContentsMargins(0,0,width,height)  Doen't do what I want.
-    //displayArea.Scroll(-width/2, -height/2)  Doesn't do what I want, at all.
+	//	displayArea.SetContentsMargins(0,0,width,height)  Doen't do what I want.
+	//displayArea.Scroll(-width/2, -height/2)  Doesn't do what I want, at all.
 	displayArea.Show()
 }

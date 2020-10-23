@@ -65,14 +65,14 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("QHBox Layout Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(500, 100) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0)      //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("QHBox Layout Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(500, 100)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	centralwidget := widgets.NewQWidget(nil, 0)
 	//hboxlayout := widgets.NewQHBoxLayout2(centralwidget)
-	hboxlayout := widgets.NewQHBoxLayout()  // this more closely matches the example code above
-    centralwidget.SetLayout(hboxlayout)  // this line gives an error of attempting to set layout which already has a layout
+	hboxlayout := widgets.NewQHBoxLayout() // this more closely matches the example code above
+	centralwidget.SetLayout(hboxlayout)    // this line gives an error of attempting to set layout which already has a layout
 	window.SetCentralWidget(centralwidget)
 
 	urlLineEdit := widgets.NewQLineEdit(centralwidget)

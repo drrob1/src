@@ -42,9 +42,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("volumedial Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(200, 200) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0)    //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("volumedial Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(200, 200)            //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	centralwidget := widgets.NewQWidget(nil, 0)
 	centralwidget.SetLayout(widgets.NewQVBoxLayout()) // from example code above
@@ -62,7 +62,7 @@ func main() {
 	volumeDial.SetMinimum(0)
 	volumeDial.SetMaximum(100)
 
-	volumeLCD := widgets.NewQLCDNumber2(3,centralwidget)
+	volumeLCD := widgets.NewQLCDNumber2(3, centralwidget)
 	paletteRed := gui.NewQPalette3(core.Qt__red)
 	volumeLCD.SetPalette(paletteRed)
 
@@ -70,7 +70,7 @@ func main() {
 	centralwidget.Layout().AddWidget(volumeslider)
 	centralwidget.Layout().AddWidget(volumeLCD)
 
-	LCDdisplaynum := func (n int) {
+	LCDdisplaynum := func(n int) {
 		volumeLCD.Display2(n)
 	}
 

@@ -914,7 +914,7 @@ func GetNameStr() string {
 	//	ans = GetInputString(len(promptstr)+2, OutputRow)
 	Print_tb(1, PromptRow, BrightYellow, Black, promptstr)
 	ans = GetInputString(len(promptstr)+2, PromptRow)
-	answer := strings.ToUpper(ans)  // don't return a forced upper case string
+	answer := strings.ToUpper(ans) // don't return a forced upper case string
 	if answer == "TODAY" || answer == "T" {
 		m, d, y := timlibg.TIME2MDY()
 		ans = timlibg.MDY2STR(m, d, y)

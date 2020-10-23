@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"github.com/gdamore/tcell"
 	"log"
@@ -18,13 +19,13 @@ import (
 	"time"
 	"timlibg"
 
-	"getcommandline"
+	//"getcommandline"
 	hpcalc "hpcalc2"
 	"tokenize"
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "8 Aug 2020"
+const LastAltered = "23 Oct 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -111,6 +112,7 @@ REVISION HISTORY
  2 Jul 20 -- Removed a duplicate help line.
  3 Jul 20 -- FIX command also sets output mode to be fixed.  So to use FIXn to set digits for float or gen, have to change outputmode AFTER using FIXn.
  8 Aug 20 -- Now using hpcalc2 in place of hpcalc.
+23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -260,6 +262,9 @@ func main() {
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 	var err error
 
+	var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
+	flag.Parse()
+
 	scrn, err = tcell.NewScreen()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -297,9 +302,7 @@ func main() {
 
 	MaxCol, MaxRow = scrn.Size()
 
-	scrn.SetStyle(tcell.StyleDefault.
-		Foreground(tcell.ColorWhite).
-		Background(tcell.ColorBlack))
+	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 	scrn.Clear()
 
 	style = tcell.StyleDefault
@@ -343,30 +346,33 @@ func main() {
 	Storage2FullFilename := HomeDir + string(os.PathSeparator) + Storage2FileName
 	Storage3FullFilename := HomeDir + string(os.PathSeparator) + Storage3FileName
 
-	thefile, err := os.Open(StorageFullFilename) // open for reading
-	if os.IsNotExist(err) {
-		log.Print(" thefile does not exist for reading. ")
-		putln("thefile does not exist for reading.")
-		theFileExists = false
-	} else if err != nil {
-		log.Printf(" Error from os.Open(Storage1FileName).  Possibly because no Stack File found: %v\n", err)
-		putfln("Error from os.Open(Storage1FileName.  Possibly because nostack file found: %v ", err)
-		theFileExists = false
-	}
-	if theFileExists {
-		defer thefile.Close()
-		decoder := gob.NewDecoder(thefile)       // decoder reads the file.
-		err = decoder.Decode(&Stk)               // decoder reads the file.
-		check(err)                               // theFileExists, so panic if this is an error.
-		for i := hpcalc.T1; i >= hpcalc.X; i-- { // Push in reverse onto the stack in hpcalc.
-			hpcalc.PUSHX(Stk[i])
+	var thefile *os.File
+	if !*nofileflag {
+		thefile, err = os.Open(StorageFullFilename) // open for reading
+		if os.IsNotExist(err) {
+			log.Print(" thefile does not exist for reading. ")
+			putln("thefile does not exist for reading.")
+			theFileExists = false
+		} else if err != nil {
+			log.Printf(" Error from os.Open(Storage1FileName).  Possibly because no Stack File found: %v\n", err)
+			putfln("Error from os.Open(Storage1FileName.  Possibly because nostack file found: %v ", err)
+			theFileExists = false
 		}
+		if theFileExists {
+			defer thefile.Close()
+			decoder := gob.NewDecoder(thefile)       // decoder reads the file.
+			err = decoder.Decode(&Stk)               // decoder reads the file.
+			check(err)                               // theFileExists, so panic if this is an error.
+			for i := hpcalc.T1; i >= hpcalc.X; i-- { // Push in reverse onto the stack in hpcalc.
+				hpcalc.PUSHX(Stk[i])
+			}
 
-		err = decoder.Decode(&Storage) // decoder reads the file.
-		check(err)                     // theFileExists, so panic if this is an error.
+			err = decoder.Decode(&Storage) // decoder reads the file.
+			check(err)                     // theFileExists, so panic if this is an error.
 
-		thefile.Close()
-	} // thefileexists for both the Stack variable, Stk, and the Storage registers.
+			thefile.Close()
+		} // thefileexists for both the Stack variable, Stk, and the Storage registers.
+	}
 
 	hpcalc.PushMatrixStacks()
 
@@ -377,11 +383,11 @@ func main() {
 		PromptRow = StartRow + 1
 	}
 
-	//  Print_tb(x,PromptRow,BrightCyan,Black,InputPrompt);  Doesn't make any difference, it seems.
-	if len(os.Args) > 1 {
-		INBUF = getcommandline.GetCommandLineString()
+	args := flag.Args()
+	if len(args) > 1 {
+		//INBUF = getcommandline.GetCommandLineString()
+		INBUF = strings.Join(args, " ")
 	} else {
-		//		Print_tb(x, PromptRow, BrightCyan, Black, InputPrompt)
 		puts(scrn, Cyan, x, PromptRow, InputPrompt)
 		x += len(InputPrompt) + 2
 		scrn.ShowCursor(x, PromptRow)
@@ -567,6 +573,8 @@ func main() {
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			scrn.Clear()
+			scrn.Sync()
+			gblrow = 0
 			RepaintScreen(StartCol)
 		} else if INBUF == "REPAINT" {
 			RepaintScreen(StartCol)
@@ -683,27 +691,29 @@ func main() {
 
 	// Time to write files before exiting.
 
-	// Rotate StorageFileNames and write
-	err = os.Rename(Storage2FullFilename, Storage3FullFilename)
-	if err != nil {
-		_ = fmt.Errorf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
+	if !*nofileflag {
+		// Rotate StorageFileNames and write
+		err = os.Rename(Storage2FullFilename, Storage3FullFilename)
+		if err != nil && !*nofileflag {
+			_ = fmt.Errorf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
+		}
+
+		err = os.Rename(StorageFullFilename, Storage2FullFilename)
+		if err != nil && !*nofileflag {
+			_ = fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
+		}
+
+		thefile, err = os.Create(StorageFullFilename)        // for writing
+		checkmsg(err, "After os.Create StorageFullFilename") // This should not fail, so panic if it does fail.
+		defer thefile.Close()
+
+		Stk = hpcalc.GETSTACK()
+		encoder := gob.NewEncoder(thefile)        // encoder writes the file
+		err = encoder.Encode(Stk)                 // encoder writes the file
+		checkmsg(err, "after encoder.Encode Stk") // Panic if there is an error
+		err = encoder.Encode(Storage)             // encoder writes the file
+		checkmsg(err, "after encoder.Encode Storage")
 	}
-
-	err = os.Rename(StorageFullFilename, Storage2FullFilename)
-	if err != nil {
-		_ = fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
-	}
-
-	thefile, err = os.Create(StorageFullFilename)        // for writing
-	checkmsg(err, "After os.Create StorageFullFilename") // This should not fail, so panic if it does fail.
-	defer thefile.Close()
-
-	Stk = hpcalc.GETSTACK()
-	encoder := gob.NewEncoder(thefile)        // encoder writes the file
-	err = encoder.Encode(Stk)                 // encoder writes the file
-	checkmsg(err, "after encoder.Encode Stk") // Panic if there is an error
-	err = encoder.Encode(Storage)             // encoder writes the file
-	checkmsg(err, "after encoder.Encode Storage")
 
 	// Will open this file in the current working directory instead of the HomeDir.
 	DisplayTapeFile, err := os.OpenFile(DisplayTapeFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -1031,7 +1041,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 
 	_, helpstringslice := hpcalc.GetResult("HELP")
 	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
-//	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")  duplicate.
+	//	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")  duplicate.
 	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
 	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
 	helpstringslice = append(helpstringslice, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
@@ -1088,14 +1098,14 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 
 	//	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 	scrn.Clear()
-
+	scrn.Sync()
+	
 	RepaintScreen(x)
 } // end WriteHelp
 
 // ------------------------------------------------------- Repaint ----------------------------------
 func RepaintScreen(x int) {
 
-	// Printf_tb(x, TitleRow, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)  Removed 4/15/19
 	WriteStack(x, StackRow)
 	n = WriteRegToScreen(x, RegRow)
 	if n > 8 {

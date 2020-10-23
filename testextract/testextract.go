@@ -1,15 +1,13 @@
 package main
 
 import (
-
-	"os"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 )
 
 const LastAltered = "23 Apr 2020"
-
 
 func main() {
 	extensions := make([]string, 0, 100)
@@ -29,7 +27,7 @@ func main() {
 	} else {
 		extensions = extractExtensions(args)
 	}
-    fmt.Println(" len Args", len(args), ", len(ext)=", len(extensions))
+	fmt.Println(" len Args", len(args), ", len(ext)=", len(extensions))
 	fmt.Println(" args:", args)
 	fmt.Println()
 	fmt.Println("extension:", extensions)
@@ -44,7 +42,7 @@ func extractExtensions(files []string) []string {
 	for _, file := range files {
 		ext := filepath.Ext(file)
 		extensions = append(extensions, ext)
-	//	fmt.Print(ext, " ")
+		//	fmt.Print(ext, " ")
 	}
 	fmt.Println()
 	fmt.Println()
@@ -55,7 +53,7 @@ func extractExtensions(files []string) []string {
 			if i == 0 {
 				continue
 			}
-			if extensions[i-1] == ext {  // recall that ext here = extensions[i]
+			if extensions[i-1] == ext { // recall that ext here = extensions[i]
 				fmt.Printf(" %q EQ %q for i=%d \n", extensions[i-1], extensions[i], i)
 				extensions[i-1] = ""
 			} else {

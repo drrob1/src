@@ -55,11 +55,11 @@ func imageViewer() *widgets.QWidget {
 		size := pixmap.Size()
 		width := size.Width()
 		height := size.Height()
-		halfwidth := float64(width)/2
-		halfheight := float64(height)/2
+		halfwidth := float64(width) / 2
+		halfheight := float64(height) / 2
 		fmt.Println(" Picture width=", width, ", picture height=", height, ", half width and height are", halfwidth, halfheight)
 
-				//scene.AddItem(item)
+		//scene.AddItem(item)
 		scene.AddItem(item)
 	}
 
@@ -82,22 +82,22 @@ func imageViewer() *widgets.QWidget {
 		mainApp.Quit()
 	}
 	quitbutton.ConnectClicked(quitbtnclicked)
-/*
-	rotateclicked := func(flag bool) {
-		angle = angle + 90
-		itemrotated.SetRotation(angle)
+	/*
+		rotateclicked := func(flag bool) {
+			angle = angle + 90
+			itemrotated.SetRotation(angle)
 
-		view.SetScene(scene)
-		// view.SetAlignment(core.Qt__AlignCenter)  doesn't work
-		view.CenterOn2(halfwidth, halfheight)
-	}
-	rotatebutton.ConnectClicked(rotateclicked)
-*/
+			view.SetScene(scene)
+			// view.SetAlignment(core.Qt__AlignCenter)  doesn't work
+			view.CenterOn2(halfwidth, halfheight)
+		}
+		rotatebutton.ConnectClicked(rotateclicked)
+	*/
 	var layout = widgets.NewQVBoxLayout()
 
 	layout.AddWidget(view, 0, core.Qt__AlignCenter)
 	layout.AddWidget(quitbutton, 0, core.Qt__AlignCenter)
-//	layout.AddWidget(rotatebutton, 0, core.Qt__AlignCenter)
+	//	layout.AddWidget(rotatebutton, 0, core.Qt__AlignCenter)
 
 	displayArea.SetLayout(layout)
 

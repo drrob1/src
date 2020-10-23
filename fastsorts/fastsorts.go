@@ -903,7 +903,7 @@ func main() {
 	   }}}
 	*/
 
-/* removed due to slowness.
+	/* removed due to slowness.
 	// ShellSort
 	copy(sliceofwords, mastersliceofwords)
 	if allowoutput {
@@ -925,7 +925,7 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
- */
+	*/
 
 	// BadShellSort -- now a misnomer as it finally works.
 	copy(sliceofwords, mastersliceofwords)

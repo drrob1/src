@@ -17,9 +17,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)    //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window := widgets.NewQMainWindow(nil, 0)        //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
 	window.SetWindowTitle("Basic Menu 4th Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetFixedSize2(500, 500)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
+	window.SetFixedSize2(500, 500)                  //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
 
 	// turns out that some of these icons didn't display because the text was too long.  Now they all work.
 	newIcon := gui.QIcon_FromTheme2("new", gui.NewQIcon5("new.png"))
@@ -118,7 +118,6 @@ func main() {
 	c.SetShortcuts2(gui.QKeySequence__Quit)
 
 	window.SetMenuBar(menubar)
-
 
 	// toolbar stuff based on Hands on GUI programming in Go
 	toolbar := widgets.NewQToolBar("tools", nil)

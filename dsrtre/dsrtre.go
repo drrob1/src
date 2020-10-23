@@ -92,7 +92,7 @@ func main() {
 	// walkfunc closure
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr," Error from walk is %v. \n", err)
+			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n", err)
 			return nil
 		}
 
@@ -193,4 +193,3 @@ func isSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
-

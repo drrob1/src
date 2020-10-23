@@ -101,7 +101,7 @@ func main() {
 		if *timeoutOpt != 0 {
 			timeout = *timeoutOpt * 1e9
 		}
-		grep(timeout, lineRx, commandLineFiles(files))  // this fails vet because it's in the platform specific code files.
+		grep(timeout, lineRx, commandLineFiles(files)) // this fails vet because it's in the platform specific code files.
 	}
 }
 

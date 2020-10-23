@@ -112,7 +112,6 @@ CountLinesLoop:
 
 	N := lines // Note: lines is 0 origin, and therefore so is N
 
-
 	// Now need to create A and B matrices, using my own code.
 
 	A := mymat.NewMatrix(N, N)
@@ -157,7 +156,6 @@ CountLinesLoop:
 
 	pause()
 
-
 	// Check that the solution looks right.
 
 	C := mymat.NewMatrix(N, 1)
@@ -182,7 +180,6 @@ CountLinesLoop:
 	fmt.Println()
 
 	pause()
-
 
 	// Now for gonum.org mat code
 	// Some of the routines take a pointer, some do not.  mat.NewDense makes a pointer.  var mat.Dense does not.  So some
@@ -255,7 +252,7 @@ CountLinesLoop:
 
 	var inverseA mat.Dense
 	err = inverseA.Inverse(newA) // I think this method has a pointer receiver, but syntatic sugar does not require me to dereference inverseA
-	                            // It compiles fine if I declare var inverseA *matDense and then remove the adrof operator in the call to Mul.
+	// It compiles fine if I declare var inverseA *matDense and then remove the adrof operator in the call to Mul.
 	if err != nil {
 		fmt.Println(" Error from inverseA.Inverse is", err)
 	}
@@ -318,12 +315,12 @@ CountLinesLoop:
 	checkVec.MulVec(newA, &vecX)
 	checkVec.SubVec(vecB, &checkVec)
 
-    for _, s := range ss {
-      fmt.Print(s)
-    }
+	for _, s := range ss {
+		fmt.Print(s)
+	}
 
-    fmt.Println()
-    fmt.Println()
+	fmt.Println()
+	fmt.Println()
 
 } // END Solve.
 

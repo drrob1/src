@@ -1074,8 +1074,8 @@ func main() {
 	termbox.SetCursor(26, LineNum)
 	_ = GetInputString(26, LineNum)
 
-//	termbox.Flush() // added 12/25/2019 and removed 1/10/20 as duplicating deferred statements, making Windows unhappy.
-//	termbox.Close() // added 12/25/2019
+	//	termbox.Flush() // added 12/25/2019 and removed 1/10/20 as duplicating deferred statements, making Windows unhappy.
+	//	termbox.Close() // added 12/25/2019
 
 } // end main func
 

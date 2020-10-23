@@ -1,33 +1,35 @@
 // From Hands On GUI Application Development in Go
 package main
+
 import (
-   "os"
-   "github.com/therecipe/qt/widgets"
+	"github.com/therecipe/qt/widgets"
+	"os"
 )
+
 func main() {
-   app := widgets.NewQApplication(len(os.Args), os.Args)
+	app := widgets.NewQApplication(len(os.Args), os.Args)
 
-   window := widgets.NewQMainWindow(nil, 0)
-   window.SetWindowTitle("Hello World")
+	window := widgets.NewQMainWindow(nil, 0)
+	window.SetWindowTitle("Hello World")
 
-   widget := widgets.NewQWidget(window, 0)
-   widget.SetLayout(widgets.NewQVBoxLayout())
+	widget := widgets.NewQWidget(window, 0)
+	widget.SetLayout(widgets.NewQVBoxLayout())
 
-   window.SetCentralWidget(widget)
+	window.SetCentralWidget(widget)
 
-   label := widgets.NewQLabel2("Hello World!", window, 0)
+	label := widgets.NewQLabel2("Hello World!", window, 0)
 
-   widget.Layout().AddWidget(label)
+	widget.Layout().AddWidget(label)
 
-   button := widgets.NewQPushButton2("Quit", window)
-   onclicked := func(bool) {
-      app.QuitDefault()
-   }
-   button.ConnectClicked(onclicked)
+	button := widgets.NewQPushButton2("Quit", window)
+	onclicked := func(bool) {
+		app.QuitDefault()
+	}
+	button.ConnectClicked(onclicked)
 
-   widget.Layout().AddWidget(button)
+	widget.Layout().AddWidget(button)
 
-   window.Show()
+	window.Show()
 
-   widgets.QApplication_Exec()
+	widgets.QApplication_Exec()
 }

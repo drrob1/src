@@ -14,7 +14,7 @@ func main() {
 	// Create main window
 	window := widgets.NewQMainWindow(nil, 0)                   //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
 	window.SetWindowTitle("Dialog Example translated into Go") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(500, 500)                             //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
+	window.SetMinimumSize2(500, 500)                           //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
 
 	windowIcon := gui.QIcon_FromTheme2("window-icon", gui.NewQIcon5("window_logo.png"))
 	window.SetWindowIcon(windowIcon)
@@ -48,7 +48,6 @@ func main() {
 	model.SetItem(0, 2, thirditem)
 	appTable.SetModel(model)
 
-
 	// layouts
 	window.SetCentralWidget(centralwidget)
 	nameLabel := widgets.NewQLabel2("Name:", centralwidget, 0)
@@ -75,7 +74,6 @@ func main() {
 	buttonsLayout.AddStretch(1)
 	buttonsLayout.AddWidget(savePushButton, 2, core.Qt__AlignLeft)
 	buttonsLayout.AddWidget(clearPushButton, 2, core.Qt__AlignLeft)
-
 
 	// set up menu bar, and maybe toolbar
 	menubar := window.MenuBar()
@@ -143,7 +141,7 @@ func main() {
 		//numofrows := model.RowCount(appTable)
 		//rowId := widgets.QInputDialog_GetInt(window,"Delete One Row","Select row to delete",1,1, numofrows,1,&ok,core.Qt__Dialog)
 		if ok {
-		//	model.RemoveRow(rowId-1, nil)
+			//	model.RemoveRow(rowId-1, nil)
 		}
 	}
 	h.ConnectTriggered(func(checked bool) {
@@ -273,7 +271,7 @@ func main() {
 		dob := gui.NewQStandardItem2(DOBEdit.Date().ToString2(core.Qt__LocalDate))
 		phonenumber := gui.NewQStandardItem2(phoneNumberLineEdit.Text())
 
-		rowitems := make([]*gui.QStandardItem,0,3)
+		rowitems := make([]*gui.QStandardItem, 0, 3)
 		rowitems = append(rowitems, name.QStandardItem_PTR())
 		rowitems = append(rowitems, dob.QStandardItem_PTR())
 		rowitems = append(rowitems, phonenumber.QStandardItem_PTR())
@@ -284,21 +282,18 @@ func main() {
 	}
 	savePushButton.ConnectClicked(savepushbuttonclicked)
 
-    clearallRecords := func() {
-    	status := widgets.QMessageBox_Question(window, "Delete All Records", "Are you sure about deleting all saved records?",
-    		widgets.QMessageBox__No, widgets.QMessageBox__Yes)
-    	if status == widgets.QMessageBox__Yes {
-    		// rowcount := model->rowcount()
-    		// model->removerows(0,rowcount)
+	clearallRecords := func() {
+		status := widgets.QMessageBox_Question(window, "Delete All Records", "Are you sure about deleting all saved records?",
+			widgets.QMessageBox__No, widgets.QMessageBox__Yes)
+		if status == widgets.QMessageBox__Yes {
+			// rowcount := model->rowcount()
+			// model->removerows(0,rowcount)
 		}
 	}
 
 	clearPushButton.ConnectClicked(func(checked bool) {
 		clearallRecords()
 	})
-
-
-
 
 	window.Show()
 

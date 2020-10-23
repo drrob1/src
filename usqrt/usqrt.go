@@ -83,7 +83,7 @@ func divfloat(x float64) float64 {
 		guess := x / sqrt
 		sqrt = (guess + sqrt) / 2
 		fmt.Println(" i=", i, ", guess=", guess, ", sqrt=", sqrt)
-		if math.Abs(sqrt-guess) <= 1.E-4*sqrt { // recall that this is not floating math.
+		if math.Abs(sqrt-guess) <= 1.e-4*sqrt { // recall that this is not floating math.
 			break
 		}
 	}
@@ -96,7 +96,7 @@ func newtonfloat(x float64) float64 {
 	for i := 0; i < 30; i++ {
 		z0 := z
 		z -= (z*z - x) / (2 * z)
-		if math.Abs(z0-z) < 1.E-4*z {
+		if math.Abs(z0-z) < 1.e-4*z {
 			break
 		}
 		fmt.Println(" i=", i, ", z=", z)

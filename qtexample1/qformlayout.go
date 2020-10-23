@@ -40,9 +40,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("QForm Layout Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(400, 400) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0)      //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("QForm Layout Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(400, 400)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	mainwidget := widgets.NewQWidget(nil, 0)
 
@@ -50,7 +50,7 @@ func main() {
 	firstNameLineEdit := widgets.NewQLineEdit(mainwidget)
 	lastNameLineEdit := widgets.NewQLineEdit(mainwidget)
 	ageSpinBox := widgets.NewQSpinBox(mainwidget)
-	ageSpinBox.SetRange(1,100)
+	ageSpinBox.SetRange(1, 100)
 
 	employmentStatusComboBox := widgets.NewQComboBox(mainwidget)
 	employmentStatusStringSlice := []string{"Unemployed", "Employed", "NA"}
@@ -64,7 +64,7 @@ func main() {
 	personnellInfoformLayout.AddRow3("Employment Status", employmentStatusComboBox)
 
 	window.SetCentralWidget(mainwidget)
-//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
+	//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
 	// Execute app

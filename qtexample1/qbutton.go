@@ -57,9 +57,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("QButton Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(200, 200) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0) //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("QButton Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(200, 200)         //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	centralwidget := widgets.NewQWidget(nil, 0)
 	centralwidget.SetLayout(widgets.NewQVBoxLayout()) // from example code above
@@ -69,12 +69,12 @@ func main() {
 
 	centralwidget.Layout().AddWidget(quitbutton)
 
-	quitclicked := func (checked bool) {
+	quitclicked := func(checked bool) {
 		app.Quit()
 	}
 	quitbutton.ConnectClicked(quitclicked)
 
-//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
+	//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
 	// Execute app

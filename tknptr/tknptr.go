@@ -66,6 +66,7 @@ import (
                  when I remap the characters.
   28 Sep 20 -- Now that I'm using tknptr in comparehashes, I'm going to include the statemap in the bufferstate structure
                  so it's not global.
+  23 Oct 20 -- GetOpcode will unget characters as needed to keep length of opcode token to a max of 2 characters.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -321,10 +322,16 @@ func (bs *BufferState) GETOPCODE(Token TokenType) int {
 	var CH1, CH2 byte
 	OpCode := 0
 
-	if (len(Token.Str) < 1) || (len(Token.Str) > 2) {
+	if len(Token.Str) < 1 {
 		log.SetFlags(log.Llongfile)
-		log.Print(" Token too long error from GetOpCode.")
+		log.Print(" Token is empty, from GetOpCode.")
 		return OpCode
+	}
+
+	// keep token length to 2 chars max.
+	for len(Token.Str) > 2 {
+		bs.UNGETCHR()
+		Token.Str = Token.Str[:len(Token.Str)-1]
 	}
 
 	CH1 = Token.Str[0]

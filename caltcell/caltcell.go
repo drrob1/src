@@ -170,7 +170,7 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig 
 	}
 	x += len(str)
 
-//	deleol(x, y)   Not needed when scrn is written only once.
+	//	deleol(x, y)   Not needed when scrn is written only once.
 	scrn.Show()
 }
 
@@ -475,7 +475,7 @@ func ShowMonth(col, row, mn int) {
 		}
 		y++
 	}
-//	style = plain
+	//	style = plain
 } // END ShowMonth
 
 // ----------------------------- HolidayAssign ---------------------------------

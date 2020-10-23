@@ -32,17 +32,16 @@ func putf(scrn tcell.Screen, style tcell.Style, x, y int, format string, args ..
 	puts(scrn, style, x, y, s)
 }
 
-func deleol(scrn tcell.Screen, style tcell.Style, x, y int)  {
-	width, _ := scrn.Size()  // don't need height for this calculation.
-	empty := width - x       // don't care if this is off by 1.
-	blanks := make([]byte,empty)
+func deleol(scrn tcell.Screen, style tcell.Style, x, y int) {
+	width, _ := scrn.Size() // don't need height for this calculation.
+	empty := width - x      // don't care if this is off by 1.
+	blanks := make([]byte, empty)
 	for i := range blanks {
 		blanks[i] = ' '
 	}
-    blankstring := string(blanks)
-    puts(scrn, style, x, y, blankstring)
+	blankstring := string(blanks)
+	puts(scrn, style, x, y, blankstring)
 }
-
 
 func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 	i := 0
@@ -100,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-//	encoding.Register()   Don't know why this is here.  This code works without this line, so I'll keep it out.
+	//	encoding.Register()   Don't know why this is here.  This code works without this line, so I'll keep it out.
 
 	if e = scrn.Init(); e != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
@@ -136,42 +135,42 @@ func main() {
 	Color20 := style.Foreground(tcell.Color20)
 	Color21 := style.Foreground(tcell.Color21)
 
-	colorslice := make([]tcell.Style,30)
-	for i:=0; i < 30; i++ {
+	colorslice := make([]tcell.Style, 30)
+	for i := 0; i < 30; i++ {
 		colorslice[i] = plain
 	}
 
-	colorslice[0] = plain // white
-	colorslice[1] = Blue  // ok color but dark
-	colorslice[2] = Green // best color
-	colorslice[3] = AquaBlue // cyan in other naming systems.  best color.
-	colorslice[4] = Yellow // best color
-	colorslice[5] = Maroon // bad color
-	colorslice[6] = NavyBlue // bad color
-	colorslice[7] = Purple // bad color
-	colorslice[8] = Red // best color
-	colorslice[9] = BoldBlue // ok color, but still dark.
-	colorslice[10]= BoldGreen  // best color
-	colorslice[11]= BoldYellow // best color
-	colorslice[12]= BoldRed // best color
-	colorslice[13]= BoldNavy // bad color
-	colorslice[14]= BoldMaroon // bad color
-	colorslice[15]= BoldPurple // pad color
-	colorslice[16]= BoldAquaBlue // bad color
-	colorslice[17]= Color16 // bad color
-	colorslice[18]= Color17 // bad color
-	colorslice[19]= Color18 // bad color
-	colorslice[20]= Color19 // bad color
-	colorslice[21]= Color20 // bad color
-	colorslice[22]= Color21 // bad color
-	colorslice[23]= style.Foreground(tcell.ColorAliceBlue) // shows as white
+	colorslice[0] = plain                                   // white
+	colorslice[1] = Blue                                    // ok color but dark
+	colorslice[2] = Green                                   // best color
+	colorslice[3] = AquaBlue                                // cyan in other naming systems.  best color.
+	colorslice[4] = Yellow                                  // best color
+	colorslice[5] = Maroon                                  // bad color
+	colorslice[6] = NavyBlue                                // bad color
+	colorslice[7] = Purple                                  // bad color
+	colorslice[8] = Red                                     // best color
+	colorslice[9] = BoldBlue                                // ok color, but still dark.
+	colorslice[10] = BoldGreen                              // best color
+	colorslice[11] = BoldYellow                             // best color
+	colorslice[12] = BoldRed                                // best color
+	colorslice[13] = BoldNavy                               // bad color
+	colorslice[14] = BoldMaroon                             // bad color
+	colorslice[15] = BoldPurple                             // pad color
+	colorslice[16] = BoldAquaBlue                           // bad color
+	colorslice[17] = Color16                                // bad color
+	colorslice[18] = Color17                                // bad color
+	colorslice[19] = Color18                                // bad color
+	colorslice[20] = Color19                                // bad color
+	colorslice[21] = Color20                                // bad color
+	colorslice[22] = Color21                                // bad color
+	colorslice[23] = style.Foreground(tcell.ColorAliceBlue) // shows as white
 
-//	scrn.SetStyle(tcell.StyleDefault.
-//		Foreground(tcell.ColorBlack).
-//		Background(tcell.ColorWhite))
-	scrn.SetStyle(tcell.StyleDefault.            // reversing the colors
-		Foreground(tcell.ColorWhite).
-		Background(tcell.ColorBlack))
+	//	scrn.SetStyle(tcell.StyleDefault.
+	//		Foreground(tcell.ColorBlack).
+	//		Background(tcell.ColorWhite))
+	scrn.SetStyle(tcell.StyleDefault. // reversing the colors
+						Foreground(tcell.ColorWhite).
+						Background(tcell.ColorBlack))
 	scrn.Clear()
 
 	style = bold
@@ -233,12 +232,12 @@ func main() {
 	}))
 
 	width, height := scrn.Size()
-	putf(scrn, reversedBlue,0,row,"from putfln.  Screen width: %d, height: %d", width, height)
+	putf(scrn, reversedBlue, 0, row, "from putfln.  Screen width: %d, height: %d", width, height)
 	row++
 	putf(scrn, reverse, 1, 17, " testing putf with a %s", "string I just typed.")
 
 	colors := scrn.Colors()
-	putfln(scrn, " Number of colors is %d", colors )
+	putfln(scrn, " Number of colors is %d", colors)
 
 	scrn.Show()
 
@@ -250,8 +249,8 @@ func main() {
 		if len(str) == 0 {
 			break // return from main is same as os.Exit(0)
 		}
-//		putln(scrn, str)   don't need to duplicate lines anymore
-        style = colorslice[i]
+		//		putln(scrn, str)   don't need to duplicate lines anymore
+		style = colorslice[i]
 		putfln(scrn, "from putfln: %s", str)
 		scrn.Show()
 		if row >= height {
@@ -259,7 +258,7 @@ func main() {
 		}
 	}
 
-//	scrn.Fini()  I don't need this because I already deferred a scrn.Fini() right after a successful init.
+	//	scrn.Fini()  I don't need this because I already deferred a scrn.Fini() right after a successful init.
 }
 
 // --------------------------------------------------- GetInputString --------------------------------------
@@ -353,8 +352,8 @@ func GetInputString(scrn tcell.Screen, x, y int) string {
 			if len(bs) > 0 {
 				bs = bs[:len(bs)-1]
 			}
-			puts(scrn,style,x+len(bs),y," ")
-			scrn.ShowCursor(x+len(bs),y)
+			puts(scrn, style, x+len(bs), y, " ")
+			scrn.ShowCursor(x+len(bs), y)
 			scrn.Show()
 
 		case <-upchan:

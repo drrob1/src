@@ -64,6 +64,7 @@ import (
                  ignore this, so I'm writing SetMapDelim so I can.
   26 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
                  when I remap the characters.
+  23 Oct 20 -- Adjusted GetOpcode code so that UNGETCHR is used for long tokens.  Code copied from tknptr.go.
 */
 
 type FSATYP int
@@ -310,10 +311,16 @@ func GETOPCODE(Token TokenType) int {
 	var CH1, CH2 byte
 	OpCode := 0
 
-	if (len(Token.Str) < 1) || (len(Token.Str) > 2) {
+	if len(Token.Str) < 1 {
 		log.SetFlags(log.Llongfile)
-		log.Print(" Token too long error from GetOpCode.")
+		log.Print(" EMpty Token error from GetOpCode.")
 		return OpCode
+	}
+
+	// keep token length to 2 chars max.
+	for len(Token.Str) > 2 {
+		UNGETCHR()
+		Token.Str = Token.Str[:len(Token.Str)-1]
 	}
 
 	CH1 = Token.Str[0]

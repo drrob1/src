@@ -432,7 +432,6 @@ StateLoop:
 	fmt.Println("len(input)=", len(input))
 	fmt.Println()
 
-
 	ItemArray = make([]string, 0, len(input))
 
 	k := Links[len(input)]

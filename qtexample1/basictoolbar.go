@@ -63,21 +63,21 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("Toolbar Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(500, 500) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
+	window := widgets.NewQMainWindow(nil, 0) //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("Toolbar Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(500, 500)         //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int)
 
 	//newIcon := gui.QIcon_FromTheme2("document-new", gui.NewQIcon5("new.png"))
-    filenewmenuoption := func () {
-    	// need a function here.  I'll make it a dummy function
-    	widgets.QMessageBox_About(window, "File New", "File New Menu option was selected")
+	filenewmenuoption := func() {
+		// need a function here.  I'll make it a dummy function
+		widgets.QMessageBox_About(window, "File New", "File New Menu option was selected")
 		return
 	}
 
 	//openIcon := gui.QIcon_FromTheme2("document-open", gui.NewQIcon5("open.png"))
-	fileopenmenuoption := func () {
-    	// need a function here.  I'll make it a dummy function
-    	widgets.QMessageBox_About(window, "File Open", "File Open Menu option was selected")
+	fileopenmenuoption := func() {
+		// need a function here.  I'll make it a dummy function
+		widgets.QMessageBox_About(window, "File Open", "File Open Menu option was selected")
 		return
 	}
 
@@ -117,10 +117,10 @@ func main() {
 	//toolbar.SetToolButtonStyle(core.Qt__ToolButtonIconOnly)
 	//toolbar.SetToolButtonStyle(core.Qt__ToolButtonFollowStyle)
 	//toolbar.SetFloatable(true)  // this worked, but I actually had to move the toolbar to see all options
-	toolbar.SetMovable(true)  // this worked, but I actually had to move the toolbar to see all options.
+	toolbar.SetMovable(true) // this worked, but I actually had to move the toolbar to see all options.
 
 	//docNew := toolbar.AddAction2(newIcon, "New")
-	docNew := toolbar.AddAction( "New")
+	docNew := toolbar.AddAction("New")
 	docNew.ConnectTriggered(func(checked bool) {
 		filenewmenuoption()
 		return
@@ -128,7 +128,7 @@ func main() {
 
 	toolbar.AddSeparator()
 	//docOpen := toolbar.AddAction2(openIcon, "Open")
-	docOpen := toolbar.AddAction( "Open")
+	docOpen := toolbar.AddAction("Open")
 	docOpen.ConnectTriggered(func(checked bool) {
 		fileopenmenuoption()
 		return
@@ -136,14 +136,14 @@ func main() {
 
 	toolbar.AddSeparator()
 	//docClose := toolbar.AddAction2(closeIcon, "Close")
-	docClose := toolbar.AddAction( "Close")
+	docClose := toolbar.AddAction("Close")
 	docClose.ConnectTriggered(func(checked bool) {
 		fileclosemenuoption()
 	})
 
 	toolbar.AddSeparator()
 	//Help := toolbar.AddAction2(helpIcon, "Help")
-	Help := toolbar.AddAction( "Help")
+	Help := toolbar.AddAction("Help")
 	Help.ConnectTriggered(func(checked bool) {
 		filehelpmenuoption()
 		return
@@ -151,7 +151,7 @@ func main() {
 
 	toolbar.AddSeparator()
 	//About := toolbar.AddAction2(aboutIcon, "About")
-	About := toolbar.AddAction( "About")
+	About := toolbar.AddAction("About")
 	About.ConnectTriggered(func(checked bool) {
 		fileaboutmenuoption()
 		return
@@ -159,13 +159,13 @@ func main() {
 
 	toolbar.AddSeparator()
 	// Quit := toolbar.AddAction2(quitIcon, "Quit")
-	Quit := toolbar.AddAction( "Quit")
+	Quit := toolbar.AddAction("Quit")
 	Quit.ConnectTriggered(func(checked bool) {
 		filequitmenuoption()
 		return
 	})
 
-//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
+	//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
 	// Execute app

@@ -75,9 +75,9 @@ func main() {
 	app := widgets.NewQApplication(len(os.Args), os.Args) // func NewQApplication(argc int, argv []string) *QApplication
 
 	// Create main window
-	window := widgets.NewQMainWindow(nil, 0)  //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
-	window.SetWindowTitle("QVBox Layout Example")  // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
-	window.SetMinimumSize2(200, 200) //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
+	window := widgets.NewQMainWindow(nil, 0)      //  func NewQMainWindow(parent QWidget_ITF, flags core.Qt__WindowType) *QMainWindow
+	window.SetWindowTitle("QVBox Layout Example") // func (ptr *QGraphicsWidget) SetWindowTitle(title string)
+	window.SetMinimumSize2(200, 200)              //  func (ptr *QWidget) SetMinimumSize2(minw int, minh int) {
 
 	mainwidget := widgets.NewQWidget(nil, 0)
 	mainwidget.SetLayout(widgets.NewQVBoxLayout()) // from example code above
@@ -100,10 +100,10 @@ func main() {
 	mainwidget.Layout().AddWidget(loginbutton)
 	mainwidget.Layout().AddWidget(registerbutton)
 
-//	window.SetLayout(vboxlayout)  this line gives an error of attempting to set Qlayout which already has a layout
+	//	window.SetLayout(vboxlayout)  this line gives an error of attempting to set Qlayout which already has a layout
 
 	window.SetCentralWidget(mainwidget)
-//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
+	//	window.SetLayout(layout)  I'm getting an error that says attempting to set layout on QMainWindow which already has a layout
 	window.Show()
 
 	// Execute app
