@@ -12,7 +12,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "9 Aug 2020"
+const LastAlteredDate = "24 Oct 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -98,6 +98,7 @@ REVISION HISTORY
  7 Aug 20 -- Now called hpcal2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
                And made a minimal change in GetResult for variable I to make code more idiomatic.
  9 Aug 20 -- Cleaned out some old, unhelpful comments, and removed one extraneous "break" in GetResult tknptr.OP section.
+24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out of bounds error.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -696,15 +697,15 @@ func GetResult(s string) (float64, []string) {
 			} // opcode value condition
 		case tknptr.ALLELSE:
 			cmdnum := cmdMap[Token.Str]
-			if cmdnum == 0 {
+			if cmdnum == 0 && len(Token.Str) > 2 {
 				TokenStrShortened := Token.Str[:3] // First 3 characters, ie, characters at positions 0, 1 and 2
 				cmdnum = cmdMap[TokenStrShortened]
-				if cmdnum == 0 {
-					ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
-					break
-				}
 			}
-			//fmt.Println(" GetResult token state is ALLELSE.  Token.Str=", Token.Str,", cmdnum=", cmdnum)
+			if cmdnum == 0 {
+				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
+				break
+			}
+
 			switch cmdnum {
 			case 10: // DUMP
 				ss = append(ss, DumpStackGeneral()...)
