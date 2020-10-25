@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "23 Oct 2020"
+const LastAltered = "25 Oct 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -113,6 +113,7 @@ REVISION HISTORY
  3 Jul 20 -- FIX command also sets output mode to be fixed.  So to use FIXn to set digits for float or gen, have to change outputmode AFTER using FIXn.
  8 Aug 20 -- Now using hpcalc2 in place of hpcalc.
 23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
+25 Oct 20 -- Trying to improve the display, as it looks terrible on (only) terminator for some reason.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -178,7 +179,7 @@ func putf(x, y int, format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	puts(scrn, style, x, y, s)
 }
-
+// ---------------------------------------------------------------------------------------------------------------------
 func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig designed to allow for non ASCII characters.  I removed that.
 	for i, r := range str {
 		scrn.SetContent(x+i, y, r, nil, style)
@@ -186,17 +187,18 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig 
 	x += len(str)
 
 	deleol(x, y) // no longer crashes here.
-	scrn.Show()
+	//scrn.Show()
 }
-
+// ---------------------------------------------------------------------------------------------------------------------
 func deleol(x, y int) {
 	width, _ := scrn.Size() // don't need height for this calculation.
-	empty := width - x - 1
-	for i := 0; i < empty; i++ {
+	//empty := width - x - 1
+	for i := 0; i < width; i++ {
 		scrn.SetContent(x+i, y, ' ', nil, plain) // making a blank slice kept crashing.  This direct method works.
 	}
+	//scrn.SetContent(width-1, y, '|', nil, plain) not needed.
 }
-
+// ---------------------------------------------------------------------------------------------------------------------
 func clearline(line int) {
 	deleol(0, line)
 }
@@ -254,6 +256,7 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) {
 }
 }}}
 */
+// ---------------------------------------------------------------------------------------------------------------------
 func main() {
 	var INBUF, HomeDir string
 
@@ -302,7 +305,8 @@ func main() {
 
 	MaxCol, MaxRow = scrn.Size()
 
-	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
+	//scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
+	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorDefault)) // this worked.
 	scrn.Clear()
 
 	style = tcell.StyleDefault
@@ -573,6 +577,7 @@ func main() {
 			outputmode = outputgen
 		} else if INBUF == "CLEAR" || INBUF == "CLS" {
 			scrn.Clear()
+			scrn.Fill(' ', plain)
 			scrn.Sync()
 			gblrow = 0
 			RepaintScreen(StartCol)
@@ -845,10 +850,12 @@ func checkmsg(err error, msg string) {
 }
 
 // --------------------------------------------------- Cap -----------------------------------------
-func Cap(c rune) rune {
+/*
+func Cap(c rune) rune {  // not used, so I'll take it out.
 	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
 	return r
 } // Cap
+ */
 
 // --------------------------------------------------- GetInputString for tcell--------------------------------------
 
@@ -1115,6 +1122,7 @@ func RepaintScreen(x int) {
 	WriteDisplayTapeToScreen(DisplayCol, StackRow)
 	//	Printf_tb(x, MaxRow-1, BrightCyan, Black, Divider)  Not needed for tcell
 	gblrow = 0
+	scrn.Sync()
 }
 
 // -------------------------------------------------- GetNameStr --------------------------------
