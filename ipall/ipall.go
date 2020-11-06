@@ -6,6 +6,7 @@
                    If a domain name is provided, it will do what nslookup does now, on both linux and windows.
 		   Since it's possible for a domain name to begin with a number, I retained the option of specifically setting the
 		   ip or host string
+     5 Nov 20 -- It's useful to always query ipinfo, even if a domain name is entered.
 */
 package main
 
@@ -21,7 +22,7 @@ import (
 	"unicode/utf8"
 )
 
-const LastAltered = "2 Nov 2020"
+const LastAltered = "5 Nov 2020"
 
 var ip string
 var host string
@@ -29,6 +30,7 @@ var ns bool
 var mx bool
 var txt bool
 var cname bool
+var URL string
 
 const (
 	ipMode = iota
@@ -73,21 +75,7 @@ func main() {
 	switch {
 	case ip != "":
 		ls.reverseLkp(ip)
-
-		URL := "http://ipinfo.io/" + arg
-		data, err := http.Get(URL)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		} else {
-			defer data.Body.Close()
-			_, err := io.Copy(os.Stdout, data.Body)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			fmt.Println()
-		}
+		ipinfo(ip)
 
 	case host != "":
 		ls.nsLkp(host)
@@ -131,8 +119,11 @@ func (ls *lsdns) hostLkp(host string) error {
 	fmt.Println()
 	fmt.Println("Host lookup")
 	fmt.Println("-----------")
+	//fmt.Println(" my added statement to understand what the addrs variable is:", addrs)
+	// addrs is a []string, where each element is a dotted quartet.  And since there may be multiple host IP addresses, it is returned as a slice of string.
 	for _, addr := range addrs {
 		fmt.Printf("%-30s%-20s\n", host, addr)
+		ipinfo(addr)
 	}
 	fmt.Println()
 	return nil
@@ -196,30 +187,22 @@ func (ls *lsdns) cnameLkp(host string) error {
 	return nil
 }
 
-/*
-func main() {
-	flag.StringVar(&host, "host", "localhost", "host name to resolve")
-	flag.Parse()
-
-	addrs, err := net.LookupHost(host)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	fmt.Println(addrs)
-}
-func main() {
-	flag.StringVar(&addr, "addr", "127.0.0.1", "host address to lookup")
-	flag.Parse()
-
-	names, err := net.LookupAddr(addr)
+func ipinfo(dottedURL string) {
+	URL := "http://ipinfo.io/" + dottedURL
+	data, err := http.Get(URL)
 	if err != nil {
 		fmt.Println(err)
 		return
+	} else {
+		defer data.Body.Close()
+		fmt.Println( " ipinfo.io response for", dottedURL, "is:")
+		_, err := io.Copy(os.Stdout, data.Body)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println()
 	}
-
-	fmt.Println(names)
+	fmt.Println()
 }
 
-*/
