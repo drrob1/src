@@ -72,6 +72,10 @@ func main() {
 		}
 	}
 
+	fmt.Println()
+	fmt.Println(" ipall info tool, last altered", LastAltered)
+	fmt.Println()
+
 	switch {
 	case ip != "":
 		ls.reverseLkp(ip)
