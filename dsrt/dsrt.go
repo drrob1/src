@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "18 Sep 2020"
+const LastAltered = "7 Nov 2020"
 
 /*
 Revision History
@@ -76,6 +76,7 @@ Revision History
    6 Oct 19 -- Removed -H and added -help flags
   25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
   18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
+   7 Nov 20 -- Learned that the idiomatic way to test absence of environment variables is LookupEnv.  From the Go Standard Lib Cookbook.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -180,7 +181,7 @@ func main() {
 	}
 
 	// flag definitions and processing
-	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
+	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
@@ -564,9 +565,9 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
-	s := os.Getenv("dsrt")
+	s, ok := os.LookupEnv("dsrt")
 
-	if len(s) < 1 {
+	if ! ok {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
