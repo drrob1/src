@@ -599,8 +599,15 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 //------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
+/* non-idiomatic code
 	s := os.Getenv("diraliases")
 	if len(s) == 0 {
+		return nil
+	}
+ */
+	
+	s, ok := os.LookupEnv("diraliases")
+	if ! ok {
 		return nil
 	}
 
