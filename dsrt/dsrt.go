@@ -605,7 +605,7 @@ func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		return nil
 	}
  */
-	
+
 	s, ok := os.LookupEnv("diraliases")
 	if ! ok {
 		return nil

@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "25 Oct 2020"
+const LastAltered = "8 Nov 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -114,6 +114,7 @@ REVISION HISTORY
  8 Aug 20 -- Now using hpcalc2 in place of hpcalc.
 23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
 25 Oct 20 -- Trying to improve the display, as it looks terrible on (only) terminator for some reason.
+ 8 Nov 20 -- Fixed minor errors in the fmt messages of FROMCLIP.  I was looking because of "Go Standard Library Cookbook"
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -520,7 +521,7 @@ func main() {
 				}
 				winclippy(s)
 			}
-		} else if INBUF == "FROMCLIP" {
+		} else if INBUF == "FROMCLIP" { // Go Standard Library Cookbook does not use strings.Builder, but does seem to be otherwise similar.
 			var w strings.Builder
 			if runtime.GOOS == "linux" {
 				cmdfromclip := exec.Command("xclip", "-o")
@@ -534,7 +535,7 @@ func main() {
 				str = strings.ReplaceAll(str, "\r", "")
 				str = strings.ReplaceAll(str, ",", "")
 				str = strings.ReplaceAll(str, " ", "")
-				s2 := fmt.Sprintf("after removing all commas and spaces it becomes %s", str)
+				s2 := fmt.Sprintf("after removing all commas and spaces it becomes %s \n", str)
 				putln(s2)
 				putf(StartCol, OutputRow+1, s2)
 				R, err := strconv.ParseFloat(str, 64)
@@ -550,7 +551,7 @@ func main() {
 				cmdfromclip.Run()
 				lines := w.String()
 				gblrow = OutputRow
-				s1 := fmt.Sprint(" received ", lines, "from tcc v12")
+				s1 := fmt.Sprint(" received ", lines, "from tcc v22")
 				putln(s1)
 				linessplit := strings.Split(lines, "\n")
 				str := strings.ReplaceAll(linessplit[1], "\"", "")

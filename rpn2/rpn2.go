@@ -1,5 +1,5 @@
-// (C) 1990-2016.  Robert W Solomon.  All rights reserved.
-// rpn.go
+// (C) 1990-2020.  Robert W Solomon.  All rights reserved.
+// rpn2.go, testing hpcalc2.go
 package main
 
 import (
@@ -61,22 +61,15 @@ func main() {
 	    8 Feb 20 -- Added PopX to hpcalc.go, and will test it here.
 	    9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
 	    8 Aug 20 -- Now called rpn2.go to test hpcalc2.go
+	    8 Nov 20 -- Removed unnecessary comments.
 	*/
 
 	var R float64
 	var INBUF, ans string
 	const StackFileName = "RPNStack.sav"
-	// {{{
-	//                                                                      var Y,NYD,July4,VetD,ChristmasD int;
-	//                                                                                var INBUF,ans,line string;
-	//                                                                         var Holidays holidaycalc.HolType;
-	// }}}
 	var stringslice []string
 
 	var Stk hpcalc2.StackType // used when time to write out the stack upon exit.
-
-	//    var stackFileHandle *os.File  --  ioutil does not use this.
-
 	var err error
 
 	suppressDump = make(map[string]bool)
@@ -142,7 +135,6 @@ func main() {
 
 	for len(INBUF) > 0 {
 		R, stringslice = hpcalc2.GetResult(INBUF)
-		//                                                                  R,Holidays = hpcalc.GetResult(INBUF);
 		ans = strconv.FormatFloat(R, 'g', -1, 64)
 		ans = hpcalc2.CropNStr(ans)
 		if R > 10000 {
@@ -165,7 +157,7 @@ func main() {
 		if suppressDump[INBUF] {
 			allowDumpFlag = false
 		}
-		//		if !(strings.HasPrefix(INBUF, "DUMP") || INBUF == "HELP" || INBUF == "?") { // old way of suppressing DUMP: if just did it, or if HELP called to not scroll help off screen.
+
 		if allowDumpFlag {
 			_, stringslice = hpcalc2.GetResult("DUMP") // discard result.  Only need stack dump general executed.
 			for _, ss := range stringslice {
