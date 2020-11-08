@@ -13,7 +13,7 @@ import (
 	"strings"
 	//
 	"getcommandline"
-	"hpcalc"
+	hpcalc "hpcalc2"
 	"makesubst"
 	//{{{
 	//                                                                                          "holidaycalc"
@@ -23,7 +23,7 @@ import (
 	//}}}
 )
 
-const LastCompiled = "9 Apr 2020"
+const LastCompiled = "8 Nov 2020"
 
 var suppressDump map[string]bool
 
@@ -65,21 +65,16 @@ func main() {
 	    2 Oct 18 -- Now using code folding.  za normal mode command toggles the fold mode where cursor is.
 	    8 Feb 20 -- Added PopX to hpcalc.go, and will test it here.
 	    9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
+	    8 Nov 20 -- Now will use hpcalc2.  I'm adding toclip, fromclip (based on code from "Go Standard Library Cookbook") to hpcalc2.
+	                And finally removed code that was commented out long ago.
 	*/
 
 	var R float64
 	var INBUF, ans string
 	const StackFileName = "RPNStack.sav"
-	// {{{
-	//                                                                      var Y,NYD,July4,VetD,ChristmasD int;
-	//                                                                                var INBUF,ans,line string;
-	//                                                                         var Holidays holidaycalc.HolType;
-	// }}}
 	var stringslice []string
 
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
-
-	//    var stackFileHandle *os.File  --  ioutil does not use this.
 
 	var err error
 
@@ -146,7 +141,6 @@ func main() {
 
 	for len(INBUF) > 0 {
 		R, stringslice = hpcalc.GetResult(INBUF)
-		//                                                                  R,Holidays = hpcalc.GetResult(INBUF);
 		ans = strconv.FormatFloat(R, 'g', -1, 64)
 		ans = hpcalc.CropNStr(ans)
 		if R > 10000 {

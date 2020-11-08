@@ -1,8 +1,12 @@
 package hpcalc2
 
 import (
+	"bytes"
 	"fmt"
 	"math"
+	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	//
@@ -12,7 +16,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "24 Oct 2020"
+const LastAlteredDate = "8 Nov 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -99,6 +103,7 @@ REVISION HISTORY
                And made a minimal change in GetResult for variable I to make code more idiomatic.
  9 Aug 20 -- Cleaned out some old, unhelpful comments, and removed one extraneous "break" in GetResult tknptr.OP section.
 24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out of bounds error.
+ 8 Nov 20 -- Adding toclip, fromclip, based on code from "Go Standard Library Cookbook", by Radomir Sohlich, (c) 2018 Packtpub.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -208,6 +213,8 @@ func init() {
 	cmdMap["ARCTAN"] = 490
 	cmdMap["D2R"] = 500
 	cmdMap["R2D"] = 510
+	cmdMap["TOCLIP"] = 520
+	cmdMap["FROMCLIP"] = 530
 }
 
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
@@ -758,6 +765,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
 				ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
 				ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
+				ss = append(ss, " TOCLIP, FROMCLIP -- uses xclip on linux and tcc 22 on Windows to access the clipboard.")
 				ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
 				ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 				ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
@@ -994,6 +1002,72 @@ func GetResult(s string) (float64, []string) {
 				PushMatrixStacks()
 				LastX = Stack[X]
 				Stack[X] *= 180.0 / PI
+			case 520: // TOCLIP
+				R := READX()
+				s := strconv.FormatFloat(R, 'g', -1, 64)
+				if runtime.GOOS == "linux" {
+					linuxclippy := func(s string) {
+						buf := []byte(s)
+						rdr := bytes.NewReader(buf)
+						cmd := exec.Command("xclip")
+						cmd.Stdin = rdr
+						cmd.Stdout = os.Stdout
+						cmd.Run()
+						ss = append(ss, fmt.Sprintf(" Sent %s to xclip.", s))
+					}
+					linuxclippy(s)
+				} else if runtime.GOOS == "windows" {
+					winclippy := func(s string) {
+						cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+						cmd.Stdout = os.Stdout
+						cmd.Run()
+						ss = append(ss, fmt.Sprintf(" Sent %s to tcc v22.", s))
+					}
+					winclippy(s)
+				}
+
+			case 530: // FROMCLIP
+				w := bytes.NewBuffer([]byte{}) // From "Go Standard Library Cookbook" as referenced above.
+				if runtime.GOOS == "linux" {
+					cmdfromclip := exec.Command("xclip", "-o")
+					cmdfromclip.Stdout = w
+					cmdfromclip.Run()
+					str := w.String()
+					s := fmt.Sprintf(" Received %s from xclip.", str)
+					str = strings.ReplaceAll(str, "\n", "")
+					str = strings.ReplaceAll(str, "\r", "")
+					str = strings.ReplaceAll(str, ",", "")
+					str = strings.ReplaceAll(str, " ", "")
+					s = s + fmt.Sprintf("  After removing all commas and spaces it becomes %s.", str)
+					ss = append(ss, s)
+					R, err := strconv.ParseFloat(str, 64)
+					if err != nil {
+						ss = append(ss, fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored."))
+					} else {
+						PUSHX(R)
+					}
+				} else if runtime.GOOS == "windows" {
+					cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
+					cmdfromclip.Stdout = w
+					cmdfromclip.Run()
+					lines := w.String()
+					s := fmt.Sprint(" Received ", lines, "from tcc v22")
+					linessplit := strings.Split(lines, "\n")
+					str := strings.ReplaceAll(linessplit[1], "\"", "")
+					str = strings.ReplaceAll(str, "\n", "")
+					str = strings.ReplaceAll(str, "\r", "")
+					str = strings.ReplaceAll(str, ",", "")
+					str = strings.ReplaceAll(str, " ", "")
+					s = s + fmt.Sprintln(", after post processing the string becomes", str)
+					ss = append(ss, s)
+					R, err := strconv.ParseFloat(str, 64)
+					if err != nil {
+						ss = append(ss, fmt.Sprintln(" fromclip", err, ".  Value ignored."))
+					} else {
+						PUSHX(R)
+					}
+				}
+
 			default:
 				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
 			} // main text command selection if statement
