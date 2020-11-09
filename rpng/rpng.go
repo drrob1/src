@@ -20,7 +20,7 @@ import (
 	"tokenize"
 )
 
-const lastAlteredDate = "8 Nov 2020"
+const lastAlteredDate = "9 Nov 2020"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -97,6 +97,7 @@ REVISION HISTORY
  8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
 23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
  8 Nov 20 -- Found minor error in fmt messages of fromclip command.  I was looking because of "Go Standard Library Cookbook"
+ 9 Nov 20 -- Added use of comspec, copied from hpcalc2.go.
 */
 
 	var INBUF, HomeDir string
@@ -276,11 +277,16 @@ REVISION HISTORY
 				}
 				linuxclippy(s)
 			} else if runtime.GOOS == "windows" {
+				comspec, ok := os.LookupEnv("ComSpec")
+				if ! ok {
+					fmt.Println(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
+					break
+				}
 				winclippy := func(s string) {
-					cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+					cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
 					cmd.Stdout = os.Stdout
 					cmd.Run()
-					fmt.Printf(" sent %s to tcc v22 \n", s)
+					fmt.Printf(" sent %s to %s \n", s, comspec)
 				}
 				winclippy(s)
 			}
@@ -306,11 +312,16 @@ REVISION HISTORY
 					AllowDumpFlag = false // need to see the displayed msg.
 				}
 			} else if runtime.GOOS == "windows" {
-				cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
+				comspec, ok := os.LookupEnv("ComSpec")
+				if ! ok {
+					fmt.Println(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
+					break
+				}
+				cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
 				cmdfromclip.Stdout = &w
 				cmdfromclip.Run()
 				lines := w.String()
-				fmt.Print(" received ", lines, "from tcc v22")
+				fmt.Print(" received ", lines, "from ", comspec)
 				linessplit := strings.Split(lines, "\n")
 				str := strings.ReplaceAll(linessplit[1], "\"", "")
 				str = strings.ReplaceAll(str, "\n", "")

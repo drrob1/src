@@ -1057,7 +1057,7 @@ func GetResult(s string) (float64, []string) {
 				} else if runtime.GOOS == "windows" {
 					comspec, ok := os.LookupEnv("ComSpec")
 					if ! ok {
-						ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
+						ss = append(ss, " Environment does not have ComSpec entry.  FromClip unsuccessful.")
 						break outerloop
 					}
 

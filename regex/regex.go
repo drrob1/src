@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Nov 21, 2019"
+const LastAltered = "Nov 9, 2020"
 
 /*
 Revision History
@@ -80,6 +80,8 @@ Revision History
                  Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
   27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
   21 Nov 19 -- Added Println() statements to separate header from filename outputs.
+  25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
+   9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -183,6 +185,8 @@ func main() {
 
 	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
 
+	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
+
 	flag.Parse()
 
 	fmt.Println(" regex will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
@@ -231,8 +235,8 @@ func main() {
 
 	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
 	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
-
-	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
+	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag                                                // added 09/12/2018 12:32:23 PM
+	LongFileSizeList := *longflag
 
 	inputRegEx := ""
 	workingdir, _ := os.Getwd()
@@ -335,16 +339,21 @@ func main() {
 		NAME := strings.ToLower(f.Name())
 		if BOOL := regex.MatchString(NAME); BOOL {
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
-			sizeint := 0
+			//sizeint := 0
 			sizestr := ""
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
-				sizeint = int(f.Size())
-				sizestr = strconv.Itoa(sizeint)
-				if sizeint > 100000 {
-					sizestr = AddCommas(sizestr)
+				//sizeint = int(f.Size()) // Don't need this as f.Size() returns int64.  This matters on 386 version.
+				if LongFileSizeList {
+					sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+					if f.Size() > 100000 {
+						sizestr = AddCommas(sizestr)
+					}
+					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+				} else {
+					sizestr = GetMagnitudeString(f.Size())
+					fmt.Printf("%-15s %s %s\n", sizestr, s, f.Name())
 				}
-				fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 				count++
 			} else if IsSymlink(f.Mode()) {
 				fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
@@ -371,41 +380,12 @@ func main() {
 	fmt.Println()
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
-		s1 := ""
-		var i int64
-		switch {
-		case GrandTotal > 1000000000000: // 1 trillion, or TB
-			i = GrandTotal / 1000000000000               // I'm forcing an integer division.
-			if GrandTotal%1000000000000 > 500000000000 { // rounding up
-				i++
-			}
-			s1 = fmt.Sprintf("%d TB", i)
-		case GrandTotal > 1000000000: // 1 billion, or GB
-			i = GrandTotal / 1000000000
-			if GrandTotal%1000000000 > 500000000 { // rounding up
-				i++
-			}
-			s1 = fmt.Sprintf("%d GB", i)
-		case GrandTotal > 1000000: // 1 million, or MB
-			i = GrandTotal / 1000000
-			if GrandTotal%1000000 > 500000 {
-				i++
-			}
-			s1 = fmt.Sprintf("%d MB", i)
-		case GrandTotal > 1000: // KB
-			i = GrandTotal / 1000
-			if GrandTotal%1000 > 500 {
-				i++
-			}
-			s1 = fmt.Sprintf("%d KB", i)
-		default:
-			s1 = fmt.Sprintf("%d", GrandTotal)
-		}
+		s1 := GetMagnitudeString(GrandTotal)
 		fmt.Println(", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
 	}
-} // end main dsrt
+} // end main regex
 
 //-------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
@@ -414,7 +394,8 @@ func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 
 //---------------------------------------------------------------------- AddCommas
 func AddCommas(instr string) string {
-	var Comma []byte = []byte{','}
+	// var Comma []byte = []byte{','}  compiler flagged this as type not needed
+	Comma := []byte{','}
 
 	BS := make([]byte, 0, 15)
 	BS = append(BS, instr...)
@@ -451,6 +432,7 @@ func GetIDname(uidStr string) string {
 
 } // GetIDname
 
+/*
 // ------------------------------- GetEnviron ------------------------------------------------
 func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obsolete now but not gone.
 	var dsrtparam DsrtParamType
@@ -484,13 +466,22 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 	return dsrtparam
 } // GetEnviron
 
+*/
+
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
+/* Non-idiomatic code
 	s := os.Getenv("dsrt")
-
 	if len(s) < 1 {
+		return dsrtparam
+	} // empty dsrtparam is returned
+ */
+
+	s, ok := os.LookupEnv("dsrt")
+
+	if ! ok {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
@@ -520,13 +511,20 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 }
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
-func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
+/* Non-idiomatic code
 	s := os.Getenv("diraliases")
 	if len(s) == 0 {
 		return nil
 	}
+ */
 
+	s, ok := os.LookupEnv("diraliases")
+	if ! ok {
+		return nil
+	}
+	
 	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
 	directoryAliasesMap := make(dirAliasMapType, 10)
 	//anAliasMap := make(dirAliasMapType,1)
@@ -568,7 +566,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = GetDirectoryAliases()
+	aliasesMap = getDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {
@@ -606,6 +604,30 @@ func MyReadDir(dir string) []os.FileInfo {
 	}
 	return fi
 } // MyReadDir
+
+// ----------------------------- GetMagnitudeString -------------------------------
+func GetMagnitudeString(j int64) string {
+
+	var s1 string
+	var f float64
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		f = float64(j) / 1000000000000
+		s1 = fmt.Sprintf("%.4g tb", f)
+	case j > 1_000_000_000: // 1 billion, or GB
+		f = float64(j) / 1000000000
+		s1 = fmt.Sprintf("%6.4g gb", f)
+	case j > 1_000_000: // 1 million, or MB
+		f = float64(j) / 1000000
+		s1 = fmt.Sprintf("%9.4g mb", f)
+	case j > 1000: // KB
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("%12.4g kb", f)
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+	}
+	return s1
+}
 
 /*
  {{{

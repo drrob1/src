@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "8 Nov 2020"
+const LastAltered = "9 Nov 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -115,6 +115,7 @@ REVISION HISTORY
 23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
 25 Oct 20 -- Trying to improve the display, as it looks terrible on (only) terminator for some reason.
  8 Nov 20 -- Fixed minor errors in the fmt messages of FROMCLIP.  I was looking because of "Go Standard Library Cookbook"
+ 9 Nov 20 -- Added use of comspec.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -512,11 +513,17 @@ func main() {
 				}
 				linuxclippy(s)
 			} else if runtime.GOOS == "windows" {
+				comspec, ok := os.LookupEnv("ComSpec")
+				if ! ok {
+					s := fmt.Sprintln(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
+					putln(s)
+					break
+				}
 				winclippy := func(s string) {
-					cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+					cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
 					cmd.Stdout = os.Stdout
 					cmd.Run()
-					s1 := fmt.Sprintf(" sent %s to tcc v22 \n", s)
+					s1 := fmt.Sprintf(" sent %s to tcc \n", s)
 					putf(StartCol, OutputRow, s1)
 				}
 				winclippy(s)
@@ -546,12 +553,18 @@ func main() {
 					hpcalc.PUSHX(R)
 				}
 			} else if runtime.GOOS == "windows" {
-				cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
+				comspec, ok := os.LookupEnv("ComSpec")
+				if ! ok {
+					s := fmt.Sprintln(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
+					putln(s)
+					break
+				}
+				cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
 				cmdfromclip.Stdout = &w
 				cmdfromclip.Run()
 				lines := w.String()
 				gblrow = OutputRow
-				s1 := fmt.Sprint(" received ", lines, "from tcc v22")
+				s1 := fmt.Sprint(" received ", lines, "from tcc")
 				putln(s1)
 				linessplit := strings.Split(lines, "\n")
 				str := strings.ReplaceAll(linessplit[1], "\"", "")
