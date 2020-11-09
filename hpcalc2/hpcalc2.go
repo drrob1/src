@@ -16,7 +16,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "8 Nov 2020"
+const LastAlteredDate = "9 Nov 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -104,6 +104,7 @@ REVISION HISTORY
  9 Aug 20 -- Cleaned out some old, unhelpful comments, and removed one extraneous "break" in GetResult tknptr.OP section.
 24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out of bounds error.
  8 Nov 20 -- Adding toclip, fromclip, based on code from "Go Standard Library Cookbook", by Radomir Sohlich, (c) 2018 Packtpub.
+ 9 Nov 20 -- Including use of comspec to find tcc on Windows.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -657,6 +658,7 @@ func GetResult(s string) (float64, []string) {
 	ss := make([]string, 0, 100) // stringslice is too long to keep having to type, esp in the help section.
 
 	tokenPointer := tknptr.INITKN(s)
+	outerloop:
 	for { //  UNTIL reached EOL
 		Token, EOL = tokenPointer.GETTKNREAL()
 		//    fmt.Println(" In GetResult after GetTknReal and R =",Token.Rsum,", Token.Str =",Token.Str,  ", TokenState = ", FSATypeString[Token.State]);
@@ -1017,11 +1019,17 @@ func GetResult(s string) (float64, []string) {
 					}
 					linuxclippy(s)
 				} else if runtime.GOOS == "windows" {
+					comspec, ok := os.LookupEnv("ComSpec")
+					if ! ok {
+						ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
+						break outerloop
+					}
 					winclippy := func(s string) {
-						cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+						//cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+						cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
 						cmd.Stdout = os.Stdout
 						cmd.Run()
-						ss = append(ss, fmt.Sprintf(" Sent %s to tcc v22.", s))
+						ss = append(ss, fmt.Sprintf(" Sent %s to %s.", s, comspec))
 					}
 					winclippy(s)
 				}
@@ -1047,11 +1055,18 @@ func GetResult(s string) (float64, []string) {
 						PUSHX(R)
 					}
 				} else if runtime.GOOS == "windows" {
-					cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
+					comspec, ok := os.LookupEnv("ComSpec")
+					if ! ok {
+						ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
+						break outerloop
+					}
+
+					//cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
+					cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
 					cmdfromclip.Stdout = w
 					cmdfromclip.Run()
 					lines := w.String()
-					s := fmt.Sprint(" Received ", lines, "from tcc v22")
+					s := fmt.Sprint(" Received ", lines, "from ", comspec)
 					linessplit := strings.Split(lines, "\n")
 					str := strings.ReplaceAll(linessplit[1], "\"", "")
 					str = strings.ReplaceAll(str, "\n", "")
