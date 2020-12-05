@@ -16,7 +16,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "9 Nov 2020"
+const LastAlteredDate = "5 Dec 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -105,6 +105,7 @@ REVISION HISTORY
 24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out of bounds error.
  8 Nov 20 -- Adding toclip, fromclip, based on code from "Go Standard Library Cookbook", by Radomir Sohlich, (c) 2018 Packtpub.
  9 Nov 20 -- Including use of comspec to find tcc on Windows.
+ 4 Dec 20 -- Thinking about how to add conversion factors.  1 lb = 453.59238 g; 1 oz = 28.34952 g; 1 m = 3.28084 ft; 1 mi = 1.609344 km
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -138,6 +139,12 @@ var StackUndoMatrix [StackSize]StackType
 const PI = math.Pi // 3.141592653589793;
 var LastX, MemReg float64
 var sigfig = -1 // default significant figures of -1 for the strconv.FormatFloat call.
+
+const lb2g = 453.59238
+const oz2g = 28.34952
+const cm2in = 2.54
+const m2ft = 3.28084
+const mi2km = 1.609344
 
 //-----------------------------------------------------------------------------------------------------------------------------
 func init() {
@@ -216,7 +223,23 @@ func init() {
 	cmdMap["R2D"] = 510
 	cmdMap["TOCLIP"] = 520
 	cmdMap["FROMCLIP"] = 530
+	cmdMap["LB2G"] = 540
+	cmdMap["OZ2G"] = 550
+	cmdMap["CM2IN"] = 560
+	cmdMap["M2FT"] = 570
+	cmdMap["MI2KM"] = 580
+	cmdMap["G2LB"] = 590
+	cmdMap["G2OZ"] = 600
+	cmdMap["IN2CM"] = 610
+	cmdMap["FT2M"] = 620
+	cmdMap["KM2MI"] = 630
 }
+
+//const lb2g = 453.59238
+//const oz2g = 28.34952
+//const m2ft = 3.28084
+//const cm2in = 2.54
+//const mi2km = 1.609344
 
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
 func Round(f float64) float64 {
@@ -654,11 +677,11 @@ func GetResult(s string) (float64, []string) {
 	var year int
 	var Token tknptr.TokenType
 	var EOL bool
-	// var Holiday holidaycalc.HolType  Moved into a more narrow scope, as it's only used in the hol command.  Done 9 Feb 20.
-	ss := make([]string, 0, 100) // stringslice is too long to keep having to type, esp in the help section.
 
-	tokenPointer := tknptr.INITKN(s)
-	outerloop:
+	ss := make([]string, 0, 100) // ss is abbrev for stringslice.
+
+	tokenPointer := tknptr.NewToken(s) // Using the Go idiom, instead of INITKN(s)
+outerloop:
 	for { //  UNTIL reached EOL
 		Token, EOL = tokenPointer.GETTKNREAL()
 		//    fmt.Println(" In GetResult after GetTknReal and R =",Token.Rsum,", Token.Str =",Token.Str,  ", TokenState = ", FSATypeString[Token.State]);
@@ -795,6 +818,7 @@ func GetResult(s string) (float64, []string) {
 				ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " substitutions: = for +, ; for *.")
+				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, and their inverses -- unit conversions.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
 			case 130: // STO
 				MemReg = Stack[X]
@@ -1020,7 +1044,7 @@ func GetResult(s string) (float64, []string) {
 					linuxclippy(s)
 				} else if runtime.GOOS == "windows" {
 					comspec, ok := os.LookupEnv("ComSpec")
-					if ! ok {
+					if !ok {
 						ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
 						break outerloop
 					}
@@ -1056,7 +1080,7 @@ func GetResult(s string) (float64, []string) {
 					}
 				} else if runtime.GOOS == "windows" {
 					comspec, ok := os.LookupEnv("ComSpec")
-					if ! ok {
+					if !ok {
 						ss = append(ss, " Environment does not have ComSpec entry.  FromClip unsuccessful.")
 						break outerloop
 					}
@@ -1082,6 +1106,76 @@ func GetResult(s string) (float64, []string) {
 						PUSHX(R)
 					}
 				}
+
+			case 540: // lb2g = 453.59238
+				r := READX() * lb2g // X * conversion factor pounds to g
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s1 := fmt.Sprintf("%s pounds is %s grams", x, s0)
+				ss = append(ss, s1)
+
+			case 550: // oz2g = 28.34952
+				r := READX() * oz2g // X * conversion factor ounce to g
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s oz is %s grams", x, s0)
+				ss = append(ss, s)
+
+			case 560: // cm2in = 2.54
+				r := READX() / cm2in // X / conversion factor of cm to inches
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s cm is %s inches", x, s0)
+				ss = append(ss, s)
+
+			case 570: // m2ft = 3.28084
+				r := READX() * m2ft
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s meters is %s feet", x, s0)
+				ss = append(ss, s)
+
+			case 580: // mi2km = 1.609344
+				r := READX() * mi2km
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s miles is %s km", x, s0)
+				ss = append(ss, s)
+
+			case 590: // g2lb
+				r := READX() / lb2g
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s1 := fmt.Sprintf("%s grams is %s pounds", x, s0)
+				ss = append(ss, s1)
+
+			case 600: // g2oz
+				r := READX() / oz2g
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s1 := fmt.Sprintf("%s grams is %s oz", x, s0)
+				ss = append(ss, s1)
+
+			case 610: //in2cm
+				r := READX() * cm2in
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s1 := fmt.Sprintf("%s inches is %s cm", x, s0)
+				ss = append(ss, s1)
+
+			case 620: // ft2m
+				r := READX() / m2ft
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s ft is %s meters", x, s0)
+				ss = append(ss, s)
+
+			case 630: // km2mi
+				r := READX() / mi2km
+				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s km is %s mi", x, s0)
+				ss = append(ss, s)
 
 			default:
 				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
