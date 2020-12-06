@@ -142,7 +142,7 @@ var sigfig = -1 // default significant figures of -1 for the strconv.FormatFloat
 
 const lb2g = 453.59238
 const oz2g = 28.34952
-const cm2in = 2.54
+const in2cm = 2.54
 const m2ft = 3.28084
 const mi2km = 1.609344
 
@@ -1108,21 +1108,21 @@ outerloop:
 				}
 
 			case 540: // lb2g = 453.59238
-				r := READX() * lb2g // X * conversion factor pounds to g
+				r := READX() * lb2g
 				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s1 := fmt.Sprintf("%s pounds is %s grams", x, s0)
 				ss = append(ss, s1)
 
 			case 550: // oz2g = 28.34952
-				r := READX() * oz2g // X * conversion factor ounce to g
+				r := READX() * oz2g
 				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s oz is %s grams", x, s0)
 				ss = append(ss, s)
 
 			case 560: // cm2in = 2.54
-				r := READX() / cm2in // X / conversion factor of cm to inches
+				r := READX() / in2cm
 				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s cm is %s inches", x, s0)
@@ -1157,7 +1157,7 @@ outerloop:
 				ss = append(ss, s1)
 
 			case 610: //in2cm
-				r := READX() * cm2in
+				r := READX() * in2cm
 				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s1 := fmt.Sprintf("%s inches is %s cm", x, s0)
