@@ -4,7 +4,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/gob"
 	"flag"
 	"fmt"
@@ -20,7 +19,7 @@ import (
 	"tokenize"
 )
 
-const lastAlteredDate = "9 Nov 2020"
+const lastAlteredDate = "11 Dec 2020"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -33,72 +32,73 @@ var SuppressDump map[string]bool
 */
 
 func main() {
-/*
-This module uses the HPCALC module to simulate an RPN type calculator.
-REVISION HISTORY
-----------------
- 1 Dec 89 -- Changed prompt.
-24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
- 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
-18 May 03 -- First Win32 version.  And changed name.
- 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
-             And will save/restore the stack to/from a file.
- 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
-             And I now have the skipline included in MiscStdInOut so it is removed from here.
-15 Oct 13 -- Now writing for gm2 under linux.
-22 Jul 14 -- Converting to Ada.
- 6 Dec 14 -- Converting to cpp.
-20 Dec 14 -- Added macros for date and time last compiled.
-31 Dec 14 -- Started coding HOL command.
- 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
-10 Jan 15 -- Playing with string conversions and number formatting.
- 5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
-22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
-13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
- 2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
- 7 Jul 16 -- Added UP command to hpcalcc.cpp
- 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
-22 Aug 16 -- Started conversion to Go, as rpn.go.
- 8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
-11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
- 1 Oct 16 -- Made the stack display when the program starts.
- 4 Oct 16 -- Made the storage registers display when the program starts.
- 7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
-             Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
- 8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
- 9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
-21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
-28 Oct 16 -- Will clear screen in between command calls.  This is before I play with termbox or goterm
-31 Oct 16 -- Since clear screen works, I'll have the stack and reg's displayed more often.
-             Turns out that this cleared output like PRIME or HEX.  Now have YES,NO,ON,OFF for manual
-             control of DUMP output.  And added a HELP line printed here after that from hpcalc.
- 3 Nov 16 -- Changed hpcalc to return strings for output by the client rtn, instead of it doing its own output.  So now have
-             to make the corresponding changes here.
- 4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
- 5 Nov 16 -- Added SuppressDump map code
- 6 Nov 16 -- Added blank lines before writing output from hpcalc.
-11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
-13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
-23 Feb 17 -- Made "?" equivalent to "help"
-17 Jul 17 -- Discovered bug in that command history is not displayed correctly here.  It is displayed
-             correctly in rpnterm.  It will take me a little longer to find and fix this bug.
-31 Aug 17 -- Stopped working on the command hx issue.  Instead of bufio, I will use fmt.Scan().
-             And will check timestamp of the rpng exec file.
- 6 Apr 18 -- Wrote out DisplayTapeFile.
-22 Aug 18 -- learning about code folding
- 2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
- 7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, afterall.
- 1 Jan 19 -- There is a bug in entering several space delimited terms.  So I removed a trimspace and I'll see what happens next.
-26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
-29 Mar 20 -- Need to removed commas from a number string received from the clip.
-30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
- 1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
- 8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
-23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
- 8 Nov 20 -- Found minor error in fmt messages of fromclip command.  I was looking because of "Go Standard Library Cookbook"
- 9 Nov 20 -- Added use of comspec, copied from hpcalc2.go.
-*/
+	/*
+	   This module uses the HPCALC module to simulate an RPN type calculator.
+	   REVISION HISTORY
+	   ----------------
+	    1 Dec 89 -- Changed prompt.
+	   24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
+	   25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+	    3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
+	   18 May 03 -- First Win32 version.  And changed name.
+	    1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
+	                And will save/restore the stack to/from a file.
+	    2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
+	                And I now have the skipline included in MiscStdInOut so it is removed from here.
+	   15 Oct 13 -- Now writing for gm2 under linux.
+	   22 Jul 14 -- Converting to Ada.
+	    6 Dec 14 -- Converting to cpp.
+	   20 Dec 14 -- Added macros for date and time last compiled.
+	   31 Dec 14 -- Started coding HOL command.
+	    1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
+	   10 Jan 15 -- Playing with string conversions and number formatting.
+	    5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
+	   22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
+	   13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
+	    2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
+	    7 Jul 16 -- Added UP command to hpcalcc.cpp
+	    8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+	   22 Aug 16 -- Started conversion to Go, as rpn.go.
+	    8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
+	   11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
+	    1 Oct 16 -- Made the stack display when the program starts.
+	    4 Oct 16 -- Made the storage registers display when the program starts.
+	    7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
+	                Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
+	    8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
+	    9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
+	   21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
+	   28 Oct 16 -- Will clear screen in between command calls.  This is before I play with termbox or goterm
+	   31 Oct 16 -- Since clear screen works, I'll have the stack and reg's displayed more often.
+	                Turns out that this cleared output like PRIME or HEX.  Now have YES,NO,ON,OFF for manual
+	                control of DUMP output.  And added a HELP line printed here after that from hpcalc.
+	    3 Nov 16 -- Changed hpcalc to return strings for output by the client rtn, instead of it doing its own output.  So now have
+	                to make the corresponding changes here.
+	    4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
+	    5 Nov 16 -- Added SuppressDump map code
+	    6 Nov 16 -- Added blank lines before writing output from hpcalc.
+	   11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
+	   13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
+	   23 Feb 17 -- Made "?" equivalent to "help"
+	   17 Jul 17 -- Discovered bug in that command history is not displayed correctly here.  It is displayed
+	                correctly in rpnterm.  It will take me a little longer to find and fix this bug.
+	   31 Aug 17 -- Stopped working on the command hx issue.  Instead of bufio, I will use fmt.Scan().
+	                And will check timestamp of the rpng exec file.
+	    6 Apr 18 -- Wrote out DisplayTapeFile.
+	   22 Aug 18 -- learning about code folding
+	    2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
+	    7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, afterall.
+	    1 Jan 19 -- There is a bug in entering several space delimited terms.  So I removed a trimspace and I'll see what happens next.
+	   26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
+	   29 Mar 20 -- Need to removed commas from a number string received from the clip.
+	   30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
+	    1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
+	    8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
+	   23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
+	    8 Nov 20 -- Found minor error in fmt messages of fromclip command.  I was looking because of "Go Standard Library Cookbook"
+	    9 Nov 20 -- Added use of comspec, copied from hpcalc2.go.
+	   11 Dec 20 -- Went back to delimiting by spaces, not <CR>.  And, as of Nov 2020, toclip, fromclip are implemented in hpcalc2
+	*/
 
 	var INBUF, HomeDir string
 
@@ -198,10 +198,11 @@ REVISION HISTORY
 	WriteRegToScreen()
 	fmt.Println()
 	fmt.Println()
-	scanner := bufio.NewScanner(os.Stdin)
-	//	scanner.Split(bufio.ScanWords).  Not by words, but bufio is back as of 10/07/2018 09:33:54 AM
 
 	args := flag.Args()
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Split(bufio.ScanWords) // as of 12/11/20, back to word by word, not line by line.
+
 	if len(args) > 1 {
 		// INBUF = getcommandline.GetCommandLineString()  No longer works now that I'm using the flag package.
 		INBUF = strings.Join(args, " ")
@@ -262,82 +263,83 @@ REVISION HISTORY
 			ManualDump = false
 		} else if INBUF == "YES" || INBUF == "ON" {
 			ManualDump = true
-		} else if INBUF == "TOCLIP" {
-			R := hpcalc.READX()
-			s := strconv.FormatFloat(R, 'g', -1, 64)
-			if runtime.GOOS == "linux" {
-				linuxclippy := func(s string) {
-					buf := []byte(s)
-					rdr := bytes.NewReader(buf)
-					cmd := exec.Command("xclip")
-					cmd.Stdin = rdr
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-					fmt.Printf(" sent %s to xclip \n", s)
-				}
-				linuxclippy(s)
-			} else if runtime.GOOS == "windows" {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if ! ok {
-					fmt.Println(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
-					break
-				}
-				winclippy := func(s string) {
-					cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-					fmt.Printf(" sent %s to %s \n", s, comspec)
-				}
-				winclippy(s)
-			}
-		} else if INBUF == "FROMCLIP" { // Go Standard Library Cookbook does not use strings.Builder, but does seem to be otherwise similar.
-			var w strings.Builder
-			if runtime.GOOS == "linux" {
-				cmdfromclip := exec.Command("xclip", "-o")
-				cmdfromclip.Stdout = &w
-				cmdfromclip.Run()
-				str := w.String()
-				fmt.Printf(" received %s from xclip ", str)
-				str = strings.ReplaceAll(str, "\n", "")
-				str = strings.ReplaceAll(str, "\r", "")
-				str = strings.ReplaceAll(str, ",", "")
-				str = strings.ReplaceAll(str, " ", "")
-				fmt.Printf(", after removing all commas and spaces it becomes %s \n", str)
-				R, err := strconv.ParseFloat(str, 64)
-				if err != nil {
-					fmt.Println(" fromclip on linux conversion returned error", err, ".  Value ignored.")
-					AllowDumpFlag = false // need to see the error msg.
-				} else {
-					hpcalc.PUSHX(R)
-					AllowDumpFlag = false // need to see the displayed msg.
-				}
-			} else if runtime.GOOS == "windows" {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if ! ok {
-					fmt.Println(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
-					break
-				}
-				cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
-				cmdfromclip.Stdout = &w
-				cmdfromclip.Run()
-				lines := w.String()
-				fmt.Print(" received ", lines, "from ", comspec)
-				linessplit := strings.Split(lines, "\n")
-				str := strings.ReplaceAll(linessplit[1], "\"", "")
-				str = strings.ReplaceAll(str, "\n", "")
-				str = strings.ReplaceAll(str, "\r", "")
-				str = strings.ReplaceAll(str, ",", "")
-				str = strings.ReplaceAll(str, " ", "")
-				fmt.Println(", after post processing the string becomes", str)
-				R, err := strconv.ParseFloat(str, 64)
-				if err != nil {
-					fmt.Println(" fromclip", err, ".  Value ignored.")
-					AllowDumpFlag = false // need to see the error msg.
-				} else {
-					hpcalc.PUSHX(R)
-					AllowDumpFlag = false // need to see the displayed msg.
-				}
-			}
+
+			//} else if INBUF == "TOCLIP" {  As of Nov 2020, implemented in hpcalc2.
+			//	R := hpcalc.READX()
+			//	s := strconv.FormatFloat(R, 'g', -1, 64)
+			//	if runtime.GOOS == "linux" {
+			//		linuxclippy := func(s string) {
+			//			buf := []byte(s)
+			//			rdr := bytes.NewReader(buf)
+			//			cmd := exec.Command("xclip")
+			//			cmd.Stdin = rdr
+			//			cmd.Stdout = os.Stdout
+			//			cmd.Run()
+			//			fmt.Printf(" sent %s to xclip \n", s)
+			//		}
+			//		linuxclippy(s)
+			//	} else if runtime.GOOS == "windows" {
+			//		comspec, ok := os.LookupEnv("ComSpec")
+			//		if ! ok {
+			//			fmt.Println(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
+			//			break
+			//		}
+			//		winclippy := func(s string) {
+			//			cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
+			//			cmd.Stdout = os.Stdout
+			//			cmd.Run()
+			//			fmt.Printf(" sent %s to %s \n", s, comspec)
+			//		}
+			//		winclippy(s)
+			//	}
+			//} else if INBUF == "FROMCLIP" { // Go Standard Library Cookbook does not use strings.Builder, but does seem to be otherwise similar.
+			//	var w strings.Builder
+			//	if runtime.GOOS == "linux" {
+			//		cmdfromclip := exec.Command("xclip", "-o")
+			//		cmdfromclip.Stdout = &w
+			//		cmdfromclip.Run()
+			//		str := w.String()
+			//		fmt.Printf(" received %s from xclip ", str)
+			//		str = strings.ReplaceAll(str, "\n", "")
+			//		str = strings.ReplaceAll(str, "\r", "")
+			//		str = strings.ReplaceAll(str, ",", "")
+			//		str = strings.ReplaceAll(str, " ", "")
+			//		fmt.Printf(", after removing all commas and spaces it becomes %s \n", str)
+			//		R, err := strconv.ParseFloat(str, 64)
+			//		if err != nil {
+			//			fmt.Println(" fromclip on linux conversion returned error", err, ".  Value ignored.")
+			//			AllowDumpFlag = false // need to see the error msg.
+			//		} else {
+			//			hpcalc.PUSHX(R)
+			//			AllowDumpFlag = false // need to see the displayed msg.
+			//		}
+			//	} else if runtime.GOOS == "windows" {
+			//		comspec, ok := os.LookupEnv("ComSpec")
+			//		if ! ok {
+			//			fmt.Println(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
+			//			break
+			//		}
+			//		cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
+			//		cmdfromclip.Stdout = &w
+			//		cmdfromclip.Run()
+			//		lines := w.String()
+			//		fmt.Print(" received ", lines, "from ", comspec)
+			//		linessplit := strings.Split(lines, "\n")
+			//		str := strings.ReplaceAll(linessplit[1], "\"", "")
+			//		str = strings.ReplaceAll(str, "\n", "")
+			//		str = strings.ReplaceAll(str, "\r", "")
+			//		str = strings.ReplaceAll(str, ",", "")
+			//		str = strings.ReplaceAll(str, " ", "")
+			//		fmt.Println(", after post processing the string becomes", str)
+			//		R, err := strconv.ParseFloat(str, 64)
+			//		if err != nil {
+			//			fmt.Println(" fromclip", err, ".  Value ignored.")
+			//			AllowDumpFlag = false // need to see the error msg.
+			//		} else {
+			//			hpcalc.PUSHX(R)
+			//			AllowDumpFlag = false // need to see the displayed msg.
+			//		}
+			//	}
 
 		} else {
 			// -------------------------------------------------------------------------------------
