@@ -980,7 +980,7 @@ outerloop:
 					ss = append(ss, s)
 				}
 			case 390: // ABOUT
-				ss = append(ss, fmt.Sprintf(" last changed hpcalc.go %s", LastAlteredDate))
+				ss = append(ss, fmt.Sprintf(" last changed hpcalc2.go %s", LastAlteredDate))
 			case 400: // SQR
 				LastX = Stack[X]
 				PushMatrixStacks()
