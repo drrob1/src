@@ -16,7 +16,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "5 Dec 2020"
+const LastAlteredDate = "11 Dec 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -106,6 +106,7 @@ REVISION HISTORY
  8 Nov 20 -- Adding toclip, fromclip, based on code from "Go Standard Library Cookbook", by Radomir Sohlich, (c) 2018 Packtpub.
  9 Nov 20 -- Including use of comspec to find tcc on Windows.
  4 Dec 20 -- Thinking about how to add conversion factors.  1 lb = 453.59238 g; 1 oz = 28.34952 g; 1 m = 3.28084 ft; 1 mi = 1.609344 km
+11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -819,7 +820,7 @@ outerloop:
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " substitutions: = for +, ; for *.")
 				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, and their inverses -- unit conversions.")
-				ss = append(ss, fmt.Sprintf(" last altered hpcalc %s.", LastAlteredDate))
+				ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.", LastAlteredDate))
 			case 130: // STO
 				MemReg = Stack[X]
 			case 135: // RCL
