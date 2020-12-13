@@ -762,7 +762,7 @@ func main() {
 
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
-	
+
 	hpcalc.MapClose()
 } // main in rpntcell.go
 
@@ -1076,7 +1076,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	helpstringslice = append(helpstringslice, " !N -- Recall history, hx.  N=0 means last command.")
 	helpstringslice = append(helpstringslice, " up -- execute command !1.")
 	helpstringslice = append(helpstringslice, " dn, pgdn, pgup, home, end -- manipulate the stack.")
-	helpstringslice = append(helpstringslice, " toclip, fromclip -- access to clip is by shelling out to xclip or tcc.")
+	// helpstringslice = append(helpstringslice, " toclip, fromclip -- access to clip is by shelling out to xclip or tcc.") moved to hpcalc2 Nov 2020
 
 	// Will always open this file in the current working directory instead of the HomeDir.
 	// This is different than rpnterm, which only writes this file if it's not already there.
