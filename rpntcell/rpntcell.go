@@ -4,15 +4,12 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/gdamore/tcell"
 	"log"
 	"os"
-	"os/exec"
-
 	"runtime"
 	"strconv"
 	"strings"
@@ -25,7 +22,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "12 Dec 2020"
+const LastAltered = "13 Dec 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -117,6 +114,7 @@ REVISION HISTORY
  8 Nov 20 -- Fixed minor errors in the fmt messages of FROMCLIP.  I was looking because of "Go Standard Library Cookbook"
  9 Nov 20 -- Added use of comspec.
 12 Dec 20 -- Started to think about mapped storage registers that can have string names, stored in a file.  I'm moving this to hpcalc2.
+13 Dec 20 -- Tweaked help message and other minor stuff.  I commented out TOCLIP, FROMCLIP here, as it's now in hpcalc2.  Added LABEL as synonym for NAME.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -182,6 +180,7 @@ func putf(x, y int, format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	puts(scrn, style, x, y, s)
 }
+
 // ---------------------------------------------------------------------------------------------------------------------
 func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig designed to allow for non ASCII characters.  I removed that.
 	for i, r := range str {
@@ -192,6 +191,7 @@ func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig 
 	deleol(x, y) // no longer crashes here.
 	//scrn.Show()
 }
+
 // ---------------------------------------------------------------------------------------------------------------------
 func deleol(x, y int) {
 	width, _ := scrn.Size() // don't need height for this calculation.
@@ -201,6 +201,7 @@ func deleol(x, y int) {
 	}
 	//scrn.SetContent(width-1, y, '|', nil, plain) not needed.
 }
+
 // ---------------------------------------------------------------------------------------------------------------------
 func clearline(line int) {
 	deleol(0, line)
@@ -468,23 +469,20 @@ func main() {
 			}
 			hpcalc.PUSHX(Storage[i].Value)
 			RepaintScreen(StartCol)
-		} else if strings.HasPrefix(INBUF, "SHO") { // so it will match SHOW and SHO
+		} else if strings.HasPrefix(INBUF, "SHO") || INBUF == "LS" || strings.HasPrefix(INBUF, "LIST") {
 			n = WriteRegToScreen(StartCol, RegRow)
 			if n > 8 {
 				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
 				PromptRow = StartRow + 1   // used to be OutputRow -1
 			}
 			WriteDisplayTapeToScreen(DisplayCol, StackRow)
-		} else if strings.HasPrefix(INBUF, "NAME") {
+		} else if strings.HasPrefix(INBUF, "NAME") || strings.HasPrefix(INBUF, "LABEL") {
 			//var ans string
 			var i int // remember that this auto-zero'd
 			if len(INBUF) > 4 {
 				ch := INBUF[4] // the 5th position
 				i = GetRegIdx(ch)
 			}
-			//promptstr := "   Input name string : "
-			//Print_tb(1, OutputRow, BrightYellow, Black, promptstr)
-			//ans = GetInputString(len(promptstr)+2, OutputRow)
 			Storage[i].Name = GetNameStr()
 		} else if strings.HasPrefix(INBUF, "SIG") || strings.HasPrefix(INBUF, "FIX") { // SigFigN command, or FIX
 			ch := INBUF[len(INBUF)-1] // ie, the last character.
@@ -498,91 +496,93 @@ func main() {
 			WriteHelp(StartCol+2, StackRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			// do nothing, ie, don't send it into hpcalc.GetResult
-		} else if INBUF == "TOCLIP" {
-			R := hpcalc.READX()
-			s := strconv.FormatFloat(R, 'g', -1, 64)
-			if runtime.GOOS == "linux" {
-				linuxclippy := func(s string) {
-					buf := []byte(s)
-					rdr := bytes.NewReader(buf)
-					cmd := exec.Command("xclip")
-					cmd.Stdin = rdr
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-					s1 := fmt.Sprintf(" sent %s to xclip \n", s)
-					putf(StartCol, OutputRow, s1)
-				}
-				linuxclippy(s)
-			} else if runtime.GOOS == "windows" {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if ! ok {
-					s := fmt.Sprintln(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
-					putln(s)
-					break
-				}
-				winclippy := func(s string) {
-					cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-					s1 := fmt.Sprintf(" sent %s to tcc \n", s)
-					putf(StartCol, OutputRow, s1)
-				}
-				winclippy(s)
-			}
-		} else if INBUF == "FROMCLIP" { // Go Standard Library Cookbook does not use strings.Builder, but does seem to be otherwise similar.
-			var w strings.Builder
-			if runtime.GOOS == "linux" {
-				cmdfromclip := exec.Command("xclip", "-o")
-				cmdfromclip.Stdout = &w
-				cmdfromclip.Run()
-				str := w.String()
-				s1 := fmt.Sprintf(" received %s from xclip ", str)
-				gblrow = OutputRow
-				putln(s1)
-				str = strings.ReplaceAll(str, "\n", "")
-				str = strings.ReplaceAll(str, "\r", "")
-				str = strings.ReplaceAll(str, ",", "")
-				str = strings.ReplaceAll(str, " ", "")
-				s2 := fmt.Sprintf("after removing all commas and spaces it becomes %s \n", str)
-				putln(s2)
-				putf(StartCol, OutputRow+1, s2)
-				R, err := strconv.ParseFloat(str, 64)
-				if err != nil {
-					s := fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored.")
-					putln(s)
-				} else {
-					hpcalc.PUSHX(R)
-				}
-			} else if runtime.GOOS == "windows" {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if ! ok {
-					s := fmt.Sprintln(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
-					putln(s)
-					break
-				}
-				cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
-				cmdfromclip.Stdout = &w
-				cmdfromclip.Run()
-				lines := w.String()
-				gblrow = OutputRow
-				s1 := fmt.Sprint(" received ", lines, "from tcc")
-				putln(s1)
-				linessplit := strings.Split(lines, "\n")
-				str := strings.ReplaceAll(linessplit[1], "\"", "")
-				str = strings.ReplaceAll(str, "\n", "")
-				str = strings.ReplaceAll(str, "\r", "")
-				str = strings.ReplaceAll(str, ",", "")
-				str = strings.ReplaceAll(str, " ", "")
-				s2 := fmt.Sprintln("after post processing the string becomes", str)
-				putln(s2)
-				R, err := strconv.ParseFloat(str, 64)
-				if err != nil {
-					s := fmt.Sprintln(" fromclip", err, ".  Value ignored.")
-					putln(s)
-				} else {
-					hpcalc.PUSHX(R)
-				}
-			}
+			/*	TOCLIP and FROMCLIP are now in hpcalc2.
+				} else if INBUF == "TOCLIP" {
+					R := hpcalc.READX()
+					s := strconv.FormatFloat(R, 'g', -1, 64)
+					if runtime.GOOS == "linux" {
+						linuxclippy := func(s string) {
+							buf := []byte(s)
+							rdr := bytes.NewReader(buf)
+							cmd := exec.Command("xclip")
+							cmd.Stdin = rdr
+							cmd.Stdout = os.Stdout
+							cmd.Run()
+							s1 := fmt.Sprintf(" sent %s to xclip \n", s)
+							putf(StartCol, OutputRow, s1)
+						}
+						linuxclippy(s)
+					} else if runtime.GOOS == "windows" {
+						comspec, ok := os.LookupEnv("ComSpec")
+						if ! ok {
+							s := fmt.Sprintln(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
+							putln(s)
+							break
+						}
+						winclippy := func(s string) {
+							cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
+							cmd.Stdout = os.Stdout
+							cmd.Run()
+							s1 := fmt.Sprintf(" sent %s to tcc \n", s)
+							putf(StartCol, OutputRow, s1)
+						}
+						winclippy(s)
+					}
+				} else if INBUF == "FROMCLIP" { // Go Standard Library Cookbook does not use strings.Builder, but does seem to be otherwise similar.
+					var w strings.Builder
+					if runtime.GOOS == "linux" {
+						cmdfromclip := exec.Command("xclip", "-o")
+						cmdfromclip.Stdout = &w
+						cmdfromclip.Run()
+						str := w.String()
+						s1 := fmt.Sprintf(" received %s from xclip ", str)
+						gblrow = OutputRow
+						putln(s1)
+						str = strings.ReplaceAll(str, "\n", "")
+						str = strings.ReplaceAll(str, "\r", "")
+						str = strings.ReplaceAll(str, ",", "")
+						str = strings.ReplaceAll(str, " ", "")
+						s2 := fmt.Sprintf("after removing all commas and spaces it becomes %s \n", str)
+						putln(s2)
+						putf(StartCol, OutputRow+1, s2)
+						R, err := strconv.ParseFloat(str, 64)
+						if err != nil {
+							s := fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored.")
+							putln(s)
+						} else {
+							hpcalc.PUSHX(R)
+						}
+					} else if runtime.GOOS == "windows" {
+						comspec, ok := os.LookupEnv("ComSpec")
+						if ! ok {
+							s := fmt.Sprintln(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
+							putln(s)
+							break
+						}
+						cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
+						cmdfromclip.Stdout = &w
+						cmdfromclip.Run()
+						lines := w.String()
+						gblrow = OutputRow
+						s1 := fmt.Sprint(" received ", lines, "from tcc")
+						putln(s1)
+						linessplit := strings.Split(lines, "\n")
+						str := strings.ReplaceAll(linessplit[1], "\"", "")
+						str = strings.ReplaceAll(str, "\n", "")
+						str = strings.ReplaceAll(str, "\r", "")
+						str = strings.ReplaceAll(str, ",", "")
+						str = strings.ReplaceAll(str, " ", "")
+						s2 := fmt.Sprintln("after post processing the string becomes", str)
+						putln(s2)
+						R, err := strconv.ParseFloat(str, 64)
+						if err != nil {
+							s := fmt.Sprintln(" fromclip", err, ".  Value ignored.")
+							putln(s)
+						} else {
+							hpcalc.PUSHX(R)
+						}
+					}
+			*/
 
 		} else if strings.HasPrefix(INBUF, "OUTPUTFI") { // allow outputfix, etc
 			outputmode = outputfix
@@ -762,6 +762,8 @@ func main() {
 
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
+	
+	hpcalc.MapClose()
 } // main in rpntcell.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
@@ -870,7 +872,7 @@ func Cap(c rune) rune {  // not used, so I'll take it out.
 	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
 	return r
 } // Cap
- */
+*/
 
 // --------------------------------------------------- GetInputString for tcell--------------------------------------
 
@@ -1062,8 +1064,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	var HelpFile *bufio.Writer
 
 	_, helpstringslice := hpcalc.GetResult("HELP")
-	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the memory register.")
-	//	helpstringslice = append(helpstringslice, " Outputfix, outputfloat, outputgen -- outputmodes for stack display.")  duplicate.
+	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
 	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
 	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
 	helpstringslice = append(helpstringslice, " EXIT,(Q)uit -- Needed after switch to use ScanWords in bufio scanner.")
@@ -1121,7 +1122,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	//	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 	scrn.Clear()
 	scrn.Sync()
-	
+
 	RepaintScreen(x)
 } // end WriteHelp
 

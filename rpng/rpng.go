@@ -447,6 +447,7 @@ func main() {
 	_, err = DisplayTapeWriter.WriteString("\n\n")
 	check(err)
 
+	hpcalc.MapClose()
 } // main in rpng.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
