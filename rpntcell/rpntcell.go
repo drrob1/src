@@ -25,7 +25,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "9 Nov 2020"
+const LastAltered = "12 Dec 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -116,6 +116,7 @@ REVISION HISTORY
 25 Oct 20 -- Trying to improve the display, as it looks terrible on (only) terminator for some reason.
  8 Nov 20 -- Fixed minor errors in the fmt messages of FROMCLIP.  I was looking because of "Go Standard Library Cookbook"
  9 Nov 20 -- Added use of comspec.
+12 Dec 20 -- Started to think about mapped storage registers that can have string names, stored in a file.  I'm moving this to hpcalc2.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -307,7 +308,7 @@ func main() {
 
 	MaxCol, MaxRow = scrn.Size()
 
-	//scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
+	//                       scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorDefault)) // this worked.
 	scrn.Clear()
 

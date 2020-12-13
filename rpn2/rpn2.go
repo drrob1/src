@@ -18,7 +18,7 @@ import (
 	"makesubst"
 )
 
-const LastCompiled = "8 Aug 2020"
+const LastCompiled = "13 Dec 2020"
 
 var suppressDump map[string]bool
 
@@ -62,6 +62,8 @@ func main() {
 	    9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
 	    8 Aug 20 -- Now called rpn2.go to test hpcalc2.go
 	    8 Nov 20 -- Removed unnecessary comments.
+	   12 Dec 20 -- hpcalc2 now has MAP commands.
+	   13 Dec 20 -- Shortened the lead space on displaying the Results.
 	*/
 
 	var R float64
@@ -149,7 +151,7 @@ func main() {
 		}
 
 		if strings.ToLower(INBUF) == "about" {
-			fmt.Println(" Last compiled rpn.go ", LastCompiled)
+			fmt.Println(" Last changed rpn.go ", LastCompiled)
 			allowDumpFlag = false
 		}
 
@@ -166,7 +168,7 @@ func main() {
 		}
 
 		fmt.Println()
-		fmt.Print("                                            Result = ")
+		fmt.Print("                  Result = ")
 		hpcalc2.OutputFixedOrFloat(R)
 		fmt.Println("         |    ", ans)
 		fmt.Print(" Enter calculation, HELP or Enter to exit: ")
@@ -209,4 +211,5 @@ func main() {
 	if err != nil {
 		fmt.Printf(" ioutil.WriteFile failed with error %v \n", err)
 	}
+	hpcalc2.MapClose()
 } // main in rpn.go

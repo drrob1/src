@@ -2,6 +2,7 @@ package hpcalc2
 
 import (
 	"bytes"
+	"encoding/gob"
 	"fmt"
 	"math"
 	"os"
@@ -16,7 +17,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "11 Dec 2020"
+const LastAlteredDate = "13 Dec 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -107,6 +108,7 @@ REVISION HISTORY
  9 Nov 20 -- Including use of comspec to find tcc on Windows.
  4 Dec 20 -- Thinking about how to add conversion factors.  1 lb = 453.59238 g; 1 oz = 28.34952 g; 1 m = 3.28084 ft; 1 mi = 1.609344 km
 11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
+12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapclose.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -134,12 +136,17 @@ var cmdMap map[string]int
 
 type StackType [StackSize]float64
 
+const mappedRegFilename = "mappedreg.gob"
+
+var mappedReg map[string]float64
 var Stack StackType
 var StackUndoMatrix [StackSize]StackType
 
 const PI = math.Pi // 3.141592653589793;
 var LastX, MemReg float64
 var sigfig = -1 // default significant figures of -1 for the strconv.FormatFloat call.
+var homedir string
+var mappedRegExists bool
 
 const lb2g = 453.59238
 const oz2g = 28.34952
@@ -234,13 +241,54 @@ func init() {
 	cmdMap["IN2CM"] = 610
 	cmdMap["FT2M"] = 620
 	cmdMap["KM2MI"] = 630
+	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
+
+	if runtime.GOOS == "linux" {
+		homedir = os.Getenv("HOME")
+	} else if runtime.GOOS == "windows" {
+		homedir = os.Getenv("userprofile")
+	}
+
+	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
+	//fmt.Println(" init code: fullmappedRegFilename is", fullmappedRegFilename)
+
+	mappedRegFile, err := os.Open(fullmappedRegFilename) // open for reading
+	if os.IsNotExist(err) {
+		mappedRegExists = false
+	} else if err != nil {
+		mappedRegExists = false
+	} else {
+		mappedRegExists = true
+	}
+
+	mappedReg = make(map[string]float64, 100)
+	if mappedRegExists {
+		defer mappedRegFile.Close()
+		decoder := gob.NewDecoder(mappedRegFile) // decoder reads the file.
+		err = decoder.Decode(&mappedReg)         // decoder reads the file.
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+
+		mappedRegFile.Close()
+	}
+
 }
 
-//const lb2g = 453.59238
-//const oz2g = 28.34952
-//const m2ft = 3.28084
-//const cm2in = 2.54
-//const mi2km = 1.609344
+// -----------------------------------------------------MapClose --------------------------------------------------------------------
+func MapClose() {
+	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
+	mappedRegFile, err := os.Create(fullmappedRegFilename) // open for writing
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "from os.Create", err)
+	}
+	defer mappedRegFile.Close()
+	encoder := gob.NewEncoder(mappedRegFile)
+	err = encoder.Encode(&mappedReg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "from gob encoder", err)
+	}
+}
 
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
 func Round(f float64) float64 {
@@ -820,6 +868,7 @@ outerloop:
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " substitutions: = for +, ; for *.")
 				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, and their inverses -- unit conversions.")
+				ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose is automatic.  !`~ become spaces in the name.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.", LastAlteredDate))
 			case 130: // STO
 				MemReg = Stack[X]
@@ -1178,6 +1227,57 @@ outerloop:
 				s := fmt.Sprintf("%s km is %s mi", x, s0)
 				ss = append(ss, s)
 
+			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl and mapsho
+				subcmd := Token.Str[3:] // slice off first three characters, which are map
+				//                                                      fmt.Println(" in MAP section.  subcmd=", subcmd)
+				if strings.HasPrefix(subcmd, "STO") {
+					regname := getMapRegName(subcmd)
+					//                                             fmt.Println(" in mapsto section.  regname=", regname)
+					if regname == "" {
+						ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
+						break outerloop
+					}
+					mappedReg[regname] = READX()
+					s := fmt.Sprint("Value in X stored into ", regname)
+					ss = append(ss, s)
+
+				} else if strings.HasPrefix(subcmd, "RCL") {
+					regname := getMapRegName(subcmd)
+					//                                             fmt.Println(" in maprcl section.  regname=", regname)
+					if regname == "" {
+						ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
+						break outerloop
+					}
+					r, ok := mappedReg[regname]
+					if ok {
+						PUSHX(r)
+					} else {
+						ss = append(ss, "register label not found in maprcl cmd.  Command ignored.")
+						break outerloop
+					}
+
+				} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") ||
+					strings.HasPrefix(subcmd, "LIST") {
+					// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
+					s0 := fmt.Sprint("Map length is ", len(mappedReg))
+					ss = append(ss, s0)
+					for key, value := range mappedReg {
+						fmtvalu := strconv.FormatFloat(value, 'g', sigfig, 64)
+						s := fmt.Sprintf("reg[%s] = %s", key, fmtvalu)
+						ss = append(ss, s)
+					}
+
+				} else if strings.HasPrefix(subcmd, "DEL") {
+					regname := getMapRegName(subcmd)
+					if regname == "" {
+						ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
+						break outerloop
+					}
+					delete(mappedReg, regname) // if key is not in the map, this does nothing but does not panic.
+					s = fmt.Sprint("deleted ", regname)
+					ss = append(ss, s)
+				}
+
 			default:
 				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
 			} // main text command selection if statement
@@ -1185,6 +1285,39 @@ outerloop:
 	}
 	return Stack[X], ss
 } // GETRESULT
+
+// ----------------------------------------------------------- getMapRegName --------------------------------------------
+func getMapRegName(cmd string) string {
+	if len(cmd) < 4 {
+		return ""
+	}
+	sub := cmd[3:] // slice off first three characters, which are the subcmd sto, rcl or sho
+	inspected := string(sub[0])
+	mappedregname := sub
+	if strings.ContainsAny(inspected, "!~`") {
+		mappedregname = sub[1:]
+	}
+
+	mappedregname = MakeSubst(mappedregname)
+	mappedregname = strings.TrimSpace(mappedregname)
+	return mappedregname
+}
+
+// ------------------------------------------------------------ MakeSubst ---------
+func MakeSubst(instr string) string {
+	// substitute ! ~ ` chara for spaces.  Copied from rpntcell
+	instr = strings.TrimSpace(instr)
+	inRune := make([]rune, len(instr))
+
+	for i, s := range instr {
+		switch s {
+		case '!', '`', '~':
+			s = ' '
+		}
+		inRune[i] = s
+	}
+	return string(inRune)
+}
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
 func GetRegIdx(chr byte) int {
