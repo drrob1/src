@@ -22,7 +22,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "13 Dec 2020"
+const LastAltered = "15 Dec 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -115,6 +115,7 @@ REVISION HISTORY
  9 Nov 20 -- Added use of comspec.
 12 Dec 20 -- Started to think about mapped storage registers that can have string names, stored in a file.  I'm moving this to hpcalc2.
 13 Dec 20 -- Tweaked help message and other minor stuff.  I commented out TOCLIP, FROMCLIP here, as it's now in hpcalc2.  Added LABEL as synonym for NAME.
+15 Dec 20 -- Tweaked help message some more.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -1064,6 +1065,8 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	var HelpFile *bufio.Writer
 
 	_, helpstringslice := hpcalc.GetResult("HELP")
+	helpstringslice = append(helpstringslice, "")
+	helpstringslice = append(helpstringslice, "")
 	helpstringslice = append(helpstringslice, " STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
 	helpstringslice = append(helpstringslice, " NAME -- NAME registers with strings, Use - for spaces in these strings.")
 	helpstringslice = append(helpstringslice, " Clear, CLS -- clear screen.")
