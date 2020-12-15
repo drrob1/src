@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	//
@@ -17,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "13 Dec 2020"
+const LastAlteredDate = "14 Dec 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -109,6 +110,7 @@ REVISION HISTORY
  4 Dec 20 -- Thinking about how to add conversion factors.  1 lb = 453.59238 g; 1 oz = 28.34952 g; 1 m = 3.28084 ft; 1 mi = 1.609344 km
 11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
 12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapclose.
+14 Dec 20 -- Decided to sort mapsho output.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -137,6 +139,11 @@ var cmdMap map[string]int
 type StackType [StackSize]float64
 
 const mappedRegFilename = "mappedreg.gob"
+
+type mappedRegStructType struct { // so the mapsho items can be sorted.
+	key   string
+	value float64
+}
 
 var mappedReg map[string]float64
 var Stack StackType
@@ -869,7 +876,7 @@ outerloop:
 				ss = append(ss, " substitutions: = for +, ; for *.")
 				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, and their inverses -- unit conversions.")
 				ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose is automatic.  !`~ become spaces in the name.")
-				ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.", LastAlteredDate))
+				ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n\n", LastAlteredDate))
 			case 130: // STO
 				MemReg = Stack[X]
 			case 135: // RCL
@@ -1227,7 +1234,7 @@ outerloop:
 				s := fmt.Sprintf("%s km is %s mi", x, s0)
 				ss = append(ss, s)
 
-			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl and mapsho
+			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
 				subcmd := Token.Str[3:] // slice off first three characters, which are map
 				//                                                      fmt.Println(" in MAP section.  subcmd=", subcmd)
 				if strings.HasPrefix(subcmd, "STO") {
@@ -1261,9 +1268,19 @@ outerloop:
 					// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
 					s0 := fmt.Sprint("Map length is ", len(mappedReg))
 					ss = append(ss, s0)
+					sliceregvar := make([]mappedRegStructType, 0, 50)
 					for key, value := range mappedReg {
-						fmtvalu := strconv.FormatFloat(value, 'g', sigfig, 64)
-						s := fmt.Sprintf("reg[%s] = %s", key, fmtvalu)
+						m := mappedRegStructType{key, value} // using structured literal syntax.
+						sliceregvar = append(sliceregvar, m)
+					}
+					sortlessfunction := func(i, j int) bool {
+						return sliceregvar[i].key < sliceregvar[j].key
+					}
+					sort.Slice(sliceregvar, sortlessfunction)
+
+					for _, reg := range sliceregvar {
+						fmtvalu := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
+						s := fmt.Sprintf("reg[%s] = %s", reg.key, fmtvalu)
 						ss = append(ss, s)
 					}
 
