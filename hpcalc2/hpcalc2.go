@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "14 Dec 2020"
+const LastAlteredDate = "18 Dec 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -111,6 +111,8 @@ REVISION HISTORY
 11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
 12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapclose.
 14 Dec 20 -- Decided to sort mapsho output.
+18 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
+               and added C2F, F2C
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -248,6 +250,8 @@ func init() {
 	cmdMap["IN2CM"] = 610
 	cmdMap["FT2M"] = 620
 	cmdMap["KM2MI"] = 630
+	cmdMap["C2F"] = 633
+	cmdMap["F2C"] = 636
 	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
 
 	if runtime.GOOS == "linux" {
@@ -874,7 +878,7 @@ outerloop:
 				ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
 				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 				ss = append(ss, " substitutions: = for +, ; for *.")
-				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, and their inverses -- unit conversions.")
+				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
 				ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose is automatic.  !`~ become spaces in the name.")
 				ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n\n", LastAlteredDate))
 			case 130: // STO
@@ -1234,6 +1238,22 @@ outerloop:
 				s := fmt.Sprintf("%s km is %s mi", x, s0)
 				ss = append(ss, s)
 
+			case 633: // C2F
+				x := READX()
+				xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
+				fdeg := x*1.8 + 32
+				fstr := strconv.FormatFloat(fdeg, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s deg C is %s deg F", xstr, fstr)
+				ss = append(ss, s)
+
+			case 636: // F2C
+				x := READX()
+				xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
+				cdeg := (x-32)/1.8
+				cstr := strconv.FormatFloat(cdeg, 'f', sigfig, 64)
+				s := fmt.Sprintf("%s deg F is %s deg C", xstr, cstr)
+				ss = append(ss, s)
+
 			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
 				subcmd := Token.Str[3:] // slice off first three characters, which are map
 				//                                                      fmt.Println(" in MAP section.  subcmd=", subcmd)
@@ -1258,7 +1278,7 @@ outerloop:
 					r, ok := mappedReg[regname]
 					if ok {
 						PUSHX(r)
-					} else {
+					} else { // call the abbreviation processing routine, that I have yet to write.  Also need to write a routine that sorts a slice of mapped reg names.
 						ss = append(ss, "register label not found in maprcl cmd.  Command ignored.")
 						break outerloop
 					}
@@ -1268,15 +1288,16 @@ outerloop:
 					// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
 					s0 := fmt.Sprint("Map length is ", len(mappedReg))
 					ss = append(ss, s0)
-					sliceregvar := make([]mappedRegStructType, 0, 50)
-					for key, value := range mappedReg {
-						m := mappedRegStructType{key, value} // using structured literal syntax.
-						sliceregvar = append(sliceregvar, m)
-					}
-					sortlessfunction := func(i, j int) bool {
-						return sliceregvar[i].key < sliceregvar[j].key
-					}
-					sort.Slice(sliceregvar, sortlessfunction)
+					//sliceregvar := make([]mappedRegStructType, 0, 50)
+					//for key, value := range mappedReg {
+					//	m := mappedRegStructType{key, value} // using structured literal syntax.
+					//	sliceregvar = append(sliceregvar, m)
+					//}
+					//sortlessfunction := func(i, j int) bool {
+					//	return sliceregvar[i].key < sliceregvar[j].key
+					//}
+					//sort.Slice(sliceregvar, sortlessfunction)
+					sliceregvar := mappedRegSortedNames()
 
 					for _, reg := range sliceregvar {
 						fmtvalu := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
@@ -1336,7 +1357,7 @@ func MakeSubst(instr string) string {
 	return string(inRune)
 }
 
-/* ------------------------------------------------------------ GetRegIdx --------- */
+// ------------------------------------------------------------ GetRegIdx ---------
 func GetRegIdx(chr byte) int {
 	/* Return 0..35 w/ A = 10 and Z = 35.  Copied from main. */
 
@@ -1348,3 +1369,18 @@ func GetRegIdx(chr byte) int {
 	}
 	return int(ch)
 } // GetRegIdx
+
+// ---------------------------------------------------------- mappedRegSortedNames ---------------------
+func mappedRegSortedNames() []mappedRegStructType {
+	sliceregvar := make([]mappedRegStructType, 0, 50)
+	for key, value := range mappedReg {
+		m := mappedRegStructType{key, value} // using structured literal syntax.
+		sliceregvar = append(sliceregvar, m)
+	}
+	sortlessfunction := func(i, j int) bool {
+		return sliceregvar[i].key < sliceregvar[j].key
+	}
+	sort.Slice(sliceregvar, sortlessfunction)
+
+	return sliceregvar
+}
