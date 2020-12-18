@@ -111,7 +111,7 @@ REVISION HISTORY
 11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
 12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapclose.
 14 Dec 20 -- Decided to sort mapsho output.
-18 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
+17 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
                and added C2F, F2C
 */
 
@@ -1278,9 +1278,14 @@ outerloop:
 					r, ok := mappedReg[regname]
 					if ok {
 						PUSHX(r)
-					} else { // call the abbreviation processing routine, that I have yet to write.  Also need to write a routine that sorts a slice of mapped reg names.
-						ss = append(ss, "register label not found in maprcl cmd.  Command ignored.")
-						break outerloop
+					} else { // call the abbreviation processing routine, that I have yet to write.
+						name := getFullMatchingName(regname)
+						if name == "" {
+							ss = append(ss, "register label not found in maprcl cmd.  Command ignored.")
+							break outerloop
+						}
+						r := mappedReg[name]
+						PUSHX(r)
 					}
 
 				} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") ||
@@ -1383,4 +1388,15 @@ func mappedRegSortedNames() []mappedRegStructType {
 	sort.Slice(sliceregvar, sortlessfunction)
 
 	return sliceregvar
+}
+
+// ----------------------------------------------------------- getFullMatchingName -----------------------
+func getFullMatchingName (abbrev string) string {
+	sliceregvar := mappedRegSortedNames()
+	for _, name := range sliceregvar {
+		if strings.HasPrefix(name.key, abbrev) {
+			return name.key
+		}
+	}
+	return ""
 }
