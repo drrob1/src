@@ -1249,7 +1249,7 @@ outerloop:
 			case 636: // F2C
 				x := READX()
 				xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
-				cdeg := (x-32)/1.8
+				cdeg := (x - 32) / 1.8
 				cstr := strconv.FormatFloat(cdeg, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s deg F is %s deg C", xstr, cstr)
 				ss = append(ss, s)
@@ -1265,8 +1265,15 @@ outerloop:
 						break outerloop
 					}
 					mappedReg[regname] = READX()
-					s := fmt.Sprint("Value in X stored into ", regname)
-					ss = append(ss, s)
+					// s := fmt.Sprint("Value in X stored into ", regname)
+					// ss = append(ss, s)
+					// ss = append(ss, "")
+					// ss = append(ss, "")
+
+					_, stringresult := GetResult("mapsho")
+					for _, str := range stringresult {
+						ss = append(ss, str)
+					}
 
 				} else if strings.HasPrefix(subcmd, "RCL") {
 					regname := getMapRegName(subcmd)
@@ -1391,7 +1398,7 @@ func mappedRegSortedNames() []mappedRegStructType {
 }
 
 // ----------------------------------------------------------- getFullMatchingName -----------------------
-func getFullMatchingName (abbrev string) string {
+func getFullMatchingName(abbrev string) string {
 	sliceregvar := mappedRegSortedNames()
 	for _, name := range sliceregvar {
 		if strings.HasPrefix(name.key, abbrev) {
