@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Nov 9, 2020"
+const LastAltered = "Dec 20, 2020"
 
 /*
 Revision History
@@ -82,9 +82,11 @@ Revision History
   21 Nov 19 -- Added Println() statements to separate header from filename outputs.
   25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
    9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
+  20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
+                 I found these to be much faster when I changed dsrt.go.
 */
 
-// FIS is a FileInfo slice, as in os.FileInfo
+// FileInfo slice
 type FISlice []os.FileInfo
 type dirAliasMapType map[string]string
 
@@ -287,21 +289,22 @@ func main() {
 		}
 	} else if DateSort && Forward {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest first sort
+			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
+			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort
 		}
 		if *testFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].Size() < files[j].Size() // I want a smallest first sort
+			return files[i].Size() < files[j].Size() // I want a smallest-first sort
 		}
 		if *testFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest first sort
+			return files[i].ModTime().Before(files[j].ModTime()) // I want an oldest-first sort
 		}
 		if *testFlag {
 			fmt.Println("sortfcn = oldest date.")
@@ -472,16 +475,16 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
-/* Non-idiomatic code
+	/* Non-idiomatic code
 	s := os.Getenv("dsrt")
 	if len(s) < 1 {
 		return dsrtparam
 	} // empty dsrtparam is returned
- */
+	*/
 
 	s, ok := os.LookupEnv("dsrt")
 
-	if ! ok {
+	if !ok {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
@@ -513,18 +516,18 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 //------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
-/* Non-idiomatic code
+	/* Non-idiomatic code
 	s := os.Getenv("diraliases")
 	if len(s) == 0 {
 		return nil
 	}
- */
+	*/
 
 	s, ok := os.LookupEnv("diraliases")
-	if ! ok {
+	if !ok {
 		return nil
 	}
-	
+
 	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
 	directoryAliasesMap := make(dirAliasMapType, 10)
 	//anAliasMap := make(dirAliasMapType,1)

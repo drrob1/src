@@ -11,6 +11,8 @@ dsrtr.go
                  And made t as an option name for timeout.
   20 Aug 20 -- Will write errors to os.Stderr.  And changed how the default timeout is set.
    5 Sep 20 -- Will look to not follow symlinks
+  20 Dec 20 -- Looking to change sort functions based on time to be idiomatic, but there aren't any here.  Go figure.
+                 I did remove some dead comments, though.
 */
 package main
 
@@ -27,14 +29,12 @@ import (
 	"time"
 )
 
-const lastAltered = "5 Sep 2020"
+const lastAltered = "20 Dec 2020"
 
 type ResultType struct {
-	// filename  string  Not needed, AFAICT (as far as I can tell)
 	path      string
 	datestamp string
 	sizeint   int
-	// fileinfo  os.FileInfo  Not needed, AFAICT
 }
 
 func main() {
@@ -115,14 +115,6 @@ func main() {
 						r.sizeint = int(fi.Size()) // fi.Size() is an int64
 						//r.fileinfo = fi
 						resultsChan <- r
-
-						//sizeint := int(fi.Size())
-						//sizestr := strconv.Itoa(sizeint)
-						//if sizeint > 100000 {
-						//	sizestr = AddCommas(sizestr)
-						//}
-						//usernameStr, groupnameStr := GetUserGroupStr(fi) // util function in platform specific removed Oct 4, 2019 and then unremoved.
-						//fmt.Printf("%10v %s:%s %15s %s %s\n", fi.Mode(), usernameStr, groupnameStr, sizestr, s, fpath)
 					}
 				}
 			} else if runtime.GOOS == "windows" {
@@ -136,13 +128,6 @@ func main() {
 					r.sizeint = int(fi.Size())
 					//r.fileinfo = fi
 					resultsChan <- r
-
-					//sizeint := int(fi.Size())
-					//sizestr := strconv.Itoa(sizeint)
-					//if sizeint > 100000 {
-					//	sizestr = AddCommas(sizestr)
-					//}
-					//fmt.Printf("%15s %s %s\n", sizestr, s, fpath)
 				}
 			}
 			now := time.Now()
@@ -209,74 +194,3 @@ func isSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
-
-/*
-{{{
-	if linuxflag {
-		for _, f := range files {
-			s := f.ModTime().Format("Jan-02-2006_15:04:05")
-			sizeint := 0
-			sizestr := ""
-			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
-			if FilenameList && f.Mode().IsRegular() {
-				SizeTotal += f.Size()
-				sizeint = int(f.Size())
-				sizestr = strconv.Itoa(sizeint)
-				if sizeint > 100000 {
-					sizestr = AddCommas(sizestr)
-				}
-				fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			} else if IsSymlink(f.Mode()) {
-				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			} else if Dirlist && f.IsDir() {
-				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-				count++
-			}
-			if count >= NumLines {
-				break
-			}
-		}
-	} else if winflag {
-		for _, f := range files {
-			NAME := strings.ToUpper(f.Name())
-			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-				s := f.ModTime().Format("Jan-02-2006_15:04:05")
-				sizeint := 0
-				sizestr := ""
-				if FilenameList && f.Mode().IsRegular() {
-					SizeTotal += f.Size()
-					sizeint = int(f.Size())
-					sizestr = strconv.Itoa(sizeint)
-					if sizeint > 100000 {
-						sizestr = AddCommas(sizestr)
-					}
-					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
-					count++
-				} else if IsSymlink(f.Mode()) {
-					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
-					count++
-				} else if Dirlist && f.IsDir() {
-					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
-					count++
-				}
-				if count >= NumLines {
-					break
-				}
-			}
-		}
-	}
-
-}}}
-*/
-/*
-{{{
-// ------------------------------ IsSymlink ---------------------------
-func IsSymlink(m os.FileMode) bool {
-	intermed := m & os.ModeSymlink
-	result := intermed != 0
-	return result
-} // IsSymlink
-}}}
-*/
