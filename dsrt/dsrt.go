@@ -78,38 +78,13 @@ Revision History
   18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
    7 Nov 20 -- Learned that the idiomatic way to test absence of environment variables is LookupEnv.  From the Go Standard Lib Cookbook.
   20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
-                 I hope these are faster.  I haven't used the sort interface in a long time.  It's still here, as a demo.
+                 I hope these are faster.  I haven't used the sort interface in a long time.  It's still in file dated Dec-20-2020 as a demo.
+                 I removed the demo code from here.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
 type FISlice []os.FileInfo
-type FISliceDate []os.FileInfo // inexperienced way to sort on more than one criterion
-type FISliceSize []os.FileInfo // having compatible types only differing in the sort criteria
 type dirAliasMapType map[string]string
-
-func (f FISliceDate) Less(i, j int) bool {
-	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first.  Not used in a long time.
-}
-
-func (f FISliceDate) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-
-func (f FISliceDate) Len() int {
-	return len(f)
-}
-
-func (f FISliceSize) Less(i, j int) bool {
-	return f[i].Size() > f[j].Size() // I want a reverse sort, largest first
-}
-
-func (f FISliceSize) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-
-func (f FISliceSize) Len() int {
-	return len(f)
-}
 
 type DsrtParamType struct {
 	numlines                                                        int
