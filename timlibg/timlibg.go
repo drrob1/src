@@ -192,4 +192,4 @@ func GREGORIAN(Juldate int) (M, D, Y int) {
 	return
 } // GREGORIAN
 
-// END timlibc
+// END timlibg

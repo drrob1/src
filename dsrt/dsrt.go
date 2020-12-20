@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "7 Nov 2020"
+const LastAltered = "20 Dec 2020"
 
 /*
 Revision History
@@ -77,6 +77,8 @@ Revision History
   25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
   18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
    7 Nov 20 -- Learned that the idiomatic way to test absence of environment variables is LookupEnv.  From the Go Standard Lib Cookbook.
+  20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
+                 I hope these are faster.  I haven't used the sort interface in a long time.  It's still here, as a demo.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -86,7 +88,7 @@ type FISliceSize []os.FileInfo // having compatible types only differing in the 
 type dirAliasMapType map[string]string
 
 func (f FISliceDate) Less(i, j int) bool {
-	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
+	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first.  Not used in a long time.
 }
 
 func (f FISliceDate) Swap(i, j int) {
@@ -273,21 +275,23 @@ func main() {
 		}
 	} else if DateSort && Forward {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest first sort
+			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
+			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
 		}
 		if *testFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].Size() < files[j].Size() // I want a smallest first sort
+			return files[i].Size() < files[j].Size() // I want an smallest-first sort
 		}
 		if *testFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest first sort
+			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
+			return files[i].ModTime().Before(files[j].ModTime()) // I want an oldest-first sort
 		}
 		if *testFlag {
 			fmt.Println("sortfcn = oldest date.")
@@ -567,7 +571,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 
 	s, ok := os.LookupEnv("dsrt")
 
-	if ! ok {
+	if !ok {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
@@ -599,15 +603,15 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 //------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
-/* non-idiomatic code
+	/* non-idiomatic code
 	s := os.Getenv("diraliases")
 	if len(s) == 0 {
 		return nil
 	}
- */
+	*/
 
 	s, ok := os.LookupEnv("diraliases")
-	if ! ok {
+	if !ok {
 		return nil
 	}
 
