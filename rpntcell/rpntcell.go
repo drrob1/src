@@ -22,7 +22,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "15 Dec 2020"
+const LastAltered = "21 Dec 2020"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -116,6 +116,7 @@ REVISION HISTORY
 12 Dec 20 -- Started to think about mapped storage registers that can have string names, stored in a file.  I'm moving this to hpcalc2.
 13 Dec 20 -- Tweaked help message and other minor stuff.  I commented out TOCLIP, FROMCLIP here, as it's now in hpcalc2.  Added LABEL as synonym for NAME.
 15 Dec 20 -- Tweaked help message some more.
+21 Dec 20 -- Changed LABEL to LABL so that it's 4 characters, which is needed for GetIndex logic.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -477,7 +478,7 @@ func main() {
 				PromptRow = StartRow + 1   // used to be OutputRow -1
 			}
 			WriteDisplayTapeToScreen(DisplayCol, StackRow)
-		} else if strings.HasPrefix(INBUF, "NAME") || strings.HasPrefix(INBUF, "LABEL") {
+		} else if strings.HasPrefix(INBUF, "NAME") || strings.HasPrefix(INBUF, "LABL") { // prefix must be 4 chars.
 			//var ans string
 			var i int // remember that this auto-zero'd
 			if len(INBUF) > 4 {

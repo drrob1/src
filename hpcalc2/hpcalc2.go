@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "18 Dec 2020"
+const LastAlteredDate = "21 Dec 2020"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -113,6 +113,7 @@ REVISION HISTORY
 14 Dec 20 -- Decided to sort mapsho output.
 17 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
                and added C2F, F2C
+21 Dec 20 -- Changed MAPRCL abbreviation concept from strings.HasPrefix to strings.Contains, so substrings are matched instead of just prefixes.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -1401,7 +1402,7 @@ func mappedRegSortedNames() []mappedRegStructType {
 func getFullMatchingName(abbrev string) string {
 	sliceregvar := mappedRegSortedNames()
 	for _, name := range sliceregvar {
-		if strings.HasPrefix(name.key, abbrev) {
+		if strings.Contains(name.key, abbrev) {
 			return name.key
 		}
 	}
