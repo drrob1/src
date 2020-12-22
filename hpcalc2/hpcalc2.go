@@ -1289,7 +1289,7 @@ outerloop:
 					} else { // call the abbreviation processing routine, that I have yet to write.
 						name := getFullMatchingName(regname)
 						if name == "" {
-							s := fmt.Sprint("register label %s not found in maprcl cmd.  Command ignored.", regname)
+							s := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regname)
 							ss = append(ss, s)
 							break outerloop
 						}
