@@ -6,36 +6,42 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 )
 
-const LastAltered = "Sep 16, 2020"
+const LastAltered = "Dec 24, 2020"
 
 /*
-  REVISION HISTORY
-  ================
-   2 Dec 2019 -- Started development of make directory bookmark, using dirbkmk.go as a start.  Will focus on Windows, as bash already has dirb.
-                   This routine will write the map of bookmarks as a gob file, that makedirbkmk.go will read.  This is copying code from
-                   primes2.go and makeprimeslice.go.
-                   It will need these commands:
-                     s -- save bookmark
-                     a -- about
-                     d -- delete bookmark
-                     p -- print bookmarks
-                     h -- help
-   4 Dec 2019 -- Will make both directoryAliasesMap and bookmark global.  I'm not doing concurrency anyway.
-                 os.Args = makedirbkmk.exe cmd bkmk-name target-directory
-               subscript =      0           1      2           3
-                  len    =      1           2      3           4
-  28 Dec 2019 -- changed cd to cdd, so it will change drive and directory at same time.
-  14 Jan 2020 -- my dirsave() also needed to change cd to cdd.  Just done.
-  16 Sep 2020 -- Added sl cmd, as in dirb, as synynom for p.  And will prompt if trying to overwrite a bookmark.
+REVISION HISTORY
+================
+ 2 Dec 19 -- Started development of make directory bookmark, using dirbkmk.go as a start.  Will focus on Windows, as bash already has dirb.
+			   This routine will write the map of bookmarks as a gob file, that makedirbkmk.go will read.  This is copying code from
+			   primes2.go and makeprimeslice.go.
+			   It will need these commands:
+				 s -- save bookmark
+				 a -- about
+				 d -- delete bookmark
+				 p -- print bookmarks
+				 h -- help
+ 4 Dec 19 -- Will make both directoryAliasesMap and bookmark global.  I'm not doing concurrency anyway.
+			 os.Args = makedirbkmk.exe cmd bkmk-name target-directory
+		   subscript =      0           1      2           3
+			  len    =      1           2      3           4
+28 Dec 19 -- changed cd to cdd, so it will change drive and directory at same time.
+14 Jan 20 -- my dirsave() also needed to change cd to cdd.  Just done.
+16 Sep 20 -- Added sl cmd, as in dirb, as synynom for p.  And will prompt if trying to overwrite a bookmark.
+24 Dec 20 -- Will now sort output from Print command.
 */
 
 const bookmarkfilename = "bookmarkfile.gob"
 
 var HomeDir string             // global because it is also needed in my dirsave rtn.
 var bookmark map[string]string // used in all routines.
+
+type bkmkslicetype struct {
+	key, value string
+}
 
 func main() {
 	fmt.Println(" makedirbkmk written in Go, last altered", LastAltered)
@@ -132,8 +138,17 @@ func main() {
 		direntrydel()
 
 	case "p", "sl": // print out bookmark list
+		bkmkslice := make([]bkmkslicetype, 0, len(bookmark))
 		for idx, valu := range bookmark {
-			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
+			bkmk := bkmkslicetype{idx, valu}  // structured literal syntax
+			bkmkslice = append(bkmkslice, bkmk)
+		}
+		sortless := func (i,j int) bool {
+			return bkmkslice[i].key < bkmkslice[j].key
+		}
+		sort.Slice(bkmkslice, sortless)
+		for _, bkmk := range bkmkslice {
+			fmt.Printf(" bookmark[%s] = %s\n", bkmk.key, bkmk.value)
 		}
 		fmt.Println()
 		fmt.Println()
