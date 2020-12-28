@@ -109,7 +109,7 @@ REVISION HISTORY
  9 Nov 20 -- Including use of comspec to find tcc on Windows.
  4 Dec 20 -- Thinking about how to add conversion factors.  1 lb = 453.59238 g; 1 oz = 28.34952 g; 1 m = 3.28084 ft; 1 mi = 1.609344 km
 11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
-12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapclose.
+12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapdel and mapclose.
 14 Dec 20 -- Decided to sort mapsho output.
 17 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
                and added C2F, F2C
