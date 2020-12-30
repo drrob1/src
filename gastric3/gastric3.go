@@ -1,4 +1,4 @@
-// GastricEmptying in Go, V 3.  (C) 2017 - 2018.  Originallly on GastricEmtpying2.mod code.
+// GastricEmptying in Go, V 3.  (C) 2017 - 2018.  Originally on GastricEmtpying2.mod code.
 
 package main
 
@@ -21,51 +21,54 @@ import (
 )
 
 /*
-  REVISION HISTORY
-  ----------------
-  24 Feb 06 -- Added logic to excluded lines w/o numbers.
-  23 Feb 06 -- LR.mod Converted to SBM2 for Win.  And since it is not allowed for this module to
-                 write errors, slope and intercept will be set zero in case of an error.
-  25 Sep 07 -- Decided to write to std out for output only
-   3 Oct 08 -- Added decay correction for Tc-99m
-  12 Sep 11 -- Added my new FilePicker module.
-  26 Dec 14 -- Will change to the FilePickerBase module as I now find it easier to use.
-                 But these use terminal mode.
-  27 Dec 14 -- Removing unused modules so can compile in ADW.
-  21 Jun 15 -- Will write out to file, and close all files before program closes.
-  10 Aug 17 -- Converting to Go
-  12 Aug 17 -- Added "Numerical Recipies" code, and removed old iterative algorithm.
-  15 Aug 17 -- Added ability to show timestamp of the executable file, as a way of showing last linking timestamp.
-                 To be used in addition of the LastAltered string.  But I can recompile without altering, as when
-		 a new version of the Go toolchain is released.
-   9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
-  11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
-  12 Sep 17 -- Added heading to output file.
-  13 Sep 17 -- Adding code from Numerical Recipies for errors in x and y.
-  24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
-  27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
-   2 Oct 17 -- Discovered that in very normal patients, counts are low enough for stdev to be neg.  I can't allow that!
-                 And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
-   3 Oct 17 -- Added separate StDevTime constant, and set a minimum of 2.  Output optimized for Windows since that
-                 is where it will be used in "production."
-  18 Oct 17 -- Added filepicker
-  15 Jun 18 -- Now at version 3, and I'm revisiting the old iterative solution that I used for a long time.  Is there a bug here?
-  18 Jun 18 -- Added some comments regarding my thoughts and observations, and decided to return FittedData3 so I can get R2.
-                 And screen output will be shorter than file output.
-  20 Jun 18 -- Added comments regarding reference normal.
-  21 Jun 18 -- Added first non digit token on line will skip that line.  So entire line can be easily commented out.
-   4 Nov 18 -- Realized that the intercept is log(counts), so exp(counts) is worth displaying.
-   6 Nov 18 -- Will also account for a lag time.
-  19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
-  31 Jul 20 -- Coding use of gonum.org, just for experience.
-   2 Aug 20 -- Got idea to vary uncertainty in counts as a function of i, so there is more uncertainty in later points.
-                 And removed the check for error > number itself.  I think the results are better.
-                 Nevermind.  I'm reverting this change because the T-1/2 was higher than the orig in many runs of this.
-                 So instead of changing the error values, I'll change the weights for the gonum computation.
-                 And I added an unweighted run of gonum's LinearRegression.
+REVISION HISTORY
+----------------
+24 Feb 06 -- Added logic to excluded lines w/o numbers.
+23 Feb 06 -- LR.mod Converted to SBM2 for Win.  And since it is not allowed for this module to
+             write errors, slope and intercept will be set zero in case of an error.
+25 Sep 07 -- Decided to write to std out for output only
+ 3 Oct 08 -- Added decay correction for Tc-99m
+12 Sep 11 -- Added my new FilePicker module.
+26 Dec 14 -- Will change to the FilePickerBase module as I now find it easier to use.
+             But these use terminal mode.
+27 Dec 14 -- Removing unused modules so can compile in ADW.
+21 Jun 15 -- Will write out to file, and close all files before program closes.
+10 Aug 17 -- Converting to Go
+12 Aug 17 -- Added "Numerical Recipies" code, and removed old iterative algorithm.
+15 Aug 17 -- Added ability to show timestamp of the executable file, as a way of showing last linking timestamp.
+             To be used in addition of the LastAltered string.  But I can recompile without altering, as when
+             a new version of the Go toolchain is released.
+ 9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
+11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
+12 Sep 17 -- Added heading to output file.
+13 Sep 17 -- Adding code from Numerical Recipies for errors in x and y.
+24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
+27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
+ 2 Oct 17 -- Discovered that in very normal patients, counts are low enough for stdev to be neg.  I can't allow that!
+             And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
+ 3 Oct 17 -- Added separate StDevTime constant, and set a minimum of 2.  Output optimized for Windows since that
+             is where it will be used in "production."
+18 Oct 17 -- Added filepicker
+15 Jun 18 -- Now at version 3, and I'm revisiting the old iterative solution that I used for a long time.  Is there a bug here?
+18 Jun 18 -- Added some comments regarding my thoughts and observations, and decided to return FittedData3 so I can get R2.
+             And screen output will be shorter than file output.
+20 Jun 18 -- Added comments regarding reference normal.
+21 Jun 18 -- Added first non digit token on line will skip that line.  So entire line can be easily commented out.
+ 4 Nov 18 -- Realized that the intercept is log(counts), so exp(counts) is worth displaying.
+ 6 Nov 18 -- Will also account for a lag time.
+19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
+31 Jul 20 -- Coding use of gonum.org, just for experience.
+ 2 Aug 20 -- Got idea to vary uncertainty in counts as a function of i, so there is more uncertainty in later points.
+             And removed the check for error > number itself.  I think the results are better.
+             Nevermind.  I'm reverting this change because the T-1/2 was higher than the orig in many runs of this.
+             So instead of changing the error values, I'll change the weights for the gonum computation.
+             And I added an unweighted run of gonum's LinearRegression.
+29 Dec 20 -- Now that new Siemens camera is installed, I want to be able to use both heads and the geometric mean.
+             So I have to read both count points on the line, assuming first is anterior and 2nd is posterior.
+             And changed to more idiomatic Go for the slices.
 */
 
-const LastAltered = "Aug 2, 2020"
+const LastAltered = "Dec 29, 2020"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -124,7 +127,7 @@ func main() {
 
 	ln2 := math.Log(2)
 	rows := make([]Point, 0, MaxCol)
-	im := make(inputmatrix, 0, MaxN) // input matrix
+	im := make(inputmatrix, 0, MaxN) // type inputmatrix []inputrow
 
 	fmt.Println()
 	fmt.Println(" GastricGo v 3, Gastric Emtpying program written in Go.  Last modified", LastAltered)
@@ -214,31 +217,38 @@ func main() {
 	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
 	check(err)
 
-	N := 0
-	for N < MaxN { // Main input reading loop to read all lines
-		line, err := bytesbuffer.ReadString('\n')
-		if err != nil {
+	for { // Main input reading loop to read all lines
+		line, e := bytesbuffer.ReadString('\n')
+		if e != nil {
 			break
 		}
 		tokenreader := tknptr.NewToken(line)
-		col := 0
-		ir := make(inputrow, 2) // input row
+		//col := 0
+		ir := make(inputrow, 0, 3) // type inputrow []float64; input row for time, ant counts, post counts.
+
 		// loop to process first 2 digit tokens on this line and ignore the rest
-		for col < 2 {
+		for {
 			token, EOL := tokenreader.GETTKNREAL()
 			if EOL || token.State != tknptr.DGT { // better way to handle non digit tokens.
 				break
 			}
 			if token.State == tknptr.DGT { // ignore non-digit tokens, which allows for comments
-				ir[col] = token.Rsum // ir is input row
-				col++
+				ir = append(ir, token.Rsum)
+				//ir[col] = token.Rsum // ir is input row
+				//col++
 			}
-		} // UNTIL EOL OR have 2 numbers
-		if col >= 1 { // process line as it has 2 numbers
+		} // UNTIL EOL OR token is not a digit token
+		if len(ir) > 0 {
 			im = append(im, ir)
-			N++
 		}
 	} // END main input reading loop
+
+	fmt.Printf(" Input Matrix by rows.  Number of rows = len(im) = %d \n", len(im))
+	for i := range im {
+		fmt.Println(im[i])
+	}
+	fmt.Println()
+	fmt.Println()
 
 	// Now need to populate the Time And Counts Table called rows.
 	// And now to construct xvector, yvector and wtvector for gonum.org stats package.
@@ -249,13 +259,13 @@ func main() {
 	unwtvector := make([]float64, 0, lenvector)
 	for c := range im {
 		point.x = im[c][0]
-		point.OrigY = im[c][1]
+		point.OrigY = im[c][1] // OrigY will have either the anterior counts, or the geometric mean of anterior and posterior counts, if available.
+		if len(im[c]) > 2 {
+			point.OrigY = math.Sqrt(point.OrigY * im[c][2])
+		}
+
 		point.y = math.Log(point.OrigY)
-		//errorFactor := StDevFac + 5 * float64(c)  Nevermind.  See note above
 		point.stdev = math.Abs(math.Log(point.OrigY * StDevFac / 100)) // treating StDevFac as a %-age.
-		//		if math.Abs(point.y) < math.Abs(point.stdev) {
-		//			point.stdev = math.Abs(point.y)
-		//		}
 		point.sigx = point.x * StDevTime / 100
 		if point.sigx < 2 {
 			point.sigx = 2
@@ -271,7 +281,7 @@ func main() {
 		unwtvector = append(unwtvector, 1.0)
 	}
 
-	// this is a closure, I think my first one.
+	// this is a closure.
 	writestr := func(s string) {
 		if bufioErr != nil {
 			return
@@ -279,7 +289,7 @@ func main() {
 		_, bufioErr = OutBufioWriter.WriteString(s)
 	}
 
-	writerune := func() { // this is a closure.
+	writerune := func() { // this is also a closure.
 		if bufioErr != nil {
 			return
 		}
