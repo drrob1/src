@@ -63,6 +63,7 @@ const LastAlteredDate = "Aug 16, 2020"
   16 Aug 20 -- Making StraightInsertion more idiomatic Go, based on code shown in High Performance Go.
                  I added BasicInsertion, also from High Performance Go.
                  I changed the variable names in HeapSort and sift, to help me understand the code.  L is lo, and R is hi.
+  27 Aug 20 -- Added timing comments from txt file that has just over 1 million words.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -1442,6 +1443,40 @@ Thu Jul 23 2020 17:16:06 EDT, and then Tue Jul 28 2020 17:38:53 EDT on z76
  After ShellSort: 28.50378449 s -> 28.594864915 s
  After StraightSelection: 47.00024184 s -> 47.048454729 s
 ----------------------------------------------------------------------------------------------------
+Tue Aug 25 2020 20:56:28 EDT
+ filesize = 8,729,361, requestedwordcount= 1,247,051, numberofwords= 1,080,126
+ms
+ After sort.Strings: 300.6921ms
+ After 2nd sort.StringSlice: 308.6832ms
+ After sort.Sort: 313.6777ms
+ After QuickSort: 315.6763ms
+ After sort.Slice: 315.7076ms
+ after NativeSort: 325.6655ms
+ After NonRecursiveQuickSortOberon: 325.6664ms
+ After Modula-2 NonRecursiveQuickSort: 433.5419ms
+ After ModifiedMergeSort: 441.5628ms
+ After mergeSort: 563.4229ms
+ After NRheapsort: 847.1315ms
+ After sort.Stable: 891.0876ms
+ After sort.SliceStable: 922.282ms
+ After HeapSort: 947.1116ms
+s
+ after container/heap, sortedheapofwords: time=1.3915749s
+ After BadShellSort: 1.2157665s
+ After MyShellSort: 19.4820301s
+m
+ After BinaryInsertion: 8m59.7050462s
+h
+ After ShellSort: 1h48m15.8470534s
+ After StraightInsertion: 1h48m46.1262238s
+ After BasicInsertion: 1h56m38.5238831s
+ After StraightSelection: 1h57m51.6689395s
+
+------------------------------------------------------
+
+
+
+
 {{{
 From the documentation at golang.org for container/heap
 
