@@ -15,18 +15,18 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Aug 16, 2020"
+const LastAlteredDate = "Jan 2, 2021"
 
 /*
   REVISION HISTORY
   ----------------
   July 2017 -- First version
   26 July 17 -- Will try to learn delve (dlv) by using it to debug the routines here that don't work.
-   7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
+   7 Aug  17 -- Thinking about a mergeSort with an insertionsort below, maybe 5 elements.
    8 Nov  17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
   10 July 19 -- Added better comments and output strings.
   28 July 19 -- Adding Stable, and SliceStable
-  29 July 19 -- Changing some formating of the output.
+  29 July 19 -- Changing some formatting of the output.
   15 May  20 -- Fixed ShellSort after starting to read High Performance Go by Ron Stephen.  I then remembered that ShellSort
                   is a modified BubbleSort, so I coded it as such.  And now it works.
   16 May  20 -- Decided to try to fix the old ShellSort, now called BadShellSort.
@@ -36,16 +36,16 @@ const LastAlteredDate = "Aug 16, 2020"
                 However, I also took another crack at NonRecursiveQuickSort.
   21 May  20 -- Removed unneeded commented out code.  I'm not recompiling.
   23 May  20 -- Copied ShellSort by Sedgewick here.  Renamed ShellSort that I based on bubble sort to MyShellSort
-  24 May  20 -- All the nonrecursive Quicksort routines I found create their own stack of indices.  I'll try
-                  my hand at creating my own stack operations push and pop.  I was not able to write a routine based on code inSedgewick.
+  24 May  20 -- All the nonrecursive Quicksort routines I found create their own stack of indices.  I'll try my hand at creating my own
+                  stack operations push and pop.  I was not able to write a routine based on code in Sedgewick.
   25 May  20 -- Thoughts on mysorts.go and mysorts2.go.
-               Over the last 2 weeks I've been able to get the bad code working.  I now have 3 versions of ShellSort, and 2 versions of nonrecursive quick sort.
+        Over the last 2 weeks I've been able to get the bad code working.  I now have 3 versions of ShellSort, and 2 versions of nonrecursive quick sort.
         I got ShellSort working by noticing a non idiomatic for loop, and Rob Pike in his book says the advantages of using idioms is that they help avoid bugs.
-         The idiom is a pattern known to work.  Look closely at non-idiomatic code for the source of bugs.  I did and that's where I found the bug in ShellSort.
-               The non-recursive quick sort routines depend on creating a stack themselves instead of relying on recursion to use the system's stack.
-               When I switched to idiomatic stack code using push and pop, the code started working.  One reason for this is that I made the stack much
-               bigger, so one of the issues may have been that the stack was too small in the code published in these books.  Mostly, I used Wirth's code which
-          differs between his Modula-2 and Oberon versions of "Programs and Data Structures."  The idea to use explicit push and pop came from Sedgewick's book.
+        The idiom is a pattern known to work.  Look closely at non-idiomatic code for the source of bugs.  I did and that's where I found the bug in ShellSort.
+        The non-recursive quick sort routines depend on creating a stack themselves instead of relying on recursion to use the system's stack.
+        When I switched to idiomatic stack code using push and pop, the code started working.  One reason for this is that I made the stack much
+        bigger, so one of the issues may have been that the stack was too small in the code published in these books.  Mostly, I used Wirth's code which
+        differs between his Modula-2 and Oberon versions of "Programs and Data Structures."  The idea to use explicit push and pop came from Sedgewick's book.
 
                I will have the non-recursive quick sort routines print out the max size of their respective stacks, so I can gauge if
                a stack too small was my problem all along.
@@ -64,6 +64,7 @@ const LastAlteredDate = "Aug 16, 2020"
                  I added BasicInsertion, also from High Performance Go.
                  I changed the variable names in HeapSort and sift, to help me understand the code.  L is lo, and R is hi.
   27 Aug 20 -- Added timing comments from txt file that has just over 1 million words.
+   2 Jan 21 -- Removed 3 redundant type conversions, as flagged by GoLand.
 */
 
 var intStack []int // for non-recursive quick sorts
@@ -1198,7 +1199,8 @@ func main() {
 	//	}
 	t9 = time.Now()
 	copy(sliceofwords, mastersliceofwords)
-	NativeWords = sort.StringSlice(sliceofwords)
+	//NativeWords = sort.StringSlice(sliceofwords)  GoLand flagged this as a redundant type conversion.
+	NativeWords = sliceofwords
 	NativeWords.Sort()
 	NativeSortTime = time.Since(t9)
 	s = fmt.Sprintf(" After 2nd sort.StringSlice: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
@@ -1221,7 +1223,8 @@ func main() {
 	//	}
 	t9 = time.Now()
 	copy(sliceofwords, mastersliceofwords)
-	NativeWords = sort.StringSlice(sliceofwords)
+	//NativeWords = sort.StringSlice(sliceofwords)  GoLand flagged this as a redundant type conversion
+	NativeWords = sliceofwords
 	sort.Sort(NativeWords)
 	NativeSortTime = time.Since(t9)
 	s = fmt.Sprintf(" After sort.Sort: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
@@ -1243,7 +1246,8 @@ func main() {
 	//	if allowoutput {
 	//		fmt.Println("before sort.Stable:", sliceofwords)
 	//	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	//NativeWords = sort.StringSlice(sliceofwords)  GoLand flagged this as a redundant type conversion
+	NativeWords = sliceofwords
 	sort.Stable(NativeWords)
 	NativeSortTime = time.Since(t9)
 	s = fmt.Sprintf(" After sort.Stable: %s, %d ns \n", NativeSortTime.String(), NativeSortTime.Nanoseconds())
