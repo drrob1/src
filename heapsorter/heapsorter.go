@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Jan 2, 2021"
+const LastAlteredDate = "Jan 4, 2021"
 
 /*
   REVISION HISTORY
@@ -65,7 +65,10 @@ const LastAlteredDate = "Jan 2, 2021"
                  I changed the variable names in HeapSort and sift, to help me understand the code.  L is lo, and R is hi.
   27 Aug 20 -- Added timing comments from txt file that has just over 1 million words.
    2 Jan 21 -- Removed 3 redundant type conversions, as flagged by GoLand.
+   4 Jan 21 -- Adding ModifiedQuickSort, and will sort output times.  And will not run N**2 sorts on datasets > tooBig.
 */
+
+const tooBig = 170_000
 
 var intStack []int // for non-recursive quick sorts
 
@@ -83,6 +86,11 @@ var hiloStack []hiloIndexType // for non-recursive quick sorts
 // }}}
 
 type stringHeap []string
+
+type timesortType struct {
+	description string
+	duration    time.Duration
+}
 
 // ----------------------------------------------------------- container/heap -----------------------------------------
 func (h stringHeap) Len() int           { return len(h) }
@@ -490,6 +498,48 @@ func QuickSort(a []string) []string {
 	a = qsort(a, 0, n)
 	return a
 } // END QuickSort
+
+func qsortmodified(a []string, lo, hi int) []string {
+	if hi-lo < 12 {
+		b := StraightInsertion(a[lo : hi+1])
+		i := lo
+		for _, s := range b {
+			a[i] = s
+			i++
+		}
+	} else {
+		i := lo
+		j := hi
+		x := a[(lo+hi)/2]
+		for i <= j { // REPEAT in original code
+			for a[i] < x {
+				i++
+			} // END a sub i < x
+			for x < a[j] {
+				j--
+			} // END x < a sub j
+			if i <= j {
+				a[i], a[j] = a[j], a[i]
+				i++
+				j--
+			} // end if i <= j
+		} // UNTIL i > j;
+		if lo < j {
+			a = qsortmodified(a, lo, j)
+		}
+		if i < hi {
+			a = qsortmodified(a, i, hi)
+		}
+	}
+	return a
+}
+
+func ModifiedQuickSort(a []string) []string {
+	n := len(a) - 1
+	a = qsortmodified(a, 0, n)
+	return a
+}
+
 // -----------------------------------------------------------
 // -----------------------------------------------------------
 func intStackInit(n int) {
@@ -668,14 +718,8 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 				}
 				L = i // continue sorting right partition
 			}
-			//			if L >= R {
-			//				break
-			//			}
 		} // for L < R
 
-		//		if s == 0 {
-		//			break
-		//		}
 	} // for stack not empty
 	// fmt.Println(" NonRecursiveQuickSortOberan maxStackSize=", maxStackSize) This showed 24 on the full PaulKrugman.dat file.
 	return a
@@ -869,11 +913,10 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 
+	// make the timesort slice to be sorted at the end
+	timeSort := make([]timesortType, 0, 50)
+
 	// sort.StringSlice method
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("slice before first sort.StringSlice:", sliceofwords)
-	//	}
 	t9 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	NativeWords := sort.StringSlice(sliceofwords)
@@ -890,72 +933,68 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts := timesortType{s, NativeSortTime} // structured constant
+	timeSort = append(timeSort, ts)
 
 	// StraightSelection
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println(" sliceofwords before StraightSelection: ", sliceofwords)
-	//	}
-	t0 := time.Now()
-	copy(sliceofwords, mastersliceofwords)
-	sortedsliceofwords := StraightSelection(sliceofwords)
-	StraightSelectionTime := time.Since(t0)
-	StraightSelectionTimeNano := StraightSelectionTime.Nanoseconds()
-	s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(), StraightSelectionTimeNano)
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Print(s)
-	if allowoutput {
-		for _, w := range sortedsliceofwords {
-			fmt.Print(w, " ")
+	if numberofwords < tooBig { // I don't want to wait 2 hrs for this to finish.
+		t0 := time.Now()
+		copy(sliceofwords, mastersliceofwords)
+		sortedsliceofwords := StraightSelection(sliceofwords)
+		StraightSelectionTime := time.Since(t0)
+		StraightSelectionTimeNano := StraightSelectionTime.Nanoseconds()
+		s = fmt.Sprintf(" After StraightSelection: %s, %d ns \n", StraightSelectionTime.String(), StraightSelectionTimeNano)
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
+		fmt.Print(s)
+		if allowoutput {
+			for _, w := range sortedsliceofwords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
 		}
-		fmt.Println()
+		ts = timesortType{s, StraightSelectionTime} // structured constant
+		timeSort = append(timeSort, ts)
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
 
 	// StraightInsertion
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before StraightInsertion:", sliceofwords)
-	//	}
-	t1 := time.Now()
-	copy(sliceofwords, mastersliceofwords)
-	sliceofsortedwords := StraightInsertion(sliceofwords)
-	StraightInsertionTime := time.Since(t1)
-	s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Print(s)
-	if allowoutput {
-		for _, w := range sliceofsortedwords {
-			fmt.Print(w, " ")
+	if numberofwords < tooBig {
+		t1 := time.Now()
+		copy(sliceofwords, mastersliceofwords)
+		sliceofsortedwords := StraightInsertion(sliceofwords)
+		StraightInsertionTime := time.Since(t1)
+		s = fmt.Sprintf(" After StraightInsertion: %s, %d ns \n", StraightInsertionTime.String(), StraightInsertionTime.Nanoseconds())
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
+		fmt.Print(s)
+		if allowoutput {
+			for _, w := range sliceofsortedwords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
 		}
-		fmt.Println()
-	}
+		ts = timesortType{s, StraightInsertionTime}
+		timeSort = append(timeSort, ts)
 
-	t1a := time.Now()
-	copy(sliceofwords, mastersliceofwords)
-	sliceofsortedwords = BasicInsertion(sliceofwords)
-	BasicInsertionTime := time.Since(t1a)
-	s = fmt.Sprintf(" After BasicInsertion: %s, %d ns \n", BasicInsertionTime.String(), BasicInsertionTime.Nanoseconds())
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Print(s)
-	if allowoutput {
-		for _, w := range sliceofsortedwords {
-			fmt.Print(w, " ")
+		t1a := time.Now()
+		copy(sliceofwords, mastersliceofwords)
+		sliceofsortedwords = BasicInsertion(sliceofwords)
+		BasicInsertionTime := time.Since(t1a)
+		s = fmt.Sprintf(" After BasicInsertion: %s, %d ns \n", BasicInsertionTime.String(), BasicInsertionTime.Nanoseconds())
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
+		fmt.Print(s)
+		if allowoutput {
+			for _, w := range sliceofsortedwords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
 		}
-		fmt.Println()
+		ts = timesortType{s, BasicInsertionTime}
+		timeSort = append(timeSort, ts)
 	}
 
 	// BinaryInsertion
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before BinaryInsertion:", sliceofwords)
-	//	}
 	t2 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	BinaryInsertionSortedWords := BinaryInsertion(sliceofwords)
@@ -970,36 +1009,30 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, BinaryInsertionTime}
+	timeSort = append(timeSort, ts)
 
 	// ShellSort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before ShellSort:", sliceofwords)
-	//	}
-	t3 := time.Now()
-	copy(sliceofwords, mastersliceofwords)
-	ShellSortedWords := ShellSort(sliceofwords)
-	ShellSortedTime := time.Since(t3)
-	s = fmt.Sprintf(" After ShellSort: %s, %d ns \n", ShellSortedTime.String(), ShellSortedTime.Nanoseconds())
-	_, err = OutBufioWriter.WriteString(s)
-	check(err)
-	fmt.Print(s)
-	if allowoutput {
-		for _, w := range ShellSortedWords {
-			fmt.Print(w, " ")
+	if numberofwords < tooBig {
+		t3 := time.Now()
+		copy(sliceofwords, mastersliceofwords)
+		ShellSortedWords := ShellSort(sliceofwords)
+		ShellSortedTime := time.Since(t3)
+		s = fmt.Sprintf(" After ShellSort: %s, %d ns \n", ShellSortedTime.String(), ShellSortedTime.Nanoseconds())
+		_, err = OutBufioWriter.WriteString(s)
+		check(err)
+		fmt.Print(s)
+		if allowoutput {
+			for _, w := range ShellSortedWords {
+				fmt.Print(w, " ")
+			}
+			fmt.Println()
 		}
-		fmt.Println()
+		ts = timesortType{s, ShellSortedTime}
+		timeSort = append(timeSort, ts)
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
 
 	// BadShellSort -- now a misnomer as it finally works.
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before BadShellSort:", sliceofwords)
-	//	}
 	t3a := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	BadShellSortedWords := BadShellSort(sliceofwords)
@@ -1014,14 +1047,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, BadShellSortedTime}
+	timeSort = append(timeSort, ts)
 
 	// MyShellSort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before MyShellSort:", sliceofwords)
-	//	}
 	t3b := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	MyShellSortedWords := MyShellSort(sliceofwords)
@@ -1036,14 +1065,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, MyShellSortedTime}
+	timeSort = append(timeSort, ts)
 
 	// HeapSort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before HeapSort:", sliceofwords)
-	//	}
 	t4 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	HeapSortedWords := HeapSort(sliceofwords)
@@ -1058,14 +1083,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, HeapSortedTime}
+	timeSort = append(timeSort, ts)
 
 	// NRHeapSort which is from Numerical Recipies and converted from C++ code.
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before NRHeapSort:", sliceofwords)
-	//	}
 	t5 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	NRHeapSortedWords := NRheapsort(sliceofwords)
@@ -1078,15 +1099,13 @@ func main() {
 		}
 		fmt.Println()
 	}
+	ts = timesortType{s, NRHeapTime}
+	timeSort = append(timeSort, ts)
 	_, err = OutBufioWriter.WriteString(s)
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
 	// QuickSort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before QuickSort:", sliceofwords)
-	//	}
 	t6 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	QuickSortedWords := QuickSort(sliceofwords)
@@ -1101,14 +1120,28 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, QuickSortedTime}
+	timeSort = append(timeSort, ts)
+
+	// ModifiedQuickSort
+	t6a := time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	ModifiedQuickSortedWords := ModifiedQuickSort(sliceofwords)
+	ModifiedQuickSortedTime := time.Since(t6a)
+	s = fmt.Sprintf(" After ModifiedQuickSort: %s, %d ns\n", ModifiedQuickSortedTime.String(), ModifiedQuickSortedTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Print(s)
+	if allowoutput {
+		for _, w := range ModifiedQuickSortedWords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	ts = timesortType{s, ModifiedQuickSortedTime}
+	timeSort = append(timeSort, ts)
 
 	// MergeSort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before MergeSort:", sliceofwords)
-	//	}
 	t7 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	MergeSortedWords := mergeSort(sliceofwords)
@@ -1123,14 +1156,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, MergeSortTime}
+	timeSort = append(timeSort, ts)
 
 	// ModifiedMergeSort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before ModifiedMergeSort:", sliceofwords)
-	//	}
 	t7a := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	ModifiedMergeSortedWords := ModifiedMergeSort(sliceofwords)
@@ -1145,14 +1174,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, ModifiedMergeSortTime}
+	timeSort = append(timeSort, ts)
 
 	// NonRecursiveQuickSort (from Modula-2)
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before Modula-2 nonrecursiveQuickSort:", sliceofwords)
-	//	}
 	t8 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	NonRecursiveQuickSortedWords := NonRecursiveQuickSort(sliceofwords)
@@ -1165,16 +1190,12 @@ func main() {
 		}
 		fmt.Println()
 	}
+	ts = timesortType{s, NonRecursiveQuickedTime}
+	timeSort = append(timeSort, ts)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
 
 	// NonRecursiveQuickSortOberon
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
-	//	}
 	t8a := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	NonRecursiveQuickSortedOberonWords := NonRecursiveQuickSortOberon(sliceofwords)
@@ -1187,16 +1208,12 @@ func main() {
 		}
 		fmt.Println()
 	}
+	ts = timesortType{s, NonRecursiveQuickOberonTime}
+	timeSort = append(timeSort, ts)
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
 
 	// sort.StringSlice
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before 2nd sort.StringSlice:", sliceofwords)
-	//	}
 	t9 = time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	//NativeWords = sort.StringSlice(sliceofwords)  GoLand flagged this as a redundant type conversion.
@@ -1213,14 +1230,10 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, NativeSortTime}
+	timeSort = append(timeSort, ts)
 
 	// sort.Sort
-	//	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before sort.Sort:", sliceofwords)
-	//	}
 	t9 = time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	//NativeWords = sort.StringSlice(sliceofwords)  GoLand flagged this as a redundant type conversion
@@ -1237,15 +1250,12 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, NativeSortTime}
+	timeSort = append(timeSort, ts)
 
 	// sort.Stable
 	t9 = time.Now()
 	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before sort.Stable:", sliceofwords)
-	//	}
 	//NativeWords = sort.StringSlice(sliceofwords)  GoLand flagged this as a redundant type conversion
 	NativeWords = sliceofwords
 	sort.Stable(NativeWords)
@@ -1260,15 +1270,11 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, NativeSortTime}
 
 	// sort.Strings
 	t10 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before sort.Strings:", sliceofwords)
-	//	}
 	sort.Strings(sliceofwords)
 	StringsSortTime := time.Since(t10)
 	s = fmt.Sprintf(" After sort.Strings: %s, %d ns \n", StringsSortTime.String(), StringsSortTime.Nanoseconds())
@@ -1281,15 +1287,12 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, StringsSortTime}
+	timeSort = append(timeSort, ts)
 
 	// sort.Slice
 	t11 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before sort.Slice:", sliceofwords)
-	//	}
 	lessfunction := func(i, j int) bool {
 		return sliceofwords[i] < sliceofwords[j]
 	}
@@ -1305,15 +1308,12 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, SliceSortTime}
+	timeSort = append(timeSort, ts)
 
 	// sort.SliceStable
 	t12 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
-	//	if allowoutput {
-	//		fmt.Println("before sort.SliceStable:", sliceofwords)
-	//	}
 	sort.SliceStable(sliceofwords, lessfunction)
 	SliceStableSortTime := time.Since(t12)
 	s = fmt.Sprintf(" After sort.SliceStable: %s, %d ns \n", SliceStableSortTime.String(), SliceStableSortTime.Nanoseconds())
@@ -1326,15 +1326,12 @@ func main() {
 		}
 		fmt.Println()
 	}
-	//	_, err = OutBufioWriter.WriteRune('\n')
-	//	check(err)
+	ts = timesortType{s, SliceStableSortTime}
+	timeSort = append(timeSort, ts)
 
 	// container/heap
 	heapofwords := make(stringHeap, 0, numberofwords) // doesn't need to be a separate type, but it makes my intent clear.
 	sortedheapofwords := make(stringHeap, 0, numberofwords)
-	//	if allowoutput {
-	//		fmt.Println("before container/heap sort. The heap is empty at the moment.")
-	//	}
 	heap.Init(&heapofwords)
 	t13 := time.Now()
 	for _, wrd := range mastersliceofwords {
@@ -1347,7 +1344,7 @@ func main() {
 		sortedheapofwords = append(sortedheapofwords, str)
 	}
 	sortedheapofwordsTime := time.Since(t13)
-	s = fmt.Sprintf(" after sortedheapofwords: time=%s for %d entries by heapofwords.Len(), and %d by Len(sortedheapofworda) \n",
+	s = fmt.Sprintf(" after container/heap: time=%s for %d entries by heapofwords.Len(), and %d by Len(sortedheapofworda) \n",
 		sortedheapofwordsTime.String(), heapofwords.Len(), len(sortedheapofwords))
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
@@ -1359,9 +1356,25 @@ func main() {
 		}
 		fmt.Println()
 	}
+	ts = timesortType{s, sortedheapofwordsTime}
+	timeSort = append(timeSort, ts)
 	//	_, err = OutBufioWriter.WriteRune('\n')
 	//	check(err)
 	fmt.Println()
+
+	// Sort times and output sorted list
+	sortlessfcn := func(i, j int) bool {
+		return timeSort[i].duration < timeSort[j].duration
+	}
+	sort.Slice(timeSort, sortlessfcn)
+	fmt.Println(" \n --- Sorted list of times is: ------")
+	_, err = OutBufioWriter.WriteString(" \n ---- Sorted List of Times ----\n")
+	for _, t := range timeSort {
+		fmt.Print(t.description)
+		_, err = OutBufioWriter.WriteString(t.description)
+		check(err)
+	}
+	fmt.Println("  \n  ") // should print 2 blank lines
 
 	// Wrap it up by writing number of words, etc.
 	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
