@@ -1464,6 +1464,7 @@ Tue Aug 25 2020 20:56:28 EDT
  filesize = 8,729,361, requestedwordcount= 1,247,051, numberofwords= 1,080,126
 ms
  After sort.Strings: 300.6921ms
+ After ModifiedQuickSort: 307.6901ms  (added 1/4/21)
  After 2nd sort.StringSlice: 308.6832ms
  After sort.Sort: 313.6777ms
  After QuickSort: 315.6763ms
@@ -1488,6 +1489,29 @@ h
  After StraightInsertion: 1h48m46.1262238s
  After BasicInsertion: 1h56m38.5238831s
  After StraightSelection: 1h57m51.6689395s
+
+------------------------------------------------------
+Mon Jan 4 2021 on same  requestedwordcount= 1247051, numberofwords= 1,080,126
+ ---- Sorted List of Times ----
+ after NativeSort: 283.7105ms, 283710500 ns
+ After sort.Sort: 291.7665ms, 291766500 ns
+ After sort.Strings: 293.7003ms, 293700300 ns
+ After 2nd sort.StringSlice: 301.7085ms, 301708500 ns
+ After sort.Slice: 302.2547ms, 302254700 ns
+ After ModifiedQuickSort: 307.6901ms, 307690100 ns
+ After QuickSort: 315.9826ms, 315982600 ns
+ After NonRecursiveQuickSortOberon: 332.6597ms, 332659700 ns
+ After Modula-2 NonRecursiveQuickSort: 393.5936ms, 393593600 ns
+ After ModifiedMergeSort: 420.5925ms, 420592500 ns
+ After mergeSort: 558.1632ms, 558163200 ns
+ After NRheapsort: 780.7471ms, 780747100 ns
+ After sort.SliceStable: 781.6792ms, 781679200 ns
+ After HeapSort: 791.7811ms, 791781100 ns
+ After BadShellSort: 1.3078114s, 1307811400 ns
+ after container/heap: time=1.3266436s for 0 entries by heapofwords.Len(), and 1080126 by Len(sortedheapofworda)
+ After MyShellSort: 18.364497s, 18364497000 ns
+ After BinaryInsertion: 8m25.5667533s, 505566753300 ns
+ After ShellSort: 1h43m54.8550407s, 6234855040700 ns
 
 ------------------------------------------------------
 
