@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "20 Dec 2020"
+const LastAltered = "10 Jan 2021"
 
 /*
 Revision History
@@ -80,6 +80,7 @@ Revision History
   20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
                  I hope these are faster.  I haven't used the sort interface in a long time.  It's still in file dated Dec-20-2020 as a demo.
                  I removed the demo code from here.
+  10 Jan 21 -- Adjusting alignment of decimal points
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -678,20 +679,52 @@ func getMagnitudeString(j int64) string {
 	switch {
 	case j > 1_000_000_000_000: // 1 trillion, or TB
 		f = float64(j) / 1000000000000
-		s1 = fmt.Sprintf("%.4g tb", f)
+		s1 = fmt.Sprintf("%.4g TB", f)
+	case j > 100_000_000_000: // 100 billion
+		f = float64(j) / 1_000_000_000
+		s1 = fmt.Sprintf(" %.4g GB", f)
+	case j > 10_000_000_000: // 10 billion
+		f = float64(j) / 1_000_000_000
+		s1 = fmt.Sprintf("  %.4g GB", f)
 	case j > 1_000_000_000: // 1 billion, or GB
 		f = float64(j) / 1000000000
-		s1 = fmt.Sprintf("%6.4g gb", f)
+		s1 = fmt.Sprintf("   %.4g GB", f)
+	case j > 100_000_000: // 100 million
+		f = float64(j) / 1_000_000
+		s1 = fmt.Sprintf("    %.4g mb", f)
+	case j > 10_000_000: // 10 million
+		f = float64(j) / 1_000_000
+		s1 = fmt.Sprintf("     %.4g mb", f)
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1000000
-		s1 = fmt.Sprintf("%9.4g mb", f)
+		s1 = fmt.Sprintf("      %.4g mb", f)
+	case j > 100_000: // 100 thousand
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("       %.4g kb", f)
+	case j > 10_000: // 10 thousand
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("        %.4g kb", f)
 	case j > 1000: // KB
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("%12.4g kb", f)
+		s1 = fmt.Sprintf("         %.4g kb", f)
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
 	}
 	return s1
+}
+
+// --------------------------------- getDigitsString --------------------------
+func getDigitsString(f float64) string {
+	var s string
+	switch {
+	case f > 100:
+		s = fmt.Sprintf("%.4g", f)
+	case f > 10:
+		s = fmt.Sprintf("%5.4g", f)
+	default:
+		s = fmt.Sprintf("%6.4g", f)
+	}
+	return s
 }
 
 /*
