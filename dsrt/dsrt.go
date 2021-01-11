@@ -377,18 +377,18 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						fmt.Printf("%10v %s:%s %15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+						fmt.Printf("%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					} else {
 						sizestr = getMagnitudeString(f.Size())
-						fmt.Printf("%10v %s:%s %-15s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+						fmt.Printf("%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 					}
 					count++
 				}
 			} else if IsSymlink(f.Mode()) {
-				fmt.Printf("%10v %s:%s %15s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				fmt.Printf("%10v %s:%s %16s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				count++
 			} else if Dirlist && f.IsDir() {
-				fmt.Printf("%10v %s:%s %15s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				fmt.Printf("%10v %s:%s %16s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				count++
 			}
 			if count >= NumLines {
@@ -422,18 +422,18 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+						fmt.Printf("%17s %s %s\n", sizestr, s, f.Name())
 
 					} else {
 						sizestr = getMagnitudeString(f.Size())
-						fmt.Printf("%-15s %s %s\n", sizestr, s, f.Name())
+						fmt.Printf("%-17s %s %s\n", sizestr, s, f.Name())
 					}
 					count++
 				} else if IsSymlink(f.Mode()) {
-					fmt.Printf("%15s %s <%s>\n", sizestr, s, f.Name())
+					fmt.Printf("%17s %s <%s>\n", sizestr, s, f.Name())
 					count++
 				} else if Dirlist && f.IsDir() {
-					fmt.Printf("%15s %s (%s)\n", sizestr, s, f.Name())
+					fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
 					count++
 				}
 				if count >= NumLines {
