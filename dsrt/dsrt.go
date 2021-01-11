@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "10 Jan 2021"
+const LastAltered = "11 Jan 2021"
 
 /*
 Revision History
@@ -706,25 +706,11 @@ func getMagnitudeString(j int64) string {
 		s1 = fmt.Sprintf("        %.4g kb", f)
 	case j > 1000: // KB
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("         %.4g kb", f)
+		s1 = fmt.Sprintf("         %.3g kb", f)
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
 	}
 	return s1
-}
-
-// --------------------------------- getDigitsString --------------------------
-func getDigitsString(f float64) string {
-	var s string
-	switch {
-	case f > 100:
-		s = fmt.Sprintf("%.4g", f)
-	case f > 10:
-		s = fmt.Sprintf("%5.4g", f)
-	default:
-		s = fmt.Sprintf("%6.4g", f)
-	}
-	return s
 }
 
 /*
