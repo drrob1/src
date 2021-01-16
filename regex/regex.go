@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jan 15, 2021"
+const LastAltered = "Jan 16, 2021"
 
 /*
 Revision History
@@ -75,7 +75,7 @@ Revision History
   22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
    4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
                  So as long as I want the exact same code for both platforms, I do need platform specific code.
-   5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.
+   5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.  And doesn't have -x flag to exclude.
    6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
    8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
                  Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
@@ -182,6 +182,7 @@ func main() {
 	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 
 	var DirListFlag = flag.Bool("d", false, "include directories in the output listing") // pointer
+
 	var FilenameListFlag bool
 	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
@@ -354,10 +355,10 @@ func main() {
 					if f.Size() > 100000 {
 						sizestr = AddCommas(sizestr)
 					}
-					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
+					fmt.Printf("%17s %s %s\n", sizestr, s, f.Name())
 				} else {
 					sizestr = getMagnitudeString(f.Size())
-					fmt.Printf("%-15s %s %s\n", sizestr, s, f.Name())
+					fmt.Printf("%-17s %s %s\n", sizestr, s, f.Name())
 				}
 				count++
 			} else if IsSymlink(f.Mode()) {
