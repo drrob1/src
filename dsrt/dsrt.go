@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -17,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "11 Jan 2021"
+const LastAltered = "15 Jan 2021"
 
 /*
 Revision History
@@ -81,6 +82,7 @@ Revision History
                  I hope these are faster.  I haven't used the sort interface in a long time.  It's still in file dated Dec-20-2020 as a demo.
                  I removed the demo code from here.
   10 Jan 21 -- Adjusting alignment of decimal points
+  15 Jan 21 -- Adding -x flag, to exclude a regex.  When it works here, I'll add it to other pgms.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -160,12 +162,10 @@ func main() {
 
 	// flag definitions and processing
 	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
-
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var nlines = flag.Int("n", numoflines, "number of lines to display") // Ptr
-
 	var NLines int
 	flag.IntVar(&NLines, "N", numoflines, "number of lines to display") // Value
 
@@ -178,6 +178,7 @@ func main() {
 	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 
 	var DirListFlag = flag.Bool("d", false, "include directories in the output listing") // pointer
+
 	var FilenameListFlag bool
 	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
@@ -187,8 +188,10 @@ func main() {
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
-	var extflag = flag.Bool("e", false, "only print if there is no extension")
-	var extensionflag = flag.Bool("ext", false, "only print if there is no extension")
+	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
+	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
+
+	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
 
 	flag.Parse()
 
@@ -226,6 +229,20 @@ func main() {
 	}
 
 	noExtensionFlag := *extensionflag || *extflag
+	excludeRegexPattern := ""
+	var excludeRegex *regexp.Regexp
+
+	if *excludeFlag {
+		fmt.Print(" Enter regex pattern to be excluded: ")
+		fmt.Scanln(&excludeRegexPattern)
+		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
+			*excludeFlag = false
+		}
+	}
 
 	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
 	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
@@ -371,6 +388,11 @@ func main() {
 				if noExtensionFlag && strings.ContainsRune(f.Name(), '.') {
 					showthis = false
 				}
+				if *excludeFlag {
+					if BOOL := excludeRegex.MatchString(strings.ToLower(f.Name())); BOOL {
+						showthis = false
+					}
+				}
 				if showthis {
 					if LongFileSizeList {
 						sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
@@ -407,6 +429,11 @@ func main() {
 				showthis = true
 				if noExtensionFlag && strings.ContainsRune(NAME, '.') {
 					showthis = false
+				}
+				if *excludeFlag {
+					if flag := excludeRegex.MatchString(strings.ToLower(NAME)); flag {
+						showthis = false
+					}
 				}
 			}
 			//			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
