@@ -15,10 +15,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	//"time"
 	"unicode"
 )
 
-const LastAltered = "Dec 20, 2020"
+const LastAltered = "Jan 15, 2021"
 
 /*
 Revision History
@@ -84,6 +85,7 @@ Revision History
    9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
   20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
                  I found these to be much faster when I changed dsrt.go.
+  15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
 */
 
 // FileInfo slice
@@ -354,7 +356,7 @@ func main() {
 					}
 					fmt.Printf("%15s %s %s\n", sizestr, s, f.Name())
 				} else {
-					sizestr = GetMagnitudeString(f.Size())
+					sizestr = getMagnitudeString(f.Size())
 					fmt.Printf("%-15s %s %s\n", sizestr, s, f.Name())
 				}
 				count++
@@ -383,7 +385,7 @@ func main() {
 	fmt.Println()
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
-		s1 := GetMagnitudeString(GrandTotal)
+		s1 := getMagnitudeString(GrandTotal)
 		fmt.Println(", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
@@ -608,6 +610,51 @@ func MyReadDir(dir string) []os.FileInfo {
 	return fi
 } // MyReadDir
 
+// ----------------------------- getMagnitudeString -------------------------------
+func getMagnitudeString(j int64) string {
+
+	var s1 string
+	var f float64
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		f = float64(j) / 1000000000000
+		s1 = fmt.Sprintf("%.4g TB", f)
+	case j > 100_000_000_000: // 100 billion
+		f = float64(j) / 1_000_000_000
+		s1 = fmt.Sprintf(" %.4g GB", f)
+	case j > 10_000_000_000: // 10 billion
+		f = float64(j) / 1_000_000_000
+		s1 = fmt.Sprintf("  %.4g GB", f)
+	case j > 1_000_000_000: // 1 billion, or GB
+		f = float64(j) / 1000000000
+		s1 = fmt.Sprintf("   %.4g GB", f)
+	case j > 100_000_000: // 100 million
+		f = float64(j) / 1_000_000
+		s1 = fmt.Sprintf("    %.4g mb", f)
+	case j > 10_000_000: // 10 million
+		f = float64(j) / 1_000_000
+		s1 = fmt.Sprintf("     %.4g mb", f)
+	case j > 1_000_000: // 1 million, or MB
+		f = float64(j) / 1000000
+		s1 = fmt.Sprintf("      %.4g mb", f)
+	case j > 100_000: // 100 thousand
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("       %.4g kb", f)
+	case j > 10_000: // 10 thousand
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("        %.4g kb", f)
+	case j > 1000: // KB
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("         %.3g kb", f)
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+	}
+	return s1
+}
+
+/*
+ {{{
+
 // ----------------------------- GetMagnitudeString -------------------------------
 func GetMagnitudeString(j int64) string {
 
@@ -632,8 +679,6 @@ func GetMagnitudeString(j int64) string {
 	return s1
 }
 
-/*
- {{{
 package strings
 func Contains
 func Contains(s, substr string) bool
