@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jan 16, 2021"
+const LastAltered = "Jan 17, 2021"
 
 /*
 Revision History
@@ -86,6 +86,7 @@ Revision History
   20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
                  I found these to be much faster when I changed dsrt.go.
   15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
+  17 Jan 21 -- Adding -x flag, for an exclude pattern, ie, if this pattern matches, don't print.
 */
 
 // FileInfo slice
@@ -112,9 +113,6 @@ func main() {
 	var SizeTotal, GrandTotal int64
 	var GrandTotalCount int
 	var systemStr string
-	//	var havefiles bool
-	//	var commandline string
-	//	var directoryAliasesMap dirAliasMapType
 
 	uid := 0
 	gid := 0
@@ -192,6 +190,8 @@ func main() {
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
+	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
+
 	flag.Parse()
 
 	fmt.Println(" regex will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
@@ -236,6 +236,20 @@ func main() {
 		NumLines = *nlines
 	} else if NLines != numoflines {
 		NumLines = NLines
+	}
+
+	excludeRegexPattern := ""
+	var excludeRegex *regexp.Regexp
+	if *excludeFlag {
+		fmt.Print(" Enter regex pattern to be excluded: ")
+		fmt.Scanln(&excludeRegexPattern)
+		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
+			*excludeFlag = false
+		}
 	}
 
 	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
@@ -344,6 +358,12 @@ func main() {
 	for _, f := range files {
 		NAME := strings.ToLower(f.Name())
 		if BOOL := regex.MatchString(NAME); BOOL {
+			if *excludeFlag {
+				if flag := excludeRegex.MatchString(strings.ToLower(f.Name())); flag {
+					continue
+				}
+			}
+
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
 			//sizeint := 0
 			sizestr := ""
