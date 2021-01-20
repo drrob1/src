@@ -66,9 +66,10 @@ REVISION HISTORY
 29 Dec 20 -- Now that new Siemens camera is installed, I want to be able to use both heads and the geometric mean.
              So I have to read both count points on the line, assuming first is anterior and 2nd is posterior.
              And changed to more idiomatic Go for the slices.
+20 Jan 21 -- Will issue a warning if a line does not have at least 2 points.  And it's inauguration day.  But that's not important now.
 */
 
-const LastAltered = "Dec 29, 2020"
+const LastAltered = "Jan 20, 2021"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -238,8 +239,10 @@ func main() {
 				//col++
 			}
 		} // UNTIL EOL OR token is not a digit token
-		if len(ir) > 0 {
+		if len(ir) > 1 {
 			im = append(im, ir)
+		} else if len(ir) == 1 {
+			fmt.Println(" Data line only has one entry, likely time but no counts.  Line ignored.")
 		}
 	} // END main input reading loop
 
@@ -303,6 +306,14 @@ func main() {
 	writerune()
 	check(bufioErr)
 
+	if len(rows) == 0 {
+		fmt.Println(" No valid rows found.  Exiting")
+		os.Exit(1)
+	} else if len(rows) < 2 {
+		fmt.Println(" Only 1 valid line found.  Exiting.")
+		os.Exit(1)
+	}
+	
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
 	fmt.Println(" i  X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev   Wt Vector ")
