@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "21 Dec 2020"
+const LastAlteredDate = "30 Jan 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -114,6 +114,7 @@ REVISION HISTORY
 17 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
                and added C2F, F2C
 21 Dec 20 -- Changed MAPRCL abbreviation concept from strings.HasPrefix to strings.Contains, so substrings are matched instead of just prefixes.
+30 Jan 21 -- Results of the converstions functions also push their result onto the stack.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -538,6 +539,7 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 	return true
 } // IsPrime
 
+/*  Not used.
 // ------------------------------------------------- PrimeFactorization ---------------------------------
 func PrimeFactorization(N int) []int {
 	var PD = [...]int{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47} // Prime divisors array
@@ -558,6 +560,7 @@ func PrimeFactorization(N int) []int {
 	return PrimeFactors
 
 } // PrimeFactorization
+
 
 // ------------------------------------------------- IsPrimeInt -----------------
 func IsPrimeInt(n int) bool {
@@ -585,6 +588,8 @@ func IsPrimeInt(n int) bool {
 	}
 	return true
 } // IsPrimeInt
+
+*/
 
 // --------------------------------------- PrimeFactorMemoized -------------------
 func PrimeFactorMemoized(U uint) []uint {
@@ -1121,6 +1126,8 @@ outerloop:
 				}
 
 			case 530: // FROMCLIP
+				PushMatrixStacks()
+				LastX = Stack[X]
 				w := bytes.NewBuffer([]byte{}) // From "Go Standard Library Cookbook" as referenced above.
 				if runtime.GOOS == "linux" {
 					cmdfromclip := exec.Command("xclip", "-o")
@@ -1175,6 +1182,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s1 := fmt.Sprintf("%s pounds is %s grams", x, s0)
 				ss = append(ss, s1)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 550: // oz2g = 28.34952
 				r := READX() * oz2g
@@ -1182,6 +1192,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s oz is %s grams", x, s0)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 560: // cm2in = 2.54
 				r := READX() / in2cm
@@ -1189,6 +1202,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s cm is %s inches", x, s0)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 570: // m2ft = 3.28084
 				r := READX() * m2ft
@@ -1196,6 +1212,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s meters is %s feet", x, s0)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 580: // mi2km = 1.609344
 				r := READX() * mi2km
@@ -1203,6 +1222,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s miles is %s km", x, s0)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 590: // g2lb
 				r := READX() / lb2g
@@ -1210,6 +1232,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s1 := fmt.Sprintf("%s grams is %s pounds", x, s0)
 				ss = append(ss, s1)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 600: // g2oz
 				r := READX() / oz2g
@@ -1217,6 +1242,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s1 := fmt.Sprintf("%s grams is %s oz", x, s0)
 				ss = append(ss, s1)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 610: //in2cm
 				r := READX() * in2cm
@@ -1224,6 +1252,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s1 := fmt.Sprintf("%s inches is %s cm", x, s0)
 				ss = append(ss, s1)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 620: // ft2m
 				r := READX() / m2ft
@@ -1231,6 +1262,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s ft is %s meters", x, s0)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 630: // km2mi
 				r := READX() / mi2km
@@ -1238,6 +1272,9 @@ outerloop:
 				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s km is %s mi", x, s0)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(r)
 
 			case 633: // C2F
 				x := READX()
@@ -1246,6 +1283,9 @@ outerloop:
 				fstr := strconv.FormatFloat(fdeg, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s deg C is %s deg F", xstr, fstr)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(x)
 
 			case 636: // F2C
 				x := READX()
@@ -1254,6 +1294,9 @@ outerloop:
 				cstr := strconv.FormatFloat(cdeg, 'f', sigfig, 64)
 				s := fmt.Sprintf("%s deg F is %s deg C", xstr, cstr)
 				ss = append(ss, s)
+				PushMatrixStacks()
+				LastX = Stack[X]
+				PUSHX(x)
 
 			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
 				subcmd := Token.Str[3:] // slice off first three characters, which are map

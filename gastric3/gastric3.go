@@ -313,7 +313,7 @@ func main() {
 		fmt.Println(" Only 1 valid line found.  Exiting.")
 		os.Exit(1)
 	}
-	
+
 	fmt.Println(" N = ", len(rows))
 	fmt.Println()
 	fmt.Println(" i  X is time(min)  Y is kcounts  Ln(y)     X StDev   Y stdev   Wt Vector ")
