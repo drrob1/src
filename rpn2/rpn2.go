@@ -7,32 +7,34 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	//
 	"getcommandline"
-	//"hpcalc"
 	"hpcalc2"
 	"makesubst"
 )
 
-const LastCompiled = "13 Dec 2020"
+const LastCompiled = "31 Jan 2021"
 
 var suppressDump map[string]bool
 
+var windowsFlag bool
+
 func main() {
 	/*
-	   This module uses the HPCALC module to simulate an RPN type calculator.
+	   This module uses the HPCALC2 module to simulate an RPN type calculator.
 	   REVISION HISTORY
 	   ----------------
 	    1 Dec 89 -- Changed prompt.
 	   24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-	   25 Jul 93 -- Output result without trailing insignificant zeros,
-	                 imported UL2, and changed prompt again.
-	    3 Mar 96 -- Fixed bug in string display if real2str fails because
-	                 number is too large (ie, Avogadro's Number).
+	   25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+	    3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
 	   18 May 03 -- First Win32 version.  And changed name.
 	    1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
 	                 And will save/restore the stack to/from a file.
@@ -64,6 +66,7 @@ func main() {
 	    8 Nov 20 -- Removed unnecessary comments.
 	   12 Dec 20 -- hpcalc2 now has MAP commands.
 	   13 Dec 20 -- Shortened the lead space on displaying the Results.
+	   31 Jan 21 -- Adding color.  And windowsFlag so color is better, ie, use bold flag on windows.
 	*/
 
 	var R float64
@@ -90,6 +93,7 @@ func main() {
 	//        suppressDump[""] = true
 
 	allowDumpFlag := true
+	windowsFlag = runtime.GOOS == "windows"
 
 	StackFileExists := true
 	InputByteSlice := make([]byte, 8*hpcalc2.StackSize) // I hope this is a slice of 64 bytes, ie, 8*8.
@@ -137,7 +141,8 @@ func main() {
 
 	for len(INBUF) > 0 {
 		R, stringslice = hpcalc2.GetResult(INBUF)
-		ans = strconv.FormatFloat(R, 'g', -1, 64)
+		sigfig := hpcalc2.SigFig()
+		ans = strconv.FormatFloat(R, 'g', sigfig, 64)
 		ans = hpcalc2.CropNStr(ans)
 		if R > 10000 {
 			ans = hpcalc2.AddCommas(ans)
@@ -145,13 +150,13 @@ func main() {
 		fmt.Println()
 		fmt.Println()
 		for _, ss := range stringslice {
-			fmt.Println(ss)
+			ctfmt.Println(ct.Green, windowsFlag, ss)
 
-			allowDumpFlag = false // Don't update stack if any strings were returned from hpcalc.GetResult()
+			allowDumpFlag = false // Don't show stack if any strings were returned from hpcalc.GetResult()
 		}
 
 		if strings.ToLower(INBUF) == "about" {
-			fmt.Println(" Last changed rpn.go ", LastCompiled)
+			ctfmt.Println(ct.Cyan, windowsFlag, " Last changed rpn.go ", LastCompiled)
 			allowDumpFlag = false
 		}
 
@@ -160,18 +165,18 @@ func main() {
 			allowDumpFlag = false
 		}
 
-		if allowDumpFlag {
+		if allowDumpFlag { // display stack.
 			_, stringslice = hpcalc2.GetResult("DUMP") // discard result.  Only need stack dump general executed.
 			for _, ss := range stringslice {
-				fmt.Println(ss)
+				ctfmt.Println(ct.Cyan, windowsFlag, ss)
 			}
 		}
 
 		fmt.Println()
-		fmt.Print("                  Result = ")
+		ctfmt.Print(ct.Yellow, windowsFlag, "                  Result = ")
 		hpcalc2.OutputFixedOrFloat(R)
-		fmt.Println("         |    ", ans)
-		fmt.Print(" Enter calculation, HELP or Enter to exit: ")
+		ctfmt.Println(ct.Yellow, windowsFlag, "         |    ", ans)
+		ctfmt.Print(ct.Blue, windowsFlag, " Enter calculation, HELP or Enter to exit: ")
 		scanner.Scan()
 		INBUF = scanner.Text()
 		if err := scanner.Err(); err != nil {
@@ -182,21 +187,20 @@ func main() {
 		allowDumpFlag = true
 	}
 
-	// Now that I've got this working, I'm taking notes.  The binary.Write appends to the buf after each
-	// call, since I'm not doing anthing to the bytes.Buffer to reset it.  I don't need a separate slice of
+	// Now that I've got this working, I'm taking notes.  The binary.Write appends to the buf after each call,
+	// since I'm not doing anything to the bytes.Buffer to reset it.  I don't need a separate slice of
 	// bytes to accumulate the stack for output.  I just have to reverse the order I write them out so that
-	// they are read in correctly, without reversing the stack after each write.  I could reset the
-	// buf.Bytes each time if I wanted.  I tested that and it works.  But it is unnecessary for my needs so
-	// I commented it out.
+	// they are read in correctly, without reversing the stack after each write.  I could reset the buf.Bytes
+	// each time if I wanted.  I tested that and it works.  But it is unnecessary for my needs so I commented it out.
 
 	Stk = hpcalc2.GETSTACK()
-	//  OutputByteSlice := make([]byte,0,8*hpcalc.StackSize);  // each stack element is a float64, and there are StackSize of these (now StackSize=8), so this is a slice of 64 bytes
 	buf := new(bytes.Buffer)
 
 	for i := hpcalc2.T1; i >= hpcalc2.X; i-- { // in reverse.  for range cannot go in reverse.
 		r := Stk[i]
 		err := binary.Write(buf, binary.LittleEndian, r)
 		if err != nil {
+			ctfmt.Println(ct.Red, windowsFlag, err)
 			fmt.Printf(" binary.write into buf failed with error %v \n", err)
 			os.Exit(1)
 		}
