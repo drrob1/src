@@ -5,6 +5,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,74 +21,75 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jan 17, 2021"
+const LastAltered = "Jan 31, 2021"
 
 /*
 Revision History
 ----------------
-  20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
-  21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
-  22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
-  22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
-  24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
-  25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
-  26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
-  27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
-  19 May 17 -- Will now show the uid:gid for linux.
-  20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
-  21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
-   2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
-  18 Oct 17 -- Added filesize totals
-  22 Oct 17 -- Made default numlines of 40.
-  23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
-  12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
-  13 Dec 17 -- Changed how lines are counted.
-  10 Jan 18 -- Added correct processing of ~.
-  11 Jan 18 -- Switching to fmt.Scanln.
-  30 Jan 18 -- Will exit if use -h flag.
-   8 Feb 18 -- Windows version will not pause to accept a pattern, as it's not necessary.
-  23 Feb 18 -- Fixing a bug when GOARCH=386 in that userptr causes a panic.
-  23 Apr 18 -- Linux version will properly process command line lists passed by the shell.
-  24 Apr 18 -- Improving comments, and removing prompt for a pattern, as it is no longer needed.
-   2 May 18 -- More improving comments.
-  11 May 18 -- Adding use of dsrt environment variable.  Tested ideas in shoenv.go.
-  28 Jun 18 -- Refining my use of an environment variable.  I did not get it exactly right the first time around.
-  18 Jul 18 -- Fixed bug in processing of "d" and "D" in dsrt environment.  And removed askforinput completely.
-  21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
-  11 Sep 18 -- Will total and display all filesizes in the files slice.
-  12 Sep 18 -- Adding a t flag to show the totals of the entire directory
-  13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
-  16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
-  20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
-  19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
+20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
+21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
+22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
+22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
+24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
+25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
+26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
+27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
+19 May 17 -- Will now show the uid:gid for linux.
+20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
+21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
+ 2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
+18 Oct 17 -- Added filesize totals
+22 Oct 17 -- Made default numlines of 40.
+23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
+12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
+13 Dec 17 -- Changed how lines are counted.
+10 Jan 18 -- Added correct processing of ~.
+11 Jan 18 -- Switching to fmt.Scanln.
+30 Jan 18 -- Will exit if use -h flag.
+ 8 Feb 18 -- Windows version will not pause to accept a pattern, as it's not necessary.
+23 Feb 18 -- Fixing a bug when GOARCH=386 in that userptr causes a panic.
+23 Apr 18 -- Linux version will properly process command line lists passed by the shell.
+24 Apr 18 -- Improving comments, and removing prompt for a pattern, as it is no longer needed.
+ 2 May 18 -- More improving comments.
+11 May 18 -- Adding use of dsrt environment variable.  Tested ideas in shoenv.go.
+28 Jun 18 -- Refining my use of an environment variable.  I did not get it exactly right the first time around.
+18 Jul 18 -- Fixed bug in processing of "d" and "D" in dsrt environment.  And removed askforinput completely.
+21 Aug 18 -- Playing with folding.  So far, I only folded the block of commented code at the bottom of the file
+11 Sep 18 -- Will total and display all filesizes in the files slice.
+12 Sep 18 -- Adding a t flag to show the totals of the entire directory
+13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
+16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
+20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
+19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
                I changed the meanings so now use <symlink> and (dir) indicators, and fixed the oversight on Windows
                whereby symlinks could not be displayed.
-  20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
+20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
                That required writing a new function to detect a symlink.
-  23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
-   2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And Lstat error processing changed.
-   3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
-   4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
-   5 Jul 19 -- Optimized order of printing file types.  I hope.
-  18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
-  19 Jul 19 -- Wrote MyReadDir
-  22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
-   9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
-  22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
-   4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
-                 So as long as I want the exact same code for both platforms, I do need platform specific code.
-   5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.  And doesn't have -x flag to exclude.
-   6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
-   8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
-                 Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
-  27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
-  21 Nov 19 -- Added Println() statements to separate header from filename outputs.
-  25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
-   9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
-  20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
+23 Jun 19 -- Changed to use Lstat when there are multiple filenames on the command line.  This only happens on Linux.
+ 2 Jul 19 -- Changed the format pattern for displaying the executable timestamp.  And Lstat error processing changed.
+ 3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
+ 4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
+ 5 Jul 19 -- Optimized order of printing file types.  I hope.
+18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
+19 Jul 19 -- Wrote MyReadDir
+22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
+ 9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
+22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
+ 4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
+               So as long as I want the exact same code for both platforms, I do need platform specific code.
+ 5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.  And doesn't have -x flag to exclude.
+ 6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
+ 8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
+               Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
+27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
+21 Nov 19 -- Added Println() statements to separate header from filename outputs.
+25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
+ 9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
+20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
                  I found these to be much faster when I changed dsrt.go.
-  15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
-  17 Jan 21 -- Adding -x flag, for an exclude pattern, ie, if this pattern matches, don't print.
+15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
+17 Jan 21 -- Adding -x flag, for an exclude pattern, ie, if this pattern matches, don't print.
+31 Jan 21 -- Adding color.
 */
 
 // FileInfo slice
@@ -118,7 +121,6 @@ func main() {
 	gid := 0
 
 	// environment variable processing.  If present, these will be the defaults.
-
 	dsrtparam = ProcessEnvironString() // This is a function below.
 
 	linuxflag := runtime.GOOS == "linux"
@@ -241,7 +243,7 @@ func main() {
 	excludeRegexPattern := ""
 	var excludeRegex *regexp.Regexp
 	if *excludeFlag {
-		fmt.Print(" Enter regex pattern to be excluded: ")
+		ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
@@ -345,7 +347,6 @@ func main() {
 		fmt.Println(" Dirname is", workingdir)
 	}
 	fmt.Println()
-	fmt.Println()
 
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
@@ -365,11 +366,9 @@ func main() {
 			}
 
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
-			//sizeint := 0
 			sizestr := ""
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
-				//sizeint = int(f.Size()) // Don't need this as f.Size() returns int64.  This matters on 386 version.
 				if LongFileSizeList {
 					sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
 					if f.Size() > 100000 {
@@ -377,8 +376,9 @@ func main() {
 					}
 					fmt.Printf("%17s %s %s\n", sizestr, s, f.Name())
 				} else {
-					sizestr = getMagnitudeString(f.Size())
-					fmt.Printf("%-17s %s %s\n", sizestr, s, f.Name())
+					var color ct.Color
+					sizestr, color = getMagnitudeString(f.Size())
+					ctfmt.Printf(color, winflag, "%-17s %s %s\n", sizestr, s, f.Name())
 				}
 				count++
 			} else if IsSymlink(f.Mode()) {
@@ -406,8 +406,8 @@ func main() {
 	fmt.Println()
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
-		s1 := getMagnitudeString(GrandTotal)
-		fmt.Println(", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
+		s1, color := getMagnitudeString(GrandTotal)
+		ctfmt.Println(color, winflag, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
 	}
@@ -632,45 +632,56 @@ func MyReadDir(dir string) []os.FileInfo {
 } // MyReadDir
 
 // ----------------------------- getMagnitudeString -------------------------------
-func getMagnitudeString(j int64) string {
-
+func getMagnitudeString(j int64) (string, ct.Color) {
 	var s1 string
 	var f float64
+	var color ct.Color
 	switch {
 	case j > 1_000_000_000_000: // 1 trillion, or TB
 		f = float64(j) / 1000000000000
 		s1 = fmt.Sprintf("%.4g TB", f)
+		color = ct.Red
 	case j > 100_000_000_000: // 100 billion
 		f = float64(j) / 1_000_000_000
 		s1 = fmt.Sprintf(" %.4g GB", f)
+		color = ct.Yellow
 	case j > 10_000_000_000: // 10 billion
 		f = float64(j) / 1_000_000_000
 		s1 = fmt.Sprintf("  %.4g GB", f)
+		color = ct.Yellow
 	case j > 1_000_000_000: // 1 billion, or GB
 		f = float64(j) / 1000000000
 		s1 = fmt.Sprintf("   %.4g GB", f)
+		color = ct.Yellow
 	case j > 100_000_000: // 100 million
 		f = float64(j) / 1_000_000
 		s1 = fmt.Sprintf("    %.4g mb", f)
+		color = ct.Cyan
 	case j > 10_000_000: // 10 million
 		f = float64(j) / 1_000_000
 		s1 = fmt.Sprintf("     %.4g mb", f)
+		color = ct.Cyan
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1000000
 		s1 = fmt.Sprintf("      %.4g mb", f)
+		color = ct.Cyan
 	case j > 100_000: // 100 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("       %.4g kb", f)
+		color = ct.Green
 	case j > 10_000: // 10 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("        %.4g kb", f)
+		color = ct.Green
 	case j > 1000: // KB
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("         %.3g kb", f)
+		color = ct.Green
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
+		color = ct.White
 	}
-	return s1
+	return s1, color
 }
 
 /*
