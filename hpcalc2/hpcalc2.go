@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "30 Jan 2021"
+const LastAlteredDate = "31 Jan 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -115,6 +115,7 @@ REVISION HISTORY
                and added C2F, F2C
 21 Dec 20 -- Changed MAPRCL abbreviation concept from strings.HasPrefix to strings.Contains, so substrings are matched instead of just prefixes.
 30 Jan 21 -- Results of the converstions functions also push their result onto the stack.
+31 Jan 21 -- Added SigFig()
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -1451,4 +1452,9 @@ func getFullMatchingName(abbrev string) string {
 		}
 	}
 	return ""
+}
+
+// ----------------------------------------------------------- SigFig --------------------------------------
+func SigFig () int {
+	return sigfig
 }

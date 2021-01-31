@@ -14,12 +14,13 @@ import (
 	"strings"
 	"time"
 
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	hpcalc "hpcalc2"
 	"makesubst"
 	"tokenize"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
+
 /*
 ct
 const (None, Black, Red, Green, Yellow, Blue, Magenta, Cyan, White)
@@ -36,7 +37,7 @@ ctfmt
    func Printf(cl ct.Color, bright bool, format string, a ...interface{}) (n int, err error)
    func Printfln(cl ct.Color, bright bool, format string, a ...interface{}) (n int, err error)
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
- */
+*/
 
 const lastAlteredDate = "31 Jan 2021"
 
@@ -44,79 +45,80 @@ var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var clear map[string]func()
 var SuppressDump map[string]bool
+var WindowsFlag bool
 
 func main() {
-/*
-This module uses the HPCALC module to simulate an RPN type calculator.
-REVISION HISTORY
-----------------
- 1 Dec 89 -- Changed prompt.
-24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
- 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
-18 May 03 -- First Win32 version.  And changed name.
- 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
-				And will save/restore the stack to/from a file.
- 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
-				And I now have the skipline included in MiscStdInOut so it is removed from here.
-15 Oct 13 -- Now writing for gm2 under linux.
-22 Jul 14 -- Converting to Ada.
- 6 Dec 14 -- Converting to cpp.
-20 Dec 14 -- Added macros for date and time last compiled.
-31 Dec 14 -- Started coding HOL command.
- 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
-10 Jan 15 -- Playing with string conversions and number formatting.
- 5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
-22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
-13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
- 2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
- 7 Jul 16 -- Added UP command to hpcalcc.cpp
- 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
-22 Aug 16 -- Started conversion to Go, as rpn.go.
- 8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
-11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
- 1 Oct 16 -- Made the stack display when the program starts.
- 4 Oct 16 -- Made the storage registers display when the program starts.
- 7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
-				Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
- 8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
- 9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
-21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
-28 Oct 16 -- Will clear screen in between command calls.  This is before I play with termbox or goterm
-31 Oct 16 -- Since clear screen works, I'll have the stack and reg's displayed more often.
-				Turns out that this cleared output like PRIME or HEX.  Now have YES,NO,ON,OFF for manual
-				control of DUMP output.  And added a HELP line printed here after that from hpcalc.
- 3 Nov 16 -- Changed hpcalc to return strings for output by the client rtn, instead of it doing its own output.  So now have
-				to make the corresponding changes here.
- 4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
- 5 Nov 16 -- Added SuppressDump map code
- 6 Nov 16 -- Added blank lines before writing output from hpcalc.
-11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
-13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
-23 Feb 17 -- Made "?" equivalent to "help"
-17 Jul 17 -- Discovered bug in that command history is not displayed correctly here.  It is displayed
-				correctly in rpnterm.  It will take me a little longer to find and fix this bug.
-31 Aug 17 -- Stopped working on the command hx issue.  Instead of bufio, I will use fmt.Scan().
-			And will check timestamp of the rpng exec file.
- 6 Apr 18 -- Wrote out DisplayTapeFile.
-22 Aug 18 -- learning about code folding
- 2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
- 7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, afterall.
- 1 Jan 19 -- There is a bug in entering several space delimited terms.  So I removed a trimspace and I'll see what happens next.
-26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
-29 Mar 20 -- Need to removed commas from a number string received from the clip.
-30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
- 1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
- 8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
-23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
- 8 Nov 20 -- Found minor error in fmt messages of fromclip command.  I was looking because of "Go Standard Library Cookbook"
- 9 Nov 20 -- Added use of comspec, copied from hpcalc2.go.
-11 Dec 20 -- Went back to delimiting by spaces, not <CR>.  And, as of Nov 2020, toclip, fromclip are implemented in hpcalc2
-13 Dec 20 -- Compiled w/ map registers now included in hpcalc2.
-30 Jan 21 -- Starting coding the colorization of the output, using "github.com/daviddengcn/go-colortext" and its documentation at
-	            https://godoc.org/github.com/daviddengcn/go-colortext.
-*/
-
+	/*
+	   This module uses the HPCALC module to simulate an RPN type calculator.
+	   REVISION HISTORY
+	   ----------------
+	    1 Dec 89 -- Changed prompt.
+	   24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
+	   25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+	    3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
+	   18 May 03 -- First Win32 version.  And changed name.
+	    1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
+	   				And will save/restore the stack to/from a file.
+	    2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
+	   				And I now have the skipline included in MiscStdInOut so it is removed from here.
+	   15 Oct 13 -- Now writing for gm2 under linux.
+	   22 Jul 14 -- Converting to Ada.
+	    6 Dec 14 -- Converting to cpp.
+	   20 Dec 14 -- Added macros for date and time last compiled.
+	   31 Dec 14 -- Started coding HOL command.
+	    1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
+	   10 Jan 15 -- Playing with string conversions and number formatting.
+	    5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
+	   22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
+	   13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
+	    2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
+	    7 Jul 16 -- Added UP command to hpcalcc.cpp
+	    8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+	   22 Aug 16 -- Started conversion to Go, as rpn.go.
+	    8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
+	   11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
+	    1 Oct 16 -- Made the stack display when the program starts.
+	    4 Oct 16 -- Made the storage registers display when the program starts.
+	    7 Oct 16 -- Changed default dump to DUMPFIXED.   Input is now using splitfunc by space delimited words instead of whole lines.
+	   				Conversion to ScanWords means I cannot get an empty string back unless ^C or ^D.  So needed (Q)uit, EXIT, STOP.
+	    8 Oct 16 -- Updated the prompt to say (Q)uit to exit instead of Enter to exit, and sto command calls WriteRegToScreen()
+	    9 Oct 16 -- Added ability to enter hex numbers like in C, or GoLang, etc, using the "0x" prefix.
+	   21 Oct 16 -- Decided that sto command should not also dump stack, as the stack does not change.
+	   28 Oct 16 -- Will clear screen in between command calls.  This is before I play with termbox or goterm
+	   31 Oct 16 -- Since clear screen works, I'll have the stack and reg's displayed more often.
+	   				Turns out that this cleared output like PRIME or HEX.  Now have YES,NO,ON,OFF for manual
+	   				control of DUMP output.  And added a HELP line printed here after that from hpcalc.
+	    3 Nov 16 -- Changed hpcalc to return strings for output by the client rtn, instead of it doing its own output.  So now have
+	   				to make the corresponding changes here.
+	    4 Nov 16 -- Added the RepaintScreen rtn, and changed how DOW is done.
+	    5 Nov 16 -- Added SuppressDump map code
+	    6 Nov 16 -- Added blank lines before writing output from hpcalc.
+	   11 Dec 16 -- Fixed bug in GetRegIdx when a char is passed in that is not 0..9, A..Z
+	   13 Jan 17 -- Removed stop as an exit command, as it meant that reg p could not be stored into.
+	   23 Feb 17 -- Made "?" equivalent to "help"
+	   17 Jul 17 -- Discovered bug in that command history is not displayed correctly here.  It is displayed
+	   				correctly in rpnterm.  It will take me a little longer to find and fix this bug.
+	   31 Aug 17 -- Stopped working on the command hx issue.  Instead of bufio, I will use fmt.Scan().
+	   			And will check timestamp of the rpng exec file.
+	    6 Apr 18 -- Wrote out DisplayTapeFile.
+	   22 Aug 18 -- learning about code folding
+	    2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
+	    7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, afterall.
+	    1 Jan 19 -- There is a bug in entering several space delimited terms.  So I removed a trimspace and I'll see what happens next.
+	   26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
+	   29 Mar 20 -- Need to removed commas from a number string received from the clip.
+	   30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
+	    1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
+	    8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
+	   23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
+	    8 Nov 20 -- Found minor error in fmt messages of fromclip command.  I was looking because of "Go Standard Library Cookbook"
+	    9 Nov 20 -- Added use of comspec, copied from hpcalc2.go.
+	   11 Dec 20 -- Went back to delimiting by spaces, not <CR>.  And, as of Nov 2020, toclip, fromclip are implemented in hpcalc2
+	   13 Dec 20 -- Compiled w/ map registers now included in hpcalc2.
+	   30 Jan 21 -- Starting coding the colorization of the output, using "github.com/daviddengcn/go-colortext" and its documentation at
+	   	            https://godoc.org/github.com/daviddengcn/go-colortext.
+	   31 Jan 21 -- Wrote hpcalc.SigFig for the conversion routine here.  And color for Windows will be bold.
+	*/
 
 	var INBUF, HomeDir string
 
@@ -148,11 +150,12 @@ REVISION HISTORY
 		HomeDir = os.Getenv("HOME")
 	} else if runtime.GOOS == "windows" {
 		HomeDir = os.Getenv("userprofile")
+		WindowsFlag = true
 	} else { // then HomeDir will be empty.
 		fmt.Println(" runtime.GOOS does not say linux or windows.  Is this a Mac?")
 	}
 	fmt.Println()
-	ctfmt.Println(ct.Blue, false, " GOOS =", runtime.GOOS, ".  HomeDir =", HomeDir, ".  ARCH=", runtime.GOARCH)
+	ctfmt.Println(ct.Blue, WindowsFlag, " GOOS =", runtime.GOOS, ".  HomeDir =", HomeDir, ".  ARCH=", runtime.GOARCH)
 	fmt.Println()
 
 	AllowDumpFlag := false // I need to be able to supress the automatic DUMP under certain circumstances.
@@ -202,16 +205,16 @@ REVISION HISTORY
 
 	hpcalc.PushMatrixStacks()
 
-	ctfmt.Println(ct.Yellow, false, " HP-type RPN calculator written in Go.  Code was last altered ", lastAlteredDate,
+	ctfmt.Println(ct.Yellow, WindowsFlag, " HP-type RPN calculator written in Go.  Code was last altered ", lastAlteredDate,
 		", NoFileFlag is ", *nofileflag)
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	ctfmt.Println(ct.Cyan, false, ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+	ctfmt.Println(ct.Cyan, WindowsFlag, ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 	_, stringslice = hpcalc.GetResult("DUMPFIXED")
 	for _, ss := range stringslice {
-		ctfmt.Println(ct.Yellow, false, ss)
+		ctfmt.Println(ct.Yellow, WindowsFlag, ss)
 	}
 	WriteRegToScreen()
 	fmt.Println()
@@ -367,7 +370,7 @@ REVISION HISTORY
 			fmt.Println()
 			if len(stringslice) > 0 {
 				for _, ss := range stringslice {
-					ctfmt.Println(ct.Cyan, false, ss)
+					ctfmt.Println(ct.Cyan, WindowsFlag, ss)
 				}
 				AllowDumpFlag = false // if there is anything in the stringslice to output, suppress dump.
 			} else if SuppressDump[INBUF] { // this may be redundant to the len(stringslice) conditional
@@ -378,7 +381,7 @@ REVISION HISTORY
 
 		//  These commands are processed thru hpcalc first, then these are processed here.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
-			ctfmt.Println(ct.Cyan, false, " Last altered the source of rpng.go", lastAlteredDate)
+			ctfmt.Println(ct.Cyan, WindowsFlag, " Last altered the source of rpng.go", lastAlteredDate)
 			AllowDumpFlag = false
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			AllowDumpFlag = false
@@ -508,7 +511,8 @@ func WriteRegToScreen() {
 				FirstNonZeroStorageFlag = false
 			} // if firstnonzerostorageflag
 			ch := GetRegChar(i)
-			s := strconv.FormatFloat(r, 'g', -1, 64)
+			sigfig := hpcalc.SigFig()
+			s := strconv.FormatFloat(r, 'g', sigfig, 64)
 			s = hpcalc.CropNStr(s)
 			if r >= 10000 {
 				s = hpcalc.AddCommas(s)
@@ -526,7 +530,7 @@ func WriteRegToScreen() {
 func WriteDisplayTapeToScreen() {
 	fmt.Println("        DisplayTape ")
 	for _, s := range DisplayTape {
-		ctfmt.Println(ct.Blue, false, s)
+		ctfmt.Println(ct.Blue, WindowsFlag, s)
 	} // for ranging over DisplayTape slice of strings
 	fmt.Println()
 } // WriteDisplayTapeToScreen
@@ -566,14 +570,14 @@ func ClearScreen() {
 
 // ---------------------------------------------------- RepaintScreen ----------------------------------
 func RepaintScreen() { // ExecFI, ExecTimeStamp and execname are not global.  I'll not print them here.
-	ctfmt.Println(ct.Cyan, false, " HP-type RPN calculator written in Go.  Last altered source of rpng.go", lastAlteredDate)
+	ctfmt.Println(ct.Cyan, WindowsFlag, " HP-type RPN calculator written in Go.  Last altered source of rpng.go", lastAlteredDate)
 	//	fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 	_, stringslice := hpcalc.GetResult("DUMPFIXED")
-	ctfmt.Println(ct.Yellow, false, "                                   ", stringslice[len(stringslice)-2])
+	ctfmt.Println(ct.Yellow, WindowsFlag, "                                   ", stringslice[len(stringslice)-2])
 	fmt.Println()
 	for _, ss := range stringslice {
-		ctfmt.Println(ct.Cyan, false, ss)
+		ctfmt.Println(ct.Cyan, WindowsFlag, ss)
 	}
 	WriteRegToScreen()
 	WriteDisplayTapeToScreen()
