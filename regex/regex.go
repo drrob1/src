@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jan 31, 2021"
+const LastAltered = "Feb 2, 2021"
 
 /*
 Revision History
@@ -668,18 +668,18 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	case j > 100_000: // 100 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("       %.4g kb", f)
-		color = ct.Green
+		color = ct.White
 	case j > 10_000: // 10 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("        %.4g kb", f)
-		color = ct.Green
+		color = ct.White
 	case j > 1000: // KB
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("         %.3g kb", f)
-		color = ct.Green
+		color = ct.White
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
-		color = ct.White
+		color = ct.Green
 	}
 	return s1, color
 }
