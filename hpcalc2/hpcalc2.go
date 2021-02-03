@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "31 Jan 2021"
+const LastAlteredDate = "3 Feb 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -116,6 +116,7 @@ REVISION HISTORY
 21 Dec 20 -- Changed MAPRCL abbreviation concept from strings.HasPrefix to strings.Contains, so substrings are matched instead of just prefixes.
 30 Jan 21 -- Results of the converstions functions also push their result onto the stack.
 31 Jan 21 -- Added SigFig()
+ 3 Feb 21 -- Fixed bug in what gets pushed onto the stack with the c2f and f2c commands.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -1286,7 +1287,7 @@ outerloop:
 				ss = append(ss, s)
 				PushMatrixStacks()
 				LastX = Stack[X]
-				PUSHX(x)
+				PUSHX(fdeg)
 
 			case 636: // F2C
 				x := READX()
@@ -1297,7 +1298,7 @@ outerloop:
 				ss = append(ss, s)
 				PushMatrixStacks()
 				LastX = Stack[X]
-				PUSHX(x)
+				PUSHX(cdeg)
 
 			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
 				subcmd := Token.Str[3:] // slice off first three characters, which are map
