@@ -48,7 +48,13 @@ func main() {
 		fmt.Fprint(ct.Writer, "I'm in reverse, cyan letters in blue background.") // To only get reverse video on 1 line, I have to use print
 		ct.ResetColor()  // then reset the color
 		fmt.Println()    // and println after the color is reset.
-		
+
+		ct.Foreground(ct.White, false)
+		ct.Background(ct.Blue, false)
+		fmt.Fprint(ct.Writer, "I'm in reverse, white letters in blue background.") // To only get reverse video on 1 line, I have to use print
+		ct.ResetColor()  // then reset the color
+		fmt.Println()    // and println after the color is reset.
+
 		time.Sleep(2*time.Second)
 	}
 }
