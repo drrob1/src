@@ -12,7 +12,7 @@ func main() {
 		ct.Foreground(ct.Yellow, false)
 		fmt.Fprintln(ct.Writer, "I'm in yellow.")
 		ct.ResetColor()
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 
 		fmt.Fprintln(ct.Writer, "Let's now do green.")
 		time.Sleep(time.Second)
@@ -20,28 +20,35 @@ func main() {
 		fmt.Fprintln(ct.Writer, "I'm in green, not bright.")
 		time.Sleep(time.Second)
 		ctfmt.Println(ct.Green, true, "I'm in bright green.")
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 
 		ctfmt.Println(ct.Cyan, false, "I'm in cyan.")
 		ctfmt.Println(ct.Cyan, true, "I'm in bright cyan.")
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 
 		fmt.Println(" I don't know what color I'll be in.  I'm using fmt.Println.  Maybe green?")
 
 		ctfmt.Println(ct.Yellow, true, "I'm in bright yellow.")
 
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 
 		ctfmt.Println(ct.Red, false, "I'm in red.")
 		ctfmt.Println(ct.Red, true, "I'm in bright red.")
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 
 		ctfmt.Println(ct.Blue, false, "I'm in blue.")
 		ctfmt.Println(ct.Blue, true, "I'm in bright blue.")
-		time.Sleep(time.Second)
+		//time.Sleep(time.Second)
 
 		ctfmt.Println(ct.Magenta, false, "I'm in magenta.")
 		ctfmt.Println(ct.Magenta, true, "I'm in bright magenta.")
+
+		ct.Foreground(ct.Cyan, false)
+		ct.Background(ct.Blue, false)
+		fmt.Fprint(ct.Writer, "I'm in reverse, cyan letters in blue background.") // To only get reverse video on 1 line, I have to use print
+		ct.ResetColor()  // then reset the color
+		fmt.Println()    // and println after the color is reset.
+		
 		time.Sleep(2*time.Second)
 	}
 }
