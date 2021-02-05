@@ -22,7 +22,7 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "21 Dec 2020"
+const LastAltered = "5 Feb 2021"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -117,6 +117,7 @@ REVISION HISTORY
 13 Dec 20 -- Tweaked help message and other minor stuff.  I commented out TOCLIP, FROMCLIP here, as it's now in hpcalc2.  Added LABEL as synonym for NAME.
 15 Dec 20 -- Tweaked help message some more.
 21 Dec 20 -- Changed LABEL to LABL so that it's 4 characters, which is needed for GetIndex logic.
+ 4 Feb 21 -- Added H for help.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -384,7 +385,7 @@ func main() {
 		} // thefileexists for both the Stack variable, Stk, and the Storage registers.
 	}
 
-	hpcalc.PushMatrixStacks()
+	// hpcalc.PushMatrixStacks()  I think this is too many, as of 2/4/21
 
 	WriteStack(x, StackRow)
 	n = WriteRegToScreen(x, RegRow)
@@ -394,8 +395,7 @@ func main() {
 	}
 
 	args := flag.Args()
-	if len(args) > 1 {
-		//INBUF = getcommandline.GetCommandLineString()
+	if len(args) > 0 {
 		INBUF = strings.Join(args, " ")
 	} else {
 		puts(scrn, Cyan, x, PromptRow, InputPrompt)
@@ -494,8 +494,8 @@ func main() {
 			}
 			_, _ = hpcalc.GetResult(INBUF) // Have to send this into hpcalc also
 			outputmode = outputfix
-		} else if INBUF == "HELP" || INBUF == "?" {
-			WriteHelp(StartCol+2, StackRow)
+		} else if INBUF == "HELP" || INBUF == "?" || INBUF == "H" {
+			WriteHelp(StartCol+2, StartRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			// do nothing, ie, don't send it into hpcalc.GetResult
 			/*	TOCLIP and FROMCLIP are now in hpcalc2.
@@ -1052,7 +1052,6 @@ func WriteStack(x, y int) {
 	}
 
 	puts(scrn, Yellow, x+10, y, stringslice[len(stringslice)-2]) // just gets X register to be output in Yellow
-	//	deleol(x+10+len(GetXstring()), y)
 	y++
 	for _, s := range stringslice {
 		puts(scrn, Cyan, x, y, s)
@@ -1098,14 +1097,17 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	HelpFile.Flush()
 	HelpOut.Close()
 
-	if y+len(helpstringslice) >= MaxRow {
+	if y+len(helpstringslice) > MaxRow {
 		FI, err := os.Stat(HelpFileName)
 		check(err)
 		//		Printf_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  See %s.", HelpFileName)
 		style = BoldGreen
-		putf(x, y, " Too many help lines for this small screen.  See %s.", HelpFileName)
+		y = OutputRow
+		putf(0, y, "Too many help lines for this small screen.  %d lines exceed %d rows.  See %s.", len(helpstringslice), MaxRow, HelpFileName)
+		y++
 		yr, m, d := FI.ModTime().Date()
-		putf(x, y, "%s from %d/%d/%d is in current directory.", FI.Name(), m, d, yr)
+		putf(0, y, "%s from %d/%d/%d is in current directory.", FI.Name(), m, d, yr)
+		y++
 		style = Cyan
 		return
 	}
