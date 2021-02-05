@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "3 Feb 2021"
+const LastAlteredDate = "4 Feb 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -117,6 +117,7 @@ REVISION HISTORY
 30 Jan 21 -- Results of the converstions functions also push their result onto the stack.
 31 Jan 21 -- Added SigFig()
  3 Feb 21 -- Fixed bug in what gets pushed onto the stack with the c2f and f2c commands.
+ 4 Feb 21 -- Added H for help.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -191,6 +192,7 @@ func init() {
 	cmdMap["VOL"] = 110
 	cmdMap["HELP"] = 120
 	cmdMap["?"] = 120
+        cmdMap["H"] = 120   // added 02/04/2021 8:54:30 AM
 	cmdMap["STO"] = 130
 	cmdMap["RCL"] = 135 // mistake -- was 130, so instead of renumbering all of it, I used my escape hatch
 	cmdMap["UNDO"] = 140
@@ -542,6 +544,7 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 } // IsPrime
 
 /*  Not used.
+{{{
 // ------------------------------------------------- PrimeFactorization ---------------------------------
 func PrimeFactorization(N int) []int {
 	var PD = [...]int{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47} // Prime divisors array
@@ -590,7 +593,7 @@ func IsPrimeInt(n int) bool {
 	}
 	return true
 } // IsPrimeInt
-
+}}}
 */
 
 // --------------------------------------- PrimeFactorMemoized -------------------
@@ -851,7 +854,7 @@ outerloop:
 				Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
 				STACKDN()
 				STACKDN()
-			case 120: // HELP or ?
+			case 120: // HELP, H or ?
 				ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
 				ss = append(ss, " CURT,CBRT -- X = cuberoot(X).")
 				ss = append(ss, " RECIP -- X = 1/X.")
