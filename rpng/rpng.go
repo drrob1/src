@@ -39,7 +39,7 @@ ctfmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "4 Feb 2021"
+const lastAlteredDate = "5 Feb 2021"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -119,6 +119,7 @@ REVISION HISTORY
    	            https://godoc.org/github.com/daviddengcn/go-colortext.
 31 Jan 21 -- Wrote hpcalc2.SigFig for the conversion routine here.  And color for Windows will be bold.
  4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed but of ignoring a command line param.
+ 5 Feb 21 -- Removed an extra PushMatrixStacks() while initializing everything.
 */
 
 	var INBUF, HomeDir string
