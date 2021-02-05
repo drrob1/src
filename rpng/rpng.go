@@ -204,7 +204,7 @@ REVISION HISTORY
 		} // thefileexists for both the Stack variable, Stk, and the Storage registers.
 	}
 
-	hpcalc.PushMatrixStacks()
+	// hpcalc.PushMatrixStacks()  I think this is an extra one and is not needed.
 
 	ctfmt.Println(ct.Yellow, WindowsFlag, " HP-type RPN calculator written in Go.  Code was last altered ", lastAlteredDate,
 		", NoFileFlag is ", *nofileflag)
@@ -368,8 +368,8 @@ REVISION HISTORY
 			// -------------------------------------------------------------------------------------
 			_, stringslice = hpcalc.GetResult(INBUF) //   Here is where GetResult is called
 			// -------------------------------------------------------------------------------------
-                        ClearScreen()    // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
-                        RepaintScreen()  // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while to see how this goes.
+            ClearScreen()    // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
+            RepaintScreen()  // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while to see how this goes.
 			AllowDumpFlag = true
 			fmt.Println()
 			if len(stringslice) > 0 {
