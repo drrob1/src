@@ -118,7 +118,7 @@ REVISION HISTORY
 30 Jan 21 -- Starting coding the colorization of the output, using "github.com/daviddengcn/go-colortext" and its documentation at
    	            https://godoc.org/github.com/daviddengcn/go-colortext.
 31 Jan 21 -- Wrote hpcalc2.SigFig for the conversion routine here.  And color for Windows will be bold.
- 4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed but of ignoring a command line param.
+ 4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed bug of ignoring a command line param.
  5 Feb 21 -- Removed an extra PushMatrixStacks() while initializing everything.
 */
 
