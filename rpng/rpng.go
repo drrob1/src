@@ -22,7 +22,7 @@ import (
 )
 
 /*
-ct
+ct go-colortext
 const (None, Black, Red, Green, Yellow, Blue, Magenta, Cyan, White)
 var Writer io.Writer = os.Stdout  uses regular fmt.Fprintln(writer," whatever ");
 type Color int
@@ -31,15 +31,14 @@ func ChangeColor(fg Color, fgBright bool, bg Color, bgBright bool)
 func Foreground(cl Color, bright bool)
 func ResetColor()
 
-
-ctfmt
+ctfmt go-colortext/fmt
    func Print(cl ct.Color, bright bool, a ...interface{}) (n int, err error)  n = number of bytes written
    func Printf(cl ct.Color, bright bool, format string, a ...interface{}) (n int, err error)
    func Printfln(cl ct.Color, bright bool, format string, a ...interface{}) (n int, err error)
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "5 Feb 2021"
+const lastAlteredDate = "11 Feb 2021"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -120,6 +119,7 @@ REVISION HISTORY
 31 Jan 21 -- Wrote hpcalc2.SigFig for the conversion routine here.  And color for Windows will be bold.
  4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed bug of ignoring a command line param.
  5 Feb 21 -- Removed an extra PushMatrixStacks() while initializing everything.
+11 Feb 21 -- Added X for exit, to copy PACS.
 */
 
 	var INBUF, HomeDir string
@@ -226,7 +226,7 @@ REVISION HISTORY
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(bufio.ScanWords) // as of 12/11/20, back to word by word, not line by line.
 
-	if len(args) > 0 {  // fixed bug here 2/4/21
+	if len(args) > 0 {  // fixed bug here 2/4/21.  Used to be > 1 which is not correct.
 		// INBUF = getcommandline.GetCommandLineString()  No longer works now that I'm using the flag package.
 		INBUF = strings.Join(args, " ")
 	} else {
@@ -369,9 +369,10 @@ REVISION HISTORY
 			// -------------------------------------------------------------------------------------
 			_, stringslice = hpcalc.GetResult(INBUF) //   Here is where GetResult is called
 			// -------------------------------------------------------------------------------------
-            ClearScreen()    // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
-            RepaintScreen()  // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while to see how this goes.
-			AllowDumpFlag = true
+                        ClearScreen()    // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
+                        RepaintScreen()  // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while but turn it off.
+		//	AllowDumpFlag = true
+                        AllowDumpFlag = false
 			fmt.Println()
 			if len(stringslice) > 0 {
 				for _, ss := range stringslice {
@@ -421,7 +422,7 @@ REVISION HISTORY
 			break
 		}
 		INBUF = strings.ToUpper(INBUF)
-		if strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" {
+		if strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" || INBUF == "X"{
 			fmt.Println()
 			break
 		}

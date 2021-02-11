@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "4 Feb 2021"
+const LastAlteredDate = "11 Feb 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -118,6 +118,7 @@ REVISION HISTORY
 31 Jan 21 -- Added SigFig()
  3 Feb 21 -- Fixed bug in what gets pushed onto the stack with the c2f and f2c commands.
  4 Feb 21 -- Added H for help.
+11 Feb 21 -- Added these commands that will be ignored, X, P and Q.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -259,6 +260,9 @@ func init() {
 	cmdMap["C2F"] = 633
 	cmdMap["F2C"] = 636
 	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
+        cmdMap["X"] = 999  // ignore these
+        cmdMap["P"] = 999
+        cmdMap["Q"] = 999
 
 	if runtime.GOOS == "linux" {
 		homedir = os.Getenv("HOME")
@@ -1377,6 +1381,8 @@ outerloop:
 					s = fmt.Sprint("deleted ", regname)
 					ss = append(ss, s)
 				}
+
+                        case 999:  // do nothing, ignore me but don't generate an error message.
 
 			default:
 				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
