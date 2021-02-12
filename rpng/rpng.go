@@ -38,7 +38,7 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "11 Feb 2021"
+const lastAlteredDate = "12 Feb 2021"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -119,7 +119,7 @@ REVISION HISTORY
 31 Jan 21 -- Wrote hpcalc2.SigFig for the conversion routine here.  And color for Windows will be bold.
  4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed bug of ignoring a command line param.
  5 Feb 21 -- Removed an extra PushMatrixStacks() while initializing everything.
-11 Feb 21 -- Added X for exit, to copy PACS.
+11 Feb 21 -- Added X for exit, to copy PACS.  And changed the prompt
 */
 
 	var INBUF, HomeDir string
@@ -230,7 +230,7 @@ REVISION HISTORY
 		// INBUF = getcommandline.GetCommandLineString()  No longer works now that I'm using the flag package.
 		INBUF = strings.Join(args, " ")
 	} else {
-		fmt.Print(" Enter calculation, HELP or (Q)uit to exit: ")
+		fmt.Print(" Enter calculation, Help,  Quit, or eXit: ")
 		scanner.Scan()
 		INBUF = scanner.Text()
 		if err := scanner.Err(); err != nil {
@@ -369,10 +369,10 @@ REVISION HISTORY
 			// -------------------------------------------------------------------------------------
 			_, stringslice = hpcalc.GetResult(INBUF) //   Here is where GetResult is called
 			// -------------------------------------------------------------------------------------
-                        ClearScreen()    // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
-                        RepaintScreen()  // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while but turn it off.
+			ClearScreen()    // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
+			RepaintScreen()  // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while but turn it off.
 		//	AllowDumpFlag = true
-                        AllowDumpFlag = false
+			AllowDumpFlag = false
 			fmt.Println()
 			if len(stringslice) > 0 {
 				for _, ss := range stringslice {
@@ -399,13 +399,13 @@ REVISION HISTORY
 		} else if INBUF == "DOW" {
 			AllowDumpFlag = false
 		}
-                AllowDumpFlag = false  // added 02/04/2021 1:02:58 PM to always turn this off.
+            AllowDumpFlag = false  // added 02/04/2021 1:02:58 PM to always turn this off.
 		if AllowDumpFlag && ManualDump {
 			ClearScreen()
 			RepaintScreen()
 		}
 		fmt.Println()
-		fmt.Print(" Enter calculation, HELP or (Q)uit to exit: ")
+		fmt.Print(" Enter calculation, Help, Quit or eXit: ")
 		//{{{
 		//_, err := fmt.Scan(&INBUF)  removed 10/2/18
 		//_, err := fmt.Scanln(&INBUF) // added 10/02/2018 1:58:57 PM, and removed again 10/07/2018 09:37:51 AM
