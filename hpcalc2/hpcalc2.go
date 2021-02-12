@@ -18,7 +18,7 @@ import (
 	"tknptr"
 )
 
-const LastAlteredDate = "11 Feb 2021"
+const LastAlteredDate = "12 Feb 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -118,7 +118,7 @@ REVISION HISTORY
 31 Jan 21 -- Added SigFig()
  3 Feb 21 -- Fixed bug in what gets pushed onto the stack with the c2f and f2c commands.
  4 Feb 21 -- Added H for help.
-11 Feb 21 -- Added these commands that will be ignored, X, P and Q.
+11 Feb 21 -- Added these commands that will be ignored, X, P and Q.  And took out come dead code.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -193,7 +193,7 @@ func init() {
 	cmdMap["VOL"] = 110
 	cmdMap["HELP"] = 120
 	cmdMap["?"] = 120
-        cmdMap["H"] = 120   // added 02/04/2021 8:54:30 AM
+	cmdMap["H"] = 120 // added 02/04/2021 8:54:30 AM
 	cmdMap["STO"] = 130
 	cmdMap["RCL"] = 135 // mistake -- was 130, so instead of renumbering all of it, I used my escape hatch
 	cmdMap["UNDO"] = 140
@@ -220,6 +220,8 @@ func init() {
 	cmdMap["HEX"] = 270
 	cmdMap["HCF"] = 280
 	cmdMap["P"] = 290
+	cmdMap["X"] = 290 // ignore these
+	cmdMap["Q"] = 290
 	cmdMap["FRAC"] = 300
 	cmdMap["MOD"] = 310
 	cmdMap["JUL"] = 320
@@ -260,9 +262,6 @@ func init() {
 	cmdMap["C2F"] = 633
 	cmdMap["F2C"] = 636
 	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
-        cmdMap["X"] = 999  // ignore these
-        cmdMap["P"] = 999
-        cmdMap["Q"] = 999
 
 	if runtime.GOOS == "linux" {
 		homedir = os.Getenv("HOME")
@@ -547,59 +546,6 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 	return true
 } // IsPrime
 
-/*  Not used.
-{{{
-// ------------------------------------------------- PrimeFactorization ---------------------------------
-func PrimeFactorization(N int) []int {
-	var PD = [...]int{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47} // Prime divisors array
-
-	PrimeFactors := make([]int, 0, 10)
-
-	n := N
-	for i := 0; i < len(PD); i++ { // outer loop to sequentially test the prime divisors
-		for n > 0 && n%PD[i] == 0 {
-			PrimeFactors = append(PrimeFactors, PD[i])
-			n = n / PD[i]
-		}
-		if n == 0 || IsPrimeInt(n) {
-			PrimeFactors = append(PrimeFactors, n)
-			break
-		}
-	}
-	return PrimeFactors
-
-} // PrimeFactorization
-
-
-// ------------------------------------------------- IsPrimeInt -----------------
-func IsPrimeInt(n int) bool {
-
-	var t uint64 = 3
-
-	Uint := uint64(n)
-
-	if Uint == 0 || Uint == 1 {
-		return false
-	} else if Uint == 2 || Uint == 3 {
-		return true
-	} else if Uint%2 == 0 {
-		return false
-	}
-
-	sqrt := math.Sqrt(float64(Uint))
-	UintSqrt := uint64(sqrt)
-
-	for t <= UintSqrt {
-		if Uint%t == 0 {
-			return false
-		}
-		t += 2
-	}
-	return true
-} // IsPrimeInt
-}}}
-*/
-
 // --------------------------------------- PrimeFactorMemoized -------------------
 func PrimeFactorMemoized(U uint) []uint {
 
@@ -611,7 +557,6 @@ func PrimeFactorMemoized(U uint) []uint {
 
 	PrimeUfactors := make([]uint, 0, 20)
 
-	//	fmt.Print("u, fac, val, primeflag : ")
 	for u := U; u > 1; {
 		fac, facflag := NextPrimeFac(u, val)
 		//		fmt.Print(u, " ", fac, " ", val, " ", primeflag, ", ")
@@ -624,7 +569,6 @@ func PrimeFactorMemoized(U uint) []uint {
 			break
 		}
 	}
-	//	fmt.Println()
 	return PrimeUfactors
 }
 
@@ -973,7 +917,7 @@ outerloop:
 				c2 := int(math.Abs(Round(Stack[Y])))
 				c := HCF(c2, c1)
 				ss = append(ss, fmt.Sprintf("HCF of %d and %d is %d.", c1, c2, c))
-			case 290: // P
+			case 290: // P, Q, X
 				//  essentially do nothing but print RESULT= line again.
 			case 300: // FRAC
 				PushMatrixStacks()
@@ -1382,7 +1326,7 @@ outerloop:
 					ss = append(ss, s)
 				}
 
-                        case 999:  // do nothing, ignore me but don't generate an error message.
+			case 999: // do nothing, ignore me but don't generate an error message.
 
 			default:
 				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
@@ -1465,6 +1409,6 @@ func getFullMatchingName(abbrev string) string {
 }
 
 // ----------------------------------------------------------- SigFig --------------------------------------
-func SigFig () int {
+func SigFig() int {
 	return sigfig
 }
