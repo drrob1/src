@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 2, 2021"
+const LastAltered = "Feb 13, 2021"
 
 /*
 Revision History
@@ -90,6 +90,7 @@ Revision History
 15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
 17 Jan 21 -- Adding -x flag, for an exclude pattern, ie, if this pattern matches, don't print.
 31 Jan 21 -- Adding color.
+13 Feb 21 -- Swapping white and cyan.
 */
 
 // FileInfo slice
@@ -660,23 +661,23 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	case j > 10_000_000: // 10 million
 		f = float64(j) / 1_000_000
 		s1 = fmt.Sprintf("     %.4g mb", f)
-		color = ct.Cyan
+		color = ct.White
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1000000
 		s1 = fmt.Sprintf("      %.4g mb", f)
-		color = ct.Cyan
+		color = ct.White
 	case j > 100_000: // 100 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("       %.4g kb", f)
-		color = ct.White
+		color = ct.Cyan
 	case j > 10_000: // 10 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("        %.4g kb", f)
-		color = ct.White
+		color = ct.Cyan
 	case j > 1000: // KB
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("         %.3g kb", f)
-		color = ct.White
+		color = ct.Cyan
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
 		color = ct.Green
