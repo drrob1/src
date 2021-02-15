@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "13 Feb 2021"
+const LastAltered = "15 Feb 2021"
 
 /*
 Revision History
@@ -87,6 +87,7 @@ Revision History
 15 Jan 21 -- Adding -x flag, to exclude a regex.  When it works here, I'll add it to other pgms.
 31 Jan 21 -- Adding color.
 13 Feb 21 -- Switching cyan and white.
+15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -716,27 +717,27 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	case j > 100_000_000_000: // 100 billion
 		f = float64(j) / 1_000_000_000
 		s1 = fmt.Sprintf(" %.4g GB", f)
-		color = ct.Yellow
+		color = ct.White
 	case j > 10_000_000_000: // 10 billion
 		f = float64(j) / 1_000_000_000
 		s1 = fmt.Sprintf("  %.4g GB", f)
-		color = ct.Yellow
+		color = ct.White
 	case j > 1_000_000_000: // 1 billion, or GB
 		f = float64(j) / 1000000000
 		s1 = fmt.Sprintf("   %.4g GB", f)
-		color = ct.Yellow
+		color = ct.White
 	case j > 100_000_000: // 100 million
 		f = float64(j) / 1_000_000
 		s1 = fmt.Sprintf("    %.4g mb", f)
-		color = ct.White
+		color = ct.Yellow
 	case j > 10_000_000: // 10 million
 		f = float64(j) / 1_000_000
 		s1 = fmt.Sprintf("     %.4g mb", f)
-		color = ct.White
+		color = ct.Yellow
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1000000
 		s1 = fmt.Sprintf("      %.4g mb", f)
-		color = ct.White
+		color = ct.Yellow
 	case j > 100_000: // 100 thousand
 		f = float64(j) / 1000
 		s1 = fmt.Sprintf("       %.4g kb", f)
