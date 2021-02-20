@@ -132,67 +132,6 @@ var (
 	DAYSNAMSHORT     = "  S  M  T  W TH  F  S    "
 )
 
-/*
-type keyStructType struct {
-	r    rune
-	name string
-}
-
-*/
-
-/*
-var gblrow int // = 0 by default
-var style, plain, bold, reverse tcell.Style
-var Green = style.Foreground(tcell.ColorGreen).Background(tcell.ColorBlack)
-var Cyan = style.Foreground(tcell.ColorAqua).Background(tcell.ColorBlack)
-var Yellow = style.Foreground(tcell.ColorYellow).Background(tcell.ColorBlack)
-var Red = style.Foreground(tcell.ColorRed).Background(tcell.ColorBlack)
-var BoldYellow = Yellow.Bold(true)
-var BoldRed = Red.Bold(true)
-var BoldGreen = Green.Bold(true)
-
-var scrn tcell.Screen
-
-func putln(str string) {
-	puts(scrn, style, 1, gblrow, str)
-	gblrow++
-}
-
-func putfln(format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
-	puts(scrn, style, 1, gblrow, s)
-	gblrow++
-}
-
-func putf(x, y int, format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
-	puts(scrn, style, x, y, s)
-}
-
-func puts(scrn tcell.Screen, style tcell.Style, x, y int, str string) { // orig designed to allow for non ASCII characters.  I removed that.
-	for i, r := range str {
-		scrn.SetContent(x+i, y, r, nil, style)
-	}
-	x += len(str)
-
-//	deleol(x, y)   Not needed when scrn is written only once.
-	scrn.Show()
-}
-
-func deleol(x, y int) {
-	width, _ := scrn.Size() // don't need height for this calculation.
-	empty := width - x - 1
-	for i := 0; i < empty; i++ {
-		scrn.SetContent(x+i, y, ' ', nil, plain) // making a blank slice kept crashing.  This direct method works.
-	}
-}
-
-func clearline(line int) {
-	deleol(0, line)
-}
-
-*/
-
 // ------------------------------------------------------- init -----------------------------------
 func init() {
 	clear = make(map[string]func())
@@ -208,15 +147,6 @@ func init() {
 		cmd.Run()
 	}
 }
-
-/*
-// --------------------------------------------------- Cap -----------------------------------------
-func Cap(c rune) rune {
-	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
-	return r
-} // Cap
-
-*/
 
 // ---------------------------------------------------- ClearScreen ------------------------------------
 func ClearScreen() {
@@ -260,7 +190,6 @@ func DATEASSIGN(MN int) {
 
 	   INPUT FROM GBL VAR'S : DIM(MN), DOW
 	   OUTPUT TO  GBL VAR'S : DOW, MonthArray(MN,,), WIM(MN)
-
 	*/
 
 	W := 0 // W is for Week number, IE, which week of the month is this.
@@ -536,6 +465,7 @@ func HolidayAssign(year int) {
 	Holiday = holidaycalc.GetHolidays(year)
 	Holiday.Valid = true
 
+	/*
 	fmt.Println(" Debugging holiday assign.")
 	fmt.Println(Holiday)
 	fmt.Print("hit <enter> to continue. ...")
@@ -543,17 +473,19 @@ func HolidayAssign(year int) {
 	fmt.Scanln(&ans)
 	fmt.Println()
 
+	 */
+
 	// New Year's Day
 	julian := timlibg.JULIAN(1, 1, year)
-	dow := julian % 7
-	EntireYear[JAN][0][dow].fg = ct.Yellow
-	EntireYear[JAN][0][dow].bg = ct.Black
+	DOW := julian % 7
+	EntireYear[JAN][0][DOW].fg = ct.Yellow
+	EntireYear[JAN][0][DOW].bg = ct.Black
 
 	// MLK Day
 	d := Holiday.MLK.D
 	MLKloop:
-	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+	for w := 1; w < 6; w++ { // start looking at 2nd week
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[JAN][w][dow].day == d {
 				EntireYear[JAN][w][dow].fg = ct.Yellow
 				EntireYear[JAN][w][dow].bg = ct.Black
@@ -565,8 +497,8 @@ func HolidayAssign(year int) {
 	// President's Day
 	d = Holiday.Pres.D
 	PresLoop:
-	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+	for w := 1; w < 6; w++ {  // start looking at the 2nd week
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[FEB][w][dow].day == d {
 				EntireYear[FEB][w][dow].fg = ct.Yellow
 				EntireYear[FEB][w][dow].bg = ct.Black
@@ -580,7 +512,7 @@ func HolidayAssign(year int) {
 	d = Holiday.Easter.D
 	EasterLoop:
 	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[m][w][dow].day == d {
 				EntireYear[m][w][dow].fg = ct.Yellow
 				EntireYear[m][w][dow].bg = ct.Black
@@ -592,8 +524,8 @@ func HolidayAssign(year int) {
 	// Mother's Day
 	d = Holiday.Mother.D
 	MotherLoop:
-	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+	for w := 1; w < 6; w++ { // start looking at the 2nd week
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[MAY][w][dow].day == d {
 				EntireYear[MAY][w][dow].fg = ct.Yellow
 				EntireYear[MAY][w][dow].bg = ct.Black
@@ -605,10 +537,10 @@ func HolidayAssign(year int) {
 	// Memorial Day
 	d = Holiday.Memorial.D
 	MemorialLoop:
-	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+	for w := 2; w < 6; w++ { // start looking at the 3rd week
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[MAY][w][dow].day == d {
-				EntireYear[MAY][w][dow].bg = ct.Yellow
+				EntireYear[MAY][w][dow].fg = ct.Yellow
 				EntireYear[MAY][w][dow].bg = ct.Black
 				break MemorialLoop
 			}
@@ -618,8 +550,8 @@ func HolidayAssign(year int) {
 	// Father's Day
 	d = Holiday.Father.D
 	FatherLoop:
-	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+	for w := 1; w < 6; w++ { // start looking at the 2nd week
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[JUN][w][dow].day == d {
 				EntireYear[JUN][w][dow].fg = ct.Yellow
 				EntireYear[JUN][w][dow].bg = ct.Black
@@ -632,7 +564,7 @@ func HolidayAssign(year int) {
 	d = 4
 	IndependenceLoop:
 	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[JUL][w][dow].day == d {
 				EntireYear[JUL][w][dow].fg = ct.Yellow
 				EntireYear[JUL][w][dow].bg = ct.Black
@@ -645,9 +577,9 @@ func HolidayAssign(year int) {
 	d = Holiday.Labor.D
 	LaborLoop:
 	for w := 0; w < 6; w++ {
-		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
+		for dow := 0; dow < 7; dow++ {
 			if EntireYear[SEP][w][dow].day == d {
-				EntireYear[SEP][w][dow].bg = ct.Yellow
+				EntireYear[SEP][w][dow].fg = ct.Yellow
 				EntireYear[SEP][w][dow].bg = ct.Black
 				break LaborLoop
 			}
@@ -657,7 +589,7 @@ func HolidayAssign(year int) {
 	// Columbus Day
 	d = Holiday.Columbus.D
 	ColumbusLoop:
-	for w := 0; w < 6; w++ {
+	for w := 1; w < 6; w++ { // start looking at the 2nd week
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 			if EntireYear[OCT][w][dow].day == d {
 				EntireYear[OCT][w][dow].fg = ct.Yellow
