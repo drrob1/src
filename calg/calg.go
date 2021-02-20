@@ -38,6 +38,7 @@ package main
  19 Jan 20 -- Now moved to tcell as terminal interface.  Mostly copied code from rpntcell.go.
  20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
  18 Feb 21 -- Back to cal.go.  And will convert to colortext calls, removing all tcell stuff as that won't run correctly in tcc.
+ 20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
 */
 
 import (
@@ -63,7 +64,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Feb 19, 2021"
+const LastCompiled = "Feb 20, 2021"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -487,15 +488,36 @@ func Show3MonthRow(mn int) { // Modified from WrOnePageYear.  main() makes sure 
 
 		for W = 0; W < 6; W++ { // week number
 			for I := 0; I < 7; I++ { // day of week positions for 1st month
-				ctfmt.Print(EntireYear[MN][W][I].fg, windowsFlag, EntireYear[MN][W][I].DateStr)
+				if EntireYear[MN][W][I].bg == ct.Black {
+					ctfmt.Print(EntireYear[MN][W][I].fg, windowsFlag, EntireYear[MN][W][I].DateStr)
+				} else { // need this construct because background set to black isn't really black.
+					ct.Foreground(EntireYear[MN][W][I].fg, windowsFlag)
+					ct.Background(EntireYear[MN][W][I].bg, windowsFlag)
+					fmt.Fprint(ct.Writer, EntireYear[MN][W][I].DateStr)
+					ct.ResetColor()
+				}
 			}
 			fmt.Print("    ")
 			for I := 0; I < 7; I++ { // day of week positions for 2nd month
-				ctfmt.Print(EntireYear[MN2][W][I].fg, windowsFlag, EntireYear[MN2][W][I].DateStr)
+				if EntireYear[MN2][W][I].bg == ct.Black {
+					ctfmt.Print(EntireYear[MN2][W][I].fg, windowsFlag, EntireYear[MN2][W][I].DateStr)
+				} else {
+					ct.Foreground(EntireYear[MN2][W][I].fg, windowsFlag)
+					ct.Background(EntireYear[MN2][W][I].bg, windowsFlag)
+					fmt.Fprint(ct.Writer, EntireYear[MN2][W][I].DateStr)
+					ct.ResetColor()
+				}
 			}
 			fmt.Print("    ")
 			for I := 0; I < 7; I++ { // day of week position for 3rd month
-				ctfmt.Print(EntireYear[MN3][W][I].fg, windowsFlag, EntireYear[MN3][W][I].DateStr)
+				if EntireYear[MN3][W][I].bg == ct.Black {
+					ctfmt.Print(EntireYear[MN3][W][I].fg, windowsFlag, EntireYear[MN3][W][I].DateStr)
+				} else {
+					ct.Foreground(EntireYear[MN3][W][I].fg, windowsFlag)
+					ct.Background(EntireYear[MN3][W][I].bg, windowsFlag)
+					fmt.Fprint(ct.Writer, EntireYear[MN3][W][I].DateStr)
+					ct.ResetColor()
+				}
 			}
 			fmt.Println()
 		} // END FOR W
@@ -511,28 +533,30 @@ func HolidayAssign(year int) {
 
 	var Holiday holidaycalc.HolType
 
-	if year < 40 {
-		year += 2000
-	} else if year < 100 {
-		year += 1900
-	}
 	Holiday = holidaycalc.GetHolidays(year)
 	Holiday.Valid = true
+
+	fmt.Println(" Debugging holiday assign.")
+	fmt.Println(Holiday)
+	fmt.Print("hit <enter> to continue. ...")
+	ans := ""
+	fmt.Scanln(&ans)
+	fmt.Println()
 
 	// New Year's Day
 	julian := timlibg.JULIAN(1, 1, year)
 	dow := julian % 7
-	EntireYear[0][0][dow].fg = ct.Yellow
-	EntireYear[0][0][dow].bg = ct.Black
+	EntireYear[JAN][0][dow].fg = ct.Yellow
+	EntireYear[JAN][0][dow].bg = ct.Black
 
 	// MLK Day
 	d := Holiday.MLK.D
 	MLKloop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[0][w][dow].day == d {
-				EntireYear[0][w][dow].fg = ct.Yellow
-				EntireYear[0][w][dow].bg = ct.Black
+			if EntireYear[JAN][w][dow].day == d {
+				EntireYear[JAN][w][dow].fg = ct.Yellow
+				EntireYear[JAN][w][dow].bg = ct.Black
 				break MLKloop
 			}
 		}
@@ -543,9 +567,9 @@ func HolidayAssign(year int) {
 	PresLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[1][w][dow].day == d {
-				EntireYear[1][w][dow].fg = ct.Yellow
-				EntireYear[1][w][dow].bg = ct.Black
+			if EntireYear[FEB][w][dow].day == d {
+				EntireYear[FEB][w][dow].fg = ct.Yellow
+				EntireYear[FEB][w][dow].bg = ct.Black
 				break PresLoop
 			}
 		}
@@ -570,9 +594,9 @@ func HolidayAssign(year int) {
 	MotherLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[4][w][dow].day == d {
-				EntireYear[4][w][dow].fg = ct.Yellow
-				EntireYear[4][w][dow].bg = ct.Black
+			if EntireYear[MAY][w][dow].day == d {
+				EntireYear[MAY][w][dow].fg = ct.Yellow
+				EntireYear[MAY][w][dow].bg = ct.Black
 				break MotherLoop
 			}
 		}
@@ -583,9 +607,9 @@ func HolidayAssign(year int) {
 	MemorialLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[4][w][dow].day == d {
-				EntireYear[4][w][dow].bg = ct.Yellow
-				EntireYear[4][w][dow].bg = ct.Black
+			if EntireYear[MAY][w][dow].day == d {
+				EntireYear[MAY][w][dow].bg = ct.Yellow
+				EntireYear[MAY][w][dow].bg = ct.Black
 				break MemorialLoop
 			}
 		}
@@ -596,9 +620,9 @@ func HolidayAssign(year int) {
 	FatherLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[5][w][dow].day == d {
-				EntireYear[5][w][dow].fg = ct.Yellow
-				EntireYear[5][w][dow].bg = ct.Black
+			if EntireYear[JUN][w][dow].day == d {
+				EntireYear[JUN][w][dow].fg = ct.Yellow
+				EntireYear[JUN][w][dow].bg = ct.Black
 				break FatherLoop
 			}
 		}
@@ -609,9 +633,9 @@ func HolidayAssign(year int) {
 	IndependenceLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[6][w][dow].day == d {
-				EntireYear[6][w][dow].fg = ct.Yellow
-				EntireYear[6][w][dow].bg = ct.Black
+			if EntireYear[JUL][w][dow].day == d {
+				EntireYear[JUL][w][dow].fg = ct.Yellow
+				EntireYear[JUL][w][dow].bg = ct.Black
 				break IndependenceLoop
 			}
 		}
@@ -622,9 +646,9 @@ func HolidayAssign(year int) {
 	LaborLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[8][w][dow].day == d {
-				EntireYear[8][w][dow].bg = ct.Yellow
-				EntireYear[8][w][dow].bg = ct.Black
+			if EntireYear[SEP][w][dow].day == d {
+				EntireYear[SEP][w][dow].bg = ct.Yellow
+				EntireYear[SEP][w][dow].bg = ct.Black
 				break LaborLoop
 			}
 		}
@@ -635,9 +659,9 @@ func HolidayAssign(year int) {
 	ColumbusLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[9][w][dow].day == d {
-				EntireYear[9][w][dow].fg = ct.Yellow
-				EntireYear[9][w][dow].bg = ct.Black
+			if EntireYear[OCT][w][dow].day == d {
+				EntireYear[OCT][w][dow].fg = ct.Yellow
+				EntireYear[OCT][w][dow].bg = ct.Black
 				break ColumbusLoop
 			}
 		}
@@ -648,9 +672,9 @@ func HolidayAssign(year int) {
 	ElectionLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[10][w][dow].day == d {
-				EntireYear[10][w][dow].fg = ct.Yellow
-				EntireYear[10][w][dow].bg = ct.Black
+			if EntireYear[NOV][w][dow].day == d {
+				EntireYear[NOV][w][dow].fg = ct.Yellow
+				EntireYear[NOV][w][dow].bg = ct.Black
 				break ElectionLoop
 			}
 		}
@@ -661,9 +685,9 @@ func HolidayAssign(year int) {
 	VeteranLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ {
-			if EntireYear[10][w][dow].day == d {
-				EntireYear[10][w][dow].fg = ct.Yellow
-				EntireYear[10][w][dow].bg = ct.Black
+			if EntireYear[NOV][w][dow].day == d {
+				EntireYear[NOV][w][dow].fg = ct.Yellow
+				EntireYear[NOV][w][dow].bg = ct.Black
 				break VeteranLoop
 			}
 		}
@@ -674,9 +698,9 @@ func HolidayAssign(year int) {
 	TGLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[10][w][dow].day == d {
-				EntireYear[10][w][dow].fg = ct.Yellow
-				EntireYear[10][w][dow].bg = ct.Black
+			if EntireYear[NOV][w][dow].day == d {
+				EntireYear[NOV][w][dow].fg = ct.Yellow
+				EntireYear[NOV][w][dow].bg = ct.Black
 				break TGLoop
 			}
 		}
@@ -687,9 +711,9 @@ func HolidayAssign(year int) {
 	XmasLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
-			if EntireYear[11][w][dow].day == d {
-				EntireYear[11][w][dow].fg = ct.Yellow
-				EntireYear[11][w][dow].bg = ct.Black
+			if EntireYear[DEC][w][dow].day == d {
+				EntireYear[DEC][w][dow].fg = ct.Yellow
+				EntireYear[DEC][w][dow].bg = ct.Black
 				break XmasLoop
 			}
 		}
@@ -703,8 +727,8 @@ func HolidayAssign(year int) {
 		for w := 0; w < 6; w++ {
 			for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 				if EntireYear[m][w][dow].day == d {
-					EntireYear[m][w][dow].fg = ct.Red
-					EntireYear[m][w][dow].bg = ct.Black
+					EntireYear[m][w][dow].fg = ct.White
+					EntireYear[m][w][dow].bg = ct.Red
 					break TodayLoop
 				}
 			}

@@ -37,6 +37,7 @@ package main
  10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
  19 Jan 20 -- Now moved to tcell as terminal interface.  Mostly copied code from rpntcell.go.
  20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
+ 20 Feb 21 -- Fixed bug when only set month, it didn't take current year.
 */
 
 import (
@@ -62,7 +63,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Jan 20, 2020"
+const LastCompiled = "Feb 20, 2021"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
@@ -832,6 +833,7 @@ func main() {
 
 	// process command line parameters
 	RequestedMonthNumber = CurrentMonthNumber - 1 // default value.
+	year = CurrentYear
 	MonthNotExplicitlySet := true
 	if flag.NArg() > 0 {
 		commandline := flag.Args()
