@@ -39,6 +39,7 @@ package main
  20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
  18 Feb 21 -- Back to cal.go.  And will convert to colortext calls, removing all tcell stuff as that won't run correctly in tcc.
  20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
+ 21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
 */
 
 import (
@@ -64,7 +65,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Feb 20, 2021"
+const LastCompiled = "Feb 21, 2021"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -105,10 +106,10 @@ var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
 // DateCell structure was added for termbox code.  Subscripts are [MN] [W] [DOW].  It was adapted for tcell, and now for colortext
 type DateCell struct {
-	DateStr  string
-	day      int
-	ch1, ch2 rune
-	fg, bg   ct.Color
+	DateStr, comment string
+	day              int
+	ch1, ch2         rune
+	fg, bg           ct.Color
 }
 
 type WeekVector [7]DateCell
@@ -119,17 +120,16 @@ var EntireYear AllMonthsArray
 var windowsFlag bool
 
 var (
-	WIM         [NumOfMonthsInYear]int
-	DIM         = []int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-	MONNAMSHORT = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
-	MONNAMLONG  [NumOfMonthsInYear]string
-	clear       map[string]func()
-	year, DOW, W, CurrentMonthNumber, RequestedMonthNumber, LineNum, TodaysDayNumber, CurrentYear,
-	StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol,
-	PromptRow, outputmode, n int
-	DAYSNAMLONG      = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"
-	DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"
-	DAYSNAMSHORT     = "  S  M  T  W TH  F  S    "
+	WIM                                                                          [NumOfMonthsInYear]int
+	DIM                                                                          = []int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+	MONNAMSHORT                                                                  = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
+	MONNAMLONG                                                                   [NumOfMonthsInYear]string
+	clear                                                                        map[string]func()
+	DOW, W                                                                       int // these are global so the date assign can do their jobs correctly
+	year, CurrentMonthNumber, RequestedMonthNumber, TodaysDayNumber, CurrentYear int
+	DAYSNAMLONG                                                                  = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"
+	DayNamesWithTabs                                                             = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"
+	DAYSNAMSHORT                                                                 = "  S  M  T  W TH  F  S    "
 )
 
 // ------------------------------------------------------- init -----------------------------------
@@ -213,51 +213,6 @@ func DATEASSIGN(MN int) {
 	}
 } // END DATEASSIGN
 
-/*
-{{{
-// ----------------------------------------------------------- PRMONTH --------------------------------------
-func PRMONTH(MN int) { // Originally intended to print one month per page.  Not currently used.
-
-	s0 := fmt.Sprintf("%40s", MONNAMSHORT[MN])
-	s1 := fmt.Sprintf("%6s", YEARSTR)
-	_, err := OutCal12file.WriteString(s0)
-	check(err, "Error while writing month name short for big calendar")
-	_, err = OutCal12file.WriteString(s1)
-	check(err, "Error while writing yearstr for big calendar")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	_, err = OutCal12file.WriteString(DAYSNAMLONG)
-	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	for W := 0; W <= WIM[MN]; W++ {
-		_, err = OutCal12file.WriteString(" ")
-		check(err, "")
-		_, err = OutCal12file.WriteString(EntireYear[MN][W][0].DateStr) // write out Sunday
-		check(err, "")
-		_, err = OutCal12file.WriteString("      ")
-		check(err, "")
-		for I := 1; I < 6; I++ { // write out Monday ..  Friday
-			_, err = OutCal12file.WriteString(" ")
-			check(err, "")
-			_, err = OutCal12file.WriteString(EntireYear[MN][W][I].DateStr)
-			_, err = OutCal12file.WriteString("        ") // FWRBL(OUTUN1,8);
-			check(err, "")
-		} // ENDFOR I
-		_, err = OutCal12file.WriteString(" ")
-		check(err, "")
-		_, err = OutCal12file.WriteString(EntireYear[MN][W][6].DateStr) // write out Saturday
-		_, err = OutCal12file.WriteRune('\n')
-		check(err, "")
-	} // ENDFOR W;
-} // END PRMONTH
-}}}
-*/
-
 // ----------------------------------------------------------- WrMonthForXL --------------------------------------
 // Intended to print in a format that can be read by Excel as a call schedule template.
 
@@ -276,22 +231,23 @@ func WrMonthForXL(MN int) {
 	_, err = OutCal12file.WriteRune('\n')
 	check(err, "")
 
-	for W := 0; W <= WIM[MN]; W++ {
-		_, err = OutCal12file.WriteString(EntireYear[MN][W][0].DateStr) // write out Sunday
+	for wk := 0; wk <= WIM[MN]; wk++ { // so won't shadow the global W
+		s := fmt.Sprintf("%s  %s", EntireYear[MN][wk][0].comment, EntireYear[MN][wk][0].DateStr)
+		_, err = OutCal12file.WriteString(s) // write out Sunday
 		check(err, "")
 		err = OutCal12file.WriteByte(HorizTab) // <tab>, or horizontal tab <HT>, to confirm that this does work
 		check(err, "")
 
 		for I := 1; I < 6; I++ { // write out Monday ..  Friday
-
-			_, err = OutCal12file.WriteString(EntireYear[MN][W][I].DateStr)
+			s = fmt.Sprintf("%s  %s", EntireYear[MN][wk][I].comment, EntireYear[MN][wk][I].DateStr)
+			_, err = OutCal12file.WriteString(s)
 			check(err, "")
 			_, err = OutCal12file.WriteRune('\t') // <tab>, or horizontal tab <HT>, to see if this works
 			check(err, "")
+		}
 
-		} // ENDFOR I
-
-		_, err = OutCal12file.WriteString(EntireYear[MN][W][6].DateStr) // write out Saturday
+		s = fmt.Sprintf("%s  %s", EntireYear[MN][wk][6].comment, EntireYear[MN][wk][6].DateStr)
+		_, err = OutCal12file.WriteString(s) // write out Saturday
 		check(err, "")
 		_, err = OutCal12file.WriteRune('\n')
 		check(err, "")
@@ -303,7 +259,7 @@ func WrMonthForXL(MN int) {
 		check(err, "")
 		_, err = OutCal12file.WriteRune('\n')
 		check(err, "")
-	} // ENDFOR W
+	}
 	_, err = OutCal12file.WriteRune('\n')
 	check(err, "")
 	_, err = OutCal12file.WriteRune('\n')
@@ -466,27 +422,29 @@ func HolidayAssign(year int) {
 	Holiday.Valid = true
 
 	/*
-	fmt.Println(" Debugging holiday assign.")
-	fmt.Println(Holiday)
-	fmt.Print("hit <enter> to continue. ...")
-	ans := ""
-	fmt.Scanln(&ans)
-	fmt.Println()
+		fmt.Println(" Debugging holiday assign.")
+		fmt.Println(Holiday)
+		fmt.Print("hit <enter> to continue. ...")
+		ans := ""
+		fmt.Scanln(&ans)
+		fmt.Println()
 
-	 */
+	*/
 
 	// New Year's Day
 	julian := timlibg.JULIAN(1, 1, year)
 	DOW := julian % 7
+	EntireYear[JAN][0][DOW].comment = "NYD"
 	EntireYear[JAN][0][DOW].fg = ct.Yellow
 	EntireYear[JAN][0][DOW].bg = ct.Black
 
 	// MLK Day
 	d := Holiday.MLK.D
-	MLKloop:
+MLKloop:
 	for w := 1; w < 6; w++ { // start looking at 2nd week
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[JAN][w][dow].day == d {
+				EntireYear[JAN][w][dow].comment = "MLK Day"
 				EntireYear[JAN][w][dow].fg = ct.Yellow
 				EntireYear[JAN][w][dow].bg = ct.Black
 				break MLKloop
@@ -496,10 +454,11 @@ func HolidayAssign(year int) {
 
 	// President's Day
 	d = Holiday.Pres.D
-	PresLoop:
-	for w := 1; w < 6; w++ {  // start looking at the 2nd week
+PresLoop:
+	for w := 1; w < 6; w++ { // start looking at the 2nd week
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[FEB][w][dow].day == d {
+				EntireYear[FEB][w][dow].comment = "Pres Day"
 				EntireYear[FEB][w][dow].fg = ct.Yellow
 				EntireYear[FEB][w][dow].bg = ct.Black
 				break PresLoop
@@ -510,10 +469,11 @@ func HolidayAssign(year int) {
 	// Easter
 	m := Holiday.Easter.M - 1 // convert to a zero origin system
 	d = Holiday.Easter.D
-	EasterLoop:
+EasterLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[m][w][dow].day == d {
+				EntireYear[m][w][dow].comment = "Easter"
 				EntireYear[m][w][dow].fg = ct.Yellow
 				EntireYear[m][w][dow].bg = ct.Black
 				break EasterLoop
@@ -523,10 +483,11 @@ func HolidayAssign(year int) {
 
 	// Mother's Day
 	d = Holiday.Mother.D
-	MotherLoop:
+MotherLoop:
 	for w := 1; w < 6; w++ { // start looking at the 2nd week
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[MAY][w][dow].day == d {
+				EntireYear[MAY][w][dow].comment = "Mom Day"
 				EntireYear[MAY][w][dow].fg = ct.Yellow
 				EntireYear[MAY][w][dow].bg = ct.Black
 				break MotherLoop
@@ -536,10 +497,11 @@ func HolidayAssign(year int) {
 
 	// Memorial Day
 	d = Holiday.Memorial.D
-	MemorialLoop:
+MemorialLoop:
 	for w := 2; w < 6; w++ { // start looking at the 3rd week
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[MAY][w][dow].day == d {
+				EntireYear[MAY][w][dow].comment = "Meml Day"
 				EntireYear[MAY][w][dow].fg = ct.Yellow
 				EntireYear[MAY][w][dow].bg = ct.Black
 				break MemorialLoop
@@ -549,10 +511,11 @@ func HolidayAssign(year int) {
 
 	// Father's Day
 	d = Holiday.Father.D
-	FatherLoop:
+FatherLoop:
 	for w := 1; w < 6; w++ { // start looking at the 2nd week
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[JUN][w][dow].day == d {
+				EntireYear[JUN][w][dow].comment = "Dad Day"
 				EntireYear[JUN][w][dow].fg = ct.Yellow
 				EntireYear[JUN][w][dow].bg = ct.Black
 				break FatherLoop
@@ -562,10 +525,11 @@ func HolidayAssign(year int) {
 
 	// July 4th
 	d = 4
-	IndependenceLoop:
+IndependenceLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[JUL][w][dow].day == d {
+				EntireYear[JUL][w][dow].comment = "Indpnc Day"
 				EntireYear[JUL][w][dow].fg = ct.Yellow
 				EntireYear[JUL][w][dow].bg = ct.Black
 				break IndependenceLoop
@@ -575,10 +539,11 @@ func HolidayAssign(year int) {
 
 	// Labor Day
 	d = Holiday.Labor.D
-	LaborLoop:
+LaborLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[SEP][w][dow].day == d {
+				EntireYear[SEP][w][dow].comment = "Labor Day"
 				EntireYear[SEP][w][dow].fg = ct.Yellow
 				EntireYear[SEP][w][dow].bg = ct.Black
 				break LaborLoop
@@ -588,10 +553,11 @@ func HolidayAssign(year int) {
 
 	// Columbus Day
 	d = Holiday.Columbus.D
-	ColumbusLoop:
+ColumbusLoop:
 	for w := 1; w < 6; w++ { // start looking at the 2nd week
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 			if EntireYear[OCT][w][dow].day == d {
+				EntireYear[OCT][w][dow].comment = "Columbus D"
 				EntireYear[OCT][w][dow].fg = ct.Yellow
 				EntireYear[OCT][w][dow].bg = ct.Black
 				break ColumbusLoop
@@ -601,10 +567,11 @@ func HolidayAssign(year int) {
 
 	// Election Day
 	d = Holiday.Election.D
-	ElectionLoop:
+ElectionLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 			if EntireYear[NOV][w][dow].day == d {
+				EntireYear[NOV][w][dow].comment = "Electn Day"
 				EntireYear[NOV][w][dow].fg = ct.Yellow
 				EntireYear[NOV][w][dow].bg = ct.Black
 				break ElectionLoop
@@ -614,10 +581,11 @@ func HolidayAssign(year int) {
 
 	// Veteran's Day
 	d = 11
-	VeteranLoop:
+VeteranLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[NOV][w][dow].day == d {
+				EntireYear[NOV][w][dow].comment = "Vetrns Day"
 				EntireYear[NOV][w][dow].fg = ct.Yellow
 				EntireYear[NOV][w][dow].bg = ct.Black
 				break VeteranLoop
@@ -627,10 +595,11 @@ func HolidayAssign(year int) {
 
 	// Thanksgiving Day
 	d = Holiday.Thanksgiving.D
-	TGLoop:
+TGLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 			if EntireYear[NOV][w][dow].day == d {
+				EntireYear[NOV][w][dow].comment = "ThanksGvg"
 				EntireYear[NOV][w][dow].fg = ct.Yellow
 				EntireYear[NOV][w][dow].bg = ct.Black
 				break TGLoop
@@ -640,10 +609,11 @@ func HolidayAssign(year int) {
 
 	// Christmas Day
 	d = 25
-	XmasLoop:
+XmasLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 			if EntireYear[DEC][w][dow].day == d {
+				EntireYear[DEC][w][dow].comment = "Xmas Day"
 				EntireYear[DEC][w][dow].fg = ct.Yellow
 				EntireYear[DEC][w][dow].bg = ct.Black
 				break XmasLoop
@@ -753,6 +723,8 @@ func main() {
 	Ext12Default := ".xls"
 	CurrentMonthNumber, TodaysDayNumber, CurrentYear = timlibg.TIME2MDY()
 
+	ClearScreen()
+
 	// flag definitions and processing
 	var nofilesflag = flag.Bool("no", false, "do not generate output cal1 and cal12 files.") // Ptr
 	var NoFilesFlag = flag.Bool("n", false, "do not generate output cal1 and cal12 files.")  // Ptr
@@ -768,22 +740,13 @@ func main() {
 	if *helpflag || HelpFlag {
 		fmt.Println()
 		fmt.Println(" Calendar Printing Program, last altered", LastCompiled)
-		fmt.Println(" Usage: calgo <flags> year month or month year, where month must be a month name string.")
+		fmt.Println(" Usage: calg [flags] year month or month year, where month must be a month name string.")
 		fmt.Println()
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
-	if *testFlag {
-		fmt.Println()
-		fmt.Println()
-		fmt.Println(" cal, a calendar printing program written in Go.  Last altered", LastCompiled)
-		fmt.Println()
-		//ans := ""
-		//fmt.Print(" pausing, hit <enter> to resume")
-		//fmt.Scanln(&ans)
-		//fmt.Println()
-	}
+	fmt.Printf(" Calg, a calendar display program written in Go.  Last altered %s \n", LastCompiled)
 
 	// process command line parameters
 	RequestedMonthNumber = CurrentMonthNumber - 1 // default value converted to a zero origin reference.
@@ -858,8 +821,8 @@ func main() {
 		BaseFilename := YEARSTR
 		Cal1Filename = BaseFilename + "_cal1" + Ext1Default
 		Cal12Filename = BaseFilename + "_cal12" + Ext12Default
-		FI, err := os.Stat(Cal1Filename)
 
+		FI, err := os.Stat(Cal1Filename)
 		if err == nil {
 			fmt.Printf(" %s already exists.  From stat call file created %s, filesize is %d.\n",
 				Cal1Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
@@ -889,14 +852,14 @@ func main() {
 
 	var err error
 
-	fmt.Printf(" Calg, a calendar display program written in Go.  Last altered %s \n", LastCompiled)
-
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Printf("%s was last linked on %s.  Working directory is %s. \n", ExecFI.Name(), LastLinkedTimeStamp, workingdir)
-	fmt.Printf(" Full name of executable file is %s \n", execname)
+	if *testFlag {
+		fmt.Printf(" %s was last linked on %s.  Working directory is %s. \n", ExecFI.Name(), LastLinkedTimeStamp, workingdir)
+		fmt.Printf(" Full name of executable file is %s \n", execname)
+	}
 
 	var OutCal1, OutCal12 *os.File
 	if Cal1FilenameFlag {
@@ -934,18 +897,16 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 
-	ClearScreen()
-
 	Show3MonthRow(RequestedMonthNumber)
 
 	/*
-		// Now disploy next year.  No file writing.  Min 10 lines/calendar.  Nevermind.
-	    year++
-	    YEARSTR = strconv.Itoa(year)
-	    AssignYear(year)
-	    HolidayAssign(year)
-	    RequestedMonthNumber = 0
-	    Show3MonthRow(RequestedMonthNumber)
+			// Now disploy next year.  No file writing.  Min 10 lines/calendar.  Nevermind.
+		    year++
+		    YEARSTR = strconv.Itoa(year)
+		    AssignYear(year)
+		    HolidayAssign(year)
+		    RequestedMonthNumber = 0
+		    Show3MonthRow(RequestedMonthNumber)
 
 	*/
 
