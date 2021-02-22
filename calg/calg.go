@@ -40,6 +40,7 @@ package main
  18 Feb 21 -- Back to cal.go.  And will convert to colortext calls, removing all tcell stuff as that won't run correctly in tcc.
  20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
  21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
+ 22 Feb 21 -- Removing text for Columbus and Veteran Days as these are not hospital holidays.
 */
 
 import (
@@ -65,7 +66,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Feb 21, 2021"
+const LastCompiled = "Feb 22, 2021"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -557,7 +558,7 @@ ColumbusLoop:
 	for w := 1; w < 6; w++ { // start looking at the 2nd week
 		for dow := 0; dow < 7; dow++ { // note that this dow is a shadow of NYD dow
 			if EntireYear[OCT][w][dow].day == d {
-				EntireYear[OCT][w][dow].comment = "Columbus D"
+				// EntireYear[OCT][w][dow].comment = "Columbus D"  not hospital holiday
 				EntireYear[OCT][w][dow].fg = ct.Yellow
 				EntireYear[OCT][w][dow].bg = ct.Black
 				break ColumbusLoop
@@ -585,7 +586,7 @@ VeteranLoop:
 	for w := 0; w < 6; w++ {
 		for dow := 0; dow < 7; dow++ {
 			if EntireYear[NOV][w][dow].day == d {
-				EntireYear[NOV][w][dow].comment = "Vetrns Day"
+				// EntireYear[NOV][w][dow].comment = "Vetrns Day"  not hospital holiday
 				EntireYear[NOV][w][dow].fg = ct.Yellow
 				EntireYear[NOV][w][dow].bg = ct.Black
 				break VeteranLoop
