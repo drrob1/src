@@ -43,9 +43,10 @@ import (
   15 Jul 20 -- Decided to make better guesses.  Sha1 has 40 digits, Sha256 has 64 digits and Sha512 has 128 digits.
   27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
                  And I'm going to change from tokenize to tknptr.  Just to see if it works.
+  25 Feb 21 -- Added 999 as a stop code.
 */
 
-const LastCompiled = "27 Sep 2020"
+const LastCompiled = "25 Feb 2021"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -91,9 +92,12 @@ func main() {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
-		fmt.Scanln(&ans)
-		if len(ans) == 0 {
+		n, err := fmt.Scanln(&ans)
+		if n == 0 || err != nil {
 			ans = "0"
+		} else if ans == "999" {
+			fmt.Println(" Stop code entered.  Exiting.")
+			os.Exit(0)
 		}
 		i, err := strconv.Atoi(ans)
 		if err == nil {
