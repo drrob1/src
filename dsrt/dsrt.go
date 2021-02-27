@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "15 Feb 2021"
+const LastAltered = "27 Feb 2021"
 
 /*
 Revision History
@@ -88,6 +88,7 @@ Revision History
 31 Jan 21 -- Adding color.
 13 Feb 21 -- Switching cyan and white.
 15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
+27 Feb 21 -- Found an optimization when writing getdir about GrandTotals
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -366,10 +367,12 @@ func main() {
 			log.Println(err, "so calling my own MyReadDir.")
 			files = MyReadDir(CleanDirName)
 		}
-		for _, f := range files {
-			if f.Mode().IsRegular() && ShowGrandTotal {
-				GrandTotal += f.Size()
-				GrandTotalCount++
+		if ShowGrandTotal { // this optimization added 2/27/21.
+			for _, f := range files {
+				if f.Mode().IsRegular() {
+					GrandTotal += f.Size()
+					GrandTotalCount++
+				}
 			}
 		}
 		sort.Slice(files, sortfcn)
