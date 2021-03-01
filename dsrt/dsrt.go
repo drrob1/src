@@ -8,7 +8,6 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -20,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "27 Feb 2021"
+const LastAltered = "1 Mar 2021"
 
 /*
 Revision History
@@ -89,6 +88,7 @@ Revision History
 13 Feb 21 -- Switching cyan and white.
 15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
 27 Feb 21 -- Found an optimization when writing getdir about GrandTotals
+ 1 Mar 21 -- Made sure all error messages are written to Stderr.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -200,7 +200,7 @@ func main() {
 
 	flag.Parse()
 
-	ctfmt.Println(ct.Blue, winflag, " dsrt will display Directory SoRTed by date or size.  Written in Go.  LastAltered ", LastAltered)
+	ctfmt.Println(ct.Magenta, winflag, " dsrt will display Directory SoRTed by date or size.  Written in Go.  LastAltered ", LastAltered)
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
@@ -243,8 +243,8 @@ func main() {
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" ignoring exclude regular expression.")
+			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, " ignoring exclude regular expression.")
 			*excludeFlag = false
 		}
 	}
@@ -255,12 +255,9 @@ func main() {
 
 	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
 
-	//	CleanDirName := "." + string(filepath.Separator)  commented out 9/9/19
 	CleanDirName := ""
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
-	//	fmt.Println(" filenames on command line",filenamesStringSlice)
-	//  fmt.Println(" linuxflag =",linuxflag,", length filenamesstringslice =", len(filenamesStringSlice))
 
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false }
@@ -302,8 +299,9 @@ func main() {
 			// need to determine if the 1 param on command line is a directory
 			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
-				log.Fatalln(err, "; after Lstat call for only one param.")
+				fmt.Fprintln(os.Stderr, err, "; after Lstat call for only one param.")
 			}
+
 			paramIsDir = fi.Mode().IsDir()
 			if *testFlag {
 				fmt.Println(" have only 1 param on line. filenameStringSlice=", filenamesStringSlice[0], "paramIsDir=", paramIsDir)
@@ -319,9 +317,10 @@ func main() {
 			for _, s := range filenamesStringSlice { // fill a slice of fileinfo
 				fi, err := os.Lstat(s)
 				if err != nil {
-					log.Println(err)
+					fmt.Fprintln(os.Stderr, err)
 					continue
 				}
+
 				files = append(files, fi)
 				if fi.Mode().IsRegular() && ShowGrandTotal {
 					GrandTotal += fi.Size()
@@ -336,7 +335,7 @@ func main() {
 		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 	}
-	//	fmt.Println(" havefiles = ", havefiles)
+
 	if winflag && len(commandline) > 0 { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
@@ -354,7 +353,6 @@ func main() {
 			fmt.Println(" CleanDirName is empty, and will be ", workingdir)
 		}
 		CleanDirName = workingdir
-		//		CleanDirName = "." + string(filepath.Separator)  changed 9/8/19
 	}
 
 	if len(CleanFileName) == 0 {
@@ -364,7 +362,7 @@ func main() {
 	if !havefiles {
 		files, err = ioutil.ReadDir(CleanDirName)
 		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-			log.Println(err, "so calling my own MyReadDir.")
+			fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 			files = MyReadDir(CleanDirName)
 		}
 		if ShowGrandTotal { // this optimization added 2/27/21.
@@ -532,7 +530,7 @@ func GetIDname(uidStr string) string {
 	}
 	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
-		panic("uid not found")
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	idname := ptrToUser.Username
@@ -614,13 +612,6 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 //------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
-	/* non-idiomatic code
-	s := os.Getenv("diraliases")
-	if len(s) == 0 {
-		return nil
-	}
-	*/
-
 	s, ok := os.LookupEnv("diraliases")
 	if !ok {
 		return nil
@@ -698,7 +689,7 @@ func MyReadDir(dir string) []os.FileInfo {
 	for _, s := range names {
 		L, err := os.Lstat(s)
 		if err != nil {
-			log.Println(" Error from os.Lstat ", err)
+			fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
 			continue
 		}
 		fi = append(fi, L)

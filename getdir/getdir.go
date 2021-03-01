@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "27 Feb 2021"
+const LastAltered = "1 Mar 2021"
 
 /*
 Revision History
@@ -87,6 +87,7 @@ Revision History
 13 Feb 21 -- Switching cyan and white.
 15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
 26 Feb 21 -- Now called getdir, as in get directory to sort.  And will use go1.16 new way of getting a directory
+ 1 Mar 21 -- Updated print messages.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -104,7 +105,6 @@ func main() {
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var userptr *user.User // from os/user
-	//var files FISlice  I'm deleting this for now so I can fix the code to use the new DirEntry.  I may need to put it back.
 	var direntries []os.DirEntry
 	var err error
 	var count int
@@ -198,7 +198,7 @@ func main() {
 
 	flag.Parse()
 
-	ctfmt.Println(ct.Blue, winflag, " dsrt will display Directory SoRTed by date or size.  Written in Go.  LastAltered ", LastAltered)
+	ctfmt.Println(ct.Blue, winflag, " getdir for sorting and display by date or size.  Written in Go.  LastAltered ", LastAltered)
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
@@ -236,13 +236,13 @@ func main() {
 	var excludeRegex *regexp.Regexp
 
 	if *excludeFlag {
-		ctfmt.Print(ct.Cyan, winflag, " Enter regex pattern to be excluded: ")
+		ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
 			fmt.Println(err)
-			fmt.Println(" ignoring exclude regular expression.")
+			fmt.Fprintln(os.Stderr, " ignoring exclude regular expression.")
 			*excludeFlag = false
 		}
 	}
@@ -649,7 +649,6 @@ func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
 	directoryAliasesMap := make(dirAliasMapType, 10)
-	//anAliasMap := make(dirAliasMapType,1)
 
 	dirAliasSlice := strings.Fields(s)
 
