@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "1 Mar 2021"
+const LastAltered = "2 Mar 2021"
 
 /*
 Revision History
@@ -89,6 +89,7 @@ Revision History
 15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
 27 Feb 21 -- Found an optimization when writing getdir about GrandTotals
  1 Mar 21 -- Made sure all error messages are written to Stderr.
+ 2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -200,7 +201,7 @@ func main() {
 
 	flag.Parse()
 
-	ctfmt.Println(ct.Magenta, winflag, " dsrt will display Directory SoRTed by date or size.  Written in Go.  LastAltered ", LastAltered)
+	ctfmt.Println(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  Written in Go.  LastAltered", LastAltered, "using Go version", runtime.Version(), ".")
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)

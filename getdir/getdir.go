@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "1 Mar 2021"
+const LastAltered = "2 Mar 2021"
 
 /*
 Revision History
@@ -88,6 +88,7 @@ Revision History
 15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
 26 Feb 21 -- Now called getdir, as in get directory to sort.  And will use go1.16 new way of getting a directory
  1 Mar 21 -- Updated print messages.
+ 2 Mar 21 -- Added runtime.Version(), which I read about in Go Standard Library Cookbook.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -198,7 +199,7 @@ func main() {
 
 	flag.Parse()
 
-	ctfmt.Println(ct.Blue, winflag, " getdir for sorting and display by date or size.  Written in Go.  LastAltered ", LastAltered)
+	ctfmt.Println(ct.Blue, winflag, "getdir for sorting and display by date or size.  Written in Go.  LastAltered ", LastAltered, ", using Go version", runtime.Version(), ".")
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)

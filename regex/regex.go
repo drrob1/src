@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 15, 2021"
+const LastAltered = "Mar 2, 2021"
 
 /*
 Revision History
@@ -92,6 +92,7 @@ Revision History
 31 Jan 21 -- Adding color.
 13 Feb 21 -- Swapping white and cyan.
 15 Feb 21 -- Swapping yellow and white so yellow is mb and white is gb.
+ 2 Mar 21 -- Adding runtime.Version(), which I read about in Go Standard Library Cookbook.
 */
 
 // FileInfo slice
@@ -198,7 +199,7 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println(" regex will display sorted by date or size.  Written in Go.  LastAltered ", LastAltered)
+	fmt.Println(" regex will display sorted by date or size.  Written in Go.  LastAltered", LastAltered, ", using Go version", runtime.Version(), ".")
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
