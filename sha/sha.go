@@ -78,7 +78,7 @@ func main() {
 	var FileSize int64
 
 	fmt.Print(" sha.go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-	fmt.Println(".  Last altered", LastCompiled, ", compiled using Go", runtime.Version())
+	fmt.Println(".  Last altered", LastCompiled, ", compiled using", runtime.Version())
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
