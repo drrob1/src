@@ -47,7 +47,7 @@ import (
   27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
                  And I'm going to change from tokenize to tknptr.  Just to see if it works.
   25 Feb 21 -- Added 999 as a stop code.
-   3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoreing file extension.
+   3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoring file extension.
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using io.ReadAll. and go 1.15.8
    7 Mar 21 -- added strings.TrimSpace
 */
