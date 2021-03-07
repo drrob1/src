@@ -49,9 +49,10 @@ import (
   25 Feb 21 -- Added 999 as a stop code.
    3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoreing file extension.
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using io.ReadAll. and go 1.15.8
+   7 Mar 21 -- added strings.TrimSpace
 */
 
-const LastCompiled = "3 Mar 2021"
+const LastCompiled = "7 Mar 2021"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -142,6 +143,7 @@ func main() {
 		WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
 
 		inputline, err := bytesbuffer.ReadString('\n')
+		inputline = strings.TrimSpace(inputline)  // probably not needed as I tokenize this, but I want to see if this works.
 		if err == io.EOF && len(inputline) == 0 { // reached EOF condition, there are no more lines to read, and no line
 			break
 		} else if len(inputline) == 0 && err != nil {
