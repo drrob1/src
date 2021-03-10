@@ -170,13 +170,13 @@ func main() {
 			os.Exit(1)
 		}
 		HomeDirStr = userptr.HomeDir + sepstring
-	} else if linuxflag {
+	}  /* else if linuxflag {
 		HomeDirStr = os.Getenv("HOME") + sepstring
 	} else if winflag {
 		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
 	} else { // unknown system
 		fmt.Println(" Program not designed for this architecture.  Maybe it will work, maybe not.  Good luck.")
-	}
+	}  */
 
 	// flag definitions and processing
 	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr

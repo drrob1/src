@@ -208,7 +208,7 @@ func main() {
 
 	fmt.Print(" regex will display sorted by date or size.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
-	
+
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
