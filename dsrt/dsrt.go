@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "2 Mar 2021"
+const LastAltered = "9 Mar 2021"
 
 /*
 Revision History
@@ -90,6 +90,7 @@ Revision History
 27 Feb 21 -- Found an optimization when writing getdir about GrandTotals
  1 Mar 21 -- Made sure all error messages are written to Stderr.
  2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
+ 9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -127,6 +128,10 @@ func main() {
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
+	ctfmt.Print(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered ", LastAltered, ", compiled using ",
+		runtime.Version(), ".")
+	fmt.Println()
+
 	if linuxflag {
 		systemStr = "Linux"
 		files = make([]os.FileInfo, 0, 500)
@@ -148,7 +153,14 @@ func main() {
 	}
 
 	sepstring := string(filepath.Separator)
-	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
+	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
+		HomeDirStr = ""
+	}
+	HomeDirStr = HomeDirStr + sepstring
+
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
 		gid = os.Getgid() // int
@@ -201,7 +213,6 @@ func main() {
 
 	flag.Parse()
 
-	ctfmt.Println(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  Written in Go.  LastAltered", LastAltered, "using Go version", runtime.Version(), ".")
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)

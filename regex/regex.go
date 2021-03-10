@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Mar 2, 2021"
+const LastAltered = "Mar 9, 2021"
 
 /*
 Revision History
@@ -93,6 +93,7 @@ Revision History
 13 Feb 21 -- Swapping white and cyan.
 15 Feb 21 -- Swapping yellow and white so yellow is mb and white is gb.
  2 Mar 21 -- Adding runtime.Version(), which I read about in Go Standard Library Cookbook.
+ 9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 */
 
 // FileInfo slice
@@ -149,7 +150,13 @@ func main() {
 	}
 
 	sepstring := string(filepath.Separator)
-	HomeDirStr := "" // HomeDir code used for processing ~ symbol meaning home directory.
+	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of go 1.12.
+	if err != nil {
+		HomeDirStr = ""
+		fmt.Fprint(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, ".  Ignored HomeDirStr.")
+	}
+	HomeDirStr = HomeDirStr + sepstring
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
 		gid = os.Getgid() // int
@@ -158,14 +165,14 @@ func main() {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
 		}
-		HomeDirStr = userptr.HomeDir + sepstring
-	} else if linuxflag {
+		//HomeDirStr = userptr.HomeDir + sepstring
+	} /* else if linuxflag {
 		HomeDirStr = os.Getenv("HOME") + sepstring
 	} else if winflag {
 		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
 	} else { // unknown system
 		fmt.Println(" Program not designed for this architecture.  Maybe it will work, maybe not.  Good luck.")
-	}
+	}  */
 
 	// flag definitions and processing
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
