@@ -206,7 +206,9 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println(" regex will display sorted by date or size.  Written in Go.  LastAltered", LastAltered, ", using Go version", runtime.Version(), ".")
+	fmt.Print(" regex will display sorted by date or size.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	fmt.Println()
+	
 	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
