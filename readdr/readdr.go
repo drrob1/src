@@ -308,6 +308,7 @@ func main() {
 			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err, "; after Lstat call for only one param.")
+				os.Exit(1)
 			}
 
 			paramIsDir = fi.Mode().IsDir()

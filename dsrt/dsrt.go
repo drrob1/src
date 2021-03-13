@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "9 Mar 2021"
+const LastAltered = "12 Mar 2021"
 
 /*
 Revision History
@@ -91,6 +91,7 @@ Revision History
  1 Mar 21 -- Made sure all error messages are written to Stderr.
  2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
+12 Mar 21 -- Added an os.Exit call after what is essentially a file not found error.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -312,6 +313,7 @@ func main() {
 			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err, "; after Lstat call for only one param.")
+				os.Exit(1)
 			}
 
 			paramIsDir = fi.Mode().IsDir()
