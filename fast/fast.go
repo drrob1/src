@@ -1,4 +1,4 @@
-// dsrt.go -- directory sort
+// fast.go -- Derived from dsrt.go directory sort
 
 package main
 
@@ -7,7 +7,6 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -19,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "13 Mar 2021"
+const LastAltered = "14 Mar 2021"
 
 /*
 Revision History
@@ -91,8 +90,16 @@ Revision History
  1 Mar 21 -- Made sure all error messages are written to Stderr.
  2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
-12 Mar 21 -- Added an os.Exit call after what is essentially a file not found error.
-13 Mar 21 -- Moved call to sort.Slice out of the loops so it is only called once.
+10 Mar 21 -- There are essentially 4 different states that this has to process; with and without params, on linux and windows.
+                Bash populates the commandline, while windows passes the glob pattern only, so these are processed differently.
+                Reading Go Standard Library Cookbook gave me the idea to use filepath.Glob on windows.  No need
+                to process the entire list of files when a glob pattern is provided.
+                But the globbing is case sensitive on Windows.  I was able to get around that before using ToLower, but not for filepath.Glob.
+12 Mar 21 -- Now called readdr so I can update the library calls.  ioutil is deprecated as of 1.16.  My experiments w/ using DirEntry showed that
+                I need to stick w/ FileInfo, as the library support for DirEntry is not complete enough for me.  IE, it does not allow
+                1 file fetch of DirEntry, like os.Lstat or Stat does for FileInfo.
+13 Mar 21 -- Moved the call to sort out of the loops, so there is only 1 call to sort.Slice.  And I came up w/ a better name.  fast.go.
+14 Mar 21 -- On windows removed use of filepath.Match(f)
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -111,8 +118,6 @@ func main() {
 	var numoflines int
 	var userptr *user.User // from os/user
 	var files FISlice
-	//	var filesDate FISliceDate  \ unused as of 9/8/19.
-	//	var filesSize FISliceSize  /
 	var err error
 	var count int
 	var SizeTotal, GrandTotal int64
@@ -130,8 +135,7 @@ func main() {
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
-	ctfmt.Print(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered ", LastAltered, ", compiled using ",
-		runtime.Version(), ".")
+	ctfmt.Print(ct.Magenta, winflag, "fast directory lister lastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
 
 	if linuxflag {
@@ -171,14 +175,7 @@ func main() {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
 		}
-		HomeDirStr = userptr.HomeDir + sepstring
-	}  /* else if linuxflag {
-		HomeDirStr = os.Getenv("HOME") + sepstring
-	} else if winflag {
-		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
-	} else { // unknown system
-		fmt.Println(" Program not designed for this architecture.  Maybe it will work, maybe not.  Good luck.")
-	}  */
+	}
 
 	// flag definitions and processing
 	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
@@ -344,7 +341,6 @@ func main() {
 			}
 			havefiles = true
 		}
-
 	} else { // either no params were present on the command line or this is running under Windows and may have a command line param.
 		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
@@ -358,7 +354,22 @@ func main() {
 		}
 		CleanDirName, CleanFileName = filepath.Split(commandline)
 		CleanDirName = filepath.Clean(CleanDirName)
-		CleanFileName = strings.ToLower(CleanFileName)
+		// CleanFileName = strings.ToLower(CleanFileName) // I'm going to try this without the force to lower case for a bit.  Glob is case sensitive anyway.
+
+		filenamesSliceOfStrings, err := filepath.Glob(CleanFileName)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+
+		for _, s := range filenamesSliceOfStrings {
+			fi, err := os.Lstat(s)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+
+			files = append(files, fi)
+		}
+		havefiles = true
 	}
 
 	if len(CleanDirName) == 0 {
@@ -374,10 +385,16 @@ func main() {
 	}
 
 	if !havefiles {
-		files, err = ioutil.ReadDir(CleanDirName)
-		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+		f, err := os.Open(CleanDirName)
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 			files = MyReadDir(CleanDirName)
+		} else {
+			files, err = f.Readdir(0)
+			if err != nil { // ioutil.ReadDir itself stopped when it gets an error of any kind, and I could not change that.  Don't know about os.ReadDir.
+				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+				files = MyReadDir(CleanDirName)
+			}
 		}
 		if ShowGrandTotal { // this optimization added 2/27/21.
 			for _, f := range files {
@@ -389,18 +406,19 @@ func main() {
 		}
 	}
 
-	sort.Slice(files, sortfcn)
-	fmt.Println(" Dirname is", CleanDirName)
+	sort.Slice(files, sortfcn) // This syntax added Go 1.8.
+	fmt.Println(" Dirname is", CleanDirName, ", Filename is", CleanFileName)
 
 	// I need to add a description of how this code works, because I forgot.
-	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
-	// This is still the way it works for Windows.
+	// Initially, the entire contents of the directory is read in by either os.ReadDir (after calling os.Open(dir) or MyReadDir.
+	// Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 	// On linux, bash populated the command line by globbing, or no command line params were entered
+	// On Windows (as of 03/10/2021) I'm using filepath.Glob to just retrieve matching files to sort and display.
 	if linuxflag {
 		for _, f := range files {
 			s := f.ModTime().Format("Jan-02-2006_15:04:05")
 			sizestr := ""
-			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
+			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific.
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
 				showthis := true
@@ -440,12 +458,12 @@ func main() {
 	} else if winflag {
 		for _, f := range files {
 			showthis := false
-			NAME := strings.ToLower(f.Name())
+			NAME := f.Name() // Glob is case sensitive.
 			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
 			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
 			// This way, the condition below can be BOOL && thisNewFlag
-			BOOL, _ := filepath.Match(CleanFileName, NAME)
-			if BOOL {
+			// BOOL, _ := filepath.Match(CleanFileName, NAME) // redundant if Glob was used.
+			if true { // was BOOL, but removed that 3/14/21 as it's redundant and wasteful, though probably not very time consuming.
 				showthis = true
 				if noExtensionFlag && strings.ContainsRune(NAME, '.') {
 					showthis = false
@@ -551,42 +569,6 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
-
-/*
-// ------------------------------- GetEnviron ------------------------------------------------
-func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obsolete now but not gone.
-	var dsrtparam DsrtParamType
-
-	EnvironSlice := os.Environ()
-
-	for _, e := range EnvironSlice {
-		if strings.HasPrefix(e, "dsrt") {
-			dsrtslice := strings.SplitAfter(e, "=")
-			indiv := strings.Split(dsrtslice[1], "") // all characters after dsrt=
-			for j, str := range indiv {
-				s := str[0]
-				if s == 'r' || s == 'R' {
-					dsrtparam.reverseflag = true
-				} else if s == 's' || s == 'S' {
-					dsrtparam.sizeflag = true
-				} else if s == 'd' {
-					dsrtparam.dirlistflag = true
-				} else if s == 'D' {
-					dsrtparam.filenamelistflag = true
-				} else if unicode.IsDigit(rune(s)) {
-					dsrtparam.numlines = int(s) - int('0')
-					if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-						dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
-						break // if have a 2 digit number, it ends processing of the indiv string
-					}
-				}
-			}
-		}
-	}
-	return dsrtparam
-} // GetEnviron
-
-*/
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
@@ -766,56 +748,15 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 }
 
 /*
-func getMagnitudeString(j int64) string {
-
-	var s1 string
-	var i int64
-	switch {
-	case j > 1_000_000_000_000: // 1 trillion, or TB
-		i = j / 1000000000000               // I'm forcing an integer division.
-		if j%1000000000000 > 500000000000 { // rounding up
-			i++
-		}
-		s1 = fmt.Sprintf("%3d TB", i)
-	case j > 1_000_000_000: // 1 billion, or GB
-		i = j / 1000000000
-		if j%1000000000 > 500000000 { // rounding up
-			i++
-		}
-		s1 = fmt.Sprintf("%6d GB", i)
-	case j > 1_000_000: // 1 million, or MB
-		i = j / 1000000
-		if j%1000000 > 500000 {
-			i++
-		}
-		s1 = fmt.Sprintf("%9d MB", i)
-	case j > 1000: // KB
-		i = j / 1000
-		if j%1000 > 500 {
-			i++
-		}
-		s1 = fmt.Sprintf("%12d kb", i)
-	default:
-		s1 = fmt.Sprintf("%3d bytes", j)
-	}
-	return s1
-}
-*/
-
-/*
  {{{
 package strings
 func Contains
 func Contains(s, substr string) bool
 Contains reports whether substr is within s.
 
-
-
 func ContainsAny
 func ContainsAny(s, chars string) bool
 ContainsAny reports whether any Unicode code points in chars are within s.
-
-
 
 func ContainsRune
 func ContainsRune(s string, r rune) bool
@@ -868,14 +809,11 @@ type FileInfo interface {
 
 A FileInfo describes a file and is returned by Stat and Lstat.
 
-func Lstat
-
 func Lstat(name string) (FileInfo, error)
 
 Lstat returns a FileInfo describing the named file.  If the file is a symbolic link, the returned FileInfo describes the symbolic link.  Lstat makes no attempt to follow the link.
 If there is an error, it will be of type *PathError.
 
-func Stat
 
 func Stat(name string) (FileInfo, error)
 
@@ -899,8 +837,8 @@ type User struct {
 package os
 func Getenv
 func Getenv(key string) string
-Getenv retrieves the value of the environment variable named by the key.  It returns the value, which will be empty if the variable is not present.  To distinguish between an empty value and an unset
-value, use LookupEnv.
+Getenv retrieves the value of the environment variable named by the key.  It returns the value, which will be empty if the variable is not present.
+To distinguish between an empty value and an unset value, use LookupEnv.
 
 Example
 package main
@@ -912,19 +850,14 @@ import (
 
 func main() {
 	fmt.Printf("%s lives in %s.\n", os.Getenv("USER"), os.Getenv("HOME"))
-
 }
 
-func Getwd
 func Getwd() (dir string, err error)
 Getwd returns a rooted path name corresponding to the current directory.  If the current directory can be reached via multiple paths (due to symbolic links), Getwd may return any one of them.
 
-func Environ
 func Environ() []string
 Environ returns a copy of strings representing the environment, in the form "key=value".
 
-
-func LookupEnv
 func LookupEnv(key string) (string, bool)
 LookupEnv retrieves the value of the environment variable named by the key.  If the variable is present in the environment the value (which may be empty) is returned and the boolean is true.  Otherwise the returned value will be empty and the boolean will be false.
 
@@ -945,11 +878,8 @@ func main() {
 			fmt.Printf("%s=%s\n", key, val)
 		}
 	}
-
 	show("USER")
 	show("GOPATH")
-
 }
-
 }}}
 */
