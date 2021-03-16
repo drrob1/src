@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "13 Mar 2021"
+const LastAltered = "16 Mar 2021"
 
 /*
 Revision History
@@ -92,7 +92,7 @@ Revision History
  2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 12 Mar 21 -- Added an os.Exit call after what is essentially a file not found error.
-13 Mar 21 -- Moved call to sort.Slice out of the loops so it is only called once.
+16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -171,7 +171,7 @@ func main() {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
 		}
-		HomeDirStr = userptr.HomeDir + sepstring
+		// HomeDirStr = userptr.HomeDir + sepstring
 	}  /* else if linuxflag {
 		HomeDirStr = os.Getenv("HOME") + sepstring
 	} else if winflag {
@@ -274,7 +274,7 @@ func main() {
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
 	// set which sort function will be in the sortfcn var
-	sortfcn := func(i, j int) bool { return false }
+	sortfcn := func(i, j int) bool { return false }  // became available as of Go 1.8
 	if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return files[i].Size() > files[j].Size() // I want a largest first sort
@@ -313,7 +313,9 @@ func main() {
 			// need to determine if the 1 param on command line is a directory
 			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err, "; after Lstat call for only one param.")
+				fmt.Fprintln(os.Stderr, err)
+				fmt.Println()
+				fmt.Println()
 				os.Exit(1)
 			}
 
@@ -342,6 +344,7 @@ func main() {
 					GrandTotalCount++
 				}
 			}
+			sort.Slice(files, sortfcn)
 			havefiles = true
 		}
 
@@ -387,9 +390,9 @@ func main() {
 				}
 			}
 		}
+		sort.Slice(files, sortfcn)
 	}
 
-	sort.Slice(files, sortfcn)
 	fmt.Println(" Dirname is", CleanDirName)
 
 	// I need to add a description of how this code works, because I forgot.
@@ -456,7 +459,7 @@ func main() {
 					}
 				}
 			}
-
+			//			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			if showthis {
 				s := f.ModTime().Format("Jan-02-2006_15:04:05")
 				sizestr := ""

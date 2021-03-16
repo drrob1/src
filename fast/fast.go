@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "14 Mar 2021"
+const LastAltered = "16 Mar 2021"
 
 /*
 Revision History
@@ -100,6 +100,7 @@ Revision History
                 1 file fetch of DirEntry, like os.Lstat or Stat does for FileInfo.
 13 Mar 21 -- Moved the call to sort out of the loops, so there is only 1 call to sort.Slice.  And I came up w/ a better name.  fast.go.
 14 Mar 21 -- On windows removed use of filepath.Match(f)
+16 Mar 21 -- Tweaked file not found error message on linux.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -310,7 +311,9 @@ func main() {
 			// need to determine if the 1 param on command line is a directory
 			fi, err := os.Lstat(filenamesStringSlice[0])
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err, "; after Lstat call for only one param.")
+				fmt.Fprintln(os.Stderr, err)
+				fmt.Println()
+				fmt.Println()
 				os.Exit(1)
 			}
 
