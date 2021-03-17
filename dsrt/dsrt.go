@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "16 Mar 2021"
+const LastAltered = "17 Mar 2021"
 
 /*
 Revision History
@@ -93,6 +93,7 @@ Revision History
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 12 Mar 21 -- Added an os.Exit call after what is essentially a file not found error.
 16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
+17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -120,6 +121,7 @@ func main() {
 	var havefiles bool
 	var commandline string
 	var directoryAliasesMap dirAliasMapType
+	var excludeRegexPattern string
 
 	uid := 0
 	gid := 0
@@ -172,7 +174,7 @@ func main() {
 			os.Exit(1)
 		}
 		// HomeDirStr = userptr.HomeDir + sepstring
-	}  /* else if linuxflag {
+	} /* else if linuxflag {
 		HomeDirStr = os.Getenv("HOME") + sepstring
 	} else if winflag {
 		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
@@ -212,6 +214,7 @@ func main() {
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
+	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
 	flag.Parse()
 
@@ -248,17 +251,25 @@ func main() {
 	}
 
 	noExtensionFlag := *extensionflag || *extflag
-	excludeRegexPattern := ""
 	var excludeRegex *regexp.Regexp
 
-	if *excludeFlag {
-		ctfmt.Print(ct.Cyan, winflag, " Enter regex pattern to be excluded: ")
+	if len(excludeRegexPattern) > 0 {
+		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
+			*excludeFlag = false
+		}
+		*excludeFlag = true
+	} else if *excludeFlag {
+		ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, " ignoring exclude regular expression.")
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
 			*excludeFlag = false
 		}
 	}
@@ -274,8 +285,8 @@ func main() {
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
 	// set which sort function will be in the sortfcn var
-	sortfcn := func(i, j int) bool { return false }  // became available as of Go 1.8
-	if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
+	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
+	if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return files[i].Size() > files[j].Size() // I want a largest first sort
 		}
