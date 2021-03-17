@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "16 Mar 2021"
+const LastAltered = "17 Mar 2021"
 
 /*
 Revision History
@@ -101,6 +101,7 @@ Revision History
 13 Mar 21 -- Moved the call to sort out of the loops, so there is only 1 call to sort.Slice.  And I came up w/ a better name.  fast.go.
 14 Mar 21 -- On windows removed use of filepath.Match(f)
 16 Mar 21 -- Tweaked file not found error message on linux.
+17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -126,6 +127,7 @@ func main() {
 	var havefiles bool
 	var commandline string
 	var directoryAliasesMap dirAliasMapType
+	var excludeRegexPattern string
 
 	uid := 0
 	gid := 0
@@ -210,6 +212,7 @@ func main() {
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
+	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
 	flag.Parse()
 
@@ -246,17 +249,25 @@ func main() {
 	}
 
 	noExtensionFlag := *extensionflag || *extflag
-	excludeRegexPattern := ""
 	var excludeRegex *regexp.Regexp
 
-	if *excludeFlag {
-		ctfmt.Print(ct.Cyan, winflag, " Enter regex pattern to be excluded: ")
+	if len(excludeRegexPattern) > 0 {
+		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
+			*excludeFlag = false
+		}
+		*excludeFlag = true
+	} else if *excludeFlag {
+		ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, " ignoring exclude regular expression.")
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
 			*excludeFlag = false
 		}
 	}
