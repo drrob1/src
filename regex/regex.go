@@ -94,6 +94,7 @@ Revision History
 15 Feb 21 -- Swapping yellow and white so yellow is mb and white is gb.
  2 Mar 21 -- Adding runtime.Version(), which I read about in Go Standard Library Cookbook.
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
+17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
 */
 
 // FileInfo slice
@@ -347,10 +348,12 @@ func main() {
 		log.Println(err, "so calling my own MyReadDir.")
 		files = MyReadDir(workingdir)
 	}
-	for _, f := range files {
-		if f.Mode().IsRegular() && ShowGrandTotal {
-			GrandTotal += f.Size()
-			GrandTotalCount++
+	if ShowGrandTotal {
+		for _, f := range files {
+			if f.Mode().IsRegular() {
+				GrandTotal += f.Size()
+				GrandTotalCount++
+			}
 		}
 	}
 	sort.Slice(files, sortfcn)
@@ -366,6 +369,9 @@ func main() {
 	regex, err := regexp.Compile(inputRegEx)
 	if err != nil {
 		log.Fatalln(" error from regex compile function is ", err)
+		fmt.Println()
+		fmt.Println()
+		os.Exit(1)
 	}
 
 	for _, f := range files {
