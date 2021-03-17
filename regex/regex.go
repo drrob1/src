@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Mar 9, 2021"
+const LastAltered = "Mar 17, 2021"
 
 /*
 Revision History
@@ -95,6 +95,7 @@ Revision History
  2 Mar 21 -- Adding runtime.Version(), which I read about in Go Standard Library Cookbook.
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
+               Adding exclude string to allow the exclude regex pattern on the command line.  Convenient for recalling commands.
 */
 
 // FileInfo slice
@@ -121,6 +122,7 @@ func main() {
 	var SizeTotal, GrandTotal int64
 	var GrandTotalCount int
 	var systemStr string
+	var excludeRegexPattern string
 
 	uid := 0
 	gid := 0
@@ -158,6 +160,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, ".  Ignored HomeDirStr.")
 	}
 	HomeDirStr = HomeDirStr + sepstring
+
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
 		gid = os.Getgid() // int
@@ -166,14 +169,7 @@ func main() {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
 		}
-		//HomeDirStr = userptr.HomeDir + sepstring
-	} /* else if linuxflag {
-		HomeDirStr = os.Getenv("HOME") + sepstring
-	} else if winflag {
-		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
-	} else { // unknown system
-		fmt.Println(" Program not designed for this architecture.  Maybe it will work, maybe not.  Good luck.")
-	}  */
+	}
 
 	// flag definitions and processing
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
@@ -203,7 +199,8 @@ func main() {
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
-	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
+	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")            // pointer
+	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
 	flag.Parse()
 
@@ -253,9 +250,17 @@ func main() {
 		NumLines = NLines
 	}
 
-	excludeRegexPattern := ""
 	var excludeRegex *regexp.Regexp
-	if *excludeFlag {
+	if len(excludeRegexPattern) > 0 {
+		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
+			*excludeFlag = false
+		}
+		*excludeFlag = true
+	} else if *excludeFlag {
 		ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
