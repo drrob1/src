@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "17 Mar 2021"
+const LastAltered = "22 Mar 2021"
 
 /*
 Revision History
@@ -102,6 +102,7 @@ Revision History
 14 Mar 21 -- On windows removed use of filepath.Match(f)
 16 Mar 21 -- Tweaked file not found error message on linux.
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
+22 Mar 21 -- Fixed bug in Glob expression in which I forgot to include the path.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -280,6 +281,7 @@ func main() {
 
 	CleanDirName := ""
 	CleanFileName := ""
+	cleanfullname := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
 	// set which sort function will be in the sortfcn var
@@ -369,8 +371,8 @@ func main() {
 		CleanDirName, CleanFileName = filepath.Split(commandline)
 		CleanDirName = filepath.Clean(CleanDirName)
 		// CleanFileName = strings.ToLower(CleanFileName) // I'm going to try this without the force to lower case for a bit.  Glob is case sensitive anyway.
-
-		filenamesSliceOfStrings, err := filepath.Glob(CleanFileName)
+		cleanfullname = filepath.Clean(commandline)
+		filenamesSliceOfStrings, err := filepath.Glob(cleanfullname)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
@@ -421,7 +423,8 @@ func main() {
 	}
 
 	sort.Slice(files, sortfcn) // This syntax added Go 1.8.
-	fmt.Println(" Dirname is", CleanDirName, ", Filename is", CleanFileName)
+	ctfmt.Println(ct.Yellow, winflag, " Dirname is", CleanDirName, ", Filename is", CleanFileName, ", and fullname is", cleanfullname)
+	fmt.Println()
 
 	// I need to add a description of how this code works, because I forgot.
 	// Initially, the entire contents of the directory is read in by either os.ReadDir (after calling os.Open(dir) or MyReadDir.
