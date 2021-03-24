@@ -41,6 +41,8 @@ package main
  20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
  21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
  22 Feb 21 -- Removing text for Columbus and Veteran Days as these are not hospital holidays.
+ 23 Mar 21 -- Will allow years from 1800 - 2100.  This came up while reading about Apr 14, 1865, which was a Friday.
+                And discovered a bug when a 4 digit year is entered.
 */
 
 import (
@@ -66,7 +68,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Feb 22, 2021"
+const LastCompiled = "Mar 23, 2021"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -429,7 +431,6 @@ func HolidayAssign(year int) {
 		ans := ""
 		fmt.Scanln(&ans)
 		fmt.Println()
-
 	*/
 
 	// New Year's Day
@@ -661,13 +662,12 @@ func SetMonthNumber(s string) int { // returns -1 if there was an error
 // ----------------------------------- AssignYear ----------------------------------------------------
 func AssignYear(y int) {
 
-	if y < 1900 || y > 2100 {
-		fmt.Printf("Year in AssignYear is %d, which is out of range of 1900..2100.  Exiting.\n", y)
+	if y < 1800 || y > 2100 {
+		fmt.Printf("Year in AssignYear is %d, which is out of range of 1800..2100.  Exiting.\n", y)
 		os.Exit(1)
 	}
 
-	JulDate := timlibg.JULIAN(1, 1, y)
-	JAN1DOW := JulDate % 7
+	JAN1DOW := timlibg.JULIAN(1, 1, y) % 7  // julian date number of Jan 1 of input year MOD 7.
 	DOW = JAN1DOW
 	FEBDAYS := 28
 
@@ -787,12 +787,13 @@ func main() {
 		year = CurrentYear
 	}
 
-	if year < CurrentYear {
+	if  year < 100 && (year < CurrentYear || year < 30) {
 		year += 2000
 	} else if year < 100 {
 		year += 1900
-	} else if year < 1900 || year > 2100 {
-		fmt.Printf("Year is %d, which is out of range (1900-2100).  Exiting.\n", year)
+	}
+	if year < 1800 || year > 2100 {
+		fmt.Printf("Year is %d, which is out of range (1800-2100).  Exiting.\n", year)
 		os.Exit(1)
 	}
 

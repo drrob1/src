@@ -37,6 +37,7 @@ import (
   25 Dec 14 -- Converted to a module to get holiday dates by the calculator, using HolMod written for the Cal program.
    1 Jan 15 -- Converting to cpp, and combining HolMod into this module.
   25 Aug 16 -- Converting to Go.
+  23 Mar 21 -- Changed the limits in EASTER function.
 */
 
 type MDType struct { // MDType is a contraction of Month Day Type, and Go export caps rules apply.
@@ -84,7 +85,7 @@ func EASTER(YEAR int) (MM, DD int) {
 	   is the following Sunday.
 	*/
 
-	if (YEAR < 1900) || (YEAR > 2500) {
+	if (YEAR < 1800) || (YEAR > 2100) { // changed these limits 3/23/21
 		MM = 0
 		DD = 0
 	} else {
@@ -185,7 +186,7 @@ func GetHolidays(y int) HolType {
 
 	Holidays := HolType{}
 
-	if y < 1900 || y > 2100 {
+	if y < 1800 || y > 2100 {
 		return Holidays // returning a zeroed out Holidays, including Valid field being false
 	}
 
