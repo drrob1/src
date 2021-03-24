@@ -787,7 +787,7 @@ func main() {
 		year = CurrentYear
 	}
 
-	if  year < 100 && (year < CurrentYear || year < 30) {
+	if  year < 100 && (year < (CurrentYear % 100) || year < 30) {
 		year += 2000
 	} else if year < 100 {
 		year += 1900
