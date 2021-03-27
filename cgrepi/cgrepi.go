@@ -20,7 +20,7 @@
                  And then I figured I could not improve performance by using more packages.
                  But I can change the side effect of displaying altered case.
   22 Mar 20 -- Will add timing code that I wrote for anack.
-   1 Apr 20 -- Change some variable names to include where they are channels, and lineRx to LineRegex
+  27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
 */
 package main
 
@@ -38,7 +38,7 @@ import (
 	"time"
 )
 
-const LastAltered = "1 Apr 2020"
+const LastAltered = "27 Mar 2021"
 
 var workers = runtime.NumCPU()
 
@@ -53,7 +53,7 @@ type Job struct {
 	results  chan<- Result
 }
 
-func (job Job) Do(lineRegex *regexp.Regexp) {
+func (job Job) Do(lineRx *regexp.Regexp) {
 	file, err := os.Open(job.filename)
 	if err != nil {
 		log.Printf("error: %s\n", err)
@@ -70,7 +70,7 @@ func (job Job) Do(lineRegex *regexp.Regexp) {
 		linestr = strings.ToLower(linestr)
 		linelowercase := []byte(linestr)
 
-		if lineRegex.Match(linelowercase) {
+		if lineRx.Match(linelowercase) {
 			job.results <- Result{job.filename, lino, string(line)}
 		}
 		if err != nil {
@@ -85,8 +85,12 @@ func (job Job) Do(lineRegex *regexp.Regexp) {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
+
+	// flag definitions and processing
+	globflag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
 	var timeoutOpt *int64 = flag.Int64("timeout", 0, "seconds (0 means no timeout)")
 	flag.Parse()
+
 	if *timeoutOpt < 0 || *timeoutOpt > 240 {
 		log.Fatalln("timeout must be in the range [0,240] seconds")
 	}
@@ -101,67 +105,73 @@ func main() {
 		log.Fatalln("must provide at least one filename")
 	}
 	t0 := time.Now()
-	if lineRegex, err := regexp.Compile(pattern); err != nil {
+	if lineRx, err := regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	} else {
 		fmt.Println()
-		fmt.Printf(" Concurrent grep insensitive case last altered %s. \n", LastAltered)
+		fmt.Printf(" Concurrent grep insensitive case last altered %s, compiled with %s. \n", LastAltered, runtime.Version())
 		fmt.Println()
 		var timeout int64 = 1e9 * 60 * 10 // 10 minutes!
 		if *timeoutOpt != 0 {
 			timeout = *timeoutOpt * 1e9
 		}
-		grep(timeout, lineRegex, commandLineFiles(files)) // this fails vet because it's in the platform specific code files.
+		if *globflag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
+			grep(timeout, lineRx, globCommandLineFiles(files)) // this fails vet because it's in the platform specific code files.
+		} else {
+			grep(timeout, lineRx, commandLineFiles(files)) // my modified Windows specific code.
+		}
 	}
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
 	fmt.Println()
 }
 
-func grep(timeout int64, lineRegex *regexp.Regexp, filenames []string) {
-	jobsChan := make(chan Job, workers)
-	resultsChan := make(chan Result, minimum(1000, len(filenames)))
-	doneChan := make(chan struct{}, workers)
+func grep(timeout int64, lineRx *regexp.Regexp, filenames []string) {
+	jobs := make(chan Job, workers)
+	results := make(chan Result, minimum(1000, len(filenames)))
+	done := make(chan struct{}, workers)
 
-	go addJobs(jobsChan, filenames, resultsChan)
+	go addJobs(jobs, filenames, results)
 	for i := 0; i < workers; i++ {
-		go doJobs(doneChan, lineRegex, jobsChan)
+		go doJobs(done, lineRx, jobs)
 	}
-	waitAndProcessResults(timeout, doneChan, resultsChan)
+	waitAndProcessResults(timeout, done, results)
 }
 
-func addJobs(jobsChan chan<- Job, filenames []string, resultsChan chan<- Result) {
+func addJobs(jobs chan<- Job, filenames []string, results chan<- Result) {
 	for _, filename := range filenames {
-		jobsChan <- Job{filename, resultsChan}
+		jobs <- Job{filename, results}
 	}
-	close(jobsChan)
+	close(jobs)
 }
 
-func doJobs(doneChan chan<- struct{}, lineRegex *regexp.Regexp, jobsChan <-chan Job) {
-	for job := range jobsChan {
-		job.Do(lineRegex)
+func doJobs(done chan<- struct{}, lineRx *regexp.Regexp, jobs <-chan Job) {
+	for job := range jobs {
+		job.Do(lineRx)
 	}
-	doneChan <- struct{}{}
+	done <- struct{}{}
 }
 
-func waitAndProcessResults(timeout int64, doneChan <-chan struct{}, resultsChan <-chan Result) {
+func waitAndProcessResults(timeout int64, done <-chan struct{},
+	results <-chan Result) {
 	finish := time.After(time.Duration(timeout))
 	for working := workers; working > 0; {
 		select { // Blocking
-		case result := <-resultsChan:
+		case result := <-results:
 			fmt.Printf("%s:%d:%s\n", result.filename, result.lino,
 				result.line)
 		case <-finish:
 			fmt.Println("timed out")
 			return // Time's up so finish with what results there were
-		case <-doneChan:
+		case <-done:
 			working--
 		}
 	}
 	for {
 		select { // Nonblocking
-		case result := <-resultsChan:
-			fmt.Printf("%s:%d:%s\n", result.filename, result.lino, result.line)
+		case result := <-results:
+			fmt.Printf("%s:%d:%s\n", result.filename, result.lino,
+				result.line)
 		case <-finish:
 			fmt.Println("timed out")
 			return // Time's up so finish with what results there were

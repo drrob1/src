@@ -30,6 +30,7 @@
                 and if there is only 1 matching file in the start directory.
                 And also if there appears to be more than one extension, like gastric.txt.out.
    5 Sep 20 -- Will not search thru symlinked directories
+  27 Mar 21 -- making sure that the filename matches are case insensitive
 */
 package main
 
@@ -125,15 +126,15 @@ func main() {
 	} else { // on windows
 		extensions = args[1:]
 		for i := range extensions {
-			extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
+			extensions[i] = strings.ToLower(strings.ReplaceAll(extensions[i], "*", ""))
 		}
 	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
-		lastAltered, startDirectory, pattern, extensions)
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
+		lastAltered, runtime.Version(), startDirectory, pattern, extensions)
 
 	DirAlreadyWalked := make(map[string]bool, 500)
 	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
@@ -168,7 +169,8 @@ func main() {
 			return filepath.SkipDir
 		} else if fi.Mode().IsRegular() {
 			for _, ext := range extensions {
-				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+				fpathlower := strings.ToLower(fpath)
+				if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
 					grepFile(lineRegex, fpath, resultsChan)
 				}
 			}
@@ -209,15 +211,15 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 
 		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
 		linestr := string(line)
-		linestr = strings.ToLower(linestr)
-		linelowercase := []byte(linestr)
+		linestrlower := strings.ToLower(linestr)
+		linelowercase := []byte(linestrlower)
 
 		if lineRegex.Match(linelowercase) {
 			var r ResultType
 			r = ResultType{
 				filename: fpath,
 				lino:     lino,
-				line:     string(line),
+				line:     linestr,
 			}
 			resultChan <- r // I think this is what makes this a concurrent walk function.
 			// fmt.Printf("%s:%d:%s \n", fpath, lino, string(line)) from orig code

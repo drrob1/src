@@ -13,4 +13,5 @@
 
 package main
 
+func globCommandLineFiles(files []string) []string { return files }
 func commandLineFiles(files []string) []string { return files }
