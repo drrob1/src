@@ -196,7 +196,6 @@ func main() {
 	fmt.Println()
 } // end main
 
-// resultsChan := make(chan ResultType, 1024)
 func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType) {
 	file, err := os.Open(fpath)
 	if err != nil {
