@@ -5,88 +5,86 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"filepicker"
+	"src/filepicker"
 	"fmt"
-	"getcommandline"
+	"src/getcommandline"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"timlibg"
-	"tokenize"
+	"src/timlibg"
+	"src/tokenize"
 )
 
-const lastModified = "17 Oct 2020"
+const lastModified = "8 Apr 2021"
 
 /*
-  REVISION HISTORY
-  ----------------
-  13 Mar 04 -- It does not seem to be always creating the output file.
-               It now copies the d/l file instead of renaming it.  And
-               it echoes its output to the terminal.
-  14 Mar 04 -- Made it a Text Window module
-  21 Mar 04 -- Changed exit keys to remove <cr> and add <space>, <bs>, <tab>
-  15 Apr 04 -- Decided to include <cr> again, as I fixed the pblm in Excel macros.
-  31 Jul 04 -- Needed to change logic because Citibank now d/l nulls in fields that I need.
-   8 Aug 04 -- Copied to process MMA file as well.  And fixed a minor output bug.
-   8 Nov 04 -- Citibank changed their file format again.  Don't need ExtractLastNum and the
-                description is now 2 fields instead of 1.
-  17 Jun 06 -- Opened a new citi acnt they call eSavings.  Need to include this into database.
-                And changed initial value of chknum to zero, and any key will exit now.
-  18 Jun 06 -- Now uses command line for file names.
-  19 Jun 06 -- Fixed bug of always writing the same acnt name and made it output filename.
-  27 Jan 07 -- Noticed that the fileformat changed slightly as of Oct or so.  I have to remove
-                squotes from acnt#.  And added a menu option to exit.
-  29 Jan 07 -- While at ISET 2007, I decided to change the method of removing the squote so that
-                all squotes are removed, even if Citibank gets cute and puts more in.
-   2 Oct 07 -- Now has ability to use .qif files, and needed a module name change for this.
-                Also used menu pick instead of cmd line params.
-  21 Feb 08 -- Had to make output file .txt so that Access on P5 could import the file.  Don't know y.
-                And I copied the .txt file to .out file so I don't have to change anything on P4.
-  24 Mar 08 -- HSBC uses short date format and squote delim for 2 dgt year.
-                 And I changed output file format to be more straightforward, reordering fields.
-   9 Feb 09 -- Now does .qfx files, hence module name change.  And will use <tab> as output delim, just because.
-                And since it really is meant for Excel to import the text file, module name change to xls.
-   3 Mar 11 -- Noticed but in GetQfxToken in that read calls should all be to the param f, not the
-                global infile.  I will fix this next time I have to recompile.
-
-   7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
-                which means open financial exchange (for/of information).  New name is ofx2csv.go
-                I think I will first process the file using something like toascii.
-  19 Oct 17 -- Added filepicker code
-   1 Nov 17 -- Added output of $ for footer amount.
-  25 Dec 17 -- Decided to try changing date format to match ISO8601 YYYY-MM-DD required for sqlite.
-  30 Dec 17 -- Discovered that Access won't handle yyyy-mm-dd format, only Excel will.  Now I need
-                 to write out 2 different files, one for Access and one for Sqlite.db.  And I need to
-				 append 2 commas for the sqlite file.
-  31 Mar 19 -- Noticed that this pgm defaults to .qfx files.  I decided to have it default to both .ofx and .qfx files.
-   5 Sep 20 -- Still not showing .ofx files, and removed default CHK part of the pattern.
-                 Put back the CHK part of pattern because this file is only designed for the Citibank checking files.
-   6 Sep 20 -- Added a comment about passing Transactions slice globally.
-   7 Sep 20 -- Now called fromfx, to mean from qfx or ofx.  My intent is to cover both the CHK files and cc files.
-                 I'll look for CHK in the selected filename to distinguish.
-  17 Sep 20 -- Using the csv routines from Go did not work for SQLiteStudio.  It's not reading the date again.
-                 I have to explicitly quote the output.  And also always write Windows line endings \r\n.  Else
-                 SQLiteStudio does not process the lines of the file correctly.  I just checked, and the
-                 Modula-2 version always wrote Windows line endings.
-                 This Go routine reads all the lines into a slice of records/struct's.  I did not write it that way
-                 in Modula-2.  In Modula-2 I read 1 line and then wrote out 1 line, one by one.  I probably could
-                 have created an array of RECORD type, but I didn't.
-                 I guess that Go makes dynamic arrays just so easy that I never did that in Modula-2.  I could have
-                 defined a large enough static array.  I just never went down that road, I guess.
-                 The Modula-2 code writes the memo field as FITID + "  " + memo + ": " + comment, where I enter comment
-                 myself w/ each run of the pgm.  I'm trying out adding the FITID numbers to Descript and see how I
-                 like it.
-  30 Sep 20 -- Now called queuefx.  I want to first read in the entire source file and create an array of tokens.
-                 I don't think I need the overhead of container/list.  Having an array of tokens will allow me to
-                 easily undo a token.  The qbo format I found on the AmEx site does not have any newlines, so the
-                 entire file is one line.  Fromfx did work on that file, but I want to play.
-   2 Oct 20 -- qbo files now will populate the filepicker menu.  Filepicker adds the case insensitive flag.  And I
-                 created 999 as a stop code.
-   4 Oct 20 -- Will ignore empty tokens.
-  17 Oct 20 -- Removed strings.ToLower from creation of output filenames.
+REVISION HISTORY
+----------------
+13 Mar 04 -- It does not seem to be always creating the output file.  It now copies the d/l file instead of renaming it.
+               And it echoes its output to the terminal.
+14 Mar 04 -- Made it a Text Window module
+21 Mar 04 -- Changed exit keys to remove <cr> and add <space>, <bs>, <tab>
+15 Apr 04 -- Decided to include <cr> again, as I fixed the pblm in Excel macros.
+31 Jul 04 -- Needed to change logic because Citibank now d/l nulls in fields that I need.
+ 8 Aug 04 -- Copied to process MMA file as well.  And fixed a minor output bug.
+ 8 Nov 04 -- Citibank changed their file format again.  Don't need ExtractLastNum and the
+              description is now 2 fields instead of 1.
+17 Jun 06 -- Opened a new citi acnt they call eSavings.  Need to include this into database.
+              And changed initial value of chknum to zero, and any key will exit now.
+18 Jun 06 -- Now uses command line for file names.
+19 Jun 06 -- Fixed bug of always writing the same acnt name and made it output filename.
+27 Jan 07 -- Noticed that the fileformat changed slightly as of Oct or so.  I have to remove
+              squotes from acnt#.  And added a menu option to exit.
+29 Jan 07 -- While at ISET 2007, I decided to change the method of removing the squote so that
+              all squotes are removed, even if Citibank gets cute and puts more in.
+ 2 Oct 07 -- Now has ability to use .qif files, and needed a module name change for this.
+              Also used menu pick instead of cmd line params.
+21 Feb 08 -- Had to make output file .txt so that Access on P5 could import the file.  Don't know y.
+              And I copied the .txt file to .out file so I don't have to change anything on P4.
+24 Mar 08 -- HSBC uses short date format and squote delim for 2 dgt year.
+               And I changed output file format to be more straightforward, reordering fields.
+ 9 Feb 09 -- Now does .qfx files, hence module name change.  And will use <tab> as output delim, just because.
+              And since it really is meant for Excel to import the text file, module name change to xls.
+ 3 Mar 11 -- Noticed but in GetQfxToken in that read calls should all be to the param f, not the
+              global infile.  I will fix this next time I have to recompile.
+ 7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
+              which means open financial exchange (for/of information).  New name is ofx2csv.go
+              I think I will first process the file using something like toascii.
+19 Oct 17 -- Added filepicker code
+ 1 Nov 17 -- Added output of $ for footer amount.
+25 Dec 17 -- Decided to try changing date format to match ISO8601 YYYY-MM-DD required for sqlite.
+30 Dec 17 -- Discovered that Access won't handle yyyy-mm-dd format, only Excel will.  Now I need
+               to write out 2 different files, one for Access and one for Sqlite.db.  And I need to
+               append 2 commas for the sqlite file.
+31 Mar 19 -- Noticed that this pgm defaults to .qfx files.  I decided to have it default to both .ofx and .qfx files.
+ 5 Sep 20 -- Still not showing .ofx files, and removed default CHK part of the pattern.
+               Put back the CHK part of pattern because this file is only designed for the Citibank checking files.
+ 6 Sep 20 -- Added a comment about passing Transactions slice globally.
+ 7 Sep 20 -- Now called fromfx, to mean from qfx or ofx.  My intent is to cover both the CHK files and cc files.
+               I'll look for CHK in the selected filename to distinguish.
+17 Sep 20 -- Using the csv routines from Go did not work for SQLiteStudio.  It's not reading the date again.
+               I have to explicitly quote the output.  And also always write Windows line endings \r\n.  Else
+               SQLiteStudio does not process the lines of the file correctly.  I just checked, and the
+               Modula-2 version always wrote Windows line endings.
+               This Go routine reads all the lines into a slice of records/struct's.  I did not write it that way
+               in Modula-2.  In Modula-2 I read 1 line and then wrote out 1 line, one by one.  I probably could
+               have created an array of RECORD type, but I didn't.
+               I guess that Go makes dynamic arrays just so easy that I never did that in Modula-2.  I could have
+               defined a large enough static array.  I just never went down that road, I guess.
+               The Modula-2 code writes the memo field as FITID + "  " + memo + ": " + comment, where I enter comment
+               myself w/ each run of the pgm.  I'm trying out adding the FITID numbers to Descript and see how I like it.
+30 Sep 20 -- Now called queuefx.  I want to first read in the entire source file and create an array of tokens.
+               I don't think I need the overhead of container/list.  Having an array of tokens will allow me to
+               easily undo a token.  The qbo format I found on the AmEx site does not have any newlines, so the
+               entire file is one line.  Fromfx did work on that file, but I want to play.
+ 2 Oct 20 -- qbo files now will populate the filepicker menu.  Filepicker adds the case insensitive flag.  And I
+               created 999 as a stop code.
+ 4 Oct 20 -- Will ignore empty tokens.
+17 Oct 20 -- Removed strings.ToLower from creation of output filenames.
+ 8 Apr 21 -- Converted to module named src.
 */
 
 const ( // intended for ofxCharType

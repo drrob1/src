@@ -15,12 +15,12 @@ import (
 	"strconv"
 	"strings"
 	//
-	"getcommandline"
-	"hpcalc2"
-	"makesubst"
+	"src/getcommandline"
+	"src/hpcalc2"
+	"src/makesubst"
 )
 
-const LastCompiled = "31 Jan 2021"
+const LastCompiled = "8 Apr 2021"
 
 var suppressDump map[string]bool
 
@@ -67,6 +67,7 @@ func main() {
 	   12 Dec 20 -- hpcalc2 now has MAP commands.
 	   13 Dec 20 -- Shortened the lead space on displaying the Results.
 	   31 Jan 21 -- Adding color.  And windowsFlag so color is better, ie, use bold flag on windows.
+	    8 Apr 21 -- Converted to module src residing at ~/go/src.  What a coincidence.
 	*/
 
 	var R float64
@@ -90,7 +91,6 @@ func main() {
 	suppressDump["DUMPFIXED"] = true
 	suppressDump["DUMPFLOAT"] = true
 	suppressDump["?"] = true
-	//        suppressDump[""] = true
 
 	allowDumpFlag := true
 	windowsFlag = runtime.GOOS == "windows"
@@ -116,7 +116,7 @@ func main() {
 
 	hpcalc2.PushMatrixStacks()
 
-	fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ", LastCompiled)
+	fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ", LastCompiled, "using", runtime.Version())
 	fmt.Println()
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -204,12 +204,6 @@ func main() {
 			fmt.Printf(" binary.write into buf failed with error %v \n", err)
 			os.Exit(1)
 		}
-		// {{{
-		//    fmt.Println(" Got Stk.  buf.Bytes len =",len(buf.Bytes()),". buf.Bytes: ",buf.Bytes());
-		//    OutputByteSlice = append(OutputByteSlice,buf.Bytes()...);
-		//    fmt.Println(" Length of OutByteSlice after append operation ",len(OutputByteSlice));
-		//    buf.Reset();
-		// }}}
 	}
 	err = ioutil.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {

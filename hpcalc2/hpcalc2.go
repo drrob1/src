@@ -12,13 +12,12 @@ import (
 	"strconv"
 	"strings"
 	//
-	"holidaycalc"
-	"timlibg"
-	//	"tokenize"
-	"tknptr"
+	"src/holidaycalc"
+	"src/timlibg"
+	"src/tknptr"
 )
 
-const LastAlteredDate = "12 Feb 2021"
+const LastAlteredDate = "8 Apr 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -119,6 +118,7 @@ REVISION HISTORY
  3 Feb 21 -- Fixed bug in what gets pushed onto the stack with the c2f and f2c commands.
  4 Feb 21 -- Added H for help.
 11 Feb 21 -- Added these commands that will be ignored, X, P and Q.  And took out come dead code.
+ 8 Apr 21 -- Converting to src module residing at ~/go/src.  What a coincidence!
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"

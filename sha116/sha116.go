@@ -1,16 +1,12 @@
 package main   // for sha116.go
 
 import (
-	//"bufio"
-	//"getcommandline"
-	//"path/filepath"
 	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"filepicker"
 	"fmt"
 	"hash"
 	"io"
@@ -19,7 +15,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"tknptr"
+	"src/filepicker"
+	"src/tknptr"
 )
 
 /*
@@ -49,9 +46,10 @@ import (
    3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoring file extension.
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using os.ReadAll, using go 1.16.
    7 Mar 21 -- Added use of strings.TrimSpace()
+   8 Apr 21 -- Converting to module version of ~/go/src.
 */
 
-const LastCompiled = "7 Mar 2021"
+const LastCompiled = "8 Apr 2021"
 
 //* ************************* MAIN ***************************************************************
 func main() {

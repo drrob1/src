@@ -16,9 +16,9 @@ import (
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	hpcalc "hpcalc2"
-	"makesubst"
-	"tokenize"
+	hpcalc "src/hpcalc2"
+	"src/makesubst"
+	"src/tokenize"
 )
 
 /*
@@ -38,7 +38,7 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "12 Feb 2021"
+const lastAlteredDate = "8 Apr 2021"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -120,6 +120,7 @@ REVISION HISTORY
  4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed bug of ignoring a command line param.
  5 Feb 21 -- Removed an extra PushMatrixStacks() while initializing everything.
 11 Feb 21 -- Added X for exit, to copy PACS.  And changed the prompt
+ 8 Apr 21 -- Converted to module name src, that happens to reside at ~/go/src.  Go figure!
 */
 
 	var INBUF, HomeDir string

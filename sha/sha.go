@@ -1,16 +1,12 @@
 package main
 
 import (
-	//"bufio"
-	//"getcommandline"
-	//"path/filepath"
 	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"filepicker"
 	"fmt"
 	"hash"
 	"io"
@@ -18,9 +14,10 @@ import (
 	"os"
 
 	"runtime"
+	"src/filepicker"
+	"src/tknptr"
 	"strconv"
 	"strings"
-	"tknptr"
 )
 
 /*
@@ -50,9 +47,10 @@ import (
    3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoring file extension.
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using io.ReadAll. and go 1.15.8
    7 Mar 21 -- added strings.TrimSpace
+   8 Apr 21 -- Converted import list to module named src.  So essentially, very little has changed except for these import statements.
 */
 
-const LastCompiled = "7 Mar 2021"
+const LastCompiled = "8 Apr 2021"
 
 //* ************************* MAIN ***************************************************************
 func main() {

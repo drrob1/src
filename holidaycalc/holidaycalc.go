@@ -1,43 +1,35 @@
 package holidaycalc
 
 import (
-	"timlibg"
+	"src/timlibg"
 )
 
 /*
-  REVISION HISTORY
-  ----------------
-  5 Apr 88 -- 1) Converted to M2 V3.03.
-              2) Imported the REALLIB and CALLIB modules, and deleted their
-                  code from here.  They were originally created here, but
-                  it seems more appropriate to leave them in a central
-                  module and import them.
-  19 Mar 89 -- 1) Imported the newly created HPCALC to allow date arithmetic.
-                  The rest of the code was modified to take advantage of this
-                  new capability.
-               2) Fixed a bug in the error reporting from the EASTER proc
-                  so that a FOR index variable does not get assigned 0.
-  30 Mar 89 -- 1) Fixed bug in the PR and HOL cmds that ignored 2 digit
-                  years
-               2) Added reminder to GREG help line to use quotes to force
-                  the date to be taken as an ALLELSE TKNSTATE.
-  26 Dec 90 -- 1) Utilized the GETTKNSTR procedure where appropriate.
+REVISION HISTORY
+----------------
+ 5 Apr 88 -- 1) Converted to M2 V3.03.
+             2) Imported the REALLIB and CALLIB modules, and deleted their code from here.  They were originally created here, but
+                  it seems more appropriate to leave them in a central module and import them.
+19 Mar 89 -- 1) Imported the newly created HPCALC to allow date arithmetic.
+                  The rest of the code was modified to take advantage of this new capability.
+               2) Fixed a bug in the error reporting from the EASTER proc so that a FOR index variable does not get assigned 0.
+30 Mar 89 -- 1) Fixed bug in the PR and HOL cmds that ignored 2 digit years
+               2) Added reminder to GREG help line to use quotes to force the date to be taken as an ALLELSE TKNSTATE.
+26 Dec 90 -- 1) Utilized the GETTKNSTR procedure where appropriate.
                2) UL2 is used instead of UTILLIB.
                3) Added GETTKNEOL proc to deal with GREG & DOW cmds.
-  25 Jul 93 -- 1) Dropping requirement of CALCCMD by passing cmdline thru
-                   to GETRESULT.
+25 Jul 93 -- 1) Dropping requirement of CALCCMD by passing cmdline thru to GETRESULT.
                2) Allowed empty command line to quit after confirmation.
-               3) Eliminated writing of trailing insignificant 0's from
-                   arithmetic functions.
+               3) Eliminated writing of trailing insignificant 0's from arithmetic functions.
                4) Imported TKNRTNS instead of TOKENIZE.
                5) Eliminated need for GETTKNSTR by improving algorithm.
-               6) Deleted GETTKNEOL proc as it is no longer used.  If
-                   needed, it may be imported from TKNRTNS now.
-  18 May 03 -- Conversion to Win32 using Stony Brook Modula-2 V 4
-  25 Dec 14 -- Converted to a module to get holiday dates by the calculator, using HolMod written for the Cal program.
-   1 Jan 15 -- Converting to cpp, and combining HolMod into this module.
-  25 Aug 16 -- Converting to Go.
-  23 Mar 21 -- Changed the limits in EASTER function.
+               6) Deleted GETTKNEOL proc as it is no longer used.  If needed, it may be imported from TKNRTNS now.
+18 May 03 -- Conversion to Win32 using Stony Brook Modula-2 V 4
+25 Dec 14 -- Converted to a module to get holiday dates by the calculator, using HolMod written for the Cal program.
+ 1 Jan 15 -- Converting to cpp, and combining HolMod into this module.
+25 Aug 16 -- Converting to Go.
+23 Mar 21 -- Changed the limits in EASTER function.
+ 8 Apr 21 -- Converted to module name src.
 */
 
 type MDType struct { // MDType is a contraction of Month Day Type, and Go export caps rules apply.
