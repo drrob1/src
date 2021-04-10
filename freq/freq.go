@@ -86,8 +86,8 @@ func main() {
 		if err != nil {
 			break
 		}
-		if size > 1 {
-			fmt.Fprintln(os.Stderr, "Size of read rune is", size, "skipping.")
+		if size > 1 || r > 126 {
+			// fmt.Fprintf(os.Stderr, "Size of read rune is %d.  Skipping %d, %q \n", size, r, r)  Don't need to see these anymore.
 			continue
 		}
 		r = toLower(r)
@@ -104,16 +104,35 @@ func main() {
 	fmt.Println(" The length of the rawRuneMap is", len(rawRuneMap), ".  The length of the letters slice is", len(letters))
 	fmt.Println()
 
-	fmt.Println(" Unsorted rawRuneMap:", rawRuneMap)
-	fmt.Println(" letters before sort:", letters)
+	fmt.Println(" Unsorted rawRuneMap:")
+	for i, rm := range rawRuneMap {
+		//if i < ' ' { continue }  // skip control characters like <LF> or <CR>
+		fmt.Printf("%q:%d:%d ", i, i, rm)
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Println(" letters before sort:")
+	for _, ltr := range letters {
+		fmt.Printf("%c:%d ", ltr.r, ltr.count)
+	}
+	fmt.Println()
+	fmt.Println()
 
 	sortfcn := func(i, j int) bool {
-		return letters[i].count > letters[j].count  // I want the most often letter to sort in front.
+		return letters[i].count > letters[j].count // I want the most often letter to sort in front.
 	}
 	sort.Slice(letters, sortfcn)
 
 	fmt.Println()
-	fmt.Print(" After sorting the letters slice: ")
+	fmt.Println(" letters and counts after sort:")
+	for _, ltr := range letters {
+		fmt.Printf("%c:%d ", ltr.r, ltr.count)
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Print(" Just sorted letters: ")
 	for i := 0; i < len(letters); i++ {
 		fmt.Printf("%c", letters[i].r)
 	}
