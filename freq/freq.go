@@ -1,4 +1,4 @@
-// (C) 1990-2016.  Robert W Solomon.  All rights reserved.
+// (C) 1990-2021.  Robert W Solomon.  All rights reserved.
 // freq.go
 package main
 
@@ -86,7 +86,7 @@ func main() {
 		if err != nil {
 			break
 		}
-		if size > 1 || r > 126 {
+		if size > 1 || r > 126 { // there is a character that looks like a reverse video '?', has value of 63355 but a size of 1, that I want to trap here.
 			// fmt.Fprintf(os.Stderr, "Size of read rune is %d.  Skipping %d, %q \n", size, r, r)  Don't need to see these anymore.
 			continue
 		}
