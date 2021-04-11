@@ -4,11 +4,12 @@
 package main
 
 /*
-  REVISION HISTORY
-  ----------------
- 16 Apr 17 -- Started coding first version of eols, based on cal.go
- 18 Apr 17 -- Tweaked output message text.
-  9 May 17 -- Will AddCommas on filesize for output
+REVISION HISTORY
+----------------
+16 Apr 17 -- Started coding first version of eols, based on cal.go
+18 Apr 17 -- Tweaked output message text.
+ 9 May 17 -- Will AddCommas on filesize for output
+11 Mar 21 -- Updated code based on my add'l experience.  And added method 2 as a test of concept.
 */
 
 import (
@@ -16,24 +17,20 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
-	//
-	"getcommandline"
-	//  "bufio"
-	//  "strconv"
-	//  "timlibg"
-	//  "tokenize"
 )
 
-const lastCompiled = "9 May 2017"
-const k = 1024
+const lastCompiled = "11 Mar 2021"
 
 // CR is the ASCII carriage return value
 const CR = 13
+const CRstr = "\r"
 
 // LF is the ASCII line feed value
 const LF = 10
+const LFstr = "\n"
 
 /*
    --------------------- MAIN ---------------------------------------------
@@ -41,19 +38,19 @@ const LF = 10
 func main() {
 	var filesize int64
 
-	fmt.Println("End Of Line Counting Program.  ", lastCompiled)
+	fmt.Println()
+	fmt.Println("End Of Line Counting Program.  Last altered", lastCompiled, "and compiled by", runtime.Version())
 	fmt.Println()
 
-	if len(os.Args) <= 1 {
+	if len(os.Args) < 2 {
 		fmt.Println(" Usage: eols <filename>")
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	Ext1Default := ".txt"
 	Ext2Default := ".out"
 
-	commandline := getcommandline.GetCommandLineString()
-	BaseFilename := filepath.Clean(commandline)
+	BaseFilename := filepath.Clean(os.Args[1])
 	Filename := ""
 	FileExists := false
 
@@ -85,23 +82,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, k*k) // initial capacity of 1 MB
-	byteslice, err := ioutil.ReadFile(Filename)
+	byteSlice, err := ioutil.ReadFile(Filename)
 	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
+		fmt.Println(err, ".  Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
-	CRtotal := 0
-	LFtotal := 0
+	var CRtotal, LFtotal uint
 
-	for _, b := range byteslice {
+	for _, b := range byteSlice {
 		if b == CR {
 			CRtotal++
 		} else if b == LF {
 			LFtotal++
 		}
-
 	}
 
 	FileSizeStr := strconv.FormatInt(filesize, 10)
@@ -109,10 +103,14 @@ func main() {
 		FileSizeStr = AddCommas(FileSizeStr)
 	}
 
-	fmt.Print(" File ", Filename, " has ", CRtotal, " CR and ", LFtotal, " LF.")
-	fmt.Println("  FileSize is ", FileSizeStr)
-	//	fmt.Println("  Length of byteslice is ", len(byteslice), ", FileSize is ",
-	//	filesize)  Length of byteslice and filesize are equal.
+	fmt.Println(" File", Filename, "has", CRtotal, "CR and", LFtotal, "LF by method 1,")
+
+	CRtot := strings.Count(string(byteSlice), CRstr)
+	LFtot := strings.Count(string(byteSlice), LFstr)
+	fmt.Println(" and has", CRtot, "CR and", LFtot, "LF by method 2, ie, strings.Count().")
+
+	fmt.Println(" FileSize is ", FileSizeStr)
+	fmt.Println()
 	fmt.Println()
 
 } // end main func for eols
