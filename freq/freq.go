@@ -157,7 +157,7 @@ func main() {
 		fmt.Printf("%c", letters[i].r)
 	}
 	fmt.Println()
-	fmt.Printf(" LF: %d, CR: %d \n", rawRuneMap[10], rawRuneMap[13])
+	fmt.Printf(" CR: %d, LF: %d \n", rawRuneMap[13], rawRuneMap[10])
 	fmt.Println()
 } // main in freq.go
 
