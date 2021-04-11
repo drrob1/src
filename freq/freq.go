@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -17,10 +18,10 @@ import (
 REVISION HISTORY
 ----------------
  9 Apr 21 -- Just started working on the to populate and sort a letter frequency table using my .txt files as source material
-
+11 Apr 21 -- Adding flag package and test flag to streamline the output.  And adding <CR> and <LF> counts to output.
 */
 
-const lastCompiled = "10 Apr 2021"
+const lastCompiled = "11 Apr 2021"
 const extDefault = ".txt"
 
 type letter struct {
@@ -34,20 +35,30 @@ func main() {
 	rawRuneMap := make(map[rune]int, 255)
 
 	fmt.Printf(" freq, a letter frequency program written in Go.  Last altered %s, compiled with %s. \n", lastCompiled, runtime.Version())
+	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
+	flag.Parse()
 
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Println(ExecFI.Name(), "was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
-	fmt.Println(" Full name of executable file is", execname)
+	if *testFlag {
+		fmt.Println(ExecFI.Name(), "was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+		fmt.Println(" Full name of executable file is", execname)
+	}
 	fmt.Println()
 
-	if len(os.Args) > 1 {
-		ans = os.Args[1]
+	args := flag.Args()
+	// os.Arg[1] could be the -test flag and I don't want that confusion.
+	if flag.NArg() > 0 {
+		ans = args[0]
 	} else {
 		fmt.Print(" Enter a filename to process: ")
-		fmt.Scanln(&ans)
+		_, err := fmt.Scanln(&ans)
+		if err != nil {
+			fmt.Println(err, " Exiting.")
+			os.Exit(1)
+		}
 	}
 	BaseFilename := filepath.Clean(ans)
 	InFileExists := false
@@ -56,14 +67,18 @@ func main() {
 		fi, err := os.Stat(infilename)
 		if err == nil {
 			InFileExists = true
-			fmt.Println(infilename, " size =", fi.Size())
+			if *testFlag {
+				fmt.Println(infilename, " size =", fi.Size())
+			}
 		}
 	} else {
 		infilename = BaseFilename + extDefault
 		fi, err := os.Stat(infilename)
 		if err == nil {
 			InFileExists = true
-			fmt.Println(infilename, "size is", fi.Size())
+			if *testFlag {
+				fmt.Println(infilename, "size is", fi.Size())
+			}
 		}
 	}
 
@@ -79,7 +94,9 @@ func main() {
 	}
 
 	filebuffer := bytes.NewBuffer(filecontents)
-	fmt.Println(" Size of filecontents is", len(filecontents), "and length of filebuffer is", filebuffer.Len(), "and cap of buffer is", filebuffer.Cap())
+	if *testFlag {
+		fmt.Println(" Size of filecontents is", len(filecontents), "and length of filebuffer is", filebuffer.Len(), "and cap of buffer is", filebuffer.Cap())
+	}
 
 	for {
 		r, size, err := filebuffer.ReadRune()
@@ -101,42 +118,46 @@ func main() {
 		letters = append(letters, ltr)
 	}
 
-	fmt.Println(" The length of the rawRuneMap is", len(rawRuneMap), ".  The length of the letters slice is", len(letters))
-	fmt.Println()
+	if *testFlag {
+		fmt.Println(" The length of the rawRuneMap is", len(rawRuneMap), ".  The length of the letters slice is", len(letters))
+		fmt.Println()
+		fmt.Println(" Unsorted rawRuneMap:")
+		for i, rm := range rawRuneMap {
+			//if i < ' ' { continue }  // skip control characters like <LF> or <CR>
+			fmt.Printf("%q:%d:%d ", i, i, rm)
+		}
+		fmt.Println()
+		fmt.Println()
 
-	fmt.Println(" Unsorted rawRuneMap:")
-	for i, rm := range rawRuneMap {
-		//if i < ' ' { continue }  // skip control characters like <LF> or <CR>
-		fmt.Printf("%q:%d:%d ", i, i, rm)
+		fmt.Println(" letters before sort:")
+		for _, ltr := range letters {
+			fmt.Printf("%c:%d ", ltr.r, ltr.count)
+		}
+		fmt.Println()
+		fmt.Println()
 	}
-	fmt.Println()
-	fmt.Println()
-
-	fmt.Println(" letters before sort:")
-	for _, ltr := range letters {
-		fmt.Printf("%c:%d ", ltr.r, ltr.count)
-	}
-	fmt.Println()
-	fmt.Println()
 
 	sortfcn := func(i, j int) bool {
 		return letters[i].count > letters[j].count // I want the most often letter to sort in front.
 	}
 	sort.Slice(letters, sortfcn)
 
-	fmt.Println()
-	fmt.Println(" letters and counts after sort:")
-	for _, ltr := range letters {
-		fmt.Printf("%c:%d ", ltr.r, ltr.count)
+	if *testFlag {
+		fmt.Println()
+		fmt.Println(" letters and counts after sort:")
+		for _, ltr := range letters {
+			fmt.Printf("%c:%d ", ltr.r, ltr.count)
+		}
+		fmt.Println()
+		fmt.Println()
 	}
-	fmt.Println()
-	fmt.Println()
 
 	fmt.Print(" Just sorted letters: ")
 	for i := 0; i < len(letters); i++ {
 		fmt.Printf("%c", letters[i].r)
 	}
 	fmt.Println()
+	fmt.Printf(" LF: %d, CR: %d \n", rawRuneMap[10], rawRuneMap[13])
 	fmt.Println()
 } // main in freq.go
 
