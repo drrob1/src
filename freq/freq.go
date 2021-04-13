@@ -19,9 +19,10 @@ REVISION HISTORY
 ----------------
  9 Apr 21 -- Just started working on the to populate and sort a letter frequency table using my .txt files as source material
 11 Apr 21 -- Adding flag package and test flag to streamline the output.  And adding <CR> and <LF> counts to output.
+13 Apr 31 -- Added verbose flag as synonym for test mode.  Verbose is more consistent w/ most utils.
 */
 
-const lastCompiled = "11 Apr 2021"
+const lastCompiled = "13 Apr 2021"
 const extDefault = ".txt"
 
 type letter struct {
@@ -36,13 +37,16 @@ func main() {
 
 	fmt.Printf(" freq, a letter frequency program written in Go.  Last altered %s, compiled with %s. \n", lastCompiled, runtime.Version())
 	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
+	var verboseFlag = flag.Bool("v", false, "verbose mode to println more variables and messages.")
 	flag.Parse()
 
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	if *testFlag {
+	verboseMode := *testFlag || *verboseFlag
+
+	if verboseMode  {
 		fmt.Println(ExecFI.Name(), "was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
 		fmt.Println(" Full name of executable file is", execname)
 	}
@@ -67,7 +71,7 @@ func main() {
 		fi, err := os.Stat(infilename)
 		if err == nil {
 			InFileExists = true
-			if *testFlag {
+			if verboseMode {
 				fmt.Println(infilename, " size =", fi.Size())
 			}
 		}
@@ -76,7 +80,7 @@ func main() {
 		fi, err := os.Stat(infilename)
 		if err == nil {
 			InFileExists = true
-			if *testFlag {
+			if verboseMode {
 				fmt.Println(infilename, "size is", fi.Size())
 			}
 		}
@@ -94,7 +98,7 @@ func main() {
 	}
 
 	filebuffer := bytes.NewBuffer(filecontents)
-	if *testFlag {
+	if verboseMode {
 		fmt.Println(" Size of filecontents is", len(filecontents), "and length of filebuffer is", filebuffer.Len(), "and cap of buffer is", filebuffer.Cap())
 	}
 
@@ -118,7 +122,7 @@ func main() {
 		letters = append(letters, ltr)
 	}
 
-	if *testFlag {
+	if verboseMode {
 		fmt.Println(" The length of the rawRuneMap is", len(rawRuneMap), ".  The length of the letters slice is", len(letters))
 		fmt.Println()
 		fmt.Println(" Unsorted rawRuneMap:")
@@ -142,7 +146,7 @@ func main() {
 	}
 	sort.Slice(letters, sortfcn)
 
-	if *testFlag {
+	if verboseMode {
 		fmt.Println()
 		fmt.Println(" letters and counts after sort:")
 		for _, ltr := range letters {
