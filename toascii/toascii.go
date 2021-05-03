@@ -11,12 +11,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode"
 	//
 )
 
-const lastAltered = "23 Dec 2017"
+const lastAltered = "27 Apr 2021"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -49,32 +50,30 @@ const bullet96 = 0x96
 const bullet95 = 0x95
 
 /*
-   REVISION HISTORY
-   ----------------
-   17 Apr 17 -- Started writing nocr, based on rpn.go
-   18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
-    5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
-    6 May 17 -- After I wrote ShowUtf8, I added more runes here and
-                  added OS based line endings.
-    8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
-   13 May 17 -- Changed the text of the final output message.
-   15 May 17 -- Will now call this toascii.go.  io.Copy and encoding/ascii85.NewEncoder does not work.
-   10 Sep 17 -- Added code to show timestamp of execname.  And changed bufio error checking.
-   23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
+REVISION HISTORY
+----------------
+17 Apr 17 -- Started writing nocr, based on rpn.go
+18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
+ 5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
+ 6 May 17 -- After I wrote ShowUtf8, I added more runes here and added OS based line endings.
+ 8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
+13 May 17 -- Changed the text of the final output message.
+15 May 17 -- Will now call this toascii.go.  io.Copy and encoding/ascii85.NewEncoder does not work.
+10 Sep 17 -- Added code to show timestamp of execname.  And changed bufio error checking.
+23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
+27 Apr 21 -- Added v flag, for verbose.
 */
 
 func main() {
 	var str string
 
 	fmt.Println()
-	fmt.Println(" toascii converts utf8 to ascii.  Last altered ", lastAltered)
+	fmt.Println(" toascii converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered)
+	fmt.Println()
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
-	fmt.Println(" Full name of executable file is", execname)
-	fmt.Println()
 
 	var norenameflag = flag.Bool("no", false, "norenameflag -- do not rename files at end.")
 	var NoRenameFlag bool
@@ -82,11 +81,17 @@ func main() {
 	var helpflag = flag.Bool("h", false, "Print help message")
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "H", false, "Print help message")
+	var verboseFlag bool
+	flag.BoolVar(&verboseFlag, "v", false, "verbose messages")
 
 	flag.Parse()
 
-	commandline := flag.Arg(0)
-	if len(os.Args) <= 1 || len(commandline) == 0 {
+	if verboseFlag {
+		fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+		fmt.Println(" Full name of executable file is", execname, "compiled using", runtime.Version())
+	}
+
+	if flag.NArg() == 0 {
 		fmt.Println(" Usage: utf8toascii <filename> ")
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -97,7 +102,7 @@ func main() {
 	}
 
 	RenameFlag := !(*norenameflag || NoRenameFlag) // same as ~A && ~B, symbollically.  This reads better in the code below.
-
+	commandline := flag.Arg(0)
 	BaseFilename := filepath.Clean(commandline)
 	InFilename := ""
 	InFileExists := false

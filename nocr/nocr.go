@@ -5,36 +5,57 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
-	//
-	"getcommandline"
 )
 
-const lastCompiled = "18 Apr 17"
+const lastCompiled = "28 Apr 21"
 
 func main() {
-	/*
-	   REVISION HISTORY
-	   ----------------
-	   17 Apr 17 -- Started writing nocr, based on rpn.go
-	   18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
-	*/
+/*
+REVISION HISTORY
+----------------
+17 Apr 17 -- Started writing nocr, based on rpn.go
+18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
+27 Apr 21 -- Adding flags and checking err only once, as per Rob Pike's recommendation.
+28 Apr 21 -- Added showing eols for both in and out files when verbose flag is set.
+*/
 
 	var inoutline string
 	//	var err error
 
-	fmt.Println(" nocr removes all <CR> from a file.  Last compiled ", lastCompiled)
+	fmt.Println(" nocr removes all <CR> from a file.  Last compiled", lastCompiled, "by", runtime.Version())
 	fmt.Println()
 
-	if len(os.Args) <= 1 {
+	var verboseFlag, norenameFlag, noRenameFlag bool
+	flag.BoolVar(&verboseFlag, "v", false, "verbose switch.")
+	flag.BoolVar(&norenameFlag, "n", false, "norename output files switch.")
+	flag.BoolVar(&noRenameFlag, "no", false, "noremane output files switch, another form.")
+	flag.Parse()
+
+	if flag.NArg() == 0 {
 		fmt.Println(" Usage: nocr <filename> ")
 		os.Exit(1)
 	}
 
-	commandline := getcommandline.GetCommandLineString()
+	renameflag := !(norenameFlag || noRenameFlag) // convenience variable
+
+	workingdir, _ := os.Getwd()
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+
+	if verboseFlag {
+		fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+		fmt.Println(" Full name of executable file is", execname)
+		fmt.Println()
+	}
+
+	commandline := flag.Arg(0)
 	BaseFilename := filepath.Clean(commandline)
 	InFilename := ""
 	InFileExists := false
@@ -80,38 +101,64 @@ func main() {
 	defer OutBufioWriter.Flush()
 
 	for InBufioScanner.Scan() {
-		inoutline = InBufioScanner.Text() // does not include the trailing EOL char
-		_, err := OutBufioWriter.WriteString(inoutline)
-		check(err)
-		_, err = OutBufioWriter.WriteRune('\n')
-		check(err)
+		inoutline = InBufioScanner.Text() // does not include the trailing EOL char or chars
+		OutBufioWriter.WriteString(inoutline)
+		OutBufioWriter.WriteRune('\n')
+		//	_, err := OutBufioWriter.WriteString(inoutline)
+		//	check(err)
+		//	_, err = OutBufioWriter.WriteRune('\n')
+		//	check(err)
 	}
 
 	InputFile.Close()
-	OutBufioWriter.Flush() // code did not work without this line.
+	if err := OutBufioWriter.Flush(); err != nil {
+		fmt.Fprintln(os.Stderr, err, "Exiting.")
+		os.Exit(1)
+	}
 	OutputFile.Close()
 
-	// Make the processed file the same name as the input file.  IE, swap in and
-	// out files.
-	TempFilename := InFilename + OutFilename + ".tmp"
-	os.Rename(InFilename, TempFilename)
-	os.Rename(OutFilename, InFilename)
-	os.Rename(TempFilename, OutFilename)
+	filename1 := InFilename
+	filename2 := OutFilename
+	if renameflag {
+		TempFilename := InFilename + OutFilename + ".tmp"
+		os.Rename(InFilename, TempFilename)
+		os.Rename(OutFilename, InFilename)
+		os.Rename(TempFilename, OutFilename)
+		filename1, filename2 = filename2, filename1
+	}
 
-	FI, err := os.Stat(InFilename)
-	InputFileSize := FI.Size()
+	FI, err := os.Stat(filename1)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	FileSize1 := FI.Size()
 
-	FI, err = os.Stat(OutFilename)
-	OutputFileSize := FI.Size()
+	FI, err = os.Stat(filename2)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	FileSize2 := FI.Size()
 
-	fmt.Println(" Original file is now ", OutFilename, " and size is ", OutputFileSize)
-	fmt.Println(" Output File is now ", InFilename, " and size is ", InputFileSize)
+	fmt.Println(" Input file is", filename1, " and size is", FileSize1)
+	fmt.Println(" Output File is", filename2, " and size is", FileSize2)
 	fmt.Println()
+
+	if (verboseFlag) {
+		CRtot, LFtot := eols(filename1)
+		fmt.Println("File", filename1, "has", CRtot, "CR and", LFtot, "LF.")
+		CRtot, LFtot = eols(filename2)
+		fmt.Println("File", filename2, "has", CRtot, "CR and", LFtot, "LF.")
+		fmt.Println()
+	}
 
 } // main in nocr.go
 
-func check(e error) {
-	if e != nil {
-		panic(e)
+func eols(fn string) (int, int) {
+	byteSlice, err := os.ReadFile(fn)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Reading", fn, err)
 	}
+	CRtot := strings.Count(string(byteSlice), "\r")
+	LFtot := strings.Count(string(byteSlice), "\n")
+	return CRtot, LFtot
 }

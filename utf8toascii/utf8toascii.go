@@ -16,7 +16,7 @@ import (
 	//
 )
 
-const lastAltered = "23 Dec 17"
+const lastAltered = "27 Apr 21"
 
 //const openQuoteRune = 0xe2809c  \  These values are in the file itself seen by hexdump -C
 //const closeQuoteRune = 0xe2809d  \ but are not the rune (unicode code point)
@@ -53,17 +53,17 @@ const bullet96 = 0x96
 const bullet95 = 0x95
 
 /*
-   REVISION HISTORY
-   ----------------
-   17 Apr 17 -- Started writing nocr, based on rpn.go
-   18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
-    5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
-    6 May 17 -- After I wrote ShowUtf8, I added more runes here and
-                  added OS based line endings.
-    8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
-   13 May 17 -- Changed the text of the final output message.
-   10 Sep 17 -- Added execname code, and changed error handling based on Rob Pike suggestion.
-   23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
+REVISION HISTORY
+----------------
+17 Apr 17 -- Started writing nocr, based on rpn.go
+18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
+ 5 May 17 -- Now will convert utf8 to ascii, based on nocr.go
+ 6 May 17 -- After I wrote ShowUtf8, I added more runes here and added OS based line endings.
+ 8 May 17 -- Added the -n or -no switch meaning no renaming at end of substitutions.
+13 May 17 -- Changed the text of the final output message.
+10 Sep 17 -- Added execname code, and changed error handling based on Rob Pike suggestion.
+23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
+27 Apr 21 -- To add verbose flag, and add switch to set line endings.
 */
 
 type errWriter struct {
@@ -81,14 +81,12 @@ func (ew *errWriter) writestr(s string) {
 func main() {
 	var instr, outstr, str, lineEndings string
 
-	fmt.Println(" utf8toascii converts utf8 to ascii.  Last altered ", lastAltered)
+	fmt.Println(" utf8toascii converts utf8 to ascii, and uses option switches to change line endings .  Last altered ",
+		lastAltered)
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
-	fmt.Println(" Full name of executable file is", execname)
-	fmt.Println()
 
 	var norenameflag = flag.Bool("no", false, "norenameflag -- do not rename files at end.")
 	var NoRenameFlag bool
@@ -96,11 +94,16 @@ func main() {
 	var helpflag = flag.Bool("h", false, "Print help message")
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "H", false, "Print help message")
+	var winEndingsFlag, linEndingsFlag, verboseFlag bool
+	flag.BoolVar(&winEndingsFlag,"win", false, "Windows line endings.")
+	flag.BoolVar(&winEndingsFlag, "w", false, "Windows line endings.") // first time same var for 2 switches
+	flag.BoolVar(&linEndingsFlag, "lin", false, "Linux line endings.")
+	flag.BoolVar(&linEndingsFlag, "l", false, "Linux line endings.") // 2nd time same var for 2 switches
+	flag.BoolVar(&verboseFlag, "v", false, "verbose.")
 
 	flag.Parse()
 
-	commandline := flag.Arg(0)
-	if len(os.Args) <= 1 || len(commandline) == 0 {
+	if flag.NArg() == 0 {
 		fmt.Println(" Usage: utf8toascii <filename> ")
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -108,7 +111,16 @@ func main() {
 
 	if *helpflag || HelpFlag {
 		flag.PrintDefaults()
+		os.Exit(0)
 	}
+
+	if verboseFlag {
+		fmt.Println(ExecFI.Name(), " was last linked on", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
+		fmt.Println(" Full name of executable file is", execname, "compiled with", runtime.Version())
+		fmt.Println()
+	}
+
+	commandline := flag.Arg(0)
 
 	RenameFlag := !(*norenameflag || NoRenameFlag) // same as ~A && ~B, symbollically.  So this reads better in the code below.
 
@@ -122,6 +134,12 @@ func main() {
 		lineEndings = "\n"
 	} else if runtime.GOOS == "windows" {
 		lineEndings = "\r\n"
+	}
+
+	if winEndingsFlag {
+		lineEndings = "\r\n"
+	} else if linEndingsFlag {
+		lineEndings = "\n"
 	}
 
 	if strings.Contains(BaseFilename, ".") {
@@ -213,10 +231,6 @@ func main() {
 		}
 		ew.writestr(outstr)
 		ew.writestr(lineEndings)
-		//		_, err := OutBufioWriter.WriteString(outstr)
-		//		check(err)
-		//		_, err = OutBufioWriter.WriteString(lineEndings)
-		//		check(err)
 	}
 
 	InputFile.Close()
@@ -229,8 +243,8 @@ func main() {
 	OutBufioWriter.Flush() // code did not work without this line.
 	OutputFile.Close()
 
-	// Make the processed file the same name as the input file.  IE, swap in and
-	// out files, unless the norename flag was used on the command line.
+	// Make the processed file the same name as the input file.
+	// IE, swap in and out files, unless the norename flag was used on the command line.
 
 	inputfilename := InFilename
 	outputfilename := OutFilename
@@ -255,9 +269,3 @@ func main() {
 	fmt.Println()
 
 } // main in utf8toascii.go
-
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
