@@ -16,7 +16,7 @@ import (
 	//
 )
 
-const lastAltered = "27 Apr 21"
+const lastAltered = "3 May 21"
 
 //const openQuoteRune = 0xe2809c  \  These values are in the file itself seen by hexdump -C
 //const closeQuoteRune = 0xe2809d  \ but are not the rune (unicode code point)
@@ -64,6 +64,7 @@ REVISION HISTORY
 10 Sep 17 -- Added execname code, and changed error handling based on Rob Pike suggestion.
 23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 27 Apr 21 -- To add verbose flag, and add switch to set line endings.
+ 3 May 21 -- Now handles correctly when input file does not have an extension, indicated by a terminating dot.
 */
 
 type errWriter struct {
@@ -143,6 +144,9 @@ func main() {
 	}
 
 	if strings.Contains(BaseFilename, ".") {
+		if BaseFilename[len(BaseFilename)-1] == '.' { // remove last char if it's a dot.
+			BaseFilename = BaseFilename[:len(BaseFilename)-1]
+		}
 		InFilename = BaseFilename
 		_, err := os.Stat(InFilename)
 		if err == nil {

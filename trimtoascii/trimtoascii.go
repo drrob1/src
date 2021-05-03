@@ -28,10 +28,10 @@ REVISION HISTORY
 10 Sep 17 -- Added code to show timestamp of execname.  And changed bufio error checking.
 23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 12 Apr 21 -- Used toascii.go as a base, and am now writing this as trimtoascii.go, and will use bytes.reader and bytes.buffer.
-13 Apr 21 -- Will have verbose mode output more stuff, like lengths of the buffers
+ 3 May 21 -- Now handles case where input file does not have an extension, indicated by a terminating dot.
 */
 
-const lastAltered = "13 Apr 2021"
+const lastAltered = "3 May 2021"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -113,6 +113,9 @@ func main() {
 	OutFileSuffix := ".out"
 
 	if strings.Contains(BaseFilename, ".") {
+		if BaseFilename[len(BaseFilename)-1] == '.' { // remove last char if it's a dot.
+			BaseFilename = BaseFilename[:len(BaseFilename)-1]
+		}
 		InFilename = BaseFilename
 		_, err := os.Stat(InFilename)
 		if err == nil {
@@ -135,9 +138,6 @@ func main() {
 	if err != nil {
 		fmt.Println(err, " Error while opening ", InFilename, ".  Exiting.")
 		os.Exit(1)
-	}
-	if *verboseFlag {
-		fmt.Println(" Length of inputFileContents is", len(inputFileContents))
 	}
 	inputBuf := bytes.NewReader(inputFileContents)
 
@@ -191,9 +191,7 @@ func main() {
 		}
 	}
 
-	if *verboseFlag {
-		fmt.Println(" OutputSlice length is", len(outputSlice), " and outputFileBuf length is", outputFileBuf.Len())
-	}
+	// based on Rob Pike's posting.  Only need to check the error here.
 	if err := os.WriteFile(OutFilename, outputFileBuf.Bytes(), fileMode); err != nil {
 		fmt.Fprintln(os.Stderr, err, " Output file error from os.WriteFile.  Exiting.")
 		os.Exit(1)

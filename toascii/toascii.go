@@ -17,7 +17,7 @@ import (
 	//
 )
 
-const lastAltered = "27 Apr 2021"
+const lastAltered = "3 May 2021"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -62,6 +62,7 @@ REVISION HISTORY
 10 Sep 17 -- Added code to show timestamp of execname.  And changed bufio error checking.
 23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 27 Apr 21 -- Added v flag, for verbose.
+ 3 May 21 -- Now handles case where inputfile does not have an extension, indicated by a terminating dot.
 */
 
 func main() {
@@ -110,6 +111,9 @@ func main() {
 	OutFileSuffix := ".out"
 
 	if strings.Contains(BaseFilename, ".") {
+		if BaseFilename[len(BaseFilename)-1] == '.' { // remove last char if it's a dot.
+			BaseFilename = BaseFilename[:len(BaseFilename)-1]
+		}
 		InFilename = BaseFilename
 		_, err := os.Stat(InFilename)
 		if err == nil {

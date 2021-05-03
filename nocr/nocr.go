@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const lastCompiled = "28 Apr 21"
+const lastCompiled = "2 May 21"
 
 func main() {
 /*
@@ -23,6 +23,7 @@ REVISION HISTORY
 18 Apr 17 -- It worked yesterday.  Now I'll rename files as in Modula-2.
 27 Apr 21 -- Adding flags and checking err only once, as per Rob Pike's recommendation.
 28 Apr 21 -- Added showing eols for both in and out files when verbose flag is set.
+ 2 May 21 -- If entered string ends in a dot, make sure outputfile does not have double dot.  This came up if file has no ext.
 */
 
 	var inoutline string
@@ -63,6 +64,9 @@ REVISION HISTORY
 	OutFileSuffix := ".out"
 
 	if strings.Contains(BaseFilename, ".") {
+		if BaseFilename[len(BaseFilename)-1] == '.' { // remove last char if it's a dot.
+			BaseFilename = BaseFilename[:len(BaseFilename)-1]
+		}
 		InFilename = BaseFilename
 		_, err := os.Stat(InFilename)
 		if err == nil {
