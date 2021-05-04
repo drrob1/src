@@ -1,5 +1,5 @@
 ## gocode
-All of my go code til now
+All of my go code as of May 3, 2021
 
 1. sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.
 1. rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
