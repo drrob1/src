@@ -10,11 +10,11 @@ REVISION HISTORY
 18 Apr 17 -- Tweaked output message text.
  9 May 17 -- Will AddCommas on filesize for output
 11 Mar 21 -- Updated code based on my add'l experience.  And added method 2 as a test of concept.
+ 9 May 21 -- Will allow files without extensions by checking for them first.
 */
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-const lastCompiled = "11 Mar 2021"
+const lastCompiled = "9 May 2021"
 
 // CR is the ASCII carriage return value
 const CR = 13
@@ -61,18 +61,25 @@ func main() {
 			FileExists = true
 			filesize = FI.Size()
 		}
-	} else {
-		Filename = BaseFilename + Ext1Default
-		FI, err := os.Stat(Filename)
+	} else { // filename does not have a dot.
+		FI, err := os.Stat(BaseFilename)
 		if err == nil {
+			Filename = BaseFilename
 			FileExists = true
 			filesize = FI.Size()
-		} else {
-			Filename = BaseFilename + Ext2Default
-			FI, err := os.Stat(Filename)
+		} else { // Since file does not exist without an extension, try a few extensions.
+			Filename = BaseFilename + Ext1Default
+			FI, err = os.Stat(Filename)
 			if err == nil {
 				FileExists = true
 				filesize = FI.Size()
+			} else {
+				Filename = BaseFilename + Ext2Default
+				FI, err := os.Stat(Filename)
+				if err == nil {
+					FileExists = true
+					filesize = FI.Size()
+				}
 			}
 		}
 	}
@@ -82,9 +89,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteSlice, err := ioutil.ReadFile(Filename)
+	byteSlice, err := os.ReadFile(Filename) // as of go 1.16, ioutil has been deprecated.
 	if err != nil {
-		fmt.Println(err, ".  Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
+		fmt.Println(err, ".  Error from ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
