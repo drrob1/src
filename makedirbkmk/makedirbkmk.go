@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "Dec 24, 2020"
+const LastAltered = "May 10, 2021"
 
 /*
 REVISION HISTORY
@@ -32,6 +32,7 @@ REVISION HISTORY
 14 Jan 20 -- my dirsave() also needed to change cd to cdd.  Just done.
 16 Sep 20 -- Added sl cmd, as in dirb, as synynom for p.  And will prompt if trying to overwrite a bookmark.
 24 Dec 20 -- Will now sort output from Print command.
+10 May 21 -- Wrote dirPrint() so will sort output when other commands display the map, esp the save cmd.
 */
 
 const bookmarkfilename = "bookmarkfile.gob"
@@ -44,21 +45,18 @@ type bkmkslicetype struct {
 }
 
 func main() {
-	fmt.Println(" makedirbkmk written in Go, last altered", LastAltered)
+	fmt.Println(" makedirbkmk written in Go, last altered", LastAltered, "and compiled w/", runtime.Version())
 	sep := string(os.PathSeparator)
-	if runtime.GOOS == "linux" {
-		HomeDir = os.Getenv("HOME")
-	} else if runtime.GOOS == "windows" {
-		HomeDir = os.Getenv("userprofile")
-	} else {
-		fmt.Println(" not running on expected platform.  Will exit.  In fact, probably won't even compile.")
+	HomeDir, err := os.UserHomeDir() // this routine became available in Go 1.12
+	if err != nil {
+		fmt.Println(err,"Exiting")
 		os.Exit(1)
 	}
 	target := "cdd" + " " + HomeDir + sep
 	fullbookmarkfilename := HomeDir + sep + bookmarkfilename
 
 	// read or init directory bookmark file
-	_, err := os.Stat(fullbookmarkfilename)
+	_, err = os.Stat(fullbookmarkfilename)
 	if err == nil { // need to read in bookmarkfile
 		bookmarkfile, err := os.Open(fullbookmarkfilename)
 		if err != nil {
@@ -97,7 +95,7 @@ func main() {
 	ExecFI, _ := os.Stat(execname)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 	help := func() {
-		fmt.Println(" dirbkmk, a Directory Bookmark program written in Go.  Last altered", LastAltered)
+		fmt.Println(" makedirbkmk, a Directory Bookmark program written in Go.  Last altered", LastAltered)
 		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ". ")
 		fmt.Println(" Full exec is", execname, ".  Fullbookmark is", fullbookmarkfilename)
 		fmt.Println()
@@ -125,9 +123,10 @@ func main() {
 		dirsave()
 		fmt.Println()
 		fmt.Println()
-		for idx, valu := range bookmark {
-			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
-		}
+//		for idx, valu := range bookmark {
+//			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
+//		}
+		dirPrint()
 		fmt.Println()
 		fmt.Println()
 
@@ -138,6 +137,7 @@ func main() {
 		direntrydel()
 
 	case "p", "sl": // print out bookmark list
+		/*
 		bkmkslice := make([]bkmkslicetype, 0, len(bookmark))
 		for idx, valu := range bookmark {
 			bkmk := bkmkslicetype{idx, valu}  // structured literal syntax
@@ -150,6 +150,8 @@ func main() {
 		for _, bkmk := range bkmkslice {
 			fmt.Printf(" bookmark[%s] = %s\n", bkmk.key, bkmk.value)
 		}
+		 */
+		dirPrint()
 		fmt.Println()
 		fmt.Println()
 
@@ -321,3 +323,18 @@ func ProcessDirectoryAliases(aliasesMap map[string]string, cmdline string) strin
 	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
 } // ProcessDirectoryAliases
+
+func dirPrint() {
+	bkmkslice := make([]bkmkslicetype, 0, len(bookmark))
+	for idx, valu := range bookmark {
+		bkmk := bkmkslicetype{idx, valu}  // structured literal syntax
+		bkmkslice = append(bkmkslice, bkmk)
+	}
+	sortless := func (i,j int) bool {
+		return bkmkslice[i].key < bkmkslice[j].key
+	}
+	sort.Slice(bkmkslice, sortless)
+	for _, bkmk := range bkmkslice {
+		fmt.Printf(" bookmark[%s] = %s\n", bkmk.key, bkmk.value)
+	}
+}
