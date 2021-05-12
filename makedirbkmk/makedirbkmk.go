@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "May 10, 2021"
+const LastAltered = "May 12, 2021"
 
 /*
 REVISION HISTORY
@@ -33,6 +33,7 @@ REVISION HISTORY
 16 Sep 20 -- Added sl cmd, as in dirb, as synynom for p.  And will prompt if trying to overwrite a bookmark.
 24 Dec 20 -- Will now sort output from Print command.
 10 May 21 -- Wrote dirPrint() so will sort output when other commands display the map, esp the save cmd.
+12 May 21 -- Remove the dash of an option, if I forget and use it anyway.  These are not options, as I'm not using the flag package.
 */
 
 const bookmarkfilename = "bookmarkfile.gob"
@@ -111,21 +112,22 @@ func main() {
 	ch := ""
 	if len(os.Args) < 2 {
 		fmt.Println(" usage: makedirbkmk [s|a|d|p|h].  Note that there is no dash preceeding the commands, as these are not options.")
+		help()
 		os.Exit(0)
 	} else {
 		ch = strings.ToLower(os.Args[1])
+		if strings.HasPrefix(ch, "-") {
+			ch = ch[1:]
+		}
 	}
-	fmt.Println(" os.Args is", os.Args)
-	fmt.Println()
+//	fmt.Println(" os.Args is", os.Args)
+//	fmt.Println()
 
 	switch ch {
 	case "s": // save current directory or entered directory name
 		dirsave()
 		fmt.Println()
 		fmt.Println()
-//		for idx, valu := range bookmark {
-//			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
-//		}
 		dirPrint()
 		fmt.Println()
 		fmt.Println()
@@ -137,20 +139,6 @@ func main() {
 		direntrydel()
 
 	case "p", "sl": // print out bookmark list
-		/*
-		bkmkslice := make([]bkmkslicetype, 0, len(bookmark))
-		for idx, valu := range bookmark {
-			bkmk := bkmkslicetype{idx, valu}  // structured literal syntax
-			bkmkslice = append(bkmkslice, bkmk)
-		}
-		sortless := func (i,j int) bool {
-			return bkmkslice[i].key < bkmkslice[j].key
-		}
-		sort.Slice(bkmkslice, sortless)
-		for _, bkmk := range bkmkslice {
-			fmt.Printf(" bookmark[%s] = %s\n", bkmk.key, bkmk.value)
-		}
-		 */
 		dirPrint()
 		fmt.Println()
 		fmt.Println()
