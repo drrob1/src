@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "17 Mar 2021"
+const LastAltered = "22 May 2021"
 
 /*
 Revision History
@@ -94,6 +94,7 @@ Revision History
 12 Mar 21 -- Added an os.Exit call after what is essentially a file not found error.
 16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
+22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -174,13 +175,7 @@ func main() {
 			os.Exit(1)
 		}
 		// HomeDirStr = userptr.HomeDir + sepstring
-	} /* else if linuxflag {
-		HomeDirStr = os.Getenv("HOME") + sepstring
-	} else if winflag {
-		HomeDirStr = os.Getenv("HOMEPATH") + sepstring
-	} else { // unknown system
-		fmt.Println(" Program not designed for this architecture.  Maybe it will work, maybe not.  Good luck.")
-	}  */
+	}
 
 	// flag definitions and processing
 	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
@@ -206,7 +201,9 @@ func main() {
 
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
-	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
+	var testFlag bool
+	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
+	flag.BoolVar(&testFlag, "v", false, "verbose mode, which is same as test mode.")
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
@@ -216,9 +213,14 @@ func main() {
 	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
+	var filterAmt int
+	var filterStr string
+	flag.StringVar(&filterStr, "f", "", "filter value for individual size below which listing is suppressed.")
+	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
+
 	flag.Parse()
 
-	if *testFlag {
+	if testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
@@ -290,7 +292,7 @@ func main() {
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return files[i].Size() > files[j].Size() // I want a largest first sort
 		}
-		if *testFlag {
+		if testFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
 	} else if DateSort && Forward {
@@ -298,14 +300,14 @@ func main() {
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
 			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
 		}
-		if *testFlag {
+		if testFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			return files[i].Size() < files[j].Size() // I want an smallest-first sort
 		}
-		if *testFlag {
+		if testFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
@@ -313,7 +315,7 @@ func main() {
 			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
 			return files[i].ModTime().Before(files[j].ModTime()) // I want an oldest-first sort
 		}
-		if *testFlag {
+		if testFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
@@ -331,7 +333,7 @@ func main() {
 			}
 
 			paramIsDir = fi.Mode().IsDir()
-			if *testFlag {
+			if testFlag {
 				fmt.Println(" have only 1 param on line. filenameStringSlice=", filenamesStringSlice[0], "paramIsDir=", paramIsDir)
 				fmt.Println()
 			}
@@ -377,7 +379,7 @@ func main() {
 
 	if len(CleanDirName) == 0 {
 		workingdir, _ := os.Getwd()
-		if *testFlag {
+		if testFlag {
 			fmt.Println(" CleanDirName is empty, and will be ", workingdir)
 		}
 		CleanDirName = workingdir
@@ -406,6 +408,29 @@ func main() {
 
 	fmt.Println(" Dirname is", CleanDirName)
 
+	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
+	if filterStr != "" {
+		if len(filterStr) > 1 {
+			filterAmt, err = strconv.Atoi(filterStr)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "converting filterStr:", err)
+			}
+		} else if unicode.IsLetter(rune(filterStr[0])) {
+			filterStr = strings.ToLower(filterStr)
+			if filterStr == "k" {
+				filterAmt = 1000
+			} else if filterStr == "m" {
+				filterAmt = 1_000_000
+			} else if filterStr == "g" {
+				filterAmt = 1_000_000_000
+			} else {
+				fmt.Fprintln(os.Stderr, "filterStr is not valid and was ignored.  filterStr=", filterStr)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, "filterStr not valid.  filterStr =", filterStr)
+		}
+	}
+
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 	// This is still the way it works for Windows.
@@ -423,6 +448,11 @@ func main() {
 				}
 				if *excludeFlag {
 					if BOOL := excludeRegex.MatchString(strings.ToLower(f.Name())); BOOL {
+						showthis = false
+					}
+				}
+				if filterAmt > 0 {
+					if f.Size() < int64(filterAmt) {
 						showthis = false
 					}
 				}
@@ -469,7 +499,13 @@ func main() {
 						showthis = false
 					}
 				}
+				if filterAmt > 0 {
+					if f.Size() < int64(filterAmt) {
+						showthis = false
+					}
+				}
 			}
+
 			//			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			if showthis {
 				s := f.ModTime().Format("Jan-02-2006_15:04:05")
