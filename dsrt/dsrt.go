@@ -215,8 +215,8 @@ func main() {
 
 	var filterAmt int
 	var filterStr string
-	flag.StringVar(&filterStr, "f", "", "filter value for individual size below which listing is suppressed.")
-	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
+	flag.StringVar(&filterStr, "filter", "m", "individual size filter value below which listing is suppressed.")
+	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	flag.Parse()
 
@@ -409,7 +409,9 @@ func main() {
 	fmt.Println(" Dirname is", CleanDirName)
 
 	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
-	if filterStr != "" {
+	if *filterFlag {
+		filterAmt = 1_000_000
+	} else if filterStr != "" {
 		if len(filterStr) > 1 {
 			filterAmt, err = strconv.Atoi(filterStr)
 			if err != nil {
