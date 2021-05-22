@@ -44,7 +44,7 @@ func main() {
 	a := app.New()
 
 	w := a.NewWindow("Snake")
-	w.Resize(fyne.NewSize(200, 200))
+	w.Resize(fyne.NewSize(800, 800))
 	w.SetFixedSize(true)
 
 	game = setupGame()
