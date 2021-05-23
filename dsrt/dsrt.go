@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "22 May 2021"
+const LastAltered = "23 May 2021"
 
 /*
 Revision History
@@ -215,7 +215,7 @@ func main() {
 
 	var filterAmt int
 	var filterStr string
-	flag.StringVar(&filterStr, "filter", "m", "individual size filter value below which listing is suppressed.")
+	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	flag.Parse()
@@ -433,6 +433,9 @@ func main() {
 		}
 	}
 
+	if testFlag {
+		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
+	}
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 	// This is still the way it works for Windows.
