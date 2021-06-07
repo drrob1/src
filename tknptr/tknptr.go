@@ -12,61 +12,60 @@ import (
  Copyright (C) 1987-2017  Robert Solomon MD.  All rights reserved.
  These routines collectively implement a very good facility to fetch, manipulate, and interpret tokens.
 
-  REVISION HISTORY
-  ----------------
-  28 MAY 87 -- Added UNGETTKN capability and no longer exported GETCHR and UNGETCHR.
-  29 AUG 87 -- Restored exportation of GETCHR and UNGETCHR.
-   3 Mar 88 -- Added the ASCZERO declaration and removed the function call from the DGT conversion loop.
-  31 Mar 88 -- Converted to M2 V3.03.
-  1 Sept 88 -- 1.  Allowed quoted string to force ALLELSE state.
-               2.  Changed the method UNGETTKN uses to unget the token.
-               3.  Added the MULTSIGN and DIVSIGN OP states.
-               4.  Ran M2CHECK and deleted all unreferenced var's.
-               5.  Moved the NEGATV check for contigently making SUM < 0 out
+REVISION HISTORY
+----------------
+28 MAY 87 -- Added UNGETTKN capability and no longer exported GETCHR and UNGETCHR.
+29 AUG 87 -- Restored exportation of GETCHR and UNGETCHR.
+ 3 Mar 88 -- Added the ASCZERO declaration and removed the function call from the DGT conversion loop.
+31 Mar 88 -- Converted to M2 V3.03.
+ 1 Sept 88 -- 1.  Allowed quoted string to force ALLELSE state.
+              2.  Changed the method UNGETTKN uses to unget the token.
+              3.  Added the MULTSIGN and DIVSIGN OP states.
+              4.  Ran M2CHECK and deleted all unreferenced var's.
+              5.  Moved the NEGATV check for contigently making SUM < 0 out
                    of the LOOP and deleted the 5 previous statements for all
                    of the different states plus the end-of-line test.
-  18 Mar 89 -- Added the GETTKNREAL Procedure.
-  20 Mar 89 -- Changed GETOPCODE so that if a multicharacter op code is
-                invalid, UNGETCHR is used to put the second char back.
-   1 Dec 89 -- Made change in GETTKN that was demonstrated to be necessary
-                when the code was ported to the VAX.
-   2 Jan 90 -- Changed GETTKNREAL so that a real number may begin with a decimal pt.
-   9 Nov 90 -- Added GETTKNSTR procedure and DELIMSTATE var.
-  27 Dec 90 -- Added GETTKNEOL procedure, originally written for CFNTS.
-  25 Jul 93 -- Fixed bug in GETCHR whereby CHRSTATE not set when at EOL, and adjusted algorithm of GETTKNSTR.
-   6 Jun 95 -- Added FSAARRAY as way to assign FSATYP, and to easily modify the FSATYP assignments.
-  20 Oct 02 -- Converted to M2 for win32, DOS mode.
-  17 May 03 -- First Win32 version.
-  30 Jun 03 -- Fixed real tokens so can now again begin w/ decpt, by always writing a leading 0.
-  21 Jul 03 -- Fixed bug introduced by above step when a token has leading spaces
-   4 Oct 03 -- Fixed bug when neg number is entered using unary minus.
-   9 Oct 13 -- Converted to gm2.
-  11 Oct 13 -- Fixed a bug in GETTKNREAL in which number like 1e-1 lost the e.
-  12 Oct 13 -- Removed an errant RETURN from GETTKNSTR.
-   3 Feb 14 -- Converted to Ada.  I modernized the data types to be a record type.
-  28 Jun 14 -- Backported enhancement to GetOpCode that includes ^, ** and %.
-  19 Nov 14 -- Converted to C++.
-   7 Dec 14 -- Removed comma as a delim, making it AllElse so it works as intended for HPCALCC
-  28 Dec 14 -- Turns out that CentOS c++ does not support -std=c++11, so I have to remove string.front and string.back
-                 member functions.
-  18 Jan 15 -- Found bug in that single digits followed by add or subtract are not processed correctly by GETTKNREAL.
-  19 Aug 16 -- Finished conversion to Go, started 8/6/16 on boat to Bermuda.
-  21 Sep 16 -- Now that this code is for case sensitive filesystem like linux, returning an all caps token is a bad idea.
+18 Mar 89 -- Added the GETTKNREAL Procedure.
+20 Mar 89 -- Changed GETOPCODE so that if a multicharacter op code is invalid, UNGETCHR is used to put the second char back.
+ 1 Dec 89 -- Made change in GETTKN that was demonstrated to be necessary when the code was ported to the VAX.
+ 2 Jan 90 -- Changed GETTKNREAL so that a real number may begin with a decimal pt.
+ 9 Nov 90 -- Added GETTKNSTR procedure and DELIMSTATE var.
+27 Dec 90 -- Added GETTKNEOL procedure, originally written for CFNTS.
+25 Jul 93 -- Fixed bug in GETCHR whereby CHRSTATE not set when at EOL, and adjusted algorithm of GETTKNSTR.
+ 6 Jun 95 -- Added FSAARRAY as way to assign FSATYP, and to easily modify the FSATYP assignments.
+20 Oct 02 -- Converted to M2 for win32, DOS mode.
+17 May 03 -- First Win32 version.
+30 Jun 03 -- Fixed real tokens so can now again begin w/ decpt, by always writing a leading 0.
+21 Jul 03 -- Fixed bug introduced by above step when a token has leading spaces
+ 4 Oct 03 -- Fixed bug when neg number is entered using unary minus.
+ 9 Oct 13 -- Converted to gm2.
+11 Oct 13 -- Fixed a bug in GETTKNREAL in which number like 1e-1 lost the e.
+12 Oct 13 -- Removed an errant RETURN from GETTKNSTR.
+ 3 Feb 14 -- Converted to Ada.  I modernized the data types to be a record type.
+28 Jun 14 -- Backported enhancement to GetOpCode that includes ^, ** and %.
+19 Nov 14 -- Converted to C++.
+ 7 Dec 14 -- Removed comma as a delim, making it AllElse so it works as intended for HPCALCC
+28 Dec 14 -- Turns out that CentOS C++ does not support -std=c++11, so I have to remove string.front and string.back member functions.
+18 Jan 15 -- Found bug in that single digits followed by add or subtract are not processed correctly by GETTKNREAL.
+19 Aug 16 -- Finished conversion to Go, started 8/6/16 on boat to Bermuda.
+21 Sep 16 -- Now that this code is for case sensitive filesystem like linux, returning an all caps token is a bad idea.
                So I added FetchToken which takes a param of true for cap and false for preserving case.
-   9 Oct 16 -- Will allow "0x" as prefix for hex, as well as "H" suffix.  An 'x' anywhere in the number will
+ 9 Oct 16 -- Will allow "0x" as prefix for hex, as well as "H" suffix.  An 'x' anywhere in the number will
                 be a hex number.  I will not force it to be the 2nd character.
-  25 Nov 16 -- The TKNMAXSIZ was too small for sha512, so I increased it.
-   3 Dec 16 -- Decided to change how the UpperCase flag is handled in GetToken.
-  10 Aug 17 -- Making this use pointer receivers, if I can.
-  13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
-  18 Oct 17 -- Changed init process so all control codes are delims, just as in the current tokenize.
-  19 Oct 17 -- Standard hash256 files for linux include a * in front of the filename.  I'm not sure why.  I want to
+25 Nov 16 -- The TKNMAXSIZ was too small for sha512, so I increased it.
+ 3 Dec 16 -- Decided to change how the UpperCase flag is handled in GetToken.
+10 Aug 17 -- Making this use pointer receivers, if I can.
+13 Oct 17 -- Made tab char a delim.  Needed for comparehashes.
+18 Oct 17 -- Changed init process so all control codes are delims, just as in the current tokenize.
+19 Oct 17 -- Standard hash256 files for linux include a * in front of the filename.  I'm not sure why.  I want to
                  ignore this, so I'm writing SetMapDelim so I can.
-  27 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
+27 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
                  when I remap the characters.
-  28 Sep 20 -- Now that I'm using tknptr in comparehashes, I'm going to include the statemap in the bufferstate structure
+28 Sep 20 -- Now that I'm using tknptr in comparehashes, I'm going to include the statemap in the bufferstate structure
                  so it's not global.
-  23 Oct 20 -- GetOpcode will unget characters as needed to keep length of opcode token to a max of 2 characters.
+23 Oct 20 -- GetOpcode will unget characters as needed to keep length of opcode token to a max of 2 characters.
+ 6 Jun 21 -- Writing GetTokenSlice, meaning return a slice of all tokens on the line, using GetToken to fetch them.
+               And added a check against an empty string being passed into the init functions.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -139,7 +138,9 @@ UnquoteChar decodes the first character or byte in the escaped string or charact
 3) tail, the remainder of the string after the character; and
 4) an error that will be nil if the character is syntactically valid.
 
-The second argument, quote, specifies the type of literal being parsed and therefore which escaped quote character is permitted. If set to a single quote, it permits the sequence \' and disallows unescaped '. If set to a double quote, it permits \" and disallows unescaped ". If set to zero, it does not permit either escape and allows both quote characters to appear unescaped.
+The second argument, quote, specifies the type of literal being parsed and therefore which escaped quote character is permitted. If set to a single quote,
+it permits the sequence \' and disallows unescaped '. If set to a double quote, it permits \" and disallows unescaped ". If set to zero, it does not permit
+either escape and allows both quote characters to appear unescaped.
 */
 
 func CAP(c byte) byte {
@@ -193,9 +194,12 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 	// variables used by nxtchr to begin processing a new line.
 	// The buffer on which the tokenizing rtns operate is also initialized.
 	// CURPOSN is initialized to start at the first character on the line.
+	if Str == "" {
+		return nil
+	}
 
-	bs := new(BufferState)
-	InitStateMap(bs) // It's possible GetTknStr or GetTknEOL changed the StateMap, so will call init.
+	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
+	InitStateMap(bs)       // It's possible GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied, not just a pointer.
@@ -212,8 +216,11 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 func NewToken(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
-	bs := new(BufferState)
-	InitStateMap(bs) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
+	if Str == "" {
+		return nil
+	}
+	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
+	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
@@ -834,7 +841,7 @@ func (bs *BufferState) GETTKNEOL() (TOKEN TokenType, EOL bool) {
 	return TOKEN, EOL
 } // GETTKNEOL
 
-//************************************** UNGETTKN *****************************
+//  UNGETTKN -- an internal function
 func (bs *BufferState) UNGETTKN() {
 	/*
 	   * UNGET TOKEN ROUTINE.
@@ -853,13 +860,32 @@ func (bs *BufferState) UNGETTKN() {
 	bs.PREVPOSN = 0
 }
 
+//                                        GetTokenSlice
+func GetTokenSlice(str string) []TokenType {
+	if str == "" {
+		return nil
+	}
+	bs := NewToken(str)                   // bs is a buffer slice
+	tknslice := make([]TokenType, 0, 100) // arbitrary limit, ie, a magic number as per Rob Pike.
+
+	for {
+		tkn, eol := bs.GetToken(false)
+		if eol {
+			break
+		}
+		tknslice = append(tknslice, tkn)
+	}
+	return tknslice
+}
+
 // end tknptr
 
-/* A way to output program file and line numbers in an error message.  Must be a closure, I think.  But
-   this is cumbersome.  I'll leave the code here in case I figure out a way to make it less cumbersome.
-   where := func() {
+/*
+  A way to output program file and line numbers in an error message.  Must be a closure, I think.  But
+  this is cumbersome.  I'll leave the code here in case I figure out a way to make it less cumbersome.
+  where := func() {
       _, file, line, _ := runtime.Caller(1)
       log.Fatalf(" In UNGETCHR and CurPosn is < 0.  %s:%d\n", file, line)
-   }
-   where();
+  }
+  where();
 */

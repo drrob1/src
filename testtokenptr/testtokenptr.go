@@ -4,25 +4,28 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	//	"getcommandline"
+
 	"log"
 	"os"
 	"strings"
-	"tknptr"
+
+	"src/tknptr"  // converted to their module system June 6, 2021.
+
 )
 
-const LastAltered = "28 Sep 2020"
+const LastAltered = "6 Jun 2021"
 
 /*
-  REVISION HISTORY
-  ================
-  19 Aug 16 -- First Go version completed to test all parts of tokenize.go package
-  21 Sep 16 -- Now need to test my new GetTknStrPreserveCase routine.  And test the change I made to GETCHR.
-   7 Oct 16 -- Changed the scanner to scan by words.  I hope.  This is to test the scanner for rpng.  Default is scan by lines.
-  11 Aug 17 -- Now named testtokenptr, and will test using pointer receivers and scanning whole lines.
-  13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
-  30 Jan 18 -- Will use flags to set the mode now.
-  28 Sep 20 -- Testing new use code of tknptr, in which the StateMap is part of the pointer structure that is passed around.
+REVISION HISTORY
+================
+19 Aug 16 -- First Go version completed to test all parts of tokenize.go package
+21 Sep 16 -- Now need to test my new GetTknStrPreserveCase routine.  And test the change I made to GETCHR.
+ 7 Oct 16 -- Changed the scanner to scan by words.  I hope.  This is to test the scanner for rpng.  Default is scan by lines.
+11 Aug 17 -- Now named testtokenptr, and will test using pointer receivers and scanning whole lines.
+13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
+30 Jan 18 -- Will use flags to set the mode now.
+28 Sep 20 -- Testing new use code of tknptr, in which the StateMap is part of the pointer structure that is passed around.
+ 6 Jun 21 -- Testing GetTokenSlice
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
@@ -67,12 +70,12 @@ func main() {
 	fmt.Println()
 
 	scanner := bufio.NewScanner(os.Stdin)
-
+	inputline := ""
 	//  scanner.Split(bufio.ScanWords); // testing scanning by words to see what happens.
 	for {
 		fmt.Print(" Input test text: ")
 		scanner.Scan()
-		inputline := scanner.Text()
+		inputline = scanner.Text()
 		if err := scanner.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 			os.Exit(1)
@@ -101,6 +104,12 @@ func main() {
 			tokenbuffer.SetMapDelim('^')
 			*mapflag = false
 		}
+
+		tknslice := tknptr.GetTokenSlice(inputline)
+		fmt.Println(" token slice is", tknslice)
+		fmt.Println()
+		fmt.Println()
+
 		EOL := false
 		token := tknptr.TokenType{}
 		for !EOL {
@@ -138,6 +147,7 @@ func main() {
 		}
 		fmt.Println()
 		log.Println(" Finished processing the inputline.")
+		fmt.Println()
 	}
 }
 
