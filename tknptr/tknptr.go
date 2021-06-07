@@ -865,7 +865,7 @@ func GetTokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
 	}
-	bs := NewToken(str)                   // bs is a buffer slice
+	bs := NewToken(str)                   // bs is a buffer state
 	tknslice := make([]TokenType, 0, 100) // arbitrary limit, ie, a magic number as per Rob Pike.
 
 	for {
