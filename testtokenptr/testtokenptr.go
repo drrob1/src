@@ -9,11 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"src/tknptr"  // converted to their module system June 6, 2021.
-
+	"src/tknptr" // converted to their module system June 6, 2021.
 )
 
-const LastAltered = "6 Jun 2021"
+const LastAltered = "12 Jun 2021"
 
 /*
 REVISION HISTORY
@@ -26,6 +25,7 @@ REVISION HISTORY
 30 Jan 18 -- Will use flags to set the mode now.
 28 Sep 20 -- Testing new use code of tknptr, in which the StateMap is part of the pointer structure that is passed around.
  6 Jun 21 -- Testing GetTokenSlice
+12 Jun 21 -- Testing TokenSlice and TokenRealSlice
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
@@ -105,8 +105,12 @@ func main() {
 			*mapflag = false
 		}
 
-		tknslice := tknptr.GetTokenSlice(inputline)
+		tknslice := tknptr.TokenSlice(inputline)
 		fmt.Println(" token slice is", tknslice)
+		fmt.Println()
+
+		realtknslice := tknptr.RealTokenSlice(inputline)
+		fmt.Println(" real token slice is", realtknslice)
 		fmt.Println()
 		fmt.Println()
 
@@ -143,6 +147,8 @@ func main() {
 			ans = strings.ToUpper(ans)
 			if strings.HasPrefix(ans, "Y") {
 				tokenbuffer.UNGETTKN()
+			} else if ans == "X" {
+				break
 			}
 		}
 		fmt.Println()

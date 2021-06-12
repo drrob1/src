@@ -66,6 +66,7 @@ REVISION HISTORY
 23 Oct 20 -- GetOpcode will unget characters as needed to keep length of opcode token to a max of 2 characters.
  6 Jun 21 -- Writing GetTokenSlice, meaning return a slice of all tokens on the line, using GetToken to fetch them.
                And added a check against an empty string being passed into the init functions.
+12 Jun 21 -- Writing TokenRealSlice, and renamed GetTokenSlice to TokenSlice, which is more idiomatic for Go.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -860,8 +861,8 @@ func (bs *BufferState) UNGETTKN() {
 	bs.PREVPOSN = 0
 }
 
-//                                        GetTokenSlice
-func GetTokenSlice(str string) []TokenType {
+//                                        GetTokenSlice, now TokenSlice
+func TokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
 	}
@@ -876,6 +877,24 @@ func GetTokenSlice(str string) []TokenType {
 		tknslice = append(tknslice, tkn)
 	}
 	return tknslice
+}
+
+//                                   RealTokenSlice
+func RealTokenSlice(str string) []TokenType {
+	if str == "" {
+		return nil
+	}
+	bufstate := NewToken(str)
+	realtknslice := make([]TokenType, 0, 100)
+
+	for {
+		tknreal, eol := bufstate.GETTKNREAL()
+		if eol {
+			break
+		}
+		realtknslice = append(realtknslice, tknreal)
+	}
+	return realtknslice
 }
 
 // end tknptr
