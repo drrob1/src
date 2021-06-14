@@ -17,7 +17,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "8 Apr 2021"
+const LastAlteredDate = "14 Jun 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -119,6 +119,7 @@ REVISION HISTORY
  4 Feb 21 -- Added H for help.
 11 Feb 21 -- Added these commands that will be ignored, X, P and Q.  And took out come dead code.
  8 Apr 21 -- Converting to src module residing at ~/go/src.  What a coincidence!
+14 Jun 21 -- Split off Result from GetResult
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -296,6 +297,7 @@ func init() {
 }
 
 // -----------------------------------------------------MapClose --------------------------------------------------------------------
+
 func MapClose() {
 	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
 	mappedRegFile, err := os.Create(fullmappedRegFilename) // open for writing
@@ -311,6 +313,7 @@ func MapClose() {
 }
 
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
+
 func Round(f float64) float64 {
 	sign := 1.0
 	if math.Signbit(f) {
@@ -321,18 +324,25 @@ func Round(f float64) float64 {
 }
 
 //------------------------------------------------------ STACKUP
+
 func STACKUP() {
 	for S := T2; S >= X; S-- {
 		Stack[S+1] = Stack[S]
 	}
 } // STACKUP
+
+
 //------------------------------------------------------ STACKDN
+
 func STACKDN() {
 	for S := Y; S < T1; S++ { // Does not affect X, so can do calculations and then remove Y and Z as needed.
 		Stack[S] = Stack[S+1]
 	}
 } // STACKDN
+
+
 //------------------------------------------------------ STACKROLLDN
+
 func STACKROLLDN() {
 	TEMP := Stack[X]
 	Stack[X] = Stack[Y]
@@ -340,7 +350,9 @@ func STACKROLLDN() {
 	Stack[T1] = TEMP
 } // STACKROLLDN
 
+
 // ----------------------------------------------------- PopX ---------------------
+
 func PopX() float64 {
 	x := Stack[X]
 	for S := X; S < T1; S++ {
@@ -349,26 +361,38 @@ func PopX() float64 {
 	return x
 } // PopX
 
+
 // ------------------------------------------------------ PUSHX
+
 func PUSHX(R float64) {
 	STACKUP()
 	Stack[X] = R
 }
 
+
 //------------------------------------------------------ READX
+
 func READX() float64 {
 	return Stack[X]
 } // READX
+
+
 //------------------------------------------------------ SWAPXY
+
 func SWAPXY() {
 	Stack[X], Stack[Y] = Stack[Y], Stack[X]
 } // SWAPXY
+
+
 //------------------------------------------------------ GETSTACK
+
 func GETSTACK() StackType {
 	return Stack
 } // GETSTACK
 
+
 //-------------------------------------------------------------------- InsertByteSlice
+
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
@@ -404,7 +428,9 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
+
 //-----------------------------------------------------------------------------------------------------------------------------
+
 func CropNStr(instr string) string {
 
 	//   A bug is if there is no decimal pt and there is a 0 in ones place, then that will no longer be
@@ -429,7 +455,9 @@ func CropNStr(instr string) string {
 	return strings.TrimSpace(outstr)
 } // CropNStr
 
+
 //------------------------------------------------------------------ DumpStackFixed -----------------------------------------------------------
+
 func DumpStackFixed() []string {
 	var SRN int
 	var str string
@@ -447,7 +475,10 @@ func DumpStackFixed() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
 } // DumpStackFixed
+
+
 // ************************************************* DumpStackFloat **************************
+
 func DumpStackFloat() []string {
 	var SRN int
 	var str string
@@ -465,7 +496,10 @@ func DumpStackFloat() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
 } // DumpStackFloat
+
+
 //************************************************* OutputFixedOrFloat *******************************
+
 func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now only rpn.go still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
@@ -475,7 +509,10 @@ func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now 
 		fmt.Print(str)
 	}
 } // OutputFixedOrFloat
+
+
 //************************************************** DumpStackGeneral ***************************
+
 func DumpStackGeneral() []string {
 	var SRN int
 	var str string
@@ -494,8 +531,10 @@ func DumpStackGeneral() []string {
 	return ss
 } // DumpStackGeneral
 
+
 //------------------------------------------------- ToHex ------------------
 // The new algorithm is elegantly simple.
+
 func ToHex(L float64) string {
 	const hexDigits = "0123456789abcdef"
 
@@ -518,7 +557,9 @@ func ToHex(L float64) string {
 	return str + "H"
 } // ToHex
 
+
 // ------------------------------------------------- IsPrime -----------------
+
 func IsPrime(real float64) bool { // The real input is to allow from stack.
 
 	var t uint64 = 3
@@ -546,7 +587,9 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 	return true
 } // IsPrime
 
+
 // --------------------------------------- PrimeFactorMemoized -------------------
+
 func PrimeFactorMemoized(U uint) []uint {
 
 	if U == 0 {
@@ -572,7 +615,9 @@ func PrimeFactorMemoized(U uint) []uint {
 	return PrimeUfactors
 }
 
+
 // ------------------------------------------------- NextPrimeFac -----------------
+
 func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
 
 	var t uint = startfac
@@ -592,7 +637,9 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 	return 0, false
 } // IsPrime
 
+
 //----------------------------------------------- usqrt ---------------------------
+
 func usqrt(u uint) uint {
 
 	sqrt := u / 2
@@ -607,9 +654,11 @@ func usqrt(u uint) uint {
 	return sqrt
 }
 
+
 // ---------------------------------------- PWRI -------------------------------------------------
 //POWER OF I.
 // This is a power function with a real base and integer exponent, using the optimized algorithm as discussed in PIM-2, V.  2.
+
 func PWRI(R float64, I int) float64 {
 	Z := 1.0
 	NEGFLAG := false
@@ -630,24 +679,35 @@ func PWRI(R float64, I int) float64 {
 	return Z
 } // PWRI
 
+
 //-------------------------------------------------------- StacksMatrixUp
+
 func StacksMatrixUp() {
 	for i := T2; i >= X; i-- {
 		StackUndoMatrix[i+1] = StackUndoMatrix[i]
 	} // FOR i
 } // StacksMatrixUp
+
+
 //-------------------------------------------------------- StacksMatrixDown
+
 func StacksMatrixDown() {
 	for i := Y; i <= T1; i++ {
 		StackUndoMatrix[i-1] = StackUndoMatrix[i]
 	} // FOR i
 } // StacksMatrixDown
+
+
 //-------------------------------------------------------- PushMatrixStacks
+
 func PushMatrixStacks() {
 	StacksMatrixUp()
 	StackUndoMatrix[Bottom] = Stack
 } // PushMatrixStacks
+
+
 //-------------------------------------------------------- UndoMatrixStacks
+
 func UndoMatrixStacks() { // RollDown operation for main stack
 	TempStack := Stack
 	Stack = StackUndoMatrix[Bottom]
@@ -657,7 +717,9 @@ func UndoMatrixStacks() { // RollDown operation for main stack
 	StackUndoMatrix[Top] = TempStack
 } // UndoMatrixStacks  IE RollDown
 
+
 //-------------------------------------------------------- RedoMatrixStacks
+
 func RedoMatrixStacks() { // RollUp uperation for main stack
 	TempStack := Stack
 	Stack = StackUndoMatrix[Top]
@@ -667,7 +729,9 @@ func RedoMatrixStacks() { // RollUp uperation for main stack
 	StackUndoMatrix[Bottom] = TempStack
 } // RedoMatrixStacks  IE RollUp
 
+
 //-------------------------------------------------------- HCF -------------------------------------
+
 func HCF(a, b int) int {
 	// a = bt + r, then hcf(a,b) = hcf(b,r)
 	var r, a1, b1 int
@@ -691,650 +755,641 @@ func HCF(a, b int) int {
 } // HCF
 //------------------------------------------------------------------------
 
-//------------------------------------------------------------------------- GetResults -----------
-func GetResult(s string) (float64, []string) {
-	var year int
-	var Token tknptr.TokenType
-	var EOL bool
 
-	ss := make([]string, 0, 100) // ss is abbrev for stringslice.
+//------------------------------------------------------------------------- GetResults -----------
+
+func GetResult(s string) (float64, []string) {
+	var token tknptr.TokenType
+	var EOL bool
+	var R float64
+	var stringslice []string
 
 	tokenPointer := tknptr.NewToken(s) // Using the Go idiom, instead of INITKN(s)
-outerloop:
-	for { //  UNTIL reached EOL
-		Token, EOL = tokenPointer.GETTKNREAL()
-		//    fmt.Println(" In GetResult after GetTknReal and R =",Token.Rsum,", Token.Str =",Token.Str,  ", TokenState = ", FSATypeString[Token.State]);
-		fmt.Println()
+	for {
+		token, EOL = tokenPointer.GETTKNREAL()
 		if EOL {
 			break
 		}
+		R, stringslice = Result(token)
+	}
+	return R, stringslice
+}
 
-		switch Token.State {
-		case tknptr.DELIM:
 
-		case tknptr.DGT:
-			PUSHX(Token.Rsum)
+func Result(tkn tknptr.TokenType) (float64, []string) {
+	var year int
+	ss := make([]string, 0, 100) // ss is abbrev for stringslice.
+
+outerloop:
+	switch tkn.State {
+	case tknptr.DELIM:
+
+	case tknptr.DGT:
+		PUSHX(tkn.Rsum)
+		PushMatrixStacks()
+
+	case tknptr.OP:
+		I := tkn.Isum
+		if (I == 6) || (I == 20) || (I == 1) || (I == 3) { // <>, ><, <, > will all SWAP
+			SWAPXY()
+		} else {
+			LastX = Stack[X]
 			PushMatrixStacks()
-
-		case tknptr.OP:
-			I := Token.Isum
-			if (I == 6) || (I == 20) || (I == 1) || (I == 3) { // <>, ><, <, > will all SWAP
-				SWAPXY()
-			} else {
-				LastX = Stack[X]
-				PushMatrixStacks()
-				switch I {
-				case 8:
-					Stack[X] += Stack[Y]
-				case 10:
-					Stack[X] = Stack[Y] - Stack[X]
-				case 12:
-					Stack[X] *= Stack[Y]
-				case 14:
-					Stack[X] = Stack[Y] / Stack[X]
-				case 16:
-					Stack[X] = PWRI(Stack[Y], int(Round(Stack[X]))) // ^ op -> PWRI
-				case 18:
-					Stack[X] = math.Pow(Stack[Y], Stack[X]) // **
-				case 22:
-					Stack[X] *= Stack[Y] / 100.0 // percent
-				default:
-					ss = append(ss, fmt.Sprintf("%s is an unrecognized operation.", Token.Str))
-					STACKUP()
-				}
-				if I != 22 { // Do not move stack for % operator
-					STACKDN()
-				}
-			} // opcode value condition
-		case tknptr.ALLELSE:
-			cmdnum := cmdMap[Token.Str]
-			if cmdnum == 0 && len(Token.Str) > 2 {
-				TokenStrShortened := Token.Str[:3] // First 3 characters, ie, characters at positions 0, 1 and 2
-				cmdnum = cmdMap[TokenStrShortened]
-			}
-			if cmdnum == 0 {
-				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", Token.Str))
-				break
-			}
-
-			switch cmdnum {
-			case 10: // DUMP
-				ss = append(ss, DumpStackGeneral()...)
-			case 20: // DUMPFIX
-				ss = append(ss, DumpStackFixed()...)
-			case 30: // DUMPFLOAT
-				ss = append(ss, DumpStackFloat()...)
-			case 40: // ADJ or ADJUST
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] *= 100
-				Stack[X] = Round(Stack[X])
-				Stack[X] /= 100
-			case 50: // NEXT, AFTER, for math.Nextafter to go up to a large number, here I use 1 billion.
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = math.Nextafter(LastX, 1e9) // correct up.
-			case 60: // BEFORE, PREV, PREVIOUS, for math.Nextafter to go towards zero.
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = math.Nextafter(LastX, 0) // correct down.
-			case 70: // SIGn, SIGFIGn, FIXn
-				ch := Token.Str[len(Token.Str)-1] // ie, the last character.
-				sigfig = GetRegIdx(ch)
-				if sigfig > 9 { // If sigfig greater than this max value, make it -1 again.
-					sigfig = -1
-				}
-			case 80: // RECIP
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = 1 / Stack[X]
-			case 90: // CURT or CBRT
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = math.Cbrt(Stack[X])
-			case 100: // DIA
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
-			case 110: // VOL
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
-				STACKDN()
-				STACKDN()
-			case 120: // HELP, H or ?
-				ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
-				ss = append(ss, " CURT,CBRT -- X = cuberoot(X).")
-				ss = append(ss, " RECIP -- X = 1/X.")
-				ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
-				ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
-				ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
-				ss = append(ss, " TOCLIP, FROMCLIP -- uses xclip on linux and tcc 22 on Windows to access the clipboard.")
-				ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
-				ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
-				ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
-				ss = append(ss, " , comma -- stack up.  | vertical bar -- stack down.")
-				ss = append(ss, " Pop -- displays X and then moves stack down.")
-				ss = append(ss, " Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.")
-				ss = append(ss, " EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.")
-				ss = append(ss, " ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X")
-				ss = append(ss, " **  -- Y to the X power, put result in X and pop stack 1 reg, using Pow()")
-				ss = append(ss, " INT, TRUNC, ROUND, CEIL, FRAC, PI, PIOVER6 -- do what their names suggest.")
-				ss = append(ss, " MOD -- evaluate Y MOD X, put result in X and pop stack 1 reg.")
-				ss = append(ss, " %   -- does XY/100, places result in X.  Leaves Y alone.")
-				ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
-				ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
-				ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.")
-				ss = append(ss, " TODAY, T -- Return Julian date number of today's date.  Pop stack x2.")
-				ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
-				ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
-				ss = append(ss, " HEX -- Round X register to a long_integer and output it in hex format.")
-				ss = append(ss, " HCF -- Push HCF(Y,X) onto stack without removing Y or X.")
-				ss = append(ss, " HOL -- Display holidays.")
-				ss = append(ss, " UNDO, REDO -- entire stack.  More comprehensive than lastx.")
-				ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
-				ss = append(ss, " Adjust -- X reg *100, Round, /100")
-				ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
-				ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
-				ss = append(ss, " substitutions: = for +, ; for *.")
-				ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
-				ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose is automatic.  !`~ become spaces in the name.")
-				ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n\n", LastAlteredDate))
-			case 130: // STO
-				MemReg = Stack[X]
-			case 135: // RCL
-				PUSHX(MemReg)
-			case 140: // UNDO
-				UndoMatrixStacks()
-			case 150: // REDO
-				RedoMatrixStacks()
-			case 160: // SWAP or ~ or backtick; I removed SWAPXY
-				PushMatrixStacks()
-				SWAPXY()
-			case 170: // LASTX or @
-				PushMatrixStacks()
-				PUSHX(LastX)
-			case 180: // StackRolldn(), not StackDn()
-				PushMatrixStacks()
-				STACKROLLDN()
-			case 190: // UP
-				PushMatrixStacks()
-				STACKUP()
-			case 200: // DN or |
-				PushMatrixStacks()
-				Stack[X] = Stack[Y]
-				STACKDN()
-			case 210: // POP
-				PushMatrixStacks()
-				x := PopX()
-				str := strconv.FormatFloat(x, 'g', sigfig, 64)
-				ss = append(ss, str)
-			case 215: // INT
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Floor(Stack[X])
-			case 220: // PRIME
-				n := Round(Stack[X])
-				if IsPrime(n) {
-					ss = append(ss, fmt.Sprintf("%d is prime.", int64(n)))
-				} else {
-					ss = append(ss, fmt.Sprintf("%d is NOT prime.", int64(n)))
-				}
-			case 230: // PRIMEFAC, PRIMEF or PRIMEFA  Intended for PrimeFactors or PrimeFactorization
-				U := uint(Round(Stack[X]))
-				if U < 2 {
-					ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
-				} else {
-
-					PrimeUfactors := PrimeFactorMemoized(U)
-					stringslice := make([]string, 0, 10)
-
-					for _, pf := range PrimeUfactors {
-						stringslice = append(stringslice, fmt.Sprintf("%d", pf))
-					}
-					ss = append(ss, strings.Join(stringslice, ", "))
-				}
-			case 240: // TRUNC
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Trunc(Stack[X])
-			case 250: // ROUND
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = Round(LastX)
-			case 260: // CEIL
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Ceil(LastX)
-			case 270: // HEX
-				if (Stack[X] >= -2.0e9) && (Stack[X] <= 1.80e19) {
-					ss = append(ss, fmt.Sprintf(" Value of X reg in hex: %s", ToHex(Stack[X])))
-				} else {
-					ss = append(ss, fmt.Sprintf(" Cannot convert X register to hex string, as number is out of range."))
-				} // Hex command
-			case 280: // HCF
-				c1 := int(math.Abs(Round(Stack[X])))
-				c2 := int(math.Abs(Round(Stack[Y])))
-				c := HCF(c2, c1)
-				ss = append(ss, fmt.Sprintf("HCF of %d and %d is %d.", c1, c2, c))
-			case 290: // P, Q, X
-				//  essentially do nothing but print RESULT= line again.
-			case 300: // FRAC
-				PushMatrixStacks()
-				LastX = Stack[X]
-				_, frac := math.Modf(Stack[X])
-				Stack[X] = frac
-			case 310: // MOD
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Mod(Round(Stack[Y]), Round(Stack[X]))
-				STACKDN()
-			case 320: // JUL
-				PushMatrixStacks()
-				LastX = Stack[X]
-				// allow for 2 digit years
-				_, _, year = timlibg.TIME2MDY()
-				if Stack[X] <= float64(year%100) { // % is the MOD operator
-					Stack[X] += 2000.0
-				} else if Stack[X] < 100.0 {
-					Stack[X] += 1900.0
-				}
-				Stack[X] = float64(timlibg.JULIAN(int(Round(Stack[Z])), int(Round(Stack[Y])), int(Round(Stack[X]))))
-				STACKDN()
-				STACKDN()
-			case 330: // TODAY or T
-				PushMatrixStacks()
-				LastX = Stack[X]
-				STACKUP()
-				c1, c2, c3 := timlibg.TIME2MDY()
-				Stack[X] = float64(timlibg.JULIAN(c1, c2, c3))
-			case 340: // GREG
-				PushMatrixStacks()
-				LastX = Stack[X]
-				STACKUP()
-				STACKUP()
-				c1, c2, c3 := timlibg.GREGORIAN(int(Round(Stack[X])))
-				Stack[Z] = float64(c1)
-				Stack[Y] = float64(c2)
-				Stack[X] = float64(c3)
-			case 350: // DOW
-				dow := int(Round(Stack[X]))
-				i := dow % 7 // % is the MOD operator only for int's
-				s := fmt.Sprintf(" Day of Week for %d is a %s", dow, timlibg.DayNames[i])
-				ss = append(ss, s)
-			case 360: // PI
-				PushMatrixStacks()
-				PUSHX(PI)
-			case 370: // CHS or _
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = -1 * Stack[X]
-			case 380: // HOL
-				// PushMatrixStacks()  Doesn't change the stack.  I don't think it ever did.
-				year := int(Round(Stack[X]))
-				if year < 40 {
-					year += 2000
-				} else if year < 100 {
-					year += 1900
-				}
-				if (year >= 1900) && (year <= 2100) {
-					Holiday := holidaycalc.GetHolidays(year)
-					Holiday.Valid = true
-					ss = append(ss, fmt.Sprintf(" For year %d:", Holiday.Year))
-					Y := Holiday.Year
-					NYD := timlibg.JULIAN(1, 1, Y) % 7
-					ss = append(ss, fmt.Sprintf("New Years Day is a %s, MLK Day is January %d, Pres Day is February %d, Easter Sunday is %s %d, Mother's Day is May %d",
-						timlibg.DayNames[NYD], Holiday.MLK.D, Holiday.Pres.D, timlibg.MonthNames[Holiday.Easter.M], Holiday.Easter.D, Holiday.Mother.D))
-
-					July4 := timlibg.JULIAN(7, 4, Y) % 7
-					ss = append(ss, fmt.Sprintf("Memorial Day is May %d, Father's Day is June %d, July 4 is a %s, Labor Day is Septempber %d, Columbus Day is October %d",
-						Holiday.Memorial.D, Holiday.Father.D, timlibg.DayNames[July4], Holiday.Labor.D, Holiday.Columbus.D))
-
-					VetD := timlibg.JULIAN(11, 11, Y) % 7
-					ChristmasD := timlibg.JULIAN(12, 25, Y) % 7
-					ss = append(ss, fmt.Sprintf("Election Day is November %d, Veteran's Day is a %s, Thanksgiving is November %d, and Christmas Day is a %s.",
-						Holiday.Election.D, timlibg.DayNames[VetD], Holiday.Thanksgiving.D, timlibg.DayNames[ChristmasD]))
-				} else { // added 1/22/20.
-					s := " X register is not a valid year.  Command ignored."
-					ss = append(ss, s)
-				}
-			case 390: // ABOUT
-				ss = append(ss, fmt.Sprintf(" last changed hpcalc2.go %s", LastAlteredDate))
-			case 400: // SQR
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] *= Stack[X]
-			case 410: // SQRT
-				LastX = Stack[X]
-				PushMatrixStacks()
-				Stack[X] = math.Sqrt(Stack[X])
-			case 420: // EXP
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Exp(Stack[X])
-			case 430: // LOG or LN
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Log(math.Abs(Stack[X]))
-			case 440: // SIN
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Sin(Stack[X] * PI / 180.0)
-			case 450: // COS
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Cos(Stack[X] * PI / 180.0)
-			case 460: // TAN
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Tan(Stack[X] * PI / 180.0)
-			case 470: // ARCSIN
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Asin(LastX) * 180.0 / PI
-			case 480: // ARCCOS
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Acos(Stack[X]) * 180.0 / PI
-			case 490: // ARCTAN
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] = math.Atan(LastX) * 180.0 / PI
-			case 500: // D2R
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] *= PI / 180.0
-			case 510: // R2D
-				PushMatrixStacks()
-				LastX = Stack[X]
-				Stack[X] *= 180.0 / PI
-			case 520: // TOCLIP
-				R := READX()
-				s := strconv.FormatFloat(R, 'g', -1, 64)
-				if runtime.GOOS == "linux" {
-					linuxclippy := func(s string) {
-						buf := []byte(s)
-						rdr := bytes.NewReader(buf)
-						cmd := exec.Command("xclip")
-						cmd.Stdin = rdr
-						cmd.Stdout = os.Stdout
-						cmd.Run()
-						ss = append(ss, fmt.Sprintf(" Sent %s to xclip.", s))
-					}
-					linuxclippy(s)
-				} else if runtime.GOOS == "windows" {
-					comspec, ok := os.LookupEnv("ComSpec")
-					if !ok {
-						ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
-						break outerloop
-					}
-					winclippy := func(s string) {
-						//cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
-						cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
-						cmd.Stdout = os.Stdout
-						cmd.Run()
-						ss = append(ss, fmt.Sprintf(" Sent %s to %s.", s, comspec))
-					}
-					winclippy(s)
-				}
-
-			case 530: // FROMCLIP
-				PushMatrixStacks()
-				LastX = Stack[X]
-				w := bytes.NewBuffer([]byte{}) // From "Go Standard Library Cookbook" as referenced above.
-				if runtime.GOOS == "linux" {
-					cmdfromclip := exec.Command("xclip", "-o")
-					cmdfromclip.Stdout = w
-					cmdfromclip.Run()
-					str := w.String()
-					s := fmt.Sprintf(" Received %s from xclip.", str)
-					str = strings.ReplaceAll(str, "\n", "")
-					str = strings.ReplaceAll(str, "\r", "")
-					str = strings.ReplaceAll(str, ",", "")
-					str = strings.ReplaceAll(str, " ", "")
-					s = s + fmt.Sprintf("  After removing all commas and spaces it becomes %s.", str)
-					ss = append(ss, s)
-					R, err := strconv.ParseFloat(str, 64)
-					if err != nil {
-						ss = append(ss, fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored."))
-					} else {
-						PUSHX(R)
-					}
-				} else if runtime.GOOS == "windows" {
-					comspec, ok := os.LookupEnv("ComSpec")
-					if !ok {
-						ss = append(ss, " Environment does not have ComSpec entry.  FromClip unsuccessful.")
-						break outerloop
-					}
-
-					//cmdfromclip := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", "%@clip[0]")
-					cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
-					cmdfromclip.Stdout = w
-					cmdfromclip.Run()
-					lines := w.String()
-					s := fmt.Sprint(" Received ", lines, "from ", comspec)
-					linessplit := strings.Split(lines, "\n")
-					str := strings.ReplaceAll(linessplit[1], "\"", "")
-					str = strings.ReplaceAll(str, "\n", "")
-					str = strings.ReplaceAll(str, "\r", "")
-					str = strings.ReplaceAll(str, ",", "")
-					str = strings.ReplaceAll(str, " ", "")
-					s = s + fmt.Sprintln(", after post processing the string becomes", str)
-					ss = append(ss, s)
-					R, err := strconv.ParseFloat(str, 64)
-					if err != nil {
-						ss = append(ss, fmt.Sprintln(" fromclip", err, ".  Value ignored."))
-					} else {
-						PUSHX(R)
-					}
-				}
-
-			case 540: // lb2g = 453.59238
-				r := READX() * lb2g
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s1 := fmt.Sprintf("%s pounds is %s grams", x, s0)
-				ss = append(ss, s1)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 550: // oz2g = 28.34952
-				r := READX() * oz2g
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s oz is %s grams", x, s0)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 560: // cm2in = 2.54
-				r := READX() / in2cm
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s cm is %s inches", x, s0)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 570: // m2ft = 3.28084
-				r := READX() * m2ft
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s meters is %s feet", x, s0)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 580: // mi2km = 1.609344
-				r := READX() * mi2km
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s miles is %s km", x, s0)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 590: // g2lb
-				r := READX() / lb2g
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s1 := fmt.Sprintf("%s grams is %s pounds", x, s0)
-				ss = append(ss, s1)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 600: // g2oz
-				r := READX() / oz2g
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s1 := fmt.Sprintf("%s grams is %s oz", x, s0)
-				ss = append(ss, s1)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 610: //in2cm
-				r := READX() * in2cm
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s1 := fmt.Sprintf("%s inches is %s cm", x, s0)
-				ss = append(ss, s1)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 620: // ft2m
-				r := READX() / m2ft
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s ft is %s meters", x, s0)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 630: // km2mi
-				r := READX() / mi2km
-				x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
-				s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s km is %s mi", x, s0)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(r)
-
-			case 633: // C2F
-				x := READX()
-				xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
-				fdeg := x*1.8 + 32
-				fstr := strconv.FormatFloat(fdeg, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s deg C is %s deg F", xstr, fstr)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(fdeg)
-
-			case 636: // F2C
-				x := READX()
-				xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
-				cdeg := (x - 32) / 1.8
-				cstr := strconv.FormatFloat(cdeg, 'f', sigfig, 64)
-				s := fmt.Sprintf("%s deg F is %s deg C", xstr, cstr)
-				ss = append(ss, s)
-				PushMatrixStacks()
-				LastX = Stack[X]
-				PUSHX(cdeg)
-
-			case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
-				subcmd := Token.Str[3:] // slice off first three characters, which are map
-				//                                                      fmt.Println(" in MAP section.  subcmd=", subcmd)
-				if strings.HasPrefix(subcmd, "STO") {
-					regname := getMapRegName(subcmd)
-					//                                             fmt.Println(" in mapsto section.  regname=", regname)
-					if regname == "" {
-						ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
-						break outerloop
-					}
-					mappedReg[regname] = READX()
-					// s := fmt.Sprint("Value in X stored into ", regname)
-					// ss = append(ss, s)
-					// ss = append(ss, "")
-					// ss = append(ss, "")
-
-					_, stringresult := GetResult("mapsho")
-					for _, str := range stringresult {
-						ss = append(ss, str)
-					}
-
-				} else if strings.HasPrefix(subcmd, "RCL") {
-					regname := getMapRegName(subcmd)
-					//                                             fmt.Println(" in maprcl section.  regname=", regname)
-					if regname == "" {
-						ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
-						break outerloop
-					}
-					r, ok := mappedReg[regname]
-					if ok {
-						PUSHX(r)
-					} else { // call the abbreviation processing routine, that I have yet to write.
-						name := getFullMatchingName(regname)
-						if name == "" {
-							s := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regname)
-							ss = append(ss, s)
-							break outerloop
-						}
-						r := mappedReg[name]
-						PUSHX(r)
-					}
-
-				} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") ||
-					strings.HasPrefix(subcmd, "LIST") {
-					// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
-					s0 := fmt.Sprint("Map length is ", len(mappedReg))
-					ss = append(ss, s0)
-					//sliceregvar := make([]mappedRegStructType, 0, 50)
-					//for key, value := range mappedReg {
-					//	m := mappedRegStructType{key, value} // using structured literal syntax.
-					//	sliceregvar = append(sliceregvar, m)
-					//}
-					//sortlessfunction := func(i, j int) bool {
-					//	return sliceregvar[i].key < sliceregvar[j].key
-					//}
-					//sort.Slice(sliceregvar, sortlessfunction)
-					sliceregvar := mappedRegSortedNames()
-
-					for _, reg := range sliceregvar {
-						fmtvalu := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
-						s := fmt.Sprintf("reg[%s] = %s", reg.key, fmtvalu)
-						ss = append(ss, s)
-					}
-
-				} else if strings.HasPrefix(subcmd, "DEL") {
-					regname := getMapRegName(subcmd)
-					if regname == "" {
-						ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
-						break outerloop
-					}
-					delete(mappedReg, regname) // if key is not in the map, this does nothing but does not panic.
-					s = fmt.Sprint("deleted ", regname)
-					ss = append(ss, s)
-				}
-
-			case 999: // do nothing, ignore me but don't generate an error message.
-
+			switch I {
+			case 5, 8:  // allow = and + to both mean add.
+				Stack[X] += Stack[Y]
+			case 10:
+				Stack[X] = Stack[Y] - Stack[X]
+			case 12:
+				Stack[X] *= Stack[Y]
+			case 14:
+				Stack[X] = Stack[Y] / Stack[X]
+			case 16:
+				Stack[X] = PWRI(Stack[Y], int(Round(Stack[X]))) // ^ op -> PWRI
+			case 18:
+				Stack[X] = math.Pow(Stack[Y], Stack[X]) // **
+			case 22:
+				Stack[X] *= Stack[Y] / 100.0 // percent
 			default:
-				ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", Token.Str))
-			} // main text command selection if statement
+				ss = append(ss, fmt.Sprintf("%s is an unrecognized operation.", tkn.Str))
+				STACKUP()
+			}
+			if I != 22 { // Do not move stack for % operator
+				STACKDN()
+			}
+		} // opcode value condition
+	case tknptr.ALLELSE:
+		cmdnum := cmdMap[tkn.Str]
+		if cmdnum == 0 && len(tkn.Str) > 2 {
+			TokenStrShortened := tkn.Str[:3] // First 3 characters, ie, characters at positions 0, 1 and 2
+			cmdnum = cmdMap[TokenStrShortened]
 		}
+		if cmdnum == 0 {
+			ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.", tkn.Str))
+			break
+		}
+
+		switch cmdnum {
+		case 10: // DUMP
+			ss = append(ss, DumpStackGeneral()...)
+		case 20: // DUMPFIX
+			ss = append(ss, DumpStackFixed()...)
+		case 30: // DUMPFLOAT
+			ss = append(ss, DumpStackFloat()...)
+		case 40: // ADJ or ADJUST
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] *= 100
+			Stack[X] = Round(Stack[X])
+			Stack[X] /= 100
+		case 50: // NEXT, AFTER, for math.Nextafter to go up to a large number, here I use 1 billion.
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = math.Nextafter(LastX, 1e9) // correct up.
+		case 60: // BEFORE, PREV, PREVIOUS, for math.Nextafter to go towards zero.
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = math.Nextafter(LastX, 0) // correct down.
+		case 70: // SIGn, SIGFIGn, FIXn
+			ch := tkn.Str[len(tkn.Str)-1] // ie, the last character.
+			sigfig = GetRegIdx(ch)
+			if sigfig > 9 { // If sigfig greater than this max value, make it -1 again.
+				sigfig = -1
+			}
+		case 80: // RECIP
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = 1 / Stack[X]
+		case 90: // CURT or CBRT
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = math.Cbrt(Stack[X])
+		case 100: // DIA
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
+		case 110: // VOL
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
+			STACKDN()
+			STACKDN()
+		case 120: // HELP, H or ?
+			ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
+			ss = append(ss, " CURT,CBRT -- X = cuberoot(X).")
+			ss = append(ss, " RECIP -- X = 1/X.")
+			ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
+			ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
+			ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
+			ss = append(ss, " TOCLIP, FROMCLIP -- uses xclip on linux and tcc 22 on Windows to access the clipboard.")
+			ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
+			ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
+			ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
+			ss = append(ss, " , comma -- stack up.  | vertical bar -- stack down.")
+			ss = append(ss, " Pop -- displays X and then moves stack down.")
+			ss = append(ss, " Dump, Dumpfixed, Dumpfloat, Sho -- dump the stack to the terminal.")
+			ss = append(ss, " EXP,LN,LOG -- evaluate exp(X) or ln(X) and put result back into X.")
+			ss = append(ss, " ^  -- Y to the X power using PWRI, put result in X and pop stack 1 reg.  Rounds X")
+			ss = append(ss, " **  -- Y to the X power, put result in X and pop stack 1 reg, using Pow()")
+			ss = append(ss, " INT, TRUNC, ROUND, CEIL, FRAC, PI, PIOVER6 -- do what their names suggest.")
+			ss = append(ss, " MOD -- evaluate Y MOD X, put result in X and pop stack 1 reg.")
+			ss = append(ss, " %   -- does XY/100, places result in X.  Leaves Y alone.")
+			ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
+			ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
+			ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.")
+			ss = append(ss, " TODAY, T -- Return Julian date number of today's date.  Pop stack x2.")
+			ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
+			ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
+			ss = append(ss, " HEX -- Round X register to a long_integer and output it in hex format.")
+			ss = append(ss, " HCF -- Push HCF(Y,X) onto stack without removing Y or X.")
+			ss = append(ss, " HOL -- Display holidays.")
+			ss = append(ss, " UNDO, REDO -- entire stack.  More comprehensive than lastx.")
+			ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
+			ss = append(ss, " Adjust -- X reg *100, Round, /100")
+			ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
+			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
+			ss = append(ss, " substitutions: = for +, ; for *.")
+			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
+			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose is automatic.  !`~ become spaces in the name.")
+			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n\n", LastAlteredDate))
+		case 130: // STO
+			MemReg = Stack[X]
+		case 135: // RCL
+			PUSHX(MemReg)
+		case 140: // UNDO
+			UndoMatrixStacks()
+		case 150: // REDO
+			RedoMatrixStacks()
+		case 160: // SWAP or ~ or backtick; I removed SWAPXY
+			PushMatrixStacks()
+			SWAPXY()
+		case 170: // LASTX or @
+			PushMatrixStacks()
+			PUSHX(LastX)
+		case 180: // StackRolldn(), not StackDn()
+			PushMatrixStacks()
+			STACKROLLDN()
+		case 190: // UP
+			PushMatrixStacks()
+			STACKUP()
+		case 200: // DN or |
+			PushMatrixStacks()
+			Stack[X] = Stack[Y]
+			STACKDN()
+		case 210: // POP
+			PushMatrixStacks()
+			x := PopX()
+			str := strconv.FormatFloat(x, 'g', sigfig, 64)
+			ss = append(ss, str)
+		case 215: // INT
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Floor(Stack[X])
+		case 220: // PRIME
+			n := Round(Stack[X])
+			if IsPrime(n) {
+				ss = append(ss, fmt.Sprintf("%d is prime.", int64(n)))
+			} else {
+				ss = append(ss, fmt.Sprintf("%d is NOT prime.", int64(n)))
+			}
+		case 230: // PRIMEFAC, PRIMEF or PRIMEFA  Intended for PrimeFactors or PrimeFactorization
+			U := uint(Round(Stack[X]))
+			if U < 2 {
+				ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
+			} else {
+
+				PrimeUfactors := PrimeFactorMemoized(U)
+				stringslice := make([]string, 0, 10)
+
+				for _, pf := range PrimeUfactors {
+					stringslice = append(stringslice, fmt.Sprintf("%d", pf))
+				}
+				ss = append(ss, strings.Join(stringslice, ", "))
+			}
+		case 240: // TRUNC
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Trunc(Stack[X])
+		case 250: // ROUND
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = Round(LastX)
+		case 260: // CEIL
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Ceil(LastX)
+		case 270: // HEX
+			if (Stack[X] >= -2.0e9) && (Stack[X] <= 1.80e19) {
+				ss = append(ss, fmt.Sprintf(" Value of X reg in hex: %s", ToHex(Stack[X])))
+			} else {
+				ss = append(ss, fmt.Sprintf(" Cannot convert X register to hex string, as number is out of range."))
+			} // Hex command
+		case 280: // HCF
+			c1 := int(math.Abs(Round(Stack[X])))
+			c2 := int(math.Abs(Round(Stack[Y])))
+			c := HCF(c2, c1)
+			ss = append(ss, fmt.Sprintf("HCF of %d and %d is %d.", c1, c2, c))
+		case 290: // P, Q, X
+			//  essentially do nothing but print RESULT= line again.
+		case 300: // FRAC
+			PushMatrixStacks()
+			LastX = Stack[X]
+			_, frac := math.Modf(Stack[X])
+			Stack[X] = frac
+		case 310: // MOD
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Mod(Round(Stack[Y]), Round(Stack[X]))
+			STACKDN()
+		case 320: // JUL
+			PushMatrixStacks()
+			LastX = Stack[X]
+			// allow for 2 digit years
+			_, _, year = timlibg.TIME2MDY()
+			if Stack[X] <= float64(year%100) { // % is the MOD operator
+				Stack[X] += 2000.0
+			} else if Stack[X] < 100.0 {
+				Stack[X] += 1900.0
+			}
+			Stack[X] = float64(timlibg.JULIAN(int(Round(Stack[Z])), int(Round(Stack[Y])), int(Round(Stack[X]))))
+			STACKDN()
+			STACKDN()
+		case 330: // TODAY or T
+			PushMatrixStacks()
+			LastX = Stack[X]
+			STACKUP()
+			c1, c2, c3 := timlibg.TIME2MDY()
+			Stack[X] = float64(timlibg.JULIAN(c1, c2, c3))
+		case 340: // GREG
+			PushMatrixStacks()
+			LastX = Stack[X]
+			STACKUP()
+			STACKUP()
+			c1, c2, c3 := timlibg.GREGORIAN(int(Round(Stack[X])))
+			Stack[Z] = float64(c1)
+			Stack[Y] = float64(c2)
+			Stack[X] = float64(c3)
+		case 350: // DOW
+			dow := int(Round(Stack[X]))
+			i := dow % 7 // % is the MOD operator only for int's
+			s := fmt.Sprintf(" Day of Week for %d is a %s", dow, timlibg.DayNames[i])
+			ss = append(ss, s)
+		case 360: // PI
+			PushMatrixStacks()
+			PUSHX(PI)
+		case 370: // CHS or _
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = -1 * Stack[X]
+		case 380: // HOL
+			// PushMatrixStacks()  Doesn't change the stack.  I don't think it ever did.
+			year := int(Round(Stack[X]))
+			if year < 40 {
+				year += 2000
+			} else if year < 100 {
+				year += 1900
+			}
+			if (year >= 1900) && (year <= 2100) {
+				Holiday := holidaycalc.GetHolidays(year)
+				Holiday.Valid = true
+				ss = append(ss, fmt.Sprintf(" For year %d:", Holiday.Year))
+				Y := Holiday.Year
+				NYD := timlibg.JULIAN(1, 1, Y) % 7
+				ss = append(ss, fmt.Sprintf("New Years Day is a %s, MLK Day is January %d, Pres Day is February %d, Easter Sunday is %s %d, Mother's Day is May %d",
+					timlibg.DayNames[NYD], Holiday.MLK.D, Holiday.Pres.D, timlibg.MonthNames[Holiday.Easter.M], Holiday.Easter.D, Holiday.Mother.D))
+
+				July4 := timlibg.JULIAN(7, 4, Y) % 7
+				ss = append(ss, fmt.Sprintf("Memorial Day is May %d, Father's Day is June %d, July 4 is a %s, Labor Day is Septempber %d, Columbus Day is October %d",
+					Holiday.Memorial.D, Holiday.Father.D, timlibg.DayNames[July4], Holiday.Labor.D, Holiday.Columbus.D))
+
+				VetD := timlibg.JULIAN(11, 11, Y) % 7
+				ChristmasD := timlibg.JULIAN(12, 25, Y) % 7
+				ss = append(ss, fmt.Sprintf("Election Day is November %d, Veteran's Day is a %s, Thanksgiving is November %d, and Christmas Day is a %s.",
+					Holiday.Election.D, timlibg.DayNames[VetD], Holiday.Thanksgiving.D, timlibg.DayNames[ChristmasD]))
+			} else { // added 1/22/20.
+				s := " X register is not a valid year.  Command ignored."
+				ss = append(ss, s)
+			}
+		case 390: // ABOUT
+			ss = append(ss, fmt.Sprintf(" last changed hpcalc2.go %s", LastAlteredDate))
+		case 400: // SQR
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] *= Stack[X]
+		case 410: // SQRT
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = math.Sqrt(Stack[X])
+		case 420: // EXP
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Exp(Stack[X])
+		case 430: // LOG or LN
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Log(math.Abs(Stack[X]))
+		case 440: // SIN
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Sin(Stack[X] * PI / 180.0)
+		case 450: // COS
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Cos(Stack[X] * PI / 180.0)
+		case 460: // TAN
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Tan(Stack[X] * PI / 180.0)
+		case 470: // ARCSIN
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Asin(LastX) * 180.0 / PI
+		case 480: // ARCCOS
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Acos(Stack[X]) * 180.0 / PI
+		case 490: // ARCTAN
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] = math.Atan(LastX) * 180.0 / PI
+		case 500: // D2R
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] *= PI / 180.0
+		case 510: // R2D
+			PushMatrixStacks()
+			LastX = Stack[X]
+			Stack[X] *= 180.0 / PI
+		case 520: // TOCLIP
+			R := READX()
+			s := strconv.FormatFloat(R, 'g', -1, 64)
+			if runtime.GOOS == "linux" {
+				linuxclippy := func(s string) {
+					buf := []byte(s)
+					rdr := bytes.NewReader(buf)
+					cmd := exec.Command("xclip")
+					cmd.Stdin = rdr
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+					ss = append(ss, fmt.Sprintf(" Sent %s to xclip.", s))
+				}
+				linuxclippy(s)
+			} else if runtime.GOOS == "windows" {
+				comspec, ok := os.LookupEnv("ComSpec")
+				if !ok {
+					ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
+					break outerloop
+				}
+				winclippy := func(s string) {
+					//cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+					cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+					ss = append(ss, fmt.Sprintf(" Sent %s to %s.", s, comspec))
+				}
+				winclippy(s)
+			}
+
+		case 530: // FROMCLIP
+			PushMatrixStacks()
+			LastX = Stack[X]
+			w := bytes.NewBuffer([]byte{}) // From "Go Standard Library Cookbook" as referenced above.
+			if runtime.GOOS == "linux" {
+				cmdfromclip := exec.Command("xclip", "-o")
+				cmdfromclip.Stdout = w
+				cmdfromclip.Run()
+				str := w.String()
+				s := fmt.Sprintf(" Received %s from xclip.", str)
+				str = strings.ReplaceAll(str, "\n", "")
+				str = strings.ReplaceAll(str, "\r", "")
+				str = strings.ReplaceAll(str, ",", "")
+				str = strings.ReplaceAll(str, " ", "")
+				s = s + fmt.Sprintf("  After removing all commas and spaces it becomes %s.", str)
+				ss = append(ss, s)
+				R, err := strconv.ParseFloat(str, 64)
+				if err != nil {
+					ss = append(ss, fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored."))
+				} else {
+					PUSHX(R)
+				}
+			} else if runtime.GOOS == "windows" {
+				comspec, ok := os.LookupEnv("ComSpec")
+				if !ok {
+					ss = append(ss, " Environment does not have ComSpec entry.  FromClip unsuccessful.")
+					break outerloop
+				}
+
+				cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
+				cmdfromclip.Stdout = w
+				cmdfromclip.Run()
+				lines := w.String()
+				s := fmt.Sprint(" Received ", lines, "from ", comspec)
+				linessplit := strings.Split(lines, "\n")
+				str := strings.ReplaceAll(linessplit[1], "\"", "")
+				str = strings.ReplaceAll(str, "\n", "")
+				str = strings.ReplaceAll(str, "\r", "")
+				str = strings.ReplaceAll(str, ",", "")
+				str = strings.ReplaceAll(str, " ", "")
+				s = s + fmt.Sprintln(", after post processing the string becomes", str)
+				ss = append(ss, s)
+				R, err := strconv.ParseFloat(str, 64)
+				if err != nil {
+					ss = append(ss, fmt.Sprintln(" fromclip", err, ".  Value ignored."))
+				} else {
+					PUSHX(R)
+				}
+			}
+
+		case 540: // lb2g = 453.59238
+			r := READX() * lb2g
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s1 := fmt.Sprintf("%s pounds is %s grams", x, s0)
+			ss = append(ss, s1)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 550: // oz2g = 28.34952
+			r := READX() * oz2g
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s oz is %s grams", x, s0)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 560: // cm2in = 2.54
+			r := READX() / in2cm
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s cm is %s inches", x, s0)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 570: // m2ft = 3.28084
+			r := READX() * m2ft
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s meters is %s feet", x, s0)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 580: // mi2km = 1.609344
+			r := READX() * mi2km
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s miles is %s km", x, s0)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 590: // g2lb
+			r := READX() / lb2g
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s1 := fmt.Sprintf("%s grams is %s pounds", x, s0)
+			ss = append(ss, s1)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 600: // g2oz
+			r := READX() / oz2g
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s1 := fmt.Sprintf("%s grams is %s oz", x, s0)
+			ss = append(ss, s1)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 610: //in2cm
+			r := READX() * in2cm
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s1 := fmt.Sprintf("%s inches is %s cm", x, s0)
+			ss = append(ss, s1)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 620: // ft2m
+			r := READX() / m2ft
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s ft is %s meters", x, s0)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 630: // km2mi
+			r := READX() / mi2km
+			x := strconv.FormatFloat(READX(), 'f', sigfig, 64)
+			s0 := strconv.FormatFloat(r, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s km is %s mi", x, s0)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(r)
+
+		case 633: // C2F
+			x := READX()
+			xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
+			fdeg := x*1.8 + 32
+			fstr := strconv.FormatFloat(fdeg, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s deg C is %s deg F", xstr, fstr)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(fdeg)
+
+		case 636: // F2C
+			x := READX()
+			xstr := strconv.FormatFloat(x, 'f', sigfig, 64)
+			cdeg := (x - 32) / 1.8
+			cstr := strconv.FormatFloat(cdeg, 'f', sigfig, 64)
+			s := fmt.Sprintf("%s deg F is %s deg C", xstr, cstr)
+			ss = append(ss, s)
+			PushMatrixStacks()
+			LastX = Stack[X]
+			PUSHX(cdeg)
+
+		case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
+			subcmd := tkn.Str[3:] // slice off first three characters, which are map
+			if strings.HasPrefix(subcmd, "STO") {
+				regname := getMapRegName(subcmd)
+				//                                             fmt.Println(" in mapsto section.  regname=", regname)
+				if regname == "" {
+					ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
+					break outerloop
+				}
+				mappedReg[regname] = READX()
+				_, stringresult := GetResult("mapsho")
+				for _, str := range stringresult {
+					ss = append(ss, str)
+				}
+
+			} else if strings.HasPrefix(subcmd, "RCL") {
+				regname := getMapRegName(subcmd)
+				//                                             fmt.Println(" in maprcl section.  regname=", regname)
+				if regname == "" {
+					ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
+					break outerloop
+				}
+				r, ok := mappedReg[regname]
+				if ok {
+					PUSHX(r)
+				} else { // call the abbreviation processing routine, that I have yet to write.
+					name := getFullMatchingName(regname)
+					if name == "" {
+						s := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regname)
+						ss = append(ss, s)
+						break outerloop
+					}
+					r := mappedReg[name]
+					PUSHX(r)
+				}
+
+			} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") ||
+				strings.HasPrefix(subcmd, "LIST") {
+				// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
+				s0 := fmt.Sprint("Map length is ", len(mappedReg))
+				ss = append(ss, s0)
+				sliceregvar := mappedRegSortedNames()
+
+				for _, reg := range sliceregvar {
+					fmtvalu := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
+					s := fmt.Sprintf("reg[%s] = %s", reg.key, fmtvalu)
+					ss = append(ss, s)
+				}
+
+			} else if strings.HasPrefix(subcmd, "DEL") {
+				regname := getMapRegName(subcmd)
+				if regname == "" {
+					ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
+					break outerloop
+				}
+				delete(mappedReg, regname) // if key is not in the map, this does nothing but does not panic.
+				s := fmt.Sprint("deleted ", regname)
+				ss = append(ss, s)
+			}
+
+		case 999: // do nothing, ignore me but don't generate an error message.
+
+		default:
+			ss = append(ss, fmt.Sprintf(" %s is an unrecognized command.  And should not get here.", tkn.Str))
+		} // main text command selection if statement
 	}
 	return Stack[X], ss
-} // GETRESULT
+} // Result
 
 // ----------------------------------------------------------- getMapRegName --------------------------------------------
 func getMapRegName(cmd string) string {

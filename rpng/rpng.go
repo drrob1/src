@@ -1,4 +1,4 @@
-// (C) 1990-2016.  Robert W.  Solomon.  All rights reserved.
+// (C) 1990-2021.  Robert W.  Solomon.  All rights reserved.
 // rpng.go
 package main
 
@@ -38,7 +38,7 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "12 Jun 2021"
+const lastAlteredDate = "14 Jun 2021"
 
 /*
 This module uses the HPCALC module to simulate an RPN type calculator.
@@ -115,6 +115,7 @@ REVISION HISTORY
 11 Feb 21 -- Added X for exit, to copy PACS.  And changed the prompt
  8 Apr 21 -- Converted to module name src, that happens to reside at ~/go/src.  Go figure!
 12 Jun 21 -- Now that I have RealTokenSlice in tknptr, I'll use it to allow more flexibility when entering commands.  And removed tokenize.CAP().
+14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
 */
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -292,7 +293,7 @@ func main() {
 				ManualDump = true
 			} else {
 				// -------------------------------------------------------------------------------------
-				_, stringslice = hpcalc.GetResult(rtkn.Str) //   Here is where GetResult is called
+				_, stringslice = hpcalc.Result(rtkn) //   Here is where GetResult is called -> Result
 				// -------------------------------------------------------------------------------------
 				ClearScreen()   // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
 				RepaintScreen() // So I don't think I need this complex system to allow or SuppressDump.  I'll keep it for a while but turn it off.
