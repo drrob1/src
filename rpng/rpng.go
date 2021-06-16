@@ -38,7 +38,7 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "14 Jun 2021"
+const lastAlteredDate = "15 Jun 2021"
 
 /*
 This module uses the HPCALC module to simulate an RPN type calculator.
@@ -116,6 +116,7 @@ REVISION HISTORY
  8 Apr 21 -- Converted to module name src, that happens to reside at ~/go/src.  Go figure!
 12 Jun 21 -- Now that I have RealTokenSlice in tknptr, I'll use it to allow more flexibility when entering commands.  And removed tokenize.CAP().
 14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
+15 Jun 21 -- Added runetime.Version() to output of about cmd.
 */
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -313,7 +314,7 @@ func main() {
 
 			//  These commands are processed thru GetResult() first, then these are processed here.
 			if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
-				ctfmt.Println(ct.Cyan, WindowsFlag, " Last altered the source of rpng.go", lastAlteredDate)
+				ctfmt.Println(ct.Cyan, WindowsFlag, " Last altered the source of rpng.go", lastAlteredDate, "compiled w/", runtime.Version())
 				AllowDumpFlag = false
 			} else if strings.HasPrefix(rtkn.Str, "DUMP") {
 				AllowDumpFlag = false
