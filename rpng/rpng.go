@@ -38,10 +38,9 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "15 Jun 2021"
+const lastAlteredDate = "16 Jun 2021"
 
 /*
-This module uses the HPCALC module to simulate an RPN type calculator.
 REVISION HISTORY
 ----------------
  1 Dec 89 -- Changed prompt.
@@ -117,6 +116,7 @@ REVISION HISTORY
 12 Jun 21 -- Now that I have RealTokenSlice in tknptr, I'll use it to allow more flexibility when entering commands.  And removed tokenize.CAP().
 14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
 15 Jun 21 -- Added runetime.Version() to output of about cmd.
+16 Jun 21 -- Added os.UserHomeDir(), which became avail as of Go 1.12
 */
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -151,6 +151,14 @@ func main() {
 	P := fmt.Println // a cute trick I just learned, from gobyexample.com.
 	ClearScreen()
 
+	HomeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error from os.UserHomeDir() is", err)
+		os.Exit(1)
+	}
+	WindowsFlag = runtime.GOOS == "windows"
+
+	/*
 	if runtime.GOOS == "linux" {
 		HomeDir = os.Getenv("HOME")
 	} else if runtime.GOOS == "windows" {
@@ -159,8 +167,11 @@ func main() {
 	} else { // then HomeDir will be empty.
 		fmt.Println(" runtime.GOOS does not say linux or windows.  Is this a Mac?")
 	}
+	 */
+
 	fmt.Println()
-	ctfmt.Println(ct.Blue, WindowsFlag, " GOOS =", runtime.GOOS, ".  HomeDir =", HomeDir, ".  ARCH=", runtime.GOARCH)
+	ctfmt.Println(ct.Blue, WindowsFlag, " GOOS =", runtime.GOOS, ".  HomeDir =", HomeDir, ".  ARCH=", runtime.GOARCH,
+		".  WindowsFlag =", WindowsFlag)
 	fmt.Println()
 
 	AllowDumpFlag := false // I need to be able to supress the automatic DUMP under certain circumstances.

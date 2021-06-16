@@ -17,7 +17,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "14 Jun 2021"
+const LastAlteredDate = "16 Jun 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -120,6 +120,7 @@ REVISION HISTORY
 11 Feb 21 -- Added these commands that will be ignored, X, P and Q.  And took out come dead code.
  8 Apr 21 -- Converting to src module residing at ~/go/src.  What a coincidence!
 14 Jun 21 -- Split off Result from GetResult
+16 Jun 21 -- Adding os.UserHomeDir(), which became available as of Go 1.12.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -138,7 +139,7 @@ const (
 )
 
 const Top = T1
-const Bottom = 0
+const Bottom = X
 
 var StackRegNamesString []string = []string{" X", " Y", " Z", "T5", "T4", "T3", "T2", "T1"}
 
@@ -172,6 +173,7 @@ const mi2km = 1.609344
 
 //-----------------------------------------------------------------------------------------------------------------------------
 func init() {
+	var err error
 	cmdMap = make(map[string]int, 100)
 	cmdMap["DUMP"] = 10
 	cmdMap["DUMPFIX"] = 20
@@ -264,10 +266,17 @@ func init() {
 	cmdMap["F2C"] = 636
 	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
 
+	/* commented out 6/16/21
 	if runtime.GOOS == "linux" {
 		homedir = os.Getenv("HOME")
 	} else if runtime.GOOS == "windows" {
 		homedir = os.Getenv("userprofile")
+	}
+	 */
+	homedir, err = os.UserHomeDir() // This func became available as of Go 1.12
+	if err != nil {
+		fmt.Fprintln(os.Stderr," Error from os.UserHomeDir call is", err)
+		os.Exit(1)
 	}
 
 	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
@@ -293,7 +302,6 @@ func init() {
 
 		mappedRegFile.Close()
 	}
-
 }
 
 // -----------------------------------------------------MapClose --------------------------------------------------------------------

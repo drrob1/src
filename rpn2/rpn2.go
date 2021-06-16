@@ -9,7 +9,6 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -63,6 +62,7 @@ REVISION HISTORY
 31 Jan 21 -- Adding color.  And windowsFlag so color is better, ie, use bold flag on windows.
  8 Apr 21 -- Converted to module src residing at ~/go/src.  What a coincidence.
 16 Jun 21 -- Will use strings.ReplaceAll instead of my makesubst to test that '=' now adds from hpcalc2.
+               And ioutil package is depracated as of Go 1.16, so I removed it.
 */
 
 var suppressDump map[string]bool
@@ -98,7 +98,7 @@ func main() {
 	StackFileExists := true
 	InputByteSlice := make([]byte, 8*hpcalc2.StackSize) // I hope this is a slice of 64 bytes, ie, 8*8.
 
-	if InputByteSlice, err = ioutil.ReadFile(StackFileName); err != nil {
+	if InputByteSlice, err = os.ReadFile(StackFileName); err != nil {
 		fmt.Printf(" Error from ioutil.ReadFile.  Probably because no Stack File found: %v\n", err)
 		StackFileExists = false
 	}
@@ -208,9 +208,9 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	err = ioutil.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
+	err = os.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {
 		fmt.Printf(" ioutil.WriteFile failed with error %v \n", err)
 	}
 	hpcalc2.MapClose()
-} // main in rpn.go
+} // main in rpn2.go
