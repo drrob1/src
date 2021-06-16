@@ -17,59 +17,59 @@ import (
 	//
 	"src/getcommandline"
 	"src/hpcalc2"
-	"src/makesubst"
 )
 
-const LastCompiled = "8 Apr 2021"
+const LastCompiled = "16 Jun 2021"
+
+/*
+This module uses the HPCALC2 module to simulate an RPN type calculator.
+REVISION HISTORY
+----------------
+ 1 Dec 89 -- Changed prompt.
+24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
+25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+ 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
+18 May 03 -- First Win32 version.  And changed name.
+ 1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
+              And will save/restore the stack to/from a file.
+ 2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
+              And I now have the skipline included in MiscStdInOut so it is removed from here.
+15 Oct 13 -- Now writing for gm2 under linux.
+22 Jul 14 -- Converting to Ada.
+ 6 Dec 14 -- Converting to cpp.
+20 Dec 14 -- Added macros for date and time last compiled.
+31 Dec 14 -- Started coding HOL command.
+ 1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
+10 Jan 15 -- Playing with string conversions and number formatting.
+ 5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
+22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
+13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
+ 2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
+ 7 Jul 16 -- Added UP command to hpcalcc.cpp
+ 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+22 Aug 16 -- Started conversion to Go.
+28 Aug 16 -- added makesubst capability for substitutions = -> + and ; -> *
+28 Nov 16 -- Backported stringslice return of hpcalc so can use the new, improved hpcalc.
+23 Feb 17 -- Made "?" equivalent to "help"
+26 Mar 17 -- Changed startup message to include written in Go.
+22 Aug 18 -- Learning about code folding
+ 2 Oct 18 -- Now using code folding.  za normal mode command toggles the fold mode where cursor is.
+ 8 Feb 20 -- Added PopX to hpcalc.go, and will test it here.
+ 9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
+ 8 Aug 20 -- Now called rpn2.go to test hpcalc2.go
+ 8 Nov 20 -- Removed unnecessary comments.
+12 Dec 20 -- hpcalc2 now has MAP commands.
+13 Dec 20 -- Shortened the lead space on displaying the Results.
+31 Jan 21 -- Adding color.  And windowsFlag so color is better, ie, use bold flag on windows.
+ 8 Apr 21 -- Converted to module src residing at ~/go/src.  What a coincidence.
+16 Jun 21 -- Will use strings.ReplaceAll instead of my makesubst to test that '=' now adds from hpcalc2.
+*/
 
 var suppressDump map[string]bool
 
 var windowsFlag bool
 
 func main() {
-	/*
-	   This module uses the HPCALC2 module to simulate an RPN type calculator.
-	   REVISION HISTORY
-	   ----------------
-	    1 Dec 89 -- Changed prompt.
-	   24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-	   25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
-	    3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
-	   18 May 03 -- First Win32 version.  And changed name.
-	    1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
-	                 And will save/restore the stack to/from a file.
-	    2 May 13 -- Will use console mode flag for HPCALC, so it will write to console instead of the terminal module routines.
-	                 And I now have the skipline included in MiscStdInOut so it is removed from here.
-	   15 Oct 13 -- Now writing for gm2 under linux.
-	   22 Jul 14 -- Converting to Ada.
-	    6 Dec 14 -- Converting to cpp.
-	   20 Dec 14 -- Added macros for date and time last compiled.
-	   31 Dec 14 -- Started coding HOL command.
-	    1 Jan 15 -- After getting HOL command to work, I did more fiddling to further understand c-strings and c++ string class.
-	   10 Jan 15 -- Playing with string conversions and number formatting.
-	    5 Nov 15 -- Added the RECIP, CURT, VOL commands to hpcalc.cpp
-	   22 Nov 15 -- Noticed that T1 and T2 stack operations are not correct.  This effects HP2cursed and rpnc.
-	   13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
-	    2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
-	    7 Jul 16 -- Added UP command to hpcalcc.cpp
-	    8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
-	   22 Aug 16 -- Started conversion to Go.
-	   28 Aug 16 -- added makesubst capability for substitutions = -> + and ; -> *
-	   28 Nov 16 -- Backported stringslice return of hpcalc so can use the new, improved hpcalc.
-	   23 Feb 17 -- Made "?" equivalent to "help"
-	   26 Mar 17 -- Changed startup message to include written in Go.
-	   22 Aug 18 -- Learning about code folding
-	    2 Oct 18 -- Now using code folding.  za normal mode command toggles the fold mode where cursor is.
-	    8 Feb 20 -- Added PopX to hpcalc.go, and will test it here.
-	    9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
-	    8 Aug 20 -- Now called rpn2.go to test hpcalc2.go
-	    8 Nov 20 -- Removed unnecessary comments.
-	   12 Dec 20 -- hpcalc2 now has MAP commands.
-	   13 Dec 20 -- Shortened the lead space on displaying the Results.
-	   31 Jan 21 -- Adding color.  And windowsFlag so color is better, ie, use bold flag on windows.
-	    8 Apr 21 -- Converted to module src residing at ~/go/src.  What a coincidence.
-	*/
-
 	var R float64
 	var INBUF, ans string
 	const StackFileName = "RPNStack.sav"
@@ -122,7 +122,8 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	if len(os.Args) > 1 {
 		INBUF = getcommandline.GetCommandLineString()
-		INBUF = makesubst.MakeSubst(INBUF)
+		//INBUF = makesubst.MakeSubst(INBUF)
+		INBUF = strings.ReplaceAll(INBUF, ";", "*")
 	} else {
 		fmt.Print(" Enter calculation, HELP or Enter to exit: ")
 		scanner.Scan()
@@ -134,7 +135,8 @@ func main() {
 		if len(INBUF) == 0 {
 			os.Exit(0)
 		}
-		INBUF = makesubst.MakeSubst(INBUF)
+		//INBUF = makesubst.MakeSubst(INBUF)
+		INBUF = strings.ReplaceAll(INBUF, ";", "*")
 	} // if command tail exists
 
 	hpcalc2.PushMatrixStacks()
@@ -183,7 +185,8 @@ func main() {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 			os.Exit(1)
 		}
-		INBUF = makesubst.MakeSubst(INBUF)
+		//INBUF = makesubst.MakeSubst(INBUF)
+		INBUF = strings.ReplaceAll(INBUF, ";", "*")
 		allowDumpFlag = true
 	}
 
