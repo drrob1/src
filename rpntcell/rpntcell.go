@@ -11,18 +11,18 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"src/timlibg"
 	"strconv"
 	"strings"
 	"time"
-	"timlibg"
 
 	//"getcommandline"
-	hpcalc "hpcalc2"
-	"tokenize"
+	hpcalc "src/hpcalc2"
+	"src/tokenize"
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "5 Feb 2021"
+const LastAltered = "17 June 2021"
 
 // runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
 
@@ -118,6 +118,7 @@ REVISION HISTORY
 15 Dec 20 -- Tweaked help message some more.
 21 Dec 20 -- Changed LABEL to LABL so that it's 4 characters, which is needed for GetIndex logic.
  4 Feb 21 -- Added H for help.
+17 Jun 21 -- Converted to modules, and added the stuff I've learned over the last 4 months.
 */
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
@@ -134,8 +135,6 @@ var clear map[string]func()
 
 var StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol, PromptRow, outputmode, n int
 
-const SpaceFiller = "     |     "
-
 const ( // output modes
 	outputfix = iota
 	outputfloat
@@ -150,10 +149,13 @@ const TextFilenameOut = "rpntcelloutput.txt"
 const TextFilenameIn = "rpntcellinput.txt"
 const HelpFileName = "helprpn.txt"
 
-type keyStructType struct {
+/*
+const SpaceFiller = "     |     "       Not used so I commented it out 6/17/21.
+type keyStructType struct {             Not used, so I commented it out 6/17/21
 	r    rune
 	name string
 }
+*/
 
 var gblrow int // = 0 by default
 
@@ -322,21 +324,19 @@ func main() {
 	reverse = style.Reverse(true)
 
 	//	style = bold     looks ugly.  I'm removing it.
-	putfln("RPN Calculator written in Go.  Last updated %s.", LastAltered)
+	putfln("RPN Calculator written in Go.  Last updated %s, and compiled w/ %s.", LastAltered, runtime.Version())
 	style = plain
 
-	stringslice = make([]string, 0, 35)
+	stringslice = make([]string, 0, 50)
 	sigfig = -1 // now only applies to WriteRegToScreen
 	StartRow := 0
 	StartCol := 0
 	outputmode = outputfix
 
-	if runtime.GOOS == "linux" {
-		HomeDir = os.Getenv("HOME")
-	} else if runtime.GOOS == "windows" {
-		HomeDir = os.Getenv("userprofile")
-	} else { // then HomeDir will be empty.
-		putln(" runtime.GOOS does not say linux or windows.  Is this a Mac?")
+	HomeDir, err = os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error from os.UserHomeDir() is", err)
+		os.Exit(1)
 	}
 	Divider = strings.Repeat("-", MaxCol-StartCol)
 
@@ -385,8 +385,6 @@ func main() {
 		} // thefileexists for both the Stack variable, Stk, and the Storage registers.
 	}
 
-	// hpcalc.PushMatrixStacks()  I think this is too many, as of 2/4/21
-
 	WriteStack(x, StackRow)
 	n = WriteRegToScreen(x, RegRow)
 	if n > 8 {
@@ -412,6 +410,7 @@ func main() {
 	INBUF = strings.ToUpper(INBUF)
 
 	hpcalc.PushMatrixStacks()
+	defer hpcalc.MapClose()
 
 	for len(INBUF) > 0 { // Main processing loop
 		// check for new use history command patterned after bash, ie, using ! to start it.
@@ -427,8 +426,8 @@ func main() {
 			INBUF = GetHx(1)
 
 		} else if INBUF == "DN" {
-			// don't know what to do yet, but by leaving it alone it should pop the stack down.
-			// I'm leaving the case alone to see what happens.  GetResult should make the case to all upper case.
+			// leaving it alone will pop the stack down.
+
 		} else if INBUF == "PGUP" {
 			INBUF = "UP" // and sent into GetResult to push the stack up
 
@@ -440,7 +439,7 @@ func main() {
 		}
 
 		x = StartCol
-		// These commands are not run thru hpcalc as they are processed before calling GetResult.
+		// These commands are not run thru hpcalc2 as they are processed before calling GetResult.
 		if INBUF == "ZEROREG" {
 			for c := range Storage {
 				Storage[c].Value = 0.0
@@ -498,93 +497,6 @@ func main() {
 			WriteHelp(StartCol+2, StartRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
 			// do nothing, ie, don't send it into hpcalc.GetResult
-			/*	TOCLIP and FROMCLIP are now in hpcalc2.
-				} else if INBUF == "TOCLIP" {
-					R := hpcalc.READX()
-					s := strconv.FormatFloat(R, 'g', -1, 64)
-					if runtime.GOOS == "linux" {
-						linuxclippy := func(s string) {
-							buf := []byte(s)
-							rdr := bytes.NewReader(buf)
-							cmd := exec.Command("xclip")
-							cmd.Stdin = rdr
-							cmd.Stdout = os.Stdout
-							cmd.Run()
-							s1 := fmt.Sprintf(" sent %s to xclip \n", s)
-							putf(StartCol, OutputRow, s1)
-						}
-						linuxclippy(s)
-					} else if runtime.GOOS == "windows" {
-						comspec, ok := os.LookupEnv("ComSpec")
-						if ! ok {
-							s := fmt.Sprintln(" Environment does not have ComSpec entry.  ToClip unsuccessful.")
-							putln(s)
-							break
-						}
-						winclippy := func(s string) {
-							cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
-							cmd.Stdout = os.Stdout
-							cmd.Run()
-							s1 := fmt.Sprintf(" sent %s to tcc \n", s)
-							putf(StartCol, OutputRow, s1)
-						}
-						winclippy(s)
-					}
-				} else if INBUF == "FROMCLIP" { // Go Standard Library Cookbook does not use strings.Builder, but does seem to be otherwise similar.
-					var w strings.Builder
-					if runtime.GOOS == "linux" {
-						cmdfromclip := exec.Command("xclip", "-o")
-						cmdfromclip.Stdout = &w
-						cmdfromclip.Run()
-						str := w.String()
-						s1 := fmt.Sprintf(" received %s from xclip ", str)
-						gblrow = OutputRow
-						putln(s1)
-						str = strings.ReplaceAll(str, "\n", "")
-						str = strings.ReplaceAll(str, "\r", "")
-						str = strings.ReplaceAll(str, ",", "")
-						str = strings.ReplaceAll(str, " ", "")
-						s2 := fmt.Sprintf("after removing all commas and spaces it becomes %s \n", str)
-						putln(s2)
-						putf(StartCol, OutputRow+1, s2)
-						R, err := strconv.ParseFloat(str, 64)
-						if err != nil {
-							s := fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored.")
-							putln(s)
-						} else {
-							hpcalc.PUSHX(R)
-						}
-					} else if runtime.GOOS == "windows" {
-						comspec, ok := os.LookupEnv("ComSpec")
-						if ! ok {
-							s := fmt.Sprintln(" Environment does not have ComSpec entry.  FromClip unsuccessful.")
-							putln(s)
-							break
-						}
-						cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
-						cmdfromclip.Stdout = &w
-						cmdfromclip.Run()
-						lines := w.String()
-						gblrow = OutputRow
-						s1 := fmt.Sprint(" received ", lines, "from tcc")
-						putln(s1)
-						linessplit := strings.Split(lines, "\n")
-						str := strings.ReplaceAll(linessplit[1], "\"", "")
-						str = strings.ReplaceAll(str, "\n", "")
-						str = strings.ReplaceAll(str, "\r", "")
-						str = strings.ReplaceAll(str, ",", "")
-						str = strings.ReplaceAll(str, " ", "")
-						s2 := fmt.Sprintln("after post processing the string becomes", str)
-						putln(s2)
-						R, err := strconv.ParseFloat(str, 64)
-						if err != nil {
-							s := fmt.Sprintln(" fromclip", err, ".  Value ignored.")
-							putln(s)
-						} else {
-							hpcalc.PUSHX(R)
-						}
-					}
-			*/
 
 		} else if strings.HasPrefix(INBUF, "OUTPUTFI") { // allow outputfix, etc
 			outputmode = outputfix
@@ -601,7 +513,6 @@ func main() {
 		} else if INBUF == "REPAINT" {
 			RepaintScreen(StartCol)
 		} else if INBUF == "DEBUG" {
-			//			Printf_tb(x, OutputRow+8, BrightCyan, Black, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
 			style = Cyan
 			putf(x, OutputRow+8, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
 			//			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
@@ -620,7 +531,6 @@ func main() {
 				style = Yellow
 				putf(0, OutputRow, " Error %v while opening %s", err, TextFilenameOut)
 				style = Cyan
-				//os.Exit(1)
 			}
 			defer XStringFile.Close()
 			XstringWriter := bufio.NewWriter(XStringFile)
@@ -684,19 +594,14 @@ func main() {
 			}
 		}
 
-		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc.
+		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc2.
 		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
 			style = Yellow
 			putf(x, OutputRow+1, " Last altered rpntcell %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
 			style = Cyan
 		}
-		/*
-		   This is to clear the screen between each iteration of the loop.  But I will move this to after the GetInputString call
-		   		if !(INBUF == "CLEAR" || INBUF == "CLS") {
-		   			RepaintScreen(StartCol)
-		   		}
-		*/
-		RepaintScreen(StartCol) // I forgot 04/07/2020 3:02:52 PM how the screen keeps getting cleared.  I finally found how, and then I changed it.
+
+		RepaintScreen(StartCol) // I forgot 4/07/2020 3:02:52 PM how the screen keeps getting cleared.  I finally found how, and then I changed it.
 		x = StartCol
 		puts(scrn, Cyan, x, PromptRow, InputPrompt)
 		x += len(InputPrompt) + 2
@@ -704,7 +609,7 @@ func main() {
 		scrn.Show()
 		ans := GetInputString(x, PromptRow)
 		INBUF = strings.ToUpper(ans)
-		if len(INBUF) == 0 || strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" {
+		if len(INBUF) == 0 || strings.HasPrefix(INBUF, "Q") || INBUF == "X" {
 			fmt.Println()
 			break
 		}
@@ -765,10 +670,11 @@ func main() {
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
 
-	hpcalc.MapClose()
+	// hpcalc.MapClose()  This is now handled by the defer above, as of 6/17/21.
 } // main in rpntcell.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
+
 func GetRegIdx(chr byte) int {
 	// Return 0..35 w/ A = 10 and Z = 35
 	ch := tokenize.CAP(chr)
@@ -781,7 +687,9 @@ func GetRegIdx(chr byte) int {
 	}
 	return int(ch)
 } // GetRegIdx
+
 /*-------------------------------------------------------------- GetRegChar ------  */
+
 func GetRegChar(idx int) string {
 	/* Return '0'..'Z' with A = 10 and Z = 35 */
 	const RegNames = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -794,6 +702,7 @@ func GetRegChar(idx int) string {
 } // GetRegChar
 
 // ------------------------------------------------------------ WriteRegToScreen --------------
+
 func WriteRegToScreen(x, y int) int { // Outputs the number of reg's that are not zero.
 	FirstNonZeroStorageFlag := true
 	n := 0
@@ -838,6 +747,7 @@ func WriteRegToScreen(x, y int) int { // Outputs the number of reg's that are no
 } // WriteRegToScreen
 
 // --------------------------------------------------------- WriteDisplayTapeToScreen ----------------
+
 func WriteDisplayTapeToScreen(x, y int) {
 	//	Print_tb(x, y, BrightCyan, Black, "DisplayTape")
 	puts(scrn, Cyan, x, y, "DisplayTape")
@@ -1028,6 +938,7 @@ func GetInputString(x, y int) string {
 } // GetInputString for tcell
 
 // ------------------------------------------- GetXstring ------------------------------------------
+
 func GetXstring() string {
 
 	if outputmode == outputfix {
@@ -1041,6 +952,7 @@ func GetXstring() string {
 }
 
 // ------------------------------------------- WriteStack ------------------------------------------
+
 func WriteStack(x, y int) {
 
 	if outputmode == outputfix {
@@ -1061,6 +973,7 @@ func WriteStack(x, y int) {
 } // end WriteStack
 
 //--------------------------------------------- WriteHelp -------------------------------------------
+
 func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds help from this module.
 	var HelpFile *bufio.Writer
 
@@ -1133,6 +1046,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 } // end WriteHelp
 
 // ------------------------------------------------------- Repaint ----------------------------------
+
 func RepaintScreen(x int) {
 
 	WriteStack(x, StackRow)
@@ -1148,6 +1062,7 @@ func RepaintScreen(x int) {
 }
 
 // -------------------------------------------------- GetNameStr --------------------------------
+
 func GetNameStr() string {
 	var ans string
 	promptstr := "   Input name string, making - or = into a space : "
@@ -1164,6 +1079,7 @@ func GetNameStr() string {
 }
 
 // -------------------------------------------------- StrSubst -----------------------------------
+
 func StrSubst(instr string) string { // copied from makesubst package.
 
 	instr = strings.TrimSpace(instr)
@@ -1182,6 +1098,7 @@ func StrSubst(instr string) string { // copied from makesubst package.
 } // makesubst
 
 // ------------------------------------------------ GetHx --------------------------------------
+
 func GetHx(posn int) string {
 	// DisplayTape is global
 	var str string

@@ -122,7 +122,8 @@ REVISION HISTORY
 14 Jun 21 -- Split off Result from GetResult
 16 Jun 21 -- Adding os.UserHomeDir(), which became available as of Go 1.12.
 17 Jun 21 -- Added "defer MapClose()" to the init function, to see it this works.  It doesn't, so I removed it.
-               deferred code will be run at the end of the containing function.  But I can call defer MapClose() at the top of a client pgm.
+               Deferred code will be run at the end of the containing function.  But I can call defer MapClose() at the top of a client pgm.
+               And fixed help message regarding MapClose, which is not automatic but needs to be deferred as I just wrote.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -920,7 +921,8 @@ outerloop:
 			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 			ss = append(ss, " substitutions: = for +, ; for *.")
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
-			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose is automatic.  !`~ become spaces in the name.")
+			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose needs to be deferred after")
+			ss = append(ss, "                                   first use of PushMatrixStacks.  !`~ become spaces in the name.")
 			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n\n", LastAlteredDate))
 		case 130: // STO
 			MemReg = Stack[X]
