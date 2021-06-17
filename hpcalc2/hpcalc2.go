@@ -17,7 +17,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "16 Jun 2021"
+const LastAlteredDate = "17 Jun 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -121,6 +121,8 @@ REVISION HISTORY
  8 Apr 21 -- Converting to src module residing at ~/go/src.  What a coincidence!
 14 Jun 21 -- Split off Result from GetResult
 16 Jun 21 -- Adding os.UserHomeDir(), which became available as of Go 1.12.
+17 Jun 21 -- Added "defer MapClose()" to the init function, to see it this works.  It doesn't, so I removed it.
+               deferred code will be run at the end of the containing function.  But I can call defer MapClose() at the top of a client pgm.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -300,7 +302,7 @@ func init() {
 			fmt.Fprintln(os.Stderr, err)
 		}
 
-		mappedRegFile.Close()
+//		mappedRegFile.Close()  This is not needed because the rules for defer is that the deferred code is executed at end of containing func.
 	}
 }
 

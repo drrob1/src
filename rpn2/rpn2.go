@@ -18,7 +18,7 @@ import (
 	"src/hpcalc2"
 )
 
-const LastCompiled = "16 Jun 2021"
+const LastCompiled = "17 Jun 2021"
 
 /*
 This module uses the HPCALC2 module to simulate an RPN type calculator.
@@ -63,6 +63,7 @@ REVISION HISTORY
  8 Apr 21 -- Converted to module src residing at ~/go/src.  What a coincidence.
 16 Jun 21 -- Will use strings.ReplaceAll instead of my makesubst to test that '=' now adds from hpcalc2.
                And ioutil package is depracated as of Go 1.16, so I removed it.
+17 Jun 21 -- Testing to see if I really need to call hpcalc2.MapClose(), or if the defer I put there works.
 */
 
 var suppressDump map[string]bool
@@ -115,6 +116,7 @@ func main() {
 	} // stackfileexists
 
 	hpcalc2.PushMatrixStacks()
+	defer hpcalc2.MapClose()  // I want to see if this works being placed here.  It does.  Imagine that.
 
 	fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ", LastCompiled, "using", runtime.Version())
 	fmt.Println()
@@ -212,5 +214,5 @@ func main() {
 	if err != nil {
 		fmt.Printf(" ioutil.WriteFile failed with error %v \n", err)
 	}
-	hpcalc2.MapClose()
+	// hpcalc2.MapClose()  // I want to see if this is really needed.  Yeah, it is.
 } // main in rpn2.go
