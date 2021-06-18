@@ -115,7 +115,7 @@ REVISION HISTORY
  8 Apr 21 -- Converted to module name src, that happens to reside at ~/go/src.  Go figure!
 12 Jun 21 -- Now that I have RealTokenSlice in tknptr, I'll use it to allow more flexibility when entering commands.  And removed tokenize.CAP().
 14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
-15 Jun 21 -- Added runetime.Version() to output of about cmd.
+15 Jun 21 -- Added runtime.Version() to output of about cmd.
 16 Jun 21 -- Added os.UserHomeDir(), which became avail as of Go 1.12
 */
 
