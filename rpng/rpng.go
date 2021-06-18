@@ -38,7 +38,7 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "16 Jun 2021"
+const lastAlteredDate = "18 Jun 2021"
 
 /*
 REVISION HISTORY
@@ -117,6 +117,7 @@ REVISION HISTORY
 14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
 15 Jun 21 -- Added runtime.Version() to output of about cmd.
 16 Jun 21 -- Added os.UserHomeDir(), which became avail as of Go 1.12
+18 Jun 21 -- Now using defer hpcalc2.MapClose(), since I never liked having to include that at the bottom, for fear of forgetting.
 */
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -261,6 +262,7 @@ func main() {
 	ManualDump := true
 
 	hpcalc.PushMatrixStacks()
+	defer hpcalc.MapClose()
 
 	for len(INBUF) > 0 { // Main processing loop
 		INBUF = makesubst.MakeSubst(INBUF)
@@ -415,7 +417,6 @@ func main() {
 	_, err = DisplayTapeWriter.WriteString("\n\n")
 	check(err)
 
-	hpcalc.MapClose()
 } // main in rpng.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
