@@ -249,8 +249,6 @@ func main() {
 		scanner.Scan()
 		INBUF = scanner.Text()
 		if err := scanner.Err(); err != nil {
-			// _, err := fmt.Scan(&INBUF)  // removed 10/2/18.
-			// _, err := fmt.Scanln(&INBUF) // added 10/02/2018 04:52:23 PM, and removed again on 10/07/2018 09:34:54 AM
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 			os.Exit(1)
 		}
