@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
-	"getcommandline"
+	"runtime"
+	"src/getcommandline" // converted to using modules 6/18/21
 )
 
 func main() {
+	fmt.Println(" Test GetCommandLine routines, compiled with", runtime.Version())
 	TheString := getcommandline.GetCommandLineString()
 	fmt.Println(" Input commandline is : ", TheString)
 	fmt.Printf(" Input command line is : %#v       of type %T\n", TheString, TheString)

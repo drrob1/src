@@ -4,45 +4,44 @@
 package main
 
 /*
-REVISION HISTORY
-----------------
- 6 Apr 88 -- 1) Converted to M2 V3.03.
-             2) Response to 12 page question is now echoed to the terminal.
-             3) Module name changed to CAL so not to conflict with the
-                 Logitech's CALENDAR library module.
- 4 Nov 90 -- Updated the UTILLIB references to UL2, and recompiled under
-             V3.4.
-28 Oct 91 -- Added FSA parse and indiv month printing abilities.
- 2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small enough to make the expression evaluate to a negative value.
-20 Jan 92 -- First page now does not begin with a FF.
- 9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
-             A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
-10 Nov 16 -- First working version, based on Modula-2 code from 92.
-11 Nov 16 -- Code from January 2009 to import into Excel is working.
-12 Nov 16 -- Fixed bug in DATEASSIGN caused by not porting my own Modula-2 code correctly.
- 3 Mar 17 -- Now calgo, and will use termbox to try to do what CALm2 does.
- 3 Apr 17 -- Came back to this, after going thru Book of R.
- 4 Apr 17 -- Will only write the calendar output files if they do not already exist.
- 9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
-10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
-12 Apr 17 -- Tweaking display output
-13 Apr 17 -- Golint complained, so I added some comments
-29 Sep 17 -- Changed the output of the final line, and added exec detection code.
- 5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
- 6 Feb 18 -- Tried to move global variables to main, but had to move them back.
- 8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
-22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
-25 Dec 19 -- Fixed termbox, I hope.
-10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
-19 Jan 20 -- Now moved to tcell as terminal interface.  Mostly copied code from rpntcell.go.
-20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
-18 Feb 21 -- Back to cal.go.  And will convert to colortext calls, removing all tcell stuff as that won't run correctly in tcc.
-20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
-21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
-22 Feb 21 -- Removing text for Columbus and Veteran Days as these are not hospital holidays.
-23 Mar 21 -- Will allow years from 1800 - 2100.  This came up while reading about Apr 14, 1865, which was a Friday.
-               And discovered a bug when a 4 digit year is entered.
- 8 Apr 21 -- Converted to module src.  And added reference to runtime.Version().
+  REVISION HISTORY
+  ----------------
+   6 Apr 88 -- 1) Converted to M2 V3.03.
+               2) Response to 12 page question is now echoed to the terminal.
+               3) Module name changed to CAL so not to conflict with the Logitech's CALENDAR library module.
+   4 Nov 90 -- Updated the UTILLIB references to UL2, and recompiled under V3.4.
+  28 Oct 91 -- Added FSA parse and indiv month printing abilities.
+   2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small enough to make the expression evaluate to a negative value.
+  20 Jan 92 -- First page now does not begin with a FF.
+  9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
+                A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
+ 10 Nov 16 -- First working version, based on Modula-2 code from 92.
+ 11 Nov 16 -- Code from January 2009 to import into Excel is working.
+ 12 Nov 16 -- Fixed bug in DATEASSIGN caused by not porting my own Modula-2 code correctly.
+  3 Mar 17 -- Now calgo, and will use termbox to try to do what CALm2 does.
+  3 Apr 17 -- Came back to this, after going thru Book of R.
+  4 Apr 17 -- Will only write the calendar output files if they do not already exist.
+  9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
+ 10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
+ 12 Apr 17 -- Tweaking display output
+ 13 Apr 17 -- Golint complained, so I added some comments
+ 29 Sep 17 -- Changed the output of the final line, and added exec detection code.
+  5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
+  6 Feb 18 -- Tried to move global variables to main, but had to move them back.
+  8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
+ 22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
+ 25 Dec 19 -- Fixed termbox, I hope.
+ 10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
+ 19 Jan 20 -- Now moved to tcell as terminal interface.  Mostly copied code from rpntcell.go.
+ 20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
+ 18 Feb 21 -- Back to cal.go.  And will convert to colortext calls, removing all tcell stuff as that won't run correctly in tcc.
+ 20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
+ 21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
+ 22 Feb 21 -- Removing text for Columbus and Veteran Days as these are not hospital holidays.
+ 23 Mar 21 -- Will allow years from 1800 - 2100.  This came up while reading about Apr 14, 1865, which was a Friday.
+                And discovered a bug when a 4 digit year is entered.
+ 18 Jun 21 -- Juneteenth added, as it became a legal federal holiday yesterday, signed into law by Biden.
+                And converted to modules.
 */
 
 import (
@@ -52,6 +51,7 @@ import (
 	"log"
 	"os"
 	"os/exec" // for the clear screen functions.
+
 	"runtime"
 	"strconv"
 	"strings"
@@ -59,13 +59,14 @@ import (
 
 	"src/holidaycalc"
 	"src/timlibg"
+	//"tokenize"  I don't use tokenization to parse the params anymore.
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Apr 8,2021"
+const LastCompiled = "June 18, 2021"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -508,6 +509,20 @@ MemorialLoop:
 		}
 	}
 
+	// Juneteenth
+	d = 19
+JuneteenthLoop:
+	for w := 2; w < 6; w++ { // start looking at the 3rd week
+		for dow := 0; dow < 7; dow++ {
+			if EntireYear[JUN][w][dow].day == d {
+				EntireYear[JUN][w][dow].comment = "Juneteenth"
+				EntireYear[JUN][w][dow].fg = ct.Yellow
+				EntireYear[JUN][w][dow].bg = ct.Black
+				break JuneteenthLoop
+			}
+		}
+	}
+
 	// Father's Day
 	d = Holiday.Father.D
 FatherLoop:
@@ -664,7 +679,7 @@ func AssignYear(y int) {
 		os.Exit(1)
 	}
 
-	JAN1DOW := timlibg.JULIAN(1, 1, y) % 7  // julian date number of Jan 1 of input year MOD 7.
+	JAN1DOW := timlibg.JULIAN(1, 1, y) % 7 // julian date number of Jan 1 of input year MOD 7.
 	DOW = JAN1DOW
 	FEBDAYS := 28
 
@@ -744,7 +759,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	fmt.Printf(" Calg, a calendar display program written in Go.  Last altered %s, compiled with %s. \n", LastCompiled, runtime.Version())
+	fmt.Printf(" Calg, a calendar display program written in Go.  Last altered %s, using %s.\n", LastCompiled, runtime.Version())
 
 	// process command line parameters
 	RequestedMonthNumber = CurrentMonthNumber - 1 // default value converted to a zero origin reference.
@@ -784,7 +799,7 @@ func main() {
 		year = CurrentYear
 	}
 
-	if  year < 100 && (year < (CurrentYear % 100) || year < 30) {
+	if year < 100 && (year < (CurrentYear%100) || year < 30) {
 		year += 2000
 	} else if year < 100 {
 		year += 1900
