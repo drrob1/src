@@ -18,7 +18,7 @@ import (
 	"src/makesubst"
 )
 
-const LastCompiled = "13 June 2021"
+const LastCompiled = "19 June 2021"
 
 /*
 REVISION HISTORY
@@ -58,7 +58,8 @@ REVISION HISTORY
  9 Apr 20 -- Will add the suppressdump map I've been using for a while in rpng.
  8 Nov 20 -- Now will use hpcalc2.  I'm adding toclip, fromclip (based on code from "Go Standard Library Cookbook") to hpcalc2.
 	                And finally removed code that was commented out long ago.
-13 Jun 31 -- Converted code to use modules
+13 Jun 21 -- Converted code to use modules
+19 Jun 21 -- Now uses the new MAP code written in hpcalc2 that does not require calling MapClose, which was never done here anyway.
 */
 
 
@@ -158,7 +159,7 @@ func main() {
 		if suppressDump[INBUF] {
 			allowDumpFlag = false
 		}
-		//		if !(strings.HasPrefix(INBUF, "DUMP") || INBUF == "HELP" || INBUF == "?") { // old way of suppressing DUMP: if just did it, or if HELP called to not scroll help off screen.
+
 		if allowDumpFlag {
 			_, stringslice = hpcalc.GetResult("DUMP") // discard result.  Only need stack dump general executed.
 			for _, ss := range stringslice {
@@ -199,12 +200,6 @@ func main() {
 			fmt.Printf(" binary.write into buf failed with error %v \n", err)
 			os.Exit(1)
 		}
-		// {{{
-		//    fmt.Println(" Got Stk.  buf.Bytes len =",len(buf.Bytes()),". buf.Bytes: ",buf.Bytes());
-		//    OutputByteSlice = append(OutputByteSlice,buf.Bytes()...);
-		//    fmt.Println(" Length of OutByteSlice after append operation ",len(OutputByteSlice));
-		//    buf.Reset();
-		// }}}
 	}
 	err = ioutil.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {
