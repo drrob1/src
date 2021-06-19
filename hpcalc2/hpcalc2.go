@@ -17,7 +17,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "17 Jun 2021"
+const LastAlteredDate = "19 Jun 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -124,6 +124,7 @@ REVISION HISTORY
 17 Jun 21 -- Added "defer MapClose()" to the init function, to see it this works.  It doesn't, so I removed it.
                Deferred code will be run at the end of the containing function.  But I can call defer MapClose() at the top of a client pgm.
                And fixed help message regarding MapClose, which is not automatic but needs to be deferred as I just wrote.
+19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call MapClose directly anymore.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -1348,6 +1349,7 @@ outerloop:
 				for _, str := range stringresult {
 					ss = append(ss, str)
 				}
+				MapClose()  // added 6/19/21
 
 			} else if strings.HasPrefix(subcmd, "RCL") {
 				regname := getMapRegName(subcmd)
@@ -1392,6 +1394,7 @@ outerloop:
 				delete(mappedReg, regname) // if key is not in the map, this does nothing but does not panic.
 				s := fmt.Sprint("deleted ", regname)
 				ss = append(ss, s)
+				MapClose()  // added 6/19/21
 			}
 
 		case 999: // do nothing, ignore me but don't generate an error message.
