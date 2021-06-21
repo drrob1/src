@@ -18,7 +18,7 @@ import (
 	"src/hpcalc2"
 )
 
-const LastCompiled = "19 Jun 2021"
+const LastCompiled = "21 Jun 2021"
 
 /*
 This module uses the HPCALC2 module to simulate an RPN type calculator.
@@ -65,6 +65,7 @@ REVISION HISTORY
                And ioutil package is depracated as of Go 1.16, so I removed it.
 17 Jun 21 -- Testing to see if the defer I put there works.  It does.
 19 Jun 21 -- Changed hpcalc2 MAP commands so that the STO and DEL call MapClose, so I don't have to do that explicitly.
+21 Jun 21 -- Changing the awkward looking code that reads in the stack from the stackfile.
 */
 
 var suppressDump map[string]bool
@@ -98,22 +99,24 @@ func main() {
 	windowsFlag = runtime.GOOS == "windows"
 
 	StackFileExists := true
-	InputByteSlice := make([]byte, 8*hpcalc2.StackSize) // I hope this is a slice of 64 bytes, ie, 8*8.
+	//InputByteSlice := make([]byte, 8*hpcalc2.StackSize) // this is a slice of 64 bytes, ie, 8*8.  But I don't need to do this.
 
-	if InputByteSlice, err = os.ReadFile(StackFileName); err != nil {
-		fmt.Printf(" Error from ioutil.ReadFile.  Probably because no Stack File found: %v\n", err)
+	InputByteSlice, err := os.ReadFile(StackFileName)
+	if err != nil {
+		fmt.Printf(" Error from os.ReadFile.  Probably because no Stack File found: %v\n", err)
 		StackFileExists = false
 	}
-	if StackFileExists { // I'll read all into memory.
-		for i := 0; i < hpcalc2.StackSize*8; i = i + 8 {
-			buf := bytes.NewReader(InputByteSlice[i : i+8])
+	if StackFileExists { // trying another way to read this file.  If it doesn't work, I'll use encoding/gob as in hpcalc2.  The original way that works is still in rpn.go
+		buf := bytes.NewReader(InputByteSlice)
+		for i := 0; i < hpcalc2.StackSize; i++ {
 			err := binary.Read(buf, binary.LittleEndian, &R)
 			if err != nil {
 				fmt.Printf(" binary.Read failed with error of %v \n", err)
 				StackFileExists = false
+				break
 			}
 			hpcalc2.PUSHX(R)
-		} // loop to extract each 8 byte chunk to convert to a longreal (float64) and push onto the hpcalc stack.
+		} // loop to read each 8 byte chunk to convert to a longreal (float64) and push onto the hpcalc stack.
 	} // stackfileexists
 
 	hpcalc2.PushMatrixStacks()
@@ -213,7 +216,7 @@ func main() {
 	}
 	err = os.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {
-		fmt.Printf(" ioutil.WriteFile failed with error %v \n", err)
+		fmt.Printf(" os.WriteFile failed with error %v \n", err)
 	}
 	// hpcalc2.MapClose()  // No longer needed here or anywhere.
 } // main in rpn2.go

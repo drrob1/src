@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
+	//	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -18,7 +18,7 @@ import (
 	"src/makesubst"
 )
 
-const LastCompiled = "19 June 2021"
+const LastCompiled = "21 June 2021"
 
 /*
 REVISION HISTORY
@@ -60,8 +60,8 @@ REVISION HISTORY
 	                And finally removed code that was commented out long ago.
 13 Jun 21 -- Converted code to use modules
 19 Jun 21 -- Now uses the new MAP code written in hpcalc2 that does not require calling MapClose, which was never done here anyway.
+21 Jun 21 -- As the ioutil package is depracated, I'm replacing it with the os package calls.
 */
-
 
 var suppressDump map[string]bool
 
@@ -95,11 +95,11 @@ func main() {
 	StackFileExists := true
 	InputByteSlice := make([]byte, 8*hpcalc.StackSize) // I hope this is a slice of 64 bytes, ie, 8*8.
 
-	if InputByteSlice, err = ioutil.ReadFile(StackFileName); err != nil {
-		fmt.Printf(" Error from ioutil.ReadFile.  Probably because no Stack File found: %v\n", err)
+	if InputByteSlice, err = os.ReadFile(StackFileName); err != nil {
+		fmt.Printf(" Error from os.ReadFile.  Probably because no Stack File found: %v\n", err)
 		StackFileExists = false
 	}
-	if StackFileExists { // I'll read all into memory.
+	if StackFileExists { // This code is ackward to me now in 2021.  I wrote it in 2016.  I've learned a thing or 2 since then.
 		for i := 0; i < hpcalc.StackSize*8; i = i + 8 {
 			buf := bytes.NewReader(InputByteSlice[i : i+8])
 			err := binary.Read(buf, binary.LittleEndian, &R)
@@ -136,7 +136,7 @@ func main() {
 
 	hpcalc.PushMatrixStacks()
 
-	for len(INBUF) > 0 {  // main reading loop
+	for len(INBUF) > 0 { // main reading loop
 		R, stringslice = hpcalc.GetResult(INBUF)
 		ans = strconv.FormatFloat(R, 'g', -1, 64)
 		ans = hpcalc.CropNStr(ans)
@@ -201,8 +201,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	err = ioutil.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
+	err = os.WriteFile(StackFileName, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {
-		fmt.Printf(" ioutil.WriteFile failed with error %v \n", err)
+		fmt.Printf(" os.WriteFile failed with error %v \n", err)
 	}
 } // main in rpn.go
