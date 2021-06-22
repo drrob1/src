@@ -18,7 +18,7 @@ import (
 	"src/makesubst"
 )
 
-const LastCompiled = "21 June 2021"
+const LastCompiled = "22 June 2021"
 
 /*
 REVISION HISTORY
@@ -61,6 +61,7 @@ REVISION HISTORY
 13 Jun 21 -- Converted code to use modules
 19 Jun 21 -- Now uses the new MAP code written in hpcalc2 that does not require calling MapClose, which was never done here anyway.
 21 Jun 21 -- As the ioutil package is depracated, I'm replacing it with the os package calls.
+22 Jun 21 -- I'm rewriting the file reading code.  I wrote that 5 yrs ago.  It looks painful to me now.
 */
 
 var suppressDump map[string]bool
@@ -93,22 +94,23 @@ func main() {
 	allowDumpFlag := true
 
 	StackFileExists := true
-	InputByteSlice := make([]byte, 8*hpcalc.StackSize) // I hope this is a slice of 64 bytes, ie, 8*8.
+	//InputByteSlice := make([]byte, 8*hpcalc.StackSize)
 
-	if InputByteSlice, err = os.ReadFile(StackFileName); err != nil {
+	InputByteSlice, err := os.ReadFile(StackFileName);
+	if err != nil {
 		fmt.Printf(" Error from os.ReadFile.  Probably because no Stack File found: %v\n", err)
 		StackFileExists = false
 	}
 	if StackFileExists { // This code is ackward to me now in 2021.  I wrote it in 2016.  I've learned a thing or 2 since then.
-		for i := 0; i < hpcalc.StackSize*8; i = i + 8 {
-			buf := bytes.NewReader(InputByteSlice[i : i+8])
+		buf := bytes.NewReader(InputByteSlice)
+		for i := 0; i < hpcalc.StackSize; i++ { // loop to extract each 8 byte chunk to convert to a float64 longreal and push onto the hpcalc stack.
 			err := binary.Read(buf, binary.LittleEndian, &R)
 			if err != nil {
 				fmt.Printf(" binary.Read failed with error of %v \n", err)
 				StackFileExists = false
 			}
 			hpcalc.PUSHX(R)
-		} // loop to extract each 8 byte chunk to convert to a longreal (float64) and push onto the hpcalc stack.
+		}
 	} // stackfileexists
 
 	hpcalc.PushMatrixStacks()
