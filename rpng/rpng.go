@@ -38,7 +38,7 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "18 Jun 2021"
+const lastAlteredDate = "23 Jun 2021"
 
 /*
 REVISION HISTORY
@@ -118,6 +118,7 @@ REVISION HISTORY
 15 Jun 21 -- Added runtime.Version() to output of about cmd.
 16 Jun 21 -- Added os.UserHomeDir(), which became avail as of Go 1.12
 18 Jun 21 -- Now using defer hpcalc2.MapClose(), since I never liked having to include that at the bottom, for fear of forgetting.
+23 Jun 21 -- Cleaning up some code, esp w/ file processing.
 */
 
 var Storage [36]float64 // 0 ..  9, a ..  z
@@ -220,8 +221,6 @@ func main() {
 		} // thefileexists for both the Stack variable, Stk, and the Storage registers.
 	}
 
-	// hpcalc.PushMatrixStacks()  I think this is an extra one and is not needed.
-
 	ctfmt.Println(ct.Yellow, WindowsFlag, " HP-type RPN calculator written in Go.  Code was last altered ", lastAlteredDate,
 		", NoFileFlag is ", *nofileflag)
 	execname, _ := os.Executable()
@@ -238,17 +237,17 @@ func main() {
 	fmt.Println()
 
 	args := flag.Args()
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Split(bufio.ScanWords) // as of 12/11/20, back to word by word, not line by line.
+	scan := bufio.NewScanner(os.Stdin)
+	//scan.Split(bufio.ScanWords) // as of 12/11/20, back to word by word, not line by line.  I removed it 6/23/21.  It only affects how pgm exits.
 
 	if len(args) > 0 { // fixed bug here 2/4/21.  Used to be > 1 which is not correct.
 		// INBUF = getcommandline.GetCommandLineString()  No longer works now that I'm using the flag package.
 		INBUF = strings.Join(args, " ")
 	} else {
 		fmt.Print(" Enter calculation, Help,  Quit, or eXit: ")
-		scanner.Scan()
-		INBUF = scanner.Text()
-		if err := scanner.Err(); err != nil {
+		scan.Scan()
+		INBUF = scan.Text()
+		if err := scan.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 			os.Exit(1)
 		}
@@ -260,7 +259,7 @@ func main() {
 	ManualDump := true
 
 	hpcalc.PushMatrixStacks()
-	defer hpcalc.MapClose()
+	//defer hpcalc.MapClose()  Not needed since I changed hpcalc2 to write the file after every change.
 
 	for len(INBUF) > 0 { // Main processing loop
 		INBUF = makesubst.MakeSubst(INBUF)
@@ -349,11 +348,11 @@ func main() {
 		//_, err := fmt.Scan(&INBUF)  removed 10/2/18
 		//_, err := fmt.Scanln(&INBUF) // added 10/02/2018 1:58:57 PM, and removed again 10/07/2018 09:37:51 AM
 		// }}}
-		scanner.Scan()
-		INBUF = scanner.Text()
+		scan.Scan()
+		INBUF = scan.Text()
 		INBUF = makesubst.MakeSubst(INBUF)
 		INBUF = strings.ToUpper(INBUF)
-		if err := scanner.Err(); err != nil {
+		if err := scan.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading 2nd buffered input:", err)
 			os.Exit(1)
 		}
