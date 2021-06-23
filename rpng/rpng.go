@@ -350,8 +350,6 @@ func main() {
 		// }}}
 		scan.Scan()
 		INBUF = scan.Text()
-		INBUF = makesubst.MakeSubst(INBUF)
-		INBUF = strings.ToUpper(INBUF)
 		if err := scan.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading 2nd buffered input:", err)
 			os.Exit(1)
@@ -359,6 +357,7 @@ func main() {
 		if len(INBUF) == 0 {
 			break
 		}
+		INBUF = makesubst.MakeSubst(INBUF)
 		INBUF = strings.ToUpper(INBUF)
 		if strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" || INBUF == "X" {
 			fmt.Println()
