@@ -2,6 +2,8 @@
   multimap.go.  multithreaded directoy mapping.  Was pmap but that conflicted with a system command.
   22 Oct 2018 -- Started coding this based on MichaelTJones' multithreaded code.
   18 Nov 2018 -- Made the min function more idiomatic for Go.
+   6 Jul 2021 -- Adding some of the root directories to the exclude list, in case this is fron from "/", exclude symlinks
+                 and errors are now written to Stderr
 */
 package main
 
@@ -9,6 +11,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/MichaelTJones/walk"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,12 +19,13 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"timlibg"
-
-	"github.com/MichaelTJones/walk"
 )
 
-const LastAlteredDate = "Nov 18, 2018"
+import (
+	"src/timlibg"
+)
+
+const LastAlteredDate = "July 6, 2021"
 
 var duration = flag.String("d", "", "find files modified within DURATION")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -56,6 +60,7 @@ func (ds dirslice) Len() int {
 
 func main() {
 	fmt.Println("multimap is a multithreaded directory mapping written in Go.  Last Altered", LastAlteredDate)
+	flag.Parse()
 
 	var GrandTotalSize, TotalOfFiles int64
 	var startDirectory string
@@ -65,26 +70,39 @@ func main() {
 
 	fmt.Println()
 
-	if len(os.Args) < 2 {
+	if flag.NArg() == 0 {
 		startDirectory, err = os.Getwd()
 		if err != nil {
 			log.Fatalln(" error from Getwd is", err)
 		}
 	} else {
-		startDirectory = os.Args[1]
+		startDirectory = flag.Arg(0)
 	}
 	start, err := os.Stat(startDirectory)
 	if err != nil || !start.IsDir() {
-		fmt.Println(" usage: dirmap <directoryname>")
+		fmt.Fprintln(os.Stderr," usage: dirmap <directoryname>")
 		os.Exit(1)
 	}
 
 	dirList = make(dirslice, 0, 1024)
 	DirMap := make(map[string]int64, 1024)
+	skiptheseMap := make(map[string]bool, 1024)
+    homeDir, err := os.UserHomeDir() // this function became available as of Go 1.12
+
+    skiptheseMap["mnt"] = true
+    skiptheseMap["proc"] = true
+    skiptheseMap["dev"] = true
+    skiptheseMap["media"] = true
+    skiptheseMap["opt"] = true
+    skiptheseMap["sys"] = true
+    skiptheseMap["boot"] = true
+    skiptheseMap["run"] = true
+    skiptheseMap["srv"] = true
+
 
 	// goroutine to collect items
 	done := make(chan bool)
-	results := make(chan item, 1024)
+	results := make(chan item, 2048)
 	var lock sync.Mutex
 	go func() {
 		for r := range results {
@@ -99,6 +117,15 @@ func main() {
 	var tFiles, tBytes int64 // total files and bytes
 	sizeVisitor := func(path string, info os.FileInfo, err error) error {
 		var d item
+		if skiptheseMap[path] == true {
+			fmt.Println(" skipdir: path is", path)
+			return filepath.SkipDir
+		}
+
+		if IsSymlink(info.Mode()) {
+			return nil
+		}
+
 		if err == nil {
 			lock.Lock()
 			tFiles += 1
@@ -114,7 +141,7 @@ func main() {
 			}
 			results <- d
 		} else {
-			fmt.Printf(" Error from walk.  Grand total size is %d in %d number of files, error is %v. \n ",
+			fmt.Fprintf(os.Stderr," Error from walk.  Grand total size is %d in %d number of files, error is %v. \n ",
 				GrandTotalSize, TotalOfFiles, err)
 		}
 		return nil
@@ -160,8 +187,9 @@ func main() {
 	GrandTotalString = AddCommas(GrandTotalString)
 
 	// Construct output filename
+	// Will always write to homeDir because I'll always have write priv's there.
 	datestr := MakeDateStr()
-	outfilename := "multimap_" + filepath.Base(startDirectory) + datestr + ".txt"
+	outfilename := homeDir + "/multimap_" + datestr + ".txt"
 	outfile, err := os.Create(outfilename)
 	defer outfile.Close()
 	var bufoutfile = bufio.NewWriter(outfile)
@@ -177,9 +205,9 @@ func main() {
 
 	// Construct output map
 	for n, m := range DirMap { // n is name as a string, m is map as a directory subtotal
-		d := directory{} // this is a structured constant
-		d.name = n
-		d.subtotal = m
+		d := directory{ name: n, subtotal: m} // this is a structured constant
+		//d.name = n
+		//d.subtotal = m
 		dirList = append(dirList, d)
 	}
 	sort.Sort(dirList)
@@ -257,3 +285,11 @@ func MakeDateStr() (datestr string) {
 		Sec + "__" + timenow.DayOfWeekStr
 	return datestr
 } // MakeDateStr
+
+// ------------------------------ IsSymlink ---------------------------
+func IsSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+} // IsSymlink
+
