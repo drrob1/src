@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "9 July 2021"
+const LastAltered = "10 July 2021"
 
 /*
 Revision History
@@ -289,9 +289,8 @@ func main() {
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
-
-	w = dsrtparam.w // if still zero then there is no dsw environment variable to set it.
-	if w <= 0 || w > maxwidth {
+	w = dsrtparam.w
+	if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
 		w = defaultwidth
 	}
 
@@ -631,18 +630,23 @@ func GetIDname(uidStr string) string {
 func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
-	dswStr := os.Getenv("dsw")  // gets set to 0 if dsw var is absent.
-	n, err := strconv.Atoi(dswStr)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " dsw environment variable not a valid number.  Ignored.")
+	dswStr, ok := os.LookupEnv("dsw")
+	if ok {
+		n, err := strconv.Atoi(dswStr)
+		if err == nil {
+			dsrtparam.w = n
+		} else {
+			fmt.Fprintf(os.Stderr, " dsw environment variable not a valid number.  dswStr = %q, %v.  Ignored.", dswStr, err)
+			dsrtparam.w = 0
+		}
+	} else { // not ok, ie, dsw variable not found in environment
+		dsrtparam.w = 0
 	}
-	dsrtparam.w = n
 
 	envStr, ok := os.LookupEnv("ds")
-
 	if !ok {
 		return dsrtparam
-	} // empty dsrtparam is returned
+	}
 
 	indiv := strings.Split(envStr, "") // this splits into individual characters
 
