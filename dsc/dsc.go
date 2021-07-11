@@ -97,7 +97,8 @@ Revision History
  9 Jul 21 -- Now called ds, and I'll use limited lengths of the file name strings.  Uses environemnt variables ds and dsw, if present.
 10 Jul 21 -- Now called dsc for directory sort columns.  I'm going to write the output to a slice that I can display after it's generated.
                It will not show the mode bits on linux; it never showed the mode bits on Windows.
-               I'm going to start using DirEntry
+               I'm going to start using DirEntry.  Nevermind, because the IsRegular function only applies to a FileInfo struct.  But I'm no
+               longer using ioutil.ReadDir to get the slice of FileInfo's, as this function is depracated as of Go 1.16.
 */
 
 type dirAliasMapType map[string]string
@@ -110,7 +111,7 @@ type DsrtParamType struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const defaultwidth = 40
+	const defaultwidth = 60
 	const maxwidth = 100
 	var dsrtparam DsrtParamType
 	var numoflines int
@@ -124,7 +125,7 @@ func main() {
 	var commandline string
 	var directoryAliasesMap dirAliasMapType
 	var excludeRegexPattern string
-	displayStringSlice := make([]string, 0, 200)  // the string slice to be displayed after generation.
+	displayStringSlice := make([]string, 0, 200) // the string slice to be displayed after generation.
 
 	uid := 0
 	gid := 0
@@ -135,7 +136,7 @@ func main() {
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
-	ctfmt.Print(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered ", LastAltered, ", compiled using ",
+	ctfmt.Print(ct.Magenta, winflag, "dsc will display Directory SoRTed by date or size in 2 columns.  LastAltered ", LastAltered, ", compiled using ",
 		runtime.Version(), ".")
 	fmt.Println()
 
@@ -221,7 +222,7 @@ func main() {
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	var w int // width maximum of the filename string to be displayed
-//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
+	//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
 
 	flag.Parse()
 
@@ -408,7 +409,7 @@ func main() {
 		}
 
 		files, err = openedDir.Readdir(0) // zero means read all FileMode entries into the returned slice of file modes.
-		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+		if err != nil {                   // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 			fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 			files = MyReadDir(CleanDirName)
 		}
@@ -505,7 +506,7 @@ func main() {
 				displayStringSlice = append(displayStringSlice, s)
 				count++
 			}
-			if count >= NumLines {
+			if count >= NumLines*2 {
 				break
 			}
 		}
@@ -564,12 +565,25 @@ func main() {
 					displayStringSlice = append(displayStringSlice, s)
 					count++
 				}
-				if count >= NumLines {
+				if count >= NumLines*2 {
 					break
 				}
 			}
 		}
 	}
+
+	// Now to output the displayStringSlice, 2 items per line, but I want the sort to remain vertical
+	halfpoint := len(displayStringSlice)/2 + 1
+	for i := 0; i < halfpoint; i++ { // to make sure all get displayed
+		//fmt.Printf("%-90s     %s\n", displayStringSlice[i], displayStringSlice[i+halfpoint])
+		fmt.Printf("%-90s     ", displayStringSlice[i])
+		if i + halfpoint < len(displayStringSlice) {
+			fmt.Printf("%s\n", displayStringSlice[i+halfpoint])
+		}
+	}
+
+	fmt.Println()
+	fmt.Println()
 
 	s := fmt.Sprintf("%d", SizeTotal)
 	if SizeTotal > 100000 {
@@ -586,15 +600,14 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
-} // end main ds
-
+	fmt.Println()
+} // end main dsc
 
 //-------------------------------------------------------------------- InsertByteSlice
 
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
-
 
 //---------------------------------------------------------------------- AddCommas
 
@@ -637,7 +650,6 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
-
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
