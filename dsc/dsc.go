@@ -563,8 +563,8 @@ func main() {
 						colorStringSlice = append(colorStringSlice, colorized)
 					} else {
 						var color ct.Color
-						s := fmt.Sprintf("%-17s %s %s", sizestr, modTimeStr, nameStr)
 						sizestr, color = getMagnitudeString(f.Size())
+						s := fmt.Sprintf("%-17s %s %s", sizestr, modTimeStr, nameStr)
 						colorized := colorizedStr{color: color, str: s}
 						colorStringSlice = append(colorStringSlice, colorized)
 					}
