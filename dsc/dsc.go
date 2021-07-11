@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "10 July 2021"
+const LastAltered = "11 July 2021"
 
 /*
 Revision History
@@ -108,6 +108,11 @@ type DsrtParamType struct {
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
 }
 
+type colorizedStr struct {
+	color ct.Color
+	str string
+}
+
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
@@ -125,7 +130,7 @@ func main() {
 	var commandline string
 	var directoryAliasesMap dirAliasMapType
 	var excludeRegexPattern string
-	displayStringSlice := make([]string, 0, 200) // the string slice to be displayed after generation.
+	colorStringSlice := make([]colorizedStr, 0, 200) // the string slice to be displayed after generation.
 
 	uid := 0
 	gid := 0
@@ -489,21 +494,26 @@ func main() {
 							sizestr = AddCommas(sizestr)
 						}
 						s := fmt.Sprintf("%16s %s %s", sizestr, modTimeStr, nameStr) // can't be colorized
-						displayStringSlice = append(displayStringSlice, s)
+						colorized := colorizedStr{color: ct.White, str: s}
+						colorStringSlice = append(colorStringSlice, colorized)
 					} else {
-						sizestr, _ = getMagnitudeString(f.Size())
-						s := fmt.Sprintf("%-16s %s %s", sizestr, modTimeStr, nameStr) // can't be colorized
-						displayStringSlice = append(displayStringSlice, s)
+						var color ct.Color
+						sizestr, color = getMagnitudeString(f.Size())
+						s := fmt.Sprintf("%-16s %s %s", sizestr, modTimeStr, nameStr)
+						colorized := colorizedStr{color: color, str: s}
+						colorStringSlice = append(colorStringSlice, colorized)
 					}
 					count++
 				}
 			} else if IsSymlink(f.Mode()) {
 				s := fmt.Sprintf("%16s %s <%s>", sizestr, modTimeStr, nameStr)
-				displayStringSlice = append(displayStringSlice, s)
+				colorized := colorizedStr{color: ct.White, str: s}
+				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			} else if Dirlist && f.IsDir() {
 				s := fmt.Sprintf("%16s %s (%s)", sizestr, modTimeStr, nameStr)
-				displayStringSlice = append(displayStringSlice, s)
+				colorized := colorizedStr{color: ct.White, str: s}
+				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			}
 			if count >= NumLines*2 {
@@ -547,22 +557,29 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						s := fmt.Sprintf("%17s %s %s\n", sizestr, modTimeStr, nameStr)
-						displayStringSlice = append(displayStringSlice, s)
-
+						s := fmt.Sprintf("%17s %s %s", sizestr, modTimeStr, nameStr)
+						var color ct.Color = ct.White
+						colorized := colorizedStr{color: color, str: s}
+						colorStringSlice = append(colorStringSlice, colorized)
 					} else {
-						sizestr, _ = getMagnitudeString(f.Size())
-						s := fmt.Sprintf("%-17s %s %s\n", sizestr, modTimeStr, nameStr)
-						displayStringSlice = append(displayStringSlice, s)
+						var color ct.Color
+						s := fmt.Sprintf("%-17s %s %s", sizestr, modTimeStr, nameStr)
+						sizestr, color = getMagnitudeString(f.Size())
+						colorized := colorizedStr{color: color, str: s}
+						colorStringSlice = append(colorStringSlice, colorized)
 					}
 					count++
 				} else if IsSymlink(f.Mode()) {
-					s := fmt.Sprintf("%17s %s <%s>\n", sizestr, modTimeStr, nameStr)
-					displayStringSlice = append(displayStringSlice, s)
+					var color ct.Color = ct.White
+					s := fmt.Sprintf("%17s %s <%s>", sizestr, modTimeStr, nameStr)
+					colorized := colorizedStr{color: color, str: s}
+					colorStringSlice = append(colorStringSlice, colorized)
 					count++
 				} else if Dirlist && f.IsDir() {
-					s := fmt.Sprintf("%17s %s (%s)\n", sizestr, modTimeStr, nameStr)
-					displayStringSlice = append(displayStringSlice, s)
+					var color ct.Color = ct.White
+					s := fmt.Sprintf("%17s %s (%s)", sizestr, modTimeStr, nameStr)
+					colorized := colorizedStr{color: color, str: s}
+					colorStringSlice = append(colorStringSlice, colorized)
 					count++
 				}
 				if count >= NumLines*2 {
@@ -573,12 +590,15 @@ func main() {
 	}
 
 	// Now to output the displayStringSlice, 2 items per line, but I want the sort to remain vertical
-	halfpoint := len(displayStringSlice)/2 + 1
+	halfpoint := len(colorStringSlice)/2
 	for i := 0; i < halfpoint; i++ { // to make sure all get displayed
-		//fmt.Printf("%-90s     %s\n", displayStringSlice[i], displayStringSlice[i+halfpoint])
-		fmt.Printf("%-90s     ", displayStringSlice[i])
-		if i + halfpoint < len(displayStringSlice) {
-			fmt.Printf("%s\n", displayStringSlice[i+halfpoint])
+		c0 := colorStringSlice[i].color
+		s0 := colorStringSlice[i].str
+		ctfmt.Printf(c0, winflag, "%-100s", s0)
+		if i + halfpoint < len(colorStringSlice) {
+			c1 := colorStringSlice[i+halfpoint].color
+			s1 := colorStringSlice[i+halfpoint].str
+			ctfmt.Printf(c1, winflag,"     %s\n", s1)
 		}
 	}
 
