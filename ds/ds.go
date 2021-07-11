@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "10 July 2021"
+const LastAltered = "11 July 2021"
 
 /*
 Revision History
@@ -96,6 +96,7 @@ Revision History
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
  9 Jul 21 -- Now called ds, and I'll use limited lengths of the file name strings.  Uses environemnt variables ds and dsw, if present.
+11 Jul 21 -- Decided to not show the mode bits.
 */
 
 type FISlice []os.FileInfo
@@ -109,7 +110,7 @@ type DsrtParamType struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const defaultwidth = 40
+	const defaultwidth = 60
 	const maxwidth = 100
 	var dsrtparam DsrtParamType
 	var numoflines int
@@ -455,7 +456,7 @@ func main() {
 			modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
 			nameStr := truncStr(f.Name(), w)
 			sizestr := ""
-			usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
+			//usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific code
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
 				showthis := true
@@ -478,19 +479,19 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						ctfmt.Printf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, modTimeStr, nameStr)
+						ctfmt.Printf(ct.Yellow, false, "%16s %s %s\n", sizestr, modTimeStr, nameStr)
 					} else {
 						var color ct.Color
 						sizestr, color = getMagnitudeString(f.Size())
-						ctfmt.Printf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, modTimeStr, nameStr)
+						ctfmt.Printf(color, false, "%-16s %s %s\n", sizestr, modTimeStr, nameStr)
 					}
 					count++
 				}
 			} else if IsSymlink(f.Mode()) {
-				fmt.Printf("%10v %s:%s %16s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, modTimeStr, nameStr)
+				fmt.Printf("%16s %s <%s>\n", sizestr, modTimeStr, nameStr)
 				count++
 			} else if Dirlist && f.IsDir() {
-				fmt.Printf("%10v %s:%s %16s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, modTimeStr, nameStr)
+				fmt.Printf("%16s %s (%s)\n", sizestr, modTimeStr, nameStr)
 				count++
 			}
 			if count >= NumLines {
