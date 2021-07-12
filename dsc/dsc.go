@@ -18,7 +18,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "11 July 2021"
+const LastAltered = "12 July 2021"
 
 /*
 Revision History
@@ -591,10 +591,19 @@ func main() {
 
 	// Now to output the displayStringSlice, 2 items per line, but I want the sort to remain vertical
 	halfpoint := len(colorStringSlice)/2
-	for i := 0; i < halfpoint; i++ { // to make sure all get displayed
+	for i := 0; i < halfpoint; i++ {
 		c0 := colorStringSlice[i].color
 		s0 := colorStringSlice[i].str
-		ctfmt.Printf(c0, winflag, "%-100s", s0)
+		if w > 59 {
+			ctfmt.Printf(c0, winflag, "%-100s", s0)
+		} else if w > 54 {
+			ctfmt.Printf(c0, winflag, "%-95s", s0)
+		} else if w > 49 {
+			ctfmt.Printf(c0, winflag, "%-90s", s0)
+		} else {
+			ctfmt.Printf(c0, winflag, "%-85s", s0)
+		}
+
 		if i + halfpoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+halfpoint].color
 			s1 := colorStringSlice[i+halfpoint].str
