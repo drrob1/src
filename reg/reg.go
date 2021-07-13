@@ -1,4 +1,4 @@
-// dsrt.go -- directory sort
+// regex.go -- directoy sort using a regular expression pattern
 
 package main
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -15,10 +16,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	//"time"
 	"unicode"
 )
 
-const LastAltered = "13 July 2021"
+const LastAltered = "Jul 13, 2021"
 
 /*
 Revision History
@@ -58,7 +60,7 @@ Revision History
 16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
 20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
 19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
-               I changed the meanings so now use <symlink> and (dir) indicators, and fixed the error on Windows
+               I changed the meanings so now use <symlink> and (dir) indicators, and fixed the oversight on Windows
                whereby symlinks could not be displayed.
 20 Jun 19 -- Changed logic so that symlinks to files are always displayed, like files.
                That required writing a new function to detect a symlink.
@@ -73,32 +75,27 @@ Revision History
  9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
 22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
  4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
-                 So as long as I want the exact same code for both platforms, I do need platform specific code.
- 6 Oct 19 -- Removed -H and added -help flags
+               So as long as I want the exact same code for both platforms, I do need platform specific code.
+ 5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.  And doesn't have -x flag to exclude.
+ 6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
+ 8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
+               Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
+27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
+21 Nov 19 -- Added Println() statements to separate header from filename outputs.
 25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
-18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
- 7 Nov 20 -- Learned that the idiomatic way to test absence of environment variables is LookupEnv.  From the Go Standard Lib Cookbook.
+ 9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
 20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
-                 I hope these are faster.  I haven't used the sort interface in a long time.  It's still in file dated Dec-20-2020 as a demo.
-                 I removed the demo code from here.
-10 Jan 21 -- Adjusting alignment of decimal points
-15 Jan 21 -- Adding -x flag, to exclude a regex.  When it works here, I'll add it to other pgms.
+                 I found these to be much faster when I changed dsrt.go.
+15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
+17 Jan 21 -- Adding -x flag, for an exclude pattern, ie, if this pattern matches, don't print.
 31 Jan 21 -- Adding color.
-13 Feb 21 -- Switching cyan and white.
-15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
-27 Feb 21 -- Found an optimization when writing getdir about GrandTotals
- 1 Mar 21 -- Made sure all error messages are written to Stderr.
- 2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
+13 Feb 21 -- Swapping white and cyan.
+15 Feb 21 -- Swapping yellow and white so yellow is mb and white is gb.
+ 2 Mar 21 -- Adding runtime.Version(), which I read about in Go Standard Library Cookbook.
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
-12 Mar 21 -- Added an os.Exit call after what is essentially a file not found error.
-16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
-17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
-22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
- 9 Jul 21 -- Now called ds, and I'll use limited lengths of the file name strings.  Uses environemnt variables ds and dsw, if present.
-10 Jul 21 -- Now called dsc for directory sort columns.  I'm going to write the output to a slice that I can display after it's generated.
-               It will not show the mode bits on linux; it never showed the mode bits on Windows.
-               I'm going to start using DirEntry.  Nevermind, because the IsRegular function only applies to a FileInfo struct.  But I'm no
-               longer using ioutil.ReadDir to get the slice of FileInfo's, as this function is depracated as of Go 1.16.
+17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
+               Adding exclude string to allow the exclude regex pattern on the command line.  Convenient for recalling commands.
+13 Jul 21 -- Now called reg.go, and will display its output in 2 columns like dsc.  ioutil is depracated, so that's now gone.
 */
 
 type dirAliasMapType map[string]string
@@ -113,11 +110,12 @@ type colorizedStr struct {
 	str string
 }
 
+const defaultlineswin = 50
+const defaultlineslinux = 40
+
+var directoryAliasesMap dirAliasMapType
+
 func main() {
-	const defaultlineswin = 50
-	const defaultlineslinux = 40
-	const defaultwidth = 60
-	const maxwidth = 100
 	var dsrtparam DsrtParamType
 	var numoflines int
 //	var userptr *user.User // from os/user
@@ -126,11 +124,8 @@ func main() {
 	var count int
 	var SizeTotal, GrandTotal int64
 	var GrandTotalCount int
-	var havefiles bool
-	var commandline string
-	var directoryAliasesMap dirAliasMapType
+	var systemStr string
 	var excludeRegexPattern string
-	colorStringSlice := make([]colorizedStr, 0, 200) // the string slice to be displayed after generation.
 
 //	uid := 0
 //	gid := 0
@@ -140,11 +135,8 @@ func main() {
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
-	ctfmt.Print(ct.Magenta, winflag, "dsc will display Directory SoRTed by date or size in 2 columns.  LastAltered ", LastAltered, ", compiled using ",
-		runtime.Version(), ".")
-	fmt.Println()
-
 	if linuxflag {
+		systemStr = "Linux"
 		files = make([]os.FileInfo, 0, 500)
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
@@ -152,33 +144,28 @@ func main() {
 			numoflines = defaultlineslinux
 		}
 	} else if winflag {
+		systemStr = "Windows"
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else {
 			numoflines = defaultlineswin
 		}
 	} else {
+		systemStr = "Unknown"
 		numoflines = defaultlineslinux
 	}
 
 	sepstring := string(filepath.Separator)
-	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
+	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of go 1.12.
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
 		HomeDirStr = ""
+		fmt.Fprint(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr.")
 	}
 	HomeDirStr = HomeDirStr + sepstring
 
-	if runtime.GOARCH == "amd64" {
-		if err != nil {
-			fmt.Println(" user.Current error is ", err, "Exiting.")
-			os.Exit(1)
-		}
-	}
-
 	// flag definitions and processing
-	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
+	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
@@ -201,39 +188,40 @@ func main() {
 
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
-	var testFlag bool
-	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
-	flag.BoolVar(&testFlag, "v", false, "verbose mode, which is same as test mode.")
+	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
-	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
-
-	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
+	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")            // pointer
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
-
-	var filterAmt int
-	var filterStr string
-	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
-
-	var w int // width maximum of the filename string to be displayed
-	//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
 
 	flag.Parse()
 
-	if testFlag {
+	fmt.Print(" reg will display sorted by date or size in 2 columns.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	fmt.Println()
+
+	if *testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		fmt.Println()
+		fmt.Println("winflag:", winflag, ", linuxflag:", linuxflag, "systemStr:", systemStr)
+		fmt.Println()
 	}
 
 	if *helpflag || HelpFlag {
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
-		fmt.Println(" Reads from diraliases environment variable if needed on Windows.")
+		fmt.Println()
+		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
+		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
+		fmt.Println()
+		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
+		fmt.Println("                    * zero or more, + one or more, ? zero or one")
+		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
+		fmt.Println("                    ^ at beginning of text or line.  $ at end of text or line.")
+		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
+		fmt.Println()
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -251,9 +239,7 @@ func main() {
 		NumLines = NLines
 	}
 
-	noExtensionFlag := *extensionflag || *extflag
 	var excludeRegex *regexp.Regexp
-
 	if len(excludeRegexPattern) > 0 {
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
@@ -277,330 +263,155 @@ func main() {
 
 	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
 	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
+	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag                                                // added 09/12/2018 12:32:23 PM
 	LongFileSizeList := *longflag
 
-	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
+	inputRegEx := ""
+	workingdir, _ := os.Getwd()
+	startdir := workingdir
 
-	CleanDirName := ""
-	CleanFileName := ""
-	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
+	commandlineSlice := flag.Args()
+	if len(commandlineSlice) == 0 {
+		fmt.Print(" Enter regex: ")
+		_, err := fmt.Scanln(&inputRegEx)
+		if err != nil {
+			// an empty line gives the error "unexpected newline"  I will assume any error is the same.
+			inputRegEx = "."
+		}
+	} else if len(commandlineSlice) == 1 {
+		inputRegEx = commandlineSlice[0]
+	} else if len(commandlineSlice) == 2 {
+		inputRegEx = commandlineSlice[0]
+		workingdir = commandlineSlice[1]
 
-	w = dsrtparam.w
-	if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-		w = defaultwidth
+		if winflag { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
+			if strings.ContainsRune(commandlineSlice[1], ':') {
+				workingdir = ProcessDirectoryAliases(directoryAliasesMap, workingdir)
+			} else if strings.Contains(commandlineSlice[1], "~") { // this can only contain a ~ on Windows.
+				workingdir = strings.Replace(workingdir, "~", HomeDirStr, 1)
+			}
+		}
+		fi, err := os.Lstat(workingdir)
+		if err != nil || !fi.Mode().IsDir() {
+			fmt.Println(workingdir, "is an invalid directory name.  Will use", startdir, "instead.")
+			workingdir = startdir
+		}
+	} else {
+		log.Fatalln("too many params on line.  Usage: regex pattern directory")
 	}
+	if *testFlag {
+		fmt.Println("inputRegEx=", inputRegEx, ", and workingdir =", workingdir)
+	}
+	inputRegEx = strings.ToLower(inputRegEx)
 
 	// set which sort function will be in the sortfcn var
-	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
-	if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
+	sortfcn := func(i, j int) bool { return false }
+	if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return files[i].Size() > files[j].Size() // I want a largest first sort
 		}
-		if testFlag {
+		if *testFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
 	} else if DateSort && Forward {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort
 		}
-		if testFlag {
+		if *testFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].Size() < files[j].Size() // I want an smallest-first sort
+			return files[i].Size() < files[j].Size() // I want a smallest-first sort
 		}
-		if testFlag {
+		if *testFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
 			return files[i].ModTime().Before(files[j].ModTime()) // I want an oldest-first sort
 		}
-		if testFlag {
+		if *testFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
 
-	if linuxflag && len(filenamesStringSlice) > 0 { // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
-		paramIsDir := false
-		if len(filenamesStringSlice) == 1 {
-			// need to determine if the 1 param on command line is a directory
-			fi, err := os.Lstat(filenamesStringSlice[0])
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				fmt.Println()
-				fmt.Println()
-				os.Exit(1)
-			}
-
-			paramIsDir = fi.Mode().IsDir()
-			if testFlag {
-				fmt.Println(" have only 1 param on line. filenameStringSlice=", filenamesStringSlice[0], "paramIsDir=", paramIsDir)
-				fmt.Println()
-			}
-			if paramIsDir {
-				CleanDirName = fi.Name()
-			} else { // not a param so this one file needs to be displayed.
-				files = append(files, fi)
-				havefiles = true
-			}
-		} else { // bash has placed more than one file in the command line, ie, len(filenameStringSlice) > 1
-			for _, s := range filenamesStringSlice { // fill a slice of fileinfo
-				fi, err := os.Lstat(s)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					continue
-				}
-
-				files = append(files, fi)
-				if fi.Mode().IsRegular() && ShowGrandTotal {
-					GrandTotal += fi.Size()
-					GrandTotalCount++
-				}
-			}
-			sort.Slice(files, sortfcn)
-			havefiles = true
-		}
-
-	} else { // either no params were present on the command line or this is running under Windows and may have a command line param.
-		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
-		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+	// files, err = ioutil.ReadDir(workingdir) depracated as of Go 1.16
+	openedDir, err := os.Open(workingdir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, " Open directory err is", err)
 	}
 
-	if winflag && len(commandline) > 0 { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
-		if strings.ContainsRune(commandline, ':') {
-			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
-		} else if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
-			commandline = strings.Replace(commandline, "~", HomeDirStr, 1)
-		}
-		CleanDirName, CleanFileName = filepath.Split(commandline)
-		CleanDirName = filepath.Clean(CleanDirName)
-		CleanFileName = strings.ToLower(CleanFileName)
+	files, err = openedDir.Readdir(0) // zero means return all filemode entries into the returned slice
+	if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+		log.Println(err, "so calling my own MyReadDir.")
+		files = MyReadDir(workingdir)
 	}
-
-	if len(CleanDirName) == 0 {
-		workingdir, _ := os.Getwd()
-		if testFlag {
-			fmt.Println(" CleanDirName is empty, and will be ", workingdir)
-		}
-		CleanDirName = workingdir
-	}
-
-	if len(CleanFileName) == 0 {
-		CleanFileName = "*"
-	}
-
-	if !havefiles {
-		// files, err = ioutil.ReadDir(CleanDirName) depracated as of Go 1.16
-		openedDir, err := os.Open(CleanDirName)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Open directory error is", err)
-			// Don't know what I'm going to do yet
-		}
-
-		files, err = openedDir.Readdir(0) // zero means read all FileMode entries into the returned slice of file modes.
-		if err != nil {                   // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-			fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-			files = MyReadDir(CleanDirName)
-		}
-		if ShowGrandTotal { // this optimization added 2/27/21, and it made a big difference.
-			for _, f := range files {
-				if f.Mode().IsRegular() {
-					GrandTotal += f.Size()
-					GrandTotalCount++
-				}
+	if ShowGrandTotal {
+		for _, f := range files {
+			if f.Mode().IsRegular() {
+				GrandTotal += f.Size()
+				GrandTotalCount++
 			}
 		}
-		sort.Slice(files, sortfcn)
 	}
+	sort.Slice(files, sortfcn)
 
-	fmt.Println(" Dirname is", CleanDirName)
-
-	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
-	if *filterFlag {
-		filterAmt = 1_000_000
-	} else if filterStr != "" {
-		if len(filterStr) > 1 {
-			filterAmt, err = strconv.Atoi(filterStr)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "converting filterStr:", err)
-			}
-		} else if unicode.IsLetter(rune(filterStr[0])) {
-			filterStr = strings.ToLower(filterStr)
-			if filterStr == "k" {
-				filterAmt = 1000
-			} else if filterStr == "m" {
-				filterAmt = 1_000_000
-			} else if filterStr == "g" {
-				filterAmt = 1_000_000_000
-			} else {
-				fmt.Fprintln(os.Stderr, "filterStr is not valid and was ignored.  filterStr=", filterStr)
-			}
-		} else {
-			fmt.Fprintln(os.Stderr, "filterStr not valid.  filterStr =", filterStr)
-		}
+	if *testFlag {
+		fmt.Println(" Dirname is", workingdir)
 	}
-
-	if testFlag {
-		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
-	}
+	fmt.Println()
 
 	// I need to add a description of how this code works, because I forgot.
-	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
-	// This is still the way it works for Windows.
-	// On linux, bash populated the command line by globbing, or no command line params were entered
+	// The entire contents of the directory is read in.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 
-	if linuxflag {
-		for _, f := range files {
-			modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
-			nameStr := truncStr(f.Name(), w)
+	regex, err := regexp.Compile(inputRegEx)
+	if err != nil {
+		log.Fatalln(" error from regex compile function is ", err)
+		fmt.Println()
+		fmt.Println()
+		os.Exit(1)
+	}
+
+	for _, f := range files {
+		NAME := strings.ToLower(f.Name())
+		if BOOL := regex.MatchString(NAME); BOOL {
+			if *excludeFlag {
+				if flag := excludeRegex.MatchString(strings.ToLower(f.Name())); flag {
+					continue
+				}
+			}
+
+			modtimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
+			nameStr := 
 			sizestr := ""
-			//usernameStr, groupnameStr := GetUserGroupStr(f) Not for this version of the code.
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
-				showthis := true
-				if noExtensionFlag && strings.ContainsRune(f.Name(), '.') {
-					showthis = false
-				}
-				if *excludeFlag {
-					if BOOL := excludeRegex.MatchString(strings.ToLower(f.Name())); BOOL {
-						showthis = false
+				if LongFileSizeList {
+					sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+					if f.Size() > 100000 {
+						sizestr = AddCommas(sizestr)
 					}
+					fmt.Printf("%17s %s %s\n", sizestr, modtimeStr, f.Name())
+				} else {
+					var color ct.Color
+					sizestr, color = getMagnitudeString(f.Size())
+					ctfmt.Printf(color, winflag, "%-17s %s %s\n", sizestr, modtimeStr, f.Name())
 				}
-				if filterAmt > 0 {
-					if f.Size() < int64(filterAmt) {
-						showthis = false
-					}
-				}
-				if showthis {
-					if LongFileSizeList {
-						sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
-						if f.Size() > 100000 {
-							sizestr = AddCommas(sizestr)
-						}
-						s := fmt.Sprintf("%16s %s %s", sizestr, modTimeStr, nameStr) // can't be colorized
-						colorized := colorizedStr{color: ct.White, str: s}
-						colorStringSlice = append(colorStringSlice, colorized)
-					} else {
-						var color ct.Color
-						sizestr, color = getMagnitudeString(f.Size())
-						s := fmt.Sprintf("%-16s %s %s", sizestr, modTimeStr, nameStr)
-						colorized := colorizedStr{color: color, str: s}
-						colorStringSlice = append(colorStringSlice, colorized)
-					}
-					count++
-				}
+				count++
 			} else if IsSymlink(f.Mode()) {
-				s := fmt.Sprintf("%16s %s <%s>", sizestr, modTimeStr, nameStr)
-				colorized := colorizedStr{color: ct.White, str: s}
-				colorStringSlice = append(colorStringSlice, colorized)
+				fmt.Printf("%15s %s <%s>\n", sizestr, modtimeStr, f.Name())
 				count++
 			} else if Dirlist && f.IsDir() {
-				s := fmt.Sprintf("%16s %s (%s)", sizestr, modTimeStr, nameStr)
-				colorized := colorizedStr{color: ct.White, str: s}
-				colorStringSlice = append(colorStringSlice, colorized)
+				fmt.Printf("%15s %s (%s)\n", sizestr, modtimeStr, f.Name())
 				count++
 			}
-			if count >= NumLines*2 {
+			if count >= NumLines {
 				break
 			}
 		}
-	} else if winflag {
-		for _, f := range files {
-			showthis := false
-			NAME := strings.ToLower(f.Name())
-			nameStr := truncStr(f.Name(), w)
-			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
-			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
-			// This way, the condition below can be BOOL && thisNewFlag
-			BOOL, _ := filepath.Match(CleanFileName, NAME)
-			if BOOL {
-				showthis = true
-				if noExtensionFlag && strings.ContainsRune(NAME, '.') {
-					showthis = false
-				}
-				if *excludeFlag {
-					if flag := excludeRegex.MatchString(strings.ToLower(NAME)); flag {
-						showthis = false
-					}
-				}
-				if filterAmt > 0 {
-					if f.Size() < int64(filterAmt) {
-						showthis = false
-					}
-				}
-			}
-
-			//			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
-			if showthis {
-				modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
-				sizestr := ""
-				if FilenameList && f.Mode().IsRegular() {
-					SizeTotal += f.Size()
-					if LongFileSizeList {
-						sizestr = strconv.FormatInt(f.Size(), 10)
-						if f.Size() > 100000 {
-							sizestr = AddCommas(sizestr)
-						}
-						s := fmt.Sprintf("%17s %s %s", sizestr, modTimeStr, nameStr)
-						var color ct.Color = ct.White
-						colorized := colorizedStr{color: color, str: s}
-						colorStringSlice = append(colorStringSlice, colorized)
-					} else {
-						var color ct.Color
-						sizestr, color = getMagnitudeString(f.Size())
-						s := fmt.Sprintf("%-17s %s %s", sizestr, modTimeStr, nameStr)
-						colorized := colorizedStr{color: color, str: s}
-						colorStringSlice = append(colorStringSlice, colorized)
-					}
-					count++
-				} else if IsSymlink(f.Mode()) {
-					var color ct.Color = ct.White
-					s := fmt.Sprintf("%17s %s <%s>", sizestr, modTimeStr, nameStr)
-					colorized := colorizedStr{color: color, str: s}
-					colorStringSlice = append(colorStringSlice, colorized)
-					count++
-				} else if Dirlist && f.IsDir() {
-					var color ct.Color = ct.White
-					s := fmt.Sprintf("%17s %s (%s)", sizestr, modTimeStr, nameStr)
-					colorized := colorizedStr{color: color, str: s}
-					colorStringSlice = append(colorStringSlice, colorized)
-					count++
-				}
-				if count >= NumLines*2 {
-					break
-				}
-			}
-		}
 	}
-
-	// Now to output the displayStringSlice, 2 items per line, but I want the sort to remain vertical
-	halfpoint := len(colorStringSlice)/2
-	for i := 0; i < halfpoint; i++ {
-		c0 := colorStringSlice[i].color
-		s0 := colorStringSlice[i].str
-		if w > 59 {
-			ctfmt.Printf(c0, winflag, "%-100s", s0)
-		} else if w > 54 {
-			ctfmt.Printf(c0, winflag, "%-95s", s0)
-		} else if w > 49 {
-			ctfmt.Printf(c0, winflag, "%-90s", s0)
-		} else {
-			ctfmt.Printf(c0, winflag, "%-85s", s0)
-		}
-
-		if i + halfpoint < len(colorStringSlice) {
-			c1 := colorStringSlice[i+halfpoint].color
-			s1 := colorStringSlice[i+halfpoint].str
-			ctfmt.Printf(c1, winflag,"     %s\n", s1)
-		}
-	}
-
-	fmt.Println()
-	fmt.Println()
 
 	s := fmt.Sprintf("%d", SizeTotal)
 	if SizeTotal > 100000 {
@@ -610,25 +421,25 @@ func main() {
 	if GrandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
+	fmt.Println()
+	fmt.Println()
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
 		s1, color := getMagnitudeString(GrandTotal)
-		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
+		ctfmt.Println(color, winflag, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
 	}
-	fmt.Println()
-} // end main dsc
+} // end main regex
 
 //-------------------------------------------------------------------- InsertByteSlice
-
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
 
 //---------------------------------------------------------------------- AddCommas
-
 func AddCommas(instr string) string {
+	// var Comma []byte = []byte{','}  compiler flagged this as type not needed
 	Comma := []byte{','}
 
 	BS := make([]byte, 0, 15)
@@ -644,7 +455,6 @@ func AddCommas(instr string) string {
 } // AddCommas
 
 // ------------------------------ IsSymlink ---------------------------
-
 func IsSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
 	result := intermed != 0
@@ -652,7 +462,6 @@ func IsSymlink(m os.FileMode) bool {
 } // IsSymlink
 
 // ---------------------------- GetIDname -----------------------------------------------------------
-
 func GetIDname(uidStr string) string {
 
 	if len(uidStr) == 0 {
@@ -660,13 +469,14 @@ func GetIDname(uidStr string) string {
 	}
 	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		panic("uid not found")
 	}
 
 	idname := ptrToUser.Username
 	return idname
 
 } // GetIDname
+
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -679,34 +489,35 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 		if err == nil {
 			dsrtparam.w = n
 		} else {
-			fmt.Fprintf(os.Stderr, " dsw environment variable not a valid number.  dswStr = %q, %v.  Ignored.", dswStr, err)
+			fmt.Fprintf(os.Stderr, " dsw environ var not a valid number.  dswStr= %q, %v.  Ignored.", dswStr, err)
 			dsrtparam.w = 0
 		}
-	} else { // not ok, ie, dsw variable not found in environment
+	} else { // dswStr not in environ, ie not ok
 		dsrtparam.w = 0
 	}
 
-	envStr, ok := os.LookupEnv("ds")
+	s, ok := os.LookupEnv("dsrt")
+
 	if !ok {
 		return dsrtparam
-	}
+	} // empty dsrtparam is returned
 
-	indiv := strings.Split(envStr, "") // this splits into individual characters
+	indiv := strings.Split(s, "")
 
 	for j, str := range indiv {
-		envChar := str[0]
-		if envChar == 'r' || envChar == 'R' {
+		s := str[0]
+		if s == 'r' || s == 'R' {
 			dsrtparam.reverseflag = true
-		} else if envChar == 's' || envChar == 'S' {
+		} else if s == 's' || s == 'S' {
 			dsrtparam.sizeflag = true
-		} else if envChar == 'd' {
+		} else if s == 'd' {
 			dsrtparam.dirlistflag = true
-		} else if envChar == 'D' {
+		} else if s == 'D' {
 			dsrtparam.filenamelistflag = true
-		} else if envChar == 't' { // added 09/12/2018 12:26:01 PM
+		} else if s == 't' { // added 09/12/2018 12:26:01 PM
 			dsrtparam.totalflag = true // for the grand total operation
-		} else if unicode.IsDigit(rune(envChar)) {
-			dsrtparam.numlines = int(envChar) - int('0')
+		} else if unicode.IsDigit(rune(s)) {
+			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
 				dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
 				break // if have a 2 digit number, it ends processing of the indiv string
@@ -714,7 +525,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 		}
 	}
 	return dsrtparam
-} // end ProcessEnvironString
+}
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
@@ -739,7 +550,8 @@ func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
 	}
 	return directoryAliasesMap
-} // end getDirectoryAliases
+}
+
 
 // --------------------------- MakeSubst -------------------------------------------
 
@@ -758,6 +570,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 	}
 	return string(inRune)
 } // makesubst
+
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
@@ -779,6 +592,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	return completeValue
 } // ProcessDirectoryAliases
 
+
 // ------------------------------- MyReadDir -----------------------------------
 
 func MyReadDir(dir string) []os.FileInfo {
@@ -799,7 +613,7 @@ func MyReadDir(dir string) []os.FileInfo {
 	for _, s := range names {
 		L, err := os.Lstat(s)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
+			log.Println(" Error from os.Lstat ", err)
 			continue
 		}
 		fi = append(fi, L)
@@ -808,9 +622,7 @@ func MyReadDir(dir string) []os.FileInfo {
 } // MyReadDir
 
 // ----------------------------- getMagnitudeString -------------------------------
-
 func getMagnitudeString(j int64) (string, ct.Color) {
-
 	var s1 string
 	var f float64
 	var color ct.Color
