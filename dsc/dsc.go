@@ -219,7 +219,7 @@ func main() {
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	var w int // width maximum of the filename string to be displayed
-	//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
+	flag.IntVar(&w, "w", 0, "width for displayed file name")
 
 	flag.Parse()
 
@@ -285,7 +285,10 @@ func main() {
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
-	w = dsrtparam.w
+	if w == 0 { // w not set by flag option
+		w = dsrtparam.w
+	}
+
 	if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
 		w = defaultwidth
 	}
@@ -577,7 +580,7 @@ func main() {
 		}
 	}
 
-	// Now to output the displayStringSlice, 2 items per line, but I want the sort to remain vertical
+	// Now to output the colorStringSlice, 2 items per line, but I want the sort to remain vertical
 	halfpoint := len(colorStringSlice)/2
 	for i := 0; i < halfpoint; i++ {
 		c0 := colorStringSlice[i].color

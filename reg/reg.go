@@ -112,6 +112,8 @@ type colorizedStr struct {
 
 const defaultlineswin = 50
 const defaultlineslinux = 40
+const defaultWidth = 60
+const maxWidth = 100
 
 var directoryAliasesMap dirAliasMapType
 
@@ -126,9 +128,7 @@ func main() {
 	var GrandTotalCount int
 	var systemStr string
 	var excludeRegexPattern string
-
-//	uid := 0
-//	gid := 0
+	colorStringSlice := make([]colorizedStr, 0, 200)
 
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtparam = ProcessEnvironString() // This is a function below.
@@ -194,6 +194,9 @@ func main() {
 
 	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")            // pointer
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
+
+	var w int
+	flag.IntVar( &w, "w", 0, " truncation width for filename.")
 
 	flag.Parse()
 
@@ -269,6 +272,13 @@ func main() {
 	inputRegEx := ""
 	workingdir, _ := os.Getwd()
 	startdir := workingdir
+
+	if w == 0 { // w not set by command line flag
+		w = dsrtparam.w
+	}
+	if w <= 0 || w > maxWidth {
+		w = defaultWidth
+	}
 
 	commandlineSlice := flag.Args()
 	if len(commandlineSlice) == 0 {
@@ -376,6 +386,7 @@ func main() {
 
 	for _, f := range files {
 		NAME := strings.ToLower(f.Name())
+		nameStr := truncStr(f.Name(), w)
 		if BOOL := regex.MatchString(NAME); BOOL {
 			if *excludeFlag {
 				if flag := excludeRegex.MatchString(strings.ToLower(f.Name())); flag {
@@ -384,7 +395,6 @@ func main() {
 			}
 
 			modtimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
-			nameStr := 
 			sizestr := ""
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
@@ -393,25 +403,58 @@ func main() {
 					if f.Size() > 100000 {
 						sizestr = AddCommas(sizestr)
 					}
-					fmt.Printf("%17s %s %s\n", sizestr, modtimeStr, f.Name())
+					s := fmt.Sprintf("%17s %s %s", sizestr, modtimeStr, nameStr)
+					colorized := colorizedStr{color: ct.White, str: s}
+					colorStringSlice = append(colorStringSlice, colorized)
 				} else {
 					var color ct.Color
 					sizestr, color = getMagnitudeString(f.Size())
-					ctfmt.Printf(color, winflag, "%-17s %s %s\n", sizestr, modtimeStr, f.Name())
+					s := fmt.Sprintf("%-17s %s %s", sizestr, modtimeStr, nameStr)
+					colorized := colorizedStr{color: color, str: s}
+					colorStringSlice = append(colorStringSlice, colorized)
 				}
 				count++
 			} else if IsSymlink(f.Mode()) {
-				fmt.Printf("%15s %s <%s>\n", sizestr, modtimeStr, f.Name())
+				s := fmt.Sprintf("%15s %s <%s>", sizestr, modtimeStr, nameStr)
+				colorized := colorizedStr{color: ct.White, str: s}
+				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			} else if Dirlist && f.IsDir() {
-				fmt.Printf("%15s %s (%s)\n", sizestr, modtimeStr, f.Name())
+				s := fmt.Sprintf("%15s %s (%s)", sizestr, modtimeStr, nameStr)
+				colorized := colorizedStr{color: ct.White, str: s}
+				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			}
-			if count >= NumLines {
+			if count >= NumLines * 2 {
 				break
 			}
 		}
 	}
+
+	// Output the colorStringSlice, 2 items per line, but I want the sort to remain vertical
+	halfpoint := len(colorStringSlice)/2
+	for i := 0; i < halfpoint; i++ {
+		c0 := colorStringSlice[i].color
+		s0 := colorStringSlice[i].str
+		if w > 59 {
+			ctfmt.Printf(c0, winflag, "%-100s", s0)
+		} else if w > 54 {
+			ctfmt.Printf(c0, winflag, "%-95s", s0)
+		} else if w > 49 {
+			ctfmt.Printf(c0, winflag, "%-90s", s0)
+		} else {
+			ctfmt.Printf(c0, winflag, "%-85s", s0)
+		}
+
+		if i + halfpoint < len(colorStringSlice) {
+			c1 := colorStringSlice[i+halfpoint].color
+			s1 := colorStringSlice[i+halfpoint].str
+			ctfmt.Printf(c1, winflag,"     %s\n", s1)
+		}
+	}
+
+	fmt.Println()
+	fmt.Println()
 
 	s := fmt.Sprintf("%d", SizeTotal)
 	if SizeTotal > 100000 {
@@ -430,6 +473,7 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
+	fmt.Println()
 } // end main regex
 
 //-------------------------------------------------------------------- InsertByteSlice
