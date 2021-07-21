@@ -203,7 +203,7 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Print(" reg will display sorted by date or size in 2 columns.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	fmt.Print(" regx3 will display sorted by date or size in 3 columns.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
 
 	if *testFlag {
