@@ -7,11 +7,10 @@ import (
 	"github.com/ricochet2200/go-disk-usage/du"
 	"os"
 	"runtime"
-	"strings"
 	"unicode"
 )
 
-//var KB = uint64(1024)
+// Results are still off by 3 orders of magnitude, even if I use it as bin/diskusage "/"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -20,12 +19,15 @@ func main() {
 	}
 	volumePath := ""
 	volume := os.Args[1]
+
 	if runtime.GOOS == "linux" {
-		//if !(strings.HasPrefix(volume, "/dev/") && strings.HasSuffix(volume, string(os.PathSeparator))) {
+		/*
 		if !(strings.HasPrefix(volume, "/dev/")) {
 			fmt.Println(" On linux, volume must begin /dev/.")
 			os.Exit(1)
 		}
+
+		 */
 		volumePath = volume
 	} else if runtime.GOOS == "windows" {
 		volByteSlice := []byte(volume)
@@ -37,6 +39,7 @@ func main() {
 		}
 		volumePath = string(driveletter + colon + os.PathSeparator)
 	}
+
 	fmt.Println(" volumepath is", volumePath)
 	usage := du.NewDiskUsage(volumePath)
 	//fmt.Println("Free:", usage.Free())
