@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "11 July 2021"
+const LastAltered = "23 July 2021"
 
 /*
 Revision History
@@ -97,6 +97,8 @@ Revision History
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
  9 Jul 21 -- Now called ds, and I'll use limited lengths of the file name strings.  Uses environemnt variables ds and dsw, if present.
 11 Jul 21 -- Decided to not show the mode bits.
+23 Jul 21 -- The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
+               But I'm keeping the display of 4 significant figures, and increased defaultwidth to 70.
 */
 
 type FISlice []os.FileInfo
@@ -110,7 +112,7 @@ type DsrtParamType struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const defaultwidth = 60
+	const defaultwidth = 70
 	const maxwidth = 100
 	var dsrtparam DsrtParamType
 	var numoflines int
@@ -219,7 +221,7 @@ func main() {
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	var w int // width maximum of the filename string to be displayed
-//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
+	//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
 
 	flag.Parse()
 
@@ -478,19 +480,19 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						ctfmt.Printf(ct.Yellow, false, "%16s %s %s\n", sizestr, modTimeStr, nameStr)
+						ctfmt.Printf(ct.Yellow, false, "%9s %s %s\n", sizestr, modTimeStr, nameStr)
 					} else {
 						var color ct.Color
 						sizestr, color = getMagnitudeString(f.Size())
-						ctfmt.Printf(color, false, "%-16s %s %s\n", sizestr, modTimeStr, nameStr)
+						ctfmt.Printf(color, false, "%-9s %s %s\n", sizestr, modTimeStr, nameStr)
 					}
 					count++
 				}
 			} else if IsSymlink(f.Mode()) {
-				fmt.Printf("%16s %s <%s>\n", sizestr, modTimeStr, nameStr)
+				fmt.Printf("%9s %s <%s>\n", sizestr, modTimeStr, nameStr)
 				count++
 			} else if Dirlist && f.IsDir() {
-				fmt.Printf("%16s %s (%s)\n", sizestr, modTimeStr, nameStr)
+				fmt.Printf("%9s %s (%s)\n", sizestr, modTimeStr, nameStr)
 				count++
 			}
 			if count >= NumLines {
@@ -535,19 +537,19 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						fmt.Printf("%17s %s %s\n", sizestr, modTimeStr, nameStr)
+						fmt.Printf("%9s %s %s\n", sizestr, modTimeStr, nameStr)
 
 					} else {
 						var color ct.Color
 						sizestr, color = getMagnitudeString(f.Size())
-						ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, modTimeStr, nameStr)
+						ctfmt.Printf(color, true, "%-9s %s %s\n", sizestr, modTimeStr, nameStr)
 					}
 					count++
 				} else if IsSymlink(f.Mode()) {
-					fmt.Printf("%17s %s <%s>\n", sizestr, modTimeStr, nameStr)
+					fmt.Printf("%9s %s <%s>\n", sizestr, modTimeStr, nameStr)
 					count++
 				} else if Dirlist && f.IsDir() {
-					fmt.Printf("%17s %s (%s)\n", sizestr, modTimeStr, nameStr)
+					fmt.Printf("%9s %s (%s)\n", sizestr, modTimeStr, nameStr)
 					count++
 				}
 				if count >= NumLines {
@@ -574,13 +576,11 @@ func main() {
 	}
 } // end main ds
 
-
 //-------------------------------------------------------------------- InsertByteSlice
 
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
-
 
 //---------------------------------------------------------------------- AddCommas
 
@@ -623,7 +623,6 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
-
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -767,7 +766,6 @@ func MyReadDir(dir string) []os.FileInfo {
 // ----------------------------- getMagnitudeString -------------------------------
 
 func getMagnitudeString(j int64) (string, ct.Color) {
-
 	var s1 string
 	var f float64
 	var color ct.Color
@@ -776,41 +774,17 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 		f = float64(j) / 1000000000000
 		s1 = fmt.Sprintf("%.4g TB", f)
 		color = ct.Red
-	case j > 100_000_000_000: // 100 billion
-		f = float64(j) / 1_000_000_000
-		s1 = fmt.Sprintf(" %.4g GB", f)
-		color = ct.White
-	case j > 10_000_000_000: // 10 billion
-		f = float64(j) / 1_000_000_000
-		s1 = fmt.Sprintf("  %.4g GB", f)
-		color = ct.White
 	case j > 1_000_000_000: // 1 billion, or GB
 		f = float64(j) / 1000000000
-		s1 = fmt.Sprintf("   %.4g GB", f)
+		s1 = fmt.Sprintf("%.4g GB", f)
 		color = ct.White
-	case j > 100_000_000: // 100 million
-		f = float64(j) / 1_000_000
-		s1 = fmt.Sprintf("    %.4g mb", f)
-		color = ct.Yellow
-	case j > 10_000_000: // 10 million
-		f = float64(j) / 1_000_000
-		s1 = fmt.Sprintf("     %.4g mb", f)
-		color = ct.Yellow
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1000000
-		s1 = fmt.Sprintf("      %.4g mb", f)
+		s1 = fmt.Sprintf("%.4g mb", f)
 		color = ct.Yellow
-	case j > 100_000: // 100 thousand
-		f = float64(j) / 1000
-		s1 = fmt.Sprintf("       %.4g kb", f)
-		color = ct.Cyan
-	case j > 10_000: // 10 thousand
-		f = float64(j) / 1000
-		s1 = fmt.Sprintf("        %.4g kb", f)
-		color = ct.Cyan
 	case j > 1000: // KB
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("         %.3g kb", f)
+		s1 = fmt.Sprintf("%.4g kb", f)
 		color = ct.Cyan
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
