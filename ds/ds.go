@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/term"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -100,7 +102,8 @@ Revision History
 11 Jul 21 -- Decided to not show the mode bits.
 23 Jul 21 -- The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
                But I'm keeping the display of 4 significant figures, and increased defaultwidth to 70.
-               I'm adding the code to determine the number of rows and columns itself.  I'll use x/term
+               I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
+               Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 */
 
 type FISlice []os.FileInfo
@@ -145,7 +148,40 @@ func main() {
 	dsrtparam = ProcessEnvironString() // This is a function below.
 
 	if ! autoDefaults {
-		fmt.Fprintln(os.Stderr," Not in a terminal according to term.IsTerminal.  Using environment strings")
+		//fmt.Fprintln(os.Stderr," Not in a terminal according to term.IsTerminal.")  on Windows this is false anyway.
+		if winflag {
+			comspec, ok := os.LookupEnv("ComSpec")
+			if ok {
+				bytesbuf := bytes.NewBuffer([]byte{})  // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
+				tcc.Stdout = bytesbuf
+				tcc.Run()
+				colstr := bytesbuf.String()
+				lines := strings.Split(colstr, "\n")
+				trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
+				autowidth , err = strconv.Atoi(trimmedLine)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
+				}
+
+				bytesbuf.Reset()
+				tcc = exec.Command(comspec, "-C", "echo", "%_rows")
+				tcc.Stdout = bytesbuf
+				tcc.Run()
+				rowstr := bytesbuf.String()
+				lines = strings.Split(rowstr, "\n")
+				trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
+				autoheight, err = strconv.Atoi(trimmedLine)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
+				}
+
+			} else {
+				fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+		}
 	} else {
 		autowidth, autoheight, err = term.GetSize(0)
 		if err != nil {
@@ -156,18 +192,18 @@ func main() {
 	if linuxflag {
 		systemStr = "Linux"
 		files = make([]os.FileInfo, 0, 500)
-		if dsrtparam.numlines > 0 {
+		if dsrtparam.numlines > 0 { // priority is the dsrt environ var over autoheight
 			numoflines = dsrtparam.numlines
-		} else if autoDefaults {
+		} else if autoheight > 0 {
 			numoflines = autoheight - 5
 		} else {
 			numoflines = defaultlineslinux
 		}
 	} else if winflag {
 		systemStr = "Windows"
-		if dsrtparam.numlines > 0 {
+		if dsrtparam.numlines > 0 { // priority is the dsrt environ var over autoheight
 			numoflines = dsrtparam.numlines
-		} else if autoDefaults {
+		} else if autoheight > 0 {
 			numoflines = autoheight - 5
 		} else {
 			numoflines = defaultlineswin
@@ -179,7 +215,7 @@ func main() {
 	}
 
 	sepstring := string(filepath.Separator)
-	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
+	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of Go 1.12
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
@@ -195,7 +231,6 @@ func main() {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
 		}
-		// HomeDirStr = userptr.HomeDir + sepstring
 	}
 
 	// flag definitions and processing
@@ -203,9 +238,9 @@ func main() {
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	var nlines = flag.Int("n", numoflines, "number of lines to display") // Ptr
+	var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
 	var NLines int
-	flag.IntVar(&NLines, "N", numoflines, "number of lines to display") // Value
+	flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
 
 	var helpflag = flag.Bool("h", false, "print help message") // pointer
 	var HelpFlag bool
@@ -252,7 +287,7 @@ func main() {
 	}
 
 	if testFlag {
-		fmt.Println(" After flag.Parse(); w=", w, "nlines=", *nlines, "Nlines=", NLines)
+		fmt.Println(" After flag.Parse(); option switches w=", w, "nscreens=", *nscreens, "Nlines=", NLines)
 	}
 
 	Reverse := *revflag || RevFlag || dsrtparam.reverseflag
@@ -262,9 +297,7 @@ func main() {
 	DateSort := !SizeSort // convenience variable
 
 	NumLines := numoflines
-	if *nlines != numoflines {
-		NumLines = *nlines
-	} else if NLines != numoflines {
+	if NLines > 0 { // -N option switch takes priority over autoheight
 		NumLines = NLines
 	}
 
@@ -306,14 +339,18 @@ func main() {
 	if w == 0 {
 		w = dsrtparam.w
 	}
-	if autoDefaults {
-		if w <= 0 || w > maxwidth {
+	if autowidth > 0 {
+		if w <= 0 || w > maxwidth { // w not set by flag.Parse or dsw environ var
 			w = autowidth - 30
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
 			w = defaultwidth
 		}
+	}
+
+	if *nscreens > 1 {
+		NumLines *= *nscreens
 	}
 
 	// set which sort function will be in the sortfcn var
@@ -359,7 +396,7 @@ func main() {
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf(" uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s.\n",
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
-			fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d. \n", autoDefaults, autoheight, autowidth, w)
+			fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoheight, autowidth, w, NumLines)
 			fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
 				dsrtparam.numlines, dsrtparam.w, dsrtparam.reverseflag, dsrtparam.sizeflag, dsrtparam.dirlistflag, dsrtparam.filenamelistflag,
 				dsrtparam.totalflag)
