@@ -7,6 +7,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -19,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "23 July 2021"
+const LastAltered = "24 July 2021"
 
 /*
 Revision History
@@ -99,6 +100,7 @@ Revision History
 11 Jul 21 -- Decided to not show the mode bits.
 23 Jul 21 -- The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
                But I'm keeping the display of 4 significant figures, and increased defaultwidth to 70.
+               I'm adding the code to determine the number of rows and columns itself.  I'll use x/term
 */
 
 type FISlice []os.FileInfo
@@ -113,7 +115,7 @@ func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
 	const defaultwidth = 70
-	const maxwidth = 100
+	const maxwidth = 300
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var userptr *user.User // from os/user
@@ -122,6 +124,7 @@ func main() {
 	var count int
 	var SizeTotal, GrandTotal int64
 	var GrandTotalCount int
+	var autowidth, autoheight int
 	var havefiles bool
 	var commandline string
 	var directoryAliasesMap dirAliasMapType
@@ -131,19 +134,32 @@ func main() {
 	gid := 0
 	systemStr := ""
 
-	// environment variable processing.  If present, these will be the defaults.
-	dsrtparam = ProcessEnvironString() // This is a function below.
-
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
 	ctfmt.Print(ct.Magenta, winflag, "ds -- Directory SoRTed w/ filename truncation.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
+
+	autoDefaults := term.IsTerminal(0)
+
+	// environment variable processing.  If present, these will be the defaults.
+	dsrtparam = ProcessEnvironString() // This is a function below.
+
+	if ! autoDefaults {
+		fmt.Fprintln(os.Stderr," Not in a terminal according to term.IsTerminal.  Using environment strings")
+	} else {
+		autowidth, autoheight, err = term.GetSize(0)
+		if err != nil {
+			autoDefaults = false
+		}
+	}
 
 	if linuxflag {
 		systemStr = "Linux"
 		files = make([]os.FileInfo, 0, 500)
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
+		} else if autoDefaults {
+			numoflines = autoheight - 5
 		} else {
 			numoflines = defaultlineslinux
 		}
@@ -151,10 +167,13 @@ func main() {
 		systemStr = "Windows"
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
+		} else if autoDefaults {
+			numoflines = autoheight - 5
 		} else {
 			numoflines = defaultlineswin
 		}
 	} else {
+		fmt.Fprintln(os.Stderr, " Not linux, not windows, should not be able to compile and run this.  WTF?")
 		systemStr = "Unknown"
 		numoflines = defaultlineslinux
 	}
@@ -221,7 +240,7 @@ func main() {
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	var w int // width maximum of the filename string to be displayed
-	//	flag.IntVar(&w, "w", 0, "width for displayed file name")  Turns out to not be useful.  If the number is set dsw, if present.  Else default is used.
+	flag.IntVar(&w, "w", 0, "width for displayed file name")
 
 	flag.Parse()
 
@@ -291,9 +310,18 @@ func main() {
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
+	// set w, the width param, ie, number of columns available
 	w = dsrtparam.w
-	if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-		w = defaultwidth
+	if autoDefaults {
+		if w <= 0 || w > maxwidth {
+			w = autowidth
+		} else {
+			w = defaultwidth
+		}
+	} else {
+		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
+			w = defaultwidth
+		}
 	}
 
 	// set which sort function will be in the sortfcn var
