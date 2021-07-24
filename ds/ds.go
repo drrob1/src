@@ -244,23 +244,15 @@ func main() {
 
 	flag.Parse()
 
-	if testFlag {
-		execname, _ := os.Executable()
-		ExecFI, _ := os.Stat(execname)
-		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
-		fmt.Println()
-		if runtime.GOARCH == "amd64" {
-			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
-				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
-		}
-	}
-
 	if *helpflag || HelpFlag {
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
+		fmt.Println(" Reads from dsrt and dsw environment variables before processing commandline switches.")
 		fmt.Println(" Reads from diraliases environment variable if needed on Windows.")
 		flag.PrintDefaults()
 		os.Exit(0)
+	}
+
+	if testFlag {
+		fmt.Println(" After flag.Parse(); w=", w, "nlines=", *nlines, "Nlines=", NLines)
 	}
 
 	Reverse := *revflag || RevFlag || dsrtparam.reverseflag
@@ -311,12 +303,12 @@ func main() {
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
 	// set w, the width param, ie, number of columns available
-	w = dsrtparam.w
+	if w == 0 {
+		w = dsrtparam.w
+	}
 	if autoDefaults {
 		if w <= 0 || w > maxwidth {
-			w = autowidth
-		} else {
-			w = defaultwidth
+			w = autowidth - 30
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
@@ -355,6 +347,22 @@ func main() {
 		}
 		if testFlag {
 			fmt.Println("sortfcn = oldest date.")
+		}
+	}
+
+	if testFlag {
+		execname, _ := os.Executable()
+		ExecFI, _ := os.Stat(execname)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		fmt.Println()
+		if runtime.GOARCH == "amd64" {
+			fmt.Printf(" uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s.\n",
+				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+			fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d. \n", autoDefaults, autoheight, autowidth, w)
+			fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
+				dsrtparam.numlines, dsrtparam.w, dsrtparam.reverseflag, dsrtparam.sizeflag, dsrtparam.dirlistflag, dsrtparam.filenamelistflag,
+				dsrtparam.totalflag)
 		}
 	}
 
