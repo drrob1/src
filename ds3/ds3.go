@@ -123,7 +123,7 @@ type colorizedStr struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const defaultwidth = 60
+	const maxTruncationValue = 45
 	const maxwidth = 300
 	const datesize = 30 // amount of size filesize and date occupy in each column
 	var dsrtparam DsrtParamType
@@ -346,7 +346,7 @@ func main() {
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-			w = defaultwidth
+			w = maxTruncationValue
 		}
 	}
 
@@ -532,6 +532,9 @@ func main() {
 	// On linux, bash populated the command line by globbing, or no command line params were entered
 
 	oneThirdWidth := w/3 - datesize   // This value is used to truncate the filename
+	if oneThirdWidth > maxTruncationValue {
+		oneThirdWidth = maxTruncationValue
+	}
 	if testFlag {
 		fmt.Println(" oneThirdWidth, the value used to truncate the filename, is", oneThirdWidth)
 	}
@@ -666,18 +669,18 @@ func main() {
 	for i := 0; i < onethirdpoint; i++ {
 		c0 := colorStringSlice[i].color
 		s0 := colorStringSlice[i].str
-		ctfmt.Printf(c0, winflag, "%-65s", s0)
+		ctfmt.Printf(c0, winflag, "%-70s", s0)
 
 		if i+onethirdpoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+onethirdpoint].color
 			s1 := colorStringSlice[i+onethirdpoint].str
-			ctfmt.Printf(c1, winflag, "%-65s", s1)
+			ctfmt.Printf(c1, winflag, "%-70s", s1)
 		}
 
 		if i+2*onethirdpoint < len(colorStringSlice) {
 			c2 := colorStringSlice[i+2*onethirdpoint].color
 			s2 := colorStringSlice[i+2*onethirdpoint].str
-			ctfmt.Printf(c2, winflag, "    %s\n", s2)
+			ctfmt.Printf(c2, winflag, "  %s\n", s2)
 		}
 	}
 

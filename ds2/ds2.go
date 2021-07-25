@@ -122,7 +122,7 @@ type colorizedStr struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const defaultwidth = 60
+	const maxTruncationValue = 60
 	const maxwidth = 300
 	const datesize = 30 // amount of space the filesize and date take up in each column
 	var dsrtparam DsrtParamType
@@ -196,7 +196,7 @@ func main() {
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 5
+			numoflines = autoheight - 10
 		} else {
 			numoflines = defaultlineslinux
 		}
@@ -204,7 +204,7 @@ func main() {
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 5
+			numoflines = autoheight - 10
 		} else {
 			numoflines = defaultlineswin
 		}
@@ -345,7 +345,7 @@ func main() {
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-			w = defaultwidth
+			w = maxTruncationValue
 		}
 	}
 
@@ -530,6 +530,9 @@ func main() {
 	// This is still the way it works for Windows.
 	// On linux, bash populated the command line by globbing, or no command line params were entered
 	halfwidth := w/2 - datesize // this value is used to truncate the filename.
+	if halfwidth > maxTruncationValue {
+		halfwidth = maxTruncationValue
+	}
 	if testFlag {
 		fmt.Println(" halfwdth value, used for truncation value of name string, is", halfwidth)
 	}
@@ -662,13 +665,13 @@ func main() {
 		c0 := colorStringSlice[i].color
 		s0 := colorStringSlice[i].str
 		if halfwidth > 59 {
-			ctfmt.Printf(c0, winflag, "%-90s", s0)
+			ctfmt.Printf(c0, winflag, "%-93s", s0)
 		} else if halfwidth > 54 {
-			ctfmt.Printf(c0, winflag, "%-85s", s0)
+			ctfmt.Printf(c0, winflag, "%-88s", s0)
 		} else if halfwidth > 49 {
-			ctfmt.Printf(c0, winflag, "%-80s", s0)
+			ctfmt.Printf(c0, winflag, "%-83s", s0)
 		} else {
-			ctfmt.Printf(c0, winflag, "%-75s", s0)
+			ctfmt.Printf(c0, winflag, "%-78s", s0)
 		}
 
 		if i+halfpoint < len(colorStringSlice) {
