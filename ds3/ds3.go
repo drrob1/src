@@ -197,7 +197,7 @@ func main() {
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 5
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineslinux
 		}
@@ -205,7 +205,7 @@ func main() {
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 5
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineswin
 		}
@@ -234,7 +234,7 @@ func main() {
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	var nscreens = flag.Int("n", 0, "number of screens to display") // Ptr
+	var nscreens = flag.Int("n", 1, "number of screens to display") // Ptr
 	var NLines int
 	flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
 
@@ -590,7 +590,7 @@ func main() {
 				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			}
-			if count >= NumLines*2 {
+			if count >= NumLines*3 {
 				break
 			}
 		}
@@ -657,7 +657,7 @@ func main() {
 					colorStringSlice = append(colorStringSlice, colorized)
 					count++
 				}
-				if count >= NumLines*2 {
+				if count >= NumLines*3 {
 					break
 				}
 			}
@@ -675,28 +675,33 @@ func main() {
 			c1 := colorStringSlice[i+onethirdpoint].color
 			s1 := colorStringSlice[i+onethirdpoint].str
 			ctfmt.Printf(c1, winflag, "%-70s", s1)
+		} else {
+			fmt.Println()
 		}
 
 		if i+2*onethirdpoint < len(colorStringSlice) {
 			c2 := colorStringSlice[i+2*onethirdpoint].color
 			s2 := colorStringSlice[i+2*onethirdpoint].str
 			ctfmt.Printf(c2, winflag, "  %s\n", s2)
+		} else {
+			fmt.Println()
 		}
 	}
 
-	fmt.Println()
 	fmt.Println()
 
 	s := fmt.Sprintf("%d", SizeTotal)
 	if SizeTotal > 100000 {
 		s = AddCommas(s)
 	}
-	s0 := fmt.Sprintf("%d", GrandTotal)
-	if GrandTotal > 100000 {
-		s0 = AddCommas(s0)
-	}
 	fmt.Print(" File Size total = ", s)
+
 	if ShowGrandTotal {
+		s0 := fmt.Sprintf("%d", GrandTotal)
+		if GrandTotal > 100000 {
+			s0 = AddCommas(s0)
+		}
+
 		s1, color := getMagnitudeString(GrandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
 	} else {
