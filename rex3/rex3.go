@@ -511,12 +511,12 @@ func main() {
 	for i := 0; i < oneThirdPoint; i++ {
 		c0 := colorStringSlice[i].color
 		s0 := colorStringSlice[i].str
-		ctfmt.Printf(c0, winflag, "%-66s", s0)
+		ctfmt.Printf(c0, winflag, "%-70s", s0)
 
 		if i + oneThirdPoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+oneThirdPoint].color
 			s1 := colorStringSlice[i+oneThirdPoint].str
-			ctfmt.Printf(c1, winflag,"%-66s", s1)
+			ctfmt.Printf(c1, winflag,"%-70s", s1)
 		} else {
 			fmt.Println()
 		}
