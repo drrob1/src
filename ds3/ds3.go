@@ -1,4 +1,4 @@
-// dsrt.go -- directory sort
+// ds3.go -- directory sort outputting 3 columns
 
 package main
 
@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "26 July 2021"
+const LastAltered = "27 July 2021"
 
 /*
 Revision History
@@ -106,6 +106,7 @@ Revision History
 25 Jul 21 -- I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
                And it's now called ds3.go
+27 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 */
 
 type dirAliasMapType map[string]string
@@ -123,11 +124,11 @@ type colorizedStr struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const maxTruncationValue = 45
-	const minTruncationValue = 30
+	//	const maxTruncationValue = 45
+	//	const minTruncationValue = 30
 	const maxwidth = 300
 	const minwidth = 210
-	const datesize = 20 // amount of size filesize and date occupy in each column
+	//	const datesize = 20 // amount of size filesize and date occupy in each column
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var files []os.FileInfo
@@ -151,9 +152,8 @@ func main() {
 		runtime.Version(), ".")
 	fmt.Println()
 
-	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
+	autoDefaults := term.IsTerminal(int(os.Stdout.Fd())) // this works on Windows now that I use Stdout instead of Stdin=0.
 	if !autoDefaults {
-		//fmt.Fprintln(os.Stderr," Not in a terminal according to term.IsTerminal.")  on Windows this is false anyway.
 		if winflag {
 			comspec, ok := os.LookupEnv("ComSpec")
 			if ok {
@@ -186,6 +186,8 @@ func main() {
 			}
 		} else {
 			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+			autoheight = defaultlineslinux
+			autowidth = minwidth
 		}
 	} else {
 		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd()))
@@ -272,8 +274,8 @@ func main() {
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
-	var w int // width maximum of the filename string to be displayed
-	flag.IntVar(&w, "w", 0, "width for displayed file name")
+	var w int // width of screen, in pixels
+	flag.IntVar(&w, "w", 0, "width for displayed screen output")
 
 	flag.Parse()
 
@@ -281,7 +283,7 @@ func main() {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname, ", autoDefaults is", autoDefaults)
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		fmt.Println()
 		fmt.Println(" After flag.Parse(): option switches w=", w, "nscreens=", nscreens, "Nlines=", NLines)
 		fmt.Println()
@@ -340,15 +342,15 @@ func main() {
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
 	if w == 0 { // w not set by flag option
-		w = dsrtparam.w * 2/3
+		w = dsrtparam.w // will still be zero if dsw environ var not set.
 	}
 	if autowidth > 0 {
 		if w <= 0 || w > maxwidth { // w not set by flag.Parse or dsw environ var
-			w = autowidth
+			w = autowidth // I expect that this will always be used.
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-			w = maxTruncationValue * 3
+			w = minwidth
 		}
 	}
 
@@ -533,22 +535,11 @@ func main() {
 	// This is still the way it works for Windows.
 	// On linux, bash populated the command line by globbing, or no command line params were entered
 
-	oneThirdWidth := w/3 - datesize   // This value is used to truncate the filename
-	if oneThirdWidth > maxTruncationValue {
-		oneThirdWidth = maxTruncationValue
-	} else if oneThirdWidth < minTruncationValue {
-		oneThirdWidth = minTruncationValue
-	}
-
-	if testFlag {
-		fmt.Println(" oneThirdWidth, the value used to truncate the filename, is", oneThirdWidth)
-	}
-
 	if linuxflag {
 		for _, f := range files {
 			//modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
 			modTimeStr := f.ModTime().Format("Jan-02-2006")
-			nameStr := truncStr(f.Name(), oneThirdWidth)
+			nameStr := f.Name() //    truncStr(f.Name(), oneThirdWidth)
 			sizestr := ""
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
@@ -603,7 +594,7 @@ func main() {
 		for _, f := range files {
 			showthis := false
 			NAME := strings.ToLower(f.Name())
-			nameStr := truncStr(f.Name(), oneThirdWidth)
+			nameStr := f.Name() //       truncStr(f.Name(), oneThirdWidth)
 			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
 			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
 			// This way, the condition below can be BOOL && thisNewFlag
@@ -671,52 +662,27 @@ func main() {
 
 	// Now to output the colorStringSlice, 3 items per line, but I want the sort to remain vertical
 	onethirdpoint := len(colorStringSlice) / 3
-	if autowidth > minwidth {
-		for i := 0; i < onethirdpoint; i++ {
-			c0 := colorStringSlice[i].color
-			s0 := colorStringSlice[i].str
-			ctfmt.Printf(c0, winflag, "%-70s", s0)
+	columnWidth := autowidth/3 - 3 // accounting for the extra spaces added by the formatting.
+	for i := 0; i < onethirdpoint; i++ {
+		c0 := colorStringSlice[i].color
+		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
+		ctfmt.Printf(c0, winflag, "%s  ", s0)
 
-			if i+onethirdpoint < len(colorStringSlice) {
-				c1 := colorStringSlice[i+onethirdpoint].color
-				s1 := colorStringSlice[i+onethirdpoint].str
-				ctfmt.Printf(c1, winflag, "%-70s", s1)
-			} else {
-				fmt.Println()
-			}
-
-			if i+2*onethirdpoint < len(colorStringSlice) {
-				c2 := colorStringSlice[i+2*onethirdpoint].color
-				s2 := colorStringSlice[i+2*onethirdpoint].str
-				ctfmt.Printf(c2, winflag, "  %s\n", s2)
-			} else {
-				fmt.Println()
-			}
-		}
-	} else {
-		smallfield := autowidth / 3 - 3  // accounting for the extra spaces added by the formatting.
-		for i := 0; i < onethirdpoint; i++ {
-			c0 := colorStringSlice[i].color
-			s0 := FixedString(colorStringSlice[i].str, smallfield)
-			ctfmt.Printf(c0, winflag, "%s  ", s0)
-
-			if i+onethirdpoint < len(colorStringSlice) {
-				c1 := colorStringSlice[i+onethirdpoint].color
-				s1 := FixedString(colorStringSlice[i+onethirdpoint].str, smallfield)
-				ctfmt.Printf(c1, winflag, "%s  ", s1)
-			} else {
-				fmt.Println()
-			}
-
-			if i+2*onethirdpoint < len(colorStringSlice) {
-				c2 := colorStringSlice[i+2*onethirdpoint].color
-				s2 := FixedString(colorStringSlice[i+2*onethirdpoint].str, smallfield)
-				ctfmt.Printf(c2, winflag, "%s\n", s2)
-			} else {
-				fmt.Println()
-			}
+		if i+onethirdpoint < len(colorStringSlice) {
+			c1 := colorStringSlice[i+onethirdpoint].color
+			s1 := fixedStringLen(colorStringSlice[i+onethirdpoint].str, columnWidth)
+			ctfmt.Printf(c1, winflag, "%s  ", s1)
+		} else {
+			fmt.Println()
 		}
 
+		if i+2*onethirdpoint < len(colorStringSlice) {
+			c2 := colorStringSlice[i+2*onethirdpoint].color
+			s2 := fixedStringLen(colorStringSlice[i+2*onethirdpoint].str, columnWidth)
+			ctfmt.Printf(c2, winflag, "%s\n", s2)
+		} else {
+			fmt.Println()
+		}
 	}
 
 	fmt.Println()
@@ -789,7 +755,7 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
- */
+*/
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -961,18 +927,21 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
+/*
+{{{
 // --------------------------------------------------- truncStr -------------------------------------------
-
 func truncStr(s string, w int) string {
 	if w <= 0 || len(s) < w {
 		return s
 	}
 	return s[:w]
 } // end truncStr
+}}}
+*/
 
 // --------------------------------------------------- fixedString ---------------------------------------
 
-func FixedString(s string, size int) string {
+func fixedStringLen(s string, size int) string {
 	var built strings.Builder
 
 	if len(s) > size { // need to truncate the string
@@ -990,7 +959,4 @@ func FixedString(s string, size int) string {
 		fmt.Fprintln(os.Stderr, " makeStrFixed input string length is strange.  It is", len(s))
 		return s
 	}
-} // end FixedString
-
-
-
+} // end fixedStringLen
