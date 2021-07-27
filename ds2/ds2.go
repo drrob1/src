@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "25 July 2021"
+const LastAltered = "26 July 2021"
 
 /*
 Revision History
@@ -123,6 +123,8 @@ func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
 	const maxTruncationValue = 60
+	const minTruncationValue = 40
+
 	const maxwidth = 300
 	const datesize = 30 // amount of space the filesize and date take up in each column
 	var dsrtparam DsrtParamType
@@ -148,7 +150,7 @@ func main() {
 		runtime.Version(), ".")
 	fmt.Println()
 
-	autoDefaults := term.IsTerminal(0)
+	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
 	if !autoDefaults {
 		//fmt.Fprintln(os.Stderr," Not in a terminal according to term.IsTerminal.")  on Windows this is false anyway.
 		if winflag {
@@ -185,7 +187,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
 		}
 	} else {
-		autowidth, autoheight, err = term.GetSize(0)
+		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
 			autoDefaults = false
 		}
@@ -278,7 +280,7 @@ func main() {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname, ", autoDefaults is", autoDefaults)
 		fmt.Println()
 		fmt.Println(" After flag.Parse(); option switches w=", w, "nscreens=", *nscreens, "Nlines=", NLines)
 		fmt.Println()
@@ -336,6 +338,8 @@ func main() {
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
+	// w is either the full screen width or the width of an indiv column.  I have to think about this more.
+	// I'll leave it as the full screen width
 	if w == 0 { // w not set by flag option
 		w = dsrtparam.w
 	}
@@ -345,7 +349,7 @@ func main() {
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-			w = maxTruncationValue
+			w = maxTruncationValue * 2
 		}
 	}
 
@@ -659,6 +663,12 @@ func main() {
 
 	// Now to output the colorStringSlice, 2 items per line, but I want the sort to remain vertical
 	halfpoint := len(colorStringSlice) / 2
+	if halfpoint > maxTruncationValue {
+		halfpoint = maxTruncationValue
+	} else if halfpoint < minTruncationValue {
+		halfpoint = minTruncationValue
+	}
+
 	for i := 0; i < halfpoint; i++ {
 		c0 := colorStringSlice[i].color
 		s0 := colorStringSlice[i].str
