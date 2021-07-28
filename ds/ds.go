@@ -665,7 +665,7 @@ func main() {
 	}
 
 	// Now to output the colorStringSlice, 1 item per line
-	columnWidth := autowidth - 1 // a tolerance factor.
+	columnWidth := w - 1 // a tolerance factor.
 	for _, css := range colorStringSlice {
 		s0 := fixedStringLen(css.str, columnWidth)
 		ctfmt.Printf(css.color, winflag, "%s\n", s0)

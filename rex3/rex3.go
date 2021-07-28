@@ -12,7 +12,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -23,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jul 25, 2021"
+const LastAltered = "Jul 28, 2021"
 
 /*
 Revision History
@@ -104,7 +103,7 @@ Revision History
                But I'm keeping the display of 4 significant figures.
                I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
-
+28 Jul 21 -- Will now use fixedStringLen to truncate the columns
 */
 
 type dirAliasMapType map[string]string
@@ -121,9 +120,8 @@ type colorizedStr struct {
 
 const defaultlineswin = 50
 const defaultlineslinux = 40
-const maxTruncationValue = 45
 const maxWidth = 300
-const dateSize = 30  // space the filesize and date occupy.
+const minWidth = 90
 
 var directoryAliasesMap dirAliasMapType
 
@@ -142,7 +140,7 @@ func main() {
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtparam = ProcessEnvironString() // This is a function below.
 
-	autoDefaults := term.IsTerminal(0)
+	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
 
@@ -179,11 +177,16 @@ func main() {
 			}
 		} else {
 			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+			autoheight = defaultlineslinux
+			autowidth = minWidth
 		}
 	} else {
-		autowidth, autoheight, err = term.GetSize(0)
+		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
 			autoDefaults = false
+			fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
+			autowidth = minWidth
+			autoheight = defaultlineslinux
 		}
 	}
 
@@ -193,7 +196,7 @@ func main() {
 		if dsrtparam.numlines > 0 { // setting this on command line take priority over defaults
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 6
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineslinux
 		}
@@ -202,7 +205,7 @@ func main() {
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 6
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineswin
 		}
@@ -254,11 +257,11 @@ func main() {
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var w int
-	flag.IntVar( &w, "w", 0, " truncation width for filename.")
+	flag.IntVar( &w, "w", 0, " width of full displayed screen.")
 
 	flag.Parse()
 
-	fmt.Print(" rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	fmt.Print(" rex3 will display sorted by date or size in 3 columns.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
 
 	if testFlag {
@@ -332,7 +335,7 @@ func main() {
 	startdir := workingdir
 
 	if w == 0 { // w not set by command line flag
-		w = dsrtparam.w
+		w = dsrtparam.w // will be zero if dsw environ var is not set.
 	}
 	if autowidth > 0 {
 		if w <= 0 || w > maxWidth {
@@ -340,7 +343,7 @@ func main() {
 		}
 	} else {
 		if w <= 0 || w > maxWidth {
-			w = maxTruncationValue
+			w = minWidth
 		}
 	}
 
@@ -452,17 +455,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	oneThirdWidth := w/3 - dateSize
-	if oneThirdWidth > maxTruncationValue {
-		oneThirdWidth = maxTruncationValue
-	}
-	if testFlag {
-		fmt.Println(" oneThirdWidth =", oneThirdWidth)
-	}
-
 	for _, f := range files {
 		NAME := strings.ToLower(f.Name())
-		nameStr := truncStr(f.Name(), oneThirdWidth)
+		nameStr := f.Name() //  truncStr(f.Name(), oneThirdWidth)
 		if BOOL := regex.MatchString(NAME); BOOL {
 			if *excludeFlag {
 				if flag := excludeRegex.MatchString(strings.ToLower(f.Name())); flag {
@@ -479,7 +474,8 @@ func main() {
 						sizestr = AddCommas(sizestr)
 					}
 					s := fmt.Sprintf("%8s %s %s", sizestr, modtimeStr, nameStr)
-					colorized := colorizedStr{color: ct.White, str: s}
+					_, color := getMagnitudeString(f.Size())
+					colorized := colorizedStr{color: color, str: s}
 					colorStringSlice = append(colorStringSlice, colorized)
 				} else {
 					var color ct.Color
@@ -507,24 +503,29 @@ func main() {
 	}
 
 	// Output the colorStringSlice, 1 items per line for this version of the code.
+	columnWidth := w/3 - 3
+	if testFlag {
+		fmt.Println(" columnWidth =", columnWidth)
+	}
+
 	oneThirdPoint := len(colorStringSlice)/3
 	for i := 0; i < oneThirdPoint; i++ {
 		c0 := colorStringSlice[i].color
-		s0 := colorStringSlice[i].str
-		ctfmt.Printf(c0, winflag, "%-70s", s0)
+		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
+		ctfmt.Printf(c0, winflag, "%s  ", s0)
 
 		if i + oneThirdPoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+oneThirdPoint].color
-			s1 := colorStringSlice[i+oneThirdPoint].str
-			ctfmt.Printf(c1, winflag,"%-70s", s1)
+			s1 := fixedStringLen(colorStringSlice[i+oneThirdPoint].str, columnWidth)
+			ctfmt.Printf(c1, winflag,"%s  ", s1)
 		} else {
 			fmt.Println()
 		}
 
 		if i + 2*oneThirdPoint < len(colorStringSlice) {
-			c1 := colorStringSlice[i+2*oneThirdPoint].color
-			s1 := colorStringSlice[i+2*oneThirdPoint].str
-			ctfmt.Printf(c1, winflag," %s\n", s1)
+			c2 := colorStringSlice[i+2*oneThirdPoint].color
+			s2 := fixedStringLen(colorStringSlice[i+2*oneThirdPoint].str, columnWidth)
+			ctfmt.Printf(c2, winflag,"%s\n", s2)
 		} else {
 			fmt.Println()
 		}
@@ -553,11 +554,13 @@ func main() {
 } // end main regex
 
 //-------------------------------------------------------------------- InsertByteSlice
+
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
 
 //---------------------------------------------------------------------- AddCommas
+
 func AddCommas(instr string) string {
 	// var Comma []byte = []byte{','}  compiler flagged this as type not needed
 	Comma := []byte{','}
@@ -575,15 +578,17 @@ func AddCommas(instr string) string {
 } // AddCommas
 
 // ------------------------------ IsSymlink ---------------------------
+
 func IsSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
 	result := intermed != 0
 	return result
 } // IsSymlink
 
+/*
+{{{
 // ---------------------------- GetIDname -----------------------------------------------------------
 func GetIDname(uidStr string) string {
-
 	if len(uidStr) == 0 {
 		return ""
 	}
@@ -591,12 +596,10 @@ func GetIDname(uidStr string) string {
 	if err != nil {
 		panic("uid not found")
 	}
-
 	idname := ptrToUser.Username
 	return idname
-
-} // GetIDname
-
+}}}
+*/
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -770,9 +773,34 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
+/*
+{{{
 func truncStr(s string, w int) string {
 	if w <= 0 || len(s) < w {
 		return s
 	}
 	return s[:w]
-}
+}}}
+*/
+
+// --------------------------------------------------- fixedString ---------------------------------------
+
+func fixedStringLen(s string, size int) string {
+	var built strings.Builder
+
+	if len(s) > size { // need to truncate the string
+		return s[:size]
+	} else if len(s) == size {
+		return s
+	} else if len(s) < size { // need to pad the string
+		needSpaces := size - len(s)
+		built.Grow(size)
+		built.WriteString(s)
+		spaces := strings.Repeat(" ", needSpaces)
+		built.WriteString(spaces)
+		return built.String()
+	} else {
+		fmt.Fprintln(os.Stderr, " makeStrFixed input string length is strange.  It is", len(s))
+		return s
+	}
+} // end fixedStringLen

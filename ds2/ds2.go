@@ -661,7 +661,7 @@ func main() {
 
 	// Now to output the colorStringSlice, 2 items per line, but I want the sort to remain vertical
 	halfpoint := len(colorStringSlice) / 2
-	columnWidth := autowidth/2 - 2
+	columnWidth := w/2 - 2
 
 	for i := 0; i < halfpoint; i++ {
 		c0 := colorStringSlice[i].color

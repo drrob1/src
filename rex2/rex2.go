@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jul 25, 2021"
+const LastAltered = "Jul 28, 2021"
 
 /*
 Revision History
@@ -103,7 +103,7 @@ Revision History
                But I'm keeping the display of 4 significant figures.
                I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
-
+28 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 */
 
 type dirAliasMapType map[string]string
@@ -115,15 +115,13 @@ type DsrtParamType struct {
 
 type colorizedStr struct {
 	color ct.Color
-	str string
+	str   string
 }
 
 const defaultlineswin = 50
 const defaultlineslinux = 40
-const maxTruncationValue = 60
 const maxWidth = 300
-const dateSize = 30  // space the filesize and date occupy.
-
+const minWidth = 90
 
 var directoryAliasesMap dirAliasMapType
 
@@ -142,22 +140,22 @@ func main() {
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtparam = ProcessEnvironString() // This is a function below.
 
-	autoDefaults := term.IsTerminal(0)
+	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
 
-	if ! autoDefaults {
+	if !autoDefaults {
 		if winflag {
 			comspec, ok := os.LookupEnv("ComSpec")
 			if ok {
-				bytesbuf := bytes.NewBuffer([]byte{})  // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
 				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
 				tcc.Stdout = bytesbuf
 				tcc.Run()
 				colstr := bytesbuf.String()
 				lines := strings.Split(colstr, "\n")
 				trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
-				autowidth , err = strconv.Atoi(trimmedLine)
+				autowidth, err = strconv.Atoi(trimmedLine)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
 				}
@@ -179,11 +177,16 @@ func main() {
 			}
 		} else {
 			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+			autowidth = minWidth
+			autoheight = defaultlineslinux
 		}
 	} else {
-		autowidth, autoheight, err = term.GetSize(0)
+		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
 			autoDefaults = false
+			fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
+			autoheight = defaultlineslinux
+			autowidth = minWidth
 		}
 	}
 
@@ -193,7 +196,7 @@ func main() {
 		if dsrtparam.numlines > 0 { // setting this on command line take priority over defaults
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 6
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineslinux
 		}
@@ -202,7 +205,7 @@ func main() {
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
 		} else if autoheight > 0 {
-			numoflines = autoheight - 6
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineswin
 		}
@@ -245,8 +248,8 @@ func main() {
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
 	var testFlag bool
-	flag.BoolVar(&testFlag,"test", false, "enter a testing mode to println more variables")
-	flag.BoolVar(&testFlag,"v", false, "enter a verbose (testing) mode to println more variables")
+	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
+	flag.BoolVar(&testFlag, "v", false, "enter a verbose (testing) mode to println more variables")
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
@@ -254,11 +257,11 @@ func main() {
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var w int
-	flag.IntVar( &w, "w", 0, " truncation width for filename.")
+	flag.IntVar(&w, "w", 0, "width of full displayed screen.")
 
 	flag.Parse()
 
-	fmt.Print(" rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	fmt.Print(" rex2 will display sorted by date or size in 2 column2.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
 
 	if testFlag {
@@ -332,7 +335,7 @@ func main() {
 	startdir := workingdir
 
 	if w == 0 { // w not set by command line flag
-		w = dsrtparam.w
+		w = dsrtparam.w // if still zero then dsw environ var not set.
 	}
 	if autowidth > 0 {
 		if w <= 0 || w > maxWidth {
@@ -340,13 +343,13 @@ func main() {
 		}
 	} else {
 		if w <= 0 || w > maxWidth {
-			w = maxTruncationValue
+			w = minWidth
 		}
 	}
 
 	commandlineSlice := flag.Args()
 	if len(commandlineSlice) == 0 {
-		inputRegEx = "."   // no regex entered on command line, default is everything, esp useful for testing.
+		inputRegEx = "." // no regex entered on command line, default is everything, esp useful for testing.
 	} else if len(commandlineSlice) == 1 {
 		inputRegEx = commandlineSlice[0]
 	} else if len(commandlineSlice) == 2 {
@@ -413,7 +416,7 @@ func main() {
 	}
 
 	files, err = openedDir.Readdir(0) // zero means return all filemode entries into the returned slice
-	if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+	if err != nil {                   // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 		log.Println(err, "so calling my own MyReadDir.")
 		files = MyReadDir(workingdir)
 	}
@@ -452,21 +455,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	halfwidth := w/2 - dateSize
-	if halfwidth > maxTruncationValue {
-		halfwidth = maxTruncationValue
-	}
-
 	for _, f := range files {
 		NAME := strings.ToLower(f.Name())
-		nameStr := truncStr(f.Name(), halfwidth)
+		nameStr := f.Name() //  truncStr(f.Name(), halfwidth)
 		if BOOL := regex.MatchString(NAME); BOOL {
 			if *excludeFlag {
 				if flag := excludeRegex.MatchString(strings.ToLower(f.Name())); flag {
 					continue
 				}
 			}
-			modtimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
+			//modtimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
+			modtimeStr := f.ModTime().Format("Jan-02-2006_15:04")
 			sizestr := ""
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
@@ -475,24 +474,25 @@ func main() {
 					if f.Size() > 100000 {
 						sizestr = AddCommas(sizestr)
 					}
-					s := fmt.Sprintf("%9s %s %s", sizestr, modtimeStr, nameStr)
-					colorized := colorizedStr{color: ct.White, str: s}
+					s := fmt.Sprintf("%8s %s %s", sizestr, modtimeStr, nameStr)
+					_, color := getMagnitudeString(f.Size())
+					colorized := colorizedStr{color: color, str: s}
 					colorStringSlice = append(colorStringSlice, colorized)
 				} else {
 					var color ct.Color
 					sizestr, color = getMagnitudeString(f.Size())
-					s := fmt.Sprintf("%-9s %s %s", sizestr, modtimeStr, nameStr)
+					s := fmt.Sprintf("%-8s %s %s", sizestr, modtimeStr, nameStr)
 					colorized := colorizedStr{color: color, str: s}
 					colorStringSlice = append(colorStringSlice, colorized)
 				}
 				count++
 			} else if IsSymlink(f.Mode()) {
-				s := fmt.Sprintf("%7s %s <%s>", sizestr, modtimeStr, nameStr)
+				s := fmt.Sprintf("%6s %s <%s>", sizestr, modtimeStr, nameStr)
 				colorized := colorizedStr{color: ct.White, str: s}
 				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			} else if Dirlist && f.IsDir() {
-				s := fmt.Sprintf("%7s %s (%s)", sizestr, modtimeStr, nameStr)
+				s := fmt.Sprintf("%6s %s (%s)", sizestr, modtimeStr, nameStr)
 				colorized := colorizedStr{color: ct.White, str: s}
 				colorStringSlice = append(colorStringSlice, colorized)
 				count++
@@ -505,25 +505,20 @@ func main() {
 
 	// Output the colorStringSlice, 2 items per line for this version of the code.
 	halfpoint := len(colorStringSlice) / 2
+	columnwidth := w/2 - 2
+
 	for i := 0; i < halfpoint; i++ {
 		c0 := colorStringSlice[i].color
-		s0 := colorStringSlice[i].str
-		if w > 59 {
-			ctfmt.Printf(c0, winflag, "%-93s", s0)
-		} else if w > 54 {
-			ctfmt.Printf(c0, winflag, "%-88s", s0)
-		} else if w > 49 {
-			ctfmt.Printf(c0, winflag, "%-83s", s0)
-		} else {
-			ctfmt.Printf(c0, winflag, "%-78s", s0)
-		}
+		s0 := fixedStringLen(colorStringSlice[i].str, columnwidth)
+		ctfmt.Printf(c0, winflag, "%s  ", s0)
 
-		if i + halfpoint < len(colorStringSlice) {
+		if i+halfpoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+halfpoint].color
-			s1 := colorStringSlice[i+halfpoint].str
-			ctfmt.Printf(c1, winflag,"    %s\n", s1)
+			s1 := fixedStringLen(colorStringSlice[i+halfpoint].str, columnwidth)
+			ctfmt.Printf(c1, winflag, "%s\n", s1)
+		} else {
+			fmt.Println()
 		}
-
 	}
 
 	fmt.Println()
@@ -653,7 +648,6 @@ func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 	return directoryAliasesMap
 }
 
-
 // --------------------------- MakeSubst -------------------------------------------
 
 func MakeSubst(instr string, r1, r2 rune) string {
@@ -671,7 +665,6 @@ func MakeSubst(instr string, r1, r2 rune) string {
 	}
 	return string(inRune)
 } // makesubst
-
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
@@ -692,7 +685,6 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
 } // ProcessDirectoryAliases
-
 
 // ------------------------------- MyReadDir -----------------------------------
 
@@ -751,9 +743,34 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
+/*
+{{{
 func truncStr(s string, w int) string {
 	if w <= 0 || len(s) < w {
 		return s
 	}
 	return s[:w]
-}
+}}}
+*/
+
+// --------------------------------------------------- fixedString ---------------------------------------
+
+func fixedStringLen(s string, size int) string {
+	var built strings.Builder
+
+	if len(s) > size { // need to truncate the string
+		return s[:size]
+	} else if len(s) == size {
+		return s
+	} else if len(s) < size { // need to pad the string
+		needSpaces := size - len(s)
+		built.Grow(size)
+		built.WriteString(s)
+		spaces := strings.Repeat(" ", needSpaces)
+		built.WriteString(spaces)
+		return built.String()
+	} else {
+		fmt.Fprintln(os.Stderr, " makeStrFixed input string length is strange.  It is", len(s))
+		return s
+	}
+} // end fixedStringLen

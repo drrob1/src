@@ -148,7 +148,7 @@ func main() {
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
-	ctfmt.Print(ct.Magenta, winflag, "dsc3 will display Directory SoRTed by date or size in 3 columns.  LastAltered ", LastAltered, ", compiled using ",
+	ctfmt.Print(ct.Magenta, winflag, "ds3 will display Directory SoRTed by date or size in 3 columns.  LastAltered ", LastAltered, ", compiled using ",
 		runtime.Version(), ".")
 	fmt.Println()
 
@@ -662,7 +662,7 @@ func main() {
 
 	// Now to output the colorStringSlice, 3 items per line, but I want the sort to remain vertical
 	onethirdpoint := len(colorStringSlice) / 3
-	columnWidth := autowidth/3 - 3 // accounting for the extra spaces added by the formatting.
+	columnWidth := w/3 - 3 // accounting for the extra spaces added by the formatting.
 	for i := 0; i < onethirdpoint; i++ {
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
