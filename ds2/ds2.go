@@ -1,4 +1,4 @@
-// dsrt.go -- directory sort
+// ds2.go -- directory sort output in a 2 column display
 
 package main
 
@@ -11,7 +11,7 @@ import (
 	"golang.org/x/term"
 	"os"
 	"os/exec"
-	"os/user"
+	//"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "26 July 2021"
+const LastAltered = "27 July 2021"
 
 /*
 Revision History
@@ -105,6 +105,7 @@ Revision History
 24 Jul 21 -- I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 25 Jul 21 -- Now called ds2.go
+27 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 */
 
 type dirAliasMapType map[string]string
@@ -122,11 +123,11 @@ type colorizedStr struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	const maxTruncationValue = 60
-	const minTruncationValue = 40
-
+	//	const maxTruncationValue = 60
+	//	const minTruncationValue = 40
 	const maxwidth = 300
-	const datesize = 30 // amount of space the filesize and date take up in each column
+	const minwidth = 210
+	//	const datesize = 30 // amount of space the filesize and date take up in each column
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var files []os.FileInfo
@@ -185,6 +186,9 @@ func main() {
 			}
 		} else {
 			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+			autoheight = defaultlineslinux
+			autowidth = minwidth
+
 		}
 	} else {
 		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd()))
@@ -280,7 +284,7 @@ func main() {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname, ", autoDefaults is", autoDefaults)
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname, ".")
 		fmt.Println()
 		fmt.Println(" After flag.Parse(); option switches w=", w, "nscreens=", *nscreens, "Nlines=", NLines)
 		fmt.Println()
@@ -338,10 +342,9 @@ func main() {
 	CleanFileName := ""
 	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
-	// w is either the full screen width or the width of an indiv column.  I have to think about this more.
-	// I'll leave it as the full screen width
+	// w is the full screen width.
 	if w == 0 { // w not set by flag option
-		w = dsrtparam.w
+		w = dsrtparam.w // will be zero if dsw environ var is not set.
 	}
 	if autowidth > 0 {
 		if w <= 0 || w > maxwidth { // w not set by flag.Parse or dsw environ var
@@ -349,7 +352,7 @@ func main() {
 		}
 	} else {
 		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-			w = maxTruncationValue * 2
+			w = minwidth
 		}
 	}
 
@@ -531,18 +534,12 @@ func main() {
 	// The entire contents of the directory is read in by either ioutil.ReadDir or MyReadDir.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 	// This is still the way it works for Windows.
 	// On linux, bash populated the command line by globbing, or no command line params were entered
-	halfwidth := w/2 - datesize // this value is used to truncate the filename.
-	if halfwidth > maxTruncationValue {
-		halfwidth = maxTruncationValue
-	}
-	if testFlag {
-		fmt.Println(" halfwdth value, used for truncation value of name string, is", halfwidth)
-	}
 
 	if linuxflag {
 		for _, f := range files {
-			modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
-			nameStr := truncStr(f.Name(), halfwidth)
+			//modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
+			modTimeStr := f.ModTime().Format("Jan-02-2006_15:04")
+			nameStr := f.Name() // truncStr(f.Name(), halfwidth)
 			sizestr := ""
 			if FilenameList && f.Mode().IsRegular() {
 				SizeTotal += f.Size()
@@ -566,25 +563,25 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						s := fmt.Sprintf("%9s %s %s", sizestr, modTimeStr, nameStr)
+						s := fmt.Sprintf("%7s %s %s", sizestr, modTimeStr, nameStr)
 						colorized := colorizedStr{color: ct.White, str: s}
 						colorStringSlice = append(colorStringSlice, colorized)
 					} else {
 						var color ct.Color
 						sizestr, color = getMagnitudeString(f.Size())
-						s := fmt.Sprintf("%-9s %s %s", sizestr, modTimeStr, nameStr)
+						s := fmt.Sprintf("%-7s %s %s", sizestr, modTimeStr, nameStr)
 						colorized := colorizedStr{color: color, str: s}
 						colorStringSlice = append(colorStringSlice, colorized)
 					}
 					count++
 				}
 			} else if IsSymlink(f.Mode()) {
-				s := fmt.Sprintf("%9s %s <%s>", sizestr, modTimeStr, nameStr)
+				s := fmt.Sprintf("%5s %s <%s>", sizestr, modTimeStr, nameStr)
 				colorized := colorizedStr{color: ct.White, str: s}
 				colorStringSlice = append(colorStringSlice, colorized)
 				count++
 			} else if Dirlist && f.IsDir() {
-				s := fmt.Sprintf("%9s %s (%s)", sizestr, modTimeStr, nameStr)
+				s := fmt.Sprintf("%5s %s (%s)", sizestr, modTimeStr, nameStr)
 				colorized := colorizedStr{color: ct.White, str: s}
 				colorStringSlice = append(colorStringSlice, colorized)
 				count++
@@ -597,7 +594,7 @@ func main() {
 		for _, f := range files {
 			showthis := false
 			NAME := strings.ToLower(f.Name())
-			nameStr := truncStr(f.Name(), halfwidth)
+			nameStr := f.Name() // truncStr(f.Name(), halfwidth)
 			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
 			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
 			// This way, the condition below can be BOOL && thisNewFlag
@@ -620,7 +617,8 @@ func main() {
 			}
 
 			if showthis {
-				modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
+				//modTimeStr := f.ModTime().Format("Jan-02-2006_15:04:05")
+				modTimeStr := f.ModTime().Format("Jan-02-2006_15:04")
 				sizestr := ""
 				if FilenameList && f.Mode().IsRegular() {
 					SizeTotal += f.Size()
@@ -629,27 +627,27 @@ func main() {
 						if f.Size() > 100000 {
 							sizestr = AddCommas(sizestr)
 						}
-						s := fmt.Sprintf("%9s %s %s", sizestr, modTimeStr, nameStr)
+						s := fmt.Sprintf("%7s %s %s", sizestr, modTimeStr, nameStr)
 						var color ct.Color = ct.White
 						colorized := colorizedStr{color: color, str: s}
 						colorStringSlice = append(colorStringSlice, colorized)
 					} else {
 						var color ct.Color
 						sizestr, color = getMagnitudeString(f.Size())
-						s := fmt.Sprintf("%-9s %s %s", sizestr, modTimeStr, nameStr)
+						s := fmt.Sprintf("%-7s %s %s", sizestr, modTimeStr, nameStr)
 						colorized := colorizedStr{color: color, str: s}
 						colorStringSlice = append(colorStringSlice, colorized)
 					}
 					count++
 				} else if IsSymlink(f.Mode()) {
 					var color ct.Color = ct.White
-					s := fmt.Sprintf("%9s %s <%s>", sizestr, modTimeStr, nameStr)
+					s := fmt.Sprintf("%5s %s <%s>", sizestr, modTimeStr, nameStr)
 					colorized := colorizedStr{color: color, str: s}
 					colorStringSlice = append(colorStringSlice, colorized)
 					count++
 				} else if Dirlist && f.IsDir() {
 					var color ct.Color = ct.White
-					s := fmt.Sprintf("%9s %s (%s)", sizestr, modTimeStr, nameStr)
+					s := fmt.Sprintf("%5s %s (%s)", sizestr, modTimeStr, nameStr)
 					colorized := colorizedStr{color: color, str: s}
 					colorStringSlice = append(colorStringSlice, colorized)
 					count++
@@ -663,29 +661,16 @@ func main() {
 
 	// Now to output the colorStringSlice, 2 items per line, but I want the sort to remain vertical
 	halfpoint := len(colorStringSlice) / 2
-	if halfpoint > maxTruncationValue {
-		halfpoint = maxTruncationValue
-	} else if halfpoint < minTruncationValue {
-		halfpoint = minTruncationValue
-	}
+	columnWidth := autowidth/2 - 2
 
 	for i := 0; i < halfpoint; i++ {
 		c0 := colorStringSlice[i].color
-		s0 := colorStringSlice[i].str
-		if halfwidth > 59 {
-			ctfmt.Printf(c0, winflag, "%-93s", s0)
-		} else if halfwidth > 54 {
-			ctfmt.Printf(c0, winflag, "%-88s", s0)
-		} else if halfwidth > 49 {
-			ctfmt.Printf(c0, winflag, "%-83s", s0)
-		} else {
-			ctfmt.Printf(c0, winflag, "%-78s", s0)
-		}
-
+		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
+		ctfmt.Printf(c0, winflag, "%s", s0)
 		if i+halfpoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+halfpoint].color
-			s1 := colorStringSlice[i+halfpoint].str
-			ctfmt.Printf(c1, winflag, "     %s\n", s1)
+			s1 := fixedStringLen(colorStringSlice[i+halfpoint].str, columnWidth)
+			ctfmt.Printf(c1, winflag, "  %s\n", s1)
 		} else {
 			fmt.Println()
 		}
@@ -744,22 +729,26 @@ func IsSymlink(m os.FileMode) bool {
 	return result
 } // IsSymlink
 
-// ---------------------------- GetIDname -----------------------------------------------------------
+/*
+{{{
+	// ---------------------------- GetIDname -----------------------------------------------------------
+	func
+	GetIDname(uidStr
+	string) string{
 
-func GetIDname(uidStr string) string {
-
-	if len(uidStr) == 0 {
+		if len(uidStr) == 0{
 		return ""
 	}
-	ptrToUser, err := user.LookupId(uidStr)
-	if err != nil {
+		ptrToUser, err := user.LookupId(uidStr)
+		if err != nil{
 		fmt.Fprintln(os.Stderr, err)
 	}
 
-	idname := ptrToUser.Username
-	return idname
-
-} // GetIDname
+		idname := ptrToUser.Username
+		return idname
+	} // GetIDname
+}}}
+*/
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -931,9 +920,35 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
+/*
+{{{
 func truncStr(s string, w int) string {
 	if w <= 0 || len(s) < w {
 		return s
 	}
 	return s[:w]
 }
+}}}
+*/
+
+// --------------------------------------------------- fixedString ---------------------------------------
+
+func fixedStringLen(s string, size int) string {
+	var built strings.Builder
+
+	if len(s) > size { // need to truncate the string
+		return s[:size]
+	} else if len(s) == size {
+		return s
+	} else if len(s) < size { // need to pad the string
+		needSpaces := size - len(s)
+		built.Grow(size)
+		built.WriteString(s)
+		spaces := strings.Repeat(" ", needSpaces)
+		built.WriteString(spaces)
+		return built.String()
+	} else {
+		fmt.Fprintln(os.Stderr, " makeStrFixed input string length is strange.  It is", len(s))
+		return s
+	}
+} // end fixedStringLen
