@@ -674,6 +674,7 @@ func main() {
 			ctfmt.Printf(c1, winflag, "%s  ", s1)
 		} else {
 			fmt.Println()
+			continue
 		}
 
 		if (i+2*onethirdpoint < len(colorStringSlice)) && (w >= minwidth) {
