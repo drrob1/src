@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jul 28, 2021"
+const LastAltered = "Jul 29, 2021"
 
 /*
 Revision History
@@ -104,6 +104,7 @@ Revision History
                I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- Will now use fixedStringLen to truncate the columns
+29 Jul 21 -- Changed value of minWidth, and will only print 2nd column if autoWidth > minWidth.
 */
 
 type dirAliasMapType map[string]string
@@ -121,7 +122,8 @@ type colorizedStr struct {
 const defaultlineswin = 50
 const defaultlineslinux = 40
 const maxWidth = 300
-const minWidth = 90
+const minWidth = 200
+const minWidth2ndCol = 160
 
 var directoryAliasesMap dirAliasMapType
 
@@ -514,7 +516,7 @@ func main() {
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s  ", s0)
 
-		if i + oneThirdPoint < len(colorStringSlice) {
+		if (i + oneThirdPoint < len(colorStringSlice)) && (w >= minWidth2ndCol) {
 			c1 := colorStringSlice[i+oneThirdPoint].color
 			s1 := fixedStringLen(colorStringSlice[i+oneThirdPoint].str, columnWidth)
 			ctfmt.Printf(c1, winflag,"%s  ", s1)
@@ -522,7 +524,7 @@ func main() {
 			fmt.Println()
 		}
 
-		if i + 2*oneThirdPoint < len(colorStringSlice) {
+		if (i + 2*oneThirdPoint < len(colorStringSlice)) && (w >= minWidth) {
 			c2 := colorStringSlice[i+2*oneThirdPoint].color
 			s2 := fixedStringLen(colorStringSlice[i+2*oneThirdPoint].str, columnWidth)
 			ctfmt.Printf(c2, winflag,"%s\n", s2)

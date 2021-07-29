@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "27 July 2021"
+const LastAltered = "29 July 2021"
 
 /*
 Revision History
@@ -106,6 +106,7 @@ Revision History
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 25 Jul 21 -- Now called ds2.go
 27 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
+29 Jul 21 -- Changed value of minWidth, and will only print 2nd column if autoWidth > minWidth.
 */
 
 type dirAliasMapType map[string]string
@@ -123,11 +124,9 @@ type colorizedStr struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
-	//	const maxTruncationValue = 60
-	//	const minTruncationValue = 40
 	const maxwidth = 300
-	const minwidth = 210
-	//	const datesize = 30 // amount of space the filesize and date take up in each column
+	const minwidth = 160
+
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var files []os.FileInfo
@@ -667,7 +666,7 @@ func main() {
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s", s0)
-		if i+halfpoint < len(colorStringSlice) {
+		if (i+halfpoint < len(colorStringSlice)) && (w >= minwidth) {
 			c1 := colorStringSlice[i+halfpoint].color
 			s1 := fixedStringLen(colorStringSlice[i+halfpoint].str, columnWidth)
 			ctfmt.Printf(c1, winflag, "  %s\n", s1)
