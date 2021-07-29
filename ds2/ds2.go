@@ -106,7 +106,7 @@ Revision History
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 25 Jul 21 -- Now called ds2.go
 27 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
-29 Jul 21 -- Changed value of minWidth, and will only print 2nd column if autoWidth > minWidth.
+29 Jul 21 -- Changed value of minWidth, and will check against minwidth.
 */
 
 type dirAliasMapType map[string]string
@@ -194,6 +194,11 @@ func main() {
 		if err != nil {
 			autoDefaults = false
 		}
+	}
+
+	if autowidth < minwidth {
+		fmt.Println(" Autowidth is", autowidth, "which is too small.  Better you should use ds.")
+		os.Exit(1)
 	}
 
 	if linuxflag {
@@ -666,7 +671,7 @@ func main() {
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s", s0)
-		if (i+halfpoint < len(colorStringSlice)) && (w >= minwidth) {
+		if i+halfpoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+halfpoint].color
 			s1 := fixedStringLen(colorStringSlice[i+halfpoint].str, columnWidth)
 			ctfmt.Printf(c1, winflag, "  %s\n", s1)

@@ -104,7 +104,7 @@ Revision History
                I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- Will now use fixedStringLen to truncate the columns
-29 Jul 21 -- Changed value of minWidth, and will only print 2nd column if autoWidth > minWidth.
+29 Jul 21 -- Changed value of minWidth, and will check against minwidth2ndcol.
 */
 
 type dirAliasMapType map[string]string
@@ -190,6 +190,11 @@ func main() {
 			autowidth = minWidth
 			autoheight = defaultlineslinux
 		}
+	}
+
+	if autowidth < minWidth2ndCol {
+		fmt.Println(" Autowidth is", autowidth, "which is too small.  Better you should use rex.")
+		os.Exit(1)
 	}
 
 	if linuxflag {
@@ -516,7 +521,7 @@ func main() {
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s  ", s0)
 
-		if (i + oneThirdPoint < len(colorStringSlice)) && (w >= minWidth2ndCol) {
+		if i + oneThirdPoint < len(colorStringSlice) {
 			c1 := colorStringSlice[i+oneThirdPoint].color
 			s1 := fixedStringLen(colorStringSlice[i+oneThirdPoint].str, columnWidth)
 			ctfmt.Printf(c1, winflag,"%s  ", s1)
@@ -525,7 +530,7 @@ func main() {
 			continue
 		}
 
-		if (i + 2*oneThirdPoint < len(colorStringSlice)) && (w >= minWidth) {
+		if i + 2*oneThirdPoint < len(colorStringSlice) {
 			c2 := colorStringSlice[i+2*oneThirdPoint].color
 			s2 := fixedStringLen(colorStringSlice[i+2*oneThirdPoint].str, columnWidth)
 			ctfmt.Printf(c2, winflag,"%s\n", s2)

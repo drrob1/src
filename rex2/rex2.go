@@ -104,7 +104,7 @@ Revision History
                I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
-29 Jul 21 -- Changed value of minWidth, and will only print 2nd column if autoWidth > minWidth.
+29 Jul 21 -- Changed value of minWidth, and check against minwidth.
 */
 
 type dirAliasMapType map[string]string
