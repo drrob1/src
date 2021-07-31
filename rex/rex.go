@@ -12,7 +12,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -23,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jul 28, 2021"
+const LastAltered = "Jul 31, 2021"
 
 /*
 Revision History
@@ -507,7 +506,7 @@ func main() {
 	}
 
 	// Output the colorStringSlice, 1 items per line for this version of the code.
-	columnWidth := w - 1
+	columnWidth := w - 2  // I needed to trim this as determined by testing runs on the other computers
 	for _, css := range colorStringSlice {
 		c0 := css.color
 		s0 := fixedStringLen(css.str, columnWidth)
@@ -531,7 +530,7 @@ func main() {
 		fmt.Println(".")
 	}
 	fmt.Println()
-} // end main regex
+} // end main rex
 
 //-------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
@@ -539,6 +538,7 @@ func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 } // InsertIntoByteSlice
 
 //---------------------------------------------------------------------- AddCommas
+
 func AddCommas(instr string) string {
 	// var Comma []byte = []byte{','}  compiler flagged this as type not needed
 	Comma := []byte{','}
@@ -556,12 +556,14 @@ func AddCommas(instr string) string {
 } // AddCommas
 
 // ------------------------------ IsSymlink ---------------------------
+
 func IsSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
 	result := intermed != 0
 	return result
 } // IsSymlink
 
+/*
 // ---------------------------- GetIDname -----------------------------------------------------------
 func GetIDname(uidStr string) string {
 
@@ -577,6 +579,8 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
+
+ */
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
