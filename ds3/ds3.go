@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "29 July 2021"
+const LastAltered = "1 Aug 2021"
 
 /*
 Revision History
@@ -667,6 +667,11 @@ func main() {
 
 	// Now to output the colorStringSlice, 3 items per line, but I want the sort to remain vertical
 	onethirdpoint := len(colorStringSlice) / 3
+	if testFlag {
+		fmt.Println(" oneThirdPoint =", onethirdpoint, ", len(colorStringSlice) =", len(colorStringSlice))
+		fmt.Println()
+	}
+
 	columnWidth := w/3 - 3 // accounting for the extra spaces added by the formatting.
 	for i := 0; i < onethirdpoint; i++ {
 		c0 := colorStringSlice[i].color

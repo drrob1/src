@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jul 29, 2021"
+const LastAltered = "Aug 1, 2021"
 
 /*
 Revision History
@@ -516,6 +516,10 @@ func main() {
 	}
 
 	oneThirdPoint := len(colorStringSlice)/3
+	if testFlag {
+		fmt.Println(" oneThirdPoint =", oneThirdPoint, ", len(colorStringSlice) =", len(colorStringSlice))
+		fmt.Println()
+	}
 	for i := 0; i < oneThirdPoint; i++ {
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
