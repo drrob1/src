@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "1 Aug 2021"
+const LastAltered = "2 Aug 2021"
 
 /*
 Revision History
@@ -290,7 +290,7 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		fmt.Println()
-		fmt.Println(" After flag.Parse(): option switches w=", w, "nscreens=", nscreens, "Nlines=", NLines)
+		fmt.Println(" After flag.Parse(): option switches w=", w, "nscreens=", *nscreens, "Nlines=", NLines)
 		fmt.Println()
 	}
 
@@ -478,6 +478,10 @@ func main() {
 
 	if len(CleanFileName) == 0 {
 		CleanFileName = "*"
+	}
+
+	if testFlag {
+		fmt.Println(" CleanDirName =", CleanDirName, ", and CleanFileName =", CleanFileName)
 	}
 
 	if !havefiles {

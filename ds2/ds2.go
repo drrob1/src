@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "29 July 2021"
+const LastAltered = "2 Aug 2021"
 
 /*
 Revision History
@@ -477,6 +477,10 @@ func main() {
 
 	if len(CleanFileName) == 0 {
 		CleanFileName = "*"
+	}
+
+	if testFlag {
+		fmt.Println(" CleanDirName =", CleanDirName, ", and CleanFileName =", CleanFileName)
 	}
 
 	if !havefiles {
