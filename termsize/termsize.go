@@ -49,6 +49,7 @@ func main() {
 	fmt.Println(" after syscall stuff.  Row =", termsize.Row, ", Col =", termsize.Col, ", Xpix =", termsize.Xpixel, ", Ypix =", termsize.Ypixel, ".")
 	fmt.Println()
 
+	fmt.Println(" int(Stdout) =", int(os.Stdout.Fd()), ", int(Stdin) =", int(os.Stdin.Fd()), "and int(Stderr) =", int(os.Stderr.Fd()))
 
 //	size, _ := ts.GetSize()
 //	fmt.Println(" ts.GetSize says", size.Rows(), "rows and", size.Cols(), "columns.")

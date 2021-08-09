@@ -42,6 +42,7 @@ package main
                 And discovered a bug when a 4 digit year is entered.
  18 Jun 21 -- Juneteenth added, as it became a legal federal holiday yesterday, signed into law by Biden.
                 And converted to modules.
+  9 Aug 21 -- Added -v to be a synonym of test.
 */
 
 import (
@@ -66,9 +67,10 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "June 18, 2021"
+const LastCompiled = "Aug 9, 2021"
 
 // BLANKCHR is used in DAY2STR.
+
 const BLANKCHR = ' '
 
 // HorizTab needs comment according to golint
@@ -415,6 +417,7 @@ func Show3MonthRow(mn int) { // Modified from WrOnePageYear.  main() makes sure 
 } // Show3MonthRow
 
 // ----------------------------- HolidayAssign ---------------------------------
+
 func HolidayAssign(year int) {
 
 	var Holiday holidaycalc.HolType
@@ -672,6 +675,7 @@ func SetMonthNumber(s string) int { // returns -1 if there was an error
 }
 
 // ----------------------------------- AssignYear ----------------------------------------------------
+
 func AssignYear(y int) {
 
 	if y < 1800 || y > 2100 {
@@ -746,7 +750,9 @@ func main() {
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "help", false, "print help message.")
 
-	var testFlag = flag.Bool("test", false, "test mode flag.") // pointer
+	var testFlag bool
+	flag.BoolVar(&testFlag,"test", false, "test mode flag.")
+	flag.BoolVar(&testFlag, "v", false, "Verbose (test) mode.")
 
 	flag.Parse()
 
@@ -815,7 +821,7 @@ func main() {
 		RequestedMonthNumber = 6
 	}
 
-	if *testFlag {
+	if testFlag {
 		fmt.Println()
 		fmt.Println(" using year", year, ", using month", MONNAMSHORT[RequestedMonthNumber])
 		fmt.Println()
@@ -855,7 +861,7 @@ func main() {
 		}
 	}
 
-	if *testFlag {
+	if testFlag {
 		fmt.Println()
 		fmt.Println(" Completed year matrix.  AllowFilesFlag is", AllowFilesFlag, ".")
 		fmt.Print(" pausing.  Hit <enter> to contiue.")
@@ -870,7 +876,7 @@ func main() {
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	if *testFlag {
+	if testFlag {
 		fmt.Printf(" %s was last linked on %s.  Working directory is %s. \n", ExecFI.Name(), LastLinkedTimeStamp, workingdir)
 		fmt.Printf(" Full name of executable file is %s \n", execname)
 	}
