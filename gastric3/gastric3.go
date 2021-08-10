@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 	//
-	"filepicker"
-	"getcommandline"
-	"tknptr"
+	"src/filepicker"
+	"src/getcommandline"
+	"src/tknptr"
 )
 
 /*
@@ -67,9 +67,11 @@ REVISION HISTORY
              So I have to read both count points on the line, assuming first is anterior and 2nd is posterior.
              And changed to more idiomatic Go for the slices.
 20 Jan 21 -- Will issue a warning if a line does not have at least 2 points.  And it's inauguration day.  But that's not important now.
+10 Aug 21 -- Fixed minor output bug in format statement for a line only output to the file and not to screen.  Forgot to use exp() and newline char.
+               and converted to modules.
 */
 
-const LastAltered = "Jan 20, 2021"
+const LastAltered = "Aug 10, 2021"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -423,8 +425,8 @@ func main() {
 
 	interceptUnWtStats, slopeUnWtStats := stat.LinearRegression(xvector, yvector, unwtvector, false)
 	halflifeUnWtStats := -ln2 / slopeUnWtStats
-	s = fmt.Sprintf(" gonum.org unweighted LinearRegression halflife is %.2f minutes, exp(intercpt) is %.2f counts. 'n",
-		halflifeUnWtStats, interceptUnWtStats)
+	s = fmt.Sprintf(" gonum.org unweighted LinearRegression halflife is %.2f minutes, exp(intercpt) is %.2f counts. \n",
+		halflifeUnWtStats, exp(interceptUnWtStats))
 	// fmt.Print(s)  same as original unweighted slope and intercept.  So I won't display it but I will write it to the file.
 	writestr(s)
 	writerune()
