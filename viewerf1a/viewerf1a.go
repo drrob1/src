@@ -3,8 +3,8 @@
 REVISION HISTORY
 -------- -------
  9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
-             First, I'm changing the function constants to the version that's more readable to me.
-
+             First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
+             import more parts of fyne.io than the unmodified version.
 
 */
 

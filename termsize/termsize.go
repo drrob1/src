@@ -2,29 +2,22 @@ package main
 
 import (
 	"fmt"
+	"golang.org/x/term"
 	"os"
 	"syscall"
 	"unsafe"
-
-	//"src/github.com/nathan-fiscaletti/consolesize.go"
-//	"github.com/nathan-fiscaletti/consolesize.go"
-
-	//"src/golang.org/x/term"
-	"golang.org/x/term"
-	//"src/github.com/olekukonko/ts"
-//	"github.com/olekukonko/ts"
-
-	// src/github.com/kopoli/go-terminal-size
-//	tsize "github.com/kopoli/go-terminal-size"
 )
+
+//  Aug 9, 2021
+//  I ran the code below that displays int(Stdin, Stdout and Stderr) on linux and Windows 10.  I got the expected result for linux of 0, 1, and 2.
+//  However, the results on Windows 10 were very surprising: Stdin=80, Stdout=84 and Stderr=88.  No wonder why IsTerminal(0) only worked on linux!
+//
 
 type terminalSize struct {
 	Row, Col, Xpixel, Ypixel uint16
 }
 
 func main() {
-//	rows, cols := consolesize.GetConsoleSize()
-//	fmt.Println(" GetConsoleSize says", rows, "rows and", cols, "columns.")
 
 	if term.IsTerminal(int(os.Stdout.Fd())) { // os.Stdout should be fd = 1.
 		fmt.Println(" in a terminal according to term.IsTerminal")
