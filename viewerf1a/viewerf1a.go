@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -30,7 +31,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 10, 2021"
+const LastModified = "August 12, 2021"
 
 type bgImageLoad struct {
 	uri fyne.URI
@@ -203,10 +204,13 @@ func startDirectory() fyne.ListableURI {
 
 func main() {
 	a := app.New()
-	w := a.NewWindow("Image Browser")
+	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
+	w := a.NewWindow(str)
+	w.Show()
 
 	w.SetContent(makeUI(startDirectory()))
-	w.Resize(fyne.NewSize(480, 360))
+	w.Resize(fyne.NewSize(1000, 500))
+
 
 	chooseDirFunc := func() {
 		chooseDirectory(w)
