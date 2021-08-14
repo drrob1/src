@@ -14,6 +14,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"fyne.io/fyne/v2/layout"
 	"image"
 	"image/color"
 	_ "image/gif"
@@ -36,7 +37,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 13, 2021"
+const LastModified = "August 14, 2021"
 const maxWidth = 3000
 const maxHeight = 2000
 
@@ -293,31 +294,36 @@ func main() {
 	imgWidth := bounds.Max.X
 	fmt.Println(" Using image.Decode, width=", imgWidth, "and height=", imgHeight, "and imgFmtName=", imgFmtName)
 	fmt.Println()
-
-	label := canvas.NewText(imgfilename, color.Gray{128})
-	label.Alignment = fyne.TextAlignCenter
-
-
 	if imgWidth > maxWidth || imgHeight > maxHeight {
 		img = resize.Resize(0, maxWidth, img, resize.Lanczos3)
 	}
-/*
-	imgRect := canvas.NewRectangle(color.Black)
-	bgColor := &color.NRGBA{R: 255, G: 255, B: 255, A: 224}
-	bg := canvas.NewRectangle(bgColor)
-	fade := canvas.NewLinearGradient(color.Transparent, bgColor, 0)
-	imagelayoutliteral := imgLayout{text: label, bg: bg, gradient: fade} // this is a canvas.Object but needs to be a type = fyne.Layout
-	picContainer := container.New(imagelayoutliteral, uri, bg, fade, label)
 
-	imgPic := canvas.NewImageFromResource(imageURI)  // code above has nil here
-	imgPic.FillMode = canvas.ImageFillContain
-	imgAndTitle := container.NewBorder(nil, label, nil, nil, imgRect) // top, left and right are all nil here.  bottom=label, center=imgRect
+	label := canvas.NewText(imgfilename, color.Gray{128})  // MakeImageItem in orig viewerf1.go
+	label.Alignment = fyne.TextAlignCenter                    // MakeImageItem in orig viewerf1.go
+	//bgColor := &color.NRGBA{R: 255, G: 255, B: 255, A: 224}  // MakeImageItem in orig viewerf1.go
+	//bg := canvas.NewRectangle(bgColor)  // MakeImageItem in orig viewerf1.go
+	//fade := canvas.NewLinearGradient(color.Transparent, bgColor, 0)  // MakeImageItem in orig viewerf1.go
+	//imagelayoutliteral := imgLayout{text: label, bg: bg, gradient: fade}  // MakeImageItem in orig viewerf1.go, but this syntax not allowed here.
+
+	loadedimg := canvas.NewImageFromImage(img) // from web, not in original viewerf1.go
+	loadedimg.FillMode = canvas.ImageFillContain      // loadimage in orig viewerf1.go
+
+	//imgcontainer := container.New(&imgLayout{text: label, bg: bg, gradient: fade}, loadedimg, bg, fade, label) //MakeImageItem in viewerf1.go
+	imgContainer := container.New(layout.NewVBoxLayout(), label, loadedimg)
+
+	//picContainer := container.New(layout.NewVBoxLayout(), label, imgRect)  from my notes of the book.  Not needed now.
+	//imgRect := canvas.NewRectangle(color.Black)
+	//imgPic := canvas.NewImageFromResource(imageURI)  // code above has nil here
+	//imgPic.FillMode = canvas.ImageFillContain
+	//imgAndTitle := container.NewBorder(nil, label, nil, nil, imgRect) // top, left and right are all nil here.  bottom=label, center=imgRect
 
 
- */
-	//	w.SetContent(makeUI(startDirectory()))
-	//	w.Resize(fyne.NewSize(480, 360))
-	//    w.SetFullScreen(true)
+
+
+	w.SetContent(imgContainer)
+	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
+	w.SetTitle(imgtitle)
+	w.SetContent(loadedimg)
 
 	//	chooseDirFunc := func() {
 	//		chooseDirectory(w)
@@ -330,7 +336,7 @@ func main() {
 
 	imageInfo := make([]os.FileInfo,0, 1024)
 
-	select { // this syntax works as hoped.
+	select { // this syntax works and is blocking.
 	case imageInfo = <- imgFileInfoChan :  // this ackward syntax is what's needed to read from a channel.
 	}
 
