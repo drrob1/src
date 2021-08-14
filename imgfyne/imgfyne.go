@@ -1,11 +1,12 @@
-// From Go GUI with Fyne, Chap 4.
+// From Go GUI with Fyne, Chap 4.  I believe it will be enhanced in later chapters, but this is what is it for now.
 /*
 REVISION HISTORY
 -------- -------
  9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
              First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
              import more parts of fyne.io than the unmodified version.
-12 Aug 21 -- Now called img.go, so I can display 1 image.  But I'll remove the fyne stuff so I can test the image stuff.
+12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
+13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
 */
 
 package main
@@ -46,7 +47,7 @@ type bgImageLoad struct {
 
 var loads = make(chan bgImageLoad, 1024)
 
-var imgInfoChan = make(chan []os.FileInfo)  // unbuffered channel
+var imgFileInfoChan = make(chan []os.FileInfo)  // unbuffered channel
 
 func scaleImage(img image.Image) image.Image {
 	return resize.Thumbnail(320, 240, img, resize.Lanczos3)
@@ -182,6 +183,16 @@ func chooseDirectory(w fyne.Window) {
 	dialog.ShowFolderOpen(listableURIfunc, w)
 }
 
+/*
+	dialog.ShowFolderOpen(func(dir fyne.ListableURI, err error) {
+		if err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+		w.SetContent(makeUI(dir))
+	}, w)
+*/
+
 func startDirectory() fyne.ListableURI {
 	flag.Parse()
 	if len(flag.Args()) < 1 {
@@ -203,7 +214,7 @@ func startDirectory() fyne.ListableURI {
 }
 
 func isNotImageStr(name string) bool {
-	ext := strings.ToLower(filepath.Ext(name))
+	ext := filepath.Ext(name)
 	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 	return !isImage
 }
@@ -268,7 +279,7 @@ func main() {
 	w.Resize(fyne.NewSize(maxWidth, maxHeight))
 	w.Show()
 
-	//cwd, _ := os.Getwd()
+	cwd, _ := os.Getwd()
 	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
@@ -282,15 +293,16 @@ func main() {
 	imgWidth := bounds.Max.X
 	fmt.Println(" Using image.Decode, width=", imgWidth, "and height=", imgHeight, "and imgFmtName=", imgFmtName)
 	fmt.Println()
-/*
+
 	label := canvas.NewText(imgfilename, color.Gray{128})
 	label.Alignment = fyne.TextAlignCenter
-	imgRect := canvas.NewRectangle(color.Black)
+
 
 	if imgWidth > maxWidth || imgHeight > maxHeight {
 		img = resize.Resize(0, maxWidth, img, resize.Lanczos3)
 	}
-
+/*
+	imgRect := canvas.NewRectangle(color.Black)
 	bgColor := &color.NRGBA{R: 255, G: 255, B: 255, A: 224}
 	bg := canvas.NewRectangle(bgColor)
 	fade := canvas.NewLinearGradient(color.Transparent, bgColor, 0)
@@ -300,7 +312,9 @@ func main() {
 	imgPic := canvas.NewImageFromResource(imageURI)  // code above has nil here
 	imgPic.FillMode = canvas.ImageFillContain
 	imgAndTitle := container.NewBorder(nil, label, nil, nil, imgRect) // top, left and right are all nil here.  bottom=label, center=imgRect
-*/
+
+
+ */
 	//	w.SetContent(makeUI(startDirectory()))
 	//	w.Resize(fyne.NewSize(480, 360))
 	//    w.SetFullScreen(true)
@@ -311,28 +325,18 @@ func main() {
 	//	w.SetMainMenu(fyne.NewMainMenu(fyne.NewMenu("File", fyne.NewMenuItem("Open Directory...", chooseDirFunc))))
 
 	//	go doLoadImages()
-//	go MyReadDirForImages(cwd, imgInfoChan)
+	go MyReadDirForImages(cwd, imgFileInfoChan)
 	w.ShowAndRun()
 
-	//imageInfo := make([]os.FileInfo,0, 1024)
-/*
-	for {
-		select {
-		case imageInfo <- imgInfoChan:
-			imageinfo =  <- imageInfoChan
-			break
-		default:
-				// do nothing but don't block.
-		}
+	imageInfo := make([]os.FileInfo,0, 1024)
+
+	select { // this syntax works as hoped.
+	case imageInfo = <- imgFileInfoChan :  // this ackward syntax is what's needed to read from a channel.
 	}
-
-
 
 	fmt.Println(" Have the slice of image file infos.  Len =", len(imageInfo))
 	fmt.Println()
 
-
- */
 
 } // end main
 
@@ -343,19 +347,21 @@ func isImage(file string) bool {
 
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif"
 }
-/*
+
+
 // ------------------------------- MyReadDirForImages -----------------------------------
+
 func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 
 	dirname, err := os.Open(dir)
 	if err != nil {
-		return nil
+		return
 	}
 	defer dirname.Close()
 
 	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
 	if err != nil {
-		return nil
+		return
 	}
 
 	fi := make([]os.FileInfo, 0, len(names))
@@ -370,9 +376,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
             }
 	}
 
-        imageInfoChan <- fi
+	imageInfoChan <- fi
 	return
 } // MyReadDirForImages
 
-
- */
