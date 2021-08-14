@@ -312,17 +312,20 @@ func main() {
 
 	//	go doLoadImages()
 	go MyReadDirForImages(cwd, imgInfoChan)
-	w.ShowAndRun()
 
 	imageInfo := make([]os.FileInfo,0, 1024)
 
 	select { // this syntax works and is blocking.
 	case imageInfo = <- imgInfoChan:
 	}
-	
+
 	fmt.Println(" Have the slice of image file infos.  Len =", len(imageInfo))
 	fmt.Println()
 
+	w.ShowAndRun()
+
+	w.Close()
+	a.Quit()
 
 
 
