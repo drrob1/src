@@ -268,7 +268,7 @@ func main() {
 	w.Resize(fyne.NewSize(maxWidth, maxHeight))
 	w.Show()
 
-	//cwd, _ := os.Getwd()
+	cwd, _ := os.Getwd()
 	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
@@ -311,28 +311,20 @@ func main() {
 	//	w.SetMainMenu(fyne.NewMainMenu(fyne.NewMenu("File", fyne.NewMenuItem("Open Directory...", chooseDirFunc))))
 
 	//	go doLoadImages()
-//	go MyReadDirForImages(cwd, imgInfoChan)
+	go MyReadDirForImages(cwd, imgInfoChan)
 	w.ShowAndRun()
 
-	//imageInfo := make([]os.FileInfo,0, 1024)
-/*
-	for {
-		select {
-		case imageInfo <- imgInfoChan:
-			imageinfo =  <- imageInfoChan
-			break
-		default:
-				// do nothing but don't block.
-		}
+	imageInfo := make([]os.FileInfo,0, 1024)
+
+	select { // this syntax works and is blocking.
+	case imageInfo = <- imgInfoChan:
 	}
-
-
-
+	
 	fmt.Println(" Have the slice of image file infos.  Len =", len(imageInfo))
 	fmt.Println()
 
 
- */
+
 
 } // end main
 
@@ -343,19 +335,21 @@ func isImage(file string) bool {
 
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif"
 }
-/*
+
+
 // ------------------------------- MyReadDirForImages -----------------------------------
+
 func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 
 	dirname, err := os.Open(dir)
 	if err != nil {
-		return nil
+		return
 	}
 	defer dirname.Close()
 
 	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
 	if err != nil {
-		return nil
+		return
 	}
 
 	fi := make([]os.FileInfo, 0, len(names))
@@ -374,5 +368,3 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	return
 } // MyReadDirForImages
 
-
- */
