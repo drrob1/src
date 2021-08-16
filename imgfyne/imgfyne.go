@@ -7,6 +7,8 @@ REVISION HISTORY
              import more parts of fyne.io than the unmodified version.
 12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
 13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
+16 Aug 21 -- Doesn't work as hoped.  I believe that after the show and run call, no code past that gets executed.
+               So everything has to be done in subroutines that are run as a go routine, I guess.
 */
 
 package main
@@ -38,7 +40,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 15, 2021"
+const LastModified = "August 16, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
@@ -53,6 +55,7 @@ const (
 var curIndex int
 var move moveType
 var keychan chan moveType
+var imgfilename, basefilename, fullfilename, cwd string
 
 func keyTyped(e *fyne.KeyEvent) {
 	var muv moveType
@@ -88,7 +91,7 @@ func main() {
 	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
 	fmt.Println(str) // this works as intended
 
-	imgfilename := flag.Arg(0)
+	imgfilename = flag.Arg(0)
 	_, err := os.Stat(imgfilename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgfilename, ") is", err)
@@ -100,22 +103,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	basefilename := filepath.Base(imgfilename)
-	fullFilename, err := filepath.Abs(imgfilename)
+	basefilename = filepath.Base(imgfilename)
+	fullfilename, err = filepath.Abs(imgfilename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from filepath.Abs on", imgfilename, "is", err)
 		os.Exit(1)
 	}
 
-	imgFileHandle, err := os.Open(fullFilename)
+	imgFileHandle, err := os.Open(fullfilename)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from opening", fullFilename, "is", err)
+		fmt.Fprintln(os.Stderr, " Error from opening", fullfilename, "is", err)
 		os.Exit(1)
 	}
 
 	imgConfig, _, err := image.DecodeConfig(imgFileHandle) // img is of type image.Config
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from decode config on", fullFilename, "is", err)
+		fmt.Fprintln(os.Stderr, " Error from decode config on", fullfilename, "is", err)
 		os.Exit(1)
 	}
 	imgFileHandle.Close()
@@ -127,7 +130,7 @@ func main() {
 		aspectRatio = 1/aspectRatio
 	}
 
-	fmt.Println(" image.Config", imgfilename, fullFilename, basefilename, "width =", width, ", height =", height, "and aspect ratio =", aspectRatio)
+	fmt.Println(" image.Config", imgfilename, fullfilename, basefilename, "width =", width, ", height =", height, "and aspect ratio =", aspectRatio)
 
 	if width > maxWidth || height > maxHeight {
 		width = maxWidth * aspectRatio
@@ -143,11 +146,11 @@ func main() {
 	w := a.NewWindow(str)
 	w.Canvas().SetOnTypedKey(keyTyped)
 
-	cwd := filepath.Dir(fullFilename)
-	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
+	cwd := filepath.Dir(fullfilename)
+	imageURI := storage.NewFileURI(fullfilename)
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
+		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
 		os.Exit(1)
 	}
 	defer imgRead.Close()
@@ -180,7 +183,7 @@ func main() {
 	w.SetContent(loadedimg)
 	w.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
-	w.ShowAndRun()
+	w.Show()
 
 	var imageInfo []os.FileInfo
 
@@ -229,11 +232,11 @@ func main() {
 		}
 		basefilename = imageInfo[curIndex].Name()
 		imgfilename = basefilename
-		fullFilename = cwd + string(filepath.Separator) + basefilename
-		imageURI = storage.NewFileURI(fullFilename)
+		fullfilename = cwd + string(filepath.Separator) + basefilename
+		imageURI = storage.NewFileURI(fullfilename)
 		imgRead, err = storage.Reader(imageURI)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "storage.Reader for", fullFilename, "got error", err)
+			fmt.Fprintln(os.Stderr, "storage.Reader for", fullfilename, "got error", err)
 			return
 		}
 		defer imgRead.Close()
@@ -258,9 +261,9 @@ func main() {
 			w.SetTitle(imgtitle)
 			w.SetContent(loadedimg)
 			w.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-			w.Show()
+			w.ShowAndRun()
 		default:
-			// do nothing but don't block
+			a.Run()
 		}
 	}
 

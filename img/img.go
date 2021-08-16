@@ -40,7 +40,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 15, 2021"
+const LastModified = "August 16, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
@@ -164,8 +164,6 @@ func main() {
 	w.SetContent(loadedimg)
 	w.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
-	w.ShowAndRun()
-
 	var imageInfo []os.FileInfo
 
 	select { // this syntax works and is blocking.
@@ -179,11 +177,10 @@ func main() {
 	sort.Slice(imageInfo, sortfcn)
 	elapsedtime := time.Since(t0)
 
-	fmt.Println(" Have the slice of image file infos.  Len =", len(imageInfo), "and sorted in", elapsedtime.String())
+	fmt.Printf(" Length of the image fileinfo slice is %d, and sorted in %s\n", len(imageInfo), elapsedtime.String())
 	fmt.Println()
 
 	t0 = time.Now()
-	//index := filenameIndex(imageInfo, basefilename)
 	indexchan := make(chan int)
 	index := 0
 	go filenameIndex(imageInfo, basefilename, indexchan)
@@ -192,9 +189,11 @@ func main() {
 	}
 	elapsedtime = time.Since(t0)
 
-	fmt.Println(" Index of", basefilename, "in imageInfo slice=", index, "taking", elapsedtime, "to find in a linear sequential search.")
-	fmt.Println(" as a check, imageInfo[", index, "] =", imageInfo[index].Name(), ".")
+	fmt.Printf(" %s index is %d in the fileinfo slice; linear sequential search took %s.\n", basefilename, index, elapsedtime)
+	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
+
+	w.ShowAndRun()
 
 } // end main
 
