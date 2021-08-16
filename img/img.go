@@ -193,6 +193,7 @@ func main() {
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
 
+	w.CenterOnScreen()
 	w.ShowAndRun()
 
 } // end main
