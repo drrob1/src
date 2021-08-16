@@ -14,9 +14,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"fyne.io/fyne/v2/layout"
+//	"fyne.io/fyne/v2/layout"
 	"image"
-	"image/color"
+//	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -32,7 +32,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
+//	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/storage"
 
 	"github.com/nfnt/resize"
@@ -42,7 +42,34 @@ const LastModified = "August 15, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
+type moveType = int  // IIRC, this is now an alias and not a separate type from int.  This was allowed as of go 1.12 or so.
 
+const (
+	imgPrev moveType = iota
+	imgNext
+	esc
+)
+
+var curIndex int
+var move moveType
+var keychan chan moveType
+
+func keyTyped(e *fyne.KeyEvent) {
+	var muv moveType
+	switch e.Name {
+	case fyne.KeyUp:
+		muv = imgPrev
+	case fyne.KeyDown:
+		muv = imgNext
+	case fyne.KeyLeft:
+		muv = imgPrev
+	case fyne.KeyRight:
+		muv = imgNext
+	case fyne.KeyEscape:
+		muv = esc
+	}
+	keychan <- muv
+}
 
 func isNotImageStr(name string) bool {
 	ext := filepath.Ext(name)
@@ -51,6 +78,7 @@ func isNotImageStr(name string) bool {
 }
 
 func main() {
+	keychan = make(chan moveType)
 	flag.Parse()
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
@@ -113,8 +141,8 @@ func main() {
 
 	a := app.New()
 	w := a.NewWindow(str)
+	w.Canvas().SetOnTypedKey(keyTyped)
 
-	//cwd, _ := os.Getwd()
 	cwd := filepath.Dir(fullFilename)
 	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
 	imgRead, err := storage.Reader(imageURI)
@@ -135,28 +163,18 @@ func main() {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 	}
 
-	label := canvas.NewText(imgfilename, color.Gray{128})  // MakeImageItem in orig viewerf1.go
-	label.Alignment = fyne.TextAlignCenter                    // MakeImageItem in orig viewerf1.go
-	//bgColor := &color.NRGBA{R: 255, G: 255, B: 255, A: 224}  // MakeImageItem in orig viewerf1.go
-	//bg := canvas.NewRectangle(bgColor)  // MakeImageItem in orig viewerf1.go
-	//fade := canvas.NewLinearGradient(color.Transparent, bgColor, 0)  // MakeImageItem in orig viewerf1.go
-	//imagelayoutliteral := imgLayout{text: label, bg: bg, gradient: fade}  // MakeImageItem in orig viewerf1.go, but this syntax not allowed here.
+//	label := canvas.NewText(imgfilename, color.Gray{128})  // MakeImageItem in orig viewerf1.go
+//	label.Alignment = fyne.TextAlignCenter                    // MakeImageItem in orig viewerf1.go
 
 	loadedimg := canvas.NewImageFromImage(img) // from web, not in original viewerf1.go
 	loadedimg.FillMode = canvas.ImageFillContain      // loadimage in orig viewerf1.go
 
 	//imgcontainer := container.New(&imgLayout{text: label, bg: bg, gradient: fade}, loadedimg, bg, fade, label) //MakeImageItem in viewerf1.go
-	imgContainer := container.New(layout.NewVBoxLayout(), label, loadedimg)
-
-	//picContainer := container.New(layout.NewVBoxLayout(), label, imgRect)  from my notes of the book.  Not needed now.
-	//imgRect := canvas.NewRectangle(color.Black)
-	//imgPic := canvas.NewImageFromResource(imageURI)  // code above has nil here
-	//imgPic.FillMode = canvas.ImageFillContain
-	//imgAndTitle := container.NewBorder(nil, label, nil, nil, imgRect) // top, left and right are all nil here.  bottom=label, center=imgRect
+//	imgContainer := container.New(layout.NewVBoxLayout(), label, loadedimg)
 
 	imgFileInfoChan := make(chan []os.FileInfo)  // unbuffered channel
 	go MyReadDirForImages(cwd, imgFileInfoChan)
-	w.SetContent(imgContainer)
+//	w.SetContent(imgContainer)
 	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
 	w.SetTitle(imgtitle)
 	w.SetContent(loadedimg)
@@ -183,16 +201,69 @@ func main() {
 	t0 = time.Now()
 	//index := filenameIndex(imageInfo, basefilename)
 	indexchan := make(chan int)
-	index := 0
 	go filenameIndex(imageInfo, basefilename, indexchan)
 	select {
-	case index = <- indexchan:
+	case curIndex = <- indexchan:
 	}
 	elapsedtime = time.Since(t0)
 
-	fmt.Println(" Index of", basefilename, "in imageInfo slice=", index, "taking", elapsedtime, "to find in a linear sequential search.")
-	fmt.Println(" as a check, imageInfo[", index, "] =", imageInfo[index].Name(), ".")
+	fmt.Printf(" %s is index %d in imageInfo slice, taking %s to find in a linear sequential search.\n", basefilename, curIndex, elapsedtime.String())
+	fmt.Printf(" As a check, imageInfo[%d] = %s\n.", curIndex, imageInfo[curIndex].Name())
 	fmt.Println()
+
+	updateImg := func (move moveType) { // a closure for updating the displayed image.  The output goes to outer files and not as params.
+		switch curIndex {
+		case imgPrev:
+			curIndex--
+			if curIndex < 0 {
+				curIndex = 0
+			}
+		case imgNext:
+			curIndex++
+			if curIndex >= len(imageInfo) {
+				curIndex = len(imageInfo) - 1
+			}
+		case esc:
+			w.Close()
+			a.Quit()
+		}
+		basefilename = imageInfo[curIndex].Name()
+		imgfilename = basefilename
+		fullFilename = cwd + string(filepath.Separator) + basefilename
+		imageURI = storage.NewFileURI(fullFilename)
+		imgRead, err = storage.Reader(imageURI)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "storage.Reader for", fullFilename, "got error", err)
+			return
+		}
+		defer imgRead.Close()
+		img, _, err = image.Decode(imgRead)
+		bounds = img.Bounds()
+		imgWidth = bounds.Max.X
+		imgHeight = bounds.Max.Y
+		if imgWidth > maxWidth {
+			img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
+		} else if imgHeight > maxHeight {
+			img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
+		}
+		loadedimg = canvas.NewImageFromImage(img)
+		loadedimg.FillMode = canvas.ImageFillContain
+		imgtitle = fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
+	}
+
+	for { // loop to read keys and process the image movement
+		select {
+		case move = <- keychan:
+			updateImg(move)
+			w.SetTitle(imgtitle)
+			w.SetContent(loadedimg)
+			w.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+			w.Show()
+		default:
+			// do nothing but don't block
+		}
+	}
+
 
 } // end main
 
