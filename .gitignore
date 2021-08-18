@@ -33,3 +33,5 @@ github.com/mattn/go-runewidth
 golang.org/x/image
 gonum.org/
 rsc.io/
+image-viewer/
+
