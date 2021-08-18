@@ -16,10 +16,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"fyne.io/fyne/v2/app"
 	//w "fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
-	"image"
 	//"image/color"
+
+	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -33,7 +35,6 @@ import (
 	//_ "golang.org/x/image"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	//"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/storage"
@@ -49,7 +50,8 @@ var index int
 var loadedimg *canvas.Image
 var cwd string
 var imageInfo []os.FileInfo
-var a fyne.App
+var globalA fyne.App
+var globalW fyne.Window
 
 func isNotImageStr(name string) bool {
 	ext := filepath.Ext(name)
@@ -118,7 +120,15 @@ func main() {
 	fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
 	fmt.Println()
 
+
 	cwd = filepath.Dir(fullFilename)
+	imgFileInfoChan := make(chan []os.FileInfo)  // unbuffered channel
+	go MyReadDirForImages(cwd, imgFileInfoChan)
+
+	globalA = app.New()  // this line must appear before any other uses of fyne.
+	globalW = globalA.NewWindow(str)
+	globalW.Canvas().SetOnTypedKey(keyTyped)
+
 	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
@@ -142,19 +152,13 @@ func main() {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 	}
 
-	imgFileInfoChan := make(chan []os.FileInfo)  // unbuffered channel
-	go MyReadDirForImages(cwd, imgFileInfoChan)
-
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.FillMode = canvas.ImageFillContain
 
-	a = app.New()
-	w := a.NewWindow(str)
-	w.Canvas().SetOnTypedKey(keyTyped)
-
 	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
-	w.SetTitle(imgtitle)
-	w.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+	globalW.SetTitle(imgtitle)
+	globalW.SetContent(loadedimg)
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
 	select { // this syntax works and is blocking.
 	case imageInfo = <- imgFileInfoChan :  // this ackward syntax is what's needed to read from a channel.
@@ -171,8 +175,8 @@ func main() {
 	fmt.Println()
 
 	t0 = time.Now()
-	indexchan := make(chan int)
 
+	indexchan := make(chan int)
 	go filenameIndex(imageInfo, basefilename, indexchan)
 	select {
 	case index = <- indexchan:
@@ -183,14 +187,15 @@ func main() {
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
 
-	w.CenterOnScreen()
-	w.ShowAndRun()
+	globalW.CenterOnScreen()
+	globalW.ShowAndRun()
 
 } // end main
 
 // --------------------------------------------------- loadTheImage ------------------------------
-func loadTheImage(indx int) *canvas.Image {
-	imgname := imageInfo[indx].Name()
+                                                     //func loadTheImage(indx int) *canvas.Image {
+func loadTheImage() {
+	imgname := imageInfo[index].Name()
 	fullfilename := cwd + string(filepath.Separator) + imgname
 	imageURI := storage.NewFileURI(fullfilename)
 	imgRead, err := storage.Reader(imageURI)
@@ -208,8 +213,8 @@ func loadTheImage(indx int) *canvas.Image {
 	bounds := img.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
-	fmt.Println( imgname, " image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
-	fmt.Println()
+	title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+	fmt.Println(title)
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
 	} else if imgHeight > maxHeight {
@@ -217,8 +222,10 @@ func loadTheImage(indx int) *canvas.Image {
 	}
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.FillMode = canvas.ImageFillContain
-
-	return loadedimg
+	globalW.SetContent(loadedimg)
+	globalW.SetTitle(title)
+	globalW.Show()
+	return
 }
 
 
@@ -247,7 +254,6 @@ func isImage(file string) bool {
 // ------------------------------- MyReadDirForImages -----------------------------------
 
 func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
-
 	dirname, err := os.Open(dir)
 	if err != nil {
 		return
@@ -276,39 +282,45 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 } // MyReadDirForImages
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
-func nextImage(indx int) *canvas.Image {
-
-	indx++
-	if indx >= len(imageInfo) {
-		indx--
+                                                                       //func nextImage(indx int) *canvas.Image {
+func nextImage() {
+	index++
+	if index >= len(imageInfo) {
+		index--
 	}
-	return loadTheImage(indx)
-
-
+	loadTheImage()
+	return
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
-func prevImage(indx int) *canvas.Image {
-	indx--
-	if indx < 0 {
-		indx++
+                                                                     //func prevImage(indx int) *canvas.Image {
+func prevImage() {
+	index--
+	if index < 0 {
+		index++
 	}
-	return loadTheImage(indx)
+	loadTheImage()
+	return
 } // end prevImage
 
 // ------------------------------------------------------------ keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
 	case fyne.KeyUp:
-		prevImage(index)
+		fmt.Println(" KeyUp hit")
+		prevImage()
 	case fyne.KeyDown:
-		nextImage(index)
+		fmt.Println(" KeyDown hit")
+		nextImage()
 	case fyne.KeyLeft:
-		prevImage(index)
+		fmt.Println(" KeyLeft hit")
+		prevImage()
 	case fyne.KeyRight:
-		nextImage(index)
+		fmt.Println(" KeyRight hit")
+		nextImage()
 	case fyne.KeyEscape:
-		a.Quit()
+		globalW.Close()  // quit's the app if this is the last window, which it is.
+//		(*globalA).Quit()
 	}
 }
 
