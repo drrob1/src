@@ -16,9 +16,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"fyne.io/fyne/v2/layout"
+	//w "fyne.io/fyne/v2/internal/widget"
+	//"fyne.io/fyne/v2/layout"
 	"image"
-	"image/color"
+	//"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -34,17 +35,21 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
+	//"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/storage"
 
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 16, 2021"
+const LastModified = "August 18, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
-
+var index int
+var loadedimg *canvas.Image
+var cwd string
+var imageInfo []os.FileInfo
+var a fyne.App
 
 func isNotImageStr(name string) bool {
 	ext := filepath.Ext(name)
@@ -113,11 +118,7 @@ func main() {
 	fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
 	fmt.Println()
 
-	a := app.New()
-	w := a.NewWindow(str)
-
-	//cwd, _ := os.Getwd()
-	cwd := filepath.Dir(fullFilename)
+	cwd = filepath.Dir(fullFilename)
 	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
@@ -126,6 +127,10 @@ func main() {
 	}
 	defer imgRead.Close()
 	img, imgFmtName, err := image.Decode(imgRead)  // imgFmtName is a string of the format name used during format registration by the init function.
+	if err != nil {
+		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
+		os.Exit(1)
+	}
 	bounds := img.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
@@ -137,34 +142,19 @@ func main() {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 	}
 
-	label := canvas.NewText(imgfilename, color.Gray{128})  // MakeImageItem in orig viewerf1.go
-	label.Alignment = fyne.TextAlignCenter                    // MakeImageItem in orig viewerf1.go
-	//bgColor := &color.NRGBA{R: 255, G: 255, B: 255, A: 224}  // MakeImageItem in orig viewerf1.go
-	//bg := canvas.NewRectangle(bgColor)  // MakeImageItem in orig viewerf1.go
-	//fade := canvas.NewLinearGradient(color.Transparent, bgColor, 0)  // MakeImageItem in orig viewerf1.go
-	//imagelayoutliteral := imgLayout{text: label, bg: bg, gradient: fade}  // MakeImageItem in orig viewerf1.go, but this syntax not allowed here.
-
-	loadedimg := canvas.NewImageFromImage(img) // from web, not in original viewerf1.go
-	loadedimg.FillMode = canvas.ImageFillContain      // loadimage in orig viewerf1.go
-
-	//imgcontainer := container.New(&imgLayout{text: label, bg: bg, gradient: fade}, loadedimg, bg, fade, label) //MakeImageItem in viewerf1.go
-	imgContainer := container.New(layout.NewVBoxLayout(), label, loadedimg)
-
-	//picContainer := container.New(layout.NewVBoxLayout(), label, imgRect)  from my notes of the book.  Not needed now.
-	//imgRect := canvas.NewRectangle(color.Black)
-	//imgPic := canvas.NewImageFromResource(imageURI)  // code above has nil here
-	//imgPic.FillMode = canvas.ImageFillContain
-	//imgAndTitle := container.NewBorder(nil, label, nil, nil, imgRect) // top, left and right are all nil here.  bottom=label, center=imgRect
-
 	imgFileInfoChan := make(chan []os.FileInfo)  // unbuffered channel
 	go MyReadDirForImages(cwd, imgFileInfoChan)
-	w.SetContent(imgContainer)
+
+	loadedimg = canvas.NewImageFromImage(img)
+	loadedimg.FillMode = canvas.ImageFillContain
+
+	a = app.New()
+	w := a.NewWindow(str)
+	w.Canvas().SetOnTypedKey(keyTyped)
+
 	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
 	w.SetTitle(imgtitle)
-	w.SetContent(loadedimg)
 	w.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-
-	var imageInfo []os.FileInfo
 
 	select { // this syntax works and is blocking.
 	case imageInfo = <- imgFileInfoChan :  // this ackward syntax is what's needed to read from a channel.
@@ -182,7 +172,7 @@ func main() {
 
 	t0 = time.Now()
 	indexchan := make(chan int)
-	index := 0
+
 	go filenameIndex(imageInfo, basefilename, indexchan)
 	select {
 	case index = <- indexchan:
@@ -198,7 +188,41 @@ func main() {
 
 } // end main
 
-// -------------------------------          filenameIndex --------------------------------------
+// --------------------------------------------------- loadTheImage ------------------------------
+func loadTheImage(indx int) *canvas.Image {
+	imgname := imageInfo[indx].Name()
+	fullfilename := cwd + string(filepath.Separator) + imgname
+	imageURI := storage.NewFileURI(fullfilename)
+	imgRead, err := storage.Reader(imageURI)
+	defer imgRead.Close()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
+		os.Exit(1)
+	}
+
+	img, imgFmtName, err := image.Decode(imgRead)  // imgFmtName is a string of the format name used during format registration by the init function.
+	if err != nil {
+		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
+		os.Exit(1)
+	}
+	bounds := img.Bounds()
+	imgHeight := bounds.Max.Y
+	imgWidth := bounds.Max.X
+	fmt.Println( imgname, " image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
+	fmt.Println()
+	if imgWidth > maxWidth {
+		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
+	} else if imgHeight > maxHeight {
+		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
+	}
+	loadedimg = canvas.NewImageFromImage(img)
+	loadedimg.FillMode = canvas.ImageFillContain
+
+	return loadedimg
+}
+
+
+// ------------------------------- filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	for i, fi := range fileinfos {
 		if fi.Name() == name {
@@ -250,4 +274,41 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	imageInfoChan <- fi
 	return
 } // MyReadDirForImages
+
+// ---------------------------------------------- nextImage -----------------------------------------------------
+func nextImage(indx int) *canvas.Image {
+
+	indx++
+	if indx >= len(imageInfo) {
+		indx--
+	}
+	return loadTheImage(indx)
+
+
+} // end nextImage
+
+// ------------------------------------------ prevImage -------------------------------------------------------
+func prevImage(indx int) *canvas.Image {
+	indx--
+	if indx < 0 {
+		indx++
+	}
+	return loadTheImage(indx)
+} // end prevImage
+
+// ------------------------------------------------------------ keyTyped ------------------------------
+func keyTyped(e *fyne.KeyEvent) { // index is a global var
+	switch e.Name {
+	case fyne.KeyUp:
+		prevImage(index)
+	case fyne.KeyDown:
+		nextImage(index)
+	case fyne.KeyLeft:
+		prevImage(index)
+	case fyne.KeyRight:
+		nextImage(index)
+	case fyne.KeyEscape:
+		a.Quit()
+	}
+}
 
