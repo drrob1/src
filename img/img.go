@@ -303,6 +303,18 @@ func prevImage() {
 	return
 } // end prevImage
 
+// ------------------------------------------ firstImage -----------------------------------------------------
+func firstImage() {
+	index = 0
+	loadTheImage()
+}
+
+// ------------------------------------------ lastImage
+func lastImage() {
+	index = len(imageInfo) - 1
+	loadTheImage()
+}
+
 // ------------------------------------------------------------ keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
@@ -317,6 +329,10 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEscape:
 		globalW.Close()  // quit's the app if this is the last window, which it is.
 //		(*globalA).Quit()
+	case fyne.KeyHome:
+		firstImage()
+	case fyne.KeyEnd:
+		lastImage()
 	}
 }
 
