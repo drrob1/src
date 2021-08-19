@@ -307,16 +307,12 @@ func prevImage() {
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
 	case fyne.KeyUp:
-		fmt.Println(" KeyUp hit")
 		prevImage()
 	case fyne.KeyDown:
-		fmt.Println(" KeyDown hit")
 		nextImage()
 	case fyne.KeyLeft:
-		fmt.Println(" KeyLeft hit")
 		prevImage()
 	case fyne.KeyRight:
-		fmt.Println(" KeyRight hit")
 		nextImage()
 	case fyne.KeyEscape:
 		globalW.Close()  // quit's the app if this is the last window, which it is.
