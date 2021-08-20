@@ -9,8 +9,7 @@ REVISION HISTORY
 13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
 15 Aug 21 -- Copied back to img.go after the code works and displays a single image from the command line.
                Will use imgfyne to add the arrow key navigation and img display.
-18 Aug 21 -- It works!
-20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
+19 Aug 21 -- img.go started working as I want yesterday.  Now this is called fynemouse.go, and I want to replicate mouse control like in FHPacs.
 */
 
 package main
@@ -22,6 +21,7 @@ import (
 	//w "fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
 	//"image/color"
+	//"fyne.io/fyne/v2/driver/desktop"  for mouse events.
 
 	"image"
 	_ "image/gif"
@@ -44,7 +44,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 18, 2021"
+const LastModified = "August 19, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
@@ -54,7 +54,6 @@ var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
-var verboseFlag *bool
 
 func isNotImageStr(name string) bool {
 	ext := filepath.Ext(name)
@@ -63,7 +62,6 @@ func isNotImageStr(name string) bool {
 }
 
 func main() {
-	verboseFlag = flag.Bool("v", false, "verbose flag")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
@@ -112,21 +110,17 @@ func main() {
 		aspectRatio = 1/aspectRatio
 	}
 
-	if *verboseFlag {
-		fmt.Println(" image.Config", imgfilename, fullFilename, basefilename, "width =", width, ", height =", height, "and aspect ratio =", aspectRatio)
-	}
+	fmt.Println(" image.Config", imgfilename, fullFilename, basefilename, "width =", width, ", height =", height, "and aspect ratio =", aspectRatio)
 
 	if width > maxWidth || height > maxHeight {
 		width = maxWidth * aspectRatio
 		height = maxHeight * aspectRatio
 	}
 
-	if *verboseFlag {
-		fmt.Println()
-		//fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
-		fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
-		fmt.Println()
-	}
+	fmt.Println()
+	//fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
+	fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
+	fmt.Println()
 
 
 	cwd = filepath.Dir(fullFilename)
@@ -152,10 +146,8 @@ func main() {
 	bounds := img.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
-	if *verboseFlag {
-		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
-		fmt.Println()
-	}
+	fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
+	fmt.Println()
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
 	} else if imgHeight > maxHeight {
@@ -223,19 +215,13 @@ func loadTheImage() {
 	bounds := img.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
-
 	title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	if *verboseFlag {
-		fmt.Println(title)
-	}
+	fmt.Println(title)
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-		title = title + "; resized."
 	} else if imgHeight > maxHeight {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-		title = title + "; resized."
 	}
-
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.FillMode = canvas.ImageFillContain
 	globalW.SetContent(loadedimg)
