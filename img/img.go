@@ -21,6 +21,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	//w "fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
+	//"fyne.io/fyne/v2/container"
 	//"image/color"
 
 	"image"
@@ -38,13 +39,12 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
-	//"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/storage"
 
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 18, 2021"
+const LastModified = "August 20, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
@@ -54,16 +54,16 @@ var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
-var verboseFlag *bool
+var verboseFlag = flag.Bool("v", false, "verbose flag")
 
 func isNotImageStr(name string) bool {
-	ext := filepath.Ext(name)
+	ext := strings.ToLower(filepath.Ext(name))
 	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 	return !isImage
 }
 
 func main() {
-	verboseFlag = flag.Bool("v", false, "verbose flag")
+//	verboseFlag = flag.Bool("v", false, "verbose flag")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
@@ -107,9 +107,9 @@ func main() {
 
 	var width = float32(imgConfig.Width)
 	var height = float32(imgConfig.Height)
-	var aspectRatio = width/height
+	var aspectRatio = width / height
 	if aspectRatio > 1 {
-		aspectRatio = 1/aspectRatio
+		aspectRatio = 1 / aspectRatio
 	}
 
 	if *verboseFlag {
@@ -128,12 +128,11 @@ func main() {
 		fmt.Println()
 	}
 
-
 	cwd = filepath.Dir(fullFilename)
-	imgFileInfoChan := make(chan []os.FileInfo)  // unbuffered channel
+	imgFileInfoChan := make(chan []os.FileInfo) // unbuffered channel
 	go MyReadDirForImages(cwd, imgFileInfoChan)
 
-	globalA = app.New()  // this line must appear before any other uses of fyne.
+	globalA = app.New() // this line must appear before any other uses of fyne.
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
@@ -144,7 +143,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer imgRead.Close()
-	img, imgFmtName, err := image.Decode(imgRead)  // imgFmtName is a string of the format name used during format registration by the init function.
+	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
 		os.Exit(1)
@@ -171,39 +170,39 @@ func main() {
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
 	select { // this syntax works and is blocking.
-	case imageInfo = <- imgFileInfoChan :  // this ackward syntax is what's needed to read from a channel.
+	case imageInfo = <-imgFileInfoChan: // this ackward syntax is what's needed to read from a channel.
 	}
 
-	t0:= time.Now()
-	sortfcn := func(i, j int) bool { // this is a closure anonymous function
-		return imageInfo[i].ModTime().After(imageInfo[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+	if *verboseFlag {
+		if isSorted(imageInfo) {
+			fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
+		} else {
+			fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
+		}
+		fmt.Println()
 	}
-	sort.Slice(imageInfo, sortfcn)
-	elapsedtime := time.Since(t0)
-
-	fmt.Printf(" Length of the image fileinfo slice is %d, and sorted in %s\n", len(imageInfo), elapsedtime.String())
-	fmt.Println()
-
-	t0 = time.Now()
 
 	indexchan := make(chan int)
+	t0 := time.Now()
+
 	go filenameIndex(imageInfo, basefilename, indexchan)
+
+	globalW.CenterOnScreen()
+
 	select {
-	case index = <- indexchan:
+	case index = <-indexchan: // syntax to read from a channel.
 	}
-	elapsedtime = time.Since(t0)
+	elapsedtime := time.Since(t0)
 
 	fmt.Printf(" %s index is %d in the fileinfo slice; linear sequential search took %s.\n", basefilename, index, elapsedtime)
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
 
-	globalW.CenterOnScreen()
 	globalW.ShowAndRun()
 
 } // end main
 
 // --------------------------------------------------- loadTheImage ------------------------------
-                                                     //func loadTheImage(indx int) *canvas.Image {
 func loadTheImage() {
 	imgname := imageInfo[index].Name()
 	fullfilename := cwd + string(filepath.Separator) + imgname
@@ -215,7 +214,7 @@ func loadTheImage() {
 		os.Exit(1)
 	}
 
-	img, imgFmtName, err := image.Decode(imgRead)  // imgFmtName is a string of the format name used during format registration by the init function.
+	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
 		os.Exit(1)
@@ -244,7 +243,6 @@ func loadTheImage() {
 	return
 }
 
-
 // ------------------------------- filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	for i, fi := range fileinfos {
@@ -257,7 +255,6 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	return
 }
 
-
 // ----------------------------------isImage ----------------------------------------------
 func isImage(file string) bool {
 	ext := strings.ToLower(filepath.Ext(file))
@@ -265,7 +262,6 @@ func isImage(file string) bool {
 
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif"
 }
-
 
 // ------------------------------- MyReadDirForImages -----------------------------------
 
@@ -283,22 +279,46 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 
 	fi := make([]os.FileInfo, 0, len(names))
 	for _, name := range names {
-            if isImage(name) {
-		imgInfo, err := os.Lstat(name)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
-			continue
+		if isImage(name) {
+			imgInfo, err := os.Lstat(name)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
+				continue
+			}
+			fi = append(fi, imgInfo)
 		}
-		fi = append(fi, imgInfo)
-            }
+	}
+
+	t0 := time.Now()
+	sortfcn := func(i, j int) bool {
+		return fi[i].ModTime().After(fi[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+	}
+
+	sort.Slice(fi, sortfcn)
+	elapsedtime := time.Since(t0)
+
+	if *verboseFlag {
+		fmt.Printf(" Length of the image fileinfo slice is %d, and sorted in %s\n", len(fi), elapsedtime.String())
+		fmt.Println()
 	}
 
 	imageInfoChan <- fi
 	return
 } // MyReadDirForImages
 
+// ------------------------------------------------------- isSorted -----------------------------------------------
+func isSorted(slice []os.FileInfo) bool {
+	for i := 0; i < len(slice)-1; i++ {
+		if slice[i].ModTime().Before(slice[i+1].ModTime()) {
+			fmt.Println(" debugging: i=", i, "Name[i]=", slice[i].Name(), " and Name[i+1]=", slice[i+1].Name())
+			return false
+		}
+	}
+	return true
+}
+
 // ---------------------------------------------- nextImage -----------------------------------------------------
-                                                                       //func nextImage(indx int) *canvas.Image {
+//func nextImage(indx int) *canvas.Image {
 func nextImage() {
 	index++
 	if index >= len(imageInfo) {
@@ -309,7 +329,7 @@ func nextImage() {
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
-                                                                     //func prevImage(indx int) *canvas.Image {
+//func prevImage(indx int) *canvas.Image {
 func prevImage() {
 	index--
 	if index < 0 {
@@ -343,12 +363,11 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyRight:
 		nextImage()
 	case fyne.KeyEscape:
-		globalW.Close()  // quit's the app if this is the last window, which it is.
-//		(*globalA).Quit()
+		globalW.Close() // quit's the app if this is the last window, which it is.
+		//		(*globalA).Quit()
 	case fyne.KeyHome:
 		firstImage()
 	case fyne.KeyEnd:
 		lastImage()
 	}
 }
-
