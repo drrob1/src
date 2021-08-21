@@ -11,6 +11,7 @@ REVISION HISTORY
                Will use imgfyne to add the arrow key navigation and img display.
 18 Aug 21 -- It works!
 20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
+21 Aug 21 -- Adding Q and X to exit.
 */
 
 package main
@@ -44,7 +45,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 20, 2021"
+const LastModified = "August 21, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
@@ -362,7 +363,7 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 		prevImage()
 	case fyne.KeyRight:
 		nextImage()
-	case fyne.KeyEscape:
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
 	case fyne.KeyHome:
