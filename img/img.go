@@ -114,7 +114,8 @@ func main() {
 	}
 
 	if *verboseFlag {
-		fmt.Println(" image.Config", imgfilename, fullFilename, basefilename, "width =", width, ", height =", height, "and aspect ratio =", aspectRatio)
+		fmt.Printf(" image.Config %s, %s, %s \n width=%g, height=%g, and aspect ratio=%.4g \n",
+			imgfilename, fullFilename, basefilename, width, height, aspectRatio)
 	}
 
 	if width > maxWidth || height > maxHeight {
@@ -195,7 +196,7 @@ func main() {
 	}
 	elapsedtime := time.Since(t0)
 
-	fmt.Printf(" %s index is %d in the fileinfo slice; linear sequential search took %s.\n", basefilename, index, elapsedtime)
+	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo) ,elapsedtime)
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
 
