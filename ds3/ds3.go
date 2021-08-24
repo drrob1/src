@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "2 Aug 2021"
+const LastAltered = "23 Aug 2021"
 
 /*
 Revision History
@@ -108,6 +108,8 @@ Revision History
                And it's now called ds3.go
 27 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 29 Jul 21 -- Changed value of minWidth, and will check against minWidth2ndCol.
+23 Aug 21 -- Output vertically sorting doesn't work when I want more screens output.  I have to scroll up to see the top of the last column.
+               I'm going to a horizontal sort, which is much easier to do anyway.
 */
 
 type dirAliasMapType map[string]string
@@ -669,31 +671,36 @@ func main() {
 		}
 	}
 
-	// Now to output the colorStringSlice, 3 items per line, but I want the sort to remain vertical
-	onethirdpoint := len(colorStringSlice) / 3
-	if testFlag {
-		fmt.Println(" oneThirdPoint =", onethirdpoint, ", len(colorStringSlice) =", len(colorStringSlice))
-		fmt.Println()
-	}
-
+	// Now to output the colorStringSlice, 3 items per line.  I used to keep the sort vertical, but that doesn't work well when nscreen > 1.
+	/*
+		onethirdpoint := len(colorStringSlice) / 3
+		if testFlag {
+			fmt.Println(" oneThirdPoint =", onethirdpoint, ", len(colorStringSlice) =", len(colorStringSlice))
+			fmt.Println()
+		}
+	*/
 	columnWidth := w/3 - 3 // accounting for the extra spaces added by the formatting.
-	for i := 0; i < onethirdpoint; i++ {
+	for i := 0; i < len(colorStringSlice); i += 3 {
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s  ", s0)
 
-		if i+onethirdpoint < len(colorStringSlice) {
-			c1 := colorStringSlice[i+onethirdpoint].color
-			s1 := fixedStringLen(colorStringSlice[i+onethirdpoint].str, columnWidth)
+		if i+1 < len(colorStringSlice) {
+			//                                            c1 := colorStringSlice[i+onethirdpoint].color
+			//                                            s1 := fixedStringLen(colorStringSlice[i+onethirdpoint].str, columnWidth)
+			c1 := colorStringSlice[i+1].color
+			s1 := fixedStringLen(colorStringSlice[i+1].str, columnWidth)
 			ctfmt.Printf(c1, winflag, "%s  ", s1)
 		} else {
 			fmt.Println()
 			continue
 		}
 
-		if i+2*onethirdpoint < len(colorStringSlice)  {
-			c2 := colorStringSlice[i+2*onethirdpoint].color
-			s2 := fixedStringLen(colorStringSlice[i+2*onethirdpoint].str, columnWidth)
+		if i+2 < len(colorStringSlice) {
+			//                                            c2 := colorStringSlice[i+2*onethirdpoint].color
+			//                                            s2 := fixedStringLen(colorStringSlice[i+2*onethirdpoint].str, columnWidth)
+			c2 := colorStringSlice[i+2].color
+			s2 := fixedStringLen(colorStringSlice[i+2].str, columnWidth)
 			ctfmt.Printf(c2, winflag, "%s\n", s2)
 		} else {
 			fmt.Println()

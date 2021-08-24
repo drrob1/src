@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "2 Aug 2021"
+const LastAltered = "23 Aug 2021"
 
 /*
 Revision History
@@ -107,6 +107,8 @@ Revision History
 25 Jul 21 -- Now called ds2.go
 27 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 29 Jul 21 -- Changed value of minWidth, and will check against minwidth.
+23 Aug 21 -- Output vertically sorting doesn't work when I want more screens output.  I have to scroll up to see the top of the last column.
+               I'm going to a horizontal sort, which is much easier to do anyway.
 */
 
 type dirAliasMapType map[string]string
@@ -667,17 +669,18 @@ func main() {
 		}
 	}
 
-	// Now to output the colorStringSlice, 2 items per line, but I want the sort to remain vertical
-	halfpoint := len(colorStringSlice) / 2
+	// Now to output the colorStringSlice, 2 items per line.  Vertical sort isn't optimal (see comment above).
+	/*
+		halfpoint := len(colorStringSlice) / 2
+	*/
 	columnWidth := w/2 - 2
-
-	for i := 0; i < halfpoint; i++ {
+	for i := 0; i < len(colorStringSlice); i += 2 {
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s", s0)
-		if i+halfpoint < len(colorStringSlice) {
-			c1 := colorStringSlice[i+halfpoint].color
-			s1 := fixedStringLen(colorStringSlice[i+halfpoint].str, columnWidth)
+		if i+1 < len(colorStringSlice) {
+			c1 := colorStringSlice[i+1].color
+			s1 := fixedStringLen(colorStringSlice[i+1].str, columnWidth)
 			ctfmt.Printf(c1, winflag, "  %s\n", s1)
 		} else {
 			fmt.Println()
