@@ -12,6 +12,7 @@ REVISION HISTORY
 18 Aug 21 -- It works!
 20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
 21 Aug 21 -- Adding Q and X to exit.
+23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
 */
 
 package main
@@ -20,23 +21,23 @@ import (
 	"flag"
 	"fmt"
 	"fyne.io/fyne/v2/app"
-	//w "fyne.io/fyne/v2/internal/widget"
+	//"fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
 	//"fyne.io/fyne/v2/container"
 	//"image/color"
 
+	_ "golang.org/x/image/webp"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
-
-	//_ "golang.org/x/image"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -45,7 +46,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 21, 2021"
+const LastModified = "August 23, 2021"
 const maxWidth = 2500
 const maxHeight = 2000
 
@@ -57,14 +58,15 @@ var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 
+// -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
 	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 	return !isImage
 }
-
+// ---------------------------------------------------- main --------------------------------------------------
 func main() {
-//	verboseFlag = flag.Bool("v", false, "verbose flag")
+	//	verboseFlag = flag.Bool("v", false, "verbose flag")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
@@ -196,7 +198,7 @@ func main() {
 	}
 	elapsedtime := time.Since(t0)
 
-	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo) ,elapsedtime)
+	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
 
@@ -262,7 +264,7 @@ func isImage(file string) bool {
 	ext := strings.ToLower(filepath.Ext(file))
 	ext = strings.ToLower(ext)
 
-	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif"
+	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
 // ------------------------------- MyReadDirForImages -----------------------------------
