@@ -23,6 +23,10 @@ package main
   16 Oct 18 -- Learned about math/rand having a shuffle function.
   17 Oct 18 -- Adding filepicker for *.xspf pattern.
   18 Oct 18 -- Added check for empty stringslice of filenames.
+  24 Aug 21 -- Instead of calling shuffle once, I'm going to imbed it in a loop to shuffle year + month + day + hour + min
+                 It's been almost 3 yrs since I've been in this code.  Wow, I've changed my style a lot in that time.  I've switched to line comments
+                 and stopped structure end comments for small number of lines, ie, I can see beginning { and ending } on one screen.
+                 And I converted to modules.
 */
 
 import (
@@ -37,15 +41,15 @@ import (
 	"strings"
 	"time"
 	//
-	"filepicker"
-	"getcommandline"
-	"timlibg"
+	"src/filepicker"
+	"src/getcommandline"
+	"src/timlibg"
 )
 
 const MaxNumOfTracks = 2048
 const blankline = "                                                                             " // ~70 spaces
 const sepline = "-----------------------------------------------------------------------------"
-const LastCompiled = "on or about Oct 18, 2018"
+const LastCompiled = "on or about Aug 24, 2021"
 
 const (
 	EMPTY    = iota
@@ -55,9 +59,11 @@ const (
 	OTHERERROR
 )
 
-const ( //  XMLcharType  which is an enumeration of states of a single character.
-	// I removed the EOL state, as it no longer applies.  Modula-2 would return a special EOL character, but this language follows the
-	// C tradition of \r for <CR>, ASCII value of 13, and \n for <LF>, value of 10
+//  XMLcharType  which is an enumeration of states of a single character.
+// I removed the EOL state, as it no longer applies.  Modula-2 would return a special EOL character, but this language follows the
+// C tradition of \r for <CR>, ASCII value of 13, and \n for <LF>, value of 10
+
+const (
 	CTRL = iota
 	OPENANGLE
 	CLOSEANGLE
@@ -76,8 +82,8 @@ type CharType struct {
 }
 
 // track was an array of TrackType.  Now it's a slice of pointers to TrackType, to make it easier to
-// shuffle.  And so I don't need NumArray anymore which just shuffles an array of indices into
-// TrackArray.
+// shuffle.  And so I don't need NumArray anymore which just shuffles an array of indices into TrackArray.
+
 type TrackType struct {
 	location, title, creator, image, duration, extension string
 }
@@ -118,28 +124,27 @@ func MakeDateStr() (datestr string) {
 	return datestr
 } // MakeDateStr
 
-/* -------------------------------------------- Shuffle ---------------------------------------------------- */
+/* -------------------------------------------- Shuffle ----------------------------------------------------
 
-func Shuffle() {
-	/*
-	   Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
-	*/
+func Shuffle() {  replaced by rand.Shuffle
+	// Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
 
 	n := len(TrackSlice)
 
-	for c := 1; c <= n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
-
+	for c := 1; c < n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
 		for i := n - 1; i > 0; i-- {
-			/* swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k
-			 * can be */
+			// swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k can be
 			k := rand.Intn(i)
 			TrackSlice[i], TrackSlice[k] = TrackSlice[k], TrackSlice[i] // Go swap idiom, to swap pointers to a track that's held in TrackSlice
-		} // for inner loop
-	} // for outer (ntimes) loop
+		}
+	}
 } // Shuffle;
+
+ */
 
 // ---------------------------------------------------------------- PeekChar -----------------------------
 // peeks at the next char without advancing fileptr.  The filepointer is advanced by ReadChar, below.
+
 func PeekChar(f *bufio.Reader) (ch CharType, EOF bool) {
 	b := make([]byte, 1)
 	b, err := f.Peek(1) // b is a byte slice with size of 1 byte.
@@ -181,14 +186,14 @@ func NextChar(f *bufio.Reader) {
 	check(err, "In DiscardChar and got err:")
 } // DiscardChar
 
-/* -------------------------------------------------------------------------- GetXMLtoken -------------------------------------------- */
+// -------------------------------------------------------------------------- GetXMLtoken --------------------------------------------
+
 func GetXMLtoken(f *bufio.Reader) (XMLtoken TokenType, EOFFLG bool) {
 	/*
 	   This will use the bufio file operations as I want this as a character stream.
 	   The only delimiters are angle brackets.  This is the only routine where input characters are read and processed.
 	   And I rewrote it to just exist as an XML token getter.  I don't need peeking functionality.  I guess when I
 	   first wrote this, I thought I would need this capability.
-
 	*/
 
 	//  XMLtoken := TokenType{};  // nil literal not needed because Go automatically does this for params.
@@ -269,7 +274,8 @@ MainForLoop:
 	return XMLtoken, false
 } // GetXMLtoken
 
-/* -------------------------------------------------- GetTrack -------------------------------------------- */
+// -------------------------------------------------- GetTrack --------------------------------------------
+
 func GetTrack(f *bufio.Reader) (trk *TrackType) {
 
 	// This returns a pointer to TrackType now.  But I don't need to explicitly dereference this pointer in Go.
@@ -353,7 +359,8 @@ func GetTrack(f *bufio.Reader) (trk *TrackType) {
 	return trk
 } // GetTrack
 
-/* -------------------------------------------------- PutTrack -------------------------------------------- */
+// -------------------------------------------------- PutTrack --------------------------------------------
+
 func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
 
 	// indivTrackNum used to be incremented here.  I'll have it incremented in the caller now.
@@ -442,21 +449,21 @@ func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
 	return
 } // PutTrack
 
-/* ---------------------------------------------- ProcessXMLfile    ------------------------------------------ */
+// ---------------------------------------------- ProcessXMLfile    ------------------------------------------
 
 func ProcessXMLfile(inputfile *bufio.Reader, outputfile *bufio.Writer) {
 
-	firstlineoffile, err := inputfile.ReadString('\n') /* this is the ?xml version line, incl'g <CR><LF> chars */
+	firstlineoffile, err := inputfile.ReadString('\n') // this is the ?xml version line, incl'g <CR><LF> chars
 	check(err, "Error when reading first line of input file.")
 	_, err = outputfile.WriteString(firstlineoffile)
 	check(err, "Error when writing first line of output file.")
 
-	secondlineoffile, err := inputfile.ReadString('\n') /* this is the playlist xmlns= line */
+	secondlineoffile, err := inputfile.ReadString('\n') // this is the playlist xmlns= line
 	check(err, "Error when reading second line of input file.")
 	_, err = outputfile.WriteString(secondlineoffile)
 	check(err, "Error when writing second line of output file.")
 
-	thirdlineoffile, err := inputfile.ReadString('\n') /* this is the title line */
+	thirdlineoffile, err := inputfile.ReadString('\n') // this is the title line
 	check(err, "Error when reading third line of input file.")
 	_, err = outputfile.WriteString(thirdlineoffile)
 	check(err, "Error when writing third line of output file.")
@@ -466,35 +473,33 @@ func ProcessXMLfile(inputfile *bufio.Reader, outputfile *bufio.Writer) {
 		if EOF {
 			fmt.Errorf(" ProcessXMLfile and got EOF when trying to get <trackList>.  Ending.\n")
 			return
-		} // if EOF
+		}
 
 		if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") {
-			break
-		} /* if have tracklist */
-	} /* loop until get opening tracklist tag */
+			break // if have tracklist
+		}
+	} // loop until get opening tracklist tag
 
-	for { /* ignoring white space until get the opening track tag.  I'm not sure I still need this as a loop.  But it works. */
+	for { // ignoring white space until get the opening track tag.  I'm not sure I still need this as a loop.  But it works.
 		XMLtoken, EOF := GetXMLtoken(inputfile)
 		if EOF {
 			fmt.Errorf(" Trying to get opening track tag and got EOF condition.  Ending.\n")
 			return
-		} // if EOF
+		}
 		if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
 			break
-		} /* if have track */
-	} /* loop ignoring whitespace until get the opening track tag */
+		}
+	}
 
 	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
 
-	for { /* to read the continuous stream of track tokens */
+	for { // to read the continuous stream of track tokens
 		trackptr := GetTrack(inputfile)
 		TrackSlice = append(TrackSlice, trackptr) // I'm using a separate assignment to hold the pointer, so I can more easily debug the code, if needed.
 
-		/*
-		   This next token will either be a closing tracklist tag or an opening track tag.  If it is not
-		   a closing tracklist tag to end the loop, then we just swallowed the next opening track tag which
-		   is perfect for the GetTrack rtn anyway.
-		*/
+		//   This next token will either be a closing tracklist tag or an opening track tag.  If it is not
+		//   a closing tracklist tag to end the loop, then we just swallowed the next opening track tag which
+		//   is perfect for the GetTrack rtn anyway.
 
 		XMLtoken, EOF := GetXMLtoken(inputfile) // this token should be <track> and then rtn loops again.
 		if EOF {
@@ -504,34 +509,32 @@ func ProcessXMLfile(inputfile *bufio.Reader, outputfile *bufio.Writer) {
 
 		if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") { // unexpected condition
 			break
-		} /* if have closing tracklist */
-	} /* loop to read in more tracks */
+		} // if have closing tracklist
+	} // loop to read in more tracks
 
 	NumOfTracks := len(TrackSlice)
 	fmt.Println("Last track number read is ", NumOfTracks)
 
 	t0 := time.Now()
-	/*
-	   need to shuffle here
-	*/
+
+	//   time to shuffle
 
 	swapfnt := func(i, j int) {
 		TrackSlice[i], TrackSlice[j] = TrackSlice[j], TrackSlice[i]
 	}
-	rand.Shuffle(len(TrackSlice), swapfnt)
-	//	Time := timlibg.GetDateTime()
-	//	shuffling := Time.Month + Time.Day + Time.Hours + Time.Minutes + Time.Year + Time.Seconds
-	//	for k := 0; k < shuffling; k++ {
-	//		Shuffle()
-	//	}
+
+	Time := timlibg.GetDateTime()
+	shuffling := Time.Month + Time.Day + Time.Hours + Time.Minutes + Time.Year + Time.Seconds
+	for k := 0; k < shuffling; k++ {
+		rand.Shuffle(len(TrackSlice), swapfnt)
+	}
 	// Finished shuffling.
 
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	timeToShuffleString := timeToShuffle.String()
-	fmt.Println(" It took ", timeToShuffleString, " to shuffle this file.")
+	fmt.Printf(" It took %s to shuffle this file.\n", timeToShuffle.String())
 	fmt.Println()
 
-	/* Write the output file. */
+	// Write the output file.
 	_, err = outputfile.WriteRune(tabchar)
 	check(err, " Starting to write the shuffled tracklist to the output file and got error: ")
 	outputfile.WriteString("<trackList>")
@@ -545,14 +548,14 @@ func ProcessXMLfile(inputfile *bufio.Reader, outputfile *bufio.Writer) {
 	outputfile.WriteString("</trackList>")
 	outputfile.WriteString(lineDelim)
 
-	for { /* to read and write the rest of the lines */
+	for { // to read and write the rest of the lines
 		line, err := inputfile.ReadString('\n')
 		if err == io.EOF {
 			break
 		}
 		check(err, " Reading final lines of the inputfile and got this error: ")
 		_, err = outputfile.WriteString(line)
-	} /* final read and write loop */
+	} // final read and write loop
 
 } // ProcessXMLfile
 
@@ -573,9 +576,9 @@ func min(a, b int) int {
 	}
 }
 
-/* ---------------------------- MAIN -------------------------------- */
+// ------------------------------------------- MAIN --------------------------------
 func main() {
-	fmt.Println(" Shuffling program for the tracks in a vlc file.  Last altered", LastCompiled)
+	fmt.Println(" Shuffling program for the tracks in a vlc file.  Last altered", LastCompiled, "and compiled by", runtime.Version())
 	fmt.Println()
 
 	InExtDefault := ".xspf"
