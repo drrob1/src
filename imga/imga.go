@@ -74,7 +74,7 @@ func main() {
 	//	verboseFlag = flag.Bool("v", false, "verbose flag")
 	flag.Parse()
 	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
+		fmt.Fprintln(os.Stderr, " Usage: imga <image file name>")
 		os.Exit(1)
 	}
 
