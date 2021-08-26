@@ -3,12 +3,15 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -19,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "23 May 2021"
+const LastAltered = "26 Aug 2021"
 
 /*
 Revision History
@@ -95,6 +98,7 @@ Revision History
 16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
+26 Aug 21 -- Backporting autoheight and autowidth
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -109,6 +113,9 @@ type DsrtParamType struct {
 func main() {
 	const defaultlineswin = 50
 	const defaultlineslinux = 40
+	const maxwidth = 300
+	const minwidth = 90
+
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var userptr *user.User // from os/user
@@ -123,6 +130,7 @@ func main() {
 	var commandline string
 	var directoryAliasesMap dirAliasMapType
 	var excludeRegexPattern string
+	var autowidth, autoheight int
 
 	uid := 0
 	gid := 0
@@ -137,11 +145,57 @@ func main() {
 		runtime.Version(), ".")
 	fmt.Println()
 
+	autoDefaults := term.IsTerminal(int(os.Stdout.Fd())) // This now works on Windows, too
+	if !autoDefaults {
+		if winflag {
+			comspec, ok := os.LookupEnv("ComSpec")
+			if ok {
+				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
+				tcc.Stdout = bytesbuf
+				tcc.Run()
+				colstr := bytesbuf.String()
+				lines := strings.Split(colstr, "\n")
+				trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
+				autowidth, err = strconv.Atoi(trimmedLine)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
+				}
+
+				bytesbuf.Reset()
+				tcc = exec.Command(comspec, "-C", "echo", "%_rows")
+				tcc.Stdout = bytesbuf
+				tcc.Run()
+				rowstr := bytesbuf.String()
+				lines = strings.Split(rowstr, "\n")
+				trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
+				autoheight, err = strconv.Atoi(trimmedLine)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
+				}
+
+			} else {
+				fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+		}
+	} else {
+		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
+		if err != nil {
+			autoDefaults = false
+			autoheight = defaultlineslinux
+			autowidth = minwidth
+		}
+	}
+
 	if linuxflag {
 		systemStr = "Linux"
 		files = make([]os.FileInfo, 0, 500)
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
+		} else if autoheight > 0 {
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineslinux
 		}
@@ -149,6 +203,8 @@ func main() {
 		systemStr = "Windows"
 		if dsrtparam.numlines > 0 {
 			numoflines = dsrtparam.numlines
+		} else if autoheight > 0 {
+			numoflines = autoheight - 7
 		} else {
 			numoflines = defaultlineswin
 		}
@@ -182,7 +238,7 @@ func main() {
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	var nlines = flag.Int("n", numoflines, "number of lines to display") // Ptr
+	var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier for numofLines") // Ptr
 	var NLines int
 	flag.IntVar(&NLines, "N", numoflines, "number of lines to display") // Value
 
@@ -229,6 +285,10 @@ func main() {
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+			fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d. \n", autoDefaults, autoheight, autowidth)
+			fmt.Printf(" dsrtparam numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
+				dsrtparam.numlines, dsrtparam.reverseflag, dsrtparam.sizeflag, dsrtparam.dirlistflag, dsrtparam.filenamelistflag,
+				dsrtparam.totalflag)
 		}
 	}
 
@@ -246,11 +306,11 @@ func main() {
 	DateSort := !SizeSort // convenience variable
 
 	NumLines := numoflines
-	if *nlines != numoflines {
-		NumLines = *nlines
-	} else if NLines != numoflines {
+	if NLines > 0 { // -N option switch takes priority over autoheight
 		NumLines = NLines
 	}
+
+	NumLines *= *nscreens // if nscreens == 1, that's not a problem after all.
 
 	noExtensionFlag := *extensionflag || *extflag
 	var excludeRegex *regexp.Regexp
