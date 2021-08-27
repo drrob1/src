@@ -4,17 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"getcommandline"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
+	"src/getcommandline"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const LastAlteredDate = "25 May 2020"
+const LastAlteredDate = "27 Aug 2021"
 
 /*
   REVISION HISTORY
@@ -53,6 +52,9 @@ const LastAlteredDate = "25 May 2020"
                When I correctly tested Sedgewick's approch to the ShellSort interval, I found it to be substantially better than what
                Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
   27 May 20 -- Fixing some comments.  I won't recompile.
+  27 Aug 21 -- Converted to modules and Go 1.16 libraries by removing ioutil.  And using other routines from the sort standard library.
+               Again, fixing some comments, and commenting out modifiedHeapsort which doesn't work.
+               This code has been supplanted by heapsorter.go.  I'll not do anything else here.
 */
 
 var intStack []int
@@ -69,6 +71,7 @@ var hiloStack []hiloIndexType
 //                         The Modula-2 version would have made it w/ one element to spare.
 
 // -----------------------------------------------------------
+
 func StraightInsertion(input []string) []string {
 	n := len(input)
 	for i := 1; i < n; i++ {
@@ -84,6 +87,7 @@ func StraightInsertion(input []string) []string {
 } // END StraightInsertion
 
 // -----------------------------------------------------------
+
 func BinaryInsertion(a []string) []string {
 	n := len(a)
 	for i := 1; i < n; i++ {
@@ -108,6 +112,7 @@ func BinaryInsertion(a []string) []string {
 } // END BinaryInsertion
 
 // -----------------------------------------------------------
+
 func StraightSelection(a []string) []string {
 	n := len(a)
 	for i := 0; i < n-1; i++ {
@@ -126,6 +131,7 @@ func StraightSelection(a []string) []string {
 } // END StraightSelection
 
 // -----------------------------------------------------------
+
 func BadShellSort(a []string) []string {
 	var h int
 
@@ -180,6 +186,7 @@ End Bubblesort
 // I based this on bubble sort pseudo-code above that I found in "Essential Algorithms", by Rod Stephens.
 // I have this as an ebook.
 // Now I'm going to add the improvement used by Sedgewick in the determination of h.
+
 func MyShellSort(a []string) []string {
 	var h int
 
@@ -214,6 +221,7 @@ func MyShellSort(a []string) []string {
 // -----------------------------------------------------------
 
 // From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
+
 func ShellSort(a []string) []string {
 	var h int
 
@@ -243,6 +251,7 @@ func ShellSort(a []string) []string {
 // -----------------------------------------------------------
 // The principal of heapsort is that in phase 1, the array to be sorted is turned into a heap.  In phase 2, the items
 // are removed from the heap in the order just created.
+
 func sift(a []string, L, R int) []string {
 	i := L
 	j := 2*i + 1
@@ -277,10 +286,11 @@ func HeapSort(a []string) []string { // I think this is based on Wirth's code in
 	} // END for-while R > 0
 	return a
 } // END HeapSort
+
 // -----------------------------------------------------------
 // -----------------------------------------------------------
-// I did this myself, but it doesn't work.  I'm keeping this here so I don't do this again.  I didn't understand how
-// a heap sort works, so this idea was wrong headed.
+/*
+This doesn't work.  I'm keeping this here so I don't do this again.  I didn't understand how a heap sort works, so this idea was wrong headed.
 func ModifiedHeapSort(a []string) []string {
 	n := len(a)
 	L := n / 2
@@ -312,6 +322,8 @@ func ModifiedHeapSort(a []string) []string {
 	} // END for-while R > 0
 	return a
 } // END ModifiedHeapSort
+
+*/
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 /*  Don't remember where this came from, but I'm leaving it here in case I find out some day.
@@ -634,6 +646,7 @@ func merge(left, right []string) []string {
 
 // -----------------------------------------------------------
 // modified mergesort.go
+
 func ModifiedMergeSort(L []string) []string {
 	if len(L) < 12 {
 		L = StraightInsertion(L)
@@ -701,14 +714,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, filesize+5) // add 5 just in case
-	byteslice, err := ioutil.ReadFile(Filename)
+	byteSlice := make([]byte, 0, filesize+5) // add 5 just in case
+	byteSlice, err := os.ReadFile(Filename)
 	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
+		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
+	bytesBuffer := bytes.NewBuffer(byteSlice)
 
 	OutFilename := BaseFilename + OutDefault
 	//	OutputFile, err := os.Create(OutFilename)
@@ -734,36 +747,35 @@ func main() {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		os.Exit(1)
 	}
-	requestedwordcount, err := strconv.Atoi(answer)
+	requestedWordCount, err := strconv.Atoi(answer)
 	if err != nil {
 		fmt.Println(" No valid answer entered.  Will assume 0.")
-		requestedwordcount = 0
+		requestedWordCount = 0
 	}
 
-	if requestedwordcount == 0 {
-		requestedwordcount = int(filesize / 7)
+	if requestedWordCount == 0 {
+		requestedWordCount = int(filesize / 7)
 	}
 
-	s := fmt.Sprintf(" filesize = %d, requestedwordcount = %d \n", filesize, requestedwordcount)
+	s := fmt.Sprintf(" filesize = %d, requestedwordcount = %d \n", filesize, requestedWordCount)
 	OutBufioWriter.WriteString(s)
-	mastersliceofwords := make([]string, 0, requestedwordcount)
+	masterSliceOfWords := make([]string, 0, requestedWordCount)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
-	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
-		word, err := bytesbuffer.ReadString('\n')
+	for totalwords := 0; totalwords < requestedWordCount; totalwords++ { // Main processing loop
+		word, err := bytesBuffer.ReadString('\n')
 		if err != nil {
 			break
 		}
 		word = strings.TrimSpace(word)
-		//	word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 4 {
 			continue
 		}
-		mastersliceofwords = append(mastersliceofwords, word)
+		masterSliceOfWords = append(masterSliceOfWords, word)
 	}
 
-	numberofwords := len(mastersliceofwords)
+	numberofwords := len(masterSliceOfWords)
 
 	allowoutput := false
 	if numberofwords < 50 {
@@ -772,7 +784,7 @@ func main() {
 
 	// make the sliceofwords
 	if allowoutput {
-		fmt.Println("master before:", mastersliceofwords)
+		fmt.Println("master before:", masterSliceOfWords)
 	}
 	sliceofwords := make([]string, numberofwords)
 
@@ -780,11 +792,11 @@ func main() {
 	fmt.Println()
 
 	// sort.StringSlice method
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("slice before first sort.StringSlice:", sliceofwords)
 	}
-	NativeWords := sort.StringSlice(sliceofwords)
+	NativeWords := sort.StringSlice(sliceofwords) // type convert to what is needed by the sort routines.
 	t9 := time.Now()
 	NativeWords.Sort()
 	NativeSortTime := time.Since(t9)
@@ -803,7 +815,7 @@ func main() {
 	fmt.Println()
 
 	// StraightSelection
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println(" sliceofwords before StraightSelection: ", sliceofwords)
 	}
@@ -826,7 +838,7 @@ func main() {
 	fmt.Println()
 
 	// StraightInsertion
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before StraightInsertion:", sliceofwords)
 	}
@@ -848,7 +860,7 @@ func main() {
 	fmt.Println()
 
 	// BinaryInsertion
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before BinaryInsertion:", sliceofwords)
 	}
@@ -870,7 +882,7 @@ func main() {
 	fmt.Println()
 
 	// ShellSort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before ShellSort:", sliceofwords)
 	}
@@ -892,7 +904,7 @@ func main() {
 	fmt.Println()
 
 	// BadShellSort -- now a misnomer as it finally works.
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before BadShellSort:", sliceofwords)
 	}
@@ -914,7 +926,7 @@ func main() {
 	fmt.Println()
 
 	// MyShellSort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before MyShellSort:", sliceofwords)
 	}
@@ -936,7 +948,7 @@ func main() {
 	fmt.Println()
 
 	// HeapSort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before HeapSort:", sliceofwords)
 	}
@@ -960,7 +972,7 @@ func main() {
 	// NRHeapSort which is from Numerical Recipies and converted from C++ coce.
 
 	/*	Did not sort correctly, but did not panic. */
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before NRHeapSort:", sliceofwords)
 	}
@@ -981,7 +993,6 @@ func main() {
 	check(err)
 
 	fmt.Println()
-	/* */
 
 	// ModifiedHeapSort -- doesn't work.
 	/*
@@ -1008,7 +1019,7 @@ func main() {
 	*/
 
 	// QuickSort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before QuickSort:", sliceofwords)
 	}
@@ -1030,7 +1041,7 @@ func main() {
 	fmt.Println()
 
 	// MergeSort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before MergeSort:", sliceofwords)
 	}
@@ -1052,7 +1063,7 @@ func main() {
 	fmt.Println()
 
 	// ModifiedMergeSort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before ModifiedMergeSort:", sliceofwords)
 	}
@@ -1074,7 +1085,7 @@ func main() {
 	fmt.Println()
 
 	// NonRecursiveQuickSort (from Modula-2)
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before Modula-2 nonrecursiveQuickSort:", sliceofwords)
 	}
@@ -1096,7 +1107,7 @@ func main() {
 	fmt.Println()
 
 	// NonRecursiveQuickSortOberon
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before nonrecursiveQuickSortOberon:", sliceofwords)
 	}
@@ -1118,11 +1129,11 @@ func main() {
 	fmt.Println()
 
 	// sort.StringSlice
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before 2nd sort.StringSlice:", sliceofwords)
 	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	NativeWords = sliceofwords // I used to have this as a type conversing to sort.StringSlice type, but Goland said this is unneeded.
 	t9 = time.Now()
 	NativeWords.Sort()
 	NativeSortTime = time.Since(t9)
@@ -1141,11 +1152,11 @@ func main() {
 	fmt.Println()
 
 	// sort.Sort
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before sort.Sort:", sliceofwords)
 	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	NativeWords = sliceofwords
 	t9 = time.Now()
 	sort.Sort(NativeWords)
 	NativeSortTime = time.Since(t9)
@@ -1164,7 +1175,7 @@ func main() {
 	fmt.Println()
 
 	// sort.Stable
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before sort.Stable:", sliceofwords)
 	}
@@ -1187,7 +1198,7 @@ func main() {
 	fmt.Println()
 
 	// sort.Strings
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before sort.Strings:", sliceofwords)
 	}
@@ -1209,7 +1220,7 @@ func main() {
 	fmt.Println()
 
 	// sort.Slice
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before sort.Slice:", sliceofwords)
 	}
@@ -1234,7 +1245,7 @@ func main() {
 	fmt.Println()
 
 	// sort.SliceStable
-	copy(sliceofwords, mastersliceofwords)
+	copy(sliceofwords, masterSliceOfWords)
 	if allowoutput {
 		fmt.Println("before sort.SliceStable:", sliceofwords)
 	}
@@ -1257,9 +1268,9 @@ func main() {
 
 	// Wrap it up by writing number of words, etc.
 	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
-		requestedwordcount, numberofwords, len(mastersliceofwords))
+		requestedWordCount, numberofwords, len(masterSliceOfWords))
 	_, err = OutBufioWriter.WriteString(s)
-	if len(mastersliceofwords) > 1000 {
+	if len(masterSliceOfWords) > 1000 {
 		fmt.Println(s)
 		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
 	}

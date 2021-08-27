@@ -5,8 +5,7 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"getcommandline"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Jan 4, 2021"
+const LastAlteredDate = "Aug 27, 2021"
 
 /*
   REVISION HISTORY
@@ -66,6 +65,7 @@ const LastAlteredDate = "Jan 4, 2021"
   27 Aug 20 -- Added timing comments from txt file that has just over 1 million words.
    2 Jan 21 -- Removed 3 redundant type conversions, as flagged by GoLand.
    4 Jan 21 -- Adding ModifiedQuickSort, and will sort output times.  And will not run N**2 sorts on datasets > tooBig.
+  27 Aug 21 -- Converting to modules by removing getcommandline, and removed the depricated ioutil.
 */
 
 const tooBig = 170_000
@@ -93,6 +93,7 @@ type timesortType struct {
 }
 
 // ----------------------------------------------------------- container/heap -----------------------------------------
+
 func (h stringHeap) Len() int           { return len(h) }
 func (h stringHeap) Less(i, j int) bool { return h[i] < h[j] }
 func (h stringHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
@@ -132,6 +133,7 @@ func (h *stringHeap) Pop() interface{} {
 
 // -----------------------------------------------------------
 // -----------------------------------------------------------
+
 func StraightInsertion(input []string) []string {
 	n := len(input)
 	for i := 1; i < n; i++ {
@@ -156,6 +158,7 @@ func BasicInsertion(input []string) []string {
 }
 
 // -----------------------------------------------------------
+
 func BinaryInsertion(a []string) []string {
 	n := len(a)
 	for i := 1; i < n; i++ {
@@ -180,6 +183,7 @@ func BinaryInsertion(a []string) []string {
 } // END BinaryInsertion
 
 // -----------------------------------------------------------
+
 func StraightSelection(a []string) []string {
 	n := len(a)
 	for i := 0; i < n-1; i++ { // don't include the last element in this loop.
@@ -198,6 +202,7 @@ func StraightSelection(a []string) []string {
 } // END StraightSelection
 
 // -----------------------------------------------------------
+
 func BadShellSort(a []string) []string {
 	var h int
 
@@ -252,6 +257,7 @@ End Bubblesort
 // I based this on bubble sort pseudo-code above that I found in "Essential Algorithms", by Rod Stephens.
 // I have this as an ebook.
 // Now I'm going to add the improvement used by Sedgewick in the determination of h.
+
 func MyShellSort(a []string) []string {
 	var h int
 
@@ -286,6 +292,7 @@ func MyShellSort(a []string) []string {
 // -----------------------------------------------------------
 
 // From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
+
 func ShellSort(a []string) []string {
 	var h int
 
@@ -595,7 +602,6 @@ func NonRecursiveQuickSort(a []string) []string {
 	k.lo = 0
 	k.hi = n
 	hiloStackPush(k)
-	//fmt.Println(" initial hi lo stack push.  Stack is", hiloStack)
 
 	for hiloStackLen() > 0 {
 		//		stacksize := hiloStackLen()
@@ -606,7 +612,6 @@ func NonRecursiveQuickSort(a []string) []string {
 		i0 := hiloStackPop()
 		lo := i0.lo
 		hi := i0.hi
-		//fmt.Println(" outer for loop, for stack not empty.  Stack is", hiloStack)
 
 		if time.Since(t0) > 10*time.Second {
 			fmt.Printf(" timeout outer loop.  i0= %v, lo=%d, hi=%d \n", i0, lo, hi)
@@ -628,8 +633,6 @@ func NonRecursiveQuickSort(a []string) []string {
 					fmt.Printf(" timeout innermost loop.  lo=%d, hi=%d, i=%d, , j=%d,  x=%s \n", lo, hi, i, j, x)
 					return a
 				}
-				//fmt.Println(" innermost for loop for i <= j.  Stack is", hiloStack)
-				//pause()
 
 				for a[i] < x {
 					i++
@@ -642,9 +645,6 @@ func NonRecursiveQuickSort(a []string) []string {
 					i++
 					j--
 				}
-				//				if i > j { // UNTIL i > j
-				//					break
-				//				}
 			} // REPEAT ... UNTIL i > j
 			if j-lo < hi-i {
 				if i < hi { // push request to sort right partition
@@ -661,10 +661,6 @@ func NonRecursiveQuickSort(a []string) []string {
 				}
 				lo = i // continue sorting right partition
 			}
-
-			//			if L >= R { // UNTIL L >= R
-			//				break
-			//			}
 		} // REPEAT ... UNTIL L >= R
 
 	} // REPEAT ... UNTIL hiloStack is empty
@@ -678,11 +674,6 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 	intStackPush(0)
 	intStackPush(n - 1)
 	for intStackLen() > 0 { // REPEAT (*take top request from stack*)
-		//		stacksize := intStackLen()
-		//		if stacksize > maxStackSize {
-		//			maxStackSize = stacksize
-		//		}
-
 		R := intStackPop()
 		L := intStackPop()
 		for L < R { // REPEAT partition a[L] ... a[R]
@@ -769,6 +760,7 @@ func merge(left, right []string) []string {
 
 // -----------------------------------------------------------
 // modified mergesort.go
+
 func ModifiedMergeSort(L []string) []string {
 	if len(L) < 12 {
 		L = StraightInsertion(L)
@@ -803,7 +795,8 @@ func main() {
 	date := time.Now()
 	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 
-	commandline := getcommandline.GetCommandLineString()
+	//commandline := getcommandline.GetCommandLineString()
+	commandline := os.Args[1]
 	BaseFilename := filepath.Clean(commandline)
 	Filename := ""
 	FileExists := false
@@ -837,9 +830,9 @@ func main() {
 	}
 
 	byteslice := make([]byte, 0, filesize+5) // add 5 just in case
-	byteslice, err := ioutil.ReadFile(Filename)
+	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
+		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
@@ -1337,7 +1330,7 @@ func main() {
 	for _, wrd := range mastersliceofwords {
 		heap.Push(&heapofwords, wrd)
 	}
-	//                                                fmt.Println(" length of heapofwords slice is", len(heapofwords), ", len of master slice is ", len(mastersliceofwords), ", heapofwords.Len is", heapofwords.Len(), ". ")
+
 	var str string
 	for heapofwords.Len() > 0 { // Note: as items are popped off of the heap, it's length gets smaller.  So using i < heapofwords.Len() didn't work.
 		str = heap.Pop(&heapofwords).(string) // this works to force the interface type treated as the string that it is.

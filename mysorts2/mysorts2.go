@@ -4,8 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"getcommandline"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,7 +13,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "24 May 2020"
+const LastAlteredDate = "27 Aug 2021"
 
 /*
   REVISION HISTORY
@@ -30,7 +29,7 @@ const LastAlteredDate = "24 May 2020"
                  Now that Sedgewick's ShellSort works, I'm adding BadShellSort to compare more directly.
   22 May 20 -- Adding ModifiedQuickSort to see if it's faster to insertionsort when < 12 items.
   24 May 20 -- ModifiedQuickSort slightly slower than QuickSort.
-
+  27 Aug 21 -- Supplanted by heapsorter.go.  But I removed ioutils and getcommandline.
 */
 
 func StraightInsertion(input []string) []string {
@@ -250,7 +249,8 @@ func main() {
 	date := time.Now()
 	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 
-	commandline := getcommandline.GetCommandLineString()
+	//commandline := getcommandline.GetCommandLineString()
+	commandline := os.Args[1]
 	BaseFilename := filepath.Clean(commandline)
 	Filename := ""
 	FileExists := false
@@ -284,9 +284,9 @@ func main() {
 	}
 
 	byteslice := make([]byte, 0, filesize+5) // add 5 just in case
-	byteslice, err := ioutil.ReadFile(Filename)
+	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
+		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
