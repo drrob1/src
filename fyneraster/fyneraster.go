@@ -50,20 +50,22 @@ func main() {
 	globalW.SetContent(raster)
 	globalW.Resize(fyne.NewSize(300, 300))
 
-	go changeContent()
+	go changeContent(raster)
 	globalW.ShowAndRun()
 
 } // end main
 
 // ---------------------------------------------------------- changeContent ---------------------------
-func changeContent() {
-
+func changeContent(cr *canvas.Raster) {
+	time.Sleep(1*time.Second)
 	for {
-		time.Sleep(1*time.Second)
+		globalW.SetContent(cr)
+		time.Sleep(500*time.Millisecond)
 
-		raster := canvas.NewRasterWithPixels(rasterfunc)
-		globalW.SetContent(raster)
-
+		size := cr.Size()
+		x := size.Width + 10
+		y := size.Height + 10
+		globalW.Resize(fyne.Size{x,y})
 	}
 }
 
