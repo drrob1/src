@@ -39,6 +39,7 @@ func rasterfunc(_, _, w, h int) color.Color {
 func main() {
 	str := fmt.Sprintf("fyneraster example, last modified %s, compiled using %s", LastModified, runtime.Version())
 
+	rand.Seed(time.Now().Unix())
 	globalA = app.New() // this line must appear before any other uses of fyne.
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
