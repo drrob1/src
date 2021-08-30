@@ -40,10 +40,18 @@ func main() {
 	btnfunc := func() {
 		log.Println(" text entered:", input.Text)
 	}
-
+/*
+Trying out alternate syntaxes.  This works as a func literal.
 	input.OnSubmitted = func(s string) {
-		log.Println(" closure func: ENTER was hit: ", s)
+		log.Println(" func literal closure func: ENTER was hit:", s)
 	}
+
+ */
+
+	submitted := func(s string) {
+		log.Println(" func assigned closure ENTER was hit:", s)
+	}
+	input.OnSubmitted = submitted // after help from Andy Williams, a principal in the fyne.io project.
 
 	btn := widget.NewButton("Wider save me", btnfunc)
 	content := container.NewVBox(input, btn)
