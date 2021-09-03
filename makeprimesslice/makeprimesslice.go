@@ -4,8 +4,8 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
-	"hpcalc"
 	"os"
+	hpcalc "src/hpcalc2"
 	"strconv"
 	"time"
 )
@@ -22,11 +22,12 @@ REVISION HISTORY
 	       Both are to be saved as gob files.
                And my first use of a ticker
  8 Mar 18 -- Tweaking output file process and when to write these files.
+ 3 Sep 21 -- Add a module so it would compile on Go 1.16
 */
 
 const PrimeMapFilename = "primemap.gob"
 const PrimeSliceFilename = "primeslice.gob"
-const MaxPrime32 uint = 4294967291
+const MaxPrime32 uint = 4_294_967_291
 
 var StopVal uint = 1e7
 
