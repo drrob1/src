@@ -180,6 +180,7 @@ func main() {
 	}
 
 	loadedimg = canvas.NewImageFromImage(img)
+	loadedimg.ScaleMode = canvas.ImageScaleFastest
 	if ! *zoomFlag {
 		loadedimg.FillMode = canvas.ImageFillContain
 	}
@@ -283,6 +284,7 @@ func loadTheImage() {
 	}
 
 	loadedimg = canvas.NewImageFromImage(img)
+	loadedimg.ScaleMode = canvas.ImageScaleFastest
 	if ! *zoomFlag {
 		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
