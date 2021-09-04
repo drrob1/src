@@ -60,7 +60,7 @@ var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
-var scaleFactor float64
+var scaleFactor float64 = 1
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -179,7 +179,7 @@ func main() {
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
 	select { // this syntax works and is blocking.
-	case imageInfo = <-imgFileInfoChan: // this ackward syntax is what's needed to read from a channel.
+	case imageInfo = <-imgFileInfoChan: // this awkward syntax is what's needed to read from a channel.
 	}
 
 	if *verboseFlag {
@@ -206,8 +206,6 @@ func main() {
 	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
-
-	scaleFactor = 1
 
 	globalW.ShowAndRun()
 
@@ -246,13 +244,23 @@ func loadTheImage() {
 		title = title + "; resized."
 	}
 
-	if scaleFactor != 1 { // only use 1 dimension to scale; I'll use height
+	bounds = img.Bounds()
+	imgHeight = bounds.Max.Y
+	imgWidth = bounds.Max.X
+
+	if scaleFactor != 1 {
+		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
+			scaledHeight := float64(imgHeight) * scaleFactor
+			intHeight := uint(math.Round(scaledHeight))
+			img = resize.Resize(0, intHeight, img, resize.Lanczos3)
+		} else {
+			scaledWidth := float64(imgWidth) * scaleFactor
+			intWidth := uint(math.Round(scaledWidth))
+			img = resize.Resize(intWidth, 0, img, resize.Lanczos3)
+		}
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		scaledHeight := float64(imgHeight) * scaleFactor
-		intHeight := uint(math.Round(scaledHeight))
-		img = resize.Resize(0, intHeight, img, resize.Lanczos3)
 	}
 
 	if *verboseFlag {
@@ -265,10 +273,11 @@ func loadTheImage() {
 
 	loadedimg = canvas.NewImageFromImage(img)
 	//loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.
-	loadedimg.FillMode = canvas.ImageFillOriginal
+	//loadedimg.FillMode = canvas.ImageFillOriginal
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetContent(loadedimg)
 	globalW.SetTitle(title)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+
 	globalW.Show()
 	return
 }
@@ -385,22 +394,28 @@ func lastImage() {
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
 	case fyne.KeyUp:
+		scaleFactor = 1
 		prevImage()
 	case fyne.KeyDown:
+		scaleFactor = 1
 		nextImage()
 	case fyne.KeyLeft:
+		scaleFactor = 1
 		prevImage()
 	case fyne.KeyRight:
+		scaleFactor = 1
 		nextImage()
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
 	case fyne.KeyHome:
+		scaleFactor = 1
 		firstImage()
 	case fyne.KeyEnd:
+		scaleFactor = 1
 		lastImage()
 	case fyne.KeyPlus:
-		scaleFactor *= 1.5
+		scaleFactor *= 1.1
 		loadTheImage()
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
@@ -408,5 +423,8 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEqual:
 		scaleFactor = 1
 		loadTheImage()
+	case fyne.KeyEnter, fyne.KeyReturn:
+		scaleFactor = 1
+		nextImage()
 	}
 }
