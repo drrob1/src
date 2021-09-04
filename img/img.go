@@ -13,6 +13,7 @@ REVISION HISTORY
 20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
 21 Aug 21 -- Adding Q and X to exit.
 23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
+ 4 Sep 21 -- Added -, + and = keys
 */
 
 package main
@@ -21,6 +22,8 @@ import (
 	"flag"
 	"fmt"
 	"fyne.io/fyne/v2/app"
+	"math"
+
 	//"fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
 	//"fyne.io/fyne/v2/container"
@@ -46,9 +49,9 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 23, 2021"
-const maxWidth = 2500
-const maxHeight = 2000
+const LastModified = "Sep 4, 2021"
+const maxWidth = 1800 // actual resolution is 1920 x 1080
+const maxHeight = 900 // actual resolution is 1920 x 1080
 
 var index int
 var loadedimg *canvas.Image
@@ -57,6 +60,7 @@ var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
+var scaleFactor float64
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -64,6 +68,7 @@ func isNotImageStr(name string) bool {
 	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 	return !isImage
 }
+
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	//	verboseFlag = flag.Bool("v", false, "verbose flag")
@@ -202,6 +207,8 @@ func main() {
 	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
 	fmt.Println()
 
+	scaleFactor = 1
+
 	globalW.ShowAndRun()
 
 } // end main
@@ -239,10 +246,29 @@ func loadTheImage() {
 		title = title + "; resized."
 	}
 
+	if scaleFactor != 1 { // only use 1 dimension to scale; I'll use height
+		bounds = img.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		scaledHeight := float64(imgHeight) * scaleFactor
+		intHeight := uint(math.Round(scaledHeight))
+		img = resize.Resize(0, intHeight, img, resize.Lanczos3)
+	}
+
+	if *verboseFlag {
+		bounds = img.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Println()
+	}
+
 	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.FillMode = canvas.ImageFillContain
+	//loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.
+	loadedimg.FillMode = canvas.ImageFillOriginal
 	globalW.SetContent(loadedimg)
 	globalW.SetTitle(title)
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.Show()
 	return
 }
@@ -349,7 +375,7 @@ func firstImage() {
 	loadTheImage()
 }
 
-// ------------------------------------------ lastImage
+// ------------------------------------------ lastImage ---------------------------------------------------------
 func lastImage() {
 	index = len(imageInfo) - 1
 	loadTheImage()
@@ -373,5 +399,14 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 		firstImage()
 	case fyne.KeyEnd:
 		lastImage()
+	case fyne.KeyPlus:
+		scaleFactor *= 1.5
+		loadTheImage()
+	case fyne.KeyMinus:
+		scaleFactor *= 0.9
+		loadTheImage()
+	case fyne.KeyEqual:
+		scaleFactor = 1
+		loadTheImage()
 	}
 }

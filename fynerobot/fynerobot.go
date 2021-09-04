@@ -7,6 +7,9 @@ REVISION HISTORY
              -- count down timer and have the title change w/ every count down number.  Time defaults to 900 sec, but can be set by a flag.
              -- when timer is zero, mouse is moved to coordinates which are defaulted, but can be set by flags for row and col, or X and Y.
              -- loops until exit by kbd or "X"-ing it's window closed.
+ 3 Sep 21 -- I found on Yussi's computer (empirically) that a value of X=450 and Y=325 works well, and each row is 100 pixels lower, ie, Y += 100.
+               Just one spot double-clicked did not keep Epic awake.  I have to do more like what I do w/ the take command batch file.
+               Maybe 3 lines in succession, each w/ X incremented or decremented by 10, and Y incremented each time by 100 pixels.
 */
 
 package main
@@ -28,7 +31,13 @@ import (
 
 )
 
-const LastModified = "Sep 3, 2021"
+const LastModified = "Sep 4, 2021"
+const clickedX = 450
+const clickedY = 325
+const incrementY = 100
+const incrementX = 10
+const timerDefault = 870
+const minTimer = 5
 
 var globalA fyne.App
 var globalW fyne.Window
@@ -37,9 +46,9 @@ var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
 var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
 var gray = color.Gray{Y: 100}
 var firstX, firstY int
-var timer = flag.Int("timer", 900, "timer value in seconds")
-var X = flag.Int("x", 500, "X (col) value")
-var Y = flag.Int("y", 500, "Y (row) value")
+var timer = flag.Int("timer", timerDefault, "timer value in seconds")
+var X = flag.Int("x", clickedX, "X (col) value")
+var Y = flag.Int("y", clickedY, "Y (row) value")
 
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
@@ -47,6 +56,10 @@ func main() {
 	str := fmt.Sprintf("fynerobot last modified %s, compiled using %s", LastModified, runtime.Version())
 
 	flag.Parse()
+
+	if *timer < minTimer { // need a minimum timer value else it's too hard to stop the pgm.
+		*timer = minTimer
+	}
 
 	globalA = app.New()
 	globalW = globalA.NewWindow(str)
@@ -83,7 +96,7 @@ func main() {
 
 // ---------------------------------------------------------- changeContent ---------------------------
 func changeContent(cnvs fyne.Canvas) {
-	time.Sleep(5*time.Second)
+	time.Sleep(10*time.Second)
 	countdowntimer := *timer
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -93,20 +106,37 @@ func changeContent(cnvs fyne.Canvas) {
 		select {
 		case <- ticker.C:
 			countdowntimer--
-			if countdowntimer > 0 {
-				timeStr := fmt.Sprintf("%d", countdowntimer)
-				globalW.SetTitle(timeStr)
-				now := time.Now()
-				nowStr := now.Format("Mon Jan 2 2006 15:04:05 MST")
-				fynetext := canvas.NewText(timeStr, green)
-				fynenow := canvas.NewText(nowStr, blue)
-				vbox := container.NewVBox(fynetext, fynenow)
-				cnvs.SetContent(vbox)
-			} else { //countdown hit zero
+			timeStr := fmt.Sprintf("%d", countdowntimer)
+			globalW.SetTitle(timeStr)
+			now := time.Now()
+			nowStr := now.Format("Mon Jan 2 2006 15:04:05 MST")
+			fynetext := canvas.NewText(timeStr, green)
+			fynenow := canvas.NewText(nowStr, blue)
+			vbox := container.NewVBox(fynetext, fynenow)
+			cnvs.SetContent(vbox)
+
+			if countdowntimer == 0 {
 				countdowntimer = *timer
 				currentX, currentY := robotgo.GetMousePos()
-				robotgo.MoveMouse(*X, *Y)
+
+				Xcol := *X
+				Yrow := *Y
+				robotgo.MoveMouse(Xcol, Yrow)
 				robotgo.MouseClick("left", true)
+				time.Sleep(500 * time.Millisecond)
+
+				Xcol += incrementX
+				Yrow += incrementY
+				robotgo.MoveMouse(Xcol, Yrow)
+				robotgo.MouseClick("left", true)
+				time.Sleep(500 * time.Millisecond)
+
+				Xcol -= incrementX
+				Yrow += incrementY
+				robotgo.MoveMouse(Xcol, Yrow)
+				robotgo.MouseClick("left", true)
+				time.Sleep(500 * time.Millisecond)
+
 				robotgo.MoveMouse(currentX, currentY)
 			}
 
