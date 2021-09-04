@@ -60,6 +60,7 @@ var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
+var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
 var scaleFactor float64 = 1
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
@@ -67,6 +68,14 @@ func isNotImageStr(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
 	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 	return !isImage
+}
+
+// ----------------------------------------------------------isImage ----------------------------------------------
+func isImage(file string) bool {
+	ext := strings.ToLower(filepath.Ext(file))
+	ext = strings.ToLower(ext)
+
+	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
 // ---------------------------------------------------- main --------------------------------------------------
@@ -171,7 +180,9 @@ func main() {
 	}
 
 	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.FillMode = canvas.ImageFillContain
+	if ! *zoomFlag {
+		loadedimg.FillMode = canvas.ImageFillContain
+	}
 
 	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
 	globalW.SetTitle(imgtitle)
@@ -272,15 +283,18 @@ func loadTheImage() {
 	}
 
 	loadedimg = canvas.NewImageFromImage(img)
-	//loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.
-	//loadedimg.FillMode = canvas.ImageFillOriginal
+	if ! *zoomFlag {
+		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
+		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
+	}
+
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetContent(loadedimg)
 	globalW.SetTitle(title)
 
 	globalW.Show()
 	return
-}
+} // end loadTheImage
 
 // ------------------------------- filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
@@ -292,14 +306,6 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	}
 	intchan <- -1
 	return
-}
-
-// ----------------------------------isImage ----------------------------------------------
-func isImage(file string) bool {
-	ext := strings.ToLower(filepath.Ext(file))
-	ext = strings.ToLower(ext)
-
-	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
 // ------------------------------- MyReadDirForImages -----------------------------------
@@ -414,6 +420,12 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEnd:
 		scaleFactor = 1
 		lastImage()
+	case fyne.KeyPageUp:
+		scaleFactor *= 0.9
+		loadTheImage()
+	case fyne.KeyPageDown:
+		scaleFactor *= 1.1
+		loadTheImage()
 	case fyne.KeyPlus:
 		scaleFactor *= 1.1
 		loadTheImage()
@@ -423,8 +435,11 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEqual:
 		scaleFactor = 1
 		loadTheImage()
-	case fyne.KeyEnter, fyne.KeyReturn:
+	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		scaleFactor = 1
 		nextImage()
+	case fyne.KeyBackspace:
+		scaleFactor = 1
+		prevImage()
 	}
 }
