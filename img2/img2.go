@@ -208,7 +208,7 @@ func main() {
 	globalW.SetTitle(imgtitle)
 	//                                                                                    globalW.SetContent(loadedimg)
 	globalW.SetContent(GUI)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight-textboxheight)))
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
 
 	select { // this syntax works and is blocking.
 	case imageInfo = <-imgFileInfoChan: // this awkward syntax is what's needed to read from a channel.
@@ -317,7 +317,7 @@ func loadTheImage() {
 
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 	globalW.SetContent(GUI)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight-textboxheight)))
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
 	globalW.SetTitle(title)
 
 	globalW.Show()
