@@ -1,3 +1,5 @@
+// From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
+
 package main
 
 import (
