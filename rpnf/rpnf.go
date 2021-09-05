@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
 	"runtime"
@@ -15,37 +14,26 @@ import (
 )
 
 const lastModified = "Sep 5, 2021"
-
-func makeUI() fyne.CanvasObject {
-
-	fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
-	f := binding.NewFloat()
-
-	prog := widget.NewProgressBarWithData(f)
-	slide := widget.NewSliderWithData(0, 1, f)
-	slide.Step = 0.01
-	btnfunc := func() { // my edits
-		_ = f.Set(0.5)
-	}
-	btn := widget.NewButton("Set to 0.5", btnfunc) // my edits
-
-	return container.NewVBox(prog, slide, btn)
-}
+var globalA fyne.App
+var globalW fyne.Window
 
 func main() {
 	var f float64
-	a := app.New()
-	w := a.NewWindow("Widget Binding")
+	fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
+	globalA = app.New()
+	globalW = globalA.NewWindow("Widget Binding")
+	globalW.Canvas().SetOnTypedKey(keyTyped)
 
 	f, _  = hpcalc2.GetResult("t")
 	x := binding.BindFloat(&f)
 
 	_, ss := hpcalc2.GetResult("dump")
+	shorterSS := ss[1:len(ss)-1] // removes the first and last strings, which are only character delims
 
 	f1, _ := x.Get()
 	fmt.Println(" Should be today's julian date:", f1)
 
-	stackstringslice := binding.BindStringList(&ss)
+	stackstringslice := binding.BindStringList(&shorterSS)
 
 	newlabelwidgetfunc := func() fyne.CanvasObject {
 		return widget.NewLabel("The Stack")
@@ -55,21 +43,30 @@ func main() {
 	}
 	listwidget := widget.NewListWithData(stackstringslice, newlabelwidgetfunc, bindingfunc)
 
-	shorterSS := ss[1:len(ss)-1] // removes the first and last strings, which are only character delims
-	shorterStackStringSlice := binding.BindStringList(&shorterSS)
-	newlabelwidgetfunc2 := func() fyne.CanvasObject {
-		return widget.NewLabel("The Stack")
-	}
-	bindingfunc2 := func(i binding.DataItem, o fyne.CanvasObject) {
-		o.(*widget.Label).Bind(i.(binding.String))
-	}
-	shorterListWidget := widget.NewListWithData(shorterStackStringSlice, newlabelwidgetfunc2, bindingfunc2)
+	globalW.SetContent(listwidget)
+	globalW.Resize(fyne.Size{300, 470})
 
-	content := container.NewHBox(listwidget, shorterListWidget)
 
-	// w.SetContent(listwidget) from first run just using listwidget as content
-	// w.Resize(fyne.Size{300, 470}) based on first run just using listwidget as content
-	w.SetContent(content)
-	w.Resize(fyne.Size{700, 470})
-	w.ShowAndRun()
+	globalW.ShowAndRun()
+}
+func keyTyped(e *fyne.KeyEvent) { // index is a global var
+	switch e.Name {
+	case fyne.KeyUp:
+	case fyne.KeyDown:
+	case fyne.KeyLeft:
+	case fyne.KeyRight:
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
+		globalW.Close() // quit's the app if this is the last window, which it is.
+		//		(*globalA).Quit()
+	case fyne.KeyHome:
+	case fyne.KeyEnd:
+	case fyne.KeyPageUp:
+	case fyne.KeyPageDown:
+	case fyne.KeyPlus:
+	case fyne.KeyMinus:
+	case fyne.KeyEqual:
+	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
+		globalA.Quit()
+	case fyne.KeyBackspace:
+	}
 }
