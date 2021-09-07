@@ -135,7 +135,7 @@ func main() {
 	combinedColumns := container.NewHBox(leftColumn, rightColumn)
 
 	globalW.SetContent(combinedColumns)
-	globalW.Resize(fyne.Size{Width: 500, Height: 500})
+	globalW.Resize(fyne.Size{Width: 950, Height: 950})
 
 	globalW.CenterOnScreen()
 	globalW.ShowAndRun()
