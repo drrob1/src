@@ -1,5 +1,7 @@
-// From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
+/* From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
+ 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
 
+*/
 package main
 
 import (
@@ -12,19 +14,17 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
-	"log"
 	"os"
 	"runtime"
 	"src/hpcalc2"
+	"src/makesubst"
 	"src/tknptr"
 	"strconv"
 	"strings"
-	"time"
-
 	//"fyne.io/fyne/v2/data/binding"
 )
 
-const lastModified = "Sep 5, 2021"
+const lastModified = "Sep 7, 2021"
 
 var globalA fyne.App
 var globalW fyne.Window
@@ -36,7 +36,7 @@ var gray = color.Gray{Y: 100}
 var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
 var lightcyan = color.NRGBA{R: 224, G: 255, B: 255, A: 255}
 
-var homeDir string
+var homeDir, INBUF string
 var windowsFlag bool
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -95,52 +95,47 @@ func main() {
 	}
 
 	globalA = app.New()
-	globalW = globalA.NewWindow("Widget Binding")
+	globalW = globalA.NewWindow("rpnf -- fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
-	R, _ := hpcalc2.GetResult("t")
-	_, ss := hpcalc2.GetResult("dump")
-	ssJoined := strings.Join(ss, "\n")
-	//shorterSS := ss[1 : len(ss)-1] // removes the first and last strings, which are only character delims
-	//shorterSSjoined := strings.Join(shorterSS, "\n")
 
-	resultStr := strconv.FormatFloat(R, 'g', -1, 64)
-	resultStr = hpcalc2.CropNStr(resultStr)
-	resultLabel := canvas.NewText("X = "+resultStr, cyan)
-	resultLabel.TextSize = 42
-	resultLabel.Alignment = fyne.TextAlignCenter
-
-	stackLabel := widget.NewLabel(ssJoined)
-
-	input := widget.NewEntry()
-	input.PlaceHolder = "Enter expression or command"
-	enterfunc := func(s string) {
-		log.Println(" func assigned closure ENTER was hit:", s)
-		input.SetText("")
+	populateUI()
+	if len(os.Args) > 0 {
+		INBUF = strings.Join(os.Args, " ")
 	}
-	input.OnSubmitted = enterfunc
-
-	regStr := OutputRegToString()
-	regLabel := widget.NewLabel(regStr)
-
-	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel)
-
-	displayString := strings.Join(DisplayTape, "\n")
-	displayLabel := widget.NewLabel(displayString)
-	paddingLabel := widget.NewLabel("\n \n \n \n")
-
-	go showHelp()
-
-	rightColumn := container.NewVBox(paddingLabel, displayLabel)
-
-	combinedColumns := container.NewHBox(leftColumn, rightColumn)
-
-	globalW.SetContent(combinedColumns)
-	globalW.Resize(fyne.Size{Width: 950, Height: 950})
+	go Doit()
 
 	globalW.CenterOnScreen()
 	globalW.ShowAndRun()
-}
+} // end main
 
+
+// ---------------------------------------------------------- Doit ------------------------------------------------
+
+func Doit()  {
+	for { // main processing loop
+		if len(INBUF) > 0 {
+			INBUF = makesubst.MakeSubst(INBUF)
+			INBUF = strings.ToUpper(INBUF)
+			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
+			// These commands are not run thru hpcalc as they are processed before calling GetResult.
+			realtknslice := tknptr.RealTokenSlice(INBUF)
+			INBUF = "" // do this to stop endless processing of INBUF in a concurrent model.
+			for _, tkn := range realtknslice {
+				if tkn.Str == "HELP" {
+					showHelp()
+				} else if tkn.Str == "ZEROREG" {
+					for c := range Storage {
+						Storage[c] = 0.0
+					}
+				}
+			}
+
+		}
+	}
+
+} // end Doit
+
+// ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
 	case fyne.KeyUp:
@@ -157,18 +152,18 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyPlus:
 	case fyne.KeyMinus:
 	case fyne.KeyEqual:
-	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
-		globalA.Quit()
+	//case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
+		//globalA.Quit()
 	case fyne.KeyBackspace:
 	}
-}
+}  // end keyTyped
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
+} // end check
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
 
@@ -231,15 +226,62 @@ func OutputRegToString() string {
 	return jointedStr
 } // end OutputRegToString
 
+
 // --------------------------------------------------------- getHelpStr ------------------------------------------
 
 func showHelp() {
-
-	time.Sleep(5 * time.Second)
+	//time.Sleep(5 * time.Second)
 	_, ss := hpcalc2.GetResult("help")
 	helpStr := strings.Join(ss, "\n")
 	helpLabel := widget.NewLabel(helpStr)
 	dialog.ShowCustom("Help","OK", helpLabel, globalW)
 
 	return
-}
+} // end showHelp
+
+
+// -------------------------------------------------------- PopulateUI -------------------------------------------
+
+func populateUI() {
+	R, _ := hpcalc2.GetResult("t")
+	_, ss := hpcalc2.GetResult("dump")
+	ssJoined := strings.Join(ss, "\n")
+	//shorterSS := ss[1 : len(ss)-1] // removes the first and last strings, which are only character delims
+	//shorterSSjoined := strings.Join(shorterSS, "\n")
+
+	resultStr := strconv.FormatFloat(R, 'g', -1, 64)
+	resultStr = hpcalc2.CropNStr(resultStr)
+	resultLabel := canvas.NewText("X = "+resultStr, cyan)
+	resultLabel.TextSize = 42
+	resultLabel.Alignment = fyne.TextAlignCenter
+
+	stackLabel := widget.NewLabel(ssJoined)
+
+	input := widget.NewEntry()
+	input.PlaceHolder = "Enter expression or command"
+	enterfunc := func(s string) {
+		INBUF = s
+		input.SetText("")
+	}
+	input.OnSubmitted = enterfunc
+
+	regStr := OutputRegToString()
+	regLabel := widget.NewLabel(regStr)
+
+	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel)
+
+	displayString := strings.Join(DisplayTape, "\n")
+	displayLabel := widget.NewLabel(displayString)
+	paddingLabel := widget.NewLabel("\n \n \n \n")
+
+	_, mapString := hpcalc2.GetResult("mapsho")
+	mapJoined := strings.Join(mapString, "\n")
+	maplabel := widget.NewLabel(mapJoined)
+	rightColumn := container.NewVBox(paddingLabel, displayLabel, maplabel)
+
+	combinedColumns := container.NewHBox(leftColumn, rightColumn)
+
+	globalW.SetContent(combinedColumns)
+	globalW.Resize(fyne.Size{Width: 950, Height: 950})
+
+} // end populateUI
