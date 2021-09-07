@@ -1,5 +1,5 @@
 /* From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
- 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
+5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
 
 */
 package main
@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	//"fyne.io/fyne/v2/data/binding"
+	//ct "github.com/daviddengcn/go-colortext"
+	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 const lastModified = "Sep 7, 2021"
@@ -36,10 +38,12 @@ var gray = color.Gray{Y: 100}
 var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
 var lightcyan = color.NRGBA{R: 224, G: 255, B: 255, A: 255}
 
-var homeDir, INBUF string
+//var homeDir, INBUF, resultToOutput string
+var homeDir, resultToOutput string
 var windowsFlag bool
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
+var inbufChan chan string
 
 const Storage1FileName = "RPNStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
 const Storage2FileName = "RPNStorage2.gob"
@@ -54,6 +58,7 @@ func main() {
 	DisplayTape = make([]string, 0, 100)
 	DisplayTape = append(DisplayTape, "History of entered commands")
 	theFileExists := true
+	inbufChan = make(chan string)
 
 	homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
 	if err != nil {
@@ -62,11 +67,7 @@ func main() {
 	}
 	windowsFlag = runtime.GOOS == "windows"
 
-	StorageFullFilenameSlice := make([]string, 5)
-	StorageFullFilenameSlice[0] = homeDir
-	StorageFullFilenameSlice[1] = string(os.PathSeparator)
-	StorageFullFilenameSlice[2] = Storage1FileName
-	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")
+	StorageFullFilename := homeDir + string(os.PathSeparator) + Storage1FileName
 	/*
 		Storage2FullFilenameSlice := homeDir + string(os.PathSeparator) + Storage2FileName
 		Storage3FullFilenameSlice := homeDir + string(os.PathSeparator) + Storage3FileName
@@ -99,8 +100,8 @@ func main() {
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
 	populateUI()
-	if len(os.Args) > 0 {
-		INBUF = strings.Join(os.Args, " ")
+	if len(os.Args) > 1 { // there will always be at least 1 here, as os.Args[0] is the program name itself.
+		inbufChan <- strings.Join(os.Args, " ")
 	}
 	go Doit()
 
@@ -108,11 +109,14 @@ func main() {
 	globalW.ShowAndRun()
 } // end main
 
-
 // ---------------------------------------------------------- Doit ------------------------------------------------
 
-func Doit()  {
+func Doit() {
+	INBUF := ""
 	for { // main processing loop
+		select {
+		case INBUF = <- inbufChan: // this should be blocking
+		}
 		if len(INBUF) > 0 {
 			INBUF = makesubst.MakeSubst(INBUF)
 			INBUF = strings.ToUpper(INBUF)
@@ -120,17 +124,52 @@ func Doit()  {
 			// These commands are not run thru hpcalc as they are processed before calling GetResult.
 			realtknslice := tknptr.RealTokenSlice(INBUF)
 			INBUF = "" // do this to stop endless processing of INBUF in a concurrent model.
-			for _, tkn := range realtknslice {
-				if tkn.Str == "HELP" {
-					showHelp()
-				} else if tkn.Str == "ZEROREG" {
-					for c := range Storage {
-						Storage[c] = 0.0
-					}
-				}
-			}
+			stringslice = nil
+			fmt.Println(" after setting stringslice to nil.  len =", len(stringslice), " and cap =", cap(stringslice))
 
+			for _, rtkn := range realtknslice {
+				fmt.Println(" in Doit inner for loop and tkn is", rtkn)
+				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // have more help lines to print
+					str := fmt.Sprintf("%s last modifed on %s, and compiled w/ %s", os.Args[0], lastModified, runtime.Version())
+					showHelp(str)
+				} else if rtkn.Str == "ZEROREG" {
+					for c := range Storage {
+						Storage[c] = 0
+					}
+				} else if strings.HasPrefix(rtkn.Str, "STO") {
+					i := 0
+					if len(rtkn.Str) > 3 {
+						ch := rtkn.Str[3] // The 4th position.
+						i = GetRegIdx(ch)
+					}
+					Storage[i] = hpcalc2.READX()
+				} else if strings.HasPrefix(rtkn.Str, "RCL") {
+					i := 0
+					if len(rtkn.Str) > 3 {
+						ch := rtkn.Str[3] // the 4th position.
+						i = GetRegIdx(ch)
+					}
+					hpcalc2.PUSHX(Storage[i])
+				} else {
+					// -------------------------------------------------------------------------------------
+					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
+					// -------------------------------------------------------------------------------------
+				}
+				// -------------------------------------------------------------------------------------
+
+				//  These commands are processed thru GetResult() first, then these are processed here.
+				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
+					str := fmt.Sprintf("Last altered the source of rpng.go %s, compiled w/ %s", lastModified, runtime.Version())
+					stringslice = append(stringslice, str)
+				}
+				if len(stringslice) > 0 {
+					resultToOutput = strings.Join(stringslice, "\n")
+				}
+
+			}
 		}
+		populateUI()
+		globalW.Show()
 	}
 
 } // end Doit
@@ -153,10 +192,10 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyMinus:
 	case fyne.KeyEqual:
 	//case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
-		//globalA.Quit()
+	//globalA.Quit()
 	case fyne.KeyBackspace:
 	}
-}  // end keyTyped
+} // end keyTyped
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
@@ -193,7 +232,6 @@ func GetRegChar(idx int) string {
 	return string(ch)
 } // GetRegChar
 
-
 // ------------------------------------------------------------ OutputRegToString --------------
 
 func OutputRegToString() string {
@@ -226,41 +264,42 @@ func OutputRegToString() string {
 	return jointedStr
 } // end OutputRegToString
 
+// --------------------------------------------------------- showHelp ------------------------------------------
 
-// --------------------------------------------------------- getHelpStr ------------------------------------------
-
-func showHelp() {
+func showHelp(extra string) {
 	//time.Sleep(5 * time.Second)
 	_, ss := hpcalc2.GetResult("help")
+	ss = append(ss, extra)
 	helpStr := strings.Join(ss, "\n")
 	helpLabel := widget.NewLabel(helpStr)
-	dialog.ShowCustom("Help","OK", helpLabel, globalW)
+	dialog.ShowCustom("Help text", "OK", helpLabel, globalW)
 
 	return
 } // end showHelp
 
-
 // -------------------------------------------------------- PopulateUI -------------------------------------------
 
 func populateUI() {
-	R, _ := hpcalc2.GetResult("t")
-	_, ss := hpcalc2.GetResult("dump")
-	ssJoined := strings.Join(ss, "\n")
-	//shorterSS := ss[1 : len(ss)-1] // removes the first and last strings, which are only character delims
-	//shorterSSjoined := strings.Join(shorterSS, "\n")
+	R := hpcalc2.READX()
 
 	resultStr := strconv.FormatFloat(R, 'g', -1, 64)
 	resultStr = hpcalc2.CropNStr(resultStr)
-	resultLabel := canvas.NewText("X = "+resultStr, cyan)
+	if R > 1_000_000 {
+		resultStr = hpcalc2.AddCommas(resultStr)
+	}
+
+	resultLabel := canvas.NewText("X = "+resultStr, lightcyan)
 	resultLabel.TextSize = 42
 	resultLabel.Alignment = fyne.TextAlignCenter
 
+	_, ss := hpcalc2.GetResult("dump")
+	ssJoined := strings.Join(ss, "\n")
 	stackLabel := widget.NewLabel(ssJoined)
 
 	input := widget.NewEntry()
 	input.PlaceHolder = "Enter expression or command"
 	enterfunc := func(s string) {
-		INBUF = s
+		inbufChan <- s  // send this string down the channel
 		input.SetText("")
 	}
 	input.OnSubmitted = enterfunc
@@ -268,7 +307,9 @@ func populateUI() {
 	regStr := OutputRegToString()
 	regLabel := widget.NewLabel(regStr)
 
-	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel)
+	outputFromHPlabel := widget.NewLabel(resultToOutput)
+
+	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel, outputFromHPlabel)
 
 	displayString := strings.Join(DisplayTape, "\n")
 	displayLabel := widget.NewLabel(displayString)
