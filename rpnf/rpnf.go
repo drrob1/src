@@ -9,17 +9,19 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"log"
-	"os"
-
-	//"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
+	"log"
+	"os"
 	"runtime"
+	"src/hpcalc2"
+	"src/tknptr"
 	"strconv"
 	"strings"
+	"time"
 
-	"src/hpcalc2"
+	//"fyne.io/fyne/v2/data/binding"
 )
 
 const lastModified = "Sep 5, 2021"
@@ -44,13 +46,13 @@ const Storage2FileName = "RPNStorage2.gob"
 const Storage3FileName = "RPNStorage3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 
-
 func main() {
 	fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
 
 	var Stk hpcalc2.StackType // used when time to write out the stack upon exit.
 	var err error
 	DisplayTape = make([]string, 0, 100)
+	DisplayTape = append(DisplayTape, "History of entered commands")
 	theFileExists := true
 
 	homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
@@ -65,20 +67,10 @@ func main() {
 	StorageFullFilenameSlice[1] = string(os.PathSeparator)
 	StorageFullFilenameSlice[2] = Storage1FileName
 	StorageFullFilename := strings.Join(StorageFullFilenameSlice, "")
-/*
-	Storage2FullFilenameSlice := make([]string, 5)
-	Storage2FullFilenameSlice[0] = homeDir
-	Storage2FullFilenameSlice[1] = string(os.PathSeparator)
-	Storage2FullFilenameSlice[2] = Storage2FileName
-	Storage2FullFilename := strings.Join(Storage2FullFilenameSlice, "")
-
-	Storage3FullFilenameSlice := make([]string, 5)
-	Storage3FullFilenameSlice[0] = homeDir
-	Storage3FullFilenameSlice[1] = string(os.PathSeparator)
-	Storage3FullFilenameSlice[2] = Storage3FileName
-	Storage3FullFilename := strings.Join(Storage3FullFilenameSlice, "")
-
- */
+	/*
+		Storage2FullFilenameSlice := homeDir + string(os.PathSeparator) + Storage2FileName
+		Storage3FullFilenameSlice := homeDir + string(os.PathSeparator) + Storage3FileName
+	*/
 
 	var thefile *os.File
 
@@ -89,9 +81,9 @@ func main() {
 	}
 	defer thefile.Close()
 	if theFileExists {
-		decoder := gob.NewDecoder(thefile)       // decoder reads the file.
-		err = decoder.Decode(&Stk)               // decoder reads the file.
-		check(err)                               // theFileExists, so panic if this is an error.
+		decoder := gob.NewDecoder(thefile)         // decoder reads the file.
+		err = decoder.Decode(&Stk)                 // decoder reads the file.
+		check(err)                                 // theFileExists, so panic if this is an error.
 		for i := hpcalc2.T1; i >= hpcalc2.X; i-- { // Push in reverse onto the stack in hpcalc2.
 			hpcalc2.PUSHX(Stk[i])
 		}
@@ -117,7 +109,7 @@ func main() {
 	resultLabel.TextSize = 42
 	resultLabel.Alignment = fyne.TextAlignCenter
 
-    stackLabel := widget.NewLabel(ssJoined)
+	stackLabel := widget.NewLabel(ssJoined)
 
 	input := widget.NewEntry()
 	input.PlaceHolder = "Enter expression or command"
@@ -127,14 +119,28 @@ func main() {
 	}
 	input.OnSubmitted = enterfunc
 
-	content := container.NewVBox(input, resultLabel,stackLabel)
+	regStr := OutputRegToString()
+	regLabel := widget.NewLabel(regStr)
 
+	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel)
 
-	globalW.SetContent(content)
-	globalW.Resize(fyne.Size{400, 500})
+	displayString := strings.Join(DisplayTape, "\n")
+	displayLabel := widget.NewLabel(displayString)
+	paddingLabel := widget.NewLabel("\n \n \n \n")
 
+	go showHelp()
+
+	rightColumn := container.NewVBox(paddingLabel, displayLabel)
+
+	combinedColumns := container.NewHBox(leftColumn, rightColumn)
+
+	globalW.SetContent(combinedColumns)
+	globalW.Resize(fyne.Size{Width: 500, Height: 500})
+
+	globalW.CenterOnScreen()
 	globalW.ShowAndRun()
 }
+
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
 	case fyne.KeyUp:
@@ -160,7 +166,80 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
 	if err != nil {
-			panic(err)
-		}
+		panic(err)
+	}
 }
 
+/* ------------------------------------------------------------ GetRegIdx --------- */
+
+func GetRegIdx(chr byte) int {
+	// Return 0..35 with A = 10 and Z = 35
+	ch := tknptr.CAP(chr)
+	if (ch >= '0') && (ch <= '9') {
+		ch = ch - '0'
+	} else if (ch >= 'A') && (ch <= 'Z') {
+		ch = ch - 'A' + 10
+	} else { // added 12/11/2016 to fix bug
+		ch = 0
+	}
+	return int(ch)
+} // end GetRegIdx
+
+/*-------------------------------------------------------------- GetRegChar ------  */
+
+func GetRegChar(idx int) string {
+	/* Return '0'..'Z' with A = 10 and Z = 35 */
+	const RegNames = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	if (idx < 0) || (idx > 35) {
+		return "0"
+	}
+	ch := RegNames[idx]
+	return string(ch)
+} // GetRegChar
+
+
+// ------------------------------------------------------------ OutputRegToString --------------
+
+func OutputRegToString() string {
+	FirstNonZeroStorageFlag := true
+	ss := make([]string, 0, 40)
+
+	for i, r := range Storage {
+		if r != 0.0 {
+			if FirstNonZeroStorageFlag {
+				s := fmt.Sprintf("                The following storage registers are not zero")
+				ss = append(ss, s)
+				FirstNonZeroStorageFlag = false
+			}
+			ch := GetRegChar(i)
+			sigfig := hpcalc2.SigFig()
+			s := strconv.FormatFloat(r, 'g', sigfig, 64)
+			s = hpcalc2.CropNStr(s)
+			if r >= 10000 {
+				s = hpcalc2.AddCommas(s)
+			}
+			str := fmt.Sprintf("Reg [%s] = %s", ch, s)
+			ss = append(ss, str)
+		} // if storage value is not zero
+	} // for range over Storage
+	if FirstNonZeroStorageFlag {
+		s := fmt.Sprintf("All storage registers are zero.")
+		ss = append(ss, s)
+	}
+	jointedStr := strings.Join(ss, "\n")
+	return jointedStr
+} // end OutputRegToString
+
+// --------------------------------------------------------- getHelpStr ------------------------------------------
+
+func showHelp() {
+
+	time.Sleep(5 * time.Second)
+	_, ss := hpcalc2.GetResult("help")
+	helpStr := strings.Join(ss, "\n")
+	helpLabel := widget.NewLabel(helpStr)
+	dialog.ShowCustom("Help","OK", helpLabel, globalW)
+
+	return
+}
