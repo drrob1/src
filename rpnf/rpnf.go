@@ -1,6 +1,8 @@
 /* From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
-8 Sep 21 -- Working as expected.  Now maybe I need to tweak a few things.
+8 Sep 21 -- Working as expected.  By george I think I've done it!
+
+
 */
 package main
 
@@ -174,11 +176,11 @@ func Doit() {
 			INBUF = makesubst.MakeSubst(INBUF)
 			INBUF = strings.ToUpper(INBUF)
 			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
-			// These commands are not run thru hpcalc as they are processed before calling GetResult.
+			// These commands are not run thru hpcalc as they are processed before calling it.
 			realtknslice := tknptr.RealTokenSlice(INBUF)
 			INBUF = "" // do this to stop endless processing of INBUF in a concurrent model.
 			stringslice = nil
-			fmt.Println(" after setting stringslice to nil.  len =", len(stringslice), " and cap =", cap(stringslice))
+			//fmt.Println(" after setting stringslice to nil.  len =", len(stringslice), " and cap =", cap(stringslice))  output is 0 and 0
 
 			for _, rtkn := range realtknslice {
 				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // have more help lines to print
@@ -333,8 +335,9 @@ func showHelp(extra string) {
 
 func populateUI() {
 	R := hpcalc2.READX()
+	sigfig := hpcalc2.SigFig()
 
-	resultStr := strconv.FormatFloat(R, 'g', -1, 64)
+	resultStr := strconv.FormatFloat(R, 'g', sigfig, 64)
 	resultStr = hpcalc2.CropNStr(resultStr)
 	if R > 1_000_000 {
 		resultStr = hpcalc2.AddCommas(resultStr)
