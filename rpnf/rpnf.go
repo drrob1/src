@@ -107,7 +107,7 @@ func main() {
 
 	populateUI()
 	go Doit()
-	if flag.NArg() > 0 { // there will always be at least 1 here, as os.Args[0] is the program name itself.
+	if flag.NArg() > 0 {
 		inbufChan <- strings.Join(flag.Args(), " ")
 	}
 
