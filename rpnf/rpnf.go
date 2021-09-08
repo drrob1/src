@@ -211,7 +211,7 @@ func Doit() {
 
 				//  These commands are processed thru GetResult() first, then these are processed here.
 				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
-					str := fmt.Sprintf("Last altered the source of rpng.go %s, compiled w/ %s", lastModified, runtime.Version())
+					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
 					stringslice = append(stringslice, str)
 				}
 				if len(stringslice) > 0 {
