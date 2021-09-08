@@ -106,10 +106,10 @@ func main() {
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
 	populateUI()
-	if len(os.Args) > 1 { // there will always be at least 1 here, as os.Args[0] is the program name itself.
-		inbufChan <- strings.Join(os.Args, " ")
-	}
 	go Doit()
+	if flag.NArg() > 0 { // there will always be at least 1 here, as os.Args[0] is the program name itself.
+		inbufChan <- strings.Join(flag.Args(), " ")
+	}
 
 	globalW.CenterOnScreen()
 	globalW.ShowAndRun()
