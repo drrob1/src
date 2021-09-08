@@ -1,11 +1,13 @@
 /* From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
-
+8 Sep 21 -- Working as expected.  Now maybe I need to tweak a few things.
 */
 package main
 
 import (
+	"bufio"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -21,12 +23,13 @@ import (
 	"src/tknptr"
 	"strconv"
 	"strings"
+	"time"
 	//"fyne.io/fyne/v2/data/binding"
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 7, 2021"
+const lastModified = "Sep 8, 2021"
 
 var globalA fyne.App
 var globalW fyne.Window
@@ -53,6 +56,9 @@ const DisplayTapeFilename = "displaytape.txt"
 func main() {
 	fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
 
+	var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
+	flag.Parse()
+
 	var Stk hpcalc2.StackType // used when time to write out the stack upon exit.
 	var err error
 	DisplayTape = make([]string, 0, 100)
@@ -68,10 +74,8 @@ func main() {
 	windowsFlag = runtime.GOOS == "windows"
 
 	StorageFullFilename := homeDir + string(os.PathSeparator) + Storage1FileName
-	/*
-		Storage2FullFilenameSlice := homeDir + string(os.PathSeparator) + Storage2FileName
-		Storage3FullFilenameSlice := homeDir + string(os.PathSeparator) + Storage3FileName
-	*/
+	Storage2FullFilename := homeDir + string(os.PathSeparator) + Storage2FileName
+	Storage3FullFilename := homeDir + string(os.PathSeparator) + Storage3FileName
 
 	var thefile *os.File
 
@@ -107,6 +111,55 @@ func main() {
 
 	globalW.CenterOnScreen()
 	globalW.ShowAndRun()
+
+	// Time to write files before exiting, if the flag says so.
+
+	if !*nofileflag {
+		// Rotate StorageFileNames and write
+		err = os.Rename(Storage2FullFilename, Storage3FullFilename)
+		if err != nil && !*nofileflag {
+			fmt.Fprintf(os.Stderr, " Rename of storage 2 to storage 3 failed with error %v \n", err)
+		}
+
+		err = os.Rename(StorageFullFilename, Storage2FullFilename)
+		if err != nil && !*nofileflag {
+			fmt.Fprintf(os.Stderr, " Rename of storage 1 to storage 2 failed with error %v \n", err)
+		}
+
+		thefile, err = os.Create(StorageFullFilename) // for writing
+		check(err)                                    // This should not fail, so panic if it does fail.
+		defer thefile.Close()
+
+		Stk = hpcalc2.GETSTACK()
+		encoder := gob.NewEncoder(thefile) // encoder writes the file
+		err = encoder.Encode(Stk)          // encoder writes the file
+		check(err)                         // Panic if there is an error
+		err = encoder.Encode(Storage)      // encoder writes the file
+		check(err)
+	}
+
+	// Will open this file in the current working directory instead of the HomeDir.
+	DisplayTapeFile, err := os.OpenFile(DisplayTapeFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println(" Error while opening DisplayTapeFilename", err)
+		os.Exit(1)
+	}
+	defer DisplayTapeFile.Close()
+	DisplayTapeWriter := bufio.NewWriter(DisplayTapeFile)
+	defer DisplayTapeWriter.Flush()
+	today := time.Now()
+	datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+	_, err = DisplayTapeWriter.WriteString("------------------------------------------------------\n")
+	_, err = DisplayTapeWriter.WriteString(datestring)
+	_, err = DisplayTapeWriter.WriteRune('\n')
+	for _, s := range DisplayTape {
+		_, err = DisplayTapeWriter.WriteString(s)
+		_, err = DisplayTapeWriter.WriteRune('\n')
+		check(err)
+	}
+	_, err = DisplayTapeWriter.WriteString("\n\n")
+	check(err)
+
 } // end main
 
 // ---------------------------------------------------------- Doit ------------------------------------------------
@@ -115,7 +168,7 @@ func Doit() {
 	INBUF := ""
 	for { // main processing loop
 		select {
-		case INBUF = <- inbufChan: // this should be blocking
+		case INBUF = <-inbufChan: // this is blocking
 		}
 		if len(INBUF) > 0 {
 			INBUF = makesubst.MakeSubst(INBUF)
@@ -128,7 +181,6 @@ func Doit() {
 			fmt.Println(" after setting stringslice to nil.  len =", len(stringslice), " and cap =", cap(stringslice))
 
 			for _, rtkn := range realtknslice {
-				fmt.Println(" in Doit inner for loop and tkn is", rtkn)
 				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // have more help lines to print
 					str := fmt.Sprintf("%s last modifed on %s, and compiled w/ %s", os.Args[0], lastModified, runtime.Version())
 					showHelp(str)
@@ -288,7 +340,7 @@ func populateUI() {
 		resultStr = hpcalc2.AddCommas(resultStr)
 	}
 
-	resultLabel := canvas.NewText("X = "+resultStr, lightcyan)
+	resultLabel := canvas.NewText("X = "+resultStr, green)
 	resultLabel.TextSize = 42
 	resultLabel.Alignment = fyne.TextAlignCenter
 
@@ -299,7 +351,7 @@ func populateUI() {
 	input := widget.NewEntry()
 	input.PlaceHolder = "Enter expression or command"
 	enterfunc := func(s string) {
-		inbufChan <- s  // send this string down the channel
+		inbufChan <- s // send this string down the channel
 		input.SetText("")
 	}
 	input.OnSubmitted = enterfunc
