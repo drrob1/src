@@ -1424,6 +1424,7 @@ func getMapRegName(cmd string) string {
 }
 
 // ------------------------------------------------------------ MakeSubst ---------
+
 func MakeSubst(instr string) string {
 	// substitute ! ~ ` chara for spaces.  Copied from rpntcell
 	instr = strings.TrimSpace(instr)
@@ -1440,6 +1441,7 @@ func MakeSubst(instr string) string {
 }
 
 // ------------------------------------------------------------ GetRegIdx ---------
+
 func GetRegIdx(chr byte) int {
 	/* Return 0..35 w/ A = 10 and Z = 35.  Copied from main. */
 
@@ -1479,6 +1481,7 @@ func getFullMatchingName(abbrev string) string {
 }
 
 // ----------------------------------------------------------- SigFig --------------------------------------
+
 func SigFig() int {
 	return sigfig
 }

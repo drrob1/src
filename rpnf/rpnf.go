@@ -1,7 +1,7 @@
 /* From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
-5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
-8 Sep 21 -- Working as expected.  By george I think I've done it!
-
+ 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
+ 8 Sep 21 -- Working as expected.  By george I think I've done it!
+ 9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Nevermind.  I have to ask Andy Williams about this.
 
 */
 package main
@@ -31,7 +31,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 8, 2021"
+const lastModified = "Sep 9, 2021"
 
 var globalA fyne.App
 var globalW fyne.Window
@@ -50,9 +50,9 @@ var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var inbufChan chan string
 
-const Storage1FileName = "RPNStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
-const Storage2FileName = "RPNStorage2.gob"
-const Storage3FileName = "RPNStorage3.gob"
+const Storage1FileName = "RPNfyneStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
+const Storage2FileName = "RPNfyneStorage2.gob"
+const Storage3FileName = "RPNfyneStorage3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 
 func main() {
@@ -204,6 +204,8 @@ func Doit() {
 						i = GetRegIdx(ch)
 					}
 					hpcalc2.PUSHX(Storage[i])
+				//} else if rtkn.Str == "FROMCLIP" {
+				//	contents := clipboard().Content()
 				} else {
 					// -------------------------------------------------------------------------------------
 					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
