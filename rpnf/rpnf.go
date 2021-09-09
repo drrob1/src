@@ -1,7 +1,7 @@
-/* From Fyne GUI book by Andrew Williams, Chapter 6, widget.go
- 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
- 8 Sep 21 -- Working as expected.  By george I think I've done it!
- 9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Nevermind.  I have to ask Andy Williams about this.
+/* From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
+5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
+8 Sep 21 -- Working as expected.  By george I think I've done it!
+9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
 
 */
 package main
@@ -204,8 +204,19 @@ func Doit() {
 						i = GetRegIdx(ch)
 					}
 					hpcalc2.PUSHX(Storage[i])
-				//} else if rtkn.Str == "FROMCLIP" {
-				//	contents := clipboard().Content()
+				} else if rtkn.Str == "FROMCLIP" {
+					contents := globalW.Clipboard().Content()
+					contents = strings.TrimSpace(contents)
+					f, err := strconv.ParseFloat(contents, 64)
+					if err == nil {
+						hpcalc2.PUSHX(f)
+					} else {
+						msg := fmt.Sprintf("Error from conversion of clipboard.  Clipboard=%s, err=%v.", contents, err)
+						stringslice = append(stringslice, msg)
+					}
+				} else if rtkn.Str == "TOCLIP" {
+					rStr := strconv.FormatFloat(hpcalc2.READX(), 'g', hpcalc2.SigFig(), 64)
+					globalW.Clipboard().SetContent(rStr)
 				} else {
 					// -------------------------------------------------------------------------------------
 					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
