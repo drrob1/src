@@ -1,8 +1,8 @@
 /* From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
-5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
-8 Sep 21 -- Working as expected.  By george I think I've done it!
-9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
-
+ 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
+ 8 Sep 21 -- Working as expected.  By george I think I've done it!
+ 9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
+10 Sep 21 -- Adding a way to have input box get input without having to click in it.  And it works!
 */
 package main
 
@@ -31,10 +31,11 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 9, 2021"
+const lastModified = "Sep 11, 2021"
 
 var globalA fyne.App
 var globalW fyne.Window
+var input *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
 var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
@@ -258,9 +259,14 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyPlus:
 	case fyne.KeyMinus:
 	case fyne.KeyEqual:
-	//case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
-	//globalA.Quit()
-	case fyne.KeyBackspace:
+	case fyne.KeySpace:
+		input.TypedRune(' ')
+	case fyne.KeyEnter, fyne.KeyReturn:
+		inbufChan <- input.Text
+
+	//case fyne.KeyBackspace:
+	default:
+		input.TypedRune(rune(e.Name[0]))
 	}
 } // end keyTyped
 
@@ -364,7 +370,7 @@ func populateUI() {
 	ssJoined := strings.Join(ss, "\n")
 	stackLabel := widget.NewLabel(ssJoined)
 
-	input := widget.NewEntry()
+	input = widget.NewEntry()
 	input.PlaceHolder = "Enter expression or command"
 	enterfunc := func(s string) {
 		inbufChan <- s // send this string down the channel
