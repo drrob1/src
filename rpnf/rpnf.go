@@ -256,15 +256,28 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEnd:
 	case fyne.KeyPageUp:
 	case fyne.KeyPageDown:
-	case fyne.KeyPlus:
-	case fyne.KeyMinus:
-	case fyne.KeyEqual:
 	case fyne.KeySpace:
 		input.TypedRune(' ')
+
 	case fyne.KeyEnter, fyne.KeyReturn:
 		inbufChan <- input.Text
 
-	//case fyne.KeyBackspace:
+	case fyne.KeyBackspace, fyne.KeyDelete:
+		input.TypedRune('\b')
+	case fyne.KeyEqual:
+		input.TypedRune('=')
+	case fyne.KeyPlus:
+		input.TypedRune('+')
+	case fyne.KeyMinus:
+		input.TypedRune('-')
+	case fyne.KeyAsterisk:
+		input.TypedRune('*')
+	case fyne.KeySlash:
+		input.TypedRune('/')
+	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
+		input.TypedRune('H') // for help
+
+
 	default:
 		input.TypedRune(rune(e.Name[0]))
 	}
