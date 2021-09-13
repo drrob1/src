@@ -31,7 +31,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 11, 2021"
+const lastModified = "Sep 13, 2021"
 
 var globalA fyne.App
 var globalW fyne.Window
@@ -50,6 +50,7 @@ var windowsFlag bool
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var inbufChan chan string
+var shiftState bool
 
 const Storage1FileName = "RPNfyneStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
 const Storage2FileName = "RPNfyneStorage2.gob"
@@ -258,28 +259,60 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyPageDown:
 	case fyne.KeySpace:
 		input.TypedRune(' ')
+	case fyne.KeyBackspace, fyne.KeyDelete:
+		input.TypedRune('\b')
+	case fyne.KeyPlus:
+		input.TypedRune('+')
+	case fyne.KeyAsterisk:
+		input.TypedRune('*')
+	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
+		input.TypedRune('H') // for help
 
 	case fyne.KeyEnter, fyne.KeyReturn:
 		inbufChan <- input.Text
 
-	case fyne.KeyBackspace, fyne.KeyDelete:
-		input.TypedRune('\b')
-	case fyne.KeyEqual:
-		input.TypedRune('=')
-	case fyne.KeyPlus:
-		input.TypedRune('+')
-	case fyne.KeyMinus:
-		input.TypedRune('-')
-	case fyne.KeyAsterisk:
-		input.TypedRune('*')
-	case fyne.KeySlash:
-		input.TypedRune('/')
-	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
-		input.TypedRune('H') // for help
-
+	//case fyne.KeySlash: moved below to include shiftState
+	//	input.TypedRune('/')
+	//case fyne.KeyEqual:  moved below to include shiftState
+	//	input.TypedRune('=')
+	//case fyne.KeyMinus:  moved below to include shiftState
+	//	input.TypedRune('-')
 
 	default:
-		input.TypedRune(rune(e.Name[0]))
+		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
+			shiftState = true
+			return
+		}
+		if shiftState {
+			shiftState = false
+			if e.Name == fyne.KeyEqual {
+				input.TypedRune('+')
+			} else if e.Name == fyne.KeySlash {
+				input.TypedRune('?')
+			} else if e.Name == fyne.KeyPeriod {
+				input.TypedRune('>')
+			} else if e.Name == fyne.KeyComma {
+				input.TypedRune('<')
+			} else if e.Name == fyne.KeyMinus {
+				input.TypedRune('_')
+			} else if e.Name == fyne.Key8 {
+				input.TypedRune('*')
+			} else if e.Name == fyne.Key6 {
+				input.TypedRune('^')
+			} else if e.Name == fyne.Key5 {
+				input.TypedRune('%')
+			} else if e.Name == fyne.Key2 {
+				input.TypedRune('@')
+			} else if e.Name == fyne.Key1 {
+				input.TypedRune('!')
+			} else if e.Name == fyne.KeyBackTick {
+				input.TypedRune('~')
+			}
+		} else {
+			input.TypedRune(rune(e.Name[0]))
+		}
+
+		//fmt.Printf(" in keyTyped.  e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
 	}
 } // end keyTyped
 
