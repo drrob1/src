@@ -3,6 +3,8 @@
  8 Sep 21 -- Working as expected.  By george I think I've done it!
  9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
 10 Sep 21 -- Adding a way to have input box get input without having to click in it.  And it works!
+13 Sep 21 -- After Andy wrote back as how to code what I want, I had already taken a stab at it.
+               Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
 */
 package main
 
@@ -186,7 +188,7 @@ func Doit() {
 
 			for _, rtkn := range realtknslice {
 				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // have more help lines to print
-					str := fmt.Sprintf("%s last modifed on %s, and compiled w/ %s", os.Args[0], lastModified, runtime.Version())
+					str := fmt.Sprintf("%s last modifed on %s, \n and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
 					showHelp(str)
 				} else if rtkn.Str == "ZEROREG" {
 					for c := range Storage {
@@ -240,16 +242,20 @@ func Doit() {
 		populateUI()
 		globalW.Show()
 	}
-
 } // end Doit
 
+
 // ---------------------------------------------------------- keyTyped --------------------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index is a global var
+func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
 	case fyne.KeyUp:
+		globalW.Canvas().Focus(input)
 	case fyne.KeyDown:
+		globalW.Canvas().Focus(input)
 	case fyne.KeyLeft:
+		globalW.Canvas().Focus(input)
 	case fyne.KeyRight:
+		globalW.Canvas().Focus(input)
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
@@ -258,8 +264,10 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyPageUp:
 	case fyne.KeyPageDown:
 	case fyne.KeySpace:
+		globalW.Canvas().Focus(input)
 		input.TypedRune(' ')
 	case fyne.KeyBackspace, fyne.KeyDelete:
+		globalW.Canvas().Focus(input)
 		input.TypedRune('\b')
 	case fyne.KeyPlus:
 		input.TypedRune('+')
@@ -267,16 +275,10 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 		input.TypedRune('*')
 	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
 		input.TypedRune('H') // for help
+		inbufChan <- input.Text
 
 	case fyne.KeyEnter, fyne.KeyReturn:
 		inbufChan <- input.Text
-
-	//case fyne.KeySlash: moved below to include shiftState
-	//	input.TypedRune('/')
-	//case fyne.KeyEqual:  moved below to include shiftState
-	//	input.TypedRune('=')
-	//case fyne.KeyMinus:  moved below to include shiftState
-	//	input.TypedRune('-')
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -308,13 +310,89 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 			} else if e.Name == fyne.KeyBackTick {
 				input.TypedRune('~')
 			}
+			globalW.Canvas().Focus(input)
 		} else {
+			input.TypedRune(rune(e.Name[0]))
+			globalW.Canvas().Focus(input)
+		}
+
+		//fmt.Printf(" in keyTyped.  e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
+	}
+} // end keyTyped
+
+/*
+// ---------------------------------------------------------- keyTyped --------------------------------------------
+func keyTyped(e *fyne.KeyEvent) { // index is a global var
+	switch e.Name {
+	case fyne.KeyUp:
+		globalW.Canvas().Focus(input)
+	case fyne.KeyDown:
+		globalW.Canvas().Focus(input)
+	case fyne.KeyLeft:
+		globalW.Canvas().Focus(input)
+	case fyne.KeyRight:
+		globalW.Canvas().Focus(input)
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
+		globalW.Close() // quit's the app if this is the last window, which it is.
+		//		(*globalA).Quit()
+	case fyne.KeyHome:
+	case fyne.KeyEnd:
+	case fyne.KeyPageUp:
+	case fyne.KeyPageDown:
+	case fyne.KeySpace:
+		input.TypedRune(' ')
+		globalW.Canvas().Focus(input)
+	case fyne.KeyBackspace, fyne.KeyDelete:
+		globalW.Canvas().Focus(input)
+		input.TypedRune('\b')
+	case fyne.KeyPlus:
+		input.TypedRune('+')
+	case fyne.KeyAsterisk:
+		input.TypedRune('*')
+	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
+		input.TypedRune('H') // for help
+	case fyne.KeyEnter, fyne.KeyReturn:
+		inbufChan <- input.Text
+	default:
+		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
+			shiftState = true
+			return
+		}
+		if shiftState {
+			shiftState = false
+			if e.Name == fyne.KeyEqual {
+				input.TypedRune('+')
+			} else if e.Name == fyne.KeySlash {
+				input.TypedRune('?')
+			} else if e.Name == fyne.KeyPeriod {
+				input.TypedRune('>')
+			} else if e.Name == fyne.KeyComma {
+				input.TypedRune('<')
+			} else if e.Name == fyne.KeyMinus {
+				input.TypedRune('_')
+			} else if e.Name == fyne.Key8 {
+				input.TypedRune('*')
+			} else if e.Name == fyne.Key6 {
+				input.TypedRune('^')
+			} else if e.Name == fyne.Key5 {
+				input.TypedRune('%')
+			} else if e.Name == fyne.Key2 {
+				input.TypedRune('@')
+			} else if e.Name == fyne.Key1 {
+				input.TypedRune('!')
+			} else if e.Name == fyne.KeyBackTick {
+				input.TypedRune('~')
+			}
+		} else {
+			globalW.Canvas().Focus(input)
 			input.TypedRune(rune(e.Name[0]))
 		}
 
 		//fmt.Printf(" in keyTyped.  e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
 	}
 } // end keyTyped
+
+ */
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
