@@ -5,6 +5,7 @@
 10 Sep 21 -- Adding a way to have input box get input without having to click in it.  And it works!
 13 Sep 21 -- After Andy wrote back as how to code what I want, I had already taken a stab at it.
                Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
+16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
 */
 package main
 
@@ -33,13 +34,23 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 13, 2021"
+const lastModified = "Sep 16, 2021"
+
+const ( // output modes
+	outputfix = iota
+	outputfloat
+	outputgen
+)
+var outputMode int
+
+var divider = "-------------------------------------------------------------------------------------------------------"
 
 var globalA fyne.App
 var globalW fyne.Window
 var input *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
+var yellow = color.NRGBA{R: 255, G: 255, B: 0, A: 255}
 var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
 var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
 var gray = color.Gray{Y: 100}
@@ -106,7 +117,7 @@ func main() {
 	}
 
 	globalA = app.New()
-	globalW = globalA.NewWindow("rpnf -- fyne")
+	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
 	populateUI()
@@ -188,8 +199,13 @@ func Doit() {
 
 			for _, rtkn := range realtknslice {
 				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // have more help lines to print
+					extra := make([]string, 0, 10)
+					extra = append(extra, "STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
+					extra = append(extra, "OutputFixed, OutputFloat, OutputGen -- set OutputMode to fixed, float or gen.")
+					extra = append(extra, "SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
 					str := fmt.Sprintf("%s last modifed on %s, \n and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
-					showHelp(str)
+					extra = append(extra, str)
+					showHelp(extra)
 				} else if rtkn.Str == "ZEROREG" {
 					for c := range Storage {
 						Storage[c] = 0
@@ -221,6 +237,12 @@ func Doit() {
 				} else if rtkn.Str == "TOCLIP" {
 					rStr := strconv.FormatFloat(hpcalc2.READX(), 'g', hpcalc2.SigFig(), 64)
 					globalW.Clipboard().SetContent(rStr)
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
+					outputMode = outputfix
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR"){
+					outputMode = outputfloat
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") {
+					outputMode = outputgen
 				} else {
 					// -------------------------------------------------------------------------------------
 					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
@@ -248,10 +270,11 @@ func Doit() {
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
-	case fyne.KeyUp:
-		globalW.Canvas().Focus(input)
-	case fyne.KeyDown:
-		globalW.Canvas().Focus(input)
+	case fyne.KeyUp: // stack up
+		inbufChan <- ","
+	case fyne.KeyDown: // stack down
+		_ = hpcalc2.PopX()
+		inbufChan <- ""
 	case fyne.KeyLeft:
 		globalW.Canvas().Focus(input)
 	case fyne.KeyRight:
@@ -316,7 +339,7 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 			globalW.Canvas().Focus(input)
 		}
 
-		//fmt.Printf(" in keyTyped.  e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
+		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
 	}
 } // end keyTyped
 
@@ -463,10 +486,10 @@ func OutputRegToString() string {
 
 // --------------------------------------------------------- showHelp ------------------------------------------
 
-func showHelp(extra string) {
+func showHelp(extra []string) {
 	//time.Sleep(5 * time.Second)
 	_, ss := hpcalc2.GetResult("help")
-	ss = append(ss, extra)
+	ss = append(ss, extra...)
 	helpStr := strings.Join(ss, "\n")
 	helpLabel := widget.NewLabel(helpStr)
 	dialog.ShowCustom("Help text", "OK", helpLabel, globalW)
@@ -486,11 +509,19 @@ func populateUI() {
 		resultStr = hpcalc2.AddCommas(resultStr)
 	}
 
-	resultLabel := canvas.NewText("X = "+resultStr, green)
+	resultLabel := canvas.NewText("X = "+resultStr, yellow)  // I liked green before I made it yellow.
 	resultLabel.TextSize = 42
 	resultLabel.Alignment = fyne.TextAlignCenter
 
-	_, ss := hpcalc2.GetResult("dump")
+	ss := make([]string, 0, 10)
+	if outputMode == outputfix {
+		_, ss = hpcalc2.GetResult("DUMPFIXED")
+	} else if outputMode == outputfloat {
+		_, ss = hpcalc2.GetResult("DUMPFLOAT")
+	} else if outputMode == outputgen {
+		_, ss = hpcalc2.GetResult("DUMP")
+	}
+
 	ssJoined := strings.Join(ss, "\n")
 	stackLabel := widget.NewLabel(ssJoined)
 
@@ -507,7 +538,10 @@ func populateUI() {
 
 	outputFromHPlabel := widget.NewLabel(resultToOutput)
 
-	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel, outputFromHPlabel)
+	spacerLabel := widget.NewLabel(divider)
+	dividerLabel := widget.NewLabel(divider)
+
+	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel, spacerLabel,outputFromHPlabel, dividerLabel)
 
 	displayString := strings.Join(DisplayTape, "\n")
 	displayLabel := widget.NewLabel(displayString)
@@ -521,6 +555,6 @@ func populateUI() {
 	combinedColumns := container.NewHBox(leftColumn, rightColumn)
 
 	globalW.SetContent(combinedColumns)
-	globalW.Resize(fyne.Size{Width: 950, Height: 950})
+	globalW.Resize(fyne.Size{Width: 950, Height: 1000})
 
 } // end populateUI

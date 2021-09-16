@@ -17,7 +17,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "19 Jun 2021"
+const LastAlteredDate = "16 Sep 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -125,6 +125,7 @@ REVISION HISTORY
                Deferred code will be run at the end of the containing function.  But I can call defer MapClose() at the top of a client pgm.
                And fixed help message regarding MapClose, which is not automatic but needs to be deferred as I just wrote.
 19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call MapClose directly anymore.
+16 Sep 21 -- I increased the number of digits for the %g verb when output is dump'd.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -276,10 +277,10 @@ func init() {
 	} else if runtime.GOOS == "windows" {
 		homedir = os.Getenv("userprofile")
 	}
-	 */
+	*/
 	homedir, err = os.UserHomeDir() // This func became available as of Go 1.12
 	if err != nil {
-		fmt.Fprintln(os.Stderr," Error from os.UserHomeDir call is", err)
+		fmt.Fprintln(os.Stderr, " Error from os.UserHomeDir call is", err)
 		os.Exit(1)
 	}
 
@@ -304,7 +305,7 @@ func init() {
 			fmt.Fprintln(os.Stderr, err)
 		}
 
-//		mappedRegFile.Close()  This is not needed because the rules for defer is that the deferred code is executed at end of containing func.
+		//		mappedRegFile.Close()  This is not needed because the rules for defer is that the deferred code is executed at end of containing func.
 	}
 }
 
@@ -322,7 +323,7 @@ func MapClose() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "from gob encoder", err)
 	}
-}
+} // end MapClose
 
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
 
@@ -333,7 +334,7 @@ func Round(f float64) float64 {
 	}
 	result := math.Trunc(f + sign*0.5)
 	return result
-}
+} // end Round
 
 //------------------------------------------------------ STACKUP
 
@@ -343,7 +344,6 @@ func STACKUP() {
 	}
 } // STACKUP
 
-
 //------------------------------------------------------ STACKDN
 
 func STACKDN() {
@@ -351,7 +351,6 @@ func STACKDN() {
 		Stack[S] = Stack[S+1]
 	}
 } // STACKDN
-
 
 //------------------------------------------------------ STACKROLLDN
 
@@ -361,7 +360,6 @@ func STACKROLLDN() {
 	STACKDN()
 	Stack[T1] = TEMP
 } // STACKROLLDN
-
 
 // ----------------------------------------------------- PopX ---------------------
 
@@ -373,7 +371,6 @@ func PopX() float64 {
 	return x
 } // PopX
 
-
 // ------------------------------------------------------ PUSHX
 
 func PUSHX(R float64) {
@@ -381,13 +378,11 @@ func PUSHX(R float64) {
 	Stack[X] = R
 }
 
-
 //------------------------------------------------------ READX
 
 func READX() float64 {
 	return Stack[X]
 } // READX
-
 
 //------------------------------------------------------ SWAPXY
 
@@ -395,13 +390,11 @@ func SWAPXY() {
 	Stack[X], Stack[Y] = Stack[Y], Stack[X]
 } // SWAPXY
 
-
 //------------------------------------------------------ GETSTACK
 
 func GETSTACK() StackType {
 	return Stack
 } // GETSTACK
-
 
 //-------------------------------------------------------------------- InsertByteSlice
 
@@ -440,7 +433,6 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
-
 //-----------------------------------------------------------------------------------------------------------------------------
 
 func CropNStr(instr string) string {
@@ -467,7 +459,6 @@ func CropNStr(instr string) string {
 	return strings.TrimSpace(outstr)
 } // CropNStr
 
-
 //------------------------------------------------------------------ DumpStackFixed -----------------------------------------------------------
 
 func DumpStackFixed() []string {
@@ -487,7 +478,6 @@ func DumpStackFixed() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
 } // DumpStackFixed
-
 
 // ************************************************* DumpStackFloat **************************
 
@@ -509,10 +499,9 @@ func DumpStackFloat() []string {
 	return ss
 } // DumpStackFloat
 
-
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now only rpn.go still uses this routine.
+func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -521,7 +510,6 @@ func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now 
 		fmt.Print(str)
 	}
 } // OutputFixedOrFloat
-
 
 //************************************************** DumpStackGeneral ***************************
 
@@ -533,16 +521,11 @@ func DumpStackGeneral() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	for SRN = T1; SRN >= X; SRN-- {
 		str = strconv.FormatFloat(Stack[SRN], 'g', sigfig, 64)
-		//		str = CropNStr(str)  makes no sense for numbers in exponential format
-		//		if Stack[SRN] > 10000 {
-		//			str = AddCommas(str)
-		//		}
-		ss = append(ss, fmt.Sprintf("%2s: %10.4g %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
+		ss = append(ss, fmt.Sprintf("%2s: %10.7g %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 	}
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
 } // DumpStackGeneral
-
 
 //------------------------------------------------- ToHex ------------------
 // The new algorithm is elegantly simple.
@@ -568,7 +551,6 @@ func ToHex(L float64) string {
 	}
 	return str + "H"
 } // ToHex
-
 
 // ------------------------------------------------- IsPrime -----------------
 
@@ -599,7 +581,6 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 	return true
 } // IsPrime
 
-
 // --------------------------------------- PrimeFactorMemoized -------------------
 
 func PrimeFactorMemoized(U uint) []uint {
@@ -627,7 +608,6 @@ func PrimeFactorMemoized(U uint) []uint {
 	return PrimeUfactors
 }
 
-
 // ------------------------------------------------- NextPrimeFac -----------------
 
 func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
@@ -649,7 +629,6 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 	return 0, false
 } // IsPrime
 
-
 //----------------------------------------------- usqrt ---------------------------
 
 func usqrt(u uint) uint {
@@ -665,7 +644,6 @@ func usqrt(u uint) uint {
 	}
 	return sqrt
 }
-
 
 // ---------------------------------------- PWRI -------------------------------------------------
 //POWER OF I.
@@ -691,7 +669,6 @@ func PWRI(R float64, I int) float64 {
 	return Z
 } // PWRI
 
-
 //-------------------------------------------------------- StacksMatrixUp
 
 func StacksMatrixUp() {
@@ -699,7 +676,6 @@ func StacksMatrixUp() {
 		StackUndoMatrix[i+1] = StackUndoMatrix[i]
 	} // FOR i
 } // StacksMatrixUp
-
 
 //-------------------------------------------------------- StacksMatrixDown
 
@@ -709,14 +685,12 @@ func StacksMatrixDown() {
 	} // FOR i
 } // StacksMatrixDown
 
-
 //-------------------------------------------------------- PushMatrixStacks
 
 func PushMatrixStacks() {
 	StacksMatrixUp()
 	StackUndoMatrix[Bottom] = Stack
 } // PushMatrixStacks
-
 
 //-------------------------------------------------------- UndoMatrixStacks
 
@@ -729,7 +703,6 @@ func UndoMatrixStacks() { // RollDown operation for main stack
 	StackUndoMatrix[Top] = TempStack
 } // UndoMatrixStacks  IE RollDown
 
-
 //-------------------------------------------------------- RedoMatrixStacks
 
 func RedoMatrixStacks() { // RollUp uperation for main stack
@@ -740,7 +713,6 @@ func RedoMatrixStacks() { // RollUp uperation for main stack
 
 	StackUndoMatrix[Bottom] = TempStack
 } // RedoMatrixStacks  IE RollUp
-
 
 //-------------------------------------------------------- HCF -------------------------------------
 
@@ -767,7 +739,6 @@ func HCF(a, b int) int {
 } // HCF
 //------------------------------------------------------------------------
 
-
 //------------------------------------------------------------------------- GetResults -----------
 
 func GetResult(s string) (float64, []string) {
@@ -786,7 +757,6 @@ func GetResult(s string) (float64, []string) {
 	}
 	return R, stringslice
 }
-
 
 func Result(tkn tknptr.TokenType) (float64, []string) {
 	var year int
@@ -808,7 +778,7 @@ outerloop:
 			LastX = Stack[X]
 			PushMatrixStacks()
 			switch I {
-			case 5, 8:  // allow = and + to both mean add.
+			case 5, 8: // allow = and + to both mean add.
 				Stack[X] += Stack[Y]
 			case 10:
 				Stack[X] = Stack[Y] - Stack[X]
@@ -924,7 +894,7 @@ outerloop:
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
 			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose needs to be deferred after")
 			ss = append(ss, "                                   first use of PushMatrixStacks.  !`~ become spaces in the name.")
-			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n\n", LastAlteredDate))
+			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n", LastAlteredDate))
 		case 130: // STO
 			MemReg = Stack[X]
 		case 135: // RCL
@@ -1349,7 +1319,7 @@ outerloop:
 				for _, str := range stringresult {
 					ss = append(ss, str)
 				}
-				MapClose()  // added 6/19/21
+				MapClose() // added 6/19/21
 
 			} else if strings.HasPrefix(subcmd, "RCL") {
 				regname := getMapRegName(subcmd)
@@ -1394,7 +1364,7 @@ outerloop:
 				delete(mappedReg, regname) // if key is not in the map, this does nothing but does not panic.
 				s := fmt.Sprint("deleted ", regname)
 				ss = append(ss, s)
-				MapClose()  // added 6/19/21
+				MapClose() // added 6/19/21
 			}
 
 		case 999: // do nothing, ignore me but don't generate an error message.
