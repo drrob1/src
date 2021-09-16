@@ -509,7 +509,10 @@ func populateUI() {
 		resultStr = hpcalc2.AddCommas(resultStr)
 	}
 
-	resultLabel := canvas.NewText("X = "+resultStr, yellow)  // I liked green before I made it yellow.
+	resultLabel := canvas.NewText("X = "+resultStr, yellow)
+	if runtime.GOOS == "windows" {
+		resultLabel = canvas.NewText("X = "+resultStr, green)
+	}
 	resultLabel.TextSize = 42
 	resultLabel.Alignment = fyne.TextAlignCenter
 
