@@ -6,6 +6,7 @@
 13 Sep 21 -- After Andy wrote back as how to code what I want, I had already taken a stab at it.
                Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
 16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
+17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
 */
 package main
 
@@ -34,7 +35,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 16, 2021"
+const lastModified = "Sep 17, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -491,8 +492,10 @@ func showHelp(extra []string) {
 	_, ss := hpcalc2.GetResult("help")
 	ss = append(ss, extra...)
 	helpStr := strings.Join(ss, "\n")
-	helpLabel := widget.NewLabel(helpStr)
-	dialog.ShowCustom("Help text", "OK", helpLabel, globalW)
+	//helpLabel := widget.NewLabel(helpStr)
+	//dialog.ShowCustom("Help text", "OK", helpLabel, globalW)
+	helpRichText := widget.NewRichTextWithText(helpStr)
+	dialog.ShowCustom("Help", "OK", helpRichText, globalW)
 
 	return
 } // end showHelp
