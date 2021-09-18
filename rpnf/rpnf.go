@@ -20,6 +20,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
 	"os"
@@ -118,8 +119,11 @@ func main() {
 	}
 
 	globalA = app.New()
+	fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+	//fyne.CurrentApp().Settings().SetTheme(theme.LightTheme())  // Goland is saying that LightTheme is depracated and will be removed in v3.
 	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
+
 
 	populateUI()
 	go Doit()
