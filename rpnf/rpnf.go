@@ -67,7 +67,7 @@ var windowsFlag bool
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var inbufChan chan string
-var shiftState bool
+var shiftState, lightTheme bool
 
 const Storage1FileName = "RPNfyneStorage.gob" // Allows for a rotation of Storage files, in case of a mistake.
 const Storage2FileName = "RPNfyneStorage2.gob"
@@ -93,6 +93,9 @@ func main() {
 		os.Exit(1)
 	}
 	windowsFlag = runtime.GOOS == "windows"
+	if windowsFlag {
+		lightTheme = true
+	}
 
 	StorageFullFilename := homeDir + string(os.PathSeparator) + Storage1FileName
 	Storage2FullFilename := homeDir + string(os.PathSeparator) + Storage2FileName
@@ -249,8 +252,10 @@ func Doit() {
 					outputMode = outputgen
 				} else if rtkn.Str == "DARK" {
 					fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+					lightTheme = false
 				} else if rtkn.Str == "LIGHT" {
 					fyne.CurrentApp().Settings().SetTheme(theme.LightTheme()) // Goland is saying that LightTheme is depracated and will be removed in v3.
+					lightTheme = true
 				} else {
 					// -------------------------------------------------------------------------------------
 					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
@@ -519,7 +524,7 @@ func populateUI() {
 	}
 
 	resultLabel := canvas.NewText("X = "+resultStr, yellow)
-	if runtime.GOOS == "windows" {
+	if lightTheme {
 		resultLabel = canvas.NewText("X = "+resultStr, green)
 	}
 	resultLabel.TextSize = 42
