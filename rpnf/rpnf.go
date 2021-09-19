@@ -7,7 +7,7 @@
                Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
 16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
 17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
-19 Sep 21 -- Added light and dark commands to change the theme.
+19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
 */
 package main
 
@@ -20,7 +20,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
@@ -50,7 +49,7 @@ var outputMode int
 var divider = "-------------------------------------------------------------------------------------------------------"
 
 var globalA fyne.App
-var globalW fyne.Window
+var globalW, helpWindow fyne.Window
 var input *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
@@ -210,7 +209,9 @@ func Doit() {
 					extra = append(extra, "STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
 					extra = append(extra, "OutputFixed, OutputFloat, OutputGen -- set OutputMode to fixed, float or gen.")
 					extra = append(extra, "SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
-					str := fmt.Sprintf("%s last modifed on %s, \n and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
+					extra = append(extra, "dark, light -- set Fyne theme to dark or light.")
+					//str := fmt.Sprintf("%s last modifed on %s, \n and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
+					str := fmt.Sprintf("%s last modifed on %s and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
 					extra = append(extra, str)
 					showHelp(extra)
 				} else if rtkn.Str == "ZEROREG" {
@@ -355,79 +356,25 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 	}
 } // end keyTyped
 
-/*
-// ---------------------------------------------------------- keyTyped --------------------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index is a global var
+// ---------------------------------------------------------- keyTypedHelp --------------------------------------------
+func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
-	case fyne.KeyUp:
-		globalW.Canvas().Focus(input)
-	case fyne.KeyDown:
-		globalW.Canvas().Focus(input)
-	case fyne.KeyLeft:
-		globalW.Canvas().Focus(input)
-	case fyne.KeyRight:
-		globalW.Canvas().Focus(input)
-	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
-		globalW.Close() // quit's the app if this is the last window, which it is.
-		//		(*globalA).Quit()
-	case fyne.KeyHome:
-	case fyne.KeyEnd:
-	case fyne.KeyPageUp:
-	case fyne.KeyPageDown:
 	case fyne.KeySpace:
+		globalW.Canvas().Focus(input)
 		input.TypedRune(' ')
-		globalW.Canvas().Focus(input)
-	case fyne.KeyBackspace, fyne.KeyDelete:
-		globalW.Canvas().Focus(input)
-		input.TypedRune('\b')
-	case fyne.KeyPlus:
-		input.TypedRune('+')
-	case fyne.KeyAsterisk:
-		input.TypedRune('*')
-	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
-		input.TypedRune('H') // for help
+
 	case fyne.KeyEnter, fyne.KeyReturn:
-		inbufChan <- input.Text
+		helpWindow.Close()
+
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
+		globalA.Quit()
+
 	default:
-		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
-			shiftState = true
-			return
-		}
-		if shiftState {
-			shiftState = false
-			if e.Name == fyne.KeyEqual {
-				input.TypedRune('+')
-			} else if e.Name == fyne.KeySlash {
-				input.TypedRune('?')
-			} else if e.Name == fyne.KeyPeriod {
-				input.TypedRune('>')
-			} else if e.Name == fyne.KeyComma {
-				input.TypedRune('<')
-			} else if e.Name == fyne.KeyMinus {
-				input.TypedRune('_')
-			} else if e.Name == fyne.Key8 {
-				input.TypedRune('*')
-			} else if e.Name == fyne.Key6 {
-				input.TypedRune('^')
-			} else if e.Name == fyne.Key5 {
-				input.TypedRune('%')
-			} else if e.Name == fyne.Key2 {
-				input.TypedRune('@')
-			} else if e.Name == fyne.Key1 {
-				input.TypedRune('!')
-			} else if e.Name == fyne.KeyBackTick {
-				input.TypedRune('~')
-			}
-		} else {
-			globalW.Canvas().Focus(input)
-			input.TypedRune(rune(e.Name[0]))
-		}
-
-		//fmt.Printf(" in keyTyped.  e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
+		//input.TypedRune(rune(e.Name[0]))  ignore the key but change focus to the main window
+		globalW.Canvas().Focus(input)
 	}
-} // end keyTyped
+} // end keyTypedHelp
 
-*/
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
@@ -503,10 +450,21 @@ func showHelp(extra []string) {
 	_, ss := hpcalc2.GetResult("help")
 	ss = append(ss, extra...)
 	helpStr := strings.Join(ss, "\n")
-	//helpLabel := widget.NewLabel(helpStr)
+	helpLabel := widget.NewLabel(helpStr)
+
+	//dialog.ShowCustom("", "OK", helpLabel, globalW) // empty title
+	//dialog.ShowInformation("", helpStr, globalW)  // empty title  I don't like it's look, as each line is centered and not left aligned.
+	//helpScroll := container.NewVScroll(helpLabel)
+	helpScroll := container.NewScroll(helpLabel)
+	helpWindow = globalA.NewWindow("Help")
+	helpWindow.SetContent(helpScroll)
+	helpWindow.Canvas().SetOnTypedKey(keyTypedHelp)
+	helpWindow.Resize(fyne.NewSize(1000, 900))
+	helpWindow.Show()
+	//dialog.ShowCustom("", "OK", helpScroll, globalW)
 	//dialog.ShowCustom("Help text", "OK", helpLabel, globalW)
-	helpRichText := widget.NewRichTextWithText(helpStr)
-	dialog.ShowCustom("Help", "OK", helpRichText, globalW)
+	//helpRichText := widget.NewRichTextWithText(helpStr)
+	//dialog.ShowCustom("Help", "OK", helpRichText, globalW)
 
 	return
 } // end showHelp
