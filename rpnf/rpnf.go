@@ -7,6 +7,7 @@
                Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
 16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
 17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
+19 Sep 21 -- Added light and dark commands to change the theme.
 */
 package main
 
@@ -36,13 +37,14 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 17, 2021"
+const lastModified = "Sep 19, 2021"
 
 const ( // output modes
 	outputfix = iota
 	outputfloat
 	outputgen
 )
+
 var outputMode int
 
 var divider = "-------------------------------------------------------------------------------------------------------"
@@ -119,11 +121,8 @@ func main() {
 	}
 
 	globalA = app.New()
-	fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
-	//fyne.CurrentApp().Settings().SetTheme(theme.LightTheme())  // Goland is saying that LightTheme is depracated and will be removed in v3.
 	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
-
 
 	populateUI()
 	go Doit()
@@ -244,10 +243,14 @@ func Doit() {
 					globalW.Clipboard().SetContent(rStr)
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
 					outputMode = outputfix
-				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR"){
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") {
 					outputMode = outputfloat
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") {
 					outputMode = outputgen
+				} else if rtkn.Str == "DARK" {
+					fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+				} else if rtkn.Str == "LIGHT" {
+					fyne.CurrentApp().Settings().SetTheme(theme.LightTheme()) // Goland is saying that LightTheme is depracated and will be removed in v3.
 				} else {
 					// -------------------------------------------------------------------------------------
 					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
@@ -270,7 +273,6 @@ func Doit() {
 		globalW.Show()
 	}
 } // end Doit
-
 
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
@@ -420,7 +422,7 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	}
 } // end keyTyped
 
- */
+*/
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
@@ -551,7 +553,7 @@ func populateUI() {
 	spacerLabel := widget.NewLabel(divider)
 	dividerLabel := widget.NewLabel(divider)
 
-	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel, spacerLabel,outputFromHPlabel, dividerLabel)
+	leftColumn := container.NewVBox(input, resultLabel, stackLabel, regLabel, spacerLabel, outputFromHPlabel, dividerLabel)
 
 	displayString := strings.Join(DisplayTape, "\n")
 	displayLabel := widget.NewLabel(displayString)
