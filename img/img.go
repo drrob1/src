@@ -14,6 +14,7 @@ REVISION HISTORY
 21 Aug 21 -- Adding Q and X to exit.
 23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
  4 Sep 21 -- Added -, + and = keys
+22 Sep 21 -- Added shiftState to deal w/ shift= is the plus sign
 */
 
 package main
@@ -49,7 +50,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 4, 2021"
+const LastModified = "Sep 22, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 
@@ -62,6 +63,7 @@ var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
 var scaleFactor float64 = 1
+var shiftState bool
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -273,6 +275,7 @@ func loadTheImage() {
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
+		title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
 	}
 
 	if *verboseFlag {
@@ -284,7 +287,7 @@ func loadTheImage() {
 	}
 
 	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.ScaleMode = canvas.ImageScaleFastest
+	loadedimg.ScaleMode = canvas.ImageScaleSmooth
 	if ! *zoomFlag {
 		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
@@ -399,7 +402,7 @@ func lastImage() {
 }
 
 // ------------------------------------------------------------ keyTyped ------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index is a global var
+func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:
 		scaleFactor = 1
@@ -434,14 +437,37 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
 		loadTheImage()
-	case fyne.KeyEqual:
-		scaleFactor = 1
-		loadTheImage()
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		scaleFactor = 1
 		nextImage()
 	case fyne.KeyBackspace:
 		scaleFactor = 1
 		prevImage()
+	case fyne.KeySlash:
+		scaleFactor *= 0.9
+		loadTheImage()
+
+	default:
+		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
+			shiftState = true
+			return
+		}
+		if shiftState {
+			shiftState = false
+			if e.Name == fyne.KeyEqual { // like key plus
+				scaleFactor *= 1.1
+				loadTheImage()
+			} else if e.Name == fyne.KeyPeriod { // >
+				nextImage()
+			} else if e.Name == fyne.KeyComma { // <
+				prevImage()
+			} else if e.Name == fyne.Key8 { // *
+				scaleFactor *= 1.1
+				loadTheImage()
+			}
+		} else if e.Name == fyne.KeyEqual {
+			scaleFactor = 1
+			loadTheImage()
+		}
 	}
 }
