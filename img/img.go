@@ -293,8 +293,8 @@ func loadTheImage() {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetContent(loadedimg)
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
 
 	globalW.Show()
