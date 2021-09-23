@@ -14,6 +14,7 @@ REVISION HISTORY
 23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
 26 Aug 21 -- Now called imga.go, to be sorted alphabetically as a slice of strings, not FileInfo's.
                This allows use of more of the library functions.
+22 Sep 21 -- Added zoomfactor, and will account for shiftState.  And maxWidth, maxHeight more closely match the monitor limits of 1920 x 1080.
 */
 
 package main
@@ -22,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"fyne.io/fyne/v2/app"
+	"math"
 
 	_ "golang.org/x/image/webp"
 	"image"
@@ -43,9 +45,9 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "August 26, 2021"
-const maxWidth = 2500
-const maxHeight = 2000
+const LastModified = "Sep 22, 2021"
+const maxWidth = 1800
+const maxHeight = 900
 
 var index int
 var loadedimg *canvas.Image
@@ -54,6 +56,9 @@ var imageInfo sort.StringSlice
 var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
+var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
+var scaleFactor float64 = 1
+var shiftState bool
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -71,7 +76,6 @@ func isImage(file string) bool {
 
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
-	//	verboseFlag = flag.Bool("v", false, "verbose flag")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: imga <image file name>")
@@ -249,9 +253,43 @@ func loadTheImage() {
 		title = title + "; resized."
 	}
 
+	bounds = img.Bounds()
+	imgHeight = bounds.Max.Y
+	imgWidth = bounds.Max.X
+
+	if scaleFactor != 1 {
+		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
+			scaledHeight := float64(imgHeight) * scaleFactor
+			intHeight := uint(math.Round(scaledHeight))
+			img = resize.Resize(0, intHeight, img, resize.Lanczos3)
+		} else {
+			scaledWidth := float64(imgWidth) * scaleFactor
+			intWidth := uint(math.Round(scaledWidth))
+			img = resize.Resize(intWidth, 0, img, resize.Lanczos3)
+		}
+		bounds = img.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+	}
+
+	if *verboseFlag {
+		bounds = img.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Println()
+	}
+
 	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.FillMode = canvas.ImageFillContain
+	loadedimg.ScaleMode = canvas.ImageScaleSmooth
+	if !*zoomFlag {
+		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
+		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
+	}
+
 	globalW.SetContent(loadedimg)
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
 	globalW.Show()
 	return
@@ -414,22 +452,72 @@ func lastImage() {
 }
 
 // ------------------------------------------------------------ keyTyped ------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index is a global var
+func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:
+		scaleFactor = 1
 		prevImage()
 	case fyne.KeyDown:
+		scaleFactor = 1
 		nextImage()
 	case fyne.KeyLeft:
+		scaleFactor = 1
 		prevImage()
 	case fyne.KeyRight:
+		scaleFactor = 1
 		nextImage()
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
 	case fyne.KeyHome:
+		scaleFactor = 1
 		firstImage()
 	case fyne.KeyEnd:
+		scaleFactor = 1
 		lastImage()
+	case fyne.KeyPageUp:
+		scaleFactor *= 0.9
+		loadTheImage()
+	case fyne.KeyPageDown:
+		scaleFactor *= 1.1
+		loadTheImage()
+	case fyne.KeyPlus:
+		scaleFactor *= 1.1
+		loadTheImage()
+	case fyne.KeyMinus:
+		scaleFactor *= 0.9
+		loadTheImage()
+	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
+		scaleFactor = 1
+		nextImage()
+	case fyne.KeyBackspace:
+		scaleFactor = 1
+		prevImage()
+	case fyne.KeySlash:
+		scaleFactor *= 0.9
+		loadTheImage()
+
+	default:
+		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
+			shiftState = true
+			return
+		}
+		if shiftState {
+			shiftState = false
+			if e.Name == fyne.KeyEqual { // like key plus
+				scaleFactor *= 1.1
+				loadTheImage()
+			} else if e.Name == fyne.KeyPeriod { // >
+				nextImage()
+			} else if e.Name == fyne.KeyComma { // <
+				prevImage()
+			} else if e.Name == fyne.Key8 { // *
+				scaleFactor *= 1.1
+				loadTheImage()
+			}
+		} else if e.Name == fyne.KeyEqual {
+			scaleFactor = 1
+			loadTheImage()
+		}
 	}
 }
