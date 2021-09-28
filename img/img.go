@@ -15,6 +15,7 @@ REVISION HISTORY
 23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
  4 Sep 21 -- Added -, + and = keys
 22 Sep 21 -- Added shiftState to deal w/ shift= is the plus sign
+27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
 */
 
 package main
@@ -50,7 +51,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 22, 2021"
+const LastModified = "Sep 29, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 
@@ -60,8 +61,10 @@ var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
-var verboseFlag = flag.Bool("v", false, "verbose flag")
-var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
+var verboseFlag = flag.Bool("v", false, "verbose flag.")
+var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot.")
+var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
 
@@ -82,15 +85,15 @@ func isImage(file string) bool {
 
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
-	//	verboseFlag = flag.Bool("v", false, "verbose flag")
 	flag.Parse()
+	sticky = *zoomFlag || *stickyFlag
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
 		os.Exit(1)
 	}
 
 	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
-	fmt.Println(str) // this works as intended
+	fmt.Println(str)
 
 	imgfilename := flag.Arg(0)
 	_, err := os.Stat(imgfilename)
@@ -132,8 +135,8 @@ func main() {
 	}
 
 	if *verboseFlag {
-		fmt.Printf(" image.Config %s, %s, %s \n width=%g, height=%g, and aspect ratio=%.4g \n",
-			imgfilename, fullFilename, basefilename, width, height, aspectRatio)
+		fmt.Printf(" image.Config %s, %s, %s \n width=%g, height=%g, and aspect ratio=%.4g.  Sticky=%t \n",
+			imgfilename, fullFilename, basefilename, width, height, aspectRatio, sticky)
 	}
 
 	if width > maxWidth || height > maxHeight {
@@ -183,7 +186,7 @@ func main() {
 
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.ScaleMode = canvas.ImageScaleFastest
-	if ! *zoomFlag {
+	if !*zoomFlag {
 		loadedimg.FillMode = canvas.ImageFillContain
 	}
 
@@ -288,7 +291,7 @@ func loadTheImage() {
 
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.ScaleMode = canvas.ImageScaleSmooth
-	if ! *zoomFlag {
+	if !*zoomFlag {
 		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
@@ -405,25 +408,37 @@ func lastImage() {
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		prevImage()
 	case fyne.KeyDown:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
 	case fyne.KeyLeft:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		prevImage()
 	case fyne.KeyRight:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
 	case fyne.KeyHome:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		firstImage()
 	case fyne.KeyEnd:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		lastImage()
 	case fyne.KeyPageUp:
 		scaleFactor *= 0.9
@@ -438,14 +453,21 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		scaleFactor *= 0.9
 		loadTheImage()
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
-	case fyne.KeyBackspace:
+	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
 		prevImage()
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
 		loadTheImage()
+	case fyne.KeyZ:
+		sticky = !sticky
+		if *verboseFlag {
+			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
+		}
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {

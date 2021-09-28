@@ -15,6 +15,7 @@ REVISION HISTORY
 26 Aug 21 -- Now called imga.go, to be sorted alphabetically as a slice of strings, not FileInfo's.
                This allows use of more of the library functions.
 22 Sep 21 -- Added zoomfactor, and will account for shiftState.  And maxWidth, maxHeight more closely match the monitor limits of 1920 x 1080.
+27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
 */
 
 package main
@@ -45,7 +46,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 22, 2021"
+const LastModified = "Sep 27, 2021"
 const maxWidth = 1800
 const maxHeight = 900
 
@@ -57,6 +58,8 @@ var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
+var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
 
@@ -77,6 +80,7 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	flag.Parse()
+	sticky = *zoomFlag || *stickyFlag
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, " Usage: imga <image file name>")
 		os.Exit(1)
@@ -455,25 +459,37 @@ func lastImage() {
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		prevImage()
 	case fyne.KeyDown:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
 	case fyne.KeyLeft:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		prevImage()
 	case fyne.KeyRight:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
 	case fyne.KeyHome:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		firstImage()
 	case fyne.KeyEnd:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		lastImage()
 	case fyne.KeyPageUp:
 		scaleFactor *= 0.9
@@ -488,14 +504,21 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		scaleFactor *= 0.9
 		loadTheImage()
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
-	case fyne.KeyBackspace:
+	case fyne.KeyBackspace: // intentionally allowing backspace to reset zoom also.
 		scaleFactor = 1
 		prevImage()
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
 		loadTheImage()
+	case fyne.KeyZ:
+		sticky = !sticky
+		if *verboseFlag {
+			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
+		}
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -515,7 +538,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 				scaleFactor *= 1.1
 				loadTheImage()
 			}
-		} else if e.Name == fyne.KeyEqual {
+		} else if e.Name == fyne.KeyEqual { // actually typed the = key, unshifted.
 			scaleFactor = 1
 			loadTheImage()
 		}
