@@ -8,6 +8,8 @@
 16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
 17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
 19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
+29 Sep 21 -- Compiled code won't run now on linux.  I noticed this first 2 days ago while working on the img pgms.  But the code does run on Windows.
+               I'm fiddling w/ what happens when backspace or del is hit.
 */
 package main
 
@@ -37,7 +39,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 19, 2021"
+const lastModified = "Sep 29, 2021"
 
 const ( // output modes
 	outputfix = iota

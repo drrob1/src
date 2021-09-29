@@ -17,6 +17,9 @@ REVISION HISTORY
  4 Sep 21 -- Now called img2, and I intend to use a more complex display, w/ a central image container and a bottom text label.
                This will need a border layout.
 22 Sep 21 -- I figured out that I need to deal w/ shift states in the keys to get magnification
+29 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
+               Copied from img.go and imga.go.  When looking at my code, Andy commented that I don't need to resize, that's handled
+               automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
 */
 
 package main
@@ -27,8 +30,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"image/color"
-	"math"
-
 	//"fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
 	//"fyne.io/fyne/v2/container"
@@ -50,11 +51,9 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/storage"
-
-	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 22, 2021"
+const LastModified = "Sep 29, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -68,6 +67,9 @@ var globalW fyne.Window
 var GUI fyne.CanvasObject
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
+var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var sticky bool
+
 var scaleFactor float64 = 1
 var shiftState bool // it must be global to preserve state btwn key presses.
 
@@ -79,9 +81,8 @@ var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
-	ext := strings.ToLower(filepath.Ext(name))
-	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
-	return !isImage
+	ismage := isImage(name)
+	return !ismage
 }
 
 // ----------------------------------------------------------isImage ----------------------------------------------
@@ -95,8 +96,9 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	flag.Parse()
+	sticky = *zoomFlag || *stickyFlag
 	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
+		fmt.Fprintln(os.Stderr, " Usage: img2 <image file name>")
 		os.Exit(1)
 	}
 
@@ -154,7 +156,7 @@ func main() {
 
 	if *verboseFlag {
 		fmt.Println()
-		//fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
+		//                                               fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
 		fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
 		fmt.Println()
 	}
@@ -186,16 +188,18 @@ func main() {
 		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
 		fmt.Println()
 	}
+	/*  Andy commented that this code is not needed, as it's done automatically.
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
 	} else if imgHeight > maxHeight {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 	}
+	*/
 
 	// Time to make the GUI
 
 	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
-	label := canvas.NewText(imgtitle, cyan)
+	label := canvas.NewText(imgtitle, green)
 	label.TextStyle.Bold = true
 	label.Alignment = fyne.TextAlignCenter
 
@@ -265,11 +269,17 @@ func loadTheImage() {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+	title := fmt.Sprintf("%s width=%d, height=%d and type=%s", imgname, imgWidth, imgHeight, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
 
+	bounds = img.Bounds()
+	imgHeight = bounds.Max.Y
+	imgWidth = bounds.Max.X
+
+	/*  Andy said that this code is not needed.
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
 		title = title + "; resized."
@@ -278,9 +288,6 @@ func loadTheImage() {
 		title = title + "; resized."
 	}
 
-	bounds = img.Bounds()
-	imgHeight = bounds.Max.Y
-	imgWidth = bounds.Max.X
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
@@ -296,6 +303,7 @@ func loadTheImage() {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 	}
+	*/
 
 	if *verboseFlag {
 		bounds = img.Bounds()
@@ -306,7 +314,7 @@ func loadTheImage() {
 	}
 
 	labelStr := fmt.Sprintf("%s; width=%d, height=%d", imgname, imgWidth, imgHeight)
-	label := canvas.NewText(labelStr, cyan)
+	label := canvas.NewText(labelStr, green)
 	label.TextStyle.Bold = true
 	label.Alignment = fyne.TextAlignCenter
 
@@ -392,7 +400,7 @@ func isSorted(slice []os.FileInfo) bool {
 }
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
-//func nextImage(indx int) *canvas.Image {
+
 func nextImage() {
 	index++
 	if index >= len(imageInfo) {
@@ -403,7 +411,7 @@ func nextImage() {
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
-//func prevImage(indx int) *canvas.Image {
+
 func prevImage() {
 	index--
 	if index < 0 {
@@ -429,25 +437,37 @@ func lastImage() {
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		prevImage()
 	case fyne.KeyDown:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
 	case fyne.KeyLeft:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		prevImage()
 	case fyne.KeyRight:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
 	case fyne.KeyHome:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		firstImage()
 	case fyne.KeyEnd:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		lastImage()
 	case fyne.KeyPageUp:
 		scaleFactor *= 0.9
@@ -455,21 +475,28 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyPageDown:
 		scaleFactor *= 1.1
 		loadTheImage()
-	case fyne.KeyPlus:
+	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
 		loadTheImage()
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
 		loadTheImage()
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
-		scaleFactor = 1
+		if !sticky {
+			scaleFactor = 1
+		}
 		nextImage()
-	case fyne.KeyBackspace:
+	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
 		prevImage()
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
 		loadTheImage()
+	case fyne.KeyZ:
+		sticky = !sticky
+		if *verboseFlag {
+			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
+		}
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
