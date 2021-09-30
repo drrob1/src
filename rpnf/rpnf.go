@@ -8,8 +8,8 @@
 16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
 17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
 19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
-29 Sep 21 -- Compiled code won't run now on linux.  I noticed this first 2 days ago while working on the img pgms.  But the code does run on Windows.
-               I'm fiddling w/ what happens when backspace or del is hit.
+29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
+30 Sep 21 -- changing function of <space>
 */
 package main
 
@@ -34,12 +34,11 @@ import (
 	"strings"
 	"time"
 	//"fyne.io/fyne/v2/data/binding"
-	//"fyne.io/fyne/v2/dialog"
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 29, 2021"
+const lastModified = "Sep 30, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -297,24 +296,31 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 		globalW.Canvas().Focus(input)
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
-		//		(*globalA).Quit()
+		//	                                                                                          (*globalA).Quit()
 	case fyne.KeyHome:
 	case fyne.KeyEnd:
 	case fyne.KeyPageUp:
 	case fyne.KeyPageDown:
 	case fyne.KeySpace:
-		globalW.Canvas().Focus(input)
-		input.TypedRune(' ')
+		//                                                                                globalW.Canvas().Focus(input)
+		//                                                                                         input.TypedRune(' ')
+		inbufChan <- input.Text
 	case fyne.KeyBackspace, fyne.KeyDelete:
-		globalW.Canvas().Focus(input)
-		input.TypedRune('\b')
+		//globalW.Canvas().Focus(input)
+		//input.TypedRune('\b')
+		text := input.Text
+		if len(text) > 0 {
+			text = text[:len(text)-1]
+		}
+		input.SetText(text)
 	case fyne.KeyPlus:
 		input.TypedRune('+')
 	case fyne.KeyAsterisk:
 		input.TypedRune('*')
 	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
-		input.TypedRune('H') // for help
-		inbufChan <- input.Text
+		//input.TypedRune('H') // for help
+		//inbufChan <- input.Text
+		inbufChan <- "H"
 
 	case fyne.KeyEnter, fyne.KeyReturn:
 		inbufChan <- input.Text
@@ -349,10 +355,10 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 			} else if e.Name == fyne.KeyBackTick {
 				input.TypedRune('~')
 			}
-			globalW.Canvas().Focus(input)
+			//globalW.Canvas().Focus(input)
 		} else {
 			input.TypedRune(rune(e.Name[0]))
-			globalW.Canvas().Focus(input)
+			//globalW.Canvas().Focus(input)
 		}
 
 		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
@@ -377,7 +383,6 @@ func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedR
 		globalW.Canvas().Focus(input)
 	}
 } // end keyTypedHelp
-
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
