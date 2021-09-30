@@ -16,6 +16,7 @@ REVISION HISTORY
  4 Sep 21 -- Added -, + and = keys
 22 Sep 21 -- Added shiftState to deal w/ shift= is the plus sign
 27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
+30 Sep 21 -- Added keyAsterisk, and removed the unneeded scaling code (according to Andy Williams).
 */
 
 package main
@@ -51,7 +52,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 29, 2021"
+const LastModified = "Sep 30, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 
@@ -70,16 +71,12 @@ var shiftState bool
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
-	ext := strings.ToLower(filepath.Ext(name))
-	isImage := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
-	return !isImage
+	return ! isImage(name)
 }
 
 // ----------------------------------------------------------isImage ----------------------------------------------
 func isImage(file string) bool {
 	ext := strings.ToLower(filepath.Ext(file))
-	ext = strings.ToLower(ext)
-
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
@@ -178,11 +175,13 @@ func main() {
 		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
 		fmt.Println()
 	}
+	/* Unnecessary according to Andy
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
 	} else if imgHeight > maxHeight {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 	}
+	*/
 
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.ScaleMode = canvas.ImageScaleFastest
@@ -220,9 +219,11 @@ func main() {
 	}
 	elapsedtime := time.Since(t0)
 
-	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
-	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
-	fmt.Println()
+	if *verboseFlag {
+		fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
+		fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
+		fmt.Println()
+	}
 
 	globalW.ShowAndRun()
 
@@ -249,10 +250,12 @@ func loadTheImage() {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+	title := fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
+	/*  According to Andy, this is unnecessary.
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
 		title = title + "; resized."
@@ -260,10 +263,10 @@ func loadTheImage() {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 		title = title + "; resized."
 	}
-
 	bounds = img.Bounds()
 	imgHeight = bounds.Max.Y
 	imgWidth = bounds.Max.X
+	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
@@ -446,7 +449,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyPageDown:
 		scaleFactor *= 1.1
 		loadTheImage()
-	case fyne.KeyPlus:
+	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
 		loadTheImage()
 	case fyne.KeyMinus:
