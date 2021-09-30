@@ -30,6 +30,8 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"image/color"
+	"math"
+
 	//"fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
 	//"fyne.io/fyne/v2/container"
@@ -51,9 +53,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/storage"
+
+	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 29, 2021"
+const LastModified = "Sep 30, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -287,7 +291,7 @@ func loadTheImage() {
 		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
 		title = title + "; resized."
 	}
-
+	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
@@ -303,7 +307,7 @@ func loadTheImage() {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 	}
-	*/
+
 
 	if *verboseFlag {
 		bounds = img.Bounds()
