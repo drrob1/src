@@ -10,8 +10,9 @@
 19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
 29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
 30 Sep 21 -- changing function of <space>
- 1 Oct 21 -- changing left, right arrows to swap X,Y, and = will always send +
+ 1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
 */
+
 package main
 
 import (
@@ -197,7 +198,8 @@ func Doit() {
 		case INBUF = <-inbufChan: // this is blocking
 		}
 		if len(INBUF) > 0 {
-			INBUF = makesubst.MakeSubst(INBUF)
+			//                                                                                                INBUF = makesubst.MakeSubst(INBUF)
+			INBUF = makesubst.MakeReplaced(INBUF)
 			INBUF = strings.ToUpper(INBUF)
 			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 			// These commands are not run thru hpcalc as they are processed before calling it.
@@ -322,6 +324,8 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 		input.TypedRune('*')
 	case fyne.KeyEqual:
 		input.TypedRune('+')
+	case fyne.KeySemicolon:
+		input.TypedRune('*')
 	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
 		//input.TypedRune('H') // for help
 		//inbufChan <- input.Text
