@@ -10,6 +10,7 @@
 19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
 29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
 30 Sep 21 -- changing function of <space>
+ 1 Oct 21 -- changing left, right arrows to swap X,Y, and = will always send +
 */
 package main
 
@@ -38,7 +39,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Sep 30, 2021"
+const lastModified = "Oct 1, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -290,10 +291,12 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 	case fyne.KeyDown: // stack down
 		_ = hpcalc2.PopX()
 		inbufChan <- ""
-	case fyne.KeyLeft:
-		globalW.Canvas().Focus(input)
-	case fyne.KeyRight:
-		globalW.Canvas().Focus(input)
+	case fyne.KeyLeft:  // swap X, Y
+		//                                                                                globalW.Canvas().Focus(input)
+		inbufChan <- "~"
+	case fyne.KeyRight: // swap X, Y
+		//                                                                                globalW.Canvas().Focus(input)
+		inbufChan <- "~"
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//	                                                                                          (*globalA).Quit()
@@ -317,6 +320,8 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 		input.TypedRune('+')
 	case fyne.KeyAsterisk:
 		input.TypedRune('*')
+	case fyne.KeyEqual:
+		input.TypedRune('+')
 	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
 		//input.TypedRune('H') // for help
 		//inbufChan <- input.Text
@@ -332,9 +337,7 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 		}
 		if shiftState {
 			shiftState = false
-			if e.Name == fyne.KeyEqual {
-				input.TypedRune('+')
-			} else if e.Name == fyne.KeySlash {
+			if e.Name == fyne.KeySlash {
 				input.TypedRune('?')
 			} else if e.Name == fyne.KeyPeriod {
 				input.TypedRune('>')
