@@ -17,7 +17,8 @@ REVISION HISTORY
 27 Apr 21 -- Added v flag, for verbose.
  3 May 21 -- Now handles case where inputfile does not have an extension, indicated by a terminating dot.
  2 Oct 21 -- Now called toascii2, based on toascii.  It will use strings.ReplaceAll instead of reading one rune at a time.  Just to see how this goes.
- 3 Oct 21 -- Added elapsedTime output w/ verbose mode.  On same large file that took ~500 ms to process (ref pt), this took ~50 ms.  On leox.
+ 3 Oct 21 -- Now called toascii3, based on earlier code.  It will use strings.replacer function to make one pass thru the file.  Just to see how this goes.
+               On same large file that toascii took ~500 ms, and toascii2 took ~50 ms, this routine took ~20 ms. On leox.
 */
 
 package main
@@ -34,7 +35,7 @@ import (
 	//
 )
 
-const lastAltered = "2 Oct 2021"
+const lastAltered = "3 Oct 2021"
 
 const openQuoteRune rune = 8220
 const closeQuoteRune rune = 8221
@@ -138,33 +139,20 @@ func main() {
 	}
 	InputString := string(InputFile)
 
+	replaced := strings.NewReplacer(string(unicode.ReplacementChar), "", string(highsquote91), squoteString, string(highsquote92), squoteString,
+		string(highquote93), quoteString, string(highquote94), quoteString, string(openQuoteRune), quoteString, string(closeQuoteRune), quoteString,
+		string(squoteRune), squoteString, string(opensquoteRune), squoteString, string(emdashRune), emdashStr, string(endashRune), emdashStr,
+		string(emdash97), emdashStr, string(bulletpointRune), bulletpointStr, string(bullet95), bulletpointStr, string(bullet96), bulletpointStr,
+		string(threedotsRune), threedotsStr, string(hyphenRune), hyphenStr, string(diagraphFIrune), diagraphFIstr, string(diagraphFLrune), diagraphFLstr)
 	t0 := time.Now()
-	FileString := strings.ReplaceAll(InputString, string(unicode.ReplacementChar), "")
-	FileString = strings.ReplaceAll(FileString, string(highsquote91), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(highsquote92), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(highquote93), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(highquote94), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(openQuoteRune), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(closeQuoteRune), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(squoteRune), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(opensquoteRune), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(emdashRune), emdashStr)
-	FileString = strings.ReplaceAll(FileString, string(endashRune), emdashStr)
-	FileString = strings.ReplaceAll(FileString, string(emdash97), emdashStr)
-	FileString = strings.ReplaceAll(FileString, string(bulletpointRune), bulletpointStr)
-	FileString = strings.ReplaceAll(FileString, string(bullet95), bulletpointStr)
-	FileString = strings.ReplaceAll(FileString, string(bullet96), bulletpointStr)
-	FileString = strings.ReplaceAll(FileString, string(threedotsRune), threedotsStr)
-	FileString = strings.ReplaceAll(FileString, string(hyphenRune), hyphenStr)
-	FileString = strings.ReplaceAll(FileString, string(diagraphFIrune), diagraphFIstr)
-	FileString = strings.ReplaceAll(FileString, string(diagraphFLrune), diagraphFLstr)
+	OutputString := replaced.Replace(InputString)
 	elapsedTime := time.Since(t0)
 
-	OutputByteSlice := []byte(FileString)
+	OutputByteSlice := []byte(OutputString)
 	OutFilename := BaseFilename + OutFileSuffix
 	err = os.WriteFile(OutFilename, OutputByteSlice, 0666)
 	lengthMsg := fmt.Sprintf("Len of InputFile is %d, len of InputString is %d, len of FileString is %d, len of OutputByteSlice is %d.  Exiting \n",
-		len(InputFile), len(InputString), len(FileString), len(OutputByteSlice))
+		len(InputFile), len(InputString), len(OutputString), len(OutputByteSlice))
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Error while writing output file is", err)
 		_, _ = fmt.Fprintln(os.Stderr, lengthMsg)
@@ -183,7 +171,13 @@ func main() {
 
 	if RenameFlag {
 		TempFilename := InFilename + OutFilename + ".tmp"
-		os.Rename(InFilename, TempFilename)
+		err = os.Rename(InFilename, TempFilename)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "Error while writing temp file in renaming operation is", err)
+			_, _ = fmt.Fprintln(os.Stderr, "Files not renamed.")
+			_, _ = fmt.Fprintln(os.Stderr, lengthMsg)
+			os.Exit(1)
+		}
 		os.Rename(OutFilename, InFilename)
 		os.Rename(TempFilename, OutFilename)
 		inputfilename = OutFilename
@@ -196,10 +190,4 @@ func main() {
 	fmt.Println(" ASCII File is ", outputfilename, " and size is ", OutFI.Size())
 	fmt.Println()
 
-} // main in toascii.go
-
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
+} // main in toascii3.go

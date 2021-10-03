@@ -13,11 +13,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 	"unicode"
 	//
 )
 
-const lastAltered = "3 May 2021"
+const lastAltered = "3 Oct 2021"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -63,6 +64,7 @@ REVISION HISTORY
 23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 27 Apr 21 -- Added v flag, for verbose.
  3 May 21 -- Now handles case where inputfile does not have an extension, indicated by a terminating dot.
+ 3 Oct 21 -- Added elapsedTime output in verbose mode.  On a large text file, this routine took ~500 ms to process.  On leox.
 */
 
 func main() {
@@ -151,6 +153,7 @@ func main() {
 	OutBufioWriter := bufio.NewWriter(OutputFile)
 	defer OutBufioWriter.Flush()
 
+	t0 := time.Now()
 	//	n := 0
 	for {
 		r, _, err := InBufioReader.ReadRune()
@@ -200,6 +203,12 @@ func main() {
 		fmt.Println(" Output file error from bufio WriteString")
 	}
 	OutputFile.Close()
+	elapsedTime := time.Since(t0)
+
+	if verboseFlag {
+		fmt.Println(" Elapsed time is", elapsedTime)
+	}
+
 
 	// Make the processed file the same name as the input file.  IE, swap in and
 	// out files, unless the norename flag was used on the command line.
