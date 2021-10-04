@@ -18,7 +18,7 @@ REVISION HISTORY
  3 May 21 -- Now handles case where inputfile does not have an extension, indicated by a terminating dot.
  3 Oct 21 -- Added elapsedTime output in verbose mode.  On a large text file, this routine took ~500 ms to process.  On leox.
  4 Oct 21 -- Now called toascii1, and read file into memory first.  And will time file I/O also.
-               Here, the I/O was ~100 ms.  I don't know why the I/O is ~2x what it is for the other approaches.
+               Here, the I/O was ~100 ms for the first run, then ~50 ms for the 2nd run.
 */
 
 package main
