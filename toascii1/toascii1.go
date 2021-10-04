@@ -16,17 +16,18 @@ REVISION HISTORY
 23 Dec 17 -- Added code to do what I also do in vim with the :%s/\%x91/ /g lines.
 27 Apr 21 -- Added v flag, for verbose.
  3 May 21 -- Now handles case where inputfile does not have an extension, indicated by a terminating dot.
- 2 Oct 21 -- Now called toascii2, based on toascii.  It will use strings.ReplaceAll instead of reading one rune at a time.  Just to see how this goes.
- 3 Oct 21 -- Added elapsedTime output w/ verbose mode.  On same large file that took ~500 ms to process (ref pt), this took ~50 ms.  On leox.
- 4 Oct 21 -- Added timing to include file I/O, to be fairer to "toascii", and added runtime.Version().  File renaming excluded from the timing.
-               Turned out that the file I/O took ~ 50 ms.
+ 3 Oct 21 -- Added elapsedTime output in verbose mode.  On a large text file, this routine took ~500 ms to process.  On leox.
+ 4 Oct 21 -- Now called toascii1, and read file into memory first.  And will time file I/O also.
+               Here, the I/O was ~100 ms.  I don't know why the I/O is ~2x what it is for the other approaches.
 */
 
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,17 +39,17 @@ import (
 
 const lastAltered = "4 Oct 2021"
 
-const openQuoteRune rune = 8220
-const closeQuoteRune rune = 8221
-const squoteRune rune = 8217
-const opensquoteRune rune = 8216
-const emdashRune rune = 8212
-const endashRune rune = 8211
-const bulletpointRune rune = 8226
-const threedotsRune rune = 8230
-const hyphenRune rune = 8208
-const diagraphFIrune rune = 64257
-const diagraphFLrune rune = 64258
+const openQuoteRune = 8220
+const closeQuoteRune = 8221
+const squoteRune = 8217
+const opensquoteRune = 8216
+const emdashRune = 8212
+const endashRune = 8211
+const bulletpointRune = 8226
+const threedotsRune = 8230
+const hyphenRune = 8208
+const diagraphFIrune = 64257
+const diagraphFLrune = 64258
 
 const quoteString = "\""
 const squoteString = "'"
@@ -60,17 +61,19 @@ const diagraphFIstr = "fi"
 const diagraphFLstr = "fl"
 
 // From the vim lines that change high ASCII characters to printable equivalents.
-const highsquote91 rune = 0x91 // open squote
-const highsquote92 rune = 0x92 // close squote
-const highquote93 rune = 0x93  // open quote
-const highquote94 rune = 0x94  // close quote
-const emdash97 rune = 0x97     // emdash as ASCII character
-const bullet96 rune = 0x96
-const bullet95 rune = 0x95
+const highsquote91 = 0x91 // open squote
+const highsquote92 = 0x92 // close squote
+const highquote93 = 0x93  // open quote
+const highquote94 = 0x94  // close quote
+const emdash97 = 0x97     // emdash as ASCII character
+const bullet96 = 0x96
+const bullet95 = 0x95
 
 func main() {
+	var str string
+
 	fmt.Println()
-	fmt.Println(" toascii2 converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered, ", compiled by", runtime.Version())
+	fmt.Println(" toascii converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered)
 	fmt.Println()
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
@@ -139,47 +142,71 @@ func main() {
 		fmt.Println(" Error while opening ", InFilename, ".  Exiting.")
 		os.Exit(1)
 	}
-	InputString := string(InputFile)
+	InBuf := bytes.NewReader(InputFile)
+
+	OutFilename := BaseFilename + OutFileSuffix
+	buf := make([]byte, 0, len(InputFile))
+	OutBuf := bytes.NewBuffer(buf)
+
+	//InBufioReader := bufio.NewReader(InputFile)
+	//OutBufioWriter := bufio.NewWriter(OutputFile)
+	//defer OutBufioWriter.Flush()
 
 	t0 := time.Now()
-	FileString := strings.ReplaceAll(InputString, string(unicode.ReplacementChar), "")
-	FileString = strings.ReplaceAll(FileString, string(highsquote91), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(highsquote92), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(highquote93), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(highquote94), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(openQuoteRune), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(closeQuoteRune), quoteString)
-	FileString = strings.ReplaceAll(FileString, string(squoteRune), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(opensquoteRune), squoteString)
-	FileString = strings.ReplaceAll(FileString, string(emdashRune), emdashStr)
-	FileString = strings.ReplaceAll(FileString, string(endashRune), emdashStr)
-	FileString = strings.ReplaceAll(FileString, string(emdash97), emdashStr)
-	FileString = strings.ReplaceAll(FileString, string(bulletpointRune), bulletpointStr)
-	FileString = strings.ReplaceAll(FileString, string(bullet95), bulletpointStr)
-	FileString = strings.ReplaceAll(FileString, string(bullet96), bulletpointStr)
-	FileString = strings.ReplaceAll(FileString, string(threedotsRune), threedotsStr)
-	FileString = strings.ReplaceAll(FileString, string(hyphenRune), hyphenStr)
-	FileString = strings.ReplaceAll(FileString, string(diagraphFIrune), diagraphFIstr)
-	FileString = strings.ReplaceAll(FileString, string(diagraphFLrune), diagraphFLstr)
+
+	for {
+		r, _, err := InBuf.ReadRune()
+		if err == io.EOF || err != nil {
+			break
+		}
+		if r == openQuoteRune || r == closeQuoteRune {
+			str = quoteString
+		} else if r == squoteRune || r == opensquoteRune {
+			str = squoteString
+		} else if r == emdashRune || r == endashRune {
+			str = emdashStr
+		} else if r == bulletpointRune {
+			str = bulletpointStr
+		} else if r == threedotsRune {
+			str = threedotsStr
+		} else if r == hyphenRune {
+			str = hyphenStr
+		} else if r == diagraphFIrune {
+			str = diagraphFIstr
+		} else if r == diagraphFLrune {
+			str = diagraphFLstr
+		} else if r == unicode.ReplacementChar {
+			str = ""
+		} else if r == highsquote91 || r == highsquote92 {
+			str = "'"
+		} else if r == highquote93 || r == highquote94 {
+			str = "\""
+		} else if r == emdash97 {
+			str = " -- "
+		} else if r == bullet95 || r == bullet96 {
+			str = "--"
+		} else {
+			str = string(r)
+		}
+
+		_, _ = OutBuf.WriteString(str)
+		//		_, err = OutBufioWriter.WriteString(str)
+		//		check(err)
+	}
 
 	elapsedTime := time.Since(t0)
 
-	OutputByteSlice := []byte(FileString)
-	OutFilename := BaseFilename + OutFileSuffix
-	err = os.WriteFile(OutFilename, OutputByteSlice, 0666)
+	err = os.WriteFile(OutFilename, OutBuf.Bytes(), 0666)
 	elapsedT1 := time.Since(t1)
-	lengthMsg := fmt.Sprintf("Len of InputFile is %d, len of InputString is %d, len of FileString is %d, len of OutputByteSlice is %d. \n",
-		len(InputFile), len(InputString), len(FileString), len(OutputByteSlice))
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "Error while writing output file is", err)
-		_, _ = fmt.Fprintln(os.Stderr, lengthMsg, "Exiting.")
+		fmt.Fprintln(os.Stderr, "error while writing output file is", err, ".  Exiting.")
 		os.Exit(1)
 	}
 
 	if verboseFlag {
-		fmt.Println(lengthMsg)
-		fmt.Printf(" Elapsed inner time is %s, and elapsed t1, outer time is %s. \n", elapsedTime, elapsedT1)
+		fmt.Printf(" Elapsed inner time is %s, elapsed outer time t1 is %s \n", elapsedTime, elapsedT1)
 	}
+
 
 	// Make the processed file the same name as the input file.  IE, swap in and out files, unless the norename flag was used on the command line.
 
@@ -195,10 +222,14 @@ func main() {
 		outputfilename = InFilename
 	}
 
-	InFI, _ := os.Stat(inputfilename)
-	OutFI, _ := os.Stat(outputfilename)
-	fmt.Println(" UTF_8 File is ", inputfilename, " and size is ", InFI.Size())
-	fmt.Println(" ASCII File is ", outputfilename, " and size is ", OutFI.Size())
+	FI, err := os.Stat(inputfilename)
+	InputFileSize := FI.Size()
+
+	FI, err = os.Stat(outputfilename)
+	OutputFileSize := FI.Size()
+
+	fmt.Println(" UTF_8 File is ", inputfilename, " and size is ", InputFileSize)
+	fmt.Println(" ASCII File is ", outputfilename, " and size is ", OutputFileSize)
 	fmt.Println()
 
 } // main in toascii.go

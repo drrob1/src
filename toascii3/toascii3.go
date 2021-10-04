@@ -19,6 +19,8 @@ REVISION HISTORY
  2 Oct 21 -- Now called toascii2, based on toascii.  It will use strings.ReplaceAll instead of reading one rune at a time.  Just to see how this goes.
  3 Oct 21 -- Now called toascii3, based on earlier code.  It will use strings.replacer function to make one pass thru the file.  Just to see how this goes.
                On same large file that toascii took ~500 ms, and toascii2 took ~50 ms, this routine took ~20 ms. On leox.
+ 4 Oct 21 -- Added timing to include file I/O, to be fairer to "toascii", and added runtime.Version().  File renaming is excluding in the timing.
+               Turned out that the file I/O took ~ 50 ms.
 */
 
 package main
@@ -35,7 +37,7 @@ import (
 	//
 )
 
-const lastAltered = "3 Oct 2021"
+const lastAltered = "4 Oct 2021"
 
 const openQuoteRune rune = 8220
 const closeQuoteRune rune = 8221
@@ -69,7 +71,7 @@ const bullet95 rune = 0x95
 
 func main() {
 	fmt.Println()
-	fmt.Println(" toascii2 converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered)
+	fmt.Println(" toascii2 converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered, ", compiled by", runtime.Version())
 	fmt.Println()
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
@@ -132,6 +134,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	t1 := time.Now()
 	InputFile, err := os.ReadFile(InFilename)
 	if err != nil {
 		fmt.Println(" Error while opening ", InFilename, ".  Exiting.")
@@ -151,17 +154,18 @@ func main() {
 	OutputByteSlice := []byte(OutputString)
 	OutFilename := BaseFilename + OutFileSuffix
 	err = os.WriteFile(OutFilename, OutputByteSlice, 0666)
-	lengthMsg := fmt.Sprintf("Len of InputFile is %d, len of InputString is %d, len of FileString is %d, len of OutputByteSlice is %d.  Exiting \n",
+	elapsedT1 := time.Since(t1)
+	lengthMsg := fmt.Sprintf("Len of InputFile is %d, len of InputString is %d, len of FileString is %d, len of OutputByteSlice is %d. \n",
 		len(InputFile), len(InputString), len(OutputString), len(OutputByteSlice))
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Error while writing output file is", err)
-		_, _ = fmt.Fprintln(os.Stderr, lengthMsg)
+		_, _ = fmt.Fprintln(os.Stderr, lengthMsg, ". Exiting.")
 		os.Exit(1)
 	}
 
 	if verboseFlag {
 		fmt.Println(lengthMsg)
-		fmt.Println(" Elapsed time is", elapsedTime)
+		fmt.Printf(" Elapsed time 0 is %s.  Elapsed t1 is %s \n", elapsedTime, elapsedT1)
 	}
 
 	// Make the processed file the same name as the input file.  IE, swap in and out files, unless the norename flag was used on the command line.
