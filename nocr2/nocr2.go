@@ -1,10 +1,9 @@
 // (C) 1990-2016.  Robert W Solomon.  All rights reserved.
-// nocr.go
+// nocr2.go
 
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -25,13 +24,10 @@ REVISION HISTORY
 27 Apr 21 -- Adding flags and checking err only once, as per Rob Pike's recommendation.
 28 Apr 21 -- Added showing eols for both in and out files when verbose flag is set.
  2 May 21 -- If entered string ends in a dot, make sure outputfile does not have double dot.  This came up if file has no ext.
- 5 Oct 21 -- Added timing reporting
+ 5 Oct 21 -- Now called nocr2.go, and I want to use the strings.replacer ability.
 */
 
-	var inoutline string
-	//	var err error
-
-	fmt.Println(" nocr removes all <CR> from a file.  Last compiled", lastCompiled, "by", runtime.Version())
+	fmt.Println(" nocr2 removes all <CR> from a file using a strings.replacer.  Last compiled", lastCompiled, "by", runtime.Version())
 	fmt.Println()
 
 	var verboseFlag, norenameFlag, noRenameFlag bool
@@ -87,64 +83,47 @@ REVISION HISTORY
 		os.Exit(1)
 	}
 
-	InputFile, err := os.Open(InFilename)
+	outerT := time.Now() // timer outer
+	InputFileData, err := os.ReadFile(InFilename)
 	if err != nil {
 		fmt.Println(" Error while opening ", InFilename, ".  Exiting.")
 		os.Exit(1)
 	}
-	defer InputFile.Close()
+	inputString := string(InputFileData)
+
+	innerT := time.Now() // timer inner
+	replaced := strings.NewReplacer("\r", "")
+	outputString := replaced.Replace(inputString)
+	elapsedInner := time.Since(innerT)
 
 	OutFilename := BaseFilename + OutFileSuffix
-	OutputFile, err := os.Create(OutFilename)
+	outputByteSlice := []byte(outputString)
+	err = os.WriteFile(OutFilename, outputByteSlice, 0666)
 	if err != nil {
 		fmt.Println(" Error while opening OutputFile ", OutFilename, ".  Exiting.")
 		os.Exit(1)
 	}
-	defer OutputFile.Close()
-
-	InBufioScanner := bufio.NewScanner(InputFile)
-	OutBufioWriter := bufio.NewWriter(OutputFile)
-	defer OutBufioWriter.Flush()
-
-	t0 := time.Now()
-	for InBufioScanner.Scan() {
-		inoutline = InBufioScanner.Text() // does not include the trailing EOL char or chars
-		OutBufioWriter.WriteString(inoutline)
-		OutBufioWriter.WriteRune('\n')
-		//	_, err := OutBufioWriter.WriteString(inoutline)
-		//	check(err)
-		//	_, err = OutBufioWriter.WriteRune('\n')
-		//	check(err)
-	}
-	elapsedTime := time.Since(t0)
-
-	_ = InputFile.Close()
-	if err := OutBufioWriter.Flush(); err != nil {
-		fmt.Fprintln(os.Stderr, err, "Exiting.")
-		os.Exit(1)
-	}
-	_ = OutputFile.Close()
-
+	elapsedOuter := time.Since(outerT)
 
 	filename1 := InFilename
 	filename2 := OutFilename
 	if renameflag {
 		TempFilename := InFilename + OutFilename + ".tmp"
-		_ = os.Rename(InFilename, TempFilename)
-		_ = os.Rename(OutFilename, InFilename)
-		_ = os.Rename(TempFilename, OutFilename)
+		os.Rename(InFilename, TempFilename)
+		os.Rename(OutFilename, InFilename)
+		os.Rename(TempFilename, OutFilename)
 		filename1, filename2 = filename2, filename1
 	}
 
 	FI, err := os.Stat(filename1)
 	if err != nil {
-		_,_ = fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, err)
 	}
 	FileSize1 := FI.Size()
 
 	FI, err = os.Stat(filename2)
 	if err != nil {
-		_,_ = fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, err)
 	}
 	FileSize2 := FI.Size()
 
@@ -153,7 +132,7 @@ REVISION HISTORY
 	fmt.Println()
 
 	if verboseFlag {
-		fmt.Printf(" Elapsed time is %s \n", elapsedTime.String())
+		fmt.Printf(" Elapsed outer timer is %s, and elapsed inner timer is %s \n", elapsedOuter.String(), elapsedInner)
 		CRtot, LFtot := eols(filename1)
 		fmt.Println("File", filename1, "has", CRtot, "CR and", LFtot, "LF.")
 		CRtot, LFtot = eols(filename2)

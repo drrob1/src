@@ -21,6 +21,7 @@ REVISION HISTORY
                On same large file that toascii took ~500 ms, and toascii2 took ~50 ms, this routine took ~20 ms. On leox.
  4 Oct 21 -- Added timing to include file I/O, to be fairer to "toascii", and added runtime.Version().  File renaming is excluding in the timing.
                Turned out that the file I/O took ~ 50 ms.
+ 5 Oct 21 -- I moved the location of T0 to include the time it takes to define the replacer function.
 */
 
 package main
@@ -37,7 +38,7 @@ import (
 	//
 )
 
-const lastAltered = "4 Oct 2021"
+const lastAltered = "5 Oct 2021"
 
 const openQuoteRune rune = 8220
 const closeQuoteRune rune = 8221
@@ -71,7 +72,7 @@ const bullet95 rune = 0x95
 
 func main() {
 	fmt.Println()
-	fmt.Println(" toascii2 converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered, ", compiled by", runtime.Version())
+	fmt.Println(" toascii3 converts utf8 to ascii, without changing line endings.  Last altered ", lastAltered, ", compiled by", runtime.Version())
 	fmt.Println()
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable() // from memory, check at home
@@ -142,12 +143,13 @@ func main() {
 	}
 	InputString := string(InputFile)
 
+	t0 := time.Now()
 	replaced := strings.NewReplacer(string(unicode.ReplacementChar), "", string(highsquote91), squoteString, string(highsquote92), squoteString,
 		string(highquote93), quoteString, string(highquote94), quoteString, string(openQuoteRune), quoteString, string(closeQuoteRune), quoteString,
 		string(squoteRune), squoteString, string(opensquoteRune), squoteString, string(emdashRune), emdashStr, string(endashRune), emdashStr,
 		string(emdash97), emdashStr, string(bulletpointRune), bulletpointStr, string(bullet95), bulletpointStr, string(bullet96), bulletpointStr,
 		string(threedotsRune), threedotsStr, string(hyphenRune), hyphenStr, string(diagraphFIrune), diagraphFIstr, string(diagraphFLrune), diagraphFLstr)
-	t0 := time.Now()
+
 	OutputString := replaced.Replace(InputString)
 	elapsedTime := time.Since(t0)
 
