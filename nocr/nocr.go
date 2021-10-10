@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const lastCompiled = "5 Oct 21"
+const lastCompiled = "9 Oct 21"
 
 func main() {
 /*
@@ -26,6 +26,8 @@ REVISION HISTORY
 28 Apr 21 -- Added showing eols for both in and out files when verbose flag is set.
  2 May 21 -- If entered string ends in a dot, make sure outputfile does not have double dot.  This came up if file has no ext.
  5 Oct 21 -- Added timing reporting
+ 9 Oct 21 -- Timing includes reporting search for line endings on the files.
+10 Oct 21 -- Using qpid.txt, timing of loop is ~50 ms and full timing ~115 ms, on leox.
 */
 
 	var inoutline string
@@ -158,6 +160,7 @@ REVISION HISTORY
 		fmt.Println("File", filename1, "has", CRtot, "CR and", LFtot, "LF.")
 		CRtot, LFtot = eols(filename2)
 		fmt.Println("File", filename2, "has", CRtot, "CR and", LFtot, "LF.")
+		fmt.Println(" Time incl'g this section is", time.Since(t0).String())
 		fmt.Println()
 	}
 
