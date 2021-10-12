@@ -11,6 +11,7 @@
 29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
 30 Sep 21 -- changing function of <space>
  1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
+11 Oct 21 -- Starting to add a pop-up modal form for register names.
 */
 
 package main
@@ -31,6 +32,7 @@ import (
 	"runtime"
 	"src/hpcalc2"
 	"src/makesubst"
+	"src/timlibg"
 	"src/tknptr"
 	"strconv"
 	"strings"
@@ -40,7 +42,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Oct 1, 2021"
+const lastModified = "Oct 12, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -53,8 +55,8 @@ var outputMode int
 var divider = "-------------------------------------------------------------------------------------------------------"
 
 var globalA fyne.App
-var globalW, helpWindow fyne.Window
-var input *widget.Entry
+var globalW, helpWindow, popupName fyne.Window
+var input, nameLabelInput *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
 var yellow = color.NRGBA{R: 255, G: 255, B: 0, A: 255}
@@ -67,7 +69,13 @@ var lightcyan = color.NRGBA{R: 224, G: 255, B: 255, A: 255}
 //var homeDir, INBUF, resultToOutput string
 var homeDir, resultToOutput string
 var windowsFlag bool
-var Storage [36]float64 // 0 ..  9, a ..  z
+
+type register struct {
+	Value float64
+	Name  string
+}
+
+var Storage [36]register // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var inbufChan chan string
 var shiftState, lightTheme bool
@@ -221,7 +229,7 @@ func Doit() {
 					showHelp(extra)
 				} else if rtkn.Str == "ZEROREG" {
 					for c := range Storage {
-						Storage[c] = 0
+						Storage[c].Value = 0
 					}
 				} else if strings.HasPrefix(rtkn.Str, "STO") {
 					i := 0
@@ -229,14 +237,25 @@ func Doit() {
 						ch := rtkn.Str[3] // The 4th position.
 						i = GetRegIdx(ch)
 					}
-					Storage[i] = hpcalc2.READX()
+					Storage[i].Value = hpcalc2.READX()
+					if i > 0 {
+						getNameFromPopup()
+						select { // this is blocking
+						case name := <-inbufChan:
+							if strings.ToLower(name) == "t" || strings.ToLower(name) == "today" {
+								m,d,y := timlibg.TIME2MDY()
+								name = timlibg.MDY2STR(m,d,y)
+							}
+							Storage[i].Name = name
+						}
+					}
 				} else if strings.HasPrefix(rtkn.Str, "RCL") {
 					i := 0
 					if len(rtkn.Str) > 3 {
 						ch := rtkn.Str[3] // the 4th position.
 						i = GetRegIdx(ch)
 					}
-					hpcalc2.PUSHX(Storage[i])
+					hpcalc2.PUSHX(Storage[i].Value)
 				} else if rtkn.Str == "FROMCLIP" {
 					contents := globalW.Clipboard().Content()
 					contents = strings.TrimSpace(contents)
@@ -293,14 +312,15 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 	case fyne.KeyDown: // stack down
 		_ = hpcalc2.PopX()
 		inbufChan <- ""
-	case fyne.KeyLeft:  // swap X, Y
+	case fyne.KeyLeft: // swap X, Y
 		//                                                                                globalW.Canvas().Focus(input)
 		inbufChan <- "~"
 	case fyne.KeyRight: // swap X, Y
 		//                                                                                globalW.Canvas().Focus(input)
 		inbufChan <- "~"
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
-		globalW.Close() // quit's the app if this is the last window, which it is.
+		//globalA.Quit()
+		globalW.Close() // quit's the app if this is the last window.
 		//	                                                                                          (*globalA).Quit()
 	case fyne.KeyHome:
 	case fyne.KeyEnd:
@@ -375,11 +395,11 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 // ---------------------------------------------------------- keyTypedHelp --------------------------------------------
 func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
-	case fyne.KeySpace:
-		globalW.Canvas().Focus(input)
-		input.TypedRune(' ')
+	//case fyne.KeySpace:
+	//	globalW.Canvas().Focus(input)
+	//	input.TypedRune(' ')
 
-	case fyne.KeyEnter, fyne.KeyReturn:
+	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		helpWindow.Close()
 
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
@@ -390,6 +410,49 @@ func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedR
 		globalW.Canvas().Focus(input)
 	}
 } // end keyTypedHelp
+
+// ---------------------------------------------------------- keyTypedPopup --------------------------------------------
+func keyTypedPopup(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
+	switch e.Name {
+	case fyne.KeySpace:
+		//globalW.Canvas().Focus(input)
+		nameLabelInput.TypedRune(' ')
+
+	case fyne.KeyEnter, fyne.KeyReturn:
+		popupName.Close()
+		inbufChan <- nameLabelInput.Text
+
+	case fyne.KeyQ, fyne.KeyX:
+		globalA.Quit()
+
+	case fyne.KeyEscape:
+		popupName.Close()
+		inbufChan <- " "
+
+	default:
+		nameLabelInput.TypedRune(rune(e.Name[0]))
+	}
+} // end keyTypedPopup
+
+// --------------------------------------------------------- getNameFromPopup ------------------------------------------
+
+func getNameFromPopup() {
+	nameLabelInput = widget.NewEntry()
+	nameLabelInput.PlaceHolder = "Enter name label for register"
+	enterFunc := func(s string) {
+		inbufChan <- s
+		popupName.Close()
+	}
+	nameLabelInput.OnSubmitted = enterFunc
+
+	popupName = globalA.NewWindow("Get Name Label for register")
+
+	popupName.SetContent(nameLabelInput)
+	popupName.Canvas().SetOnTypedKey(keyTypedPopup)
+	popupName.Resize(fyne.NewSize(500, 200))
+	popupName.Show()
+	return
+} // end getNameFromPopup
 
 // ------------------------------------------------------- check -------------------------------
 func check(err error) {
@@ -432,8 +495,8 @@ func OutputRegToString() string {
 	FirstNonZeroStorageFlag := true
 	ss := make([]string, 0, 40)
 
-	for i, r := range Storage {
-		if r != 0.0 {
+	for i, r := range Storage { // r for register
+		if r.Value != 0.0 {
 			if FirstNonZeroStorageFlag {
 				s := fmt.Sprintf("                The following storage registers are not zero")
 				ss = append(ss, s)
@@ -441,12 +504,12 @@ func OutputRegToString() string {
 			}
 			ch := GetRegChar(i)
 			sigfig := hpcalc2.SigFig()
-			s := strconv.FormatFloat(r, 'g', sigfig, 64)
+			s := strconv.FormatFloat(r.Value, 'g', sigfig, 64)
 			s = hpcalc2.CropNStr(s)
-			if r >= 10000 {
+			if r.Value >= 10000 {
 				s = hpcalc2.AddCommas(s)
 			}
-			str := fmt.Sprintf("Reg [%s] = %s", ch, s)
+			str := fmt.Sprintf("Reg [%s], %s = %s", ch, r.Name, s)
 			ss = append(ss, str)
 		} // if storage value is not zero
 	} // for range over Storage
