@@ -11,7 +11,7 @@
 29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
 30 Sep 21 -- changing function of <space>
  1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
-11 Oct 21 -- Starting to add a pop-up modal form for register names.
+11 Oct 21 -- Starting to add a pop-up modal form for register names.  This was finished the next evening.
 */
 
 package main
