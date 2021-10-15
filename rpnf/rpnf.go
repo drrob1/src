@@ -12,6 +12,7 @@
 30 Sep 21 -- changing function of <space>
  1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
 11 Oct 21 -- Starting to add a pop-up modal form for register names.  This was finished the next evening.
+14 Oct 21 -- Added trim to the popup text
 */
 
 package main
@@ -42,7 +43,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Oct 12, 2021"
+const lastModified = "Oct 14, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -420,7 +421,7 @@ func keyTypedPopup(e *fyne.KeyEvent) { // Maybe better to first call input.Typed
 
 	case fyne.KeyEnter, fyne.KeyReturn:
 		popupName.Close()
-		inbufChan <- nameLabelInput.Text
+		inbufChan <- strings.TrimSpace(nameLabelInput.Text)
 
 	case fyne.KeyQ, fyne.KeyX:
 		globalA.Quit()
