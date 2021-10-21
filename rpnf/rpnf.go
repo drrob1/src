@@ -13,6 +13,8 @@
  1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
 11 Oct 21 -- Starting to add a pop-up modal form for register names.  This was finished the next evening.
 14 Oct 21 -- Added trim to the popup text
+21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
+               And added commas to big X display when > 10K instead of 1M.
 */
 
 package main
@@ -43,7 +45,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Oct 14, 2021"
+const lastModified = "Oct 21, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -332,8 +334,8 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 		//                                                                                         input.TypedRune(' ')
 		inbufChan <- input.Text
 	case fyne.KeyBackspace, fyne.KeyDelete:
-		//globalW.Canvas().Focus(input)
-		//input.TypedRune('\b')
+		//                                                                                globalW.Canvas().Focus(input)
+		//                                                                                        input.TypedRune('\b')
 		text := input.Text
 		if len(text) > 0 {
 			text = text[:len(text)-1]
@@ -348,8 +350,8 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 	case fyne.KeySemicolon:
 		input.TypedRune('*')
 	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
-		//input.TypedRune('H') // for help
-		//inbufChan <- input.Text
+		//                                                                             input.TypedRune('H') // for help
+		//                                                                                      inbufChan <- input.Text
 		inbufChan <- "H"
 
 	case fyne.KeyEnter, fyne.KeyReturn:
@@ -416,7 +418,6 @@ func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedR
 func keyTypedPopup(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
 	case fyne.KeySpace:
-		//globalW.Canvas().Focus(input)
 		nameLabelInput.TypedRune(' ')
 
 	case fyne.KeyEnter, fyne.KeyReturn:
@@ -429,6 +430,13 @@ func keyTypedPopup(e *fyne.KeyEvent) { // Maybe better to first call input.Typed
 	case fyne.KeyEscape:
 		popupName.Close()
 		inbufChan <- " "
+
+	case fyne.KeyBackspace, fyne.KeyDelete:
+		text := nameLabelInput.Text
+		if len(text) > 0 {
+			text = text[:len(text)-1]
+		}
+		nameLabelInput.SetText(text)
 
 	default:
 		nameLabelInput.TypedRune(rune(e.Name[0]))
@@ -556,7 +564,7 @@ func populateUI() {
 
 	resultStr := strconv.FormatFloat(R, 'g', sigfig, 64)
 	resultStr = hpcalc2.CropNStr(resultStr)
-	if R > 1_000_000 {
+	if R > 10_000 {
 		resultStr = hpcalc2.AddCommas(resultStr)
 	}
 
