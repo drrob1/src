@@ -68,7 +68,7 @@ REVISION HISTORY
 20 Jan 21 -- Will issue a warning if a line does not have at least 2 points.  And it's inauguration day.  But that's not important now.
 10 Aug 21 -- Fixed minor output bug in format statement for a line only output to the file and not to screen.  Forgot to use exp() and newline char.
                and converted to modules.
-22 Oct 21 -- Removed the depracated ioutil (as of Go 1.16)
+22 Oct 21 -- Removed ioutil, which was depracated as of Go 1.16.
 23 Oct 21 -- Stopped pre-allocating the slice of file contents.
 */
 
