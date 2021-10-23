@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Aug 27, 2021"
+const LastAlteredDate = "Oct 23, 2021"
 
 /*
   REVISION HISTORY
@@ -66,6 +66,7 @@ const LastAlteredDate = "Aug 27, 2021"
    2 Jan 21 -- Removed 3 redundant type conversions, as flagged by GoLand.
    4 Jan 21 -- Adding ModifiedQuickSort, and will sort output times.  And will not run N**2 sorts on datasets > tooBig.
   27 Aug 21 -- Converting to modules by removing getcommandline, and removed the depricated ioutil.
+  23 Oct 21 -- Removed call to make slice to receive words file.
 */
 
 const tooBig = 170_000
@@ -829,7 +830,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, filesize+5) // add 5 just in case
+	//byteslice := make([]byte, 0, filesize+5) // add 5 just in case.  Now I don't think this is needed, anyway.
 	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
