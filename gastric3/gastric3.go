@@ -69,9 +69,10 @@ REVISION HISTORY
 10 Aug 21 -- Fixed minor output bug in format statement for a line only output to the file and not to screen.  Forgot to use exp() and newline char.
                and converted to modules.
 22 Oct 21 -- Removed the depracated ioutil (as of Go 1.16)
+23 Oct 21 -- Stopped pre-allocating the slice of file contents.
 */
 
-const LastAltered = "Oct 22, 2021"
+const LastAltered = "Oct 23, 2021"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -199,9 +200,9 @@ func main() {
 		fmt.Println(" Filename is", Filename)
 	}
 
-	byteslice := make([]byte, 0, 5000)
+	//byteslice := make([]byte, 0, 5000) // don't need to do this, so I'm removing this at of 10/23/21
 	//byteslice, err = ioutil.ReadFile(Filename)
-	byteslice, err = os.ReadFile(Filename)
+	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error", err, " from iotuil.ReadFile when reading", Filename, ".  Exiting.")
 		os.Exit(1)
