@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,10 +18,11 @@ REVISION HISTORY
 ----------------
  9 Apr 21 -- Just started working on the to populate and sort a letter frequency table using my .txt files as source material
 11 Apr 21 -- Adding flag package and test flag to streamline the output.  And adding <CR> and <LF> counts to output.
-13 Apr 31 -- Added verbose flag as synonym for test mode.  Verbose is more consistent w/ most utils.
+13 Apr 21 -- Added verbose flag as synonym for test mode.  Verbose is more consistent w/ most utils.
+22 Oct 21 -- Removing the depracated (as of Go 1.16) ioutil.
 */
 
-const lastCompiled = "13 Apr 2021"
+const lastCompiled = "22 Oct 2021"
 const extDefault = ".txt"
 
 type letter struct {
@@ -91,7 +91,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	filecontents, e := ioutil.ReadFile(infilename)
+	//filecontents, e := ioutil.ReadFile(infilename)
+	filecontents, e := os.ReadFile(infilename)
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e, ".  Exiting")
 		os.Exit(1)

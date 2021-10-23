@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"gonum.org/v1/gonum/stat"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -69,9 +68,10 @@ REVISION HISTORY
 20 Jan 21 -- Will issue a warning if a line does not have at least 2 points.  And it's inauguration day.  But that's not important now.
 10 Aug 21 -- Fixed minor output bug in format statement for a line only output to the file and not to screen.  Forgot to use exp() and newline char.
                and converted to modules.
+22 Oct 21 -- Removed the depracated ioutil (as of Go 1.16)
 */
 
-const LastAltered = "Aug 10, 2021"
+const LastAltered = "Oct 22, 2021"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -200,7 +200,8 @@ func main() {
 	}
 
 	byteslice := make([]byte, 0, 5000)
-	byteslice, err = ioutil.ReadFile(Filename)
+	//byteslice, err = ioutil.ReadFile(Filename)
+	byteslice, err = os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error", err, " from iotuil.ReadFile when reading", Filename, ".  Exiting.")
 		os.Exit(1)

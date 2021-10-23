@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"getcommandline"
-	"io/ioutil"
+	"src/getcommandline"
+	// "io/ioutil"  Depracated as of Go 1.16
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "26 May 2020"
+const LastAlteredDate = "22 Oct 2021"
 
 /*
   REVISION HISTORY
@@ -55,6 +55,7 @@ const LastAlteredDate = "26 May 2020"
   26 May  20 -- Only updating some comments.
                 Now called fastsorts, in which I will only compare the n*log(n) sorts.  I will leave in the binary insertion sort.
                 I will use more idiomatic Go for my stack routines in the nonrecursive quick sort routines.
+  22 Oct 21 --  Optimizing code that uses bytes.NewBuffer().  And removed the depracated ioutil to use os.ReadFile.
 */
 
 type intStackType []int
@@ -169,6 +170,7 @@ func StraightSelection(a []string) []string {
 */
 
 // -----------------------------------------------------------
+
 func BadShellSort(a []string) []string {
 	var h int
 
@@ -223,6 +225,7 @@ End Bubblesort
 // I based this on bubble sort pseudo-code above that I found in "Essential Algorithms", by Rod Stephens.
 // I have this as an ebook.
 // Now I'm going to add the improvement used by Sedgewick in the determination of h.
+
 func MyShellSort(a []string) []string {
 	var h int
 
@@ -257,6 +260,7 @@ func MyShellSort(a []string) []string {
 // -----------------------------------------------------------
 
 // From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
+
 func ShellSort(a []string) []string {
 	var h int
 
@@ -320,6 +324,7 @@ func HeapSort(a []string) []string { // I think this is based on Wirth's code in
 } // END HeapSort
 // -----------------------------------------------------------
 // -----------------------------------------------------------
+
 func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn't work.
 	n := len(a)
 	L := n / 2
@@ -663,6 +668,7 @@ func merge(left, right []string) []string {
 
 // -----------------------------------------------------------
 // modified mergesort.go
+
 func ModifiedMergeSort(L []string) []string {
 	if len(L) < 12 {
 		L = StraightInsertion(L)
@@ -730,8 +736,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, filesize+5) // add 5 just in case
-	byteslice, err := ioutil.ReadFile(Filename)
+	//byteslice := make([]byte, 0, filesize+5) // add 5 just in case
+	//byteslice, err := ioutil.ReadFile(Filename)
+	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)

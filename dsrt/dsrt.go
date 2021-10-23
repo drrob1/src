@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "26 Aug 2021"
+const LastAltered = "22 Oct 2021"
 
 /*
 Revision History
@@ -99,6 +99,7 @@ Revision History
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
 26 Aug 21 -- Backporting autoheight and autowidth
+22 Oct 21 -- Updating the idiom that uses bytes.buffer.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -150,7 +151,8 @@ func main() {
 		if winflag {
 			comspec, ok := os.LookupEnv("ComSpec")
 			if ok {
-				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				bytesbuf := bytes.NewBuffer(make([]byte,0,200))
 				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
 				tcc.Stdout = bytesbuf
 				tcc.Run()

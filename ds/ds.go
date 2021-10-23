@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "28 July 2021"
+const LastAltered = "22 Oct 2021"
 
 /*
 Revision History
@@ -105,6 +105,7 @@ Revision History
                I'm adding the code to determine the number of rows and columns itself.  I'll use golang.org/x/term for linux, and shelling out to tcc for Windows.
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- Backporting the changes from ds2 and ds3, ie, autoheight, autowidth, and putting the output as strings in a slice struct.
+22 Oct 21 -- Changed the code that uses bytes.NewBuffer()
 */
 
 type FISlice []os.FileInfo
@@ -157,7 +158,8 @@ func main() {
 		if winflag {
 			comspec, ok := os.LookupEnv("ComSpec")
 			if ok {
-				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				bytesbuf := bytes.NewBuffer(make([]byte,0,200))
 				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
 				tcc.Stdout = bytesbuf
 				tcc.Run()

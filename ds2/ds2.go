@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "23 Aug 2021"
+const LastAltered = "22 Oct 2021"
 
 /*
 Revision History
@@ -109,6 +109,7 @@ Revision History
 29 Jul 21 -- Changed value of minWidth, and will check against minwidth.
 23 Aug 21 -- Output vertically sorting doesn't work when I want more screens output.  I have to scroll up to see the top of the last column.
                I'm going to a horizontal sort, which is much easier to do anyway.
+22 Oct 21 -- Optimized (I think) code to use bytes.NewBuffer().
 */
 
 type dirAliasMapType map[string]string
@@ -158,7 +159,8 @@ func main() {
 		if winflag {
 			comspec, ok := os.LookupEnv("ComSpec")
 			if ok {
-				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+				bytesbuf := bytes.NewBuffer(make([]byte,0,200))
 				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
 				tcc.Stdout = bytesbuf
 				tcc.Run()

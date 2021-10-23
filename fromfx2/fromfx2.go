@@ -5,20 +5,20 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"filepicker"
 	"fmt"
-	"getcommandline"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"src/filepicker"
+	"src/getcommandline"
+	"src/timlibg"
+	"src/tokenize"
 	"strconv"
 	"strings"
-	"timlibg"
-	"tokenize"
+	// "io/ioutil" depracated as of Go 1.16
 )
 
-const lastModified = "17 Oct 20"
+const lastModified = "22 Oct 21"
 
 /*
   REVISION HISTORY
@@ -245,8 +245,9 @@ func main() {
 
 	fmt.Println()
 
-	filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.
-	filebyteslice, e = ioutil.ReadFile(InFilename)
+	//filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.
+	//filebyteslice, e = ioutil.ReadFile(InFilename)
+	filebyteslice, e = os.ReadFile(InFilename)
 	if e != nil {
 		fmt.Println(" Error from ReadFile is ", e)
 		os.Exit(1)
