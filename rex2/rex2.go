@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Jul 29, 2021"
+const LastAltered = "Oct 26, 2021"
 
 /*
 Revision History
@@ -105,6 +105,7 @@ Revision History
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 29 Jul 21 -- Changed value of minWidth, and check against minwidth.
+26 Oct 21 -- Fixed bug in which last row was not shown if not complete.
 */
 
 type dirAliasMapType map[string]string
@@ -505,7 +506,7 @@ func main() {
 	}
 
 	// Output the colorStringSlice, 2 items per line for this version of the code.
-	halfpoint := len(colorStringSlice) / 2
+	halfpoint := len(colorStringSlice) / 2 + 1  // make sure last row is shown, even if not complete
 	columnwidth := w/2 - 2
 
 	for i := 0; i < halfpoint; i++ {
@@ -540,7 +541,7 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
-	fmt.Println()
+	// fmt.Println()  Too many blank lines now.
 } // end main regex
 
 //-------------------------------------------------------------------- InsertByteSlice

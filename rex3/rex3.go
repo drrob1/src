@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Aug 1, 2021"
+const LastAltered = "Oct 26, 2021"
 
 /*
 Revision History
@@ -105,6 +105,7 @@ Revision History
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- Will now use fixedStringLen to truncate the columns
 29 Jul 21 -- Changed value of minWidth, and will check against minwidth2ndcol.
+26 Oct 21 -- Make sure incomplete rows also print
 */
 
 type dirAliasMapType map[string]string
@@ -515,7 +516,7 @@ func main() {
 		fmt.Println(" columnWidth =", columnWidth)
 	}
 
-	oneThirdPoint := len(colorStringSlice)/3
+	oneThirdPoint := len(colorStringSlice)/3 + 2 // make sure even incomplete rows print.
 	if testFlag {
 		fmt.Println(" oneThirdPoint =", oneThirdPoint, ", len(colorStringSlice) =", len(colorStringSlice))
 		fmt.Println()
@@ -562,7 +563,7 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
-	fmt.Println()
+	// fmt.Println()  Too many blank lines now.
 } // end main regex
 
 //-------------------------------------------------------------------- InsertByteSlice
