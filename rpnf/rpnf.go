@@ -15,6 +15,8 @@
 14 Oct 21 -- Added trim to the popup text
 21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
                And added commas to big X display when > 10K instead of 1M.
+30 Oct 21 -- Thinking about changing commands.  Will allow fixed, float and gen to switch output modes.
+               So fix will also change modes, but sigfig will not.  So far, I'm thinking about it by writing this comment.  I haven't coded anything yet.
 */
 
 package main
