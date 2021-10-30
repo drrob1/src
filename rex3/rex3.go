@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Oct 26, 2021"
+const LastAltered = "Oct 29, 2021"
 
 /*
 Revision History
@@ -106,6 +106,7 @@ Revision History
 28 Jul 21 -- Will now use fixedStringLen to truncate the columns
 29 Jul 21 -- Changed value of minWidth, and will check against minwidth2ndcol.
 26 Oct 21 -- Make sure incomplete rows also print
+29 Oct 21 -- Made a different adjustment for all items to be displayed are actually displayed.
 */
 
 type dirAliasMapType map[string]string
@@ -516,12 +517,12 @@ func main() {
 		fmt.Println(" columnWidth =", columnWidth)
 	}
 
-	oneThirdPoint := len(colorStringSlice)/3 + 2 // make sure even incomplete rows print.
+	oneThirdPoint := len(colorStringSlice)/3
 	if testFlag {
 		fmt.Println(" oneThirdPoint =", oneThirdPoint, ", len(colorStringSlice) =", len(colorStringSlice))
 		fmt.Println()
 	}
-	for i := 0; i < oneThirdPoint; i++ {
+	for i := 0; i < oneThirdPoint + 2; i++ {  // make sure all colorStringSlice items are displayed.
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnWidth)
 		ctfmt.Printf(c0, winflag, "%s  ", s0)

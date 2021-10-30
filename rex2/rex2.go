@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Oct 26, 2021"
+const LastAltered = "Oct 29, 2021"
 
 /*
 Revision History
@@ -106,6 +106,7 @@ Revision History
 28 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
 29 Jul 21 -- Changed value of minWidth, and check against minwidth.
 26 Oct 21 -- Fixed bug in which last row was not shown if not complete.
+29 Oct 21 -- Made a different adjustment to have all items printed.
 */
 
 type dirAliasMapType map[string]string
@@ -506,10 +507,10 @@ func main() {
 	}
 
 	// Output the colorStringSlice, 2 items per line for this version of the code.
-	halfpoint := len(colorStringSlice) / 2 + 1  // make sure last row is shown, even if not complete
+	halfpoint := len(colorStringSlice) / 2
 	columnwidth := w/2 - 2
 
-	for i := 0; i < halfpoint; i++ {
+	for i := 0; i < halfpoint+1; i++ { // make sure all items print.
 		c0 := colorStringSlice[i].color
 		s0 := fixedStringLen(colorStringSlice[i].str, columnwidth)
 		ctfmt.Printf(c0, winflag, "%s  ", s0)
