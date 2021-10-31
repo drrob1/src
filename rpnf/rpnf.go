@@ -15,8 +15,7 @@
 14 Oct 21 -- Added trim to the popup text
 21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
                And added commas to big X display when > 10K instead of 1M.
-30 Oct 21 -- Thinking about changing commands.  Will allow fixed, float and gen to switch output modes.
-               So fix will also change modes, but sigfig will not.  So far, I'm thinking about it by writing this comment.  I haven't coded anything yet.
+31 Oct 21 -- Will allow fixed, float and gen to switch output modes.  So fix will also change modes, but sigfig will not.
 */
 
 package main
@@ -47,7 +46,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Oct 21, 2021"
+const lastModified = "Oct 31, 2021"
 
 const ( // output modes
 	outputfix = iota
@@ -222,14 +221,13 @@ func Doit() {
 			//fmt.Println(" after setting stringslice to nil.  len =", len(stringslice), " and cap =", cap(stringslice))  output is 0 and 0
 
 			for _, rtkn := range realtknslice {
-				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // have more help lines to print
+				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // append more help lines to output from HPCALC2
 					extra := make([]string, 0, 10)
 					extra = append(extra, "STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
-					extra = append(extra, "OutputFixed, OutputFloat, OutputGen -- set OutputMode to fixed, float or gen.")
+					extra = append(extra, "OutputFixed (fix), OutputFloat (float, real), OutputGen (gen) -- set OutputMode to fixed, float or gen.")
 					extra = append(extra, "SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
 					extra = append(extra, "dark, light -- set Fyne theme to dark or light.")
-					//str := fmt.Sprintf("%s last modifed on %s, \n and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
-					str := fmt.Sprintf("%s last modifed on %s and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
+					str := fmt.Sprintf("%s last modified on %s and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
 					extra = append(extra, str)
 					showHelp(extra)
 				} else if rtkn.Str == "ZEROREG" {
@@ -276,9 +274,10 @@ func Doit() {
 					globalW.Clipboard().SetContent(rStr)
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
 					outputMode = outputfix
-				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") {
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") || rtkn.Str == "REAL" ||
+					rtkn.Str == "FLOAT" {
 					outputMode = outputfloat
-				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") {
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") || strings.HasPrefix(rtkn.Str, "GEN"){
 					outputMode = outputgen
 				} else if rtkn.Str == "DARK" {
 					fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
@@ -297,6 +296,8 @@ func Doit() {
 				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
 					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
 					stringslice = append(stringslice, str)
+				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc sets output mode AND number of significant figures.
+					outputMode = outputfix
 				}
 				if len(stringslice) > 0 {
 					resultToOutput = strings.Join(stringslice, "\n")
