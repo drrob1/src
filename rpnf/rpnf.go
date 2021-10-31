@@ -16,6 +16,7 @@
 21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
                And added commas to big X display when > 10K instead of 1M.
 31 Oct 21 -- Will allow fixed, float and gen to switch output modes.  So fix will also change modes, but sigfig will not.
+               And fix, lastx both use letter X which immediately exits.  I'm going to try to fix that.
 */
 
 package main
@@ -316,18 +317,24 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 	case fyne.KeyUp: // stack up
 		inbufChan <- ","
 	case fyne.KeyDown: // stack down
-		_ = hpcalc2.PopX()
-		inbufChan <- ""
+		//                                          _ = hpcalc2.PopX()  but this prevents UNDO from working here.
+		inbufChan <- "POP" // I'm sending a command thru instead of calling PopX so that UNDO will work correctly.
 	case fyne.KeyLeft: // swap X, Y
 		//                                                                                globalW.Canvas().Focus(input)
 		inbufChan <- "~"
 	case fyne.KeyRight: // swap X, Y
 		//                                                                                globalW.Canvas().Focus(input)
 		inbufChan <- "~"
-	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
-		//globalA.Quit()
-		globalW.Close() // quit's the app if this is the last window.
+	case fyne.KeyEscape, fyne.KeyQ:
+		//                                                                                               globalA.Quit()
 		//	                                                                                          (*globalA).Quit()
+		globalW.Close() // quit's the app if this is the last window.
+	case fyne.KeyX:
+		if len(input.Text) == 0 { // only eXit if X is first character typed.
+			globalW.Close()
+		} else {
+			input.TypedRune('X')
+		}
 	case fyne.KeyHome:
 	case fyne.KeyEnd:
 	case fyne.KeyPageUp:
