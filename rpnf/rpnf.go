@@ -275,8 +275,7 @@ func Doit() {
 					globalW.Clipboard().SetContent(rStr)
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
 					outputMode = outputfix
-				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") || rtkn.Str == "REAL" ||
-					rtkn.Str == "FLOAT" {
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") || rtkn.Str == "REAL" || rtkn.Str == "FLOAT" {
 					outputMode = outputfloat
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") || strings.HasPrefix(rtkn.Str, "GEN"){
 					outputMode = outputgen

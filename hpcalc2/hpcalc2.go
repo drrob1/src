@@ -17,7 +17,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "16 Sep 2021"
+const LastAlteredDate = "2 Nov 2021"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -126,6 +126,7 @@ REVISION HISTORY
                And fixed help message regarding MapClose, which is not automatic but needs to be deferred as I just wrote.
 19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call MapClose directly anymore.
 16 Sep 21 -- I increased the number of digits for the %g verb when output is dump'd.
+ 2 Nov 21 -- Adjusted dumpedfixed so that very large or very small numbers are output in general format to not mess up the display
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -175,6 +176,8 @@ const oz2g = 28.34952
 const in2cm = 2.54
 const m2ft = 3.28084
 const mi2km = 1.609344
+const veryLargeNumber = 1e10
+const verySmallNumber = 1e-10
 
 //-----------------------------------------------------------------------------------------------------------------------------
 func init() {
@@ -462,18 +465,24 @@ func CropNStr(instr string) string {
 //------------------------------------------------------------------ DumpStackFixed -----------------------------------------------------------
 
 func DumpStackFixed() []string {
-	var SRN int
+	//                                       var SRN int   I would never do this now, so I'm removing it
 	var str string
 
 	ss := make([]string, 0, StackSize+2)
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
-	for SRN = T1; SRN >= X; SRN-- {
-		str = strconv.FormatFloat(Stack[SRN], 'f', sigfig, 64)
-		str = CropNStr(str)
-		if Stack[SRN] > 10000 {
-			str = AddCommas(str)
+	for SRN := T1; SRN >= X; SRN-- {
+		if math.Abs(Stack[SRN]) < verySmallNumber || math.Abs(Stack[SRN]) > veryLargeNumber {
+			str = strconv.FormatFloat(Stack[SRN], 'g', sigfig, 64)
+			ss = append(ss, fmt.Sprintf("%2s: %10.2g %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
+
+		} else {
+			str = strconv.FormatFloat(Stack[SRN], 'f', sigfig, 64)
+			str = CropNStr(str)
+			if Stack[SRN] > 10000 {
+				str = AddCommas(str)
+			}
+			ss = append(ss, fmt.Sprintf("%2s: %10.2f %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 		}
-		ss = append(ss, fmt.Sprintf("%2s: %10.2f %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 	}
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
