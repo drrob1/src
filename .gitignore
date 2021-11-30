@@ -36,4 +36,6 @@ rsc.io/
 image-viewer/
 solitaire/
 github.com/
+go.mod
+go.sum
 
