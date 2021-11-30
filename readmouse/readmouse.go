@@ -19,7 +19,7 @@ REVISION HISTORY
 
 */
 
-const lastCompiled = "29 Nov 2021"
+const lastCompiled = "30 Nov 2021"
 const timeDelay = 5
 const maxIterations = 5
 
@@ -76,6 +76,7 @@ func main() {
 		finalMouseX, finalMouseY := robotgo.GetMousePos()
 		fmt.Println(" Final mouse x =", finalMouseX, "and final mouse y =", finalMouseY)
 		fmt.Println(" Final row =", finalMouseY, "and final column =", finalMouseX)
+                mouseSlice = append(mouseSlice, mousepoint{finalMouseX, finalMouseY})
 
 	}
 	robotgo.MoveMouse(mousex, mousey)

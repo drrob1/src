@@ -17,6 +17,7 @@ REVISION HISTORY
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"fyne.io/fyne/v2"
@@ -32,7 +33,8 @@ import (
 	"time"
 )
 
-const LastModified = "Nov 29, 2021"
+const LastModified = "Nov 30, 2021"
+const mousePointsFilename = "mousePointsFile.txt"
 const clickedX = 450
 const clickedY = 325
 const incrementY = 100
@@ -87,7 +89,7 @@ func main() {
 	fynetext.TextStyle.Bold = true
 
 	vbox := container.NewVBox(headingFyne, fynetext)
-	mousePoints = make([]mousepoint, 0, 10)
+	mousePoints = make([]mousepoint, 0, 50)
 	mousePoints = append(mousePoints, mousepoint{firstX, firstY})
 
 	myCanvas.SetContent(vbox)
@@ -129,7 +131,7 @@ func changeContent(cnvs fyne.Canvas) {
 // ---------------------------------------------------------- showMousePoints ----------------------------
 func showMousePoints() fyne.CanvasObject {
 
-	mouseString := make([]string, 0, 10)
+	mouseString := make([]string, 0, 50)
 	for i, mouse := range mousePoints {
 		s := fmt.Sprintf(" point %d: x = %d, y = %d \n", i, mouse.x, mouse.y)
 		mouseString = append(mouseString, s)
@@ -141,6 +143,59 @@ func showMousePoints() fyne.CanvasObject {
 	return mouseLabel
 }
 
+// ---------------------------------------------------------- writeMousePoints ----------------------------
+func writeMousePoints() {
+
+    // open file in append mode in the Documents dir of home directory.  Must separately open it to be able to append if one is already there.  os.WriteFile won't work
+    // for this.
+    userhomedir, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Fprintln(os.Stderr,"Error getting user home directory is:", err)
+        return
+    }
+    err = os.Chdir(userhomedir + "/Documents")
+    if err != nil {
+        fmt.Fprintln(os.Stderr,"Error changing to userHomeDir/Documents is:", err)
+        return
+    }
+
+	date := time.Now()
+	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+
+	//               mousePointsFile, err := os.OpenFile(mousePointsFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm|os.ModeAppend)  //  func OpenFile(name string, flag int, perm FileMode) (*File, error)
+	mousePointsFile, err := os.OpenFile(mousePointsFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+    if err != nil {
+        fmt.Fprintln(os.Stderr,"Error creating", mousePointsFilename, "is:", err)
+        return
+    }
+    defer mousePointsFile.Close()
+
+    mousePointsBufferedFile := bufio.NewWriter(mousePointsFile)
+
+	mousePointsBufferedFile.WriteString("------------------------------------------------------\n")
+	mousePointsBufferedFile.WriteString(datestring + "\n\n")
+
+	for i, mouse := range mousePoints {
+		s := fmt.Sprintf(" point %d: x = %d, y = %d \n", i, mouse.x, mouse.y)
+        _, err := mousePointsBufferedFile.WriteString(s)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error writing to", mousePointsFilename, "is:", err)
+			return
+		}
+	}
+
+	mousePointsBufferedFile.WriteString("------------------------------------------------------\n")
+	mousePointsBufferedFile.WriteRune('\n')
+
+	err = mousePointsBufferedFile.Flush()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error from writing or flushing to", mousePointsFilename, "is:", err)
+		return
+	}
+
+	return
+} // end writeMousePoints
+
 // ------------------------------------------------------------ keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	switch e.Name {
@@ -149,10 +204,12 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyLeft:
 	case fyne.KeyRight:
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
+            writeMousePoints()
 		globalA.Quit()
 	case fyne.KeyHome:
 	case fyne.KeyEnd:
 	case fyne.KeyEnter, fyne.KeyReturn:
+            writeMousePoints()
 		globalW.Close()
 	}
 }
