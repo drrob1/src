@@ -17,6 +17,7 @@ REVISION HISTORY
 22 Sep 21 -- Added shiftState to deal w/ shift= is the plus sign
 27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
 30 Sep 21 -- Added keyAsterisk, and removed the unneeded scaling code (according to Andy Williams).
+ 2 Dec 21 -- After listening to Bill Kennedy's Go talks, I made the image channel buffered.
 */
 
 package main
@@ -52,7 +53,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 30, 2021"
+const LastModified = "Dec 2, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 
@@ -149,7 +150,7 @@ func main() {
 	}
 
 	cwd = filepath.Dir(fullFilename)
-	imgFileInfoChan := make(chan []os.FileInfo) // unbuffered channel
+	imgFileInfoChan := make(chan []os.FileInfo, 10) // unbuffered channel increases latency.  Will make it buffered now.
 	go MyReadDirForImages(cwd, imgFileInfoChan)
 
 	globalA = app.New() // this line must appear before any other uses of fyne.
@@ -194,7 +195,7 @@ func main() {
 	globalW.SetContent(loadedimg)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
-	select { // this syntax works and is blocking.
+	select { // this syntax works and was blocking until I made the channel buffered.
 	case imageInfo = <-imgFileInfoChan: // this awkward syntax is what's needed to read from a channel.
 	}
 
@@ -207,7 +208,7 @@ func main() {
 		fmt.Println()
 	}
 
-	indexchan := make(chan int)
+	indexchan := make(chan int) // unbuffered because there is no advantage to making this buffered.  I'm only getting 1 int back.
 	t0 := time.Now()
 
 	go filenameIndex(imageInfo, basefilename, indexchan)
