@@ -1,5 +1,12 @@
-// From Go GUI with Fyne, Chap 4.  I believe it will be enhanced in later chapters, but this is what is it for now.
+// From Go GUI with Fyne, Chap 4.
 /*
+
+This pgm works by the main thread initializing the image display and then starting the display message loop.
+Then the keyTyped handles the keyboard events.
+I now want to change that so that keyTyped puts these events into a buffered channel that is handled by a different go routine.
+Just to see if I can now.
+
+
 REVISION HISTORY
 -------- -------
  9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
@@ -18,6 +25,8 @@ REVISION HISTORY
 27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
 30 Sep 21 -- Added keyAsterisk, and removed the unneeded scaling code (according to Andy Williams).
  2 Dec 21 -- After listening to Bill Kennedy's Go talks, I made the image channel buffered.
+ 3 Dec 21 -- Some clean up that I learned from Bill Kennedy.
+ 4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.
 */
 
 package main
@@ -53,9 +62,17 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 2, 2021"
+const LastModified = "Dec 4, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
+const keyCmdChanSize = 20
+const (
+	firstImgCmd = iota
+	prevImgCmd
+	nextImgCmd
+	loadImgCmd
+	lastImgCmd
+)
 
 var index int
 var loadedimg *canvas.Image
@@ -69,10 +86,11 @@ var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor
 var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
+var keyCmdChan chan int
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
-	return ! isImage(name)
+	return !isImage(name)
 }
 
 // ----------------------------------------------------------isImage ----------------------------------------------
@@ -105,6 +123,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	keyCmdChan = make(chan int, keyCmdChanSize)
 	basefilename := filepath.Base(imgfilename)
 	fullFilename, err := filepath.Abs(imgfilename)
 	if err != nil {
@@ -150,7 +169,7 @@ func main() {
 	}
 
 	cwd = filepath.Dir(fullFilename)
-	imgFileInfoChan := make(chan []os.FileInfo, 10) // unbuffered channel increases latency.  Will make it buffered now.
+	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
 	go MyReadDirForImages(cwd, imgFileInfoChan)
 
 	globalA = app.New() // this line must appear before any other uses of fyne.
@@ -195,9 +214,8 @@ func main() {
 	globalW.SetContent(loadedimg)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
-	select { // this syntax works and was blocking until I made the channel buffered.
-	case imageInfo = <-imgFileInfoChan: // this awkward syntax is what's needed to read from a channel.
-	}
+	// this syntax works and was blocking until I made the channel buffered.
+	imageInfo = <-imgFileInfoChan // reading from a channel is a unary use of the channel operator.
 
 	if *verboseFlag {
 		if isSorted(imageInfo) {
@@ -208,16 +226,14 @@ func main() {
 		fmt.Println()
 	}
 
-	indexchan := make(chan int) // unbuffered because there is no advantage to making this buffered.  I'm only getting 1 int back.
+	indexchan := make(chan int, 1) // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
 	t0 := time.Now()
 
 	go filenameIndex(imageInfo, basefilename, indexchan)
 
 	globalW.CenterOnScreen()
 
-	select {
-	case index = <-indexchan: // syntax to read from a channel.
-	}
+	index = <-indexchan // syntax to read from a channel, using the channel operator as a unary operator.
 	elapsedtime := time.Since(t0)
 
 	if *verboseFlag {
@@ -226,9 +242,31 @@ func main() {
 		fmt.Println()
 	}
 
+	go processKeys()
+
 	globalW.ShowAndRun()
 
 } // end main
+
+// --------------------------------------------------- processKeys -------------------------------
+func processKeys() {
+	for {
+		keyCmd := <-keyCmdChan
+		//fmt.Println("in processKeys go routine.  keycmd =", keyCmd)
+		switch keyCmd {
+		case firstImgCmd:
+			firstImage()
+		case prevImgCmd:
+			prevImage()
+		case nextImgCmd:
+			nextImage()
+		case loadImgCmd:
+			loadTheImage()
+		case lastImgCmd:
+			lastImage()
+		}
+	}
+}
 
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage() {
@@ -416,22 +454,26 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if !sticky {
 			scaleFactor = 1
 		}
-		prevImage()
+		//prevImage()
+		keyCmdChan <- prevImgCmd
 	case fyne.KeyDown:
 		if !sticky {
 			scaleFactor = 1
 		}
-		nextImage()
+		//nextImage()
+		keyCmdChan <- nextImgCmd
 	case fyne.KeyLeft:
 		if !sticky {
 			scaleFactor = 1
 		}
-		prevImage()
+		//prevImage()
+		keyCmdChan <- prevImgCmd
 	case fyne.KeyRight:
 		if !sticky {
 			scaleFactor = 1
 		}
-		nextImage()
+		//nextImage()
+		keyCmdChan <- nextImgCmd
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
@@ -439,37 +481,50 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if !sticky {
 			scaleFactor = 1
 		}
-		firstImage()
+		//firstImage()
+		keyCmdChan <- firstImgCmd
 	case fyne.KeyEnd:
 		if !sticky {
 			scaleFactor = 1
 		}
-		lastImage()
+		//lastImage()
+		keyCmdChan <- lastImgCmd
 	case fyne.KeyPageUp:
-		scaleFactor *= 0.9
-		loadTheImage()
+		scaleFactor *= 1.1 // I'm reversing what I did before.  PageUp now scales up
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyPageDown:
-		scaleFactor *= 1.1
-		loadTheImage()
+		scaleFactor *= 0.9 // I'm reversing what I did before.  PageDn now scales down
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
-		loadTheImage()
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
-		loadTheImage()
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		if !sticky {
 			scaleFactor = 1
 		}
-		nextImage()
+		//nextImage()
+		keyCmdChan <- nextImgCmd
 	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
-		prevImage()
+		//prevImage()
+		keyCmdChan <- prevImgCmd
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
-		loadTheImage()
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
+	case fyne.KeyV:
+		*verboseFlag = true
+		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
 	case fyne.KeyZ:
 		sticky = !sticky
+		*verboseFlag = !*verboseFlag
 		if *verboseFlag {
 			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
 		}
@@ -481,20 +536,25 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 		if shiftState {
 			shiftState = false
-			if e.Name == fyne.KeyEqual { // like key plus
+			if e.Name == fyne.KeyEqual { // shift equal is key plus
 				scaleFactor *= 1.1
-				loadTheImage()
+				//loadTheImage()
+				keyCmdChan <- loadImgCmd
 			} else if e.Name == fyne.KeyPeriod { // >
-				nextImage()
+				//nextImage()
+				keyCmdChan <- nextImgCmd
 			} else if e.Name == fyne.KeyComma { // <
-				prevImage()
+				//prevImage()
+				keyCmdChan <- prevImgCmd
 			} else if e.Name == fyne.Key8 { // *
 				scaleFactor *= 1.1
-				loadTheImage()
+				//loadTheImage()
+				keyCmdChan <- loadImgCmd
 			}
 		} else if e.Name == fyne.KeyEqual {
 			scaleFactor = 1
-			loadTheImage()
+			//loadTheImage()
+			keyCmdChan <- loadImgCmd
 		}
 	}
-}
+} // end keyTyped
