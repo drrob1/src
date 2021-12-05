@@ -20,6 +20,7 @@ REVISION HISTORY
 29 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
                Copied from img.go and imga.go.  When looking at my code, Andy commented that I don't need to resize, that's handled
                automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
+ 4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
 */
 
 package main
@@ -57,7 +58,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 30, 2021"
+const LastModified = "Dec 4, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -166,7 +167,7 @@ func main() {
 	}
 
 	cwd = filepath.Dir(fullFilename)
-	imgFileInfoChan := make(chan []os.FileInfo) // unbuffered channel
+	imgFileInfoChan := make(chan []os.FileInfo, 1) // buffered channel
 	go MyReadDirForImages(cwd, imgFileInfoChan)
 
 	globalA = app.New() // this line must appear before any other uses of fyne.
@@ -219,9 +220,7 @@ func main() {
 	globalW.SetContent(GUI)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
 
-	select { // this syntax works and is blocking.
-	case imageInfo = <-imgFileInfoChan: // this awkward syntax is what's needed to read from a channel.
-	}
+	imageInfo = <-imgFileInfoChan // unary channel operator reads from the channel.
 
 	if *verboseFlag {
 		if isSorted(imageInfo) {
@@ -232,16 +231,15 @@ func main() {
 		fmt.Println()
 	}
 
-	indexchan := make(chan int)
+	indexchan := make(chan int, 1)
 	t0 := time.Now()
 
 	go filenameIndex(imageInfo, basefilename, indexchan)
 
 	globalW.CenterOnScreen()
 
-	select {
-	case index = <-indexchan: // syntax to read from a channel.
-	}
+	index = <-indexchan // syntax to read from a channel.
+
 	elapsedtime := time.Since(t0)
 
 	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
@@ -307,7 +305,6 @@ func loadTheImage() {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 	}
-
 
 	if *verboseFlag {
 		bounds = img.Bounds()
@@ -496,6 +493,9 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
 		loadTheImage()
+	case fyne.KeyV:
+		*verboseFlag = true
+		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
 	case fyne.KeyZ:
 		sticky = !sticky
 		if *verboseFlag {
