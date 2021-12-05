@@ -58,7 +58,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 4, 2021"
+const LastModified = "Dec 5, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -471,10 +471,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 		lastImage()
 	case fyne.KeyPageUp:
-		scaleFactor *= 0.9
+		scaleFactor *= 1.1
 		loadTheImage()
 	case fyne.KeyPageDown:
-		scaleFactor *= 1.1
+		scaleFactor *= 0.9
 		loadTheImage()
 	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
