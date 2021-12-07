@@ -26,7 +26,8 @@
                 And also if there appears to be more than one extension, like gastric.txt.out.
    5 Sep 20 -- Will not search thru symlinked directories
   27 Mar 21 -- making sure that the filename matches are case insensitive
-   6 Dec 21 -- Maybe something I'm learning from Bill Kennedy applies here.  I only make the doneChan buffered.
+   6 Dec 21 -- Maybe something I'm learning from Bill Kennedy applies here.  I only made the doneChan buffered.
+   7 Dec 21 -- Extensions like .xls will also match .xlsm, .xlsx, etc.
 */
 package main
 
@@ -132,7 +133,9 @@ func main() {
 		} else if fi.Mode().IsRegular() {
 			for _, ext := range extensions {
 				fpathlower := strings.ToLower(fpath)
-				if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+				fpathext := filepath.Ext(fpathlower)
+				//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+				if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
 					grepFile(lineRegex, fpath, resultsChan)
 				}
 			}
