@@ -1,19 +1,14 @@
 // multack.go
 // Copyright (C) 2011-12 Qtrac Ltd.
 //
-// This program or package and any associated files are licensed under the
-// Apache License, Version 2.0 (the "License"); you may not use these files
-// except in compliance with the License. You can get a copy of the License
-// at: http://www.apache.org/licenses/LICENSE-2.0.
+// This program or package and any associated files are licensed under the Apache License, Version 2.0 (the "License"); you may not use these files
+// except in compliance with the License. You can get a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The approach taken here was inspired by an example on the gonuts mailing
-// list by Roger Peppe.
+// The approach taken here was inspired by an example on the gonuts mailing list by Roger Peppe.
 /*
   REVISION HISTORY
   ----------------
@@ -25,12 +20,13 @@
                With a ResultType buffer of 100,000 items, it's ~24% faster than anack.
                I'll stop at 100,000 items.  It's great it works.
 
-   2 Apr 20 -- Updated it's start string to declare its correct name.  I forgot to change that yesterday.
+   2 Apr 20 -- Updated its start string to declare its correct name.  I forgot to change that yesterday.
   23 Apr 20 -- 2 edge cases don't work on linux.  If there is a filepattern but no matching files in the start directory,
                 and if there is only 1 matching file in the start directory.
                 And also if there appears to be more than one extension, like gastric.txt.out.
    5 Sep 20 -- Will not search thru symlinked directories
   27 Mar 21 -- making sure that the filename matches are case insensitive
+   6 Dec 21 -- Maybe something I'm learning from Bill Kennedy applies here.  I only make the doneChan buffered.
 */
 package main
 
@@ -50,7 +46,7 @@ import (
 	"time"
 )
 
-const lastAltered = "23 Apr 2020"
+const lastAltered = "6 Dec 2021"
 
 var workers = runtime.NumCPU()
 
@@ -60,40 +56,6 @@ type ResultType struct {
 	line     string
 }
 
-/*  This is not being used, anyway
-type Job struct {
-	filename string
-	results  chan<- ResultType
-}
-
-func (job Job) Do(lineRegex *regexp.Regexp) {
-	file, err := os.Open(job.filename)
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		return
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	for lino := 1; ; lino++ {
-		line, err := reader.ReadBytes('\n')
-		line = bytes.TrimRight(line, "\n\r")
-
-		linestr := string(line)
-		linestr = strings.ToLower(linestr)
-		linelowercase := []byte(linestr)
-
-		if lineRegex.Match(linelowercase) {
-			job.results <- ResultType{job.filename, lino, string(line)}
-		}
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("error:%d: %s\n", lino, err)
-			}
-			break
-		}
-	}
-}
-*/
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
@@ -143,7 +105,7 @@ func main() {
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
 	// goroutine to collect results from resultsChan
-	doneChan := make(chan bool)
+	doneChan := make(chan bool, 1) // based on Bill Kennedy's talks
 	resultsChan := make(chan ResultType, 100_000)
 	go func() {
 		for r := range resultsChan {
@@ -185,6 +147,8 @@ func main() {
 
 	err = filepath.Walk(startDirectory, filepathwalkfunction)
 	close(resultsChan)
+
+	// stop and wait for the doneChan to receive it's signal.
 	<-doneChan
 
 	if err != nil {
@@ -220,8 +184,9 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 				lino:     lino,
 				line:     linestr,
 			}
-			resultChan <- r // I think this is what makes this a concurrent walk function.
+
 			// fmt.Printf("%s:%d:%s \n", fpath, lino, string(line)) from orig code
+			resultChan <- r // I think this is what makes this a concurrent walk function.
 		}
 		if err != nil {
 			if err != io.EOF {
