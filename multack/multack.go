@@ -27,7 +27,10 @@
    5 Sep 20 -- Will not search thru symlinked directories
   27 Mar 21 -- making sure that the filename matches are case insensitive
    6 Dec 21 -- Maybe something I'm learning from Bill Kennedy applies here.  I only made the doneChan buffered.
-   7 Dec 21 -- Extensions like .xls will also match .xlsm, .xlsx, etc.
+   7 Dec 21 -- Extensions like .xls will also match .xlsm, .xlsx, etc.  And I don't think I have to track which directories I've visited, as the library func does that.
+                 So I'll just use the map as a list of known directories to skip.  So far, only ".git" is skipped.
+                 And I don't have to check for IsDir() or IsRegular(), so I removed that, also.
+
 */
 package main
 
@@ -99,8 +102,10 @@ func main() {
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
 		lastAltered, runtime.Version(), startDirectory, pattern, extensions)
 
-	DirAlreadyWalked := make(map[string]bool, 500)
-	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
+	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.
+	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
+	dirToSkip := make(map[string]bool, 5)
+	dirToSkip[".git"] = true
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
@@ -115,29 +120,59 @@ func main() {
 		doneChan <- true
 	}()
 
-	// walkfunc closure that I hope is parallel.  I stopped here
+	// walkfunc closure
+	/*
+		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf(" Error from walk is %v. \n ", err)
+				return nil
+			}
+
+			if fi.IsDir() {
+				//	if DirAlreadyWalked[fpath] { return filepath.SkipDir
+				//	} else {  I don't think I have to track the directories visited myself.  So I'm taking this out.
+				//		DirAlreadyWalked[fpath] = true
+				//	}
+
+				if dirToSkip[fpath] {
+					return filepath.SkipDir
+				}
+				//} else if isSymlink(fi.Mode()) && fi.IsDir() {  // also not needed, because the docs say that walk does not follow symlinks.
+				//	return filepath.SkipDir
+			} else if fi.Mode().IsRegular() {
+				for _, ext := range extensions {
+					fpathlower := strings.ToLower(fpath)
+					fpathext := filepath.Ext(fpathlower)
+					//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+					if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
+						grepFile(lineRegex, fpath, resultsChan)
+					}
+				}
+			}
+
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
+			return nil
+		}
+	*/
 	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk is %v. \n ", err)
 			return nil
 		}
 
-		if fi.IsDir() {
-			if DirAlreadyWalked[fpath] {
-				return filepath.SkipDir
-			} else {
-				DirAlreadyWalked[fpath] = true
-			}
-		} else if isSymlink(fi.Mode()) && fi.IsDir() {
+		if dirToSkip[fpath] {
 			return filepath.SkipDir
-		} else if fi.Mode().IsRegular() {
-			for _, ext := range extensions {
-				fpathlower := strings.ToLower(fpath)
-				fpathext := filepath.Ext(fpathlower)
-				//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-				if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-					grepFile(lineRegex, fpath, resultsChan)
-				}
+		}
+
+		for _, ext := range extensions {
+			fpathlower := strings.ToLower(fpath)
+			fpathext := filepath.Ext(fpathlower)
+			//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+			if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
+				grepFile(lineRegex, fpath, resultsChan)
 			}
 		}
 
@@ -181,8 +216,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 		linelowercase := []byte(linestrlower)
 
 		if lineRegex.Match(linelowercase) {
-			var r ResultType
-			r = ResultType{
+			r := ResultType{
 				filename: fpath,
 				lino:     lino,
 				line:     linestr,

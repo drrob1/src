@@ -1,18 +1,13 @@
 // Copyright (C) 2011-12 Qtrac Ltd.
 //
-// This program or package and any associated files are licensed under the
-// Apache License, Version 2.0 (the "License"); you may not use these files
-// except in compliance with the License. You can get a copy of the License
-// at: http://www.apache.org/licenses/LICENSE-2.0.
+// This program or package and any associated files are licensed under the Apache License, Version 2.0 (the "License"); you may not use these files
+// except in compliance with the License. You can get a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// See the License for the specific language governing permissions and limitations under the License.
 
-// The approach taken here was inspired by an example on the gonuts mailing
-// list by Roger Peppe.
+// The approach taken here was inspired by an example on the gonuts mailing list by Roger Peppe.
 /*
   REVISION HISTORY
   ----------------
@@ -24,6 +19,8 @@
                  I'll use multiple processes for the grep work.  For the dir walking I'll just do that in main.
   30 Mar 20 -- Started work on extracting the extensions from a slice of input filenames.  And will assume .txt extension if none is provided.
    1 Apr 20 -- Moved the regexp compile line out of main loop.
+   7 Dec 21 -- All of the changes since Apr 2020 have been in multack.  I'm backporting a change to not track which dir have been entered, as the library will do that.
+                 And I redid the walk closure to remove test for regular file.  The walk does not follow symlinks so this is not needed, either.
 */
 package main
 
@@ -43,7 +40,7 @@ import (
 	"time"
 )
 
-const lastAltered = "1 Apr 2020"
+const lastAltered = "7 Dec 2021"
 
 //var workers = runtime.NumCPU()
 
@@ -78,10 +75,8 @@ func main() {
 		extensions = append(extensions, ".txt")
 	} else if runtime.GOOS == "linux" {
 		files := args[1:]
-		if len(files) > 1 {
-			extensions = extractExtensions(files)
-		}
-	} else {
+		extensions = extractExtensions(files)
+	} else { // windows branch
 		extensions = args[1:]
 		for i := range extensions {
 			extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
@@ -92,33 +87,59 @@ func main() {
 	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
 		lastAltered, startDirectory, pattern, extensions)
 
-	DirAlreadyWalked := make(map[string]bool, 500)
-	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
+	//DirAlreadyWalked := make(map[string]bool, 500)
+	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
+	dirToSkip := make(map[string]bool, 5)
+	dirToSkip[".git"] = true
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
 	// walkfunc closure
+	/*
+		var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf(" Error from walk is %v. \n ", err)
+				return nil
+			}
+
+			if fi.IsDir() {
+				//if DirAlreadyWalked[fpath] { return filepath.SkipDir } else { DirAlreadyWalked[fpath] = true }
+				if dirToSkip[fpath] {
+					return filepath.SkipDir
+				}
+			} else if fi.Mode().IsRegular() {
+				for _, ext := range extensions {
+					if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+						grepFile(lineRegex, fpath)
+
+					}
+				}
+			}
+			//log.Println(" Need to debug this.  Filepath is", fpath, ", fi is", fi.Name(), fi.IsDir())
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
+			return nil
+		}
+	*/
 	var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk is %v. \n ", err)
 			return nil
 		}
 
-		if fi.IsDir() {
-			if DirAlreadyWalked[fpath] {
-				return filepath.SkipDir
-			} else {
-				DirAlreadyWalked[fpath] = true
-			}
-		} else if fi.Mode().IsRegular() {
-			for _, ext := range extensions {
-				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-					grepFile(lineRegex, fpath)
+		if dirToSkip[fpath] {
+			return filepath.SkipDir
+		}
 
-				}
+		for _, ext := range extensions {
+			if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+				grepFile(lineRegex, fpath)
 			}
 		}
+
 		//log.Println(" Need to debug this.  Filepath is", fpath, ", fi is", fi.Name(), fi.IsDir())
 		now := time.Now()
 		if now.After(tfinal) {
