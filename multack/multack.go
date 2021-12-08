@@ -31,6 +31,7 @@
                  So I'll just use the map as a list of known directories to skip.  So far, only ".git" is skipped.
                  And I don't have to check for IsDir() or IsRegular(), so I removed that, also.
                Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
+   8 Dec 21 -- Will output when .git gets skipped, and will use the pattern of signalling without data, as I learned from Bill Kennedy.
 */
 package main
 
@@ -50,9 +51,9 @@ import (
 	"time"
 )
 
-const lastAltered = "6 Dec 2021"
+const lastAltered = "8 Dec 2021"
 
-var workers = runtime.NumCPU()
+//var workers = runtime.NumCPU()  Not used in the code below.
 
 type ResultType struct {
 	filename string
@@ -104,8 +105,8 @@ func main() {
 
 	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.
 	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
-	dirToSkip := make(map[string]bool, 5)
-	dirToSkip[".git"] = true
+	// dirToSkip := make(map[string]bool, 5)  This didn't get triggered in a directory I know has a .git.  I'm removing the overhead.
+	//dirToSkip[".git"] = true
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
@@ -117,7 +118,8 @@ func main() {
 		for r := range resultsChan {
 			fmt.Printf(" %s:%d:%s\n", r.filename, r.lino, r.line)
 		}
-		doneChan <- true
+		//doneChan <- true  This is signalling with data.
+		close(doneChan) // This is signalling without data.  I'm going to try this now.
 	}()
 
 	// walkfunc closures.  Only the last one is being used now.
@@ -193,9 +195,10 @@ func main() {
 			return nil
 		}
 
-		if dirToSkip[fpath] {
-			return filepath.SkipDir
-		}
+		//if dirToSkip[fpath] {
+		//	fmt.Println(" Skipped", fpath, "directory.")
+		//	return filepath.SkipDir
+		//}
 
 		for _, ext := range extensions {
 			fpathlower := strings.ToLower(fpath)
@@ -217,7 +220,7 @@ func main() {
 
 	close(resultsChan)
 
-	// stop and wait for the doneChan to receive it's signal.
+	// stop and wait for the doneChan to receive it's signal.  I'll changed this to a signal without data.
 	<-doneChan
 
 	if err != nil {

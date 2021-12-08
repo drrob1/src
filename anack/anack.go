@@ -22,6 +22,7 @@
    7 Dec 21 -- All of the changes since Apr 2020 have been in multack.  I'm backporting a change to not track which dir have been entered, as the library will do that.
                  And I redid the walk closure to remove test for regular file.  The walk does not follow symlinks so this is not needed, either.
                  Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
+   8 Dec 21 -- Removing the test for .git.  It seems that the walk function knows not to enter .git.
 */
 package main
 
@@ -41,7 +42,7 @@ import (
 	"time"
 )
 
-const lastAltered = "7 Dec 2021"
+const lastAltered = "8 Dec 2021"
 
 //var workers = runtime.NumCPU()
 
@@ -90,8 +91,8 @@ func main() {
 
 	//DirAlreadyWalked := make(map[string]bool, 500)
 	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
-	dirToSkip := make(map[string]bool, 5)
-	dirToSkip[".git"] = true
+	//dirToSkip := make(map[string]bool, 5)
+	//dirToSkip[".git"] = true
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
@@ -159,9 +160,9 @@ func main() {
 			return nil
 		}
 
-		if dirToSkip[fpath] {
-			return filepath.SkipDir
-		}
+		//if dirToSkip[fpath] {
+		//	return filepath.SkipDir
+		//}
 
 		for _, ext := range extensions {
 			if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
