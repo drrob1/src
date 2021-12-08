@@ -30,7 +30,7 @@
    7 Dec 21 -- Extensions like .xls will also match .xlsm, .xlsx, etc.  And I don't think I have to track which directories I've visited, as the library func does that.
                  So I'll just use the map as a list of known directories to skip.  So far, only ".git" is skipped.
                  And I don't have to check for IsDir() or IsRegular(), so I removed that, also.
-
+               Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
 */
 package main
 
@@ -120,7 +120,7 @@ func main() {
 		doneChan <- true
 	}()
 
-	// walkfunc closure
+	// walkfunc closures.  Only the last one is being used now.
 	/*
 		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
 			if err != nil {
@@ -157,7 +157,37 @@ func main() {
 			return nil
 		}
 	*/
-	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
+	/*
+		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf(" Error from walk is %v. \n ", err)
+				return nil
+			}
+
+			if dirToSkip[fpath] {
+				return filepath.SkipDir
+			}
+
+			for _, ext := range extensions {
+				fpathlower := strings.ToLower(fpath)
+				fpathext := filepath.Ext(fpathlower)
+				//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+				if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
+					grepFile(lineRegex, fpath, resultsChan)
+				}
+			}
+
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
+			return nil
+		}
+
+		err = filepath.Walk(startDirectory, filepathwalkfunction)
+	*/
+
+	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk is %v. \n ", err)
 			return nil
@@ -170,7 +200,7 @@ func main() {
 		for _, ext := range extensions {
 			fpathlower := strings.ToLower(fpath)
 			fpathext := filepath.Ext(fpathlower)
-			//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+			// only search thru indicated extensions.  Especially not thru binary or swap files.
 			if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
 				grepFile(lineRegex, fpath, resultsChan)
 			}
@@ -183,7 +213,8 @@ func main() {
 		return nil
 	}
 
-	err = filepath.Walk(startDirectory, filepathwalkfunction)
+	err = filepath.WalkDir(startDirectory, walkDirFunction)
+
 	close(resultsChan)
 
 	// stop and wait for the doneChan to receive it's signal.

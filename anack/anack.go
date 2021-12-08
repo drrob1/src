@@ -21,6 +21,7 @@
    1 Apr 20 -- Moved the regexp compile line out of main loop.
    7 Dec 21 -- All of the changes since Apr 2020 have been in multack.  I'm backporting a change to not track which dir have been entered, as the library will do that.
                  And I redid the walk closure to remove test for regular file.  The walk does not follow symlinks so this is not needed, either.
+                 Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
 */
 package main
 
@@ -95,7 +96,7 @@ func main() {
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
-	// walkfunc closure
+	// walkfunc closures.  Only the last one is being used.
 	/*
 		var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
 			if err != nil {
@@ -124,7 +125,35 @@ func main() {
 			return nil
 		}
 	*/
-	var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
+	/*
+		var filepathwalkfunction filepath.WalkFunc = func(fpath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf(" Error from walk is %v. \n ", err)
+				return nil
+			}
+
+			if dirToSkip[fpath] {
+				return filepath.SkipDir
+			}
+
+			for _, ext := range extensions {
+				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+					grepFile(lineRegex, fpath)
+				}
+			}
+
+			//log.Println(" Need to debug this.  Filepath is", fpath, ", fi is", fi.Name(), fi.IsDir())
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
+			return nil
+		}
+
+		err = filepath.Walk(startDirectory, filepathwalkfunction)
+	*/
+
+	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk is %v. \n ", err)
 			return nil
@@ -148,7 +177,7 @@ func main() {
 		return nil
 	}
 
-	err = filepath.Walk(startDirectory, filepathwalkfunction)
+	err = filepath.WalkDir(startDirectory, walkDirFunction)
 
 	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
