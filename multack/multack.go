@@ -34,6 +34,7 @@
    8 Dec 21 -- Will output when .git gets skipped, and will use the pattern of signalling without data, as I learned from Bill Kennedy.
   10 Dec 21 -- I'm testing for .git and will skipdir if found.  And will simply return on IsDir.
                  I'm going to restructure this to use waitgroups.  I'll see how that goes.
+                 I think I was having a shadowing problem w/ err.  When I made that er, the code started working.
 */
 package main
 
