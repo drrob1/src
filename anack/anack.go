@@ -23,12 +23,12 @@
                  And I redid the walk closure to remove test for regular file.  The walk does not follow symlinks so this is not needed, either.
                  Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
    8 Dec 21 -- Removing the test for .git.  It seems that the walk function knows not to enter .git.
+  10 Dec 21 -- Nevermind.  I'm testing for .git and will skipdir if found.  And will simply return on IsDir
 */
 package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -42,7 +42,7 @@ import (
 	"time"
 )
 
-const lastAltered = "8 Dec 2021"
+const lastAltered = "10 Dec 2021"
 
 //var workers = runtime.NumCPU()
 
@@ -160,6 +160,17 @@ func main() {
 			return nil
 		}
 
+		if d.IsDir() {
+			//fmt.Println(fpath, "is a directory")  Yeah, it does return directories and not just files.
+			//ext := filepath.Ext(fpath)  If directory name is .git, then both base and ext will be .git
+			//base := filepath.Base(fpath) if directory name is src, then base is src and ext is empty.
+			//fmt.Println(" fpath is a directory.  fpath =", fpath, ", base =", base, ", ext =", ext)
+			if filepath.Ext(fpath) == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		//if dirToSkip[fpath] {
 		//	return filepath.SkipDir
 		//}
@@ -197,24 +208,29 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	for lino := 1; ; lino++ {
-		line, err := reader.ReadBytes('\n')
-		line = bytes.TrimRight(line, "\n\r")
+	for lino := 1; reader.Buffered() == 0; lino++ {
+		line, er := reader.ReadString('\n')
+		line = strings.TrimSpace(line)
+		//line = bytes.TrimRight(line, "\r\n")
 
 		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
-		linestr := string(line)
-		linestr = strings.ToLower(linestr)
+		//linestr := string(line)
+		linestr := strings.ToLower(line)
 		linelowercase := []byte(linestr)
 
 		if lineRegex.Match(linelowercase) {
 			fmt.Printf("%s:%d:%s \n", fpath, lino, string(line))
 		}
-		if err != nil {
-			if err != io.EOF {
+		if er != nil {
+			if er != io.EOF {
 				log.Printf("error from reader.ReadBytes in grepfile:%d: %s\n", lino, err)
 			}
 			break // just exit when hit EOF condition.
 		}
+		//if reader.Buffered() == 0 { // If can't read any more bytes, break
+		//	break
+		//}
+
 	}
 } // end grepFile
 

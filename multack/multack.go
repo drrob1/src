@@ -32,15 +32,15 @@
                  And I don't have to check for IsDir() or IsRegular(), so I removed that, also.
                Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
    8 Dec 21 -- Will output when .git gets skipped, and will use the pattern of signalling without data, as I learned from Bill Kennedy.
+  10 Dec 21 -- I'm testing for .git and will skipdir if found.  And will simply return on IsDir.
+                 I'm going to restructure this to use waitgroups.  I'll see how that goes.
 */
 package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -48,30 +48,35 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
-const lastAltered = "8 Dec 2021"
+const lastAltered = "10 Dec 2021"
+const maxSecondsToTimeout = 300
 
-//var workers = runtime.NumCPU()  Not used in the code below.
-
+/*
 type ResultType struct {
 	filename string
 	lino     int
 	line     string
 }
+*/
+
+var wg sync.WaitGroup
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
-	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 240, where 0 means max timeout of 240 sec.")
+	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.Parse()
-	if *timeoutOpt < 0 || *timeoutOpt > 240 {
-		log.Fatalln("timeout must be in the range [0,240] seconds")
+	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
+		log.Fatalln("timeout must be in the range [0,300] seconds")
 	}
 	if *timeoutOpt == 0 {
-		*timeoutOpt = 240
+		*timeoutOpt = maxSecondsToTimeout
 	}
+
 	args := flag.Args()
 	if len(args) < 1 {
 		log.Fatalln("a regexp to match must be specified")
@@ -110,17 +115,6 @@ func main() {
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
-
-	// goroutine to collect results from resultsChan
-	doneChan := make(chan bool, 1) // based on Bill Kennedy's talks
-	resultsChan := make(chan ResultType, 100_000)
-	go func() {
-		for r := range resultsChan {
-			fmt.Printf(" %s:%d:%s\n", r.filename, r.lino, r.line)
-		}
-		//doneChan <- true  This is signalling with data.
-		close(doneChan) // This is signalling without data.  I'm going to try this now.
-	}()
 
 	// walkfunc closures.  Only the last one is being used now.
 	/*
@@ -195,17 +189,17 @@ func main() {
 			return nil
 		}
 
-		//if dirToSkip[fpath] {
-		//	fmt.Println(" Skipped", fpath, "directory.")
-		//	return filepath.SkipDir
-		//}
+		if d.IsDir() {
+			return nil
+		}
 
 		for _, ext := range extensions {
-			fpathlower := strings.ToLower(fpath)
-			fpathext := filepath.Ext(fpathlower)
+			fpathLower := strings.ToLower(fpath)
+			fpathExt := filepath.Ext(fpathLower)
 			// only search thru indicated extensions.  Especially not thru binary or swap files.
-			if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-				grepFile(lineRegex, fpath, resultsChan)
+			if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
+				wg.Add(1)
+				go grepFile(lineRegex, fpath)
 			}
 		}
 
@@ -217,22 +211,19 @@ func main() {
 	}
 
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
-
-	close(resultsChan)
-
-	// stop and wait for the doneChan to receive it's signal.  I'll changed this to a signal without data.
-	<-doneChan
-
 	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
+
+	// stop and wait for the grepFile go rtn's to complete.
+	wg.Wait()
 
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
 	fmt.Println()
 } // end main
 
-func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType) {
+func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
@@ -240,32 +231,36 @@ func grepFile(lineRegex *regexp.Regexp, fpath string, resultChan chan ResultType
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	for lino := 1; ; lino++ {
-		line, err := reader.ReadBytes('\n')
-		line = bytes.TrimRight(line, "\n\r")
+	for lino := 1; reader.Buffered() == 0; lino++ {
+		line, er := reader.ReadString('\n')
+		//line = bytes.TrimRight(line, "\n\r")
 
 		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
-		linestr := string(line)
-		linestrlower := strings.ToLower(linestr)
-		linelowercase := []byte(linestrlower)
+		lineStr := strings.TrimSpace(line)
+		lineStrLower := strings.ToLower(lineStr)
+		lineLowercase := []byte(lineStrLower)
 
-		if lineRegex.Match(linelowercase) {
-			r := ResultType{
-				filename: fpath,
-				lino:     lino,
-				line:     linestr,
-			}
+		if lineRegex.Match(lineLowercase) {
+			//r := ResultType{
+			//	filename: fpath,
+			//	lino:     lino,
+			//	line:     lineStr,
+			//}
 
-			// fmt.Printf("%s:%d:%s \n", fpath, lino, string(line)) from orig code
-			resultChan <- r // I think this is what makes this a concurrent walk function.
+			fmt.Printf("%s:%d:%s \n", fpath, lino, line)
+			//resultChan <- r
 		}
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("error from reader.ReadBytes in grepfile:%d: %s\n", lino, err)
-			}
-			break // just exit when hit EOF condition.
+		//if err != nil {
+		//	if err != io.EOF {
+		//		log.Printf("error from reader.ReadBytes in grepfile:%d: %s\n", lino, err)
+		//		break // just exit when hit EOF condition.
+		//	}
+		//}
+		if er != nil { // when can't read any more bytes, break
+			break
 		}
 	}
+	wg.Done()
 } // end grepFile
 
 func extractExtensions(files []string) []string {
