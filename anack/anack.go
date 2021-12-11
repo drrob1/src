@@ -31,7 +31,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -42,7 +41,7 @@ import (
 	"time"
 )
 
-const lastAltered = "10 Dec 2021"
+const lastAltered = "11 Dec 2021"
 
 //var workers = runtime.NumCPU()
 
@@ -208,29 +207,22 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	for lino := 1; reader.Buffered() == 0; lino++ {
+	for lino := 1; ; lino++ {
 		line, er := reader.ReadString('\n')
 		line = strings.TrimSpace(line)
-		//line = bytes.TrimRight(line, "\r\n")
 
 		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
-		//linestr := string(line)
-		linestr := strings.ToLower(line)
-		linelowercase := []byte(linestr)
+		lineStrLower := strings.ToLower(line)
 
-		if lineRegex.Match(linelowercase) {
-			fmt.Printf("%s:%d:%s \n", fpath, lino, string(line))
+		if lineRegex.MatchString(lineStrLower) {
+			fmt.Printf("%s:%d:%s \n", fpath, lino, line)
 		}
 		if er != nil {
-			if er != io.EOF {
-				log.Printf("error from reader.ReadBytes in grepfile:%d: %s\n", lino, err)
-			}
+			//if er != io.EOF {  This became messy, so I'm removing it.
+			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
+			//}
 			break // just exit when hit EOF condition.
 		}
-		//if reader.Buffered() == 0 { // If can't read any more bytes, break
-		//	break
-		//}
-
 	}
 } // end grepFile
 

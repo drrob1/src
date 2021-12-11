@@ -35,6 +35,7 @@
   10 Dec 21 -- I'm testing for .git and will skipdir if found.  And will simply return on IsDir.
                  I'm going to restructure this to use waitgroups.  I'll see how that goes.
                  I think I was having a shadowing problem w/ err.  When I made that er, the code started working.
+  11 Dec 21 -- Now I got the error that too many files were open.  So I need a worker pool.
 */
 package main
 
@@ -49,22 +50,22 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
-const lastAltered = "10 Dec 2021"
+const lastAltered = "11 Dec 2021"
 const maxSecondsToTimeout = 300
+const workerPoolSize = 1000
 
-/*
-type ResultType struct {
+type grepType struct {
+	regex    *regexp.Regexp
 	filename string
-	lino     int
-	line     string
+	goRtnNum int
 }
-*/
 
-var wg sync.WaitGroup
+var grepChan chan grepType
+
+//var wg sync.WaitGroup
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
@@ -113,6 +114,16 @@ func main() {
 	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
 	// dirToSkip := make(map[string]bool, 5)  This didn't get triggered in a directory I know has a .git.  I'm removing the overhead.
 	//dirToSkip[".git"] = true
+
+	// start the worker pool
+	grepChan = make(chan grepType, workerPoolSize) // buffered channel
+	for w := 0; w < workerPoolSize; w++ {
+		go func() {
+			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
+				grepFile(g.regex, g.filename)
+			}
+		}()
+	}
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
@@ -194,13 +205,16 @@ func main() {
 			return nil
 		}
 
-		for _, ext := range extensions {
+		for _, ext := range extensions { // only search thru indicated extensions.  Especially not thru binary or swap files.
 			fpathLower := strings.ToLower(fpath)
 			fpathExt := filepath.Ext(fpathLower)
-			// only search thru indicated extensions.  Especially not thru binary or swap files.
+
 			if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-				wg.Add(1)
-				go grepFile(lineRegex, fpath)
+				grepChan <- grepType{ // send this to a worker go routine.
+					regex:    lineRegex,
+					filename: fpath,
+				}
+				//                                                                         go grepFile(lineRegex, fpath)
 			}
 		}
 
@@ -216,8 +230,7 @@ func main() {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
 
-	// stop and wait for the grepFile go rtn's to complete.
-	wg.Wait()
+	close(grepChan) // must close the channel so the worker go routines know to stop.
 
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
@@ -232,36 +245,24 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-	for lino := 1; reader.Buffered() == 0; lino++ {
+	for lino := 1; ; lino++ {
 		line, er := reader.ReadString('\n')
-		//line = bytes.TrimRight(line, "\n\r")
 
-		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
+		// this is the change I made to make every comparison case insensitive.
 		lineStr := strings.TrimSpace(line)
 		lineStrLower := strings.ToLower(lineStr)
-		lineLowercase := []byte(lineStrLower)
 
-		if lineRegex.Match(lineLowercase) {
-			//r := ResultType{
-			//	filename: fpath,
-			//	lino:     lino,
-			//	line:     lineStr,
-			//}
-
+		if lineRegex.MatchString(lineStrLower) {
 			fmt.Printf("%s:%d:%s \n", fpath, lino, line)
-			//resultChan <- r
 		}
-		//if err != nil {
-		//	if err != io.EOF {
-		//		log.Printf("error from reader.ReadBytes in grepfile:%d: %s\n", lino, err)
-		//		break // just exit when hit EOF condition.
-		//	}
-		//}
-		if er != nil { // when can't read any more bytes, break
-			break
+		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
+			//if err != io.EOF { // this became messy, so I'm removing it
+			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
+			//}
+			break // just exit when hit EOF condition.
 		}
 	}
-	wg.Done()
+	//                                                                                                         wg.Done()
 } // end grepFile
 
 func extractExtensions(files []string) []string {
@@ -298,10 +299,12 @@ func extractExtensions(files []string) []string {
 	//fmt.Println()
 	return extensions
 } // end extractExtensions
-
+/*
 // ------------------------------ isSymlink ---------------------------
 func isSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
 	result := intermed != 0
 	return result
 } // IsSymlink
+
+*/
