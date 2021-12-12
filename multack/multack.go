@@ -37,6 +37,7 @@
                  I think I was having a shadowing problem w/ err.  When I made that er, the code started working.
   11 Dec 21 -- Now I got the error that too many files were open.  So I need a worker pool.
   12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
+                 I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
 */
 package main
 
@@ -59,7 +60,8 @@ const maxSecondsToTimeout = 300
 
 // I started w/ 1000, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
-const workerPoolSize = 200
+// Now it will be a multiplier of number of logical CPUs.
+const workerPoolMultiplier = 20
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -72,6 +74,7 @@ var grepChan chan grepType
 //var wg sync.WaitGroup
 
 func main() {
+	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
@@ -240,7 +243,7 @@ func main() {
 	close(grepChan) // must close the channel so the worker go routines know to stop.
 
 	elapsed := time.Since(t0)
-	fmt.Println(" Elapsed time is", elapsed)
+	fmt.Println(" Elapsed time is", elapsed, "and number of Go routines is", runtime.NumGoroutine())
 	fmt.Println()
 } // end main
 
