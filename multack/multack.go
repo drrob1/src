@@ -240,10 +240,13 @@ func main() {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
 
-	close(grepChan) // must close the channel so the worker go routines know to stop.
+	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
+	close(grepChan)                  // must close the channel so the worker go routines know to stop.
 
 	elapsed := time.Since(t0)
-	fmt.Println(" Elapsed time is", elapsed, "and number of Go routines is", runtime.NumGoroutine())
+
+	time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  I'm trying to stop that.
+	fmt.Println(" Elapsed time is", elapsed, "and number of Go routines is", goRtns)
 	fmt.Println()
 } // end main
 
