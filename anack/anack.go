@@ -209,19 +209,19 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		line, er := reader.ReadString('\n')
-		line = strings.TrimSpace(line)
+		// line = strings.TrimSpace(line)  I'm going to try without this.
 
 		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
 		lineStrLower := strings.ToLower(line)
 
 		if lineRegex.MatchString(lineStrLower) {
-			fmt.Printf("%s:%d:%s \n", fpath, lino, line)
+			fmt.Printf("%s:%d:%s", fpath, lino, line)
 		}
 		if er != nil {
 			//if er != io.EOF {  This became messy, so I'm removing it.
 			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
 			//}
-			break // just exit when hit EOF condition.
+			break // just exit when hit any error condition.
 		}
 	}
 } // end grepFile

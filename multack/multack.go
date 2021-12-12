@@ -36,6 +36,7 @@
                  I'm going to restructure this to use waitgroups.  I'll see how that goes.
                  I think I was having a shadowing problem w/ err.  When I made that er, the code started working.
   11 Dec 21 -- Now I got the error that too many files were open.  So I need a worker pool.
+  12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
 */
 package main
 
@@ -53,9 +54,12 @@ import (
 	"time"
 )
 
-const lastAltered = "11 Dec 2021"
+const lastAltered = "12 Dec 2021"
 const maxSecondsToTimeout = 300
-const workerPoolSize = 1000
+
+// I started w/ 1000, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
+// Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
+const workerPoolSize = 200
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -107,8 +111,8 @@ func main() {
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
-		lastAltered, runtime.Version(), startDirectory, pattern, extensions)
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v, workerPoolSize=%d.\n\n\n",
+		lastAltered, runtime.Version(), startDirectory, pattern, extensions, workerPoolSize)
 
 	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.
 	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
@@ -202,6 +206,9 @@ func main() {
 		}
 
 		if d.IsDir() {
+			if filepath.Ext(fpath) == ".git" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
@@ -246,14 +253,14 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	defer file.Close()
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
-		line, er := reader.ReadString('\n')
+		lineStr, er := reader.ReadString('\n')
 
 		// this is the change I made to make every comparison case insensitive.
-		lineStr := strings.TrimSpace(line)
+		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
 		lineStrLower := strings.ToLower(lineStr)
 
 		if lineRegex.MatchString(lineStrLower) {
-			fmt.Printf("%s:%d:%s \n", fpath, lino, line)
+			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 		}
 		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
 			//if err != io.EOF { // this became messy, so I'm removing it
