@@ -24,6 +24,7 @@
                  Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
    8 Dec 21 -- Removing the test for .git.  It seems that the walk function knows not to enter .git.
   10 Dec 21 -- Nevermind.  I'm testing for .git and will skipdir if found.  And will simply return on IsDir
+  13 Dec 21 -- Adding a total number of files scanned, and number of matches found.
 */
 package main
 
@@ -42,6 +43,8 @@ import (
 )
 
 const lastAltered = "11 Dec 2021"
+
+var totFilesScanned, totMatchesFound int
 
 //var workers = runtime.NumCPU()
 
@@ -195,7 +198,7 @@ func main() {
 	}
 
 	elapsed := time.Since(t0)
-	fmt.Println(" Elapsed time is", elapsed)
+	fmt.Println(" Elapsed time is", elapsed, "and total matches found is", totMatchesFound, "in", totFilesScanned, "files scanned.")
 	fmt.Println()
 } // end main
 
@@ -206,6 +209,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		return
 	}
 	defer file.Close()
+	totFilesScanned++
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		line, er := reader.ReadString('\n')
@@ -216,6 +220,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 
 		if lineRegex.MatchString(lineStrLower) {
 			fmt.Printf("%s:%d:%s", fpath, lino, line)
+			totMatchesFound++
 		}
 		if er != nil {
 			//if er != io.EOF {  This became messy, so I'm removing it.
