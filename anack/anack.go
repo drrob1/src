@@ -42,7 +42,7 @@ import (
 	"time"
 )
 
-const lastAltered = "11 Dec 2021"
+const lastAltered = "13 Dec 2021"
 
 var totFilesScanned, totMatchesFound int
 
