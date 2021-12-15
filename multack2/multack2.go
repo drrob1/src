@@ -121,11 +121,6 @@ func main() {
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v, workerPoolSize=%d.\n\n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, extensions, workerPoolSize)
 
-	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.
-	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
-	// dirToSkip := make(map[string]bool, 5)  This didn't get triggered in a directory I know has a .git.  I'm removing the overhead.
-	//dirToSkip[".git"] = true
-
 	// start the worker pool
 	grepChan = make(chan grepType, workerPoolSize) // buffered channel
 	for w := 0; w < workerPoolSize; w++ {
@@ -139,73 +134,7 @@ func main() {
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
-	// walkfunc closures.  Only the last one is being used now.
-	/*
-		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf(" Error from walk is %v. \n ", err)
-				return nil
-			}
-
-			if fi.IsDir() {
-				//	if DirAlreadyWalked[fpath] { return filepath.SkipDir
-				//	} else {  I don't think I have to track the directories visited myself.  So I'm taking this out.
-				//		DirAlreadyWalked[fpath] = true
-				//	}
-
-				if dirToSkip[fpath] {
-					return filepath.SkipDir
-				}
-				//} else if isSymlink(fi.Mode()) && fi.IsDir() {  // also not needed, because the docs say that walk does not follow symlinks.
-				//	return filepath.SkipDir
-			} else if fi.Mode().IsRegular() {
-				for _, ext := range extensions {
-					fpathlower := strings.ToLower(fpath)
-					fpathext := filepath.Ext(fpathlower)
-					//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-					if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-						grepFile(lineRegex, fpath, resultsChan)
-					}
-				}
-			}
-
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-			}
-			return nil
-		}
-	*/
-	/*
-		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf(" Error from walk is %v. \n ", err)
-				return nil
-			}
-
-			if dirToSkip[fpath] {
-				return filepath.SkipDir
-			}
-
-			for _, ext := range extensions {
-				fpathlower := strings.ToLower(fpath)
-				fpathext := filepath.Ext(fpathlower)
-				//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-				if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-					grepFile(lineRegex, fpath, resultsChan)
-				}
-			}
-
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-			}
-			return nil
-		}
-
-		err = filepath.Walk(startDirectory, filepathwalkfunction)
-	*/
-
+	// walkfunc closure.
 	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf(" Error from walk is %v. \n ", err)
@@ -281,7 +210,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 			break // just exit when hit EOF condition.
 		}
 	}
-	//                                                                                                         wg.Done()
 } // end grepFile
 
 func extractExtensions(files []string) []string {

@@ -21,26 +21,32 @@
                  But I can change the side effect of displaying altered case.
   22 Mar 20 -- Will add timing code that I wrote for anack.
   27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
+  14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is mure complex than it
+                 needs to be.  I'm going to take a crack at writing a simpler version myself.
+                 It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
+                 thru all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
+                 this better.  It seems much too complex.  I'm going to simplify it.
 */
 package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
-const LastAltered = "27 Mar 2021"
+const LastAltered = "15 Dec 2021"
+const maxSecondsToTimeout = 300
+const workerPoolMultiplier = 20
 
-var workers = runtime.NumCPU()
+var workers = runtime.NumCPU() * workerPoolMultiplier // this works very well in multack
 
 type Result struct {
 	filename string
@@ -53,34 +59,14 @@ type Job struct {
 	results  chan<- Result
 }
 
-func (job Job) Do(lineRx *regexp.Regexp) {
-	file, err := os.Open(job.filename)
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		return
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	for lino := 1; ; lino++ {
-		line, err := reader.ReadBytes('\n')
-		line = bytes.TrimRight(line, "\n\r")
-
-		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
-		linestr := string(line)
-		linestr = strings.ToLower(linestr)
-		linelowercase := []byte(linestr)
-
-		if lineRx.Match(linelowercase) {
-			job.results <- Result{job.filename, lino, string(line)}
-		}
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("error:%d: %s\n", lino, err)
-			}
-			break
-		}
-	}
+type grepType struct {
+	regex    *regexp.Regexp
+	filename string
+	goRtnNum int
 }
+
+var grepChan chan grepType
+var totFilesScanned, totMatchesFound int64
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
@@ -88,11 +74,12 @@ func main() {
 
 	// flag definitions and processing
 	globflag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
-	var timeoutOpt *int64 = flag.Int64("timeout", 0, "seconds (0 means no timeout)")
+	var timeoutOpt = flag.Int64("timeout", 0, "seconds (0 means no timeout)")
 	flag.Parse()
 
-	if *timeoutOpt < 0 || *timeoutOpt > 240 {
-		log.Fatalln("timeout must be in the range [0,240] seconds")
+	if *timeoutOpt < 1 || *timeoutOpt > maxSecondsToTimeout {
+		fmt.Fprintln(os.Stderr, "timeout is", *timeoutOpt, ", and is out of range of [0,300] seconds.  Set to", maxSecondsToTimeout)
+		*timeoutOpt = maxSecondsToTimeout
 	}
 	args := flag.Args()
 	if len(args) < 1 {
@@ -102,90 +89,83 @@ func main() {
 	pattern = strings.ToLower(pattern) // this is the change for the pattern.
 	files := args[1:]
 	if len(files) < 1 {
-		log.Fatalln("must provide at least one filename")
-	}
-	t0 := time.Now()
-	if lineRx, err := regexp.Compile(pattern); err != nil {
-		log.Fatalf("invalid regexp: %s\n", err)
-	} else {
-		fmt.Println()
-		fmt.Printf(" Concurrent grep insensitive case last altered %s, compiled with %s. \n", LastAltered, runtime.Version())
-		fmt.Println()
-		var timeout int64 = 1e9 * 60 * 10 // 10 minutes!
-		if *timeoutOpt != 0 {
-			timeout = *timeoutOpt * 1e9
-		}
-		if *globflag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
-			grep(timeout, lineRx, globCommandLineFiles(files)) // this fails vet because it's in the platform specific code files.
+		if runtime.GOOS == "windows" {
+			files = append(files, "*.txt")
 		} else {
-			grep(timeout, lineRx, commandLineFiles(files)) // my modified Windows specific code.
+			log.Fatalln(" A file must be given on linux.")
+		}
+
+	}
+
+	// start the worker pool
+	grepChan = make(chan grepType, workers) // buffered channel
+	for w := 0; w < workers; w++ {
+		go func() {
+			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
+				grepFile(g.regex, g.filename)
+			}
+		}()
+	}
+
+	t0 := time.Now()
+	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	//fmt.Println(" t0 is", t0, "and tfinal is", tfinal, "and timeoutOpt is", *timeoutOpt)
+	lineRegex, err := regexp.Compile(pattern)
+	if err != nil {
+		log.Fatalf("invalid regexp: %s\n", err)
+	}
+
+	fmt.Println()
+	fmt.Printf(" Concurrent grep insensitive case last altered %s, using pattern of %q, %d worker rtns, compiled with %s. \n",
+		LastAltered, pattern, workers, runtime.Version())
+	fmt.Println()
+
+	if *globflag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
+		files = globCommandLineFiles(files) // this fails vet because it's in the platform specific code file.
+	} else {
+		files = commandLineFiles(files)
+	}
+
+	for _, file := range files {
+		grepChan <- grepType{regex: lineRegex, filename: file}
+		now := time.Now()
+		if now.After(tfinal) {
+			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 		}
 	}
+
+	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
+	close(grepChan)                  // must close the channel so the worker go routines know to stop.
+
 	elapsed := time.Since(t0)
-	fmt.Println(" Elapsed time is", elapsed)
+	time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
+
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 }
 
-func grep(timeout int64, lineRx *regexp.Regexp, filenames []string) {
-	jobs := make(chan Job, workers)
-	results := make(chan Result, minimum(1000, len(filenames)))
-	done := make(chan struct{}, workers)
-
-	go addJobs(jobs, filenames, results)
-	for i := 0; i < workers; i++ {
-		go doJobs(done, lineRx, jobs)
+func grepFile(lineRegex *regexp.Regexp, fpath string) {
+	//fmt.Println(" in grepFile and file is", fpath)
+	file, err := os.Open(fpath)
+	if err != nil {
+		log.Printf("grepFile os.Open error : %s\n", err)
+		return
 	}
-	waitAndProcessResults(timeout, done, results)
-}
-
-func addJobs(jobs chan<- Job, filenames []string, results chan<- Result) {
-	for _, filename := range filenames {
-		jobs <- Job{filename, results}
-	}
-	close(jobs)
-}
-
-func doJobs(done chan<- struct{}, lineRx *regexp.Regexp, jobs <-chan Job) {
-	for job := range jobs {
-		job.Do(lineRx)
-	}
-	done <- struct{}{}
-}
-
-func waitAndProcessResults(timeout int64, done <-chan struct{},
-	results <-chan Result) {
-	finish := time.After(time.Duration(timeout))
-	for working := workers; working > 0; {
-		select { // Blocking
-		case result := <-results:
-			fmt.Printf("%s:%d:%s\n", result.filename, result.lino,
-				result.line)
-		case <-finish:
-			fmt.Println("timed out")
-			return // Time's up so finish with what results there were
-		case <-done:
-			working--
+	defer file.Close()
+	atomic.AddInt64(&totFilesScanned, 1)
+	reader := bufio.NewReader(file)
+	for lino := 1; ; lino++ {
+		lineStr, er := reader.ReadString('\n')
+		lineStrLower := strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
+		if lineRegex.MatchString(lineStrLower) {
+			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+			atomic.AddInt64(&totMatchesFound, 1)
+		}
+		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
+			break // just exit when hit EOF condition.
 		}
 	}
-	for {
-		select { // Nonblocking
-		case result := <-results:
-			fmt.Printf("%s:%d:%s\n", result.filename, result.lino,
-				result.line)
-		case <-finish:
-			fmt.Println("timed out")
-			return // Time's up so finish with what results there were
-		default:
-			return
-		}
-	}
-}
-
-func minimum(x int, ys ...int) int {
-	for _, y := range ys {
-		if y < x {
-			x = y
-		}
-	}
-	return x
-}
+} // end grepFile
