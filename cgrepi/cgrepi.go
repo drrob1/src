@@ -1,18 +1,3 @@
-// Copyright © 2011-12 Qtrac Ltd.
-//
-// This program or package and any associated files are licensed under the
-// Apache License, Version 2.0 (the "License"); you may not use these files
-// except in compliance with the License. You can get a copy of the License
-// at: http://www.apache.org/licenses/LICENSE-2.0.
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// The approach taken here was inspired by an example on the gonuts mailing
-// list by Roger Peppe.
 /*
   REVISION HISTORY
   ----------------
@@ -26,6 +11,7 @@
                  It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
                  thru all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
                  this better.  It seems much too complex.  I'm going to simplify it.
+  16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
 */
 package main
 
@@ -35,29 +21,20 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
-const LastAltered = "15 Dec 2021"
+const LastAltered = "16 Dec 2021"
 const maxSecondsToTimeout = 300
 const workerPoolMultiplier = 20
 
 var workers = runtime.NumCPU() * workerPoolMultiplier // this works very well in multack
-
-type Result struct {
-	filename string
-	lino     int
-	line     string
-}
-
-type Job struct {
-	filename string
-	results  chan<- Result
-}
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -67,6 +44,8 @@ type grepType struct {
 
 var grepChan chan grepType
 var totFilesScanned, totMatchesFound int64
+var t0, tfinal time.Time
+var wg sync.WaitGroup
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
@@ -88,28 +67,16 @@ func main() {
 	pattern := args[0]
 	pattern = strings.ToLower(pattern) // this is the change for the pattern.
 	files := args[1:]
-	if len(files) < 1 {
+	if len(files) < 1 { // no files or globbing pattern on command line.
 		if runtime.GOOS == "windows" {
-			files = append(files, "*.txt")
+			files = []string{"*.txt"}
 		} else {
-			log.Fatalln(" A file must be given on linux.")
+			files = txtFiles() // intended only for use on linux.
 		}
-
 	}
 
-	// start the worker pool
-	grepChan = make(chan grepType, workers) // buffered channel
-	for w := 0; w < workers; w++ {
-		go func() {
-			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
-				grepFile(g.regex, g.filename)
-			}
-		}()
-	}
-
-	t0 := time.Now()
-	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
-	//fmt.Println(" t0 is", t0, "and tfinal is", tfinal, "and timeoutOpt is", *timeoutOpt)
+	t0 = time.Now()
+	tfinal = t0.Add(time.Duration(*timeoutOpt) * time.Second)
 	lineRegex, err := regexp.Compile(pattern)
 	if err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
@@ -126,19 +93,28 @@ func main() {
 		files = commandLineFiles(files)
 	}
 
+	minGoRtns := min(len(files), workers)
+	// start the worker pool
+	grepChan = make(chan grepType, workers) // buffered channel
+	for w := 0; w < minGoRtns; w++ {
+		go func() {
+			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
+				grepFile(g.regex, g.filename)
+			}
+		}()
+	}
+
 	for _, file := range files {
+		wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
-		now := time.Now()
-		if now.After(tfinal) {
-			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-		}
 	}
 
 	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
-	close(grepChan)                  // must close the channel so the worker go routines know to stop.
+	wg.Wait()
+	close(grepChan) // must close the channel so the worker go routines know to stop.
 
 	elapsed := time.Since(t0)
-	time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
+	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
 
 	fmt.Println()
 	fmt.Println()
@@ -167,5 +143,47 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
 			break // just exit when hit EOF condition.
 		}
+		now := time.Now()
+		if now.After(tfinal) {
+			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+		}
 	}
+	wg.Done()
 } // end grepFile
+
+func txtFiles() []string { // intended to be needed on linux.
+	workingDirname, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "from commandlinefiles:", err)
+		return nil
+	}
+	direntries, err := os.ReadDir(workingDirname) // became available as of Go 1.16
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "While using os.ReadDir got:", err)
+		os.Exit(1)
+	}
+
+	pattern := "*.txt"
+	matchingNames := make([]string, 0, len(direntries))
+	for _, d := range direntries {
+		if d.IsDir() {
+			continue // skip it
+		}
+		bool, er := filepath.Match(pattern, strings.ToLower(d.Name()))
+		if er != nil {
+			fmt.Fprintln(os.Stderr, err)
+			continue
+		}
+		if bool {
+			matchingNames = append(matchingNames, d.Name())
+		}
+	}
+	return matchingNames
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}

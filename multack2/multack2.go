@@ -1,14 +1,4 @@
-// multack.go
-// Copyright (C) 2011-12 Qtrac Ltd.
-//
-// This program or package and any associated files are licensed under the Apache License, Version 2.0 (the "License"); you may not use these files
-// except in compliance with the License. You can get a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0.
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and
-// limitations under the License.
-
-// The approach taken here was inspired by an example on the gonuts mailing list by Roger Peppe.
+// multack2.go
 /*
   REVISION HISTORY
   ----------------
@@ -39,6 +29,7 @@
   12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
                  I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
   13 Dec 21 -- Now called multack2.go.  I want to add atomic totFilesScanned and totMatchesFound
+  16 Dec 21 -- Putting back waitgroup.  The sleep at the end is a kludge.
 */
 package main
 
@@ -53,11 +44,12 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
-const lastAltered = "12 Dec 2021"
+const lastAltered = "16 Dec 2021"
 const maxSecondsToTimeout = 300
 
 var totFilesScanned, totMatchesFound int64
@@ -75,7 +67,7 @@ type grepType struct {
 
 var grepChan chan grepType
 
-//var wg sync.WaitGroup
+var wg sync.WaitGroup
 
 func main() {
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
@@ -153,11 +145,11 @@ func main() {
 			fpathExt := filepath.Ext(fpathLower)
 
 			if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
+				wg.Add(1)
 				grepChan <- grepType{ // send this to a worker go routine.
 					regex:    lineRegex,
 					filename: fpath,
 				}
-				//                                                                         go grepFile(lineRegex, fpath)
 			}
 		}
 
@@ -174,11 +166,12 @@ func main() {
 	}
 
 	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
-	close(grepChan)                  // must close the channel so the worker go routines know to stop.
+	wg.Wait()
+	close(grepChan) // must close the channel so the worker go routines know to stop.
 
 	elapsed := time.Since(t0)
 
-	time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
+	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
 	fmt.Printf(" Elapsed time is %s, number of Go routines is %d, and %d matches were found in %d files scanned\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 } // end main
@@ -210,6 +203,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 			break // just exit when hit EOF condition.
 		}
 	}
+	wg.Done()
 } // end grepFile
 
 func extractExtensions(files []string) []string {

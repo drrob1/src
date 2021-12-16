@@ -25,45 +25,48 @@ import (
 	"strings"
 ) // Glob is case sensitive.  I want case insensitive.
 
-func globCommandLineFiles(files []string) []string { // orig code w/ new name
-	args := make([]string, 0, len(files))
-	for _, name := range files {
-		if matches, err := filepath.Glob(name); err != nil {
-			args = append(args, name) // Invalid pattern
+const estimatedNumberOfFiles = 100
+
+func globCommandLineFiles(patterns []string) []string {
+	matchingNames := make([]string, 0, estimatedNumberOfFiles)
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern) // Glob returns names of all files matching the case-sensitive pattern.
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from filepath.Glob is", err)
+			os.Exit(1)
 		} else if matches != nil { // At least one match
-			args = append(args, matches...)
+			matchingNames = append(matchingNames, matches...)
 		}
 	}
-	return args
+	return matchingNames
 }
 
-func commandLineFiles(files []string) []string {
+func commandLineFiles(patterns []string) []string {
 	workingDirname, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "from commandlinefiles:", err)
 		return nil
 	}
-	dirname, err := os.Open(workingDirname)
-	if err != nil {
-		return nil
-	}
-	defer dirname.Close()
-
-	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
+	direntries, err := os.ReadDir(workingDirname) // became available as of Go 1.16
 	if err != nil {
 		return nil
 	}
 
-	pattern := strings.ToLower(files[0])
-	matchingNames := make([]string, 0, len(names))
-	for _, s := range names {
-		bool, err := filepath.Match(pattern, strings.ToLower(s))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			continue
-		}
-		if bool {
-			matchingNames = append(matchingNames, s)
+	matchingNames := make([]string, 0, len(direntries))
+
+	for _, pattern := range patterns { // outer loop to test against multiple patterns.
+		for _, d := range direntries { // inner loop to test each pattern against the filenames.
+			if d.IsDir() {
+				continue // skip a subdirectory name
+			}
+			bool, err := filepath.Match(pattern, strings.ToLower(d.Name()))
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				continue
+			}
+			if bool {
+				matchingNames = append(matchingNames, d.Name())
+			}
 		}
 	}
 	return matchingNames
