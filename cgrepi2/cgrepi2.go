@@ -14,6 +14,7 @@
                  this better.  It seems much too complex.  I'm going to simplify it.
   16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
   18 Dec 21 -- Adding optimizations as recommended by Bill Kennedy in his last example.  It's maybe 20% faster, but it's hard for me to be sure.
+                 And on Ryzen 9 5950X, it's maybe 5 - 10% faster.  But it is faster.
 */
 package main
 
