@@ -30,6 +30,10 @@
                  I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
   13 Dec 21 -- Now called multack2.go.  I want to add atomic totFilesScanned and totMatchesFound
   16 Dec 21 -- Putting back waitgroup.  The sleep at the end is a kludge.
+  19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in multack3.go.  But I will
+                 keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
+                 Multack3 is still faster, so most of the slowness here is the line by line file reading.
+
 */
 package main
 
@@ -49,7 +53,7 @@ import (
 	"time"
 )
 
-const lastAltered = "16 Dec 2021"
+const lastAltered = "19 Dec 2021"
 const maxSecondsToTimeout = 300
 
 var totFilesScanned, totMatchesFound int64
@@ -177,13 +181,19 @@ func main() {
 } // end main
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
+	var localMatches int64
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
 		return
 	}
-	defer file.Close()
-	atomic.AddInt64(&totFilesScanned, 1)
+	defer func() {
+		file.Close()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches)
+		wg.Done()
+	}()
+
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
@@ -203,7 +213,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 			break // just exit when hit EOF condition.
 		}
 	}
-	wg.Done()
 } // end grepFile
 
 func extractExtensions(files []string) []string {

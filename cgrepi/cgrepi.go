@@ -12,6 +12,9 @@
                  thru all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
                  this better.  It seems much too complex.  I'm going to simplify it.
   16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
+  19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
+                 keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
+                 Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
 */
 package main
 
@@ -30,11 +33,11 @@ import (
 	"time"
 )
 
-const LastAltered = "16 Dec 2021"
+const LastAltered = "19 Dec 2021"
 const maxSecondsToTimeout = 300
 const workerPoolMultiplier = 20
 
-var workers = runtime.NumCPU() * workerPoolMultiplier // this works very well in multack
+var workers = runtime.NumCPU() * workerPoolMultiplier
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -124,21 +127,26 @@ func main() {
 }
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
-	//fmt.Println(" in grepFile and file is", fpath)
+	var localMatches int64
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
 		return
 	}
-	defer file.Close()
-	atomic.AddInt64(&totFilesScanned, 1)
+	defer func() {
+		file.Close()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches)
+		wg.Done()
+	}()
+
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
 		lineStrLower := strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
 		if lineRegex.MatchString(lineStrLower) {
 			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
-			atomic.AddInt64(&totMatchesFound, 1)
+			localMatches++
 		}
 		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
 			break // just exit when hit EOF condition.
@@ -148,7 +156,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 		}
 	}
-	wg.Done()
 } // end grepFile
 
 func txtFiles() []string { // intended to be needed on linux.
