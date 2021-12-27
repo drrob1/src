@@ -21,6 +21,7 @@ REVISION HISTORY
                Copied from img.go and imga.go.  When looking at my code, Andy commented that I don't need to resize, that's handled
                automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
  4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
+26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
 */
 
 package main
@@ -32,11 +33,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"image/color"
 	"math"
-
-	//"fyne.io/fyne/v2/internal/widget"
-	//"fyne.io/fyne/v2/layout"
-	//"fyne.io/fyne/v2/container"
-	//"image/color"
 
 	_ "golang.org/x/image/webp"
 	"image"
@@ -54,14 +50,124 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
 
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 5, 2021"
+const LastModified = "Dec 26, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
+
+type ImageWidget struct {
+	widget.BaseWidget
+	img      *canvas.Image
+	x, y     int
+	click    func()
+	scrolled func()
+	filename string
+}
+
+func (iw *ImageWidget) Clicked(_ *fyne.PointEvent) {
+	if iw.click == nil {
+		return
+	}
+
+	iw.click()
+}
+
+func (iw *ImageWidget) Scrolled(_ *fyne.ScrollEvent) {
+	if iw.scrolled == nil {
+		return
+	}
+
+	iw.scrolled()
+}
+
+type imageRender struct {
+	imgWdgt *ImageWidget
+}
+
+func (ir *imageRender) MinSize() fyne.Size { // This func is needed to define a renderer
+	return fyne.NewSize(float32(ir.imgWdgt.x), float32(ir.imgWdgt.y))
+}
+func (ir *imageRender) Layout(_ fyne.Size) { // This func is needed to define a renderer
+	ir.imgWdgt.Resize(ir.MinSize())
+}
+func (ir *imageRender) Destroy() { // This func is needed to define a renderer, but it can be empty
+}
+func (ir *imageRender) Refresh() { // This func is needed to define a renderer
+	ir.imgWdgt.Refresh()
+}
+func (ir *imageRender) Objects() []fyne.CanvasObject { // This func is needed to define a renderer
+	return []fyne.CanvasObject{ir.imgWdgt}
+}
+
+func (iw *ImageWidget) CreateRenderer() fyne.WidgetRenderer {
+	rndrr := imageRender{imgWdgt: iw}
+	return &rndrr
+}
+
+func newImageWidget(fn string, clk func(), scrl func()) *ImageWidget {
+	e := ImageWidget{click: clk, scrolled: scrl}
+	imgURI := storage.NewFileURI(fn)
+	imgRead, err := storage.Reader(imgURI)
+	if err != nil {
+		panic(err)
+	}
+	defer imgRead.Close()
+
+	imag, _, err := image.Decode(imgRead)
+	if err != nil {
+		panic(err)
+	}
+
+	bounds := imag.Bounds()
+	e.y = bounds.Max.Y - bounds.Min.Y
+	e.x = bounds.Max.X - bounds.Min.X
+
+	e.img = canvas.NewImageFromImage(imag)
+
+	e.ExtendBaseWidget(e)
+	return &e
+}
+
+type ImageCanvas struct {
+	widget.BaseWidget
+	canvas.Image
+	click    func()
+	scrolled func()
+	filename string
+}
+
+func (ic *ImageCanvas) CreateRenderer() fyne.WidgetRenderer {
+	//TODO implement me.  I'm getting an error that CreateRenderer has a pointer receiver
+	panic("implement me")
+}
+
+func newImageCanvas(res fyne.Resource, clk func(), scrl func()) *ImageCanvas {
+	e := ImageCanvas{click: clk, scrolled: scrl}
+	e.Resource = res
+	e.ExtendBaseWidget(e)
+	return &e
+}
+
+func (ic *ImageCanvas) Clicked(_ *fyne.PointEvent) {
+	if ic.click == nil {
+		return
+	}
+
+	ic.click()
+}
+
+func (ic *ImageCanvas) Scrolled(_ *fyne.ScrollEvent) {
+	if ic.scrolled == nil {
+		return
+	}
+
+	ic.scrolled()
+}
 
 var index int
 var loadedimg *canvas.Image
@@ -84,13 +190,13 @@ var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
 var gray = color.Gray{Y: 100}
 var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
 
-// -------------------------------------------------------- isNotImageStr ----------------------------------------
+//  isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
 	ismage := isImage(name)
 	return !ismage
 }
 
-// ----------------------------------------------------------isImage ----------------------------------------------
+// isImage ----------------------------------------------
 func isImage(file string) bool {
 	ext := strings.ToLower(filepath.Ext(file))
 	ext = strings.ToLower(ext)
@@ -98,7 +204,7 @@ func isImage(file string) bool {
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
-// ---------------------------------------------------- main --------------------------------------------------
+//  main --------------------------------------------------
 func main() {
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
@@ -250,7 +356,7 @@ func main() {
 
 } // end main
 
-// --------------------------------------------------- loadTheImage ------------------------------
+//  loadTheImage ------------------------------
 func loadTheImage() {
 	imgname := imageInfo[index].Name()
 	fullfilename := cwd + string(filepath.Separator) + imgname
@@ -334,7 +440,7 @@ func loadTheImage() {
 	return
 } // end loadTheImage
 
-// ------------------------------- filenameIndex --------------------------------------
+//  filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	for i, fi := range fileinfos {
 		if fi.Name() == name {
@@ -346,7 +452,7 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	return
 }
 
-// ------------------------------- MyReadDirForImages -----------------------------------
+//  MyReadDirForImages -----------------------------------
 
 func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	dirname, err := os.Open(dir)
@@ -389,7 +495,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	return
 } // MyReadDirForImages
 
-// ------------------------------------------------------- isSorted -----------------------------------------------
+//  isSorted -----------------------------------------------
 func isSorted(slice []os.FileInfo) bool {
 	for i := 0; i < len(slice)-1; i++ {
 		if slice[i].ModTime().Before(slice[i+1].ModTime()) {
@@ -400,7 +506,7 @@ func isSorted(slice []os.FileInfo) bool {
 	return true
 }
 
-// ---------------------------------------------- nextImage -----------------------------------------------------
+//  nextImage -----------------------------------------------------
 
 func nextImage() {
 	index++
@@ -411,7 +517,7 @@ func nextImage() {
 	return
 } // end nextImage
 
-// ------------------------------------------ prevImage -------------------------------------------------------
+//  prevImage -------------------------------------------------------
 
 func prevImage() {
 	index--
@@ -422,19 +528,19 @@ func prevImage() {
 	return
 } // end prevImage
 
-// ------------------------------------------ firstImage -----------------------------------------------------
+//  firstImage -----------------------------------------------------
 func firstImage() {
 	index = 0
 	loadTheImage()
 }
 
-// ------------------------------------------ lastImage ---------------------------------------------------------
+//  lastImage ---------------------------------------------------------
 func lastImage() {
 	index = len(imageInfo) - 1
 	loadTheImage()
 }
 
-// ------------------------------------------------------------ keyTyped ------------------------------
+//  keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:
@@ -525,4 +631,16 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			loadTheImage()
 		}
 	}
+}
+
+// mouseClicked
+func mouseClicked(e *fyne.PointEvent) {
+	fmt.Println(" received clicked event.  X =", e.Position.X, " and Y =", e.Position.Y, "on image.")
+}
+
+// mouseScrolled
+func mouseScrolled(e *fyne.ScrollEvent) {
+	fmt.Println(" received scroll event.  scrolled delta X =", e.Scrolled.DX, " and scrolled delta Y =", e.Scrolled.DY, "at point X =",
+		e.Position.X, "and point Y =", e.Position.Y)
+
 }

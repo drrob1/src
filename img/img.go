@@ -27,6 +27,7 @@ REVISION HISTORY
  2 Dec 21 -- After listening to Bill Kennedy's Go talks, I made the image channel buffered.
  3 Dec 21 -- Some clean up that I learned from Bill Kennedy.
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.
+26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 */
 
 package main
@@ -62,7 +63,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 4, 2021"
+const LastModified = "Dec 26, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -192,7 +193,8 @@ func main() {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 	if *verboseFlag {
-		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
+		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd, ".  Min x =", bounds.Min.X,
+			"and min y =", bounds.Min.Y)
 		fmt.Println()
 	}
 	/* Unnecessary according to Andy
