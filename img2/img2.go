@@ -55,7 +55,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 26, 2021"
+const LastModified = "Dec 27, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -64,25 +64,25 @@ type ImageWidget struct {
 	widget.BaseWidget
 	img      *canvas.Image
 	x, y     int
-	click    func()
-	scrolled func()
+	click    func(event *fyne.PointEvent)
+	scrolled func(event *fyne.ScrollEvent)
 	filename string
 }
 
-func (iw *ImageWidget) Clicked(_ *fyne.PointEvent) {
+func (iw *ImageWidget) Clicked(e *fyne.PointEvent) {
 	if iw.click == nil {
 		return
 	}
 
-	iw.click()
+	iw.click(e)
 }
 
-func (iw *ImageWidget) Scrolled(_ *fyne.ScrollEvent) {
+func (iw *ImageWidget) Scrolled(e *fyne.ScrollEvent) {
 	if iw.scrolled == nil {
 		return
 	}
 
-	iw.scrolled()
+	iw.scrolled(e)
 }
 
 type imageRender struct {
@@ -109,7 +109,7 @@ func (iw *ImageWidget) CreateRenderer() fyne.WidgetRenderer {
 	return &rndrr
 }
 
-func newImageWidget(fn string, clk func(), scrl func()) *ImageWidget {
+func newImageWidget(fn string, clk func(e *fyne.PointEvent), scrl func(e *fyne.ScrollEvent)) *ImageWidget {
 	e := ImageWidget{click: clk, scrolled: scrl}
 	imgURI := storage.NewFileURI(fn)
 	imgRead, err := storage.Reader(imgURI)
@@ -129,45 +129,42 @@ func newImageWidget(fn string, clk func(), scrl func()) *ImageWidget {
 
 	e.img = canvas.NewImageFromImage(imag)
 
-	e.ExtendBaseWidget(e)
+	e.ExtendBaseWidget(&e)
 	return &e
 }
 
-type ImageCanvas struct {
-	widget.BaseWidget
-	canvas.Image
-	click    func()
-	scrolled func()
-	filename string
-}
+/*
+//type ImageCanvas struct {
+//	widget.BaseWidget
+//	canvas.Image
+//	click    func()
+//	scrolled func()
+//	filename string
+//}
 
-func (ic *ImageCanvas) CreateRenderer() fyne.WidgetRenderer {
-	//TODO implement me.  I'm getting an error that CreateRenderer has a pointer receiver
-	panic("implement me")
-}
+//func newImageCanvas(res fyne.Resource, clk func(), scrl func()) *ImageCanvas {
+//	e := ImageCanvas{click: clk, scrolled: scrl}
+//	e.Resource = res
+//	e.ExtendBaseWidget(&e)
+//	return &e
+//}
 
-func newImageCanvas(res fyne.Resource, clk func(), scrl func()) *ImageCanvas {
-	e := ImageCanvas{click: clk, scrolled: scrl}
-	e.Resource = res
-	e.ExtendBaseWidget(e)
-	return &e
-}
+//func (ic *ImageCanvas) Clicked(_ *fyne.PointEvent) {
+//	if ic.click == nil {
+//		return
+//	}
+//
+//	ic.click()
+//}
 
-func (ic *ImageCanvas) Clicked(_ *fyne.PointEvent) {
-	if ic.click == nil {
-		return
-	}
+//func (ic *ImageCanvas) Scrolled(_ *fyne.ScrollEvent) {
+//	if ic.scrolled == nil {
+//		return
+//	}
 
-	ic.click()
-}
-
-func (ic *ImageCanvas) Scrolled(_ *fyne.ScrollEvent) {
-	if ic.scrolled == nil {
-		return
-	}
-
-	ic.scrolled()
-}
+//	ic.scrolled()
+//}
+*/
 
 var index int
 var loadedimg *canvas.Image
