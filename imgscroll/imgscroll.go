@@ -29,6 +29,7 @@ REVISION HISTORY
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 27 Dec 21 -- Now called imgcsroll.go.  I'm going to take a stab at adding mouse wheel detection.
+28 Dec 21 -- It works!  Now to get it to do what I want w/ the mouse wheel.  Mouse clicks will still print a message if verbose is set.
 */
 
 package main
@@ -64,7 +65,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 28, 2021"
+const LastModified = "Dec 29, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -115,14 +116,24 @@ func NewScrollClickImg(res fyne.Resource) *scrollClickImg {
 }
 
 func (sI *scrollClickImg) Scrolled(se *fyne.ScrollEvent) {
-	fmt.Printf(" scroll event found.  X= %.4f, dX=%.4f; Y=%.4f, dY=%.4f, for %s\n", se.Position.X, se.Scrolled.DX, se.Position.Y, se.Scrolled.DY,
-		sI.Resource.Name())
+	if *verboseFlag {
+		fmt.Printf(" scroll event found.  X= %.4f, dX=%.4f; Y=%.4f, dY=%.4f, for %s\n", se.Position.X, se.Scrolled.DX, se.Position.Y, se.Scrolled.DY,
+			sI.Resource.Name())
+	}
+	if se.Scrolled.DX < 0 || se.Scrolled.DY < 0 {
+		keyCmdChan <- nextImgCmd
+	}
+	keyCmdChan <- prevImgCmd
 }
 func (sI *scrollClickImg) Tapped(pe *fyne.PointEvent) {
-	fmt.Printf(" leftclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+	if *verboseFlag {
+		fmt.Printf(" leftclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+	}
 }
 func (sI *scrollClickImg) TappedSecondary(pe *fyne.PointEvent) {
-	fmt.Printf(" rightclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+	if *verboseFlag {
+		fmt.Printf(" rightclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+	}
 }
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
