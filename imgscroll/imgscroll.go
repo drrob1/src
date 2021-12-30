@@ -30,6 +30,7 @@ REVISION HISTORY
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 27 Dec 21 -- Now called imgcsroll.go.  I'm going to take a stab at adding mouse wheel detection.
 28 Dec 21 -- It works!  Now to get it to do what I want w/ the mouse wheel.  Mouse clicks will still print a message if verbose is set.
+29 Dec 21 -- After a reboot, and one line change in loadTheImage, it works as intended.  Don't know if the reboot mattered.
 */
 
 package main
@@ -338,8 +339,12 @@ func processKeys() {
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage() {
 	imgname := imageInfo[index].Name()
-	fullfilename := cwd + string(filepath.Separator) + imgname
-	imageResource, err := fyne.LoadResourceFromPath(fullfilename)
+	//fullfilename := cwd + string(filepath.Separator) + imgname
+	fullFilename, err := filepath.Abs(imgname) // after this change, and a reboot, it seems to work as intended.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from filepath.Abs in loadTheImage is %v\n", err)
+	}
+	imageResource, err := fyne.LoadResourceFromPath(fullFilename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " In loadTheImage, error from LoadResourceFromPath is %v\n", err)
 	}
