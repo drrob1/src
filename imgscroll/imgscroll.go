@@ -30,7 +30,7 @@ REVISION HISTORY
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 27 Dec 21 -- Now called imgcsroll.go.  I'm going to take a stab at adding mouse wheel detection.
 28 Dec 21 -- It works!  Now to get it to do what I want w/ the mouse wheel.  Mouse clicks will still print a message if verbose is set.
-29 Dec 21 -- After a reboot, and one line change in loadTheImage, it works as intended.  Don't know if the reboot mattered.
+
 */
 
 package main
@@ -121,8 +121,9 @@ func (sI *scrollClickImg) Scrolled(se *fyne.ScrollEvent) {
 		fmt.Printf(" scroll event found.  X= %.4f, dX=%.4f; Y=%.4f, dY=%.4f, for %s\n", se.Position.X, se.Scrolled.DX, se.Position.Y, se.Scrolled.DY,
 			sI.Resource.Name())
 	}
-	if se.Scrolled.DX < 0 || se.Scrolled.DY < 0 {
+	if se.Scrolled.DY < 0 { // will ignore DX as the scroll wheel only changes DY.
 		keyCmdChan <- nextImgCmd
+		return // I forgot to do this, so both would be sent in this branch.  Oops.
 	}
 	keyCmdChan <- prevImgCmd
 }
@@ -340,7 +341,7 @@ func processKeys() {
 func loadTheImage() {
 	imgname := imageInfo[index].Name()
 	//fullfilename := cwd + string(filepath.Separator) + imgname
-	fullFilename, err := filepath.Abs(imgname) // after this change, and a reboot, it seems to work as intended.
+	fullFilename, err := filepath.Abs(imgname)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from filepath.Abs in loadTheImage is %v\n", err)
 	}
