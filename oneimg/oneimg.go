@@ -134,25 +134,29 @@ func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
 		sI.p2.Position.X, sI.p2.Position.Y = pe.Position.X, pe.Position.Y
 		sI.p2.AbsolutePosition.X, sI.p2.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
 		fmt.Printf(" value of p2 set to %v\n", sI.p2)
+		showImage(sI.iImage, "iImage before call to image.Rect or subimaging.")
+		time.Sleep(4 * time.Second)
 		sI.rect = image.Rect(round(sI.p1.Position.X), round(sI.p1.Position.Y), round(sI.p2.Position.X), round(sI.p2.Position.Y))
 		fmt.Printf(" value of rect set to %v\n", sI.rect)
-		m := image.NewRGBA(sI.rect)
+		m := image.NewRGBA(sI.iImage.Bounds())
 		draw.Draw(m, m.Bounds(), sI.iImage, sI.iImage.Bounds().Min, draw.Src)
+		showImage(m, "m after draw.Draw based on iImage, before call to SubImage")
 		sI.sImage = m.SubImage(sI.rect)
 		fmt.Printf(" sImage set using above rect.")
+		time.Sleep(4 * time.Second)
 		sI.subImg = image.NewRGBA(sI.rect)
 		for y := sI.rect.Min.Y; y < sI.rect.Max.Y; y++ {
 			for x := sI.rect.Min.X; x < sI.rect.Max.X; x++ {
 				sI.subImg.Set(x, y, sI.iImage.At(x, y))
 			}
 		}
-		//sI.sImage = sI.subImg  Now sImage is defined using subImage method
+		//sI.sImage = sI.subImg  Now sImage is defined using subImage method above
 		fmt.Printf(" sImage set using above rect from rgba and iImage.  sI=%p, sI.sImage=%p.\n", sI, sI.sImage)
 		fmt.Printf(" &sI.Icon=%p, sI.cImage=%p, sI.iImage=%p, sI.subimg=%p, &sI.rect=%p, &sI.p1=%p, &sI.p2=%p\n\n",
 			&sI.Icon, sI.cImage, sI.iImage, sI.subImg, &sI.rect, &sI.p1, &sI.p2)
 		showImage(sI.sImage, "sImage")
 		time.Sleep(5 * time.Second)
-		showImage(sI.subImg, "subImg")
+		showImage(sI.subImg, "subImg set point by point based on iImage")
 
 	}
 }
