@@ -39,12 +39,8 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/widget"
+	"image/draw"
 	"math"
-
-	//"fyne.io/fyne/v2/internal/widget"
-	//"fyne.io/fyne/v2/layout"
-	//"fyne.io/fyne/v2/container"
-	//"image/color"
 
 	_ "golang.org/x/image/webp"
 	"image"
@@ -64,7 +60,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 28, 2021"
+const LastModified = "Dec 31, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -78,7 +74,6 @@ const (
 
 var index int
 
-//var loadedimg *canvas.Image
 //var scrollClickImage *scrollClickImg
 var cwd string
 var imageInfo []os.FileInfo
@@ -92,37 +87,82 @@ var scaleFactor float64 = 1
 var shiftState bool
 var keyCmdChan chan int
 
-type scrollClickImg struct {
+type scrollCropImgT struct {
 	widget.Icon
-	cImage *canvas.Image
-	iImage image.Image
-	imgFmt string
+	cImage         *canvas.Image
+	iImage, sImage image.Image // hold iImage, but always display sImage.  If it becomes a subimage, that's great.
+	subImg         *image.RGBA
+	imgFmt         string
+	rect           image.Rectangle
+	p1, p2         fyne.PointEvent
 }
 
-func NewScrollClickImg(res fyne.Resource) *scrollClickImg {
-	scrClkImg := scrollClickImg{}
-	scrClkImg.ExtendBaseWidget(&scrClkImg)
-	scrClkImg.SetResource(res)
-	scrClkImg.cImage = canvas.NewImageFromResource(res)
-	scrClkImg.cImage.ScaleMode = canvas.ImageScaleFastest
-	buf := bytes.NewReader(scrClkImg.Resource.Content())
+func NewScrollCropImg(res fyne.Resource) *scrollCropImgT {
+	scrlCrpImg := scrollCropImgT{}
+	scrlCrpImg.ExtendBaseWidget(&scrlCrpImg)
+	scrlCrpImg.SetResource(res)
+	scrlCrpImg.cImage = canvas.NewImageFromResource(scrlCrpImg.Resource)
+	scrlCrpImg.sImage = scrlCrpImg.cImage.Image
+	//scrClkImg.cImage.ScaleMode = canvas.ImageScaleFastest  Not sure if this is even needed.
+	buf := bytes.NewReader(scrlCrpImg.Resource.Content())
 	var err error
-	scrClkImg.iImage, scrClkImg.imgFmt, err = image.Decode(buf)
+	scrlCrpImg.iImage, scrlCrpImg.imgFmt, err = image.Decode(buf)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " image decoding error: %v \n", err)
 	}
-	return &scrClkImg
+	//bounds := scrlCrpImg.iImage.Bounds()
+	//m := image.NewCMYK(bounds)
+	//draw.Draw(m, m.Bounds(), scrlCrpImg.iImage, bounds.Min, draw.Src)
+	//scrlCrpImg.subImg = m
+	//scrlCrpImg.sImage = scrlCrpImg.iImage  doesn't work
+	return &scrlCrpImg
 }
 
-func (sI *scrollClickImg) Scrolled(se *fyne.ScrollEvent) {
+func (sI *scrollCropImgT) Scrolled(se *fyne.ScrollEvent) {
 	fmt.Printf(" scroll event found.  X= %.4f, dX=%.4f; Y=%.4f, dY=%.4f, for %s\n", se.Position.X, se.Scrolled.DX, se.Position.Y, se.Scrolled.DY,
 		sI.Resource.Name())
 }
-func (sI *scrollClickImg) Tapped(pe *fyne.PointEvent) {
-	fmt.Printf(" leftclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
+	if *verboseFlag {
+		fmt.Printf(" leftclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+	}
+	if sI.p1.Position.X == 0 && sI.p1.Position.Y == 0 {
+		sI.p1.Position.X, sI.p1.Position.Y = pe.Position.X, pe.Position.Y
+		sI.p1.AbsolutePosition.X, sI.p1.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
+		fmt.Printf(" value of p1 set to %v\n", sI.p1)
+	} else {
+		sI.p2.Position.X, sI.p2.Position.Y = pe.Position.X, pe.Position.Y
+		sI.p2.AbsolutePosition.X, sI.p2.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
+		fmt.Printf(" value of p2 set to %v\n", sI.p2)
+		sI.rect = image.Rect(round(sI.p1.Position.X), round(sI.p1.Position.Y), round(sI.p2.Position.X), round(sI.p2.Position.Y))
+		fmt.Printf(" value of rect set to %v\n", sI.rect)
+		m := image.NewRGBA(sI.rect)
+		draw.Draw(m, m.Bounds(), sI.iImage, sI.iImage.Bounds().Min, draw.Src)
+		sI.sImage = m.SubImage(sI.rect)
+		fmt.Printf(" sImage set using above rect.")
+		sI.subImg = image.NewRGBA(sI.rect)
+		for y := sI.rect.Min.Y; y < sI.rect.Max.Y; y++ {
+			for x := sI.rect.Min.X; x < sI.rect.Max.X; x++ {
+				sI.subImg.Set(x, y, sI.iImage.At(x, y))
+			}
+		}
+		//sI.sImage = sI.subImg  Now sImage is defined using subImage method
+		fmt.Printf(" sImage set using above rect from rgba and iImage.  sI=%p, sI.sImage=%p.\n", sI, sI.sImage)
+		fmt.Printf(" &sI.Icon=%p, sI.cImage=%p, sI.iImage=%p, sI.subimg=%p, &sI.rect=%p, &sI.p1=%p, &sI.p2=%p\n\n",
+			&sI.Icon, sI.cImage, sI.iImage, sI.subImg, &sI.rect, &sI.p1, &sI.p2)
+		showImage(sI.sImage, "sImage")
+		time.Sleep(5 * time.Second)
+		showImage(sI.subImg, "subImg")
+
+	}
 }
-func (sI *scrollClickImg) TappedSecondary(pe *fyne.PointEvent) {
+func (sI *scrollCropImgT) TappedSecondary(pe *fyne.PointEvent) {
 	fmt.Printf(" rightclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
+}
+
+// round -- guess what this does.
+func round(f float32) int {
+	return int(math.Round(float64(f)))
 }
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
@@ -220,54 +260,28 @@ func main() {
 	if *verboseFlag {
 		fmt.Printf(" Resource name=%s\n ", imageResource.Name())
 	}
-	//loadedImgFromResource := canvas.NewImageFromResource(imageResource)
-	//imgBounds := loadedImgFromResource.Image.Bounds()  This line panicked saying invalid memory address or nil pointer dereference
-	//imgX := imgBounds.Max.X
-	//imgY := imgBounds.Max.Y
-	//if *verboseFlag {
-	//	fmt.Printf(" From Resource.  imgX=%d, imgY=%d, minX=%d, minY=%d\n", imgX, imgY, imgBounds.Min.X, imgBounds.Min.Y)
-	//}
 
 	//imageURI := storage.NewFileURI(fullFilename)
-	scrollClickImage := NewScrollClickImg(imageResource)
-	//loadedimg = canvas.NewImageFromResource(scrollImg.Resource)
-	//loadedimg.ScaleMode = canvas.ImageScaleFastest
+	scrollCropImage := NewScrollCropImg(imageResource)
 
-	/*
-		imageURI := storage.NewFileURI(imgfilename)
-		imgRead, err := storage.Reader(imageURI)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
-			os.Exit(1)
-		}
-		defer imgRead.Close()
-		img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-			os.Exit(1)
-		}
-
-	*/
-
-	bounds := scrollClickImage.iImage.Bounds()
+	bounds := scrollCropImage.iImage.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 	if *verboseFlag {
-		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", scrollClickImage.imgFmt, "and cwd=", cwd, ".  Min x =", bounds.Min.X,
-			"and min y =", bounds.Min.Y)
+		fmt.Printf(" image.Decode, w=%d, and h=%d, imgFmtName=%s, cwd=%s, min x=%d, min y =%d, ctype=%T, itype=%T, stype=%T \n",
+			imgWidth, imgHeight, scrollCropImage.imgFmt, cwd, bounds.Min.X, bounds.Min.Y, scrollCropImage.cImage, scrollCropImage.iImage,
+			scrollCropImage.sImage)
 		fmt.Println()
 	}
 
-	//loadedimg = canvas.NewImageFromImage(img) original code I wrote that I know works.
-	//loadedimg = canvas.NewImageFromResource(imageResource)  Goland does not flag this line w/ an error.
 	if !*zoomFlag {
-		scrollClickImage.cImage.FillMode = canvas.ImageFillContain
+		scrollCropImage.cImage.FillMode = canvas.ImageFillContain
 	}
 
 	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
 	globalW.SetTitle(imgtitle)
 	//globalW.SetContent(scrollClickImage.cImage)  Doesn't respond to the mouse.
-	globalW.SetContent(scrollClickImage) // this does respond to the mouse.  Yea!!!
+	globalW.SetContent(scrollCropImage) // this does respond to the mouse.  Yea!!!
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
 	// this syntax works and was blocking until I made the channel buffered.
@@ -326,87 +340,76 @@ func processKeys() {
 
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage() {
-	imgname := imageInfo[index].Name()
-	fullfilename := cwd + string(filepath.Separator) + imgname
-	imageResource, err := fyne.LoadResourceFromPath(fullfilename)
+	imgName := imageInfo[index].Name()
+	//fullfilename := cwd + string(filepath.Separator) + imgname
+	fullFilename, err := filepath.Abs(imgName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " in loadTheImage and error from filepath.Abs is %v\n", err)
+		return
+	}
+	imageResource, err := fyne.LoadResourceFromPath(fullFilename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " In loadTheImage, error from LoadResourceFromPath is %v\n", err)
 	}
-	scrollClickImage := NewScrollClickImg(imageResource)
+	scrollCropImage := NewScrollCropImg(imageResource)
 
-	/*
-		imageURI := storage.NewFileURI(fullfilename)
-		imgRead, err := storage.Reader(imageURI)
-		defer imgRead.Close()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
-			os.Exit(1)
-		}
-
-		img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-			os.Exit(1)
-		}
-	*/
-	bounds := scrollClickImage.iImage.Bounds()
+	bounds := scrollCropImage.iImage.Bounds() //sImage is empty so far.
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, scrollClickImage.imgFmt)
+	title := fmt.Sprintf("%s, %d x %d, type=%s \n", imgName, imgWidth, imgHeight, scrollCropImage.imgFmt)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
-	/*  According to Andy, this is unnecessary.
-	if imgWidth > maxWidth {
-		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-		title = title + "; resized."
-	} else if imgHeight > maxHeight {
-		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-		title = title + "; resized."
-	}
-	bounds = img.Bounds()
-	imgHeight = bounds.Max.Y
-	imgWidth = bounds.Max.X
-	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
 			scaledHeight := float64(imgHeight) * scaleFactor
 			intHeight := uint(math.Round(scaledHeight))
-			scrollClickImage.iImage = resize.Resize(0, intHeight, scrollClickImage.iImage, resize.Lanczos3)
+			scrollCropImage.sImage = resize.Resize(0, intHeight, scrollCropImage.iImage, resize.Lanczos3)
 		} else {
 			scaledWidth := float64(imgWidth) * scaleFactor
 			intWidth := uint(math.Round(scaledWidth))
-			scrollClickImage.iImage = resize.Resize(intWidth, 0, scrollClickImage.iImage, resize.Lanczos3)
+			scrollCropImage.iImage = resize.Resize(intWidth, 0, scrollCropImage.iImage, resize.Lanczos3)
 		}
-		bounds = scrollClickImage.iImage.Bounds()
+		bounds = scrollCropImage.iImage.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		title = fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, scrollClickImage.imgFmt)
+		title = fmt.Sprintf("%s, %d x %d, type=%s \n", imgName, imgWidth, imgHeight, scrollCropImage.imgFmt)
 	}
 
 	if *verboseFlag {
-		bounds = scrollClickImage.iImage.Bounds()
+		bounds = scrollCropImage.iImage.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Println(" iImage Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
 		fmt.Println()
 	}
 
-	scrollClickImage.cImage.ScaleMode = canvas.ImageScaleSmooth
+	//scrollCropImage.cImage.ScaleMode = canvas.ImageScaleSmooth
 	if !*zoomFlag {
-		scrollClickImage.cImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
+		scrollCropImage.cImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
 	//globalW.SetContent(scrollClickImage.cImage) // doesn't respond to the mouse.
-	globalW.SetContent(scrollClickImage) // This does respond to the mouse.  Yea!!!
+	//globalW.SetContent(img) // won't respond to mouse anymore.
+	globalW.SetContent(scrollCropImage) // does respond to the mouse
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
 
 	globalW.Show()
+	/* This code cause a memory fault.
+	img := canvas.NewImageFromImage(scrollCropImage.sImage)
+	anotherWindow := globalA.NewWindow("Cropped Image maybe")
+	anotherWindow.Canvas().SetOnTypedKey(anotherKeyTyped)
+	anotherWindow.SetContent(img)
+	xFloat := float32(img.Image.Bounds().Max.X)
+	yFloat := float32(img.Image.Bounds().Max.Y)
+	anotherWindow.Resize(fyne.NewSize(xFloat, yFloat))
+	anotherWindow.Show()
 	return
+	*/
 } // end loadTheImage
 
 // ------------------------------- filenameIndex --------------------------------------
@@ -572,7 +575,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			scaleFactor = 1
 		}
 		//nextImage()
-		keyCmdChan <- nextImgCmd
+		//keyCmdChan <- nextImgCmd
+		loadTheImage()
 	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
 		//prevImage()
@@ -620,3 +624,48 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 	}
 } // end keyTyped
+
+func anotherKeyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
+	switch e.Name {
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
+		//globalW.Close() // quit's the app if this is the last window, which it is.
+		globalA.Quit()
+	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
+		if !sticky {
+			scaleFactor = 1
+		}
+		//nextImage()
+		//keyCmdChan <- nextImgCmd
+		keyCmdChan <- loadImgCmd
+	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
+		scaleFactor = 1
+		//prevImage()
+		//keyCmdChan <- prevImgCmd
+		keyCmdChan <- loadImgCmd
+	case fyne.KeyV:
+		*verboseFlag = true
+		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
+	case fyne.KeyZ:
+		sticky = !sticky
+		*verboseFlag = !*verboseFlag
+		if *verboseFlag {
+			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
+		}
+
+	default:
+		// empty
+	}
+} // end anotherKeyTyped
+
+func showImage(m image.Image, title string) {
+	img := canvas.NewImageFromImage(m)
+	img.FillMode = canvas.ImageFillContain
+	anotherWindow := globalA.NewWindow(title)
+	anotherWindow.Canvas().SetOnTypedKey(anotherKeyTyped)
+	anotherWindow.SetContent(img)
+	xFloat := float32(img.Image.Bounds().Max.X)
+	yFloat := float32(img.Image.Bounds().Max.Y)
+	anotherWindow.Resize(fyne.NewSize(xFloat, yFloat))
+	anotherWindow.Show()
+
+} // end showImage

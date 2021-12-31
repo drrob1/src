@@ -1,12 +1,10 @@
-// From Go GUI with Fyne, Chap 4.  img.go -> imgscroll.go -> imgclkscroll.go
+// From Go GUI with Fyne, Chap 4.  img.go -> imgscroll.go
 /*
 
 This pgm works by the main thread initializing the image display and then starting the display message loop.
 Then the keyTyped handles the keyboard events.
 I now want to change that so that keyTyped puts these events into a buffered channel that is handled by a different go routine.
 Just to see if I can now.
-I'm removing the keyTyped channel to see if that's clashing somehow w/ the mouse wheel.
-Nope, that's not it.
 
 
 REVISION HISTORY
@@ -32,7 +30,7 @@ REVISION HISTORY
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 27 Dec 21 -- Now called imgcsroll.go.  I'm going to take a stab at adding mouse wheel detection.
 28 Dec 21 -- It works!  Now to get it to do what I want w/ the mouse wheel.  Mouse clicks will still print a message if verbose is set.
-29 Dec 21 -- Doesn't work as well as I'd expect.  I'm going to remove the channel for keys
+
 */
 
 package main
@@ -72,14 +70,13 @@ const LastModified = "Dec 29, 2021"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
-
-//const (
-//	firstImgCmd = iota
-//	prevImgCmd
-//	nextImgCmd
-//	loadImgCmd
-//	lastImgCmd
-//)
+const (
+	firstImgCmd = iota
+	prevImgCmd
+	nextImgCmd
+	loadImgCmd
+	lastImgCmd
+)
 
 var index int
 
@@ -124,13 +121,11 @@ func (sI *scrollClickImg) Scrolled(se *fyne.ScrollEvent) {
 		fmt.Printf(" scroll event found.  X= %.4f, dX=%.4f; Y=%.4f, dY=%.4f, for %s\n", se.Position.X, se.Scrolled.DX, se.Position.Y, se.Scrolled.DY,
 			sI.Resource.Name())
 	}
-	if se.Scrolled.DX < 0 || se.Scrolled.DY < 0 {
-		nextImage()
-		//keyCmdChan <- nextImgCmd
+	if se.Scrolled.DY < 0 { // will ignore DX as the scroll wheel only changes DY.
+		keyCmdChan <- nextImgCmd
+		return // I forgot to do this, so both would be sent in this branch.  Oops.
 	}
-	prevImage()
-	//keyCmdChan <- prevImgCmd
-
+	keyCmdChan <- prevImgCmd
 }
 func (sI *scrollClickImg) Tapped(pe *fyne.PointEvent) {
 	if *verboseFlag {
@@ -178,7 +173,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	//keyCmdChan = make(chan int, keyCmdChanSize)
+	keyCmdChan = make(chan int, keyCmdChanSize)
 	basefilename := filepath.Base(imgfilename)
 	fullFilename, err := filepath.Abs(imgfilename)
 	if err != nil {
@@ -238,7 +233,34 @@ func main() {
 	if *verboseFlag {
 		fmt.Printf(" Resource name=%s\n ", imageResource.Name())
 	}
+	//loadedImgFromResource := canvas.NewImageFromResource(imageResource)
+	//imgBounds := loadedImgFromResource.Image.Bounds()  This line panicked saying invalid memory address or nil pointer dereference
+	//imgX := imgBounds.Max.X
+	//imgY := imgBounds.Max.Y
+	//if *verboseFlag {
+	//	fmt.Printf(" From Resource.  imgX=%d, imgY=%d, minX=%d, minY=%d\n", imgX, imgY, imgBounds.Min.X, imgBounds.Min.Y)
+	//}
+
+	//imageURI := storage.NewFileURI(fullFilename)
 	scrollClickImage := NewScrollClickImg(imageResource)
+	//loadedimg = canvas.NewImageFromResource(scrollImg.Resource)
+	//loadedimg.ScaleMode = canvas.ImageScaleFastest
+
+	/*
+		imageURI := storage.NewFileURI(imgfilename)
+		imgRead, err := storage.Reader(imageURI)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
+			os.Exit(1)
+		}
+		defer imgRead.Close()
+		img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
+			os.Exit(1)
+		}
+
+	*/
 
 	bounds := scrollClickImage.iImage.Bounds()
 	imgHeight := bounds.Max.Y
@@ -249,6 +271,8 @@ func main() {
 		fmt.Println()
 	}
 
+	//loadedimg = canvas.NewImageFromImage(img) original code I wrote that I know works.
+	//loadedimg = canvas.NewImageFromResource(imageResource)  Goland does not flag this line w/ an error.
 	if !*zoomFlag {
 		scrollClickImage.cImage.FillMode = canvas.ImageFillContain
 	}
@@ -287,42 +311,61 @@ func main() {
 		fmt.Println()
 	}
 
-	//go processKeys()
+	go processKeys()
 
 	globalW.ShowAndRun()
 
 } // end main
 
 // --------------------------------------------------- processKeys -------------------------------
-//func processKeys() {
-//	for {
-//		keyCmd := <-keyCmdChan
-//		//fmt.Println("in processKeys go routine.  keycmd =", keyCmd)
-//		switch keyCmd {
-//		case firstImgCmd:
-//			firstImage()
-//		case prevImgCmd:
-//			prevImage()
-//		case nextImgCmd:
-//			nextImage()
-//		case loadImgCmd:
-//			loadTheImage()
-//		case lastImgCmd:
-//			lastImage()
-//		}
-//	}
-//}
+func processKeys() {
+	for {
+		keyCmd := <-keyCmdChan
+		//fmt.Println("in processKeys go routine.  keycmd =", keyCmd)
+		switch keyCmd {
+		case firstImgCmd:
+			firstImage()
+		case prevImgCmd:
+			prevImage()
+		case nextImgCmd:
+			nextImage()
+		case loadImgCmd:
+			loadTheImage()
+		case lastImgCmd:
+			lastImage()
+		}
+	}
+}
 
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage() {
 	imgname := imageInfo[index].Name()
-	fullfilename := cwd + string(filepath.Separator) + imgname
-	imageResource, err := fyne.LoadResourceFromPath(fullfilename)
+	//fullfilename := cwd + string(filepath.Separator) + imgname
+	fullFilename, err := filepath.Abs(imgname)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from filepath.Abs in loadTheImage is %v\n", err)
+	}
+	imageResource, err := fyne.LoadResourceFromPath(fullFilename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " In loadTheImage, error from LoadResourceFromPath is %v\n", err)
 	}
 	scrollClickImage := NewScrollClickImg(imageResource)
 
+	/*
+		imageURI := storage.NewFileURI(fullfilename)
+		imgRead, err := storage.Reader(imageURI)
+		defer imgRead.Close()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
+			os.Exit(1)
+		}
+
+		img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
+			os.Exit(1)
+		}
+	*/
 	bounds := scrollClickImage.iImage.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
@@ -331,6 +374,18 @@ func loadTheImage() {
 	if *verboseFlag {
 		fmt.Println(title)
 	}
+	/*  According to Andy, this is unnecessary.
+	if imgWidth > maxWidth {
+		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
+		title = title + "; resized."
+	} else if imgHeight > maxHeight {
+		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
+		title = title + "; resized."
+	}
+	bounds = img.Bounds()
+	imgHeight = bounds.Max.Y
+	imgWidth = bounds.Max.X
+	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
@@ -478,26 +533,26 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if !sticky {
 			scaleFactor = 1
 		}
-		prevImage()
-		//keyCmdChan <- prevImgCmd
+		//prevImage()
+		keyCmdChan <- prevImgCmd
 	case fyne.KeyDown:
 		if !sticky {
 			scaleFactor = 1
 		}
-		nextImage()
-		//keyCmdChan <- nextImgCmd
+		//nextImage()
+		keyCmdChan <- nextImgCmd
 	case fyne.KeyLeft:
 		if !sticky {
 			scaleFactor = 1
 		}
-		prevImage()
-		//keyCmdChan <- prevImgCmd
+		//prevImage()
+		keyCmdChan <- prevImgCmd
 	case fyne.KeyRight:
 		if !sticky {
 			scaleFactor = 1
 		}
-		nextImage()
-		//keyCmdChan <- nextImgCmd
+		//nextImage()
+		keyCmdChan <- nextImgCmd
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quit's the app if this is the last window, which it is.
 		//		(*globalA).Quit()
@@ -505,44 +560,44 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if !sticky {
 			scaleFactor = 1
 		}
-		firstImage()
-		//keyCmdChan <- firstImgCmd
+		//firstImage()
+		keyCmdChan <- firstImgCmd
 	case fyne.KeyEnd:
 		if !sticky {
 			scaleFactor = 1
 		}
-		lastImage()
-		//keyCmdChan <- lastImgCmd
+		//lastImage()
+		keyCmdChan <- lastImgCmd
 	case fyne.KeyPageUp:
 		scaleFactor *= 1.1 // I'm reversing what I did before.  PageUp now scales up
-		loadTheImage()
-		//keyCmdChan <- loadImgCmd
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyPageDown:
 		scaleFactor *= 0.9 // I'm reversing what I did before.  PageDn now scales down
-		loadTheImage()
-		//keyCmdChan <- loadImgCmd
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
-		loadTheImage()
-		//keyCmdChan <- loadImgCmd
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
-		loadTheImage()
-		//keyCmdChan <- loadImgCmd
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		if !sticky {
 			scaleFactor = 1
 		}
-		nextImage()
-		//keyCmdChan <- nextImgCmd
+		//nextImage()
+		keyCmdChan <- nextImgCmd
 	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
-		prevImage()
-		//keyCmdChan <- prevImgCmd
+		//prevImage()
+		keyCmdChan <- prevImgCmd
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
-		loadTheImage()
-		//keyCmdChan <- loadImgCmd
+		//loadTheImage()
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyV:
 		*verboseFlag = true
 		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
@@ -562,23 +617,23 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			shiftState = false
 			if e.Name == fyne.KeyEqual { // shift equal is key plus
 				scaleFactor *= 1.1
-				loadTheImage()
-				//keyCmdChan <- loadImgCmd
+				//loadTheImage()
+				keyCmdChan <- loadImgCmd
 			} else if e.Name == fyne.KeyPeriod { // >
-				nextImage()
-				//keyCmdChan <- nextImgCmd
+				//nextImage()
+				keyCmdChan <- nextImgCmd
 			} else if e.Name == fyne.KeyComma { // <
-				prevImage()
-				//keyCmdChan <- prevImgCmd
+				//prevImage()
+				keyCmdChan <- prevImgCmd
 			} else if e.Name == fyne.Key8 { // *
 				scaleFactor *= 1.1
-				loadTheImage()
-				//keyCmdChan <- loadImgCmd
+				//loadTheImage()
+				keyCmdChan <- loadImgCmd
 			}
 		} else if e.Name == fyne.KeyEqual {
 			scaleFactor = 1
-			loadTheImage()
-			//keyCmdChan <- loadImgCmd
+			//loadTheImage()
+			keyCmdChan <- loadImgCmd
 		}
 	}
 } // end keyTyped
