@@ -394,7 +394,7 @@ func processKeys() {
 			lastImage()
 		}
 	}
-}
+} // end processKeys
 
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage() {
@@ -469,7 +469,7 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	}
 	intchan <- -1
 	return
-}
+} // end filenameIndex
 
 // ------------------------------- MyReadDirForImages -----------------------------------
 
@@ -523,7 +523,7 @@ func isSorted(slice []os.FileInfo) bool {
 		}
 	}
 	return true
-}
+} // end isSorted
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
 //func nextImage(indx int) *canvas.Image {
@@ -657,21 +657,22 @@ func anotherKeyTyped(e *fyne.KeyEvent) { // index and shiftState are global vars
 	switch e.Name {
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		anotherWindow.Close()
+		scaleFactor2nd = 1
 		//                                                                                                globalA.Quit()
 		return
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace, fyne.KeyBackspace:
 		scaleFactor2nd = 1
 	case fyne.KeyPageUp:
-		scaleFactor2nd *= 1.1
+		scaleFactor2nd *= 1.2
 	case fyne.KeyPageDown:
-		scaleFactor2nd *= 0.9
+		scaleFactor2nd *= 0.8
 	case fyne.KeyPlus, fyne.KeyAsterisk:
-		scaleFactor2nd *= 1.1
+		scaleFactor2nd *= 1.2
 	case fyne.KeyMinus:
-		scaleFactor2nd *= 0.9
+		scaleFactor2nd *= 0.8
 	case fyne.KeyEqual:
 		scaleFactor2nd = 1
-	default:
+		//default:
 		// empty
 	}
 	msg := fmt.Sprintf("Scale Factor %.2f, %d x %d", scaleFactor2nd, popupImage.Bounds().Max.X, popupImage.Bounds().Max.Y)
