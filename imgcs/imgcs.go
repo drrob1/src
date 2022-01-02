@@ -1,4 +1,4 @@
-// From Go GUI with Fyne, Chap 4.  img.go -> imgscroll.go -> imgcs.go (img click scroll)
+// From Go GUI with Fyne, Chap 4.  img.go -> imgscroll.go
 /*
 
 This pgm works by the main thread initializing the image display and then starting the display message loop.
@@ -31,7 +31,7 @@ REVISION HISTORY
 27 Dec 21 -- Now called imgsroll.go.  I'm going to take a stab at adding mouse wheel detection.
 28 Dec 21 -- It works!  Now to get it to do what I want w/ the mouse wheel.  Mouse clicks will still print a message if verbose is set.
  1 Jan 22 -- Adding code from oneimg.go to crop an image, w/ intent to be able to zoom in to cropped image.
-               Now called imgcs.go, referring to Click Scroll capabilities.
+               Now to add the first clicked point is set to black, and then the 2nd clicked point is also set to black.
 */
 
 package main
@@ -42,6 +42,7 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/widget"
+	"image/color"
 	"image/draw"
 	"math"
 	"math/rand"
@@ -141,8 +142,10 @@ func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
 	if sI.p1.Position.X == 0 && sI.p1.Position.Y == 0 {
 		sI.p1.Position.X, sI.p1.Position.Y = pe.Position.X, pe.Position.Y
 		sI.p1.AbsolutePosition.X, sI.p1.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
-		//                                                                 fmt.Printf(" value of p1 set to %v\n", sI.p1)
-
+		anotherImage := imgAddDot(sI.iImage, iround(pe.Position.X), iround(pe.Position.Y))
+		//anotherWindow.Close()  Not open yet.
+		msg := fmt.Sprintf("sImage %s, %d x %d", sI.Resource.Name(), anotherImage.Bounds().Max.X, anotherImage.Bounds().Max.Y)
+		showPopup(anotherImage, msg)
 	} else {
 		sI.p2.Position.X, sI.p2.Position.Y = pe.Position.X, pe.Position.Y
 		sI.p2.AbsolutePosition.X, sI.p2.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
@@ -190,13 +193,22 @@ func isImage(file string) bool {
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
+func imgAddDot(img image.Image, x, y int) image.Image {
+	bounds := img.Bounds()
+	rgbaImg := image.NewRGBA(bounds)
+	draw.Draw(rgbaImg, bounds, img, bounds.Min, draw.Src)
+	rgbaImg.Set(x, y, color.Black)
+	var Img image.Image = rgbaImg
+	return Img
+}
+
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	rand.Seed(time.Now().Unix())
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
 	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: imgcs <image file name>")
+		fmt.Fprintln(os.Stderr, " Usage: imgscroll <image file name>")
 		os.Exit(1)
 	}
 
@@ -482,7 +494,6 @@ func isSorted(slice []os.FileInfo) bool {
 } // end isSorted
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
-//func nextImage(indx int) *canvas.Image {
 func nextImage() {
 	index++
 	if index >= len(imageInfo) {
@@ -493,7 +504,6 @@ func nextImage() {
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
-//func prevImage(indx int) *canvas.Image {
 func prevImage() {
 	index--
 	if index < 0 {
@@ -516,7 +526,7 @@ func lastImage() {
 }
 
 // ------------------------------------------------------------ keyTyped ------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
+func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global vars
 	switch e.Name {
 	case fyne.KeyUp:
 		if !sticky {
