@@ -1,4 +1,4 @@
-// From Go GUI with Fyne, Chap 4.  img.go -> imgscroll.go
+// From Go GUI with Fyne, Chap 4.  img.go -> imgscroll.go -> imgcs.go (img click scroll)
 /*
 
 This pgm works by the main thread initializing the image display and then starting the display message loop.
@@ -31,7 +31,7 @@ REVISION HISTORY
 27 Dec 21 -- Now called imgsroll.go.  I'm going to take a stab at adding mouse wheel detection.
 28 Dec 21 -- It works!  Now to get it to do what I want w/ the mouse wheel.  Mouse clicks will still print a message if verbose is set.
  1 Jan 22 -- Adding code from oneimg.go to crop an image, w/ intent to be able to zoom in to cropped image.
-               Now to add the first clicked point is set to black, and then the 2nd clicked point is also set to black.
+               Now called imgcs.go, referring to Click Scroll capabilities.
 */
 
 package main
@@ -196,7 +196,7 @@ func main() {
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
 	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: imgscroll <image file name>")
+		fmt.Fprintln(os.Stderr, " Usage: imgcs <image file name>")
 		os.Exit(1)
 	}
 
