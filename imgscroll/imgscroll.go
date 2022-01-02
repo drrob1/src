@@ -161,7 +161,7 @@ func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
 				sI.subImg.Set(x, y, sI.iImage.At(x, y))
 			}
 		}
-		if *dotWindowFlag && dotWindow.Title() != "" {
+		if *dotWindowFlag && dotWindow.Title() != "" { // if I try to close a window that's not open, pgm panics.
 			dotWindow.Close()
 		}
 		rndm := rand.Intn(100) // so only will show 1 cropped image, but I want to keep generating using both methods.
