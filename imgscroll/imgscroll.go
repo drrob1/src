@@ -42,6 +42,7 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/widget"
+	"image/color"
 	"image/draw"
 	"math"
 	"math/rand"
@@ -69,7 +70,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Jan 1, 2022"
+const LastModified = "Jan 2, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -85,10 +86,11 @@ var index int
 var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
-var globalW, anotherWindow fyne.Window
+var globalW, anotherWindow, dotWindow fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag.")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot.")
 var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var dotWindowFlag = flag.Bool("w", false, " If true, show the black dot popup Window.")
 var sticky bool
 var scaleFactor float64 = 1
 var scaleFactor2nd float32 = 1
@@ -141,8 +143,11 @@ func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
 	if sI.p1.Position.X == 0 && sI.p1.Position.Y == 0 {
 		sI.p1.Position.X, sI.p1.Position.Y = pe.Position.X, pe.Position.Y
 		sI.p1.AbsolutePosition.X, sI.p1.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
-		//                                                                 fmt.Printf(" value of p1 set to %v\n", sI.p1)
-
+		anotherImage := imgAddDot(sI.iImage, iround(pe.Position.X), iround(pe.Position.Y))
+		if *dotWindowFlag {
+			msg := fmt.Sprintf("sImage %s, %d x %d", sI.Resource.Name(), anotherImage.Bounds().Max.X, anotherImage.Bounds().Max.Y)
+			showDotWin(anotherImage, msg)
+		}
 	} else {
 		sI.p2.Position.X, sI.p2.Position.Y = pe.Position.X, pe.Position.Y
 		sI.p2.AbsolutePosition.X, sI.p2.AbsolutePosition.Y = pe.Position.X, pe.Position.Y
@@ -156,6 +161,9 @@ func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
 				sI.subImg.Set(x, y, sI.iImage.At(x, y))
 			}
 		}
+		if *dotWindowFlag && dotWindow.Title() != "" {
+			dotWindow.Close()
+		}
 		rndm := rand.Intn(100) // so only will show 1 cropped image, but I want to keep generating using both methods.
 		if rndm < 50 {
 			title := fmt.Sprintf("sImage %s, %d x %d", sI.Resource.Name(), sI.sImage.Bounds().Max.X, sI.sImage.Bounds().Max.Y)
@@ -165,7 +173,7 @@ func (sI *scrollCropImgT) Tapped(pe *fyne.PointEvent) {
 			showPopup(sI.subImg, title)
 		}
 	}
-}
+} // end Tapped
 func (sI *scrollCropImgT) TappedSecondary(pe *fyne.PointEvent) {
 	fmt.Printf(" rightclick event found.  X=%.4f, Y=%.4f for %s\n", pe.Position.X, pe.Position.Y, sI.Resource.Name())
 }
@@ -188,6 +196,36 @@ func isNotImageStr(name string) bool {
 func isImage(file string) bool {
 	ext := strings.ToLower(filepath.Ext(file))
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
+}
+
+func imgAddDot(img image.Image, x, y int) image.Image {
+	bounds := img.Bounds()
+	rgbaImg := image.NewRGBA(bounds)
+	draw.Draw(rgbaImg, bounds, img, bounds.Min, draw.Src)
+	if x == bounds.Min.X {
+		x++
+	}
+	if x == bounds.Max.X {
+		x--
+	}
+	if y == bounds.Min.Y {
+		y++
+	}
+	if y == bounds.Max.Y {
+		y--
+	}
+	rgbaImg.Set(x-1, y-1, color.Black)
+	rgbaImg.Set(x-1, y, color.Black)
+	rgbaImg.Set(x-1, y+1, color.Black)
+	rgbaImg.Set(x, y-1, color.Black)
+	rgbaImg.Set(x, y, color.Black)
+	rgbaImg.Set(x, y+1, color.Black)
+	rgbaImg.Set(x+1, y-1, color.Black)
+	rgbaImg.Set(x+1, y, color.Black)
+	rgbaImg.Set(x+1, y+1, color.Black)
+
+	var Img image.Image = rgbaImg
+	return Img
 }
 
 // ---------------------------------------------------- main --------------------------------------------------
@@ -482,7 +520,6 @@ func isSorted(slice []os.FileInfo) bool {
 } // end isSorted
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
-//func nextImage(indx int) *canvas.Image {
 func nextImage() {
 	index++
 	if index >= len(imageInfo) {
@@ -493,7 +530,6 @@ func nextImage() {
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
-//func prevImage(indx int) *canvas.Image {
 func prevImage() {
 	index--
 	if index < 0 {
@@ -516,7 +552,7 @@ func lastImage() {
 }
 
 // ------------------------------------------------------------ keyTyped ------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
+func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global vars
 	switch e.Name {
 	case fyne.KeyUp:
 		if !sticky {
@@ -647,4 +683,25 @@ func showPopup(m image.Image, title string) {
 	yFloat := float32(img.Image.Bounds().Max.Y) * scaleFactor2nd
 	anotherWindow.Resize(fyne.NewSize(xFloat, yFloat))
 	anotherWindow.Show()
+} // end showImage
+
+func dotWinKeyTyped(e *fyne.KeyEvent) { // index and shiftState are global vars
+	switch e.Name {
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
+		dotWindow.Close()
+	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace, fyne.KeyBackspace:
+		dotWindow.Close()
+	}
+} // end dotWinKeyTyped
+
+func showDotWin(m image.Image, title string) {
+	img := canvas.NewImageFromImage(m)
+	img.FillMode = canvas.ImageFillContain
+	dotWindow = globalA.NewWindow(title)
+	dotWindow.Canvas().SetOnTypedKey(dotWinKeyTyped)
+	dotWindow.SetContent(img)
+	xFloat := float32(img.Image.Bounds().Max.X) * scaleFactor2nd
+	yFloat := float32(img.Image.Bounds().Max.Y) * scaleFactor2nd
+	dotWindow.Resize(fyne.NewSize(xFloat, yFloat))
+	dotWindow.Show()
 } // end showImage
