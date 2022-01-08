@@ -7,7 +7,6 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -252,8 +251,9 @@ func main() {
 
 	fmt.Println()
 
-	filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.
-	filebyteslice, e = ioutil.ReadFile(InFilename)
+	//filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.  Don't need to do this.  Removed Jan 2022.
+	//filebyteslice, e = ioutil.ReadFile(InFilename)    ioutil depracated as of Go 1.16.
+	filebyteslice, e = os.ReadFile(InFilename)
 	if e != nil {
 		fmt.Println(" Error from ReadFile is ", e)
 		os.Exit(1)
@@ -894,7 +894,7 @@ func Pause() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Pausing.  Hit <enter> to continue  ")
 	scanner.Scan()
-	_ = scanner.Text()
+	// _ = scanner.Text()  Not needed.  I would use fmt.Scanln if I was doing this in 2022.
 }
 
 //------------------------------------------------------------

@@ -7,7 +7,6 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -84,7 +83,7 @@ const lastModified = "8 Jan 22"
    4 Oct 20 -- Will ignore empty tokens
   17 Oct 20 -- Removed the strings.ToLower for output filenames.
    8 Jan 22 -- Converted to modules; it shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
-                 Added verbose flag to control the display of pauses.
+                 Added verbose flag to control the display of pauses.  Removed use of ioutil that was depracated as of Go 1.16
 */
 
 const ( // intended for ofxCharType
@@ -252,8 +251,8 @@ func main() {
 
 	fmt.Println()
 
-	filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.
-	filebyteslice, e = ioutil.ReadFile(InFilename)
+	//filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.  Which is not needed and was removed Jan 2022.
+	filebyteslice, e = os.ReadFile(InFilename) // ioutil has been depracated as of Go 1.16
 	if e != nil {
 		fmt.Println(" Error from ReadFile is ", e)
 		os.Exit(1)
@@ -864,7 +863,7 @@ func Pause() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Pausing.  Hit <enter> to continue  ")
 	scanner.Scan()
-	_ = scanner.Text()
+	// _ = scanner.Text()  This step is not needed, and was removed Jan 2022.  I would use fmt.Scanln if I was doing this in 2022.
 }
 
 //------------------------------------------------------------
