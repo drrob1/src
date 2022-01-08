@@ -5,20 +5,21 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"filepicker"
+	"flag"
 	"fmt"
-	"getcommandline"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"src/filepicker"
+	//"src/getcommandline"
+	"src/timlibg"
+	"src/tokenize"
 	"strconv"
 	"strings"
-	"timlibg"
-	"tokenize"
 )
 
-const lastModified = "17 Oct 20"
+const lastModified = "8 Jan 22"
 
 /*
   REVISION HISTORY
@@ -82,6 +83,8 @@ const lastModified = "17 Oct 20"
    2 Oct 20 -- qbo files will populate the filepicker menu.  Filepicker now uses case insensitive flag.  Stop code added.
    4 Oct 20 -- Will ignore empty tokens
   17 Oct 20 -- Removed the strings.ToLower for output filenames.
+   8 Jan 22 -- Converted to modules; it shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
+                 Added verbose flag to control the display of pauses.
 */
 
 const ( // intended for ofxCharType
@@ -162,18 +165,22 @@ var Transactions []generalTransactionType
 var inputstate int
 var bankTranListEnd bool
 var EOF bool
+var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
 
 func main() {
 	var e error
 	var filebyteslice []byte
 	var BaseFilename, ans, InFilename, CSVOutFilename, TXTOutFilename string
+
+	flag.Parse()
+
 	InFileExists := false
 
 	fmt.Println(" fromfx.go lastModified is", lastModified)
-	if len(os.Args) <= 1 {
+	if flag.NArg() < 1 {
 		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 30); i++ {
-			fmt.Println("filename[", i, "] is", filenames[i])
+			fmt.Printf("filename[%d, %c] is %s \n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice (stop code=999) : ")
 		fmt.Scanln(&ans)
@@ -197,8 +204,10 @@ func main() {
 		fmt.Println(" Picked filename is", InFilename)
 		BaseFilename = InFilename
 	} else {
-		inbuf := getcommandline.GetCommandLineString()
-		BaseFilename = filepath.Clean(inbuf)
+		//                                                                inbuf := getcommandline.GetCommandLineString()
+		//                                                      inbuf := os.Args[1] // os.Args[0] is binary exe cmd name
+		inBuf := flag.Arg(0)
+		BaseFilename = filepath.Clean(inBuf)
 
 		if strings.Contains(BaseFilename, ".") { // there is an extension here
 			InFilename = BaseFilename
@@ -235,8 +244,8 @@ func main() {
 		CSVOutFilename = sqliteoutfile
 		TXTOutFilename = accessoutfile
 	} else {
-		//		CSVOutFilename = strings.ToLower(BaseFilename + ".csv")
-		//		TXTOutFilename = strings.ToLower(BaseFilename + ".xls")
+		//                                                       CSVOutFilename = strings.ToLower(BaseFilename + ".csv")
+		//                                                       TXTOutFilename = strings.ToLower(BaseFilename + ".xls")
 		CSVOutFilename = BaseFilename + ".csv"
 		TXTOutFilename = BaseFilename + ".xls"
 	}
@@ -259,8 +268,6 @@ func main() {
 
 	header, footer := processOFXFile(bytesbuffer) // Transactions slice is passed and returned globally.
 	fmt.Println(" Number of transactions is ", len(Transactions))
-	//fmt.Println("which are:", Transactions)
-	//Pause()
 
 	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
 		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ") +
@@ -315,8 +322,10 @@ func main() {
 			outputstringslice[3] = t.Descript
 			outputstringslice[4] = t.TRNAMT
 			outputstringslice[5] = header.ACCTTYPE
-			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			if *verboseFlag {
+				fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+					outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			}
 			if e = csvwriter.Write(outputstringslice); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, e)
 			}
@@ -325,10 +334,12 @@ func main() {
 			if _, e = txtwriter.WriteString(str); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, e)
 			}
-			fmt.Print(str)
+			if *verboseFlag {
+				fmt.Print(str)
+			}
 		}
 
-		if ctr%40 == 0 && ctr > 0 {
+		if ctr%40 == 0 && ctr > 0 && *verboseFlag {
 			Pause()
 		}
 	}
@@ -377,35 +388,34 @@ func main() {
 			outputstringslice[5] = header.ACCTTYPE
 			outputstringslice[6] = ""
 			outputstringslice[7] = ""
-			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			if *verboseFlag {
+				fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+					outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			}
 			if e = csvwriter.Write(outputstringslice); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, ":", e)
 			}
-
 		} else { // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
 			outputstringslice[0] = t.DTPOSTEDcsv
 			outputstringslice[1] = t.TRNAMT
 			outputstringslice[2] = t.Descript
 			outputstringslice[3] = BaseFilename
-			fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3])
+			if *verboseFlag {
+				fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+					outputstringslice[3])
+			}
 			s := fmt.Sprintf("%q, %q, %q, %q \r\n", outputstringslice[0], outputstringslice[1], outputstringslice[2],
 				outputstringslice[3])
 			if _, e = txtwriter.WriteString(s); e != nil {
 				log.Fatalln(e)
 			}
 		}
-		if ctr%40 == 0 && ctr > 0 {
+		if ctr%40 == 0 && ctr > 0 && *verboseFlag {
 			Pause()
 		}
 	}
 
-	//	type generalHeaderType struct {  This is here as a reference for the printf below.
-	//		DTSERVER, LANGUAGE, ORG, FID, CURDEF, BANKID, ACCTID, ACCTTYPE, DTSTART, DTEND    string
-	//	}
-
-	fmt.Println()
+	fmt.Println() // always display the footer.
 	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
 		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
 	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
@@ -456,33 +466,6 @@ func DateFieldReformatAccess(datein string) (string, int) {
 	juldate := timlibg.JULIAN(m, d, y)
 	return dateout, juldate
 } // END DateFieldReformatAccess;
-/*
-func DateFieldReformatSQlite(datein string) (string, int) {
-	//                                                                    01234567    0123456789
-	//  This procedure changes the date as it is input in a qfx file from yyyymmdd -> YYYY-MM-DD.
-	// I have to look into if I want a 2 or 4 digit year
-
-	var dateout string
-
-	datebyteslice := make([]byte, 10)
-	datebyteslice[0] = datein[0]
-	datebyteslice[1] = datein[1]
-	datebyteslice[2] = datein[2]
-	datebyteslice[3] = datein[3]
-	datebyteslice[4] = '-'
-	datebyteslice[5] = datein[4]
-	datebyteslice[6] = datein[5]
-	datebyteslice[7] = '-'
-	datebyteslice[8] = datein[6]
-	datebyteslice[9] = datein[7]
-	dateout = string(datebyteslice)
-	m, _ := strconv.Atoi(datein[4:6]) // Remember that these bounds include lower and up to but not
-	d, _ := strconv.Atoi(datein[6:8]) // including the upper bound.
-	y, _ := strconv.Atoi(datein[0:4])
-	juldate := timlibg.JULIAN(m, d, y)
-	return dateout, juldate
-} // END DateFieldReformatSQlite;
-*/
 
 func DateFieldAccessToSQlite(datein string) string {
 	//                                   0123456789     0123456789
@@ -511,7 +494,6 @@ func DateFieldAccessToSQlite(datein string) string {
 
 //--------------------------------------------------------------------------------------------------
 func getOfxToken(buf *bytes.Buffer, allowEmptyToken bool) ofxTokenType {
-	// -------------------------------------------------- GetQfxToken ----------------------------------
 	// Delimiters are angle brackets and EOL.
 	//   I forgot that break applies to switch-case as well as for loop.  I had to be more specific for this to work.
 	// allowEmptyToken is true to return an empty token if there are no more tokens on the line.
@@ -878,7 +860,6 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 	return header, footer
 } // END processOFXFile
 
-//--------------------------------------------------------------------------------------------
 func Pause() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Pausing.  Hit <enter> to continue  ")
@@ -922,12 +903,10 @@ func min(a, b int) int {
 	}
 }
 
-//-------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
 
-//---------------------------------------------------------------------- AddCommas
 func AddCommas(instr string) string {
 	var Comma []byte = []byte{','}
 

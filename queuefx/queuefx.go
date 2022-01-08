@@ -5,20 +5,20 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"src/filepicker"
+	"flag"
 	"fmt"
-	"src/getcommandline"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
+	"src/filepicker"
 	"src/timlibg"
 	"src/tokenize"
+	"strconv"
+	"strings"
 )
 
-const lastModified = "8 Apr 2021"
+const lastModified = "8 Jan 2022"
 
 /*
 REVISION HISTORY
@@ -85,6 +85,9 @@ REVISION HISTORY
  4 Oct 20 -- Will ignore empty tokens.
 17 Oct 20 -- Removed strings.ToLower from creation of output filenames.
  8 Apr 21 -- Converted to module named src.
+ 8 Jan 22 -- It now shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
+               Added verbose flag to control the display of pauses.
+
 */
 
 const ( // intended for ofxCharType
@@ -165,6 +168,7 @@ var bankTranListEnd bool
 var EOF bool
 var queueOfTokens []ofxTokenType
 var qCtr int
+var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
 
 func main() {
 	var e error
@@ -172,11 +176,15 @@ func main() {
 	var BaseFilename, ans, InFilename, CSVOutFilename, TXTOutFilename string
 	InFileExists := false
 
-	fmt.Println(" fromfx.go lastModified is", lastModified)
-	if len(os.Args) <= 1 {
+	flag.Parse()
+
+	fmt.Println(" queuefx.go lastModified is", lastModified)
+	//if len(os.Args) <= 1 { old way of doing this, before I started using the flag package.
+	if flag.NArg() < 1 { // now that I'm using the flag package, I can use this function.
 		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 30); i++ {
-			fmt.Println("filename[", i, "] is", filenames[i])
+			//                                                         fmt.Println("filename[", i, "] is", filenames[i])
+			fmt.Printf("filename[%d, %c] is %s \n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice (stop code=999) : ")
 		fmt.Scanln(&ans)
@@ -189,7 +197,7 @@ func main() {
 		i, err := strconv.Atoi(ans)
 		if err == nil {
 			InFilename = filenames[i]
-		} else { // allow entering 'a' .. 'z' for 0 to 25.  However, it seems I never use it.
+		} else { // allow entering 'a' .. 'z' for 0 to 25.
 			s := strings.ToUpper(ans)
 			s = strings.TrimSpace(s)
 			s0 := s[0]
@@ -199,8 +207,9 @@ func main() {
 		fmt.Println(" Picked filename is", InFilename)
 		BaseFilename = InFilename
 	} else {
-		inbuf := getcommandline.GetCommandLineString()
-		BaseFilename = filepath.Clean(inbuf)
+		//inbuf := getcommandline.GetCommandLineString()
+		inBuf := flag.Arg(0)
+		BaseFilename = filepath.Clean(inBuf)
 
 		if strings.Contains(BaseFilename, ".") { // there is an extension here
 			InFilename = BaseFilename
@@ -259,9 +268,8 @@ func main() {
 	makeQueue(bytesbuffer)
 
 	header, footer := processOFXFile(bytesbuffer) // Transactions slice is passed and returned globally.
+
 	fmt.Println(" Number of transactions is ", len(Transactions))
-	//fmt.Println("which are:", Transactions)
-	//Pause()
 
 	for ctr, t := range Transactions { // assign Descript and CHECKNUMs fields
 		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ") +
@@ -303,8 +311,10 @@ func main() {
 			outputstringslice[3] = t.Descript
 			outputstringslice[4] = t.TRNAMT
 			outputstringslice[5] = header.ACCTTYPE
-			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			if *verboseFlag {
+				fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+					outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			}
 			if e = csvwriter.Write(outputstringslice); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, e)
 			}
@@ -313,10 +323,12 @@ func main() {
 			if _, e = txtwriter.WriteString(str); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, e)
 			}
-			fmt.Print(str)
+			if *verboseFlag {
+				fmt.Print(str)
+			}
 		}
 
-		if ctr%40 == 0 && ctr > 0 {
+		if ctr%40 == 0 && ctr > 0 && *verboseFlag {
 			Pause()
 		}
 	}
@@ -362,8 +374,11 @@ func main() {
 			outputstringslice[5] = header.ACCTTYPE
 			outputstringslice[6] = ""
 			outputstringslice[7] = ""
-			fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			if *verboseFlag {
+				fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+					outputstringslice[3], outputstringslice[4], outputstringslice[5])
+			}
+
 			if e = csvwriter.Write(outputstringslice); e != nil {
 				log.Fatalln(" Error writing record to", OutFilename, ":", e)
 			}
@@ -373,24 +388,23 @@ func main() {
 			outputstringslice[1] = t.TRNAMT
 			outputstringslice[2] = t.Descript
 			outputstringslice[3] = BaseFilename
-			fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3])
+			if *verboseFlag {
+				fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+					outputstringslice[3])
+			}
+
 			s := fmt.Sprintf("%q, %q, %q, %q \r\n", outputstringslice[0], outputstringslice[1], outputstringslice[2],
 				outputstringslice[3])
 			if _, e = txtwriter.WriteString(s); e != nil {
 				log.Fatalln(e)
 			}
 		}
-		if ctr%40 == 0 && ctr > 0 {
+		if ctr%40 == 0 && ctr > 0 && *verboseFlag {
 			Pause()
 		}
 	}
 
-	//	type generalHeaderType struct {  This is here as a reference for the printf below.
-	//		DTSERVER, LANGUAGE, ORG, FID, CURDEF, BANKID, ACCTID, ACCTTYPE, DTSTART, DTEND    string
-	//	}
-
-	fmt.Println()
+	fmt.Println() // always display the footer.
 	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
 		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
 	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
@@ -477,8 +491,10 @@ func makeQueue(buf *bytes.Buffer) {
 			queueOfTokens = append(queueOfTokens, ofxToken)
 		}
 	}
-	fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
-	Pause()
+	if *verboseFlag {
+		fmt.Println(" Found", len(queueOfTokens), "tokens in the input file.")
+		Pause()
+	}
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -873,6 +889,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 } // END processOFXFile
 
 //--------------------------------------------------------------------------------------------
+
 func Pause() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Pausing.  Hit <enter> to continue  ")
@@ -917,11 +934,13 @@ func min(a, b int) int {
 }
 
 //-------------------------------------------------------------------- InsertByteSlice
+
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
 
 //---------------------------------------------------------------------- AddCommas
+
 func AddCommas(instr string) string {
 	var Comma []byte = []byte{','}
 
