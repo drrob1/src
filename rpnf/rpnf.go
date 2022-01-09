@@ -256,14 +256,13 @@ func Doit() {
 					Storage[i].Value = hpcalc2.READX()
 					if i > 0 {
 						getNameFromPopup()
-						select { // this is blocking
-						case name := <-inbufChan:
-							if strings.ToLower(name) == "t" || strings.ToLower(name) == "today" {
-								m, d, y := timlibg.TIME2MDY()
-								name = timlibg.MDY2STR(m, d, y)
-							}
-							Storage[i].Name = name
+						// I took out a select {} statement here because it was not needed.
+						name := <-inbufChan
+						if strings.ToLower(name) == "t" || strings.ToLower(name) == "today" {
+							m, d, y := timlibg.TIME2MDY()
+							name = timlibg.MDY2STR(m, d, y)
 						}
+						Storage[i].Name = name
 					}
 				} else if strings.HasPrefix(rtkn.Str, "RCL") {
 					i := 0
