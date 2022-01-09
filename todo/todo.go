@@ -16,9 +16,9 @@ type item struct {
 	CompletedAt time.Time
 }
 
-type TodoList []item // the book calls this type List.  I think that's too vague so I changed it.
+type ListType []item // the book calls this type List.  I think that's too vague so I changed it.
 
-func (l *TodoList) Add(task string) { // note that this is a pointer receiver
+func (l *ListType) Add(task string) { // note that this is a pointer receiver
 	tsk := item{
 		Task:        task,
 		Done:        false,
@@ -28,7 +28,7 @@ func (l *TodoList) Add(task string) { // note that this is a pointer receiver
 	*l = append(*l, tsk)
 }
 
-func (l *TodoList) Complete(i int) error { // Will use 1 origin reference so i = 1 is first item
+func (l *ListType) Complete(i int) error { // Will use 1 origin reference so i = 1 is first item
 	ls := *l
 	if i <= 0 || i > len(ls) {
 		return fmt.Errorf("Item %d does not exist", i)
@@ -40,7 +40,7 @@ func (l *TodoList) Complete(i int) error { // Will use 1 origin reference so i =
 	return nil
 }
 
-func (l *TodoList) Delete(i int) error {
+func (l *ListType) Delete(i int) error {
 	ls := *l
 	if i <= 0 || i > len(ls) {
 		return fmt.Errorf("Item %d does not exist to be deleted.", i)
@@ -51,7 +51,7 @@ func (l *TodoList) Delete(i int) error {
 	return nil
 }
 
-func (l *TodoList) SaveJSON(filename string) error {
+func (l *ListType) SaveJSON(filename string) error {
 	js, err := json.Marshal(l)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (l *TodoList) SaveJSON(filename string) error {
 	return os.WriteFile(filename, js, 0644)
 }
 
-func (l *TodoList) SaveBinary(filename string) error {
+func (l *ListType) SaveBinary(filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (l *TodoList) SaveBinary(filename string) error {
 	return err // I want to make sure that the write operation occurs before the close operation.
 }
 
-func (l *TodoList) OpenJSON(filename string) error {
+func (l *ListType) OpenJSON(filename string) error {
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -88,7 +88,7 @@ func (l *TodoList) OpenJSON(filename string) error {
 	return json.Unmarshal(file, l)
 }
 
-func (l *TodoList) OpenBinary(filename string) error {
+func (l *ListType) OpenBinary(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -103,7 +103,7 @@ func (l *TodoList) OpenBinary(filename string) error {
 	return err
 }
 
-func (l *TodoList) List() []string {
+func (l *ListType) List() []string {
 	s := make([]string, 0, len(*l))
 
 	for _, v := range *l {

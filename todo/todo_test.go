@@ -1,13 +1,14 @@
-package todo
+package todo_test
 
 import (
 	"fmt"
 	"os"
+	"src/todo"
 	"testing"
 )
 
 func TestAdd(t *testing.T) {
-	l := TodoList{}
+	l := todo.ListType{}
 
 	taskName := "New Task"
 	l.Add(taskName)
@@ -19,7 +20,7 @@ func TestAdd(t *testing.T) {
 		t.Errorf(" New task should not be marked as completed.\n")
 	}
 
-	l.Complete(1)
+	_ = l.Complete(1)
 
 	if !l[0].Done {
 		t.Errorf(" New task should be marked as completed now.\n")
@@ -27,7 +28,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	l := TodoList{}
+	l := todo.ListType{}
 
 	tasks := []string{
 		"New task 1",
@@ -44,7 +45,7 @@ func TestDelete(t *testing.T) {
 		t.Errorf(" Expected %q, got %q instead. \n", tasks[0], l[0].Task)
 	}
 
-	l.Delete(2)
+	_ = l.Delete(2)
 
 	if len(l) != 3 {
 		t.Errorf(" Expected list length %d, got %d instead.\n", 3, len(l))
@@ -56,7 +57,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	l := TodoList{}
+	l := todo.ListType{}
 
 	tasks := []string{
 		"New task 1",
@@ -78,8 +79,8 @@ func TestList(t *testing.T) {
 }
 
 func TestSaveOpen(t *testing.T) {
-	l1 := TodoList{}
-	l2 := TodoList{}
+	l1 := todo.ListType{}
+	l2 := todo.ListType{}
 
 	taskName := "New Task"
 
@@ -112,8 +113,8 @@ func TestSaveOpen(t *testing.T) {
 }
 
 func TestSaveBinary(t *testing.T) {
-	l1 := TodoList{}
-	l2 := TodoList{}
+	l1 := todo.ListType{}
+	l2 := todo.ListType{}
 
 	taskName := "New Task"
 	anotherTask := "Another Task"
