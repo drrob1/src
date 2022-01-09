@@ -16,7 +16,9 @@
 21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
                And added commas to big X display when > 10K instead of 1M.
 31 Oct 21 -- Will allow fixed, float and gen to switch output modes.  So fix will also change modes, but sigfig will not.
-               And fix, lastx both use letter X which immediately exits.  I'm going to try to fix that.
+               And fix, lastx both use letter X which immediately exits.  Now fixed.
+ 8 Jan 22 -- Will detect File Not Found error and handle it differently than other errors.  I now know how based on "Powerful Command Line Applications in Go."
+               And will have keyTyped go back into the Entry widget.  I think it looks nicer.
 */
 
 package main
@@ -24,6 +26,7 @@ package main
 import (
 	"bufio"
 	"encoding/gob"
+	"errors"
 	"flag"
 	"fmt"
 	"fyne.io/fyne/v2"
@@ -47,7 +50,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Oct 31, 2021"
+const lastModified = "Jan 9, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -101,7 +104,7 @@ func main() {
 	DisplayTape = make([]string, 0, 100)
 	DisplayTape = append(DisplayTape, "History of entered commands")
 	theFileExists := true
-	inbufChan = make(chan string)
+	inbufChan = make(chan string, 10)
 
 	homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
 	if err != nil {
@@ -121,10 +124,15 @@ func main() {
 
 	thefile, err = os.Open(StorageFullFilename) // open for reading
 	if err != nil {
-		fmt.Printf(" Error from os.Open(Storage1FileName).  Possibly because no Stack File found: %v\n", err)
 		theFileExists = false
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "%s not found\n", Storage1FileName)
+		} else {
+			fmt.Fprintf(os.Stderr, " Error from os.Open(%s) is: %v\n", Storage1FileName, err)
+		}
 	}
 	defer thefile.Close()
+
 	if theFileExists {
 		decoder := gob.NewDecoder(thefile)         // decoder reads the file.
 		err = decoder.Decode(&Stk)                 // decoder reads the file.
@@ -158,12 +166,16 @@ func main() {
 		// Rotate StorageFileNames and write
 		err = os.Rename(Storage2FullFilename, Storage3FullFilename)
 		if err != nil && !*nofileflag {
-			fmt.Fprintf(os.Stderr, " Rename of storage 2 to storage 3 failed with error %v \n", err)
+			if !errors.Is(err, os.ErrNotExist) {
+				fmt.Fprintf(os.Stderr, " Rename of storage 2 to storage 3 failed with error %v \n", err)
+			}
 		}
 
 		err = os.Rename(StorageFullFilename, Storage2FullFilename)
 		if err != nil && !*nofileflag {
-			fmt.Fprintf(os.Stderr, " Rename of storage 1 to storage 2 failed with error %v \n", err)
+			if !errors.Is(err, os.ErrNotExist) {
+				fmt.Fprintf(os.Stderr, " Rename of storage 1 to storage 2 failed with error %v \n", err)
+			}
 		}
 
 		thefile, err = os.Create(StorageFullFilename) // for writing
@@ -247,8 +259,8 @@ func Doit() {
 						select { // this is blocking
 						case name := <-inbufChan:
 							if strings.ToLower(name) == "t" || strings.ToLower(name) == "today" {
-								m,d,y := timlibg.TIME2MDY()
-								name = timlibg.MDY2STR(m,d,y)
+								m, d, y := timlibg.TIME2MDY()
+								name = timlibg.MDY2STR(m, d, y)
 							}
 							Storage[i].Name = name
 						}
@@ -277,7 +289,7 @@ func Doit() {
 					outputMode = outputfix
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") || rtkn.Str == "REAL" || rtkn.Str == "FLOAT" {
 					outputMode = outputfloat
-				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") || strings.HasPrefix(rtkn.Str, "GEN"){
+				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") || strings.HasPrefix(rtkn.Str, "GEN") {
 					outputMode = outputgen
 				} else if rtkn.Str == "DARK" {
 					fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
@@ -310,6 +322,7 @@ func Doit() {
 	}
 } // end Doit
 
+/*
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
@@ -402,6 +415,112 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 
 		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
 	}
+} // end keyTyped
+*/
+
+// ---------------------------------------------------------- keyTyped --------------------------------------------
+func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.
+	switch e.Name {
+	case fyne.KeyUp: // stack up
+		inbufChan <- ","
+		return
+	case fyne.KeyDown: // stack down
+		inbufChan <- "POP" // I'm sending a command thru instead of calling PopX so that UNDO will work correctly.
+		return
+	case fyne.KeyLeft: // swap X, Y
+		inbufChan <- "~"
+		return
+	case fyne.KeyRight: // swap X, Y
+		inbufChan <- "~"
+		return
+	case fyne.KeyEscape, fyne.KeyQ:
+		globalW.Close() // quit's the app if this is the last window.
+		//                                                                                               globalA.Quit()
+		//	                                                                                          (*globalA).Quit()
+	case fyne.KeyX:
+		if len(input.Text) == 0 { // only eXit if X is first character typed.
+			globalW.Close()
+		} else {
+			input.TypedRune('X')
+		}
+	case fyne.KeyHome:
+	case fyne.KeyEnd:
+	case fyne.KeyPageUp:
+	case fyne.KeyPageDown:
+	case fyne.KeySpace:
+		inbufChan <- input.Text
+		//                                                                                globalW.Canvas().Focus(input)
+		//                                                                                         input.TypedRune(' ')
+		return
+	case fyne.KeyBackspace, fyne.KeyDelete:
+		text := input.Text
+		if len(text) > 0 {
+			text = text[:len(text)-1]
+		}
+		input.SetText(text)
+		//                                                                                globalW.Canvas().Focus(input)
+		//                                                                                        input.TypedRune('\b')
+
+	case fyne.KeyPlus:
+		input.TypedRune('+')
+	case fyne.KeyAsterisk:
+		input.TypedRune('*')
+	case fyne.KeyEqual:
+		input.TypedRune('+')
+	case fyne.KeySemicolon:
+		input.TypedRune('*')
+	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
+		inbufChan <- "H"
+		//                                                                             input.TypedRune('H') // for help
+		//                                                                                      inbufChan <- input.Text
+		return
+	case fyne.KeyEnter, fyne.KeyReturn:
+		inbufChan <- input.Text
+
+	default:
+		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
+			shiftState = true
+			globalW.Canvas().Focus(input)
+			return
+		}
+		if shiftState {
+			shiftState = false
+			if e.Name == fyne.KeySlash {
+				input.TypedRune('?')
+			} else if e.Name == fyne.KeyPeriod {
+				inbufChan <- "~"
+				//input.TypedRune('>')
+				return
+			} else if e.Name == fyne.KeyComma {
+				inbufChan <- "~"
+				//input.TypedRune('<')
+				return
+			} else if e.Name == fyne.KeyMinus {
+				input.TypedRune('_')
+			} else if e.Name == fyne.Key8 {
+				input.TypedRune('*')
+			} else if e.Name == fyne.Key6 {
+				input.TypedRune('^')
+			} else if e.Name == fyne.Key5 {
+				input.TypedRune('%')
+			} else if e.Name == fyne.Key2 {
+				input.TypedRune('@')
+			} else if e.Name == fyne.Key1 {
+				input.TypedRune('!')
+			} else if e.Name == fyne.KeyBackTick {
+				inbufChan <- "~"
+				//input.TypedRune('~')
+				return
+			}
+			globalW.Canvas().Focus(input)
+		} else {
+			input.TypedRune(rune(e.Name[0]))
+			//globalW.Canvas().Focus(input)
+		}
+
+		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
+	}
+	globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.
 } // end keyTyped
 
 // ---------------------------------------------------------- keyTypedHelp --------------------------------------------
