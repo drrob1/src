@@ -101,7 +101,7 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 	for _, f := range filesDate {
 		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
 		count++
-		if count > numLines {
+		if count >= numLines {
 			break
 		}
 	}
@@ -162,7 +162,7 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 	for _, f := range filesDate {
 		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
 		count++
-		if count > numLines {
+		if count >= numLines {
 			break
 		}
 	}

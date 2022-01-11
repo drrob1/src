@@ -22,7 +22,7 @@ const maxChoices = 20
 
 func main() {
 	var ans, commandline, regex string // So I can test on linux.  Bash globs.
-	fmt.Print(" commandline =")
+	fmt.Print(" commandline = ")
 	_, err := fmt.Scanln(&commandline)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from Scanln is %v, will assume '*' \n", err)
