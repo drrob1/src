@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-const lastModified = "8 Jan 22"
+const lastModified = "10 Jan 22"
 
 /*
   REVISION HISTORY
@@ -177,7 +177,11 @@ func main() {
 
 	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if flag.NArg() < 1 {
-		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		filenames, err := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from GetRegexFilenames is %v, exiting\n", err)
+			os.Exit(1)
+		}
 		for i := 0; i < min(len(filenames), 30); i++ {
 			fmt.Printf("filename[%d, %c] is %s \n", i, i+'a', filenames[i])
 		}

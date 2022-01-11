@@ -64,8 +64,8 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 		CleanFileName = "*"
 	}
 
-	fmt.Printf(" In GetFilenames.  pattern = %q, CleanDirName = %q, and CleanFileName = %q \n\n", pattern, CleanDirName, CleanFileName)
-	//filesDate, err = ioutil.ReadDir(CleanDirName)
+	// fmt.Printf(" In GetFilenames.  pattern = %q, CleanDirName = %q, and CleanFileName = %q \n\n", pattern, CleanDirName, CleanFileName)
+	// filesDate, err = ioutil.ReadDir(CleanDirName)
 	dirname, err := os.Open(CleanDirName)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf(" In GetFilenames.  len(names) = %d\n\n", len(names))
+	//                                                  fmt.Printf(" In GetFilenames.  len(names) = %d\n\n", len(names))
 
 	CleanFileName = strings.ToLower(CleanFileName)
 	filesDate = make(FISliceDate, 0, len(names))
@@ -105,7 +105,7 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 			break
 		}
 	}
-	fmt.Printf(" In GetFilenames, len(stringSlice) is %d\n\n", len(stringSlice))
+	//                                      fmt.Printf(" In GetFilenames, len(stringSlice) is %d\n\n", len(stringSlice))
 	return stringSlice, nil
 } // end GetFilenames
 
@@ -121,7 +121,7 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 	}
 	CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
 
-	fmt.Printf(" In GetRegexFilenames.  pattern = %q, CleanDirName = %q, and CleanPattern = %q \n\n", pattern, CleanDirName, CleanPattern)
+	// fmt.Printf(" In GetRegexFilenames.  pattern = %q, CleanDirName = %q, and CleanPattern = %q \n\n", pattern, CleanDirName, CleanPattern)
 
 	regex, err := regexp.Compile(CleanPattern)
 	if err != nil {
@@ -139,7 +139,7 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 		return nil, err
 	}
 
-	fmt.Printf(" In GetRegexFilenames.  Len(names) = %d\n", len(names))
+	//                                               fmt.Printf(" In GetRegexFilenames.  Len(names) = %d\n", len(names))
 	filesDate := make(FISliceDate, 0, len(names))
 	for _, name := range names {
 		if regex.MatchString(name) {
@@ -150,7 +150,7 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 			filesDate = append(filesDate, L)
 		}
 	}
-	fmt.Printf(" In GetRegexFilenames.  len(filesdate) = %d\n", len(filesDate))
+	//                                       fmt.Printf(" In GetRegexFilenames.  len(filesdate) = %d\n", len(filesDate))
 
 	lessFunc := func(i, j int) bool {
 		return filesDate[i].ModTime().UnixNano() > filesDate[j].ModTime().UnixNano()
@@ -166,12 +166,12 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 			break
 		}
 	}
-	fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
+	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
 	return stringSlice, nil
 } // end GetRegexFilenames
 
 //-------------------------------------------------------------------- InsertByteSlice --------------------------------
-
+/*
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
@@ -193,6 +193,8 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 //---------------------------------------------------------------------------------------------------
+
+*/
 /*
 // ---------------------------- GetIDname -----------------------------------------------------------
 func GetIDname(uidStr string) string {

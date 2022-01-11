@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-const lastModified = "8 Jan 2022"
+const lastModified = "10 Jan 2022"
 
 /*
 REVISION HISTORY
@@ -180,7 +180,12 @@ func main() {
 	fmt.Println(" queuefx.go lastModified is", lastModified)
 	//if len(os.Args) <= 1 { old way of doing this, before I started using the flag package.
 	if flag.NArg() < 1 { // now that I'm using the flag package, I can use this function.
-		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		filenames, err := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from GetRegexFilenames is %v, exiting\n", err)
+			os.Exit(1)
+		}
+
 		for i := 0; i < min(len(filenames), 30); i++ {
 			//                                                         fmt.Println("filename[", i, "] is", filenames[i])
 			fmt.Printf("filename[%d, %c] is %s \n", i, i+'a', filenames[i])
