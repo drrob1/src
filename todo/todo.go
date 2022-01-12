@@ -73,7 +73,7 @@ func (l *ListType) SaveBinary(filename string) error {
 	return err // I want to make sure that the write operation occurs before the close operation.
 }
 
-func (l *ListType) OpenJSON(filename string) error {
+func (l *ListType) LoadJSON(filename string) error {
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -88,7 +88,7 @@ func (l *ListType) OpenJSON(filename string) error {
 	return json.Unmarshal(file, l)
 }
 
-func (l *ListType) OpenBinary(filename string) error {
+func (l *ListType) LoadBinary(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
