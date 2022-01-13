@@ -3,12 +3,12 @@ package todo_test
 import (
 	"fmt"
 	"os"
-	"src/todocore"
+	"src/todo"
 	"testing"
 )
 
 func TestAdd(t *testing.T) {
-	l := todocore.ListType{}
+	l := todo.ListType{}
 
 	taskName := "New Task"
 	l.Add(taskName)
@@ -28,7 +28,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	l := todocore.ListType{}
+	l := todo.ListType{}
 
 	tasks := []string{
 		"New task 1",
@@ -57,7 +57,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	l := todocore.ListType{}
+	l := todo.ListType{}
 
 	tasks := []string{
 		"New task 1",
@@ -79,8 +79,8 @@ func TestList(t *testing.T) {
 }
 
 func TestSaveLoad(t *testing.T) {
-	l1 := todocore.ListType{}
-	l2 := todocore.ListType{}
+	l1 := todo.ListType{}
+	l2 := todo.ListType{}
 
 	taskName := "New Task"
 
@@ -111,10 +111,14 @@ func TestSaveLoad(t *testing.T) {
 		t.Errorf(" Task %q from list1 does not match %q from list2.\n", l1[0].Task, l2[0].Task)
 	}
 
-	if l1[0].CreatedAt != l2[0].CreatedAt {
-		t.Errorf("Using SaveJSON Created at from list1 does not match created at from list2: list1 %#v, list2 %#v\n", l1[0].CreatedAt, l2[0].CreatedAt)
-		t.Errorf("And L1 %v, L2 %v\n", l1[0].CreatedAt, l2[0].CreatedAt)
-	}
+	/*
+		This fails because of the m factor.  I don't need to keep running this test.
+		if l1[0].CreatedAt != l2[0].CreatedAt {
+			t.Errorf("Using SaveJSON Created at from list1 does not match created at from list2: list1 %#v, list2 %#v\n", l1[0].CreatedAt, l2[0].CreatedAt)
+			t.Errorf("And L1 %v, L2 %v\n", l1[0].CreatedAt, l2[0].CreatedAt)
+		}
+
+	*/
 
 	if l1[0].CreatedAt.Unix() != l2[0].CreatedAt.Unix() { // this succeeds
 		t.Errorf("Using SaveJSON Created at.Unix from list1 does not match created at from list2: list1 %#v, list2 %#v\n", l1[0].CreatedAt.Unix(), l2[0].CreatedAt.Unix())
@@ -137,8 +141,8 @@ func TestSaveLoad(t *testing.T) {
 }
 
 func TestSaveBinary(t *testing.T) {
-	l1 := todocore.ListType{}
-	l2 := todocore.ListType{}
+	l1 := todo.ListType{}
+	l2 := todo.ListType{}
 
 	taskName := "New Task"
 	anotherTask := "Another Task"
@@ -171,9 +175,27 @@ func TestSaveBinary(t *testing.T) {
 		t.Errorf(" Task %q from list1 does not match %q from list2.\n", l1[0].Task, l2[0].Task)
 	}
 
+	/* This test fails because of the 'm' factor which I think is a correction factor of some kind.
 	if l1[0].CreatedAt != l2[0].CreatedAt {
 		t.Errorf("Using SaveBinary, Created at from list1 does not match created at from list2: list1 %#v, list2 %#v\n", l1[0].CreatedAt, l2[0].CreatedAt)
 		t.Errorf("And L1 %v, L2 %v\n", l1[0].CreatedAt, l2[0].CreatedAt)
 	}
+	*/
 
+	if l1[0].CreatedAt.Unix() != l2[0].CreatedAt.Unix() { // this succeeds
+		t.Errorf("Using SaveBinary Created at.Unix from list1 does not match created at from list2: list1 %#v, list2 %#v\n", l1[0].CreatedAt.Unix(), l2[0].CreatedAt.Unix())
+		t.Errorf("And L1 %v, L2 %v\n", l1[0].CreatedAt, l2[0].CreatedAt)
+	}
+
+	if l1[0].CreatedAt.UnixNano() != l2[0].CreatedAt.UnixNano() { // this succeeds
+		t.Errorf("Using SaveBinary Created at.UnixNano from list1 does not match created at from list2: list1 %#v, list2 %#v\n", l1[0].CreatedAt.UnixNano(), l2[0].CreatedAt.UnixNano())
+		t.Errorf("And L1 %v, L2 %v\n", l1[0].CreatedAt, l2[0].CreatedAt)
+	}
+}
+
+func TestAbout(t *testing.T) {
+	l := todo.ListType{}
+	if l.About() != "Jan 13, 2022" {
+		t.Errorf(" In TestAbout, expecting Jan 13, 2022 but got %q\n", l.About())
+	}
 }

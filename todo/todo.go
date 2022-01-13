@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+const lastModified = "Jan 13, 2022"
+
+/*
+REVISION HISTORY
+-------- -------
+10 Jan 22 -- Started writing this code from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
+
+*/
+
 type item struct {
 	Task        string
 	Done        bool
@@ -110,4 +119,8 @@ func (l *ListType) List() []string {
 		s = append(s, v.Task)
 	}
 	return s
+}
+
+func (l *ListType) About() string {
+	return lastModified
 }
