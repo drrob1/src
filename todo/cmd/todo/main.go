@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"src/todo"
@@ -9,10 +10,20 @@ import (
 
 const todoFilename = "todo.json"
 const todoFileBin = "todo.gob"
-const lastModified = "12 Jan 2022"
+const lastModified = "14 Jan 2022"
+
+var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
+var task = flag.String("task", "", "Task to be added to the ToDo list.")
+var complete = flag.Int("complete", 0, "Item to be completed.") // here, 0 means NTD.  That's why we have to start at 1 for item numbers.
+var listFlag = flag.Bool("list", false, "List all tasks to the display.")
 
 func main() {
-	//fmt.Printf(" todo last modified %s.  It will display and manage a todo list.\n", lastModified)
+	flag.Parse()
+	if *verboseFlag {
+		fmt.Printf(" todo last modified %s.  It will display and manage a todo list.\n", lastModified)
+
+	}
+
 	l := todo.ListType{}
 	err := l.LoadJSON(todoFilename) // if file doesn't exist, this does not return an error.
 	if err != nil {
@@ -26,21 +37,37 @@ func main() {
 	}
 
 	switch {
-	case len(os.Args) == 1:
-		str := l.List() // if no params, just list the tasks
-		for _, s := range str {
-			fmt.Println(s)
+	case *listFlag:
+		for _, item := range l {
+			if !item.Done {
+				fmt.Println(item.Task)
+			}
 		}
-	default:
-		item := strings.Join(os.Args[1:], " ")
-		l.Add(item)
+	case *complete > 0:
+		err = l.Complete(*complete)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Item number %d cannot be completed because %v\n", *complete, err)
+		}
+
 		err = l.SaveJSON(todoFilename)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error returned from SaveJSON is %v \n", err)
+			fmt.Fprintf(os.Stderr, " List could not be saved in json because %v\n", err)
 		}
 		err = l.SaveBinary(todoFileBin)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error returned from SaveBinary is %v \n", err)
+			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v\n", err)
 		}
+	case *task != "":
+		l.Add(*task)
+		err = l.SaveJSON(todoFilename)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " List could not be saved in JSON because %v \n", err)
+		}
+		err = l.SaveBinary(todoFileBin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
+		}
+	default:
+		fmt.Fprintf(os.Stderr, " No valid option was set.\n")
 	}
 }
