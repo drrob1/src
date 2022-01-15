@@ -87,9 +87,13 @@ func main() {
 			}
 		}
 		*/
-		//fmt.Println(l)        // This should invoke the stringer interface from the fmt package.  IE, call the String method I defined in todo.  But it's not working.
+
+		// This should invoke the stringer interface from the fmt package.  IE, call the String method I defined in todo.  But it's not working.
+		// I kept playing w/ it and I read the docs at golang.org.  I concluded that the stringer interface required a value receiver.  I had
+		// followed the book that defined it as a pointer receiver.  So I defined it in todo.go as a value receiver, and it started to work.
+		fmt.Println(l)
 		//fmt.Printf("%s", l)   // this does not work.
-		fmt.Print(l.String()) // this works.
+		//fmt.Print(l.String()) // this works.  But I figured out why it didn't work at first like the book said it should.  See the above comment.
 	case *complete > 0:
 		err = l.Complete(*complete)
 		if err != nil {

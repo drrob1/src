@@ -125,10 +125,10 @@ func (l *ListType) About() string {
 	return lastModified
 }
 
-func (l *ListType) String() string { // implements the fmt.Stringer interface
+func (l ListType) String() string { // implements the fmt.Stringer interface
 	var formatted string
 
-	for i, t := range *l { // loop to have all tasks in the returned string
+	for i, t := range l { // loop to have all tasks in the returned string
 		suffix := ".  "
 		prefix := "  "
 
