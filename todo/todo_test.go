@@ -195,7 +195,18 @@ func TestSaveBinary(t *testing.T) {
 
 func TestAbout(t *testing.T) {
 	l := todo.ListType{}
-	if l.About() != "Jan 13, 2022" {
+	if l.About() != "Jan 15, 2022" {
 		t.Errorf(" In TestAbout, expecting Jan 13, 2022 but got %q\n", l.About())
+	}
+}
+
+func TestString(t *testing.T) {
+	l := todo.ListType{}
+
+	taskName := "New Task"
+	l.Add(taskName)
+	expected := "  1: " + taskName + ".  \n"
+	if l.String() != expected {
+		t.Errorf("Error from TestString.  Expecting %q, got %q\n", expected, l.String())
 	}
 }

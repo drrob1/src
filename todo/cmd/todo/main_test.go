@@ -9,27 +9,38 @@ import (
 	"testing"
 )
 
-var binName = "todo"
+var execName = "todo"
 var fileName = "todo.json"
 var binFilename = "todo.gob"
 
 func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
-		binName += ".exe"
+		execName += ".exe"
 	}
 
-	build := exec.Command("go", "build", "-o", binName)
+	build := exec.Command("go", "build", "-o", execName)
 	err := build.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Cannot build tool %s: %s \n", binName, err)
+		fmt.Fprintf(os.Stderr, " Cannot build tool %s: %s \n", execName, err)
 		os.Exit(1)
 	}
 	fmt.Println(" Running tests ....")
 	result := m.Run()
 	fmt.Println(" Cleaning up ....")
-	os.Remove(binName)
-	os.Remove(fileName)
-	os.Remove(binFilename)
+	err = os.Remove(execName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from Remove(%s) is %v\n", execName, err)
+	}
+	err = os.Remove(fileName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from Remove(%s) is %v\n", fileName, err)
+	}
+
+	err = os.Remove(binFilename)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from Remove(%s) is %v\n", binFilename, err)
+	}
+
 	os.Exit(result)
 }
 
@@ -39,8 +50,14 @@ func TestTodoCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	cmdPath := filepath.Join(dir, execName)
 
-	cmdPath := filepath.Join(dir, binName)
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileName = filepath.Join(userHomeDir, fileName)
+	binFilename = filepath.Join(userHomeDir, binFilename)
 
 	addNewTaskTestFunc := func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-task", task)
@@ -58,7 +75,7 @@ func TestTodoCLI(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := task + "\n"
+		expected := " Not done: " + task + "\n\n"
 		if expected != string(out) {
 			t.Errorf(" Expected %q, got %q instead\n", expected, string(out))
 		}

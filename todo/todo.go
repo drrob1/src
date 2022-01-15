@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-const lastModified = "Jan 13, 2022"
+const lastModified = "Jan 15, 2022"
 
 /*
 REVISION HISTORY
 -------- -------
 10 Jan 22 -- Started writing this code from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
-
+15 Jan 22 -- Changed behavior of the file read to return the error if file was not found.
 */
 
 type item struct {
@@ -85,7 +85,7 @@ func (l *ListType) SaveBinary(filename string) error {
 func (l *ListType) LoadJSON(filename string) error {
 	file, err := os.ReadFile(filename)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) { // I wanted the client to know if file was not found, but then the tests didn't work.
 			return nil
 		}
 		return err
@@ -100,7 +100,7 @@ func (l *ListType) LoadJSON(filename string) error {
 func (l *ListType) LoadBinary(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) { // I wanted the client to know if the file was not found, but then the tests didn't work.
 			return nil
 		}
 		return err
@@ -123,4 +123,21 @@ func (l *ListType) List() []string {
 
 func (l *ListType) About() string {
 	return lastModified
+}
+
+func (l *ListType) String() string { // implements the fmt.Stringer interface
+	var formatted string
+
+	for i, t := range *l { // loop to have all tasks in the returned string
+		suffix := ".  "
+		prefix := "  "
+
+		if t.Done {
+			prefix = "X "
+			suffix = " completed at" + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
+		}
+		// Need to adjust to 1-origin task numbers
+		formatted += fmt.Sprintf("%s%d: %s%s\n", prefix, i+1, t.Task, suffix)
+	}
+	return formatted
 }
