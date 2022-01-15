@@ -74,6 +74,7 @@ func main() {
 
 	switch {
 	case *listFlag:
+		/* Replaced by the stringer interface
 		for _, item := range l {
 			if !item.Done {
 				fmt.Printf(" Not done: %s\n", item.Task)
@@ -85,6 +86,10 @@ func main() {
 				fmt.Printf(" Done: %s was completed on %s\n", item.Task, item.CompletedAt.Format("Jan-02-2006 15:04:05"))
 			}
 		}
+		*/
+		//fmt.Println(l)        // This should invoke the stringer interface from the fmt package.  IE, call the String method I defined in todo.  But it's not working.
+		//fmt.Printf("%s", l)   // this does not work.
+		fmt.Print(l.String()) // this works.
 	case *complete > 0:
 		err = l.Complete(*complete)
 		if err != nil {
