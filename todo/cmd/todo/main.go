@@ -40,7 +40,13 @@ func main() {
 	case *listFlag:
 		for _, item := range l {
 			if !item.Done {
-				fmt.Println(item.Task)
+				fmt.Printf(" Not done: %s\n", item.Task)
+			}
+		}
+		fmt.Println()
+		for _, item := range l {
+			if item.Done {
+				fmt.Printf(" Done: %s was completed on %s\n", item.Task, item.CompletedAt.Format("Jan-02-2006 15:04:05"))
 			}
 		}
 	case *complete > 0:
