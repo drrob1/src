@@ -16,6 +16,7 @@ REVISION HISTORY
 -------- -------
 10 Jan 22 -- Started writing this code from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 15 Jan 22 -- Changed behavior of the file read to return the error if file was not found.
+               Then added the String() method using value receiver as fmt package requires that to work.
 */
 
 type item struct {
@@ -125,7 +126,7 @@ func (l *ListType) About() string {
 	return lastModified
 }
 
-func (l ListType) String() string { // implements the fmt.Stringer interface
+func (l ListType) String() string { // implements the fmt.Stringer interface, which must be a value receiver
 	var formatted string
 
 	for i, t := range l { // loop to have all tasks in the returned string
@@ -134,7 +135,7 @@ func (l ListType) String() string { // implements the fmt.Stringer interface
 
 		if t.Done {
 			prefix = "X "
-			suffix = " completed at" + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
+			suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
 		}
 		// Need to adjust to 1-origin task numbers
 		formatted += fmt.Sprintf("%s%d: %s%s\n", prefix, i+1, t.Task, suffix)

@@ -214,3 +214,15 @@ func TestString(t *testing.T) {
 		t.Errorf("Error from TestString.  Expecting %q, got %q\n", expected, fmt.Sprintf("%s", l))
 	}
 }
+
+func TestComplete(t *testing.T) {
+	l := todo.ListType{}
+
+	taskName := "New Task"
+	l.Add(taskName)
+	l.Complete(1)
+	expected := "X 1: " + taskName + " completed at \n" // this will always fail.
+	if l.String() != expected {
+		t.Errorf("TestComplete expecting %q, got %q\n", expected, l.String())
+	}
+}
