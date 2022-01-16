@@ -154,7 +154,20 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
 		}
-	default:
-		fmt.Fprintf(os.Stderr, " No valid option was set.\n")
+	default: // task add
+		//                                                         fmt.Fprintf(os.Stderr, " No valid option was set.\n")
+		if flag.NArg() > 0 {
+			tsk := strings.Join(flag.Args(), " ")
+			l.Add(tsk)
+			err = l.SaveJSON(fullFilenameJson)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " List could not be saved in JSON because %v \n", err)
+			}
+			err = l.SaveBinary(fullFilenameBin)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
+			}
+
+		}
 	}
 }
