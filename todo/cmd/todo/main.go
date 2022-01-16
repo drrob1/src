@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"src/todo"
@@ -17,6 +19,7 @@ REVISION HISTORY
 15 Jan 22 -- Modifying the output for the -h flag using the book code.  I don't need -v flag anymore.
              Then added the String method, but that had to be a value receiver to work as like in the book.
              Then added use of TODO_FILENAME environment variable.
+16 Jan 22 -- Added stdin as a source.  And changed name of string task flag to a boolean add flag.
 */
 
 const lastModified = "16 Jan 2022"
@@ -26,7 +29,9 @@ var todoFileBin = "todo.gob"   // now a var instead of a const so can use enviro
 var fileExists bool
 
 var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
-var task = flag.String("task", "", "Task to be added to the ToDo list.")
+
+//var task = flag.String("task", "", "Task to be added to the ToDo list.")
+var add = flag.Bool("add", false, "Add task to the ToDo list.")
 var complete = flag.Int("complete", 0, "Item to be completed.") // here, 0 means NTD.  That's why we have to start at 1 for item numbers.
 var listFlag = flag.Bool("list", false, "List all tasks to the display.")
 
@@ -144,8 +149,13 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v\n", err)
 		}
-	case *task != "":
-		l.Add(*task)
+	case *add:
+		task, err := getTask(os.Stdin, flag.Args()...)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		l.Add(task)
 		err = l.SaveJSON(fullFilenameJson)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " List could not be saved in JSON because %v \n", err)
@@ -170,4 +180,22 @@ func main() {
 
 		}
 	}
+}
+
+func getTask(r io.Reader, args ...string) (string, error) { // decides where to get task string, from args or stdin.
+	if len(args) > 0 {
+		return strings.Join(args, " "), nil
+	}
+
+	scnr := bufio.NewScanner(r)
+	scnr.Scan()
+	if err := scnr.Err(); err != nil {
+		return "", err
+	}
+
+	if len(scnr.Text()) == 0 {
+		return "", fmt.Errorf("Task to add cannot be blank.")
+	}
+
+	return scnr.Text(), nil
 }

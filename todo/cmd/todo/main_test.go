@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,13 +65,30 @@ func TestTodoCLI(t *testing.T) {
 	//binFilename = filepath.Join(userHomeDir, binFilename)
 
 	addNewTaskTestFunc := func(t *testing.T) {
-		cmd := exec.Command(cmdPath, "-task", task)
+		cmd := exec.Command(cmdPath, "-add", task)
 		err = cmd.Run()
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	t.Run("AddNewTask", addNewTaskTestFunc)
+	t.Run("AddNewTaskFromArgs", addNewTaskTestFunc)
+
+	task2 := "test task number 2"
+	fromStdinFunc := func(t *testing.T) {
+		cmd := exec.Command(cmdPath, "-add")
+		cmdStdIn, err := cmd.StdinPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		io.WriteString(cmdStdIn, task2)
+		cmdStdIn.Close()
+
+		if err := cmd.Run(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Run("AddNewTaskFromSTDIN", fromStdinFunc)
 
 	listTasksTestFunc := func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-list")
@@ -80,7 +98,7 @@ func TestTodoCLI(t *testing.T) {
 		}
 
 		//expected := " Not done: " + task + "\n\n"
-		expected := "  1: " + task + ".  \n\n"
+		expected := "  1: " + task + ".  \n  2: " + task2 + ".  \n\n"
 		if expected != string(out) {
 			t.Errorf(" Expected %q, got %q instead\n", expected, string(out))
 		}
