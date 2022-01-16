@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "22 Oct 2021"
+const LastAltered = "16 Jan 2022"
 
 /*
 Revision History
@@ -100,6 +100,7 @@ Revision History
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
 26 Aug 21 -- Backporting autoheight and autowidth
 22 Oct 21 -- Updating the idiom that uses bytes.buffer.
+16 Jan 22 -- Updating how the help message is created, learned from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -152,7 +153,7 @@ func main() {
 			comspec, ok := os.LookupEnv("ComSpec")
 			if ok {
 				//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
-				bytesbuf := bytes.NewBuffer(make([]byte,0,200))
+				bytesbuf := bytes.NewBuffer(make([]byte, 0, 200))
 				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
 				tcc.Stdout = bytesbuf
 				tcc.Run()
@@ -236,6 +237,14 @@ func main() {
 	}
 
 	// flag definitions and processing
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
+		flag.PrintDefaults()
+	}
+
 	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
@@ -244,9 +253,9 @@ func main() {
 	var NLines int
 	flag.IntVar(&NLines, "N", numoflines, "number of lines to display") // Value
 
-	var helpflag = flag.Bool("h", false, "print help message") // pointer
-	var HelpFlag bool
-	flag.BoolVar(&HelpFlag, "help", false, "print help message")
+	//var helpflag = flag.Bool("h", false, "print help message") // pointer
+	//var HelpFlag bool
+	//flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
 	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
 	var SizeFlag bool
@@ -292,13 +301,6 @@ func main() {
 				dsrtparam.numlines, dsrtparam.reverseflag, dsrtparam.sizeflag, dsrtparam.dirlistflag, dsrtparam.filenamelistflag,
 				dsrtparam.totalflag)
 		}
-	}
-
-	if *helpflag || HelpFlag {
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches.")
-		fmt.Println(" Reads from diraliases environment variable if needed on Windows.")
-		flag.PrintDefaults()
-		os.Exit(0)
 	}
 
 	Reverse := *revflag || RevFlag || dsrtparam.reverseflag
