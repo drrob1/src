@@ -19,7 +19,7 @@ REVISION HISTORY
              Then added use of TODO_FILENAME environment variable.
 */
 
-const lastModified = "15 Jan 2022"
+const lastModified = "16 Jan 2022"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
@@ -39,6 +39,7 @@ func main() {
 	flag.Parse()
 	if *verboseFlag {
 		fmt.Printf(" todo last modified %s.  It will display and manage a todo list.\n", lastModified)
+		fmt.Printf(" Default file root is todo for todo.json and todo.gob.  TODO_FILENAME environment variable is read.\n")
 
 	}
 
@@ -49,7 +50,7 @@ func main() {
 
 	envValue, ok := os.LookupEnv("TODO_FILENAME")
 	if ok {
-		todoFilename = envValue
+		todoFilename = envValue + ".json"
 		todoFileBin = filepath.Base(envValue) + ".gob"
 	}
 	if *verboseFlag {

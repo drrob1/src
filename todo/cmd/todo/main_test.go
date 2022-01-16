@@ -10,16 +10,25 @@ import (
 )
 
 var execName = "todo"
-var fileName = "todo.json"
-var binFilename = "todo.gob"
+
+var fileName = "test-todo"
+var binFilename = "test-todo"
 
 func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
 		execName += ".exe"
 	}
 
+	os.Setenv("TODO_FILENAME", fileName)
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("in TestMain. UserHomeDir error is", err)
+	}
+	fileName = filepath.Join(userHomeDir, fileName) + ".json"
+	binFilename = filepath.Join(userHomeDir, binFilename) + ".gob"
+
 	build := exec.Command("go", "build", "-o", execName)
-	err := build.Run()
+	err = build.Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Cannot build tool %s: %s \n", execName, err)
 		os.Exit(1)
@@ -52,12 +61,7 @@ func TestTodoCLI(t *testing.T) {
 	}
 	cmdPath := filepath.Join(dir, execName)
 
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fileName = filepath.Join(userHomeDir, fileName)
-	binFilename = filepath.Join(userHomeDir, binFilename)
+	//binFilename = filepath.Join(userHomeDir, binFilename)
 
 	addNewTaskTestFunc := func(t *testing.T) {
 		cmd := exec.Command(cmdPath, "-task", task)
@@ -76,7 +80,7 @@ func TestTodoCLI(t *testing.T) {
 		}
 
 		//expected := " Not done: " + task + "\n\n"
-		expected := "  1: " + task + ".  \n"
+		expected := "  1: " + task + ".  \n\n"
 		if expected != string(out) {
 			t.Errorf(" Expected %q, got %q instead\n", expected, string(out))
 		}

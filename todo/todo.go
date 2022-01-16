@@ -135,7 +135,8 @@ func (l ListType) String() string { // implements the fmt.Stringer interface, wh
 
 		if t.Done {
 			prefix = "X "
-			suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
+			//suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
+			suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04") + ".  "
 		}
 		// Need to adjust to 1-origin task numbers
 		formatted += fmt.Sprintf("%s%d: %s%s\n", prefix, i+1, t.Task, suffix)

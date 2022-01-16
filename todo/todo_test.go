@@ -5,6 +5,7 @@ import (
 	"os"
 	"src/todo"
 	"testing"
+	"time"
 )
 
 func TestAdd(t *testing.T) {
@@ -221,7 +222,7 @@ func TestComplete(t *testing.T) {
 	taskName := "New Task"
 	l.Add(taskName)
 	l.Complete(1)
-	expected := "X 1: " + taskName + " completed at \n" // this will always fail.
+	expected := "X 1: " + taskName + " completed at " + time.Now().Format("Jan-02-2006 15:04") + ".  \n"
 	if l.String() != expected {
 		t.Errorf("TestComplete expecting %q, got %q\n", expected, l.String())
 	}
