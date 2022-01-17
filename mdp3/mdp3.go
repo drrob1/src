@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday/v2"
+	"html/template"
 	"io"
 	"os"
 	"os/exec"
@@ -23,25 +24,34 @@ REVISION HISTORY
 17 Jan 22 -- Adding use of a temporary file for outfile file.
              Now called mdp2.go, and will use interfaces to automate tests, which is the next section in the book
              Adding an auto-preview feature to this tool.
+             Now called mdp3.go, and will add templates to generate the header and footer.  The html/template package
+             will be used to create a data-driven template that allows code to be injected at defined places at runtime.
+             This implementation will allow the user to specify their own alternative template file using a flag -t.
 */
 
-const header = `<!DOCTYPE html>
+const DefaultTemplate = `<!DOCTYPE html>
 <html>
       <head>
       <meta http-equiv="content-type" content="text/html; charset=utf-8">
-      <title>Markdown Preview Tool</title>
+      <title>{{ .Title }}</title>
       </head>
   <body>
-`
-const footer = `
+{{ .Body }}
     </body>
-</html>` // here is the error.  If this backtick was on the next line, it would insert the newline char I had to insert myself.
+</html>
+`
+
+type content struct { // Used for the templete.
+	Title string
+	Body  template.HTML // only safe because sanitized by bluemonday.  Without bluemonday, this would be a security risk.
+}
 
 func main() {
 	fmt.Printf("mdp, a Markdown Previewer tool, last modified %s \n", lastModified)
-	var filename string
+	var filename, tFname string
 	flag.StringVar(&filename, "f", "", "Markdown file to preview")
 	skipPreview := flag.Bool("skip", false, "Skip the preview step.")
+	flag.StringVar(&tFname, "t", "", "Alternate template filename")
 	flag.Parse()
 
 	if filename == "" && flag.NArg() == 0 {
@@ -51,7 +61,7 @@ func main() {
 		filename = flag.Arg(0)
 	}
 
-	err := run(filename, os.Stdout, *skipPreview)
+	err := run(filename, tFname, os.Stdout, *skipPreview)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -62,15 +72,17 @@ func main() {
 // And using the run() function allows the use of a defer statement to clean up our resources.  main() relies on os.Exit() which exits immediately and does not execute any defer statements.
 // Here we will use golden files to validate the output, as the results can be complex as they're entire HTML files.
 // A special subdir off of mdp/ is created, called testdata.  This is ignored by the Go build tools.
-func run(filename string, out io.Writer, skipPreview bool) error {
+func run(filename string, tFname string, out io.Writer, skipPreview bool) error {
 	input, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
 
-	htmlData := parseContent(input)
+	htmlData, err := parseContent(input, tFname)
+	if err != nil {
+		return err
+	}
 
-	//outName := fmt.Sprintf("%s.html", filepath.Base(filename)) Temp file allows multiple runs of same input file, likely w/ small changes.
 	temp, err := os.CreateTemp("", "mdp*.html") // This sends the file into /tmp
 	if err != nil {
 		return err
@@ -94,17 +106,33 @@ func run(filename string, out io.Writer, skipPreview bool) error {
 	return preview(outName)
 }
 
-func parseContent(input []byte) []byte {
+func parseContent(input []byte, tFname string) ([]byte, error) {
 	output := blackfriday.Run(input)
 	body := bluemonday.UGCPolicy().SanitizeBytes(output)
 
+	t, err := template.New("mdp").Parse(DefaultTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	if tFname != "" { // alternate template file provided by user
+		t, err = template.ParseFiles(tFname)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	cntnt := content{
+		Title: "Markdown Preview Tool 3",
+		Body:  template.HTML(body),
+	}
+
 	var buffer bytes.Buffer
+	if err := t.Execute(&buffer, cntnt); err != nil {
+		return nil, err
+	}
 
-	buffer.WriteString(header)
-	buffer.Write(body)
-	buffer.WriteString(footer)
-
-	return buffer.Bytes()
+	return buffer.Bytes(), nil
 }
 
 func saveHTML(outFname string, data []byte) error {
