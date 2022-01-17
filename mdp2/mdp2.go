@@ -1,4 +1,4 @@
-// mdp.go.  Markdown Preview tool to generate a valid HTML block, wrap w/ an HTML header and footer, so it can be viewed in a browser.
+// mdp2.go.  Markdown Preview tool to generate a valid HTML block, wrap w/ an HTML header and footer, so it can be viewed in a browser.
 package main
 
 import (
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday/v2"
+	"io"
 	"os"
 )
 
@@ -17,6 +18,7 @@ REVISION HISTORY
 -------- -------
 16 Jan 22 -- Started reading chapter 3 in "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 17 Jan 22 -- Adding use of a temporary file for outfile file.
+             Now called mdp2.go, and will use interfaces to automate tests, which is the next section in the book
 */
 
 const header = `<!DOCTYPE html>
@@ -44,7 +46,7 @@ func main() {
 		filename = flag.Arg(0)
 	}
 
-	err := run(filename)
+	err := run(filename, os.Stdout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -54,7 +56,7 @@ func main() {
 // main() can't be tested using the Go tools, as main() doesn't return anything.  But run() can be, so that's why run() is here as it returns values that can be used in tests.
 // Here we will use golden files to validate the output, as the results can be complex as they're entire HTML files.
 // A special subdir off of mdp/ is created, called testdata.  This is ignored by the Go build tools.
-func run(filename string) error {
+func run(filename string, out io.Writer) error {
 	input, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -72,7 +74,8 @@ func run(filename string) error {
 	}
 
 	outName := temp.Name()
-	fmt.Println(outName)
+	fmt.Fprintln(out, outName)
+
 	return saveHTML(outName, htmlData)
 }
 
