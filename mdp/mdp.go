@@ -33,19 +33,20 @@ const footer = `
 
 func main() {
 	fmt.Printf("mdp, a Markdown Previewer tool, last modified %s \n", lastModified)
-	filename := flag.String("file", "", "Markdown file to preview")
+	var filename string
+	flag.StringVar(&filename, "file", "", "Markdown file to preview")
 	flag.Parse()
 
-	if *filename == "" {
+	if filename == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	if err := run(*filename); err != nil {
+	err := run(filename)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
 }
 
 // main() can't be tested using the Go tools.  But run() can be, so that's why run() is here as it returns values that can be used in tests.
