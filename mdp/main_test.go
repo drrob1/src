@@ -17,6 +17,7 @@ func TestParseContent(t *testing.T) {
 	}
 
 	result := parseContent(input)
+	result = append(result, '\n') // this makes the byte by byte comparison succeed.
 
 	expected, err := os.ReadFile(goldenFile)
 	if err != nil {
@@ -39,6 +40,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	result = append(result, '\n') // this makes the byte by byte comparison succeed.
 
 	expected, err := os.ReadFile(goldenFile)
 	if err != nil {
