@@ -28,6 +28,8 @@ func TestMain(m *testing.M) {
 	fileName = filepath.Join(userHomeDir, fileName) + ".json"
 	binFilename = filepath.Join(userHomeDir, binFilename) + ".gob"
 
+	// We are compiling the tool and running it in the test cases because this code is in main() which can't be tested
+	// because it doesn't return anything that can be tested using the Go tools.
 	build := exec.Command("go", "build", "-o", execName)
 	err = build.Run()
 	if err != nil {

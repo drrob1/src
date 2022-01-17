@@ -20,9 +20,10 @@ REVISION HISTORY
              Then added the String method, but that had to be a value receiver to work as like in the book.
              Then added use of TODO_FILENAME environment variable.
 16 Jan 22 -- Added stdin as a source.  And changed name of string task flag to a boolean add flag.
+18 Jan 22 -- Added default actions if no switch is provided.  If there are arguments then add as a task, if not list tasks.
 */
 
-const lastModified = "16 Jan 2022"
+const lastModified = "18 Jan 2022"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
@@ -165,7 +166,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
 		}
 	default: // task add
-		//                                                         fmt.Fprintf(os.Stderr, " No valid option was set.\n")
 		if flag.NArg() > 0 {
 			tsk := strings.Join(flag.Args(), " ")
 			l.Add(tsk)
@@ -177,7 +177,12 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
 			}
-
+		} else {
+			if fileExists {
+				fmt.Println(l)
+			} else {
+				fmt.Fprintf(os.Stderr, " Cannot list todo files (%s or %s) as they cannot be found.\n", fullFilenameJson, fullFilenameBin)
+			}
 		}
 	}
 }
