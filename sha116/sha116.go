@@ -281,7 +281,7 @@ func main() {
 			fmt.Print(" Matched.")
 		} else {
 			fmt.Print(" Not matched.")
-		}                  /* if hashes */
+		} /* if hashes */
 		TargetFile.Close() // Close the handle to allow opening a target from the next line, if there is one.
 		fmt.Println()
 		fmt.Println()
