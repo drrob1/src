@@ -119,14 +119,19 @@ func main() {
 			os.Exit(0)
 		}
 		i, err := strconv.Atoi(ans)
-		if err == nil {
+		if err == nil && i < len(filenames) {
 			Filename = filenames[i]
 		} else {
 			s := strings.ToUpper(ans)
 			s = strings.TrimSpace(s)
 			s0 := s[0]
 			i = int(s0 - 'A')
-			Filename = filenames[i]
+			if i < len(filenames) {
+				Filename = filenames[i]
+			}
+		}
+		if len(Filename) == 0 { // if entered choice is out of range, switch to use 0.  It's inelegant to panic.
+			Filename = filenames[0]
 		}
 		fmt.Println(" Picked filename is", Filename)
 	} else { // will use filename entered on commandline
@@ -276,7 +281,7 @@ func main() {
 			fmt.Print(" Matched.")
 		} else {
 			fmt.Print(" Not matched.")
-		} /* if hashes */
+		}                  /* if hashes */
 		TargetFile.Close() // Close the handle to allow opening a target from the next line, if there is one.
 		fmt.Println()
 		fmt.Println()
