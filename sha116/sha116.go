@@ -50,7 +50,7 @@ import (
   24 Jan 22 -- Adding a help message using the flag package.  And since I recently changed the interface for filepicker, I have to fix that here too.
 */
 
-const LastCompiled = "24 Jan 2022"
+const LastCompiled = "25 Jan 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -86,7 +86,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Hash comparer, last modified %s.\n", LastCompiled)
 		fmt.Fprintf(flag.CommandLine.Output(), " Filename to compare to its hash are on the same line in either order.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " File of hashes can be given on the command line, or filepicker will be called to pick it.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " Lines of the hashes file are ignored if <= 10 characters, or begin w/ ; or #.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Lines of the hashes file are ignored if <= 10 characters, or begin wtih ';' or '#'.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " And only first 2 tokens on a line are read.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
 		fmt.Fprintln(flag.CommandLine.Output())
