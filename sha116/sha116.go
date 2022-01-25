@@ -108,7 +108,7 @@ func main() {
 			os.Exit(1)
 		}
 		for i := 0; i < min(len(filenames), 20); i++ {
-			fmt.Println("filename[", i, "] is", filenames[i])
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
 		n, err := fmt.Scanln(&ans)
