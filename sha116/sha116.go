@@ -1,4 +1,4 @@
-package main   // for sha116.go
+package main // for sha116.go
 
 import (
 	"bytes"
@@ -7,26 +7,26 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"hash"
 	"io"
 	"os"
 
-	"runtime"
-	"strconv"
-	"strings"
 	"src/filepicker"
 	"src/tknptr"
+	"strconv"
+	"strings"
 )
 
 /*
   REVISION HISTORY
   ----------------
-   6 Apr 13 -- First modified version of module.  I will use VLI to compare all digits of the hashes.
+   6 Apr 13 -- M2:  First modified version of module.  I will use VLI to compare all digits of the hashes.
   23 Apr 13 -- Fixed problem of a single line in the hashes file, that does not contain an EOL character, causes
                 an immediate return without processing of the characters just read in.
   24 Apr 13 -- Added output of which file either matches or does not match.
-  19 Sep 16 -- Finished conversion to Go, that was started 13 Sep 16.  Added the removed of '*' which is part of a std linux formated hash file.  And I forgot that
+  19 Sep 16 -- Finished conversion to Go, that was started 13 Sep 16.  Added the removal of '*' which is part of a std linux formatted hash file.  And I forgot that
                  the routine allowed either order in the file.  If the token has a '.' I assume it is a filename, else it is a hash value.
   21 Sep 16 -- Fixed the case issue in tokenize.GetToken.  Edited code here to correspond to this fix.
   25 Nov 16 -- Need to not panic when target file is not found, only panic when hash file is not found.
@@ -47,9 +47,10 @@ import (
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using os.ReadAll, using go 1.16.
    7 Mar 21 -- Added use of strings.TrimSpace()
    8 Apr 21 -- Converting to module version of ~/go/src.
+  24 Jan 22 -- Adding a help message using the flag package.  And since I recently changed the interface for filepicker, I have to fix that here too.
 */
 
-const LastCompiled = "8 Apr 2021"
+const LastCompiled = "24 Jan 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -75,20 +76,37 @@ func main() {
 	var hasher hash.Hash
 	var FileSize int64
 
-	fmt.Print(" sha.go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-	fmt.Println(".  Last altered", LastCompiled, ", compiled using", runtime.Version())
 	workingdir, _ := os.Getwd()
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
-	fmt.Println()
 
+	// flag help message
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " Hash comparer, last modified %s.\n", LastCompiled)
+		fmt.Fprintf(flag.CommandLine.Output(), " Filename to compare to its hash are on the same line in either order.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " File of hashes can be given on the command line, or filepicker will be called to pick it.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Lines of the hashes file are ignored if <= 10 characters, or begin w/ ; or #.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " And only first 2 tokens on a line are read.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
+		fmt.Fprintln(flag.CommandLine.Output())
+		flag.PrintDefaults()
+	}
+	var verboseFlag bool
+	flag.BoolVar(&verboseFlag, "v", false, " verbose mode.")
+	flag.Parse()
+
+	//fmt.Print(" sha.go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
+	//fmt.Println(".  Last altered", LastCompiled, ", compiled using", runtime.Version())
 
 	// filepicker stuff.
 
-	if len(os.Args) <= 1 { // need to use filepicker
-		filenames := filepicker.GetFilenames("*.sha*")
+	if flag.NArg() == 0 { // need to use filepicker
+		filenames, err := filepicker.GetFilenames("*.sha*")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, " Error from filepicker is", err)
+			os.Exit(1)
+		}
 		for i := 0; i < min(len(filenames), 20); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
@@ -113,40 +131,39 @@ func main() {
 		fmt.Println(" Picked filename is", Filename)
 	} else { // will use filename entered on commandline
 		//            Filename = getcommandline.GetCommandLineString()  removed 3/3/21, as os.Args is fine.
-                Filename = os.Args[1]
+		//Filename = os.Args[1]
+		Filename = flag.Arg(0)
 	}
 
 	fmt.Println()
 
-
 	// Now ignores extension, always going by hash length.
-
 
 	// Read and parse the file with the hashes.
 
-        filebyteslice := make([]byte, 0, 2000)
-        filebyteslice, err := os.ReadFile(Filename)
-        if os.IsNotExist(err) {
-            fmt.Println(Filename, " does not exist.  Exiting.")
-            os.Exit(1)
-        } else if err != nil {
-            fmt.Fprintln(os.Stderr, err)
-            os.Exit(1)
-        }
-        bytesbuffer := bytes.NewBuffer(filebyteslice)
+	//filebyteslice := make([]byte, 0, 2000)
+	fileByteSlice, err := os.ReadFile(Filename)
+	if os.IsNotExist(err) {
+		fmt.Println(Filename, " does not exist.  Exiting.")
+		os.Exit(1)
+	} else if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	bytesBuffer := bytes.NewBuffer(fileByteSlice)
 
 	for { /* to read multiple lines */
 		FileSize = 0
-		WhichHash = undetermined  // reset it for this next line, allowing multiple types of hashes in same file.
+		WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
 
-		inputline, err := bytesbuffer.ReadString('\n')
+		inputline, err := bytesBuffer.ReadString('\n')
 		if err == io.EOF && len(inputline) == 0 { // reached EOF condition, there are no more lines to read, and no line
 			break
 		} else if len(inputline) == 0 && err != nil {
 			fmt.Fprintln(os.Stderr, "While reading from the HashesFile:", err)
 			os.Exit(1)
 		}
-		inputline = strings.TrimSpace(inputline)  // trims off the trailing newline
+		inputline = strings.TrimSpace(inputline) // trims off the trailing newline
 
 		if strings.HasPrefix(inputline, ";") || strings.HasPrefix(inputline, "#") || (len(inputline) <= 10) {
 			continue
@@ -156,7 +173,7 @@ func main() {
 		tokenPtr.SetMapDelim('*')
 		FirstToken, EOL := tokenPtr.GetTokenString(false)
 		if EOL {
-			fmt.Fprintln(os.Stderr," EOL while getting 1st token in the hashing file.  Skipping to next line.")
+			fmt.Fprintln(os.Stderr, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
 		hashlength := 0
@@ -191,10 +208,9 @@ func main() {
 			TargetFilename = (SecondToken.Str)
 		} /* if have filename first or hash value first */
 
-
 		//   now to compute the hash, compare them, and output results
 
-		// Create Hash Section 
+		// Create Hash Section
 		TargetFile, err := os.Open(TargetFilename)
 		if os.IsNotExist(err) {
 			fmt.Fprintln(os.Stderr, TargetFilename, " does not exist.  Skipping.")
