@@ -121,11 +121,12 @@ type colorizedStr struct {
 	str   string
 }
 
+const defaultLinesWin = 50
+const defaultLinesLinux = 40
+const maxWidth = 300
+const minWidth = 90
+
 func main() {
-	const defaultlineswin = 50
-	const defaultlineslinux = 40
-	const maxwidth = 300
-	const minwidth = 90
 	var dsrtparam DsrtParamType
 	var numoflines int
 	var userptr *user.User // from os/user
@@ -193,8 +194,8 @@ func main() {
 		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 		if err != nil {
 			autoDefaults = false
-			autoheight = defaultlineslinux
-			autowidth = minwidth
+			autoheight = defaultLinesLinux
+			autowidth = minWidth
 		}
 	}
 
@@ -206,7 +207,7 @@ func main() {
 		} else if autoheight > 0 {
 			numoflines = autoheight - 7
 		} else {
-			numoflines = defaultlineslinux
+			numoflines = defaultLinesLinux
 		}
 	} else if winflag {
 		systemStr = "Windows"
@@ -215,12 +216,12 @@ func main() {
 		} else if autoheight > 0 {
 			numoflines = autoheight - 7
 		} else {
-			numoflines = defaultlineswin
+			numoflines = defaultLinesWin
 		}
 	} else {
 		fmt.Fprintln(os.Stderr, " Not linux, not windows, should not be able to compile and run this.  WTF?")
 		systemStr = "Unknown"
-		numoflines = defaultlineslinux
+		numoflines = defaultLinesLinux
 	}
 
 	sepstring := string(filepath.Separator)
@@ -353,12 +354,12 @@ func main() {
 		w = dsrtparam.w
 	}
 	if autowidth > 0 {
-		if w <= 0 || w > maxwidth { // w not set by flag.Parse or dsw environ var
+		if w <= 0 || w > maxWidth { // w not set by flag.Parse or dsw environ var
 			w = autowidth
 		}
 	} else {
-		if w <= 0 || w > maxwidth { // if w is zero then there is no dsw environment variable to set it.
-			w = minwidth
+		if w <= 0 || w > maxWidth { // if w is zero then there is no dsw environment variable to set it.
+			w = minWidth
 		}
 	}
 
@@ -413,6 +414,8 @@ func main() {
 			fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
 				dsrtparam.numlines, dsrtparam.w, dsrtparam.reverseflag, dsrtparam.sizeflag, dsrtparam.dirlistflag, dsrtparam.filenamelistflag,
 				dsrtparam.totalflag)
+			fmt.Printf(" glob pattern = %s.\n", flag.Arg(0))
+			fmt.Printf(" Num of args = %d; Len of params = %d; Params: %v\n", flag.NArg(), len(flag.Args()), flag.Args())
 		}
 	}
 
@@ -462,6 +465,10 @@ func main() {
 		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 	}
 
+	if testFlag {
+		fmt.Printf(" commandline = %s\n", commandline)
+	}
+
 	if winflag && len(commandline) > 0 { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
 		if strings.ContainsRune(commandline, ':') {
 			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
@@ -471,12 +478,18 @@ func main() {
 		CleanDirName, CleanFileName = filepath.Split(commandline)
 		CleanDirName = filepath.Clean(CleanDirName)
 		CleanFileName = filepath.Clean(commandline)
-		filenamesSliceOfStrings, err := filepath.Glob(CleanFileName)
+		filenamesSliceOfGlobStrings, err := filepath.Glob(CleanFileName)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
 
-		for _, s := range filenamesSliceOfStrings {
+		if testFlag {
+			fmt.Printf(" CleanDirName = %s; CleanFileName = %s; Len of filesnamesSliceOfStrings = %d, slice is %v\n",
+				CleanDirName, CleanFileName, len(filenamesSliceOfGlobStrings), filenamesSliceOfGlobStrings)
+		}
+
+		files = make(FISlice, 0, len(filenamesSliceOfGlobStrings))
+		for _, s := range filenamesSliceOfGlobStrings {
 			fi, err := os.Lstat(s)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
@@ -485,6 +498,10 @@ func main() {
 			files = append(files, fi)
 		}
 		havefiles = true
+
+		if testFlag {
+			fmt.Printf(" Len of files = %d; files slice = %v\n", len(files), files)
+		}
 	}
 
 	if len(CleanDirName) == 0 {
@@ -523,7 +540,9 @@ func main() {
 		sort.Slice(files, sortfcn)
 	}
 
-	fmt.Println(" Dirname is", CleanDirName)
+	if testFlag {
+		fmt.Println(" Dirname is", CleanDirName)
+	}
 
 	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
 	if *filterFlag {
@@ -564,7 +583,7 @@ func main() {
 
 	if linuxflag {
 		for _, f := range files {
-			//modTimeStr := f.ModTime().Format("Jan-02-2006_15:04")
+			//                                                     modTimeStr := f.ModTime().Format("Jan-02-2006_15:04")
 			modTimeStr := f.ModTime().Format("Jan-02-2006_15:04")
 			nameStr := f.Name() // truncStr(f.Name(), w)
 			sizestr := ""
@@ -621,7 +640,9 @@ func main() {
 	} else if winflag {
 		for _, f := range files {
 			showthis := false
-			NAME := strings.ToLower(f.Name())
+			//NAME := strings.ToLower(f.Name())  This is glob, using ToLower is not correct.
+			NAME := f.Name()
+
 			nameStr := f.Name() // truncStr(f.Name(), w)
 			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
 			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
