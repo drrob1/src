@@ -21,7 +21,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "26 Oct 2022"
+const LastAltered = "27 Oct 2022"
 
 /*
 Revision History
@@ -641,29 +641,27 @@ func main() {
 		for _, f := range files {
 			showthis := false
 			//NAME := strings.ToLower(f.Name())  This is glob, using ToLower is not correct.
-			NAME := f.Name()
-
 			nameStr := f.Name() // truncStr(f.Name(), w)
 			// trying to figure out how to implement the noextensionflag.  I'm thinking that I will create a flag that will
 			// be true if this file is to be printed, ie, either the flag is off or the flag is on and there is a '.' in the filename.
 			// This way, the condition below can be BOOL && thisNewFlag
-			BOOL, _ := filepath.Match(CleanFileName, NAME)
-			if BOOL {
-				showthis = true
-				if noExtensionFlag && strings.ContainsRune(NAME, '.') {
+			//BOOL, _ := filepath.Match(CleanFileName, NAME)
+			//if true { // used to be if BOOL, but that's now redundant by the use of Glob
+			showthis = true
+			if noExtensionFlag && strings.ContainsRune(nameStr, '.') {
+				showthis = false
+			}
+			if *excludeFlag {
+				if flag := excludeRegex.MatchString(strings.ToLower(nameStr)); flag {
 					showthis = false
 				}
-				if *excludeFlag {
-					if flag := excludeRegex.MatchString(strings.ToLower(NAME)); flag {
-						showthis = false
-					}
-				}
-				if filterAmt > 0 {
-					if f.Size() < int64(filterAmt) {
-						showthis = false
-					}
+			}
+			if filterAmt > 0 {
+				if f.Size() < int64(filterAmt) {
+					showthis = false
 				}
 			}
+			//}
 
 			//			if BOOL, _ := filepath.Match(CleanFileName, NAME); BOOL {
 			if showthis {
