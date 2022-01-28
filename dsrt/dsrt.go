@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -11,7 +10,6 @@ import (
 	"golang.org/x/term"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -22,7 +20,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "16 Jan 2022"
+const LastAltered = "28 Jan 2022"
 
 /*
 Revision History
@@ -102,10 +100,11 @@ Revision History
 22 Oct 21 -- Updating the idiom that uses bytes.buffer.
 16 Jan 22 -- Updating how the help message is created, learned from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 26 Jan 22 -- Adding a verbose flag
+27 Jan 22 -- Full refactoring to use a lot more platform specific code instead of all the if windows or if linux stuff.
 */
 
 // FISlice is a FileInfo slice, as in os.FileInfo
-type FISlice []os.FileInfo
+type FISliceType []os.FileInfo
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
@@ -113,34 +112,38 @@ type DsrtParamType struct {
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
 }
 
-func main() {
-	const defaultlineswin = 50
-	const defaultlineslinux = 40
-	const maxwidth = 300
-	const minwidth = 90
+//const defaultLinesWin = 50
+//const defaultLinesLinux = 40
+const defaultHeight = 40
+const maxWidth = 300
+const minWidth = 90
 
-	var dsrtparam DsrtParamType
-	var numoflines int
-	var userptr *user.User // from os/user
-	var files FISlice
-	//	var filesDate FISliceDate  \ unused as of 9/8/19.
-	//	var filesSize FISliceSize  /
+var ShowGrandTotal, noExtensionFlag, excludeFlag, LongFileSizeList, FilenameToBeListed bool
+var filterAmt int
+var filterStr string
+var excludeRegex *regexp.Regexp
+
+func main() {
+	var dsrtParam DsrtParamType
+	var numOfLines int
+	var userPtr *user.User // from os/user
+	var files FISliceType
 	var err error
 	var count int
+	var autoWidth, autoHeight int
 	var SizeTotal, GrandTotal int64
 	var GrandTotalCount int
-	var havefiles bool
-	var commandline string
+	var haveFiles bool
+	var commandLine string
 	var directoryAliasesMap dirAliasMapType
 	var excludeRegexPattern string
-	var autowidth, autoheight int
 
 	uid := 0
 	gid := 0
 	systemStr := ""
 
 	// environment variable processing.  If present, these will be the defaults.
-	dsrtparam = ProcessEnvironString() // This is a function below.
+	dsrtParam = ProcessEnvironString() // This is a function below.
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
@@ -148,88 +151,78 @@ func main() {
 		runtime.Version(), ".")
 	fmt.Println()
 
-	autoDefaults := term.IsTerminal(int(os.Stdout.Fd())) // This now works on Windows, too
-	if !autoDefaults {
-		if winflag {
-			comspec, ok := os.LookupEnv("ComSpec")
-			if ok {
-				//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
-				bytesbuf := bytes.NewBuffer(make([]byte, 0, 200))
-				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
-				tcc.Stdout = bytesbuf
-				tcc.Run()
-				colstr := bytesbuf.String()
-				lines := strings.Split(colstr, "\n")
-				trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
-				autowidth, err = strconv.Atoi(trimmedLine)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
-				}
+	//autoDefaults := term.IsTerminal(int(os.Stdout.Fd())) // This now works on Windows, too
+	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
+	if err != nil {
+		//autoDefaults = false
+		autoHeight = defaultHeight
+		autoWidth = minWidth
+	}
+	/*
+		if !autoDefaults {
+			if winflag {
+				comspec, ok := os.LookupEnv("ComSpec")
+				if ok {
+					//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+					bytesbuf := bytes.NewBuffer(make([]byte, 0, 200))
+					tcc := exec.Command(comspec, "-C", "echo", "%_columns")
+					tcc.Stdout = bytesbuf
+					tcc.Run()
+					colstr := bytesbuf.String()
+					lines := strings.Split(colstr, "\n")
+					trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
+					autoWidth, err = strconv.Atoi(trimmedLine)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
+					}
 
-				bytesbuf.Reset()
-				tcc = exec.Command(comspec, "-C", "echo", "%_rows")
-				tcc.Stdout = bytesbuf
-				tcc.Run()
-				rowstr := bytesbuf.String()
-				lines = strings.Split(rowstr, "\n")
-				trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
-				autoheight, err = strconv.Atoi(trimmedLine)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
+					bytesbuf.Reset()
+					tcc = exec.Command(comspec, "-C", "echo", "%_rows")
+					tcc.Stdout = bytesbuf
+					tcc.Run()
+					rowstr := bytesbuf.String()
+					lines = strings.Split(rowstr, "\n")
+					trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
+					autoHeight, err = strconv.Atoi(trimmedLine)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
+					}
+				} else {
+					fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
 				}
-
 			} else {
-				fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
+				fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
 			}
-		} else {
-			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
 		}
-	} else {
-		autowidth, autoheight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
-		if err != nil {
-			autoDefaults = false
-			autoheight = defaultlineslinux
-			autowidth = minwidth
-		}
+	*/
+
+	if dsrtParam.numlines > 0 { // if set, dsrtParam will take priority over the auto settings.
+		numOfLines = dsrtParam.numlines
 	}
 
-	if linuxflag {
-		systemStr = "Linux"
-		files = make([]os.FileInfo, 0, 500)
-		if dsrtparam.numlines > 0 {
-			numoflines = dsrtparam.numlines
-		} else if autoheight > 0 {
-			numoflines = autoheight - 7
+	/*	if linuxflag {
+			systemStr = "Linux"
+			files = make([]os.FileInfo, 0, 500)
+		} else if winflag {
+			systemStr = "Windows"
 		} else {
-			numoflines = defaultlineslinux
+			systemStr = "Unknown"
+			numOfLines = defaultHeight
 		}
-	} else if winflag {
-		systemStr = "Windows"
-		if dsrtparam.numlines > 0 {
-			numoflines = dsrtparam.numlines
-		} else if autoheight > 0 {
-			numoflines = autoheight - 7
-		} else {
-			numoflines = defaultlineswin
-		}
-	} else {
-		systemStr = "Unknown"
-		numoflines = defaultlineslinux
-	}
+	*/
 
-	sepstring := string(filepath.Separator)
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
 		HomeDirStr = ""
 	}
-	HomeDirStr = HomeDirStr + sepstring
+	HomeDirStr = HomeDirStr + string(filepath.Separator)
 
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
 		gid = os.Getgid() // int
-		userptr, err = user.Current()
+		userPtr, err = user.Current()
 		if err != nil {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
@@ -250,9 +243,9 @@ func main() {
 	var RevFlag bool
 	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier for numofLines") // Ptr
+	var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier for numOfLines") // Ptr
 	var NLines int
-	flag.IntVar(&NLines, "N", numoflines, "number of lines to display") // Value
+	flag.IntVar(&NLines, "N", numOfLines, "number of lines to display, and takes priority over the auto settings.") // Value
 
 	//var helpflag = flag.Bool("h", false, "print help message") // pointer
 	//var HelpFlag bool
@@ -278,11 +271,9 @@ func main() {
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
-	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
+	flag.BoolVar(&excludeFlag, "x", false, "exclude regex entered after prompt")
+	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.")
 
-	var filterAmt int
-	var filterStr string
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
@@ -299,29 +290,28 @@ func main() {
 		fmt.Println()
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
-				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
-			fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d. \n", autoDefaults, autoheight, autowidth)
+				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
+			fmt.Printf(" Autodefault has been deleted; autoheight=%d, autowidth=%d. \n", autoHeight, autoWidth)
 			fmt.Printf(" dsrtparam numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
-				dsrtparam.numlines, dsrtparam.reverseflag, dsrtparam.sizeflag, dsrtparam.dirlistflag, dsrtparam.filenamelistflag,
-				dsrtparam.totalflag)
+				dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
+				dsrtParam.totalflag)
 		}
 	}
 
-	Reverse := *revflag || RevFlag || dsrtparam.reverseflag
+	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
 
-	SizeSort := *sizeflag || SizeFlag || dsrtparam.sizeflag
+	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
-	NumLines := numoflines
+	NumLines := numOfLines
 	if NLines > 0 { // -N option switch takes priority over autoheight
 		NumLines = NLines
 	}
 
 	NumLines *= *nscreens // if nscreens == 1, that's not a problem after all.
 
-	noExtensionFlag := *extensionflag || *extflag
-	var excludeRegex *regexp.Regexp
+	noExtensionFlag = *extensionflag || *extflag
 
 	if len(excludeRegexPattern) > 0 {
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
@@ -329,10 +319,10 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
-			*excludeFlag = false
+			excludeFlag = false
 		}
-		*excludeFlag = true
-	} else if *excludeFlag {
+		excludeFlag = true
+	} else if excludeFlag {
 		ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
@@ -340,19 +330,18 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
-			*excludeFlag = false
+			excludeFlag = false
 		}
 	}
 
-	Dirlist := *DirListFlag || FilenameListFlag || dsrtparam.dirlistflag || dsrtparam.filenamelistflag // if -D entered then this expression also needs to be true.
-	FilenameList := !(FilenameListFlag || dsrtparam.filenamelistflag)                                  // need to reverse the flag because D means suppress the output of filenames.
-	LongFileSizeList := *longflag
+	Dirlist := *DirListFlag || FilenameListFlag || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // if -D entered then this expression also needs to be true.
+	FilenameToBeListed = !(FilenameListFlag || dsrtParam.filenamelistflag)                             // need to reverse the flag because D means suppress the output of filenames.
+	LongFileSizeList = *longflag
 
-	ShowGrandTotal := *TotalFlag || dsrtparam.totalflag // added 09/12/2018 12:32:23 PM
+	ShowGrandTotal = *TotalFlag || dsrtParam.totalflag // added 09/12/2018 12:32:23 PM
 
 	CleanDirName := ""
 	CleanFileName := ""
-	filenamesStringSlice := flag.Args() // Intended to process linux command line filenames.
 
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
@@ -388,94 +377,6 @@ func main() {
 		}
 	}
 
-	if linuxflag && len(filenamesStringSlice) > 0 { // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
-		paramIsDir := false
-		if len(filenamesStringSlice) == 1 {
-			// need to determine if the 1 param on command line is a directory
-			fi, err := os.Lstat(filenamesStringSlice[0])
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				fmt.Println()
-				fmt.Println()
-				os.Exit(1)
-			}
-
-			paramIsDir = fi.Mode().IsDir()
-			if testFlag {
-				fmt.Println(" have only 1 param on line. filenameStringSlice=", filenamesStringSlice[0], "paramIsDir=", paramIsDir)
-				fmt.Println()
-			}
-			if paramIsDir {
-				CleanDirName = fi.Name()
-			} else { // not a param so this one file needs to be displayed.
-				files = append(files, fi)
-				havefiles = true
-			}
-		} else {                                     // bash has placed more than one file in the command line, ie, len(filenameStringSlice) > 1
-			for _, s := range filenamesStringSlice { // fill a slice of fileinfo
-				fi, err := os.Lstat(s)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					continue
-				}
-
-				files = append(files, fi)
-				if fi.Mode().IsRegular() && ShowGrandTotal {
-					GrandTotal += fi.Size()
-					GrandTotalCount++
-				}
-			}
-			sort.Slice(files, sortfcn)
-			havefiles = true
-		}
-
-	} else { // either no params were present on the command line or this is running under Windows and may have a command line param.
-		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
-		commandline = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
-	}
-
-	if winflag && len(commandline) > 0 { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
-		if strings.ContainsRune(commandline, ':') {
-			commandline = ProcessDirectoryAliases(directoryAliasesMap, commandline)
-		} else if strings.Contains(commandline, "~") { // this can only contain a ~ on Windows.
-			commandline = strings.Replace(commandline, "~", HomeDirStr, 1)
-		}
-		CleanDirName, CleanFileName = filepath.Split(commandline)
-		CleanDirName = filepath.Clean(CleanDirName)
-		CleanFileName = strings.ToLower(CleanFileName)
-	}
-
-	if len(CleanDirName) == 0 {
-		workingdir, _ := os.Getwd()
-		if testFlag {
-			fmt.Println(" CleanDirName is empty, and will be ", workingdir)
-		}
-		CleanDirName = workingdir
-	}
-
-	if len(CleanFileName) == 0 {
-		CleanFileName = "*"
-	}
-
-	if !havefiles {
-		files, err = ioutil.ReadDir(CleanDirName)
-		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-			fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-			files = MyReadDir(CleanDirName)
-		}
-		if ShowGrandTotal { // this optimization added 2/27/21.
-			for _, f := range files {
-				if f.Mode().IsRegular() {
-					GrandTotal += f.Size()
-					GrandTotalCount++
-				}
-			}
-		}
-		sort.Slice(files, sortfcn)
-	}
-
-	fmt.Println(" Dirname is", CleanDirName)
-
 	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
 	if *filterFlag {
 		filterAmt = 1_000_000
@@ -501,6 +402,96 @@ func main() {
 		}
 	}
 
+	fileInfos := processCommandLine(sortfcn)
+
+	if linuxflag && len(filenamesStringSlice) > 0 { // linux command line processing for filenames.  This condition had to be fixed July 4, 2019.
+		paramIsDir := false
+		if len(filenamesStringSlice) == 1 {
+			// need to determine if the 1 param on command line is a directory
+			fi, err := os.Lstat(filenamesStringSlice[0])
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				fmt.Println()
+				fmt.Println()
+				os.Exit(1)
+			}
+
+			paramIsDir = fi.Mode().IsDir()
+			if testFlag {
+				fmt.Println(" have only 1 param on line. filenameStringSlice=", filenamesStringSlice[0], "paramIsDir=", paramIsDir)
+				fmt.Println()
+			}
+			if paramIsDir {
+				CleanDirName = fi.Name()
+			} else { // not a param so this one file needs to be displayed.
+				files = append(files, fi)
+				haveFiles = true
+			}
+		} else { // bash has placed more than one file in the command line, ie, len(filenameStringSlice) > 1
+			for _, s := range filenamesStringSlice { // fill a slice of fileinfo
+				fi, err := os.Lstat(s)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					continue
+				}
+
+				files = append(files, fi)
+				if fi.Mode().IsRegular() && ShowGrandTotal {
+					GrandTotal += fi.Size()
+					GrandTotalCount++
+				}
+			}
+			sort.Slice(files, sortfcn)
+			haveFiles = true
+		}
+
+	} else { // either no params were present on the command line or this is running under Windows and may have a command line param.
+		// commandline = filenamesStringSlice[0] -- this panics if there are no params on the line.
+		commandLine = flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+	}
+
+	if winflag && len(commandLine) > 0 { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
+		if strings.ContainsRune(commandLine, ':') {
+			commandLine = ProcessDirectoryAliases(directoryAliasesMap, commandLine)
+		} else if strings.Contains(commandLine, "~") { // this can only contain a ~ on Windows.
+			commandLine = strings.Replace(commandLine, "~", HomeDirStr, 1)
+		}
+		CleanDirName, CleanFileName = filepath.Split(commandLine)
+		CleanDirName = filepath.Clean(CleanDirName)
+		CleanFileName = strings.ToLower(CleanFileName)
+	}
+
+	if len(CleanDirName) == 0 {
+		workingdir, _ := os.Getwd()
+		if testFlag {
+			fmt.Println(" CleanDirName is empty, and will be ", workingdir)
+		}
+		CleanDirName = workingdir
+	}
+
+	if len(CleanFileName) == 0 {
+		CleanFileName = "*"
+	}
+
+	if !haveFiles {
+		files, err = ioutil.ReadDir(CleanDirName)
+		if err != nil { // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+			fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+			files = MyReadDir(CleanDirName)
+		}
+		if ShowGrandTotal { // this optimization added 2/27/21.
+			for _, f := range files {
+				if f.Mode().IsRegular() {
+					GrandTotal += f.Size()
+					GrandTotalCount++
+				}
+			}
+		}
+		sort.Slice(files, sortfcn)
+	}
+
+	fmt.Println(" Dirname is", CleanDirName)
+
 	if testFlag {
 		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
 	}
@@ -519,7 +510,7 @@ func main() {
 				if noExtensionFlag && strings.ContainsRune(f.Name(), '.') {
 					showthis = false
 				}
-				if *excludeFlag {
+				if excludeFlag {
 					if BOOL := excludeRegex.MatchString(strings.ToLower(f.Name())); BOOL {
 						showthis = false
 					}
