@@ -2,8 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -14,7 +18,7 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 // processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine(sortfcn func(i, j int) bool) FISliceType {
+func getFileInfosFromCommandLine() FISliceType {
 	var GrandTotal int64
 	var GrandTotalCount int
 	var fileInfos FISliceType
@@ -42,11 +46,17 @@ func getFileInfosFromCommandLine(sortfcn func(i, j int) bool) FISliceType {
 		if strings.ContainsRune(pattern, ':') {
 			directoryAliasesMap = getDirectoryAliases()
 			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
-		} else if strings.Contains(commandLine, "~") { // this can only contain a ~ on Windows.
+		} else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows.
 			pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
 		}
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
+		if dirName == "" {
+			dirName = "."
+		}
+		if testFlag {
+			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+		}
 		d, err := os.Open(dirName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
@@ -66,16 +76,22 @@ func getFileInfosFromCommandLine(sortfcn func(i, j int) bool) FISliceType {
 				continue
 			}
 
-			if includeThis(fi) && filepath.Match(pattern, strings.ToLower(f)) { // has to match pattern, size criteria and not match an exclude pattern.
+			match, er := filepath.Match(pattern, strings.ToLower(f))
+			if er != nil {
+				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
+				continue
+			}
+
+			if includeThis(fi) && match { // has to match pattern, size criteria and not match an exclude pattern.
 				fileInfos = append(fileInfos, fi)
 			}
-			if fi.Mode().IsRegular() && ShowGrandTotal {
+			if fi.Mode().IsRegular() && showGrandTotal {
 				GrandTotal += fi.Size()
 				GrandTotalCount++
 			}
-		}
-	}
-	sort.Slice(fileInfos, sortfcn)
+		} // for f ranges over filenames
+	} // if flag.NArgs()
+
 	return fileInfos
 
 } // end getFileInfosFromCommandLine
@@ -87,7 +103,7 @@ func displayFileInfos(fiSlice FISliceType) {
 		s := f.ModTime().Format("Jan-02-2006_15:04:05")
 		sizestr := ""
 		if filenameToBeListedFlag && f.Mode().IsRegular() {
-			SizeTotal += f.Size()
+			sizeTotal += f.Size()
 			if longFileSizeListFlag {
 				sizestr = strconv.FormatInt(f.Size(), 10)
 				if f.Size() > 100_000 {
@@ -100,15 +116,15 @@ func displayFileInfos(fiSlice FISliceType) {
 				sizestr, color = getMagnitudeString(f.Size())
 				ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
 			}
-			count++
+			lnCount++
 		} else if IsSymlink(f.Mode()) {
 			fmt.Printf("%17s %s <%s>\n", sizestr, s, f.Name())
-			count++
-		} else if Dirlist && f.IsDir() {
+			lnCount++
+		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
-			count++
+			lnCount++
 		}
-		if count >= NumLines {
+		if lnCount >= numOfLines {
 			break
 		}
 
