@@ -102,6 +102,7 @@ func displayFileInfos(fiSlice FISliceType) {
 		sizestr := ""
 		usernameStr, groupnameStr := GetUserGroupStr(f) // util function in platform specific removed Oct 4, 2019 and then unremoved.
 		if filenameToBeListedFlag && f.Mode().IsRegular() {
+			sizeTotal += f.Size()
 			if longFileSizeListFlag {
 				sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
 				if f.Size() > 100000 {
@@ -125,6 +126,5 @@ func displayFileInfos(fiSlice FISliceType) {
 		if lnCount >= numOfLines {
 			break
 		}
-		sizeTotal += f.Size()
 	}
 }
