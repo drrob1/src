@@ -19,8 +19,6 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfosFromCommandLine() FISliceType {
-	var GrandTotal int64
-	var GrandTotalCount int
 	var fileInfos FISliceType
 	//var workingDir string
 	//var er error
@@ -57,15 +55,30 @@ func getFileInfosFromCommandLine() FISliceType {
 		if testFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
-		d, err := os.Open(dirName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
-			os.Exit(1)
-		}
-		filenames, e := d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
-		if e != nil {                     // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-			fmt.Fprintln(os.Stderr, e, "so calling my own MyReadDir.")
-			fileInfos = MyReadDir(dirName)
+
+		var filenames []string
+		if globFlag {
+			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
+			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
+			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
+			filenames, err = filepath.Glob(pattern)
+			if testFlag {
+				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+			}
+
+		} else {
+			d, err := os.Open(dirName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
+				os.Exit(1)
+			}
+			defer d.Close()
+			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
+			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+				fileInfos = MyReadDir(dirName)
+			}
+
 		}
 
 		fileInfos = make(FISliceType, 0, len(filenames))
@@ -76,7 +89,7 @@ func getFileInfosFromCommandLine() FISliceType {
 				continue
 			}
 
-			match, er := filepath.Match(pattern, strings.ToLower(f))
+			match, er := filepath.Match(strings.ToLower(pattern), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
 			if er != nil {
 				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
 				continue
@@ -86,8 +99,8 @@ func getFileInfosFromCommandLine() FISliceType {
 				fileInfos = append(fileInfos, fi)
 			}
 			if fi.Mode().IsRegular() && showGrandTotal {
-				GrandTotal += fi.Size()
-				GrandTotalCount++
+				grandTotal += fi.Size()
+				grandTotalCount++
 			}
 		} // for f ranges over filenames
 	} // if flag.NArgs()

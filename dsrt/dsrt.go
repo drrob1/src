@@ -95,11 +95,12 @@ Revision History
 16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
-26 Aug 21 -- Backporting autoheight and autowidth
+26 Aug 21 -- Back porting autoHeight and autoWidth
 22 Oct 21 -- Updating the idiom that uses bytes.buffer.
 16 Jan 22 -- Updating how the help message is created, learned from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 26 Jan 22 -- Adding a verbose flag
 27 Jan 22 -- Full refactoring to use a lot more platform specific code instead of all the if windows or if linux stuff.
+29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux but on Windows it means to use the Glob function.
 */
 
 type FISliceType []os.FileInfo
@@ -117,6 +118,7 @@ const defaultHeight = 40
 const minWidth = 90
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
+var globFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -245,7 +247,7 @@ func main() {
 	var FilenameListFlag bool
 	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
-	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
+	var TotalFlag = flag.Bool("t", false, "include grand total of directory, makes most sense when no pattern is given on command line.")
 
 	// var testFlag bool  Now set globally
 	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
@@ -261,6 +263,8 @@ func main() {
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
+
+	flag.BoolVar(&globFlag, "g", false, "Use glob function on Windows.")
 
 	flag.Parse()
 
@@ -400,11 +404,14 @@ func main() {
 			*nscreens, numLines, flag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}
 
-	fileInfos = getFileInfosFromCommandLine(sortfcn)
+	fileInfos = getFileInfosFromCommandLine()
 	if testFlag {
 		fmt.Printf(" After call to getFileInfosFromCommandLine.  flag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", flag.NArg(), len(fileInfos), numOfLines)
 	}
-	sort.Slice(fileInfos, sortfcn) // must be sorted here for sortfcn to work correctly, because the slice name it uses must be correct.  Better if that name is not global.
+	if len(fileInfos) > 1 {
+		sort.Slice(fileInfos, sortfcn) // must be sorted here for sortfcn to work correctly, because the slice name it uses must be correct.  Better if that name is not global.
+	}
+
 	displayFileInfos(fileInfos)
 
 	s := fmt.Sprintf("%d", sizeTotal)

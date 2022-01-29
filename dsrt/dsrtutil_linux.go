@@ -29,7 +29,7 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine(sortfcn func(i, j int) bool) FISliceType {
+func getFileInfosFromCommandLine() FISliceType {
 	var fileInfos FISliceType
 	if testFlag {
 		fmt.Printf(" Entering getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
