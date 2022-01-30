@@ -19,10 +19,10 @@ import (
 	"unicode"
 )
 
-const LastAltered = "29 Jan 2022"
+const LastAltered = "30 Jan 2022"
 
 /*
-Revision History
+REVISION HISTORY
 ----------------
 20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
 21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
@@ -103,7 +103,7 @@ Revision History
 29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux but on Windows it means to use the Glob function.
 */
 
-type FISliceType []os.FileInfo
+//type FISliceType []os.FileInfo
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
@@ -111,9 +111,6 @@ type DsrtParamType struct {
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
 }
 
-//const defaultLinesWin = 50
-//const defaultLinesLinux = 40
-//const maxWidth = 300
 const defaultHeight = 40
 const minWidth = 90
 
@@ -131,7 +128,7 @@ func main() {
 	var err error
 	var autoWidth, autoHeight int
 	var excludeRegexPattern string
-	var fileInfos FISliceType // Sort functions
+	var fileInfos []os.FileInfo
 
 	uid := 0
 	gid := 0
@@ -140,16 +137,13 @@ func main() {
 	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
 	dsrtParam = ProcessEnvironString() // This is a function below.
 
-	//linuxflag := runtime.GOOS == "linux"
-	winflag := runtime.GOOS == "windows"
+	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	ctfmt.Print(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered ", LastAltered, ", compiled using ",
 		runtime.Version(), ".")
 	fmt.Println()
 
-	//autoDefaults := term.IsTerminal(int(os.Stdout.Fd())) // This now works on Windows, too
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
@@ -218,6 +212,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " dsrt values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
 			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
@@ -233,10 +228,6 @@ func main() {
 	var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier for numOfLines") // Ptr
 	var NLines int
 	flag.IntVar(&NLines, "N", numOfLines, "number of lines to display, and takes priority over the auto settings.") // Value
-
-	//var helpflag = flag.Bool("h", false, "print help message") // pointer
-	//var HelpFlag bool
-	//flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
 	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
 	var SizeFlag bool
@@ -626,7 +617,8 @@ func MyReadDir(dir string) []os.FileInfo {
 
 	fileInfs := make([]os.FileInfo, 0, len(names))
 	for _, s := range names {
-		fi, err := os.Lstat(s)
+		path := dir + string(os.PathSeparator) + s
+		fi, err := os.Lstat(path)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
 			continue

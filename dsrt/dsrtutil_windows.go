@@ -11,15 +11,18 @@ import (
 	"strings"
 )
 
+/*
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	return "", ""
 }
 
+*/
+
 // processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine() FISliceType {
-	var fileInfos FISliceType
+func getFileInfosFromCommandLine() []os.FileInfo {
+	var fileInfos []os.FileInfo
 	//var workingDir string
 	//var er error
 
@@ -49,8 +52,15 @@ func getFileInfosFromCommandLine() FISliceType {
 		}
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
+		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
+			fileInfos = MyReadDir(dirName)
+			return fileInfos
+		}
 		if dirName == "" {
 			dirName = "."
+		}
+		if fileName == "" { // need this to not be blank because of the call to Match below.
+			fileName = "*"
 		}
 		if testFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
@@ -69,27 +79,38 @@ func getFileInfosFromCommandLine() FISliceType {
 		} else {
 			d, err := os.Open(dirName)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
+				fmt.Fprintf(os.Stderr, "Error from Windows processCommandLine directory os.Open is %v\n", err)
 				os.Exit(1)
 			}
 			defer d.Close()
-			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
-			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+			filenames, err = d.Readdirnames(0) // I don't have to make filenames slice first.
+			if err != nil {
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 				fileInfos = MyReadDir(dirName)
+				return fileInfos
+			}
+		} // if globFlag
+
+		if testFlag {
+			fmt.Printf(" len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+		}
+		fileInfos = make([]os.FileInfo, 0, len(filenames))
+		const sepStr = string(os.PathSeparator)
+		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
+			var path string
+			if strings.Contains(f, sepStr) {
+				path = f
+			} else {
+				path = dirName + sepStr + f
 			}
 
-		}
-
-		fileInfos = make(FISliceType, 0, len(filenames))
-		for _, f := range filenames {
-			fi, err := os.Lstat(f)
+			fi, err := os.Lstat(path)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
 				continue
 			}
 
-			match, er := filepath.Match(strings.ToLower(pattern), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
+			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
 			if er != nil {
 				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
 				continue
@@ -110,7 +131,7 @@ func getFileInfosFromCommandLine() FISliceType {
 } // end getFileInfosFromCommandLine
 
 //displayFileInfos only as to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
-func displayFileInfos(fiSlice FISliceType) {
+func displayFileInfos(fiSlice []os.FileInfo) {
 	var lnCount int
 	for _, f := range fiSlice {
 		s := f.ModTime().Format("Jan-02-2006_15:04:05")
@@ -140,7 +161,5 @@ func displayFileInfos(fiSlice FISliceType) {
 		if lnCount >= numOfLines {
 			break
 		}
-
 	}
-
 }
