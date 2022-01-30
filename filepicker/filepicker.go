@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "10 Jan 22"
+const LastAltered = "30 Jan 22"
 
 /*
 Revision History
@@ -25,6 +25,7 @@ Revision History
                This routine still uses the old sort method using an interface.  I will change that to use sort.Slice.
                The original algorithm sorted all files first using sort.Sort; I am changing this to first only read the filenames,
                matching against that, and then sorting by file timestamp (newest first).
+30 Jan 22 -- Commented out a debugging print statement that I forgot to do before.
 */
 
 // FIS is a FileInfo slice, as in os.FileInfo
@@ -92,7 +93,7 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 		}
 	}
 
-	fmt.Printf(" In GetFilenames, len(filesDate) = %d\n\n", len(filesDate))
+	//fmt.Printf(" In GetFilenames, len(filesDate) = %d\n\n", len(filesDate))
 	sort.Sort(filesDate)
 
 	stringSlice := make([]string, 0)
