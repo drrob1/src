@@ -48,11 +48,13 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			os.Exit(1)
 		}
 
-		// even if this is a directory it must be returned.  A different routine will decide whether and how to display this.
-		fileInfos = append(fileInfos, fi)
+		if fi.IsDir() {
+			fileInfos = MyReadDir(fi.Name())
+		} else {
+			fileInfos = append(fileInfos, fi)
+		}
 
 	} else { // must have more than one filename on the command line, populated by bash.
-		//filenames := flag.Args()
 		fileInfos = make([]os.FileInfo, 0, flag.NArg())
 		for _, f := range flag.Args() {
 			fi, err := os.Lstat(f)
