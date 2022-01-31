@@ -83,7 +83,7 @@ func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr { // this may not
 
 	cs := make([]colorizedStr, 0, len(fiSlice))
 
-	for _, f := range fiSlice {
+	for i, f := range fiSlice {
 		t := f.ModTime().Format("Jan-02-2006_15:04:05")
 		sizeStr := ""
 		if filenameToBeListedFlag && f.Mode().IsRegular() {
@@ -93,14 +93,14 @@ func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr { // this may not
 				if f.Size() > 100000 {
 					sizeStr = AddCommas(sizeStr)
 				}
-				strng := fmt.Sprintf("%10v %16s %s %s\n", f.Mode(), sizeStr, t, f.Name())
+				strng := fmt.Sprintf("%10v %16s %s %s", f.Mode(), sizeStr, t, f.Name())
 				colorized := colorizedStr{color: ct.Yellow, str: strng}
 				cs = append(cs, colorized)
 
 			} else {
 				var colr ct.Color
 				sizeStr, colr = getMagnitudeString(f.Size())
-				strng := fmt.Sprintf("%10v %-16s %s %s\n", f.Mode(), sizeStr, t, f.Name())
+				strng := fmt.Sprintf("%10v %-10s %s %s", f.Mode(), sizeStr, t, f.Name())
 				colorized := colorizedStr{color: colr, str: strng}
 				cs = append(cs, colorized)
 			}
@@ -113,6 +113,9 @@ func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr { // this may not
 			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
 			colorized := colorizedStr{color: ct.White, str: s}
 			cs = append(cs, colorized)
+		}
+		if i > numOfLines*2 {
+			break
 		}
 	}
 	return cs

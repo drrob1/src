@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "30 Jan 2022"
+const LastAltered = "31 Jan 2022"
 
 /*
 REVISION HISTORY
@@ -185,10 +185,6 @@ func main() {
 		}
 	*/
 
-	if dsrtParam.numlines > 0 { // if set, dsrtParam will take priority over the auto settings.
-		numOfLines = dsrtParam.numlines
-	}
-
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
@@ -259,6 +255,18 @@ func main() {
 
 	flag.Parse()
 
+	if NLines > 0 { // priority
+		numOfLines = NLines
+	} else if dsrtParam.numlines > 0 { // then check this
+		numOfLines = dsrtParam.numlines
+	} else if autoHeight > 0 { // finally use autoHeight.
+		numOfLines = autoHeight - 7
+	} else { // intended if autoHeight fails, just in case.
+		numOfLines = defaultHeight
+	}
+
+	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
+
 	if testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
@@ -282,15 +290,15 @@ func main() {
 	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
-	if NLines > 0 && numOfLines == 0 { // then the -N option flag.  dsrtParam is tested above.
-		numOfLines = NLines
-	} else if autoHeight > 0 && numOfLines == 0 { // then autoheight
-		numOfLines = autoHeight - 7
-	} else { // finally the default height
-		numOfLines = defaultHeight
-	}
-	numLines *= *nscreens // Doesn't matter if *nscreens = 1
-
+	/*
+	       if NLines > 0 && numOfLines == 0 { // then the -N option flag.  dsrtParam is tested above.
+	   		numOfLines = NLines
+	   	} else if autoHeight > 0 && numOfLines == 0 { // then autoheight
+	   		numOfLines = autoHeight - 7
+	   	} else { // finally the default height
+	   		numOfLines = defaultHeight
+	   	}
+	*/
 	if testFlag {
 		fmt.Printf(" dsrtParam.numlines=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
 			dsrtParam.numlines, NLines, autoHeight, defaultHeight, numOfLines)

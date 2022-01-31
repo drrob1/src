@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "29 Jan 2022"
+const LastAltered = "31 Jan 2022"
 
 /*
 Revision History
@@ -142,7 +142,6 @@ func main() {
 	var fileInfos []os.FileInfo
 	var err error
 	var excludeRegexPattern string
-	colorStringSlice := make([]colorizedStr, 0, 200) // the string slice to be displayed after generation.
 
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtParam = ProcessEnvironString() // This is a function below.
@@ -164,14 +163,6 @@ func main() {
 	if autoWidth < minWidth {
 		fmt.Println(" Autowidth is", autoWidth, "which is too small.  Better you should use ds.")
 		os.Exit(1)
-	}
-
-	if dsrtParam.numlines > 0 {
-		numOfLines = dsrtParam.numlines
-	} else if autoHeight > 0 {
-		numOfLines = autoHeight - 7
-	} else {
-		numOfLines = defaultHeight
 	}
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
@@ -228,14 +219,28 @@ func main() {
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var filterAmt int
-	var filterStr string
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	var w int // width maximum of the filename string to be displayed
 	flag.IntVar(&w, "w", 0, "width for displayed file name")
 
+	var lmt int
+	flag.IntVar(&lmt, "lmt", 10_000, " Limit for index to test output one item at a time.")
+
 	flag.Parse()
+
+	if NLines > 0 { // priority
+		numOfLines = NLines
+	} else if dsrtParam.numlines > 0 { // then check this
+		numOfLines = dsrtParam.numlines
+	} else if autoHeight > 0 { // finally use autoHeight.
+		numOfLines = autoHeight - 7
+	} else { // intended if autoHeight fails, just in case.
+		numOfLines = defaultHeight
+	}
+
+	numOfLines *= *nscreens
 
 	if testFlag {
 		execname, _ := os.Executable()
@@ -252,11 +257,6 @@ func main() {
 
 	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
-
-	NumLines := numOfLines
-	if NLines > 0 { // -N option switch priorty over autoheight
-		NumLines = NLines
-	}
 
 	noExtensionFlag = *extensionflag || *extflag
 
@@ -301,8 +301,6 @@ func main() {
 		}
 	}
 
-	NumLines *= *nscreens
-
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
 	if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
@@ -344,7 +342,7 @@ func main() {
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		fmt.Println()
 		if runtime.GOARCH == "amd64" {
-			fmt.Printf(" autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoHeight, autoWidth, w, NumLines)
+			fmt.Printf(" autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoHeight, autoWidth, w, numLines)
 			fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
 				dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 				dsrtParam.totalflag)
@@ -387,21 +385,27 @@ func main() {
 
 	cs := getColorizedStrings(fileInfos)
 
+	if testFlag {
+		fmt.Printf(" Len(fileinfos)=%d, len(colorizedStrings)=%d, numOfLines=%d\n", len(fileInfos), len(cs), numOfLines)
+	}
+
 	// Now to output the colorStringSlice, 2 items per line.  Vertical sort isn't optimal (see comment above).
-	/*
-		halfpoint := len(colorStringSlice) / 2
-	*/
+
 	columnWidth := w/2 - 2
-	for i := 0; i < len(colorStringSlice); i += 2 {
-		c0 := colorStringSlice[i].color
+
+	for i := 0; i < len(cs); i += 2 {
+		c0 := cs[i].color
 		s0 := fixedStringLen(cs[i].str, columnWidth)
 		ctfmt.Printf(c0, winFlag, "%s", s0)
-		if i+1 < len(colorStringSlice) {
-			c1 := colorStringSlice[i+1].color
-			s1 := fixedStringLen(colorStringSlice[i+1].str, columnWidth)
+		if i+1 < len(cs) {
+			c1 := cs[i+1].color
+			s1 := fixedStringLen(cs[i+1].str, columnWidth)
 			ctfmt.Printf(c1, winFlag, "  %s\n", s1)
 		} else {
 			fmt.Println()
+		}
+		if i >= lmt {
+			break
 		}
 	}
 
@@ -457,27 +461,6 @@ func IsSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
-
-/*
-{{{
-	// ---------------------------- GetIDname -----------------------------------------------------------
-	func
-	GetIDname(uidStr
-	string) string{
-
-		if len(uidStr) == 0{
-		return ""
-	}
-		ptrToUser, err := user.LookupId(uidStr)
-		if err != nil{
-		fmt.Fprintln(os.Stderr, err)
-	}
-
-		idname := ptrToUser.Username
-		return idname
-	} // GetIDname
-}}}
-*/
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -649,33 +632,24 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
-/*
-{{{
-func truncStr(s string, w int) string {
-	if w <= 0 || len(s) < w {
-		return s
-	}
-	return s[:w]
-}
-}}}
-*/
-
 // --------------------------------------------------- fixedString ---------------------------------------
 
 func fixedStringLen(s string, size int) string {
-	var built strings.Builder
+	//var built strings.Builder  I don't remember why I used this.  Maybe just to see how it worked?
 
 	if len(s) > size { // need to truncate the string
 		return s[:size]
 	} else if len(s) == size {
 		return s
 	} else if len(s) < size { // need to pad the string
-		needSpaces := size - len(s)
+		/* seems too complex
 		built.Grow(size)
 		built.WriteString(s)
-		spaces := strings.Repeat(" ", needSpaces)
 		built.WriteString(spaces)
-		return built.String()
+		*/
+		needSpaces := size - len(s)
+		spaces := strings.Repeat(" ", needSpaces)
+		return s + spaces
 	} else {
 		fmt.Fprintln(os.Stderr, " makeStrFixed input string length is strange.  It is", len(s))
 		return s
