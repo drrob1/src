@@ -632,7 +632,7 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
-// --------------------------------------------------- fixedString ---------------------------------------
+// --------------------------------------------------- fixedStringLen ---------------------------------------
 
 func fixedStringLen(s string, size int) string {
 	//var built strings.Builder  I don't remember why I used this.  Maybe just to see how it worked?
@@ -677,4 +677,49 @@ func includeThis(fi os.FileInfo) bool {
 		}
 	}
 	return showThis
+}
+
+// getColorizedStrings is same for both platforms, so I moved it into main file.  Only 1 rtn has to be platform specific.
+
+func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr { // this may not be needed
+	//var lnCount int
+
+	cs := make([]colorizedStr, 0, len(fiSlice))
+
+	for i, f := range fiSlice {
+		t := f.ModTime().Format("Jan-02-2006_15:04:05")
+		sizeStr := ""
+		if filenameToBeListedFlag && f.Mode().IsRegular() {
+			sizeTotal += f.Size()
+			if longFileSizeListFlag {
+				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+				if f.Size() > 100000 {
+					sizeStr = AddCommas(sizeStr)
+				}
+				strng := fmt.Sprintf("%10v %16s %s %s", f.Mode(), sizeStr, t, f.Name())
+				colorized := colorizedStr{color: ct.Yellow, str: strng}
+				cs = append(cs, colorized)
+
+			} else {
+				var colr ct.Color
+				sizeStr, colr = getMagnitudeString(f.Size())
+				strng := fmt.Sprintf("%10v %-10s %s %s", f.Mode(), sizeStr, t, f.Name())
+				colorized := colorizedStr{color: colr, str: strng}
+				cs = append(cs, colorized)
+			}
+
+		} else if IsSymlink(f.Mode()) {
+			s := fmt.Sprintf("%5s %s <%s>", sizeStr, t, f.Name())
+			colorized := colorizedStr{color: ct.White, str: s}
+			cs = append(cs, colorized)
+		} else if dirList && f.IsDir() {
+			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
+			colorized := colorizedStr{color: ct.White, str: s}
+			cs = append(cs, colorized)
+		}
+		if i > numOfLines*2 {
+			break
+		}
+	}
+	return cs
 }
