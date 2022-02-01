@@ -206,7 +206,6 @@ func main() {
 
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
-	var testFlag bool
 	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
 	flag.BoolVar(&testFlag, "v", false, "verbose mode, which is same as test mode.")
 
@@ -215,10 +214,9 @@ func main() {
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
-	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
+	flag.BoolVar(&excludeFlag, "x", false, "exclude regex entered after prompt")
 	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
 
-	var filterAmt int
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
@@ -226,7 +224,7 @@ func main() {
 	flag.IntVar(&w, "w", 0, "width for displayed file name")
 
 	var lmt int
-	flag.IntVar(&lmt, "lmt", 10_000, " Limit for index to test output one item at a time.")
+	flag.IntVar(&lmt, "lmt", 1_000_000_000, " Limit for index to test output one item at a time.")
 
 	flag.Parse()
 
@@ -261,15 +259,21 @@ func main() {
 	noExtensionFlag = *extensionflag || *extflag
 
 	if len(excludeRegexPattern) > 0 {
+		if testFlag {
+			fmt.Printf(" excludeRegexPattern is longer than 0 runes.  It is %d runes. \n", len(excludeRegexPattern))
+		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
-			*excludeFlag = false
+			excludeFlag = false
 		}
-		*excludeFlag = true
-	} else if *excludeFlag {
+		excludeFlag = true
+		if testFlag {
+			fmt.Printf(" Regex condition: excludeFlag=%t, excludeRegex=%v\n", excludeFlag, excludeRegex.String())
+		}
+	} else if excludeFlag {
 		ctfmt.Print(ct.Yellow, winFlag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
@@ -277,14 +281,13 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
-			*excludeFlag = false
+			excludeFlag = false
 		}
 	}
 
 	dirList = *DirListFlag || FilenameListFlag || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // if -D entered then this expression also needs to be true.
 	filenameToBeListedFlag = !(FilenameListFlag || dsrtParam.filenamelistflag)                        // need to reverse the flag because D means suppress the output of filenames.
 	longFileSizeListFlag = *longflag
-
 	ShowGrandTotal := *TotalFlag || dsrtParam.totalflag // added 09/12/2018 12:32:23 PM
 
 	// w is the full screen width.
@@ -576,7 +579,6 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 // ------------------------------- MyReadDir -----------------------------------
 
 func MyReadDir(dir string) []os.FileInfo {
-
 	dirname, err := os.Open(dir)
 	//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
 	if err != nil {
@@ -589,16 +591,23 @@ func MyReadDir(dir string) []os.FileInfo {
 		return nil
 	}
 
-	fi := make([]os.FileInfo, 0, len(names))
+	fileInfs := make([]os.FileInfo, 0, len(names))
 	for _, s := range names {
-		L, err := os.Lstat(s)
+		path := dir + string(os.PathSeparator) + s
+		fi, err := os.Lstat(path)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
 			continue
 		}
-		fi = append(fi, L)
+		if includeThis(fi) {
+			fileInfs = append(fileInfs, fi)
+		}
+		if fi.Mode().IsRegular() && showGrandTotal {
+			grandTotal += fi.Size()
+			grandTotalCount++
+		}
 	}
-	return fi
+	return fileInfs
 } // MyReadDir
 
 // ----------------------------- getMagnitudeString -------------------------------
