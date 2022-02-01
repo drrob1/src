@@ -4,7 +4,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
 	"os"
+	"strconv"
 )
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed
@@ -76,4 +78,47 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
 	return fileInfos
+}
+
+func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr { // this may not be needed
+	//var lnCount int
+
+	cs := make([]colorizedStr, 0, len(fiSlice))
+
+	for i, f := range fiSlice {
+		t := f.ModTime().Format("Jan-02-2006_15:04:05")
+		sizeStr := ""
+		if filenameToBeListedFlag && f.Mode().IsRegular() {
+			sizeTotal += f.Size()
+			if longFileSizeListFlag {
+				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+				if f.Size() > 100000 {
+					sizeStr = AddCommas(sizeStr)
+				}
+				strng := fmt.Sprintf("%10v %16s %s %s", f.Mode(), sizeStr, t, f.Name())
+				colorized := colorizedStr{color: ct.Yellow, str: strng}
+				cs = append(cs, colorized)
+
+			} else {
+				var colr ct.Color
+				sizeStr, colr = getMagnitudeString(f.Size())
+				strng := fmt.Sprintf("%10v %-10s %s %s", f.Mode(), sizeStr, t, f.Name())
+				colorized := colorizedStr{color: colr, str: strng}
+				cs = append(cs, colorized)
+			}
+
+		} else if IsSymlink(f.Mode()) {
+			s := fmt.Sprintf("%5s %s <%s>", sizeStr, t, f.Name())
+			colorized := colorizedStr{color: ct.White, str: s}
+			cs = append(cs, colorized)
+		} else if dirList && f.IsDir() {
+			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
+			colorized := colorizedStr{color: ct.White, str: s}
+			cs = append(cs, colorized)
+		}
+		if i > numOfLines*2 {
+			break
+		}
+	}
+	return cs
 }
