@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "31 Jan 2022"
+const LastAltered = "1 Feb 2022"
 
 /*
 Revision History
@@ -105,6 +105,8 @@ Revision History
 22 Oct 21 -- Changed the code that uses bytes.NewBuffer()
 29 Jan 22 -- Porting the code from dsrt.go to here.  I'm using more platform specific code now, and the code is much simpler.
 31 Jan 22 -- Now that ds2 is working, I'm going to refactor this code.
+ 1 Feb 22 -- Added veryVerboseFlag, intended for only when I really need it.  And fixed environ var by making it dsrt instead of what it was, ds.
+               And optimized includeThis.
 */
 
 type dirAliasMapType map[string]string
@@ -124,7 +126,7 @@ const minWidth = 90
 const maxWidth = 300
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
-var globFlag bool
+var globFlag, veryVerboseFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -227,6 +229,8 @@ func main() {
 
 	var w int // width maximum of the filename string to be displayed
 	flag.IntVar(&w, "w", 0, "width for displayed file name")
+
+	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
 
 	flag.Parse()
 
@@ -482,7 +486,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 		dsrtparam.w = 0
 	}
 
-	envStr, ok := os.LookupEnv("ds")
+	envStr, ok := os.LookupEnv("dsrt")
 	if !ok {
 		return dsrtparam
 	}
@@ -663,24 +667,21 @@ func fixedStringLen(s string, size int) string {
 // ---------------------------------------------------- includeThis ----------------------------------------
 
 func includeThis(fi os.FileInfo) bool {
-	showThis := true
-	if testFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-		showThis = false
-	}
-	if excludeFlag {
+		return false
+	} else if excludeFlag {
 		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
-			showThis = false
+			return false
 		}
-	}
-	if filterAmt > 0 {
+	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
-			showThis = false
+			return false
 		}
 	}
-	return showThis
+	return true
 }
 
 // getColorizedStrings is same for both platforms, so I moved it into main file.  Only 1 rtn has to be platform specific.

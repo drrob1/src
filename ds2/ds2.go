@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "31 Jan 2022"
+const LastAltered = "1 Feb 2022"
 
 /*
 Revision History
@@ -109,6 +109,7 @@ Revision History
                I'm going to a horizontal sort, which is much easier to do anyway.
 22 Oct 21 -- Optimized (I think) code to use bytes.NewBuffer().
 29 Jan 22 -- Porting the simplified code from dsrt.go to here.  I'm using a lot more platform specific code now, and the code is much simpler.
+ 1 Feb 22 -- Environ variable now dsrt, instead of ds, optimozed includeThis, and added veryVerboseFlag for when I really want it.
 */
 
 type dirAliasMapType map[string]string
@@ -128,7 +129,7 @@ const minWidth = 160
 const maxWidth = 300
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
-var globFlag bool
+var globFlag, veryVerboseFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -146,13 +147,11 @@ func main() {
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtParam = ProcessEnvironString() // This is a function below.
 
-	//linuxFlag := runtime.GOOS == "linux"
 	winFlag := runtime.GOOS == "windows" // used for color functions
 	ctfmt.Print(ct.Magenta, winFlag, "ds2 will display Directory SoRTed by date or size in 2 columns.  LastAltered ", LastAltered, ", compiled using ",
 		runtime.Version(), ".")
 	fmt.Println()
 
-	//autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Auto sizing error is %v.  Using defaults of %d height and %d width.\n", err, defaultHeight, minWidth)
@@ -225,6 +224,8 @@ func main() {
 
 	var lmt int
 	flag.IntVar(&lmt, "lmt", 1_000_000_000, " Limit for index to test output one item at a time.")
+
+	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag for when I really want it.")
 
 	flag.Parse()
 
@@ -483,7 +484,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 		dsrtparam.w = 0
 	}
 
-	envStr, ok := os.LookupEnv("ds")
+	envStr, ok := os.LookupEnv("dsrt")
 	if !ok {
 		return dsrtparam
 	}
@@ -668,24 +669,21 @@ func fixedStringLen(s string, size int) string {
 // ---------------------------------------------------- includeThis ----------------------------------------
 
 func includeThis(fi os.FileInfo) bool {
-	showThis := true
-	if testFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-		showThis = false
-	}
-	if excludeFlag {
+		return false
+	} else if excludeFlag {
 		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
-			showThis = false
+			return false
 		}
-	}
-	if filterAmt > 0 {
+	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
-			showThis = false
+			return false
 		}
 	}
-	return showThis
+	return true
 }
 
 // getColorizedStrings is same for both platforms, so I moved it into main file.  Only 1 rtn has to be platform specific.

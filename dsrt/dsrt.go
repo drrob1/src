@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "31 Jan 2022"
+const LastAltered = "1 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -101,6 +101,7 @@ REVISION HISTORY
 26 Jan 22 -- Adding a verbose flag
 27 Jan 22 -- Full refactoring to use a lot more platform specific code instead of all the if windows or if linux stuff.
 29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux but on Windows it means to use the Glob function.
+ 1 Feb 22 -- Added veryVerboseFlag, and optimized includeThis.
 */
 
 //type FISliceType []os.FileInfo
@@ -115,7 +116,7 @@ const defaultHeight = 40
 const minWidth = 90
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
-var globFlag bool
+var globFlag, veryVerboseFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -252,6 +253,8 @@ func main() {
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	flag.BoolVar(&globFlag, "g", false, "Use glob function on Windows.")
+
+	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose option for when I really want it.")
 
 	flag.Parse()
 
@@ -644,7 +647,6 @@ func MyReadDir(dir string) []os.FileInfo {
 
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
-
 	var s1 string
 	var f float64
 	var color ct.Color
@@ -697,24 +699,21 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 }
 
 func includeThis(fi os.FileInfo) bool {
-	showThis := true
-	if testFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-		showThis = false
-	}
-	if excludeFlag {
+		return false
+	} else if excludeFlag {
 		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
-			showThis = false
+			return false
 		}
-	}
-	if filterAmt > 0 {
+	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
-			showThis = false
+			return false
 		}
 	}
-	return showThis
+	return true
 }
 
 /*
