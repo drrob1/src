@@ -229,6 +229,10 @@ func main() {
 
 	flag.Parse()
 
+	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
+		testFlag = true
+	}
+
 	if NLines > 0 { // priority
 		numOfLines = NLines
 	} else if dsrtParam.numlines > 0 { // then check this
@@ -577,8 +581,32 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	return completeValue
 } // ProcessDirectoryAliases
 
-// ------------------------------- MyReadDir -----------------------------------
+// ------------------------------- myReadDir -----------------------------------
 
+func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
+	for _, d := range dirEntries {
+		fi, e := d.Info()
+		if e != nil {
+			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
+		}
+		if includeThis(fi) {
+			fileInfos = append(fileInfos, fi)
+		}
+		if fi.Mode().IsRegular() && showGrandTotal {
+			grandTotal += fi.Size()
+			grandTotalCount++
+		}
+	}
+	return fileInfos
+} // myReadDir
+
+/*
 func MyReadDir(dir string) []os.FileInfo {
 	dirname, err := os.Open(dir)
 	//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
@@ -610,7 +638,7 @@ func MyReadDir(dir string) []os.FileInfo {
 	}
 	return fileInfs
 } // MyReadDir
-
+*/
 // ----------------------------- getMagnitudeString -------------------------------
 
 func getMagnitudeString(j int64) (string, ct.Color) {
@@ -674,16 +702,15 @@ func includeThis(fi os.FileInfo) bool {
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
 		return false
-	} else if excludeFlag {
-		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
-			return false
-		}
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
 			return false
 		}
 	}
+	if excludeFlag {
+		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
+			return false
+		}
+	}
 	return true
 }
-
-// getColorizedStrings is same for both platforms, so I moved it into main file.  Only 1 rtn has to be platform specific.

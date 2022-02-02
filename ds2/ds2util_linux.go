@@ -29,7 +29,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
 
-		fileInfos = MyReadDir(workingDir) // excluding by regex, filesize or having an ext is done by MyReadDir.
+		fileInfos = myReadDir(workingDir) // excluding by regex, filesize or having an ext is done by MyReadDir.
 		if testFlag {
 			fmt.Printf(" after call to myreaddir.  Len(fileInfos)=%d\n", len(fileInfos))
 		}
@@ -49,7 +49,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 
 		if fi.IsDir() {
-			fileInfos = MyReadDir(fi.Name())
+			fileInfos = myReadDir(fi.Name())
 		} else {
 			fileInfos = append(fileInfos, fi)
 		}
