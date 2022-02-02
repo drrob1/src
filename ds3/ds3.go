@@ -226,6 +226,8 @@ func main() {
 	var lmt int
 	flag.IntVar(&lmt, "lmt", 1_000_000_000, " Limit for index to test output one item at a time.")
 
+	flag.BoolVar(&globFlag, "g", false, "Use glob function on Windows.")
+
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag for when I really want it.")
 
 	flag.Parse()
@@ -727,5 +729,3 @@ func includeThis(fi os.FileInfo) bool {
 	}
 	return true
 }
-
-// getColorizedStrings is same for both platforms, so I moved it into main file.  Only 1 rtn has to be platform specific.

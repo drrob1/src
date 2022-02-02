@@ -4,24 +4,23 @@ import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
+/*
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	return "", ""
 }
+*/
 
 // processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine() FISliceType {
-	var fileInfos FISliceType
-	//var workingDir string
-	//var er error
+func getFileInfosFromCommandLine() []os.FileInfo {
+	var fileInfos []os.FileInfo
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
@@ -49,9 +48,20 @@ func getFileInfosFromCommandLine() FISliceType {
 		}
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
+		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
+			fileInfos = MyReadDir(dirName)
+			return fileInfos
+		}
 		if dirName == "" {
 			dirName = "."
 		}
+		if fileName == "" { // need this to not be blank because of the call to Match below.
+			fileName = "*"
+		}
+		if testFlag {
+			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+		}
+
 		if testFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
@@ -81,15 +91,23 @@ func getFileInfosFromCommandLine() FISliceType {
 
 		}
 
-		fileInfos = make(FISliceType, 0, len(filenames))
-		for _, f := range filenames {
-			fi, err := os.Lstat(f)
+		fileInfos = make([]os.FileInfo, 0, len(filenames))
+		const sepStr = string(os.PathSeparator)
+		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
+			var path string
+			if strings.Contains(f, sepStr) {
+				path = f
+			} else {
+				path = dirName + sepStr + f
+			}
+
+			fi, err := os.Lstat(path)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
 				continue
 			}
 
-			match, er := filepath.Match(strings.ToLower(pattern), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
+			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
 			if er != nil {
 				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
 				continue
@@ -109,38 +127,44 @@ func getFileInfosFromCommandLine() FISliceType {
 
 } // end getFileInfosFromCommandLine
 
-//displayFileInfos only as to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
-func displayFileInfos(fiSlice FISliceType) {
-	var lnCount int
-	for _, f := range fiSlice {
-		s := f.ModTime().Format("Jan-02-2006_15:04:05")
-		sizestr := ""
+func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr {
+
+	cs := make([]colorizedStr, 0, len(fiSlice))
+
+	for i, f := range fiSlice {
+		t := f.ModTime().Format("Jan-02-2006_15:04:05")
+		sizeStr := ""
 		if filenameToBeListedFlag && f.Mode().IsRegular() {
 			sizeTotal += f.Size()
 			if longFileSizeListFlag {
-				sizestr = strconv.FormatInt(f.Size(), 10)
-				if f.Size() > 100_000 {
-					sizestr = AddCommas(sizestr)
+				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+				if f.Size() > 100000 {
+					sizeStr = AddCommas(sizeStr)
 				}
-				fmt.Printf("%17s %s %s\n", sizestr, s, f.Name())
+				strng := fmt.Sprintf("%16s %s %s", sizeStr, t, f.Name())
+				colorized := colorizedStr{color: ct.Yellow, str: strng}
+				cs = append(cs, colorized)
 
 			} else {
-				var color ct.Color
-				sizestr, color = getMagnitudeString(f.Size())
-				ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
+				var colr ct.Color
+				sizeStr, colr = getMagnitudeString(f.Size())
+				strng := fmt.Sprintf("%-10s %s %s", sizeStr, t, f.Name())
+				colorized := colorizedStr{color: colr, str: strng}
+				cs = append(cs, colorized)
 			}
-			lnCount++
+
 		} else if IsSymlink(f.Mode()) {
-			fmt.Printf("%17s %s <%s>\n", sizestr, s, f.Name())
-			lnCount++
+			s := fmt.Sprintf("%5s %s <%s>", sizeStr, t, f.Name())
+			colorized := colorizedStr{color: ct.White, str: s}
+			cs = append(cs, colorized)
 		} else if dirList && f.IsDir() {
-			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
-			lnCount++
+			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
+			colorized := colorizedStr{color: ct.White, str: s}
+			cs = append(cs, colorized)
 		}
-		if lnCount >= numOfLines {
+		if i > numOfLines*2 {
 			break
 		}
-
 	}
-
+	return cs
 }
