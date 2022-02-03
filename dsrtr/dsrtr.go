@@ -13,6 +13,7 @@ dsrtr.go
    5 Sep 20 -- Will look to not follow symlinks
   20 Dec 20 -- Looking to change sort functions based on time to be idiomatic, but there aren't any here.  Go figure.
                  I did remove some dead comments, though.
+   2 Feb 22 -- Refactoring -- removing the go routine pattern as it's not necessary.  And experimenting w/ Walk vs WalkDir
 */
 package main
 
@@ -23,24 +24,14 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const lastAltered = "20 Dec 2020"
-
-type ResultType struct {
-	path      string
-	datestamp string
-	sizeint   int
-}
+const lastAltered = "2 Feb 2022"
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
-	log.SetFlags(0)
-	//var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
@@ -48,115 +39,135 @@ func main() {
 		*timeoutOpt = 900
 	}
 
-	args := flag.Args()
+	var globPattern, startDir string
+	var err error
+	if flag.NArg() == 0 {
+		fmt.Print(" Enter globbing pattern: ")
+		fmt.Scanln(&globPattern)
+		startDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Getwd returned this error: %v\n", err)
+			os.Exit(1)
+		}
 
-	if len(args) < 1 {
-		log.Fatalln("a globbing pattern to match must be specified")
-	} else if len(args) == 1 {
-		//pattern = strings.ToLower(pattern)
-		//fmt.Println(" pattern=", pattern)
+	} else if flag.NArg() == 1 {
+		globPattern = flag.Arg(0)
+		startDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Getwd returned this error: %v\n", err)
+			os.Exit(1)
+		}
 	} else {
-		// I cannot think of anything to put here at the moment.  I'll say that args must be a slice of strings of filenames, and on linux.
+		globPattern = flag.Arg(0)
+		startDir = flag.Arg(1)
 	}
 
-	pattern := strings.ToLower(args[0])
+	globPattern = strings.ToLower(globPattern)
 
-	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, will use globbing pattern of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
+	fmt.Printf(" dsrtr (recursive), written in Go.  Last altered %s, will use globbing pattern of %q and will start in %s. \n", lastAltered, globPattern, startDir)
 	fmt.Println()
 	fmt.Println()
-	DirAlreadyWalked := make(map[string]bool, 500)
-	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
+	//DirAlreadyWalked := make(map[string]bool, 500)
+	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
-
-	// goroutine to collect results from resultsChan
-	doneChan := make(chan bool)
-	resultsChan := make(chan ResultType, 100_000)
-	go func() {
-		for r := range resultsChan {
-			sizestr := strconv.Itoa(r.sizeint)
-			if r.sizeint > 100000 {
-				sizestr = AddCommas(sizestr)
+	/*
+		// walkfunc closure
+		filepathWalkFunction := func(fpath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
+				return nil
 			}
-			fmt.Printf("%15s %s %s\n", sizestr, r.datestamp, r.path)
-		}
-		doneChan <- true
-	}()
 
-	// walkfunc closure
-	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
+			if fi.IsDir() && fpath == ".git" {
+				return filepath.SkipDir
+			} else if isSymlink(fi.Mode()) {
+				fmt.Printf(" %s is a symlink, mode is %v\n", fpath, fi.Mode())
+				return filepath.SkipDir
+			}
+
+			// Must be a regular file
+			NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
+			if BOOL, _ := filepath.Match(globPattern, NAME); BOOL {
+				t := fi.ModTime().Format("Jan-02-2006_15:04:05")
+				sizeStr := strconv.Itoa(int(fi.Size()))
+				if fi.Size() > 100_000 {
+					sizeStr = AddCommas(sizeStr)
+				}
+
+				fmt.Printf("%15s %s %s\n", sizeStr, t, fpath)
+			}
+
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
+
+			return nil
+		}
+
+		err = filepath.Walk(startDir, filepathWalkFunction)
+	*/
+
+	filepathWalkDirEntry := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
 			return nil
 		}
 
-		if fi.IsDir() {
-			if DirAlreadyWalked[fpath] {
-				return filepath.SkipDir
-			} else {
-				DirAlreadyWalked[fpath] = true
-			}
-		} else if isSymlink(fi.Mode()) && fi.IsDir() { // don't follow symlinked directories
+		if d.IsDir() && fpath == ".git" {
 			return filepath.SkipDir
-		} else /* if fi.Mode().IsRegular()  */ {
-			if runtime.GOOS == "linux" {
-				for _, fp := range args {
-					fp = strings.ToLower(fp)
-					NAME := strings.ToLower(fi.Name())
-					if BOOL, _ := filepath.Match(fp, NAME); BOOL {
-						var r ResultType
-						s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-						//r.filename = NAME
-						r.path = fpath
-						r.datestamp = s
-						r.sizeint = int(fi.Size()) // fi.Size() is an int64
-						//r.fileinfo = fi
-						resultsChan <- r
-					}
-				}
-			} else if runtime.GOOS == "windows" {
-				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
-				if BOOL, _ := filepath.Match(pattern, NAME); BOOL {
-					var r ResultType
-					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-					//r.filename = NAME
-					r.path = fpath
-					r.datestamp = s
-					r.sizeint = int(fi.Size())
-					//r.fileinfo = fi
-					resultsChan <- r
-				}
-			}
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-			}
+		} else if isSymlink(d.Type()) {
+			fmt.Printf(" %s is a symlink, name is %s, mode is %v\n", fpath, d.Name(), d.Type())
+			return filepath.SkipDir
 		}
+
+		// Must be a regular file
+		NAME := strings.ToLower(d.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
+		if BOOL, _ := filepath.Match(globPattern, NAME); BOOL {
+			fi, er := d.Info()
+			if er != nil {
+				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name())
+				return er
+			}
+			t := fi.ModTime().Format("Jan-02-2006_15:04:05")
+			sizeStr := strconv.Itoa(int(fi.Size()))
+			if fi.Size() > 100_000 {
+				sizeStr = AddCommas(sizeStr)
+			}
+
+			fmt.Printf("%15s %s %s\n", sizeStr, t, fpath)
+		}
+
+		now := time.Now()
+		if now.After(tfinal) {
+			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+		}
+
 		return nil
 	}
 
-	err := filepath.Walk(startDirectory, filepathwalkfunction)
-	if err != nil {
-		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
-	}
+	err = filepath.WalkDir(startDir, filepathWalkDirEntry)
 
-	close(resultsChan)
-	<-doneChan
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from filepath.walk is %v.  Elapsed time is %s\n", err, time.Since(t0))
+	}
 
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
 	fmt.Println()
 } // end main
 
-//-------------------------------------------------------------------- InsertByteSlice
+//-------------------------------------------------------------------- InsertByteSlice --------------------------------
+
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
 
-//---------------------------------------------------------------------- AddCommas
+//---------------------------------------------------------------------- AddCommas ------------------------------------
+
 func AddCommas(instr string) string {
 	var Comma []byte = []byte{','}
 
@@ -172,7 +183,8 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
-// ---------------------------- GetIDname -----------------------------------------------------------
+// ----------------------------                   GetIDname -----------------------------------------------------------
+
 func GetIDname(uidStr string) string {
 
 	if len(uidStr) == 0 {
