@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "2 Feb 2022"
+const LastAltered = "3 Feb 2022"
 
 /*
 Revision History
@@ -111,6 +111,7 @@ Revision History
 29 Jan 22 -- Porting the simplified code from dsrt.go to here.  I'm using a lot more platform specific code now, and the code is much simpler.
  1 Feb 22 -- Environ variable now dsrt, instead of ds, optimozed includeThis, and added veryVerboseFlag for when I really want it.
  2 Feb 22 -- Now ds3.go is created from debugged ds2.go.  Output code is changed, and the myReadDir will use the dirEntry code I debugged in de.go.
+ 3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
 */
 
 type dirAliasMapType map[string]string
@@ -214,8 +215,8 @@ func main() {
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
-	flag.BoolVar(&excludeFlag, "x", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
+	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
+	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")

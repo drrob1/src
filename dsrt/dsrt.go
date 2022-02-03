@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "1 Feb 2022"
+const LastAltered = "3 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -102,6 +102,7 @@ REVISION HISTORY
 27 Jan 22 -- Full refactoring to use a lot more platform specific code instead of all the if windows or if linux stuff.
 29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux but on Windows it means to use the Glob function.
  1 Feb 22 -- Added veryVerboseFlag, and optimized includeThis.
+ 3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
 */
 
 //type FISliceType []os.FileInfo
@@ -246,8 +247,8 @@ func main() {
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
-	flag.BoolVar(&excludeFlag, "x", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.")
+	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
+	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.")
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
