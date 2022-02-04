@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 3, 2022"
+const LastAltered = "Feb 4, 2022"
 
 /*
 Revision History
@@ -106,6 +106,7 @@ Revision History
 28 Jul 21 -- I'm removing truncStr and will use fixedStringLen instead.
  3 Feb 22 -- Porting simpler code from dsrt and ds to here.  And reversed -x and -exclude options.  Now -x means input exclude regex on command line.
                And adding a column number param.
+ 4 Feb 22 -- Added c2 and c3 flags to set 2 and 3 column modes.
 */
 
 type dirAliasMapType map[string]string
@@ -253,6 +254,8 @@ func main() {
 
 	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
 
+	c2 := flag.Bool("c2", false, "Flag to set 2 column display mode.")
+	c3 := flag.Bool("c3", false, "Flag to set 3 column display mode.")
 	flag.Parse()
 
 	if veryVerboseFlag { // setting very verbose will also set verbose.
@@ -268,6 +271,13 @@ func main() {
 		numOfCols = 1
 	} else if numOfCols > 3 {
 		numOfCols = 3
+	}
+	if numOfCols == 1 {
+		if *c2 {
+			numOfCols = 2
+		} else if *c3 {
+			numOfCols = 3
+		}
 	}
 
 	if testFlag {
