@@ -447,27 +447,6 @@ func main() {
 		}
 	}
 
-	// files, err = ioutil.ReadDir(workingdir) depracated as of Go 1.16
-	openedDir, err := os.Open(workingDir)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Open directory err is", err)
-	}
-
-	files, err = openedDir.Readdir(0) // zero means return all filemode entries into the returned slice
-	if err != nil {                   // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-		log.Println(err, "so calling my own MyReadDir.")
-		files = MyReadDir(workingDir)
-	}
-	if ShowGrandTotal {
-		for _, f := range files {
-			if f.Mode().IsRegular() {
-				grandTotal += f.Size()
-				GrandTotalCount++
-			}
-		}
-	}
-	sort.Slice(files, sortfcn)
-
 	if testFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
@@ -479,13 +458,14 @@ func main() {
 			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag)
 		fmt.Println(" Dirname is", workingDir)
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// I need to add a description of how this code works, because I forgot.
 	// The entire contents of the directory is read in.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
 
 	fileInfos := getFileInfos(workingDir, inputRegEx)
+	sort.Slice(files, sortfcn)
 	cs := getColorizedStrings(fileInfos, numOfCols)
 
 	// Output the colorized string slice
