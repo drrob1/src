@@ -103,6 +103,8 @@ REVISION HISTORY
 29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux but on Windows it means to use the Glob function.
  1 Feb 22 -- Added veryVerboseFlag, and optimized includeThis.
  3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
+               Current logic has the getFileInfos routine process the command line options and params, determines which files match
+               the provided pattern, which don't match the exclude regex, which are filtered out by size, and returns what's left.
 */
 
 //type FISliceType []os.FileInfo
