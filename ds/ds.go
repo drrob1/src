@@ -342,7 +342,7 @@ func main() {
 	if numOfCols == 3 && w < min3Width {
 		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min3Width, numOfCols)
 		numOfCols = 1
-	} else if numOfCols == 3 && w < min2Width {
+	} else if numOfCols == 2 && w < min2Width {
 		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min2Width, numOfCols)
 		numOfCols = 1
 	} else if numOfCols == 1 && w < minWidth {
