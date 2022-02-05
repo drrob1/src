@@ -13,6 +13,7 @@ dsrtre.go
   20 Aug 20 -- Will write errors to os.Stderr.  Changed how default timeout is set.
   23 Aug 20 -- Make sure a newline is displayed after the error message.
    5 Sep 20 -- Don't follow symlinked directories
+   4 Feb 22 -- Updated code, removing the concurrency pattern as it's not needed.  And removing the tracking of directories visited.
 */
 package main
 
@@ -24,126 +25,153 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const lastAltered = "5 Sep 2020"
-
-type ResultType struct {
-	// filename  string  Not needed, AFAICT (as far as I can tell)
-	path      string
-	datestamp string
-	sizeint   int
-	// fileinfo  os.FileInfo  Not needed, AFAICT
-}
+const lastAltered = "4 Feb 2022"
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
-	log.SetFlags(0)
-	//var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 1800, where 0 means timeout of 900 sec.")
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
-	//var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
+	var verboseFlag = flag.Bool("v", false, "enter a verbose testing mode to println more variables")
+	var inputRegexPattern, startDir string
+	var inputRegex *regexp.Regexp
+	var err error
+
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
-		log.Println("timeout must be in the range [0..1800] seconds")
-		*timeoutOpt = 0
+		log.Println("timeout must be in the range [0..1800] seconds.  Set to 900")
+		*timeoutOpt = 900
 	}
 
-	args := flag.Args()
+	if flag.NArg() == 0 {
+		fmt.Print(" Enter regex: ")
+		fmt.Scanln(&inputRegexPattern)
+		startDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Getwd returned this error: %v\n", err)
+			os.Exit(1)
+		}
 
-	if len(args) < 1 {
-		log.Fatalln("a regex to match must be specified")
+	} else if flag.NArg() == 1 {
+		inputRegexPattern = flag.Arg(0)
+		startDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Getwd returned this error: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		inputRegexPattern = flag.Arg(0)
+		startDir = flag.Arg(1)
 	}
 
-	inputpattern := strings.ToLower(args[0])
-	pattern, err := regexp.Compile(inputpattern)
+	inputRegexPattern = strings.ToLower(inputRegexPattern)
+	inputRegex, err = regexp.Compile(inputRegexPattern)
 	if err != nil {
 		log.Fatalln(" error from regex compile function is ", err)
 	}
 
-	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" dsrtre (recursive), written in Go.  Last altered %s, will use regex of %q and will start in %s. \n", lastAltered, pattern, startDirectory)
+	fmt.Printf(" dsrtre (recursive), written in Go.  Last altered %s, will use regex of %q and will start in %s. \n", lastAltered, inputRegex.String(), startDir)
 	fmt.Println()
-	fmt.Println()
-	DirAlreadyWalked := make(map[string]bool, 500)
-	DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
+	if *verboseFlag { // I don't really have anything for verbose mode yet.  I'll have to think of something.
+		fmt.Println()
+	}
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
-	// goroutine to collect results from resultsChan
-	doneChan := make(chan bool)
-	resultsChan := make(chan ResultType, 100_000)
-	go func() {
-		for r := range resultsChan {
-			sizestr := strconv.Itoa(r.sizeint)
-			if r.sizeint > 100000 {
-				sizestr = AddCommas(sizestr)
+	/*	// walkfunc closure
+		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from walk is %v. \n", err)
+				return nil
 			}
-			fmt.Printf("%15s %s %s\n", sizestr, r.datestamp, r.path)
-		}
-		doneChan <- true
-	}()
 
-	// walkfunc closure
-	filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n", err)
-			return nil
-		}
-
-		if fi.IsDir() {
-			if DirAlreadyWalked[fpath] {
-				return filepath.SkipDir
-			} else {
-				DirAlreadyWalked[fpath] = true
-			}
-		} else if isSymlink(fi.Mode()) && fi.IsDir() {
-			return filepath.SkipDir
-		} else /* if fi.Mode().IsRegular()  */ {
-			if runtime.GOOS == "linux" {
-				for _, fp := range args {
-					fp = strings.ToLower(fp)
-					NAME := strings.ToLower(fi.Name())
+			if fi.IsDir() {
+				if DirAlreadyWalked[fpath] {
+					return filepath.SkipDir
+				} else {
+					DirAlreadyWalked[fpath] = true
+				}
+			} else if isSymlink(fi.Mode()) && fi.IsDir() {
+				if runtime.GOOS == "linux" {
+					for _, fp := range args {
+						fp = strings.ToLower(fp)
+						NAME := strings.ToLower(fi.Name())
+						if BOOL := pattern.MatchString(NAME); BOOL {
+							var r ResultType
+							s := fi.ModTime().Format("Jan-02-2006_15:04:05")
+							r.path = fpath
+							r.datestamp = s
+							r.sizeint = int(fi.Size()) // fi.Size() is an int64
+							resultsChan <- r
+						}
+					}
+				} else if runtime.GOOS == "windows" {
+					NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
 					if BOOL := pattern.MatchString(NAME); BOOL {
 						var r ResultType
 						s := fi.ModTime().Format("Jan-02-2006_15:04:05")
 						r.path = fpath
 						r.datestamp = s
-						r.sizeint = int(fi.Size()) // fi.Size() is an int64
+						r.sizeint = int(fi.Size())
 						resultsChan <- r
 					}
 				}
-			} else if runtime.GOOS == "windows" {
-				NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
-				if BOOL := pattern.MatchString(NAME); BOOL {
-					var r ResultType
-					s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-					r.path = fpath
-					r.datestamp = s
-					r.sizeint = int(fi.Size())
-					resultsChan <- r
+				now := time.Now()
+				if now.After(tfinal) {
+					log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 				}
 			}
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-			}
+			return nil
 		}
+
+		er := filepath.Walk(startDirectory, filepathwalkfunction)
+	*/
+	filepathWalkDirEntry := func(fpath string, d os.DirEntry, err error) error {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
+			return nil
+		}
+
+		if d.IsDir() && fpath == ".git" {
+			return filepath.SkipDir
+		} else if isSymlink(d.Type()) {
+			fmt.Printf(" %s is a symlink, name is %s. \n", fpath, d.Name())
+			//return filepath.SkipDir
+		}
+
+		// Must be a regular file
+		NAME := strings.ToLower(d.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
+		if BOOL := inputRegex.MatchString(NAME); BOOL {
+			fi, er := d.Info()
+			if er != nil {
+				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name())
+				return er
+			}
+			t := fi.ModTime().Format("Jan-02-2006_15:04:05")
+			sizeStr := strconv.Itoa(int(fi.Size()))
+			if fi.Size() > 100_000 {
+				sizeStr = AddCommas(sizeStr)
+			}
+
+			fmt.Printf("%15s %s %s\n", sizeStr, t, fpath)
+		}
+
+		now := time.Now()
+		if now.After(tfinal) {
+			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+		}
+
 		return nil
 	}
 
-	er := filepath.Walk(startDirectory, filepathwalkfunction)
-	if er != nil {
+	err = filepath.WalkDir(startDir, filepathWalkDirEntry)
+	if err != nil {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
-
-	close(resultsChan)
-	<-doneChan
 
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
@@ -151,6 +179,7 @@ func main() {
 } // end main
 
 //-------------------------------------------------------------------- InsertByteSlice
+
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
