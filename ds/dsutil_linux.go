@@ -106,19 +106,21 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr {
 		sizeStr := ""
 		if filenameToBeListedFlag && f.Mode().IsRegular() {
 			sizeTotal += f.Size()
-			if longFileSizeListFlag {
+			if longFileSizeListFlag { // changed 5 Feb 22.  All digits of length can only be seen by dsrt now.
 				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
 				if f.Size() > 100000 {
 					sizeStr = AddCommas(sizeStr)
 				}
-				strng := fmt.Sprintf("%10v %16s %s %s", f.Mode(), sizeStr, t, f.Name())
-				colorized := colorizedStr{color: ct.Yellow, str: strng}
-				cs = append(cs, colorized)
-
-			} else {
 				var colr ct.Color
 				sizeStr, colr = getMagnitudeString(f.Size())
 				strng := fmt.Sprintf("%10v %-10s %s %s", f.Mode(), sizeStr, t, f.Name())
+				colorized := colorizedStr{color: colr, str: strng}
+				cs = append(cs, colorized)
+
+			} else { // by default, the mode bits will not be shown.  Need longFileSizeListFlag to see the mode bits.
+				var colr ct.Color
+				sizeStr, colr = getMagnitudeString(f.Size())
+				strng := fmt.Sprintf("%-10s %s %s", sizeStr, t, f.Name())
 				colorized := colorizedStr{color: colr, str: strng}
 				cs = append(cs, colorized)
 			}

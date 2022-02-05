@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-const lastAltered = "2 Feb 2022"
+const lastAltered = "5 Feb 2022"
 
 func main() {
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
@@ -121,7 +121,7 @@ func main() {
 			return filepath.SkipDir
 		} else if isSymlink(d.Type()) {
 			fmt.Printf(" %s is a symlink, name is %s, mode is %v\n", fpath, d.Name(), d.Type())
-			return filepath.SkipDir
+			//return filepath.SkipDir
 		}
 
 		// Must be a regular file

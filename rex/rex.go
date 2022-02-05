@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 4, 2022"
+const LastAltered = "Feb 5, 2022"
 
 /*
 Revision History
@@ -254,8 +254,8 @@ func main() {
 
 	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
 
-	c2 := flag.Bool("c2", false, "Flag to set 2 column display mode.")
-	c3 := flag.Bool("c3", false, "Flag to set 3 column display mode.")
+	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
+	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 	flag.Parse()
 
 	if veryVerboseFlag { // setting very verbose will also set verbose.
@@ -377,6 +377,16 @@ func main() {
 				w = min3Width
 			}
 		}
+	}
+	// check min widths
+	if numOfCols == 3 && w < min3Width {
+		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min3Width, numOfCols)
+		numOfCols = 1
+	} else if numOfCols == 3 && w < min2Width {
+		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min2Width, numOfCols)
+		numOfCols = 1
+	} else if numOfCols == 1 && w < minWidth {
+		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Output may not look good.\n", w, minWidth, numOfCols)
 	}
 
 	if flag.NArg() == 0 {
