@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "3 Feb 2022"
+const LastAltered = "5 Feb 2022"
 
 /*
 Revision History
@@ -108,6 +108,7 @@ Revision History
  1 Feb 22 -- Added veryVerboseFlag, intended for only when I really need it.  And fixed environ var by making it dsrt instead of what it was, ds.
                And optimized includeThis.
  3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
+ 5 Feb 22 -- Now to add the numOfCols stuff that works in rex.go.  So this will also allow multi column displays, too.
 */
 
 type dirAliasMapType map[string]string
@@ -125,6 +126,8 @@ type colorizedStr struct {
 const defaultHeight = 40
 const minWidth = 90
 const maxWidth = 300
+const min2Width = 160
+const min3Width = 170
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
 var globFlag, veryVerboseFlag bool
@@ -143,6 +146,7 @@ func main() {
 	var SizeTotal, GrandTotal int64
 	var GrandTotalCount int
 	var excludeRegexPattern string
+	var numOfCols int
 
 	uid := 0
 	gid := 0
@@ -233,16 +237,15 @@ func main() {
 
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
 
+	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
+
+	c2 := flag.Bool("c2", false, "Flag to set 2 column display mode.")
+	c3 := flag.Bool("c3", false, "Flag to set 3 column display mode.")
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, testFlag
 		testFlag = true
 	}
-
-	if testFlag {
-		fmt.Println(" After flag.Parse(); option switches w=", w, "nscreens=", *nscreens, "Nlines=", NLines)
-	}
-
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
 
@@ -262,6 +265,30 @@ func main() {
 	numOfLines *= *nscreens
 
 	noExtensionFlag = *extensionflag || *extflag
+
+	if numOfCols < 1 {
+		numOfCols = 1
+	} else if numOfCols > 3 {
+		numOfCols = 3
+	}
+	if numOfCols == 1 {
+		if *c2 {
+			numOfCols = 2
+		} else if *c3 {
+			numOfCols = 3
+		}
+	}
+
+	if testFlag {
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
+		fmt.Println()
+		fmt.Println("winFlag:", winFlag)
+		fmt.Println()
+		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d, numOfCols=%d\n", w, *nscreens, NLines, numOfCols)
+	}
 
 	if len(excludeRegexPattern) > 0 {
 		if testFlag {
@@ -341,15 +368,15 @@ func main() {
 	}
 
 	if testFlag {
-		execname, _ := os.Executable()
-		ExecFI, _ := os.Stat(execname)
-		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
-		fmt.Println()
+		//execname, _ := os.Executable()
+		//ExecFI, _ := os.Stat(execname)
+		//ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		//fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		//fmt.Println()
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf(" uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s.\n",
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
-			fmt.Printf(" Autoheight=%d, autowidth=%d, w=%d, numOfLines=%d. \n", autoHeight, autoWidth, w, numOfLines)
+			fmt.Printf(" Autoheight=%d, autowidth=%d, w=%d, numOfLines=%d, numOfCols=%d. \n", autoHeight, autoWidth, w, numOfLines, numOfCols)
 			fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
 				dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 				dsrtParam.totalflag)
@@ -390,22 +417,32 @@ func main() {
 		sort.Slice(fileInfos, sortfcn)
 	}
 
-	cs := getColorizedStrings(fileInfos)
+	cs := getColorizedStrings(fileInfos, numOfCols)
 
 	if testFlag {
 		fmt.Printf(" Len(fileinfos)=%d, len(colorizedStrings)=%d, numOfLines=%d\n", len(fileInfos), len(cs), numOfLines)
 	}
 
-	// Now to output the colorStringSlice, 1 item per line
-	columnWidth := w - 1 // a tolerance factor.
-	for i, css := range cs {
-		s0 := fixedStringLen(css.str, columnWidth)
-		ctfmt.Printf(css.color, winFlag, "%s\n", s0)
-		if i >= numOfLines {
-			break
-		}
-	}
+	// Output the colorized string slice
+	columnWidth := w/numOfCols - 2
+	for i := 0; i < len(cs); i += numOfCols {
+		c0 := cs[i].color
+		s0 := fixedStringLen(cs[i].str, columnWidth)
+		ctfmt.Printf(c0, winFlag, "%s", s0)
 
+		if numOfCols > 1 && (i+1) < len(cs) { // numOfCols of 2 or 3
+			c1 := cs[i+1].color
+			s1 := fixedStringLen(cs[i+1].str, columnWidth)
+			ctfmt.Printf(c1, winFlag, "  %s", s1)
+		}
+
+		if numOfCols == 3 && (i+2) < len(cs) {
+			c2 := cs[i+2].color
+			s2 := fixedStringLen(cs[i+2].str, columnWidth)
+			ctfmt.Printf(c2, winFlag, "  %s", s2)
+		}
+		fmt.Println()
+	}
 	fmt.Println()
 
 	s := fmt.Sprintf("%d", SizeTotal)

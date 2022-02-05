@@ -462,7 +462,8 @@ func main() {
 	}
 
 	// I need to add a description of how this code works, because I forgot.
-	// The entire contents of the directory is read in.  Then the slice of fileinfo's is sorted, and finally only the matching filenames are displayed.
+	// The entire contents of the directory is read in and then only matching files less the excluded ones are made into a slice of file infos.
+	// Then the slice of fileinfo's is sorted, and finally filenames are displayed.
 
 	fileInfos := getFileInfos(workingDir, inputRegEx)
 	sort.Slice(files, sortfcn)

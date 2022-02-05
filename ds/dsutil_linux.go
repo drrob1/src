@@ -97,7 +97,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 	return fileInfos
 }
 
-func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr {
+func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr {
 
 	cs := make([]colorizedStr, 0, len(fiSlice))
 
@@ -132,12 +132,12 @@ func getColorizedStrings(fiSlice []os.FileInfo) []colorizedStr {
 			colorized := colorizedStr{color: ct.White, str: s}
 			cs = append(cs, colorized)
 		}
-		if i > numOfLines {
+		if i > numOfLines*cols {
 			break
 		}
 	}
 	if testFlag {
-		fmt.Printf(" In getColorizedString.  len(fiSlice)=%d, len(cs)=%d, numofLines=%d\n", len(fiSlice), len(cs), numOfLines)
+		fmt.Printf(" In getColorizedString.  len(fiSlice)=%d, len(cs)=%d, numofLines=%d, cols=%d\n", len(fiSlice), len(cs), numOfLines, cols)
 	}
 	return cs
 }
