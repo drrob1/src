@@ -25,9 +25,10 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	return usernameStr, groupnameStr
 } // end GetUserGroupStr
 
-// getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed
-// It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
-// The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
+// getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
+// It handles if there are no files populated by bash or file not found by bash, but does not sort the slice before returning it, due to difficulty in passing the sort function.
+// The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
+// Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
 
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo

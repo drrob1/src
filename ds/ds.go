@@ -111,6 +111,14 @@ Revision History
  5 Feb 22 -- Now to add the numOfCols stuff that works in rex.go.  So this will also allow multi column displays, too.
 */
 
+// getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
+// It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
+// but does not sort the slice before returning it, due to difficulty in passing the sort function.
+// The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
+// Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
+// As of Feb 5, 2022, I can use this routine to handle the 2 and 3 column displays, so I don't need the separate routines.  I decided that the difficulity of maintaining
+// all of these different files is too much.  From now on, all code improvements will happen in this pgm.
+
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
