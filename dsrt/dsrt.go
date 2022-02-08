@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "3 Feb 2022"
+const LastAltered = "8 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -105,6 +105,7 @@ REVISION HISTORY
  3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
                Current logic has the getFileInfos routine process the command line options and params, determines which files match
                the provided pattern, which don't match the exclude regex, which are filtered out by size, and returns what's left.
+ 8 Feb 22 -- Fixing a bug w/ the -g globbing option on Windows.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

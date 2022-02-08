@@ -12,6 +12,13 @@ import (
 )
 
 /*
+REVISION HISTORY
+-------- -------
+ 8 Feb 22 -- Found a bug in glob flag when I tested with "z:*.TXT" that didn't happen w/ the separate glob.go, fast.go or dsrt z:*.txt
+               I got an error from Lstat in that it tried to Lstat z:\z:filename.TXT.
+*/
+
+/* Not used here.
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	return "", ""
 }
@@ -19,7 +26,8 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 */
 
 // processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
-// It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
+// It handles if there are no files populated by bash or file not found by bash, but doesn't sort the slice before returning it, because of difficulty passing
+// the sortfcn.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
@@ -40,7 +48,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
 			os.Exit(1)
 		}
-		fileInfos = MyReadDir(workingDir)
+		fileInfos = myReadDir(workingDir)
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
@@ -53,7 +61,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
-			fileInfos = MyReadDir(dirName)
+			fileInfos = myReadDir(dirName)
 			return fileInfos
 		}
 		if dirName == "" {
@@ -72,6 +80,11 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
 			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
 			filenames, err = filepath.Glob(pattern)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " In getFileInfosFromCommandLine: error from Glob is %v.\n", err)
+				return nil
+			}
+			dirName = "" // make this an empty string because the name returned by glob includes the dir info.
 			if testFlag {
 				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 			}
@@ -86,7 +99,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			filenames, err = d.Readdirnames(0) // I don't have to make filenames slice first.
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfos = MyReadDir(dirName)
+				fileInfos = myReadDir(dirName)
 				return fileInfos
 			}
 		} // if globFlag
@@ -98,7 +111,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		const sepStr = string(os.PathSeparator)
 		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
 			var path string
-			if strings.Contains(f, sepStr) {
+			if strings.Contains(f, sepStr) || strings.Contains(f, ":") {
 				path = f
 			} else {
 				path = dirName + sepStr + f
@@ -130,7 +143,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 
 } // end getFileInfosFromCommandLine
 
-//displayFileInfos only as to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
+//displayFileInfos only has to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
 func displayFileInfos(fiSlice []os.FileInfo) {
 	var lnCount int
 	for _, f := range fiSlice {
