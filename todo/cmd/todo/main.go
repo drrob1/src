@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"src/todo"
 	"strings"
 	"time"
@@ -21,9 +22,12 @@ REVISION HISTORY
              Then added use of TODO_FILENAME environment variable.
 16 Jan 22 -- Added stdin as a source.  And changed name of string task flag to a boolean add flag.
 17 Jan 22 -- Added default actions if no switch is provided.  If there are arguments then add as a task, if not list tasks.
+ 8 Feb 22 -- Will show a timestamp of adding a task, and will use a network file if available.
 */
 
-const lastModified = "17 Jan 2022"
+const lastModified = "9 Feb 2022"
+const linuxNetworkPrefix = "/mnt/docs/"
+const windowsNetworkPrefix = "z:/"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
@@ -31,7 +35,7 @@ var fileExists bool
 
 var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
 
-//var task = flag.String("task", "", "Task to be added to the ToDo list.")
+//                                                                                  var task = flag.String("task", "", "Task to be added to the ToDo list.")
 var add = flag.Bool("add", false, "Add task to the ToDo list.")
 var complete = flag.Int("complete", 0, "Item to be completed.") // here, 0 means NTD.  That's why we have to start at 1 for item numbers.
 var listFlag = flag.Bool("list", false, "List all tasks to the display.")
@@ -54,17 +58,29 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir is %v.\n", err)
 	}
 
+	if runtime.GOOS == "linux" {
+
+	} else { // must be on Windows.
+
+	}
+
 	envValue, ok := os.LookupEnv("TODO_FILENAME")
 	if ok {
 		todoFilename = envValue + ".json"
-		todoFileBin = filepath.Base(envValue) + ".gob"
+		//todoFileBin = filepath.Base(envValue) + ".gob"
+		todoFileBin = envValue + ".gob"
 	}
 	if *verboseFlag {
 		fmt.Printf(" todoFilename = %s, todoFileBin = %s\n", todoFilename, todoFileBin)
 	}
 
-	fullFilenameJson := filepath.Join(homeDir, todoFilename)
-	fullFilenameBin := filepath.Join(homeDir, todoFileBin)
+	var fullFilenameJson, fullFilenameBin string
+	if ok {
+		fullFilenameJson, fullFilenameBin = todoFilename, todoFileBin
+	} else {
+		fullFilenameJson = filepath.Join(homeDir, todoFilename)
+		fullFilenameBin = filepath.Join(homeDir, todoFileBin)
+	}
 	if *verboseFlag {
 		fmt.Printf(" fullFilenameJson = %s, fullFilenameBin = %s\n", fullFilenameJson, fullFilenameBin)
 	}

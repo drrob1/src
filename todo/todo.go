@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const lastModified = "Jan 15, 2022"
+const lastModified = "Feb 9, 2022"
 
 /*
 REVISION HISTORY
@@ -17,6 +17,7 @@ REVISION HISTORY
 10 Jan 22 -- Started writing this code from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 15 Jan 22 -- Changed behavior of the file read to return the error if file was not found.
                Then added the String() method using value receiver as fmt package requires that to work.
+ 8 Feb 22 -- Will show the created at field in the Stringer method.
 */
 
 type item struct {
@@ -133,13 +134,15 @@ func (l ListType) String() string { // implements the fmt.Stringer interface, wh
 		suffix := ".  "
 		prefix := "  "
 
+		createdAt := ", created " + t.CreatedAt.Format("Jan-02-2006 15:04") + ", "
+
 		if t.Done {
 			prefix = "X "
 			//suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
 			suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04") + ".  "
 		}
 		// Need to adjust to 1-origin task numbers
-		formatted += fmt.Sprintf("%s%d: %s%s\n", prefix, i+1, t.Task, suffix)
+		formatted += fmt.Sprintf("%s%d: %s%s%s\n", prefix, i+1, t.Task, createdAt, suffix)
 	}
 	return formatted
 }
