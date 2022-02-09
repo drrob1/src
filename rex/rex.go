@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 5, 2022"
+const LastAltered = "Feb 9, 2022"
 
 /*
 Revision History
@@ -107,6 +107,7 @@ Revision History
  3 Feb 22 -- Porting simpler code from dsrt and ds to here.  And reversed -x and -exclude options.  Now -x means input exclude regex on command line.
                And adding a column number param.
  4 Feb 22 -- Added c2 and c3 flags to set 2 and 3 column modes.
+ 9 Feb 22 -- Fixed but on sorting line, sorting the wrong file.
 */
 
 type dirAliasMapType map[string]string
@@ -136,7 +137,7 @@ var numOfLines int
 
 func main() {
 	var dsrtParam DsrtParamType
-	var files []os.FileInfo
+	var fileInfos []os.FileInfo
 	var err error
 	var GrandTotalCount, autoHeight, autoWidth int
 	var excludeRegexPattern string
@@ -428,7 +429,7 @@ func main() {
 	sortfcn := func(i, j int) bool { return false }
 	if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
-			return files[i].Size() > files[j].Size() // I want a largest first sort
+			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
 		}
 		if testFlag {
 			fmt.Println("sortfcn = largest size.")
@@ -436,21 +437,21 @@ func main() {
 	} else if DateSort && Forward {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort
+			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort
 		}
 		if testFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].Size() < files[j].Size() // I want a smallest-first sort
+			return fileInfos[i].Size() < fileInfos[j].Size() // I want a smallest-first sort
 		}
 		if testFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
-			return files[i].ModTime().Before(files[j].ModTime()) // I want an oldest-first sort
+			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
 		}
 		if testFlag {
 			fmt.Println("sortfcn = oldest date.")
@@ -472,11 +473,11 @@ func main() {
 	}
 
 	// I need to add a description of how this code works, because I forgot.
-	// The entire contents of the directory is read in and then only matching files less the excluded ones are made into a slice of file infos.
-	// Then the slice of fileinfo's is sorted, and finally filenames are displayed.
+	// The entire contents of the directory is read in and then only matching files after the excluded ones are removed, are returned as the slice of file infos.
+	// Then the slice of fileinfo's is sorted, and finally the file infos are colorized and displayed in columns
 
-	fileInfos := getFileInfos(workingDir, inputRegEx)
-	sort.Slice(files, sortfcn)
+	fileInfos = getFileInfos(workingDir, inputRegEx)
+	sort.Slice(fileInfos, sortfcn)
 	cs := getColorizedStrings(fileInfos, numOfCols)
 
 	// Output the colorized string slice
@@ -486,15 +487,17 @@ func main() {
 		s0 := fixedStringLen(cs[i].str, columnWidth)
 		ctfmt.Printf(c0, winFlag, "%s", s0)
 
-		if numOfCols > 1 && (i+1) < len(cs) { // numOfCols of 2 or 3
-			c1 := cs[i+1].color
-			s1 := fixedStringLen(cs[i+1].str, columnWidth)
+		j := i + 1
+		if numOfCols > 1 && j < len(cs) { // numOfCols of 2 or 3
+			c1 := cs[j].color
+			s1 := fixedStringLen(cs[j].str, columnWidth)
 			ctfmt.Printf(c1, winFlag, "  %s", s1)
 		}
 
-		if numOfCols == 3 && (i+2) < len(cs) {
-			c2 := cs[i+2].color
-			s2 := fixedStringLen(cs[i+2].str, columnWidth)
+		k := j + 1
+		if numOfCols == 3 && k < len(cs) {
+			c2 := cs[k].color
+			s2 := fixedStringLen(cs[k].str, columnWidth)
 			ctfmt.Printf(c2, winFlag, "  %s", s2)
 		}
 		fmt.Println()
