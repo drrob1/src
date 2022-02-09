@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"src/todo"
 	"strings"
 	"time"
@@ -22,15 +21,15 @@ REVISION HISTORY
              Then added use of TODO_FILENAME environment variable.
 16 Jan 22 -- Added stdin as a source.  And changed name of string task flag to a boolean add flag.
 17 Jan 22 -- Added default actions if no switch is provided.  If there are arguments then add as a task, if not list tasks.
- 8 Feb 22 -- Will show a timestamp of adding a task, and will use a network file if available.
+ 8 Feb 22 -- Will show a timestamp of adding a task, done by updating the stringer method in todo.go.  I changed how the
+               filename is constructed.  I am considering adding another environment variable, called TODO_PREFIX to more easily cover the networking prefix.
 */
 
 const lastModified = "9 Feb 2022"
-const linuxNetworkPrefix = "/mnt/docs/"
-const windowsNetworkPrefix = "z:/"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
+var prefix string
 var fileExists bool
 
 var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
@@ -43,14 +42,14 @@ var listFlag = flag.Bool("list", false, "List all tasks to the display.")
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s. \n", os.Args[0], lastModified)
+		fmt.Fprintf(flag.CommandLine.Output(), "TODO_PREFIX and TODO_FILENAME are the environment variables used.  Do not use an extension for TODO_FILENAME")
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	if *verboseFlag {
 		fmt.Printf(" todo last modified %s.  It will display and manage a todo list.\n", lastModified)
-		fmt.Printf(" Default file root is todo for todo.json and todo.gob.  TODO_FILENAME environment variable is read.\n")
-
+		fmt.Printf(" Default filename root is todo for todo.json and todo.gob.  TODO_FILENAME environment variable is read, and should not have an extension.\n")
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -58,29 +57,25 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir is %v.\n", err)
 	}
 
-	if runtime.GOOS == "linux" {
-
-	} else { // must be on Windows.
-
-	}
-
-	envValue, ok := os.LookupEnv("TODO_FILENAME")
+	var fullFilenameJson, fullFilenameBin string
+	envFN, ok := os.LookupEnv("TODO_FILENAME")
 	if ok {
-		todoFilename = envValue + ".json"
-		//todoFileBin = filepath.Base(envValue) + ".gob"
-		todoFileBin = envValue + ".gob"
+		todoFilename = envFN + ".json"
+		todoFileBin = filepath.Base(envFN) + ".gob"
 	}
 	if *verboseFlag {
 		fmt.Printf(" todoFilename = %s, todoFileBin = %s\n", todoFilename, todoFileBin)
 	}
 
-	var fullFilenameJson, fullFilenameBin string
+	prefix, ok = os.LookupEnv("TODO_PREFIX")
 	if ok {
-		fullFilenameJson, fullFilenameBin = todoFilename, todoFileBin
+		fullFilenameJson = filepath.Join(prefix, todoFilename)
+		fullFilenameBin = filepath.Join(prefix, todoFileBin)
 	} else {
 		fullFilenameJson = filepath.Join(homeDir, todoFilename)
 		fullFilenameBin = filepath.Join(homeDir, todoFileBin)
 	}
+
 	if *verboseFlag {
 		fmt.Printf(" fullFilenameJson = %s, fullFilenameBin = %s\n", fullFilenameJson, fullFilenameBin)
 	}
