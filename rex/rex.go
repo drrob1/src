@@ -107,7 +107,7 @@ Revision History
  3 Feb 22 -- Porting simpler code from dsrt and ds to here.  And reversed -x and -exclude options.  Now -x means input exclude regex on command line.
                And adding a column number param.
  4 Feb 22 -- Added c2 and c3 flags to set 2 and 3 column modes.
- 9 Feb 22 -- Fixed but on sorting line, sorting the wrong file.
+ 9 Feb 22 -- Fixed bug on sorting line, sorting the wrong file.
 */
 
 type dirAliasMapType map[string]string
