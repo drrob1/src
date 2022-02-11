@@ -813,6 +813,8 @@ func includeThis(fn string) bool { // I removed the filter against file size, so
 	return true
 }
 
+// --------------------------------------------- getColorizedStrings --------------------------------------------------
+
 func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr { // cols is the intended number of columns for the colorizedStr output slice.
 
 	cs := make([]colorizedStr, 0, len(fiSlice))

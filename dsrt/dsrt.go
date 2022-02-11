@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "8 Feb 2022"
+const LastAltered = "10 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -106,6 +106,7 @@ REVISION HISTORY
                Current logic has the getFileInfos routine process the command line options and params, determines which files match
                the provided pattern, which don't match the exclude regex, which are filtered out by size, and returns what's left.
  8 Feb 22 -- Fixing a bug w/ the -g globbing option on Windows.
+10 Feb 22 -- Fixing a bug in MyReadDir when an error occurs.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -637,6 +638,7 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 		fi, e := d.Info()
 		if e != nil {
 			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
+			continue
 		}
 		if includeThis(fi) {
 			fileInfos = append(fileInfos, fi)
