@@ -19,6 +19,7 @@
                And fix, lastx both use letter X which immediately exits.  Now fixed.
  8 Jan 22 -- Will detect File Not Found error and handle it differently than other errors.  I now know how based on "Powerful Command Line Applications in Go."
                And will have keyTyped go back into the Entry widget.  I think it looks nicer.
+12 Feb 22 -- Going back to not have keyTyped to into the entry widget.  This allows <space> to be a delimiter.  I like that better.
 */
 
 package main
@@ -50,7 +51,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Jan 9, 2022"
+const lastModified = "Feb 12, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -479,7 +480,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
 			shiftState = true
-			globalW.Canvas().Focus(input)
+			// globalW.Canvas().Focus(input)
 			return
 		}
 		if shiftState {
@@ -511,7 +512,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 				//input.TypedRune('~')
 				return
 			}
-			globalW.Canvas().Focus(input)
+			// globalW.Canvas().Focus(input)  Not changing focus into the entry widget.  This is the line that changes focus.
 		} else {
 			input.TypedRune(rune(e.Name[0]))
 			//globalW.Canvas().Focus(input)
@@ -519,7 +520,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 
 		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
 	}
-	globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.
+	// globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.  Undone.
 } // end keyTyped
 
 // ---------------------------------------------------------- keyTypedHelp --------------------------------------------
