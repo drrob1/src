@@ -48,9 +48,10 @@ import (
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using io.ReadAll. and go 1.15.8
    7 Mar 21 -- added strings.TrimSpace
    8 Apr 21 -- Converted import list to module named src.  So essentially, very little has changed except for these import statements.
+  13 Feb 22 -- filepicker API changed recently.  So I'm updating the code here that uses filepicker.
 */
 
-const LastCompiled = "8 Apr 2021"
+const LastCompiled = "13 Feb 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -88,7 +89,11 @@ func main() {
 	// filepicker stuff.
 
 	if len(os.Args) <= 1 { // need to use filepicker
-		filenames := filepicker.GetFilenames("*.sha*")
+		filenames, err := filepicker.GetFilenames("*.sha*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from filepicker is %v.  Exiting \n", err)
+			os.Exit(1)
+		}
 		for i := 0; i < min(len(filenames), 20); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}

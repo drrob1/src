@@ -20,29 +20,23 @@ package mat
  24 Dec 16 -- Passed mattest.
  25 Dec 16 -- Changed the code to use the Go swapping idiom
   1 Aug 20 -- Cleaning up some code.  I'm looking at this again because of adding gohum to solve.go --> gonumsolve.go
+ 13 Feb 22 -- Updated to modules
 */
 
 import (
-	//  "os"
-	//  "bufio"
-	//  "path/filepath"
-	//  "strings"
 	"fmt"
 	"math"
 	"math/cmplx"
 	"math/rand"
+	"src/vec"
 	"strconv"
 	"time"
-	//
-	"vec"
-	//  "getcommandline"
-	//  "timlibg"
-	//  "tokenize"
 )
 
 const small = 1.0e-10
 const SubscriptDim = 8192
-const SizeFudgeFactor = 20 // decided to not use this in NewMatrix
+
+//const SizeFudgeFactor = 20 // decided to not use this in NewMatrix
 
 type Matrix2D [][]float64
 type Permutation []int

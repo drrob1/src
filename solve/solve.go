@@ -10,26 +10,32 @@ MODULE Solve;
    4 Mar 05 -- Don't need N as 1st line now.
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
   24 Dec 16 -- Converted to Go.
+  13 Feb 21 -- Updated to modules.  And added filepicker and flag package.
 */
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
-	"getcommandline"
 	"io"
-	"mat"
 	"os"
-	"path/filepath"
+	"runtime"
+	"src/filepicker"
+	"src/mat"
+	"src/tokenize"
+	"strconv"
 	"strings"
-	"tokenize"
 )
 
-const LastCompiled = "25 Dec 16"
+const LastCompiled = "13 Feb 21"
 const MaxN = 9
 
 //                          MaxRealArray is not square because the B column vector is in last column of IM
 //                                             TYPE MaxRealArray = ARRAY [1..MaxN],[1..MaxN+1] OF LONGREAL;
-type Matrix2D [][]float64
+
+//type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
+
+var verboseFlag = flag.Bool("v", false, "Verbose mode.")
 
 func main() {
 	/************************************************************************)
@@ -39,22 +45,61 @@ func main() {
 	fmt.Println(" Equation solver written in Go.  Last compiled ", LastCompiled)
 	fmt.Println()
 
-	if len(os.Args) <= 1 {
-		fmt.Println(" Usage: solve <filename>")
-		fmt.Println(" Solves vector equation A*X = B; A is a square coef matrix.")
-		fmt.Println(" N is determined by number of rows and B value is last on each line.")
-		os.Exit(0)
-	}
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastCompiled, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " Solves vector equation A*X = B; A is a square coef matrix.")
+		fmt.Fprintf(flag.CommandLine.Output(), " Input text file has each row being the coefficients.")
+		fmt.Fprintf(flag.CommandLine.Output(), " N is determined by number of rows and B value is last on each line.")
 
-	commandline := getcommandline.GetCommandLineString()
-	cleancommandline := filepath.Clean(commandline)
-	fmt.Println(" filename on command line is ", cleancommandline)
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	var filename string
+	if flag.NArg() == 0 {
+		filenames, err := filepicker.GetFilenames("*") // Not sure what the default ext should be.  For now, any file is allowed.
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " filepicker returned error %v\n.  Exiting.", err)
+			os.Exit(1)
+		}
+		if len(filenames) == 0 {
+			fmt.Fprintln(os.Stderr, " No filenames found that match pattern.  Exiting")
+			os.Exit(1)
+		}
+		for i := 0; i < min(len(filenames), 26); i++ { // goes 0 .. 25, or a .. z
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
+		}
+		var ans string
+		fmt.Print(" Enter filename choice : ")
+		_, err = fmt.Scanln(&ans)
+		if len(ans) == 0 || err != nil {
+			ans = "0"
+		}
+		i, er := strconv.Atoi(ans)
+		if er == nil {
+			filename = filenames[i]
+		} else {
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A')
+			filename = filenames[i]
+		}
+		fmt.Println(" Picked filename is", filename)
+	} else {
+		filename = flag.Arg(0)
+		fmt.Println(" filename on command line is ", filename)
+	}
 
 	//  cleancommandline = "xy1.txt";
 
-	infile, err := os.Open(cleancommandline)
+	infile, err := os.Open(filename)
 	if err != nil {
-		fmt.Println(" Cannot open input file.  Does it exist?  Error is ", err)
+		if err == os.ErrNotExist {
+			fmt.Fprintf(os.Stderr, " %s does not exit.  Exiting.", filename)
+		} else {
+			fmt.Fprintf(os.Stderr, " Error while opening %s is %v.  Exiting.\n ", filename, err)
+		}
 		os.Exit(1)
 	}
 
@@ -86,9 +131,10 @@ CountLinesLoop:
 
 			tokenize.INITKN(inputline)
 			col := 0
-			EOL := false
+			var EOL bool
+			var token tokenize.TokenType
 			for (EOL == false) && (n <= MaxN) { // REPEAT
-				token, EOL := tokenize.GETTKNREAL()
+				token, EOL = tokenize.GETTKNREAL() // if I use the gopher operator here, then EOL gets shadowed and is not the variable evaluated in the for condition.
 				if EOL {
 					break
 				}
@@ -96,8 +142,8 @@ CountLinesLoop:
 					IM[lines][col] = token.Rsum // remember that IM is Input Matrix
 					col++
 				} // ENDIF token.state=DGT
-			} //  UNTIL (retcod > 0) OR (col > MaxN);
-			if col > 0 { // short line like if text only or null do not increment the row counter.
+			} //  UNTIL (EOL is true) OR (col > MaxN);
+			if col > 0 { // text only or null lines do not increment the row counter.
 				lines++
 			}
 		} // END for n
@@ -106,8 +152,8 @@ CountLinesLoop:
 
 	// Now need to create A and B matrices
 
-	A := mat.NewMatrix(N, N) // ra1 in Modula-2 code
-	B := mat.NewMatrix(N, 1) // ra2 in Modula-2 code
+	A := mat.NewMatrix(N, N) // ra1 in Modula-2 code, ie, square matrix of coefficients to solve
+	B := mat.NewMatrix(N, 1) // ra2 in Modula-2 code, ie, a column vector of coefficients on the RHS of each line.
 	for row := range A {     // FOR row :=  1 TO N DO
 		for col := range A[0] { //   FOR col := 1 TO N DO
 			A[row][col] = IM[row][col]
@@ -173,7 +219,17 @@ CountLinesLoop:
 
 } // END Solve.
 
-func pause() {
+// -------------------------------------------- min ---------------------------------------------
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
+/*
+func pause() {  Written in Dec 2016.  It's not the way I would write this in 2022.  I would use fmt.Scanln(&ans)
 	scnr := bufio.NewScanner(os.Stdin)
 	fmt.Print(" pausing ... hit <enter>")
 	scnr.Scan()
@@ -186,3 +242,4 @@ func pause() {
 	ans = strings.ToUpper(ans)
 	fmt.Println(ans)
 }
+*/

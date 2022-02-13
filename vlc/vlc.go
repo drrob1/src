@@ -27,6 +27,7 @@ package main
                  It's been almost 3 yrs since I've been in this code.  Wow, I've changed my style a lot in that time.  I've switched to line comments
                  and stopped structure end comments for small number of lines, ie, I can see beginning { and ending } on one screen.
                  And I converted to modules.
+  13 Feb 22 -- Converted to new API for filepicker.
 */
 
 import (
@@ -49,7 +50,7 @@ import (
 const MaxNumOfTracks = 2048
 const blankline = "                                                                             " // ~70 spaces
 const sepline = "-----------------------------------------------------------------------------"
-const LastCompiled = "on or about Aug 24, 2021"
+const LastCompiled = "on or about Feb 13, 2022"
 
 const (
 	EMPTY    = iota
@@ -140,7 +141,7 @@ func Shuffle() {  replaced by rand.Shuffle
 	}
 } // Shuffle;
 
- */
+*/
 
 // ---------------------------------------------------------------- PeekChar -----------------------------
 // peeks at the next char without advancing fileptr.  The filepointer is advanced by ReadChar, below.
@@ -587,21 +588,25 @@ func main() {
 	FileExists := false
 
 	if len(os.Args) <= 1 { // need to use filepicker
-		filenames := filepicker.GetFilenames("*.xspf")
+		filenames, err := filepicker.GetFilenames("*.xspf")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " filepicker returned error %v\n.  Exiting.", err)
+			os.Exit(1)
+		}
 		if len(filenames) == 0 {
 			fmt.Println(" No filenames found that match *.xspf pattern.  Exiting")
 			os.Exit(1)
 		}
 		for i := 0; i < min(len(filenames), 26); i++ { // goes 0 .. 25, or a .. z
-			fmt.Println("filename[", i, "] is", filenames[i])
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
-		_, err := fmt.Scanln(&ans)
+		_, err = fmt.Scanln(&ans)
 		if len(ans) == 0 || err != nil {
 			ans = "0"
 		}
-		i, err := strconv.Atoi(ans)
-		if err == nil {
+		i, er := strconv.Atoi(ans)
+		if er == nil {
 			Filename = filenames[i]
 		} else {
 			s := strings.ToUpper(ans)
