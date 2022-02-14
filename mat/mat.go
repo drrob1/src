@@ -11,9 +11,9 @@ package mat
        language extension (open arrays) here; I
        haven't yet figured out how to do the job
        in ISO standard Modula-2.
-*/
 
-/*
+
+
  REVISION HISTORY
  ================
  19 Dec 16 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
@@ -36,8 +36,6 @@ import (
 const small = 1.0e-10
 const SubscriptDim = 8192
 
-//const SizeFudgeFactor = 20 // decided to not use this in NewMatrix
-
 type Matrix2D [][]float64
 type Permutation []int
 
@@ -47,9 +45,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-/*
-   CREATING MATRICES
-*/
+//   CREATING MATRICES
 
 func NewMatrix(R, C int) Matrix2D { // I think row, column makes more sense than N x M
 	// Creates an NxM matrix as a slice of slices.  So it's a pointer that gets passed around.
@@ -67,9 +63,7 @@ func NewMatrix(R, C int) Matrix2D { // I think row, column makes more sense than
 
 // PROCEDURE DisposeArray (VAR (*INOUT*) V: ArrayPtr;  N, M: CARDINAL);  Deallocating an NxM matrix is not needed, because of the garbage collection.  It just did DISPOSE (V);
 
-/*
-   ASSIGNMENTS
-*/
+//  ASSIGNMENTS
 
 func Zero(matrix Matrix2D) Matrix2D {
 	// It zeros an already defined r by c matrix.  I'm not sure this is needed in Go, but here it is.
@@ -149,11 +143,10 @@ func Copy(Src Matrix2D) Matrix2D {
 	return Dest
 }
 
-/*
-   THE BASIC MATRIX OPERATIONS
-*/
+//   THE BASIC MATRIX OPERATIONS
 
 // ---------------------------------------------------- Add -------------------
+
 func Add(A, B Matrix2D) Matrix2D {
 	// Computes C = A + B.
 
@@ -176,6 +169,7 @@ func Add(A, B Matrix2D) Matrix2D {
 }
 
 // ---------------------------------------------------- Sub -------------------
+
 func Sub(A, B Matrix2D) Matrix2D {
 	// Computes C = A - B.
 
@@ -243,9 +237,7 @@ func ScalarMul(a float64, B Matrix2D) Matrix2D {
 	return C
 }
 
-/*
-   SOLVING LINEAR EQUATIONS
-*/
+//   SOLVING LINEAR EQUATIONS
 
 // -------------------------------------------------------------------------------- LUFactor ------------------------------------------------
 
@@ -255,7 +247,7 @@ func LUFactor(A Matrix2D, perm Permutation) (Matrix2D, bool) { // A is an InOut 
 	       LU decomposition of a square matrix.  We express A in the form P*L*U, where P is a permutation matrix,
 	       L is lower triangular with unit diagonal elements, and U is upper triangular.  This is an in-place
 	       computation, where on exit U occupies the upper triangle of A, and L (not including its diagonal entries)
-	       is in the lower triangle.  The permutation information is returned in  perm.  Output parameter oddswaps
+	       is in the lower triangle.  The permutation information is returned in perm.  Output parameter oddswaps
 	       is TRUE iff an odd number of row interchanges were done by the permutation.
 	       (We need to know this only if we are going to go on to calculate a determinant.)
 
@@ -291,7 +283,7 @@ func LUFactor(A Matrix2D, perm Permutation) (Matrix2D, bool) { // A is an InOut 
 		}
 	}
 
-	/* Crout's method: we work through one column at a time. */
+	//	Crout's method: we work through one column at a time.
 
 	for col := range A {
 
@@ -360,28 +352,24 @@ func LUFactor(A Matrix2D, perm Permutation) (Matrix2D, bool) { // A is an InOut 
 	return A, oddswaps
 } // END LUFactor
 
-/************************************************************************/
+// ------------------------------------------------------------------------------------------------------
 
 // ------------------------------------------------------- LUSolve ---------------------------------------
+
 func LUSolve(LU, B Matrix2D, perm Permutation) Matrix2D {
 	/*
-	   Solves the equation P*L*U * X = B, where P is a permutation
-	   matrix specified indirectly by perm; L is lower triangular; and
-	   U is upper triangular.  The "Matrix" LU is not a genuine matrix,
-	   but rather a packed form of L and U as produced by procedure
+	   Solves the equation P*L*U * X = B, where P is a permutation matrix specified indirectly by perm; L is lower triangular; and
+	   U is upper triangular.  The "Matrix" LU is not a genuine matrix, but rather a packed form of L and U as produced by procedure
 	   LUfactor above.  Returns the solution X.
 	   Dimensions: left side is NxN, B is NxM
 	*/
 	var sum, scale float64
 	/*
-	   Pass 1: Solve the equation L*Y = B (at the same time sorting
-	   B in accordance with the specified permutation).
+	   Pass 1: Solve the equation L*Y = B (at the same time sorting B in accordance with the specified permutation).
 	   The solution Y overwrites the original value of B.
 
-	   Understanding how the permutations work is something of a
-	   black art.  It helps to know that (a) ip>=i for all i, and
-	   (b) in the summation over k below, we are accessing only
-	   those elements of B that have already been sorted into the
+	   Understanding how the permutations work is something of a black art.  It helps to know that (a) ip>=i for all i, and
+	   (b) in the summation over k below, we are accessing only those elements of B that have already been sorted into the
 	   correct order.
 	*/
 
@@ -422,6 +410,7 @@ func LUSolve(LU, B Matrix2D, perm Permutation) Matrix2D {
 } // END LUSolve;
 
 // ---------------------------------- GaussJ ----------------------------
+
 func GaussJ(A, B Matrix2D) Matrix2D {
 
 	/*
@@ -552,6 +541,7 @@ func Solve(A, B Matrix2D) Matrix2D {
 } // END Solve;
 
 // ------------------------------- Invert -------------------------
+
 func Invert(A Matrix2D) Matrix2D {
 
 	var X Matrix2D
@@ -578,15 +568,10 @@ func Balance(A Matrix2D) Matrix2D {
 	   machine's radix.
 	*/
 
-	//    VAR row, j: CARDINAL;
-	//        done: BOOLEAN;
-
 	const radix float64 = 2
 	const radixsq = radix * radix
 
 	var c, r, f, g, s float64
-
-	//        N := len(A);
 
 	for { // REPEAT
 		done := true
@@ -642,10 +627,8 @@ func Balance(A Matrix2D) Matrix2D {
 
 func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 	/*
-	   	Transforms an NxN matrix into upper Hessenberg form, i.e. all
-	   	entries below the diagonal zero except for the first subdiagonal.
-	   	This is an "in-place" calculation, i.e. the answer replaces the
-	       original matrix.
+		Transforms an NxN matrix into upper Hessenberg form, i.e. all entries below the diagonal zero except for the first subdiagonal.
+		This is an "in-place" calculation, i.e. the answer replaces the original matrix.
 	*/
 
 	//  CONST small = 1.0E-15;  But for this Go translation, I made it 1e-10
@@ -662,16 +645,12 @@ func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 		   		At this point in the calculation, A has the form
 		   		          A11     A12
 		   		          A21     A22
-		   		where A11 has (pos+1) rows and columns and is already in
-		   		upper Hessenberg form; and A21 is zero except for its
-		           last two columns.  This time around the loop, we are
-		   		going to transform A such that column (pos-1) of A21 is
-		   		reduced to zero.  The transformation will affect only
-		   		the last column of A11, therefore will not alter its
+		   		where A11 has (pos+1) rows and columns and is already in upper Hessenberg form; and A21 is zero except for its
+		        last two columns.  This time around the loop, we are going to transform A such that column (pos-1) of A21 is
+		   		reduced to zero.  The transformation will affect only the last column of A11, therefore will not alter its
 		   		Hessenberg property.
 
-		   		Step 1: we need A[pos,pos-1] to be nonzero.  To keep
-		   		the calculations as well-conditioned as possible, we
+		   		Step 1: we need A[pos,pos-1] to be nonzero.  To keep the calculations as well-conditioned as possible, we
 		   		allow for a preliminary row and column swap.
 		*/
 
@@ -714,10 +693,8 @@ func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 			}
 
 			/*
-				Now we are going to replace A by T*A*Inverse(T),
-				where T is a unit matrix except for column pos.
-				That column is equal to a vector V, where V[i] = 0.0
-				for i < pos, and V[pos] = 1.0.  We don't bother
+				Now we are going to replace A by T*A*Inverse(T), where T is a unit matrix except for column pos.
+				That column is equal to a vector V, where V[i] = 0.0 for i < pos, and V[pos] = 1.0.  We don't bother
 				storing those fixed elements explicitly.
 			*/
 
@@ -726,8 +703,7 @@ func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 			}
 
 			/*
-				    Premultiplication of A by T.  Because of the special
-				    structure of T, this affects only rows [pos+1..N].
+				    Premultiplication of A by T.  Because of the special structure of T, this affects only rows [pos+1..N].
 					We also know that some of the results will be zero.
 			*/
 			for i := pos + 1; i < N; i++ {
@@ -758,8 +734,7 @@ func QR(A Matrix2D) LongComplexSlice {
 		Finds all the eigenvalues of an upper Hessenberg matrix.
 		On return W contains the eigenvalues.
 
-		Source: this is an adaption of code from "Numerical Recipes"
-		by Press, Flannery, Teutolsky, and Vetterling.
+		Source: this is an adaption of code from "Numerical Recipes" by Press, Flannery, Teutolsky, and Vetterling.
 	*/
 	var shift, w, x, y, z, p, q, r, s float64
 
@@ -781,10 +756,8 @@ func QR(A Matrix2D) LongComplexSlice {
 MainOuterLOOP:
 	for {
 		/*
-			Find, if possible, an L such that A[L,L-1] is zero to
-			machine accuracy.  If we succeed then A is now block
-			diagonal, and we can work independently on the final
-			block (rows and columns L to last).
+			Find, if possible, an L such that A[L,L-1] is zero to machine accuracy.  If we succeed then A is now block
+			diagonal, and we can work independently on the final block (rows and columns L to last).
 		*/
 		L := last
 
@@ -867,16 +840,11 @@ MainOuterLOOP:
 				} // END IF its<10
 
 				/*
-				  We're now working on a sub-array [L..last] of
-				  size 3x3 or greater.  Our goal is to transform
-				  the matrix so as to reduce the magnitudes of
-				  the elements on the first sub-diagonal, so that
-				  after one or more iterations one of them will be
-				  zero to within machine accuracy.
+				  We're now working on a sub-array [L..last] of size 3x3 or greater.  Our goal is to transform
+				  the matrix so as to reduce the magnitudes of the elements on the first sub-diagonal, so that
+				  after one or more iterations one of them will be zero to within machine accuracy.
 
-				  Shortcut: if we can find two consecutive
-				  subdiagonal elements whose product is small,
-				  we're even better off.
+				  Shortcut: if we can find two consecutive subdiagonal elements whose product is small, we're even better off.
 				*/
 
 				m := last - 2
@@ -982,11 +950,10 @@ MainOuterLOOP:
 	return W
 } // END QR;
 
-/*
-   EIGENVALUES
-*/
+//   EIGENVALUES
 
 // ----------------------------------------------------------------------------- Eigenvalues -----------------------
+
 func Eigenvalues(A Matrix2D) LongComplexSlice {
 	// Finds all the eigenvalues of an NxN matrix.  This procedure does not modify A.
 
