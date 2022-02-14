@@ -10,17 +10,21 @@ package main
   (*                                                      *)
   (********************************************************/
 
-// REVISION HISTORY
-// ================
-// 21 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
-// 24 Dec 2016 -- Seems to work.
-// 29 Dec 2016 -- Tweaked Write field size values
+/*
+REVISION HISTORY
+================
+21 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
+24 Dec 2016 -- Seems to work.
+29 Dec 2016 -- Tweaked Write field size values
+13 Feb 2022 -- Converted to modules
+
+*/
 
 import (
 	"bufio"
 	"fmt"
-	"mat"
 	"os"
+	"src/mat"
 	"strings"
 )
 
