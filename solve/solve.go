@@ -175,16 +175,16 @@ CountLinesLoop:
 	}
 	fmt.Println()
 
-	ans := mat.NewMatrix(N, N)
-	ans = mat.Solve(A, B) // Solve (ra1, ra2, ans, N, 1);
+	//ans := mat.NewMatrix(N, N)  I don't have to do this.  Obviously, I learned this sometime after 2016 when this code was written.
+	ans := mat.Solve(A, B) // Solve (ra1, ra2, ans, N, 1);
 	fmt.Println("The solution X to AX = B using Solve is")
 	ss = mat.Write(ans, 5)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
 
-	ans2 := mat.NewMatrix(N, N)
-	ans2 = mat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
+	//ans2 := mat.NewMatrix(N, N)
+	ans2 := mat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
 	fmt.Println("The solution X to AX = B using GaussJ is")
 	ss = mat.Write(ans2, 5)
 	for _, s := range ss {
