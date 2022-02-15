@@ -33,7 +33,7 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" Entering getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
 
@@ -44,12 +44,12 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 	}
 
 	if flag.NArg() == 0 {
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
 
 		fileInfos = myReadDir(workingDir) // excluding by regex, filesize or having an ext is done by MyReadDir.
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" after call to myreaddir.  Len(fileInfos)=%d\n", len(fileInfos))
 		}
 
@@ -75,7 +75,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			os.Exit(1)
 		}
 
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" in getFileInfosFromCommandLine: loneFilename=%s, fi.Name=%s, IsDir=%t\n", loneFilename, fi.Name(), fi.IsDir())
 		}
 
@@ -93,7 +93,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			if testFlag {
+			if verboseFlag {
 				fmt.Printf(" in loop: fi.Name=%s, fi.Size=%d, fi.IsDir=%t\n", fi.Name(), fi.Size(), fi.IsDir())
 			}
 			if includeThis(fi) {
@@ -105,7 +105,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			}
 		}
 	}
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
 	return fileInfos
@@ -152,7 +152,7 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr {
 			break
 		}
 	}
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" In getColorizedString.  len(fiSlice)=%d, len(cs)=%d, numofLines=%d, cols=%d\n", len(fiSlice), len(cs), numOfLines, cols)
 	}
 	return cs

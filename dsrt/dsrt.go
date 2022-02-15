@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "14 Feb 2022"
+const LastAltered = "15 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -108,6 +108,7 @@ REVISION HISTORY
  8 Feb 22 -- Fixing a bug w/ the -g globbing option on Windows.
 10 Feb 22 -- Fixing a bug in MyReadDir when an error occurs.
 14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
+15 Feb 22 -- Really replaced testFlag w/ VerboseFlag, because as I maintain the code, I forget if this has verboseFlag.  Now it does and doesn't have testFlag.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -126,7 +127,7 @@ type DsrtParamType struct {
 const defaultHeight = 40
 const minWidth = 90
 
-var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
+var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var globFlag, veryVerboseFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
@@ -249,8 +250,8 @@ func main() {
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory, makes most sense when no pattern is given on command line.")
 
 	// var testFlag bool  Now set globally
-	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
-	flag.BoolVar(&testFlag, "v", false, "verbose mode, which is same as test mode.")
+	flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")
+	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
@@ -270,7 +271,7 @@ func main() {
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
-		testFlag = true
+		verboseFlag = true
 	}
 
 	if NLines > 0 { // priority
@@ -285,7 +286,7 @@ func main() {
 
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
 
-	if testFlag {
+	if verboseFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
@@ -317,14 +318,14 @@ func main() {
 	   		numOfLines = defaultHeight
 	   	}
 	*/
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" dsrtParam.numlines=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
 			dsrtParam.numlines, NLines, autoHeight, defaultHeight, numOfLines)
 	}
 	noExtensionFlag = *extensionflag || *extflag
 
 	if len(excludeRegexPattern) > 0 {
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" excludeRegexPattern is longer than 0 runes.  It is %d runes. \n", len(excludeRegexPattern))
 		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
@@ -335,7 +336,7 @@ func main() {
 			excludeFlag = false
 		}
 		excludeFlag = true
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" Regex condition: excludeFlag=%t, excludeRegex=%v\n", excludeFlag, excludeRegex.String())
 		}
 	} else if excludeFlag {
@@ -361,7 +362,7 @@ func main() {
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
 	} else if DateSort && Forward {
@@ -369,14 +370,14 @@ func main() {
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
 			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			return fileInfos[i].Size() < fileInfos[j].Size() // I want an smallest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
@@ -384,7 +385,7 @@ func main() {
 			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
 			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
@@ -414,7 +415,7 @@ func main() {
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		fmt.Println(" *** Here I am ***")
 		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
 		fmt.Printf(" nscreens=%d, numLines=%d, flag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
@@ -422,7 +423,7 @@ func main() {
 	}
 
 	fileInfos = getFileInfosFromCommandLine()
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" After call to getFileInfosFromCommandLine.  flag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", flag.NArg(), len(fileInfos), numOfLines)
 	}
 	if len(fileInfos) > 1 {

@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "14 Feb 2022"
+const LastAltered = "15 Feb 2022"
 
 /*
 Revision History
@@ -111,6 +111,7 @@ Revision History
  5 Feb 22 -- Now to add the numOfCols stuff that works in rex.go.  So this will also allow multi column displays, too.
 10 Feb 22 -- Fixing bug of when an error is returned to MyReadDir.
 14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
+15 Feb 22 -- Replaced testFlag w/ verboseFlag
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -139,7 +140,7 @@ const maxWidth = 300
 const min2Width = 160
 const min3Width = 170
 
-var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, testFlag bool
+var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var globFlag, veryVerboseFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
@@ -228,8 +229,8 @@ func main() {
 
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
-	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
-	flag.BoolVar(&testFlag, "v", false, "verbose mode, which is same as test mode.")
+	flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")
+	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
@@ -253,8 +254,8 @@ func main() {
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 	flag.Parse()
 
-	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, testFlag
-		testFlag = true
+	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
+		verboseFlag = true
 	}
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
@@ -289,7 +290,7 @@ func main() {
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
@@ -301,7 +302,7 @@ func main() {
 	}
 
 	if len(excludeRegexPattern) > 0 {
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" excludeRegexPattern is longer than 0 runes.  It is %d runes. \n", len(excludeRegexPattern))
 		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
@@ -365,7 +366,7 @@ func main() {
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
 	} else if DateSort && Forward {
@@ -373,14 +374,14 @@ func main() {
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
 			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			return fileInfos[i].Size() < fileInfos[j].Size() // I want an smallest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
@@ -388,12 +389,12 @@ func main() {
 			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
 			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		//execname, _ := os.Executable()
 		//ExecFI, _ := os.Stat(execname)
 		//ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
@@ -434,7 +435,7 @@ func main() {
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
 	}
 
@@ -445,7 +446,7 @@ func main() {
 
 	cs := getColorizedStrings(fileInfos, numOfCols)
 
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" Len(fileinfos)=%d, len(colorizedStrings)=%d, numOfLines=%d\n", len(fileInfos), len(cs), numOfLines)
 	}
 

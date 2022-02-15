@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 9, 2022"
+const LastAltered = "Feb 15, 2022"
 
 /*
 Revision History
@@ -108,6 +108,7 @@ Revision History
                And adding a column number param.
  4 Feb 22 -- Added c2 and c3 flags to set 2 and 3 column modes.
  9 Feb 22 -- Fixed bug on sorting line, sorting the wrong file.
+15 Feb 22 -- Replaced testFlag w/ verboseFlag, finally.
 */
 
 type dirAliasMapType map[string]string
@@ -131,7 +132,7 @@ const min3Width = 170
 //const dateSize = 30  // space the filesize and date occupy.
 
 var excludeRegex *regexp.Regexp
-var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, testFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag bool
+var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
 
@@ -237,8 +238,8 @@ func main() {
 
 	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
 
-	flag.BoolVar(&testFlag, "test", false, "enter a testing mode to println more variables")
-	flag.BoolVar(&testFlag, "v", false, "enter a verbose (testing) mode to println more variables")
+	flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")
+	flag.BoolVar(&verboseFlag, "v", false, "enter a verbose (testing) mode to println more variables")
 
 	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
 
@@ -260,7 +261,7 @@ func main() {
 	flag.Parse()
 
 	if veryVerboseFlag { // setting very verbose will also set verbose.
-		testFlag = true
+		verboseFlag = true
 	}
 
 	fmt.Print(" rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
@@ -281,7 +282,7 @@ func main() {
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
@@ -413,7 +414,7 @@ func main() {
 			workingDir = startDir
 		}
 	}
-	if testFlag {
+	if verboseFlag {
 		fmt.Println("inputRegEx=", inputRegExStr, ", and workingdir =", workingDir)
 	}
 	inputRegExStr = strings.ToLower(inputRegExStr)
@@ -431,7 +432,7 @@ func main() {
 		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
 	} else if DateSort && Forward {
@@ -439,26 +440,26 @@ func main() {
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
 			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			return fileInfos[i].Size() < fileInfos[j].Size() // I want a smallest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
 		sortfcn = func(i, j int) bool { // this is a closure anonymous function
 			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		execname, _ := os.Executable()
 		ExecFI, _ := os.Stat(execname)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
@@ -667,7 +668,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 } // ProcessDirectoryAliases
 
 // ------------------------------- MyReadDir -----------------------------------
-
+/*  replaced by myReadDir, below
 func MyReadDir(dir string) []os.FileInfo {
 
 	dirname, err := os.Open(dir)
@@ -693,7 +694,7 @@ func MyReadDir(dir string) []os.FileInfo {
 	}
 	return fi
 } // MyReadDir
-
+*/
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
 	var s1 string
@@ -763,10 +764,10 @@ func fixedStringLen(s string, size int) string {
 func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
 
 	fileInfos := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" Entering getFileInfos.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
 
