@@ -58,11 +58,11 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		if fileName == "" { // need this to not be blank because of the call to Match below.
 			fileName = "*"
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
@@ -72,7 +72,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
 			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
 			filenames, err = filepath.Glob(pattern)
-			if testFlag {
+			if verboseFlag {
 				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 			}
 
@@ -166,7 +166,7 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr {
 			break
 		}
 	}
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" In getColorizedString.  len(fiSlice)=%d, len(cs)=%d, numofLines=%d\n", len(fiSlice), len(cs), numOfLines)
 	}
 	return cs
