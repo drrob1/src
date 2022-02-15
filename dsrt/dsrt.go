@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "10 Feb 2022"
+const LastAltered = "14 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -107,6 +107,7 @@ REVISION HISTORY
                the provided pattern, which don't match the exclude regex, which are filtered out by size, and returns what's left.
  8 Feb 22 -- Fixing a bug w/ the -g globbing option on Windows.
 10 Feb 22 -- Fixing a bug in MyReadDir when an error occurs.
+14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

@@ -7,6 +7,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -53,8 +54,16 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 
 	} else if flag.NArg() == 1 { // a lone name may mean file not found, as bash will populate what it finds.
+		var loneFilename string
+		const sep = filepath.Separator
 		fileInfos = make([]os.FileInfo, 0, 1)
-		loneFilename := workingDir + string(os.PathSeparator) + flag.Arg(0)
+		firstChar := rune(flag.Arg(0)[0])
+		if firstChar == sep { // have an absolute path, so don't prepend anything
+			loneFilename = flag.Arg(0)
+		} else {
+			loneFilename = workingDir + string(sep) + flag.Arg(0)
+			loneFilename = filepath.Clean(loneFilename)
+		}
 		fi, err := os.Lstat(loneFilename)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
@@ -65,9 +74,12 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fmt.Println()
 			os.Exit(1)
 		}
+		if testFlag {
+			fmt.Printf(" in getFileInfosFromCommandLine: loneFilename=%s, fi.Name=%s\n", loneFilename, fi.Name())
+		}
 
 		if fi.IsDir() {
-			fileInfos = myReadDir(fi.Name())
+			fileInfos = myReadDir(loneFilename)
 		} else {
 			fileInfos = append(fileInfos, fi)
 		}
