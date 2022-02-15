@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "10 Feb 2022"
+const LastAltered = "14 Feb 2022"
 
 /*
 Revision History
@@ -110,6 +110,7 @@ Revision History
  3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
  5 Feb 22 -- Now to add the numOfCols stuff that works in rex.go.  So this will also allow multi column displays, too.
 10 Feb 22 -- Fixing bug of when an error is returned to MyReadDir.
+14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -36,13 +37,13 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		fmt.Printf(" Entering getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
 
-	if flag.NArg() == 0 {
-		workingDir, er := os.Getwd()
-		if er != nil {
-			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
-			os.Exit(1)
-		}
+	workingDir, er := os.Getwd()
+	if er != nil {
+		fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
+		os.Exit(1)
+	}
 
+	if flag.NArg() == 0 {
 		if testFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
@@ -53,8 +54,16 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 
 	} else if flag.NArg() == 1 { // a lone name may mean file not found, as bash will populate what it finds.
+		var loneFilename string
+		const sep = filepath.Separator
 		fileInfos = make([]os.FileInfo, 0, 1)
-		loneFilename := flag.Arg(0)
+		firstChar := rune(flag.Arg(0)[0])
+		if firstChar == sep { // have an absolute path, so don't prepend anything
+			loneFilename = flag.Arg(0)
+		} else {
+			loneFilename = workingDir + string(sep) + flag.Arg(0)
+			loneFilename = filepath.Clean(loneFilename)
+		}
 		fi, err := os.Lstat(loneFilename)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
@@ -66,8 +75,12 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			os.Exit(1)
 		}
 
+		if testFlag {
+			fmt.Printf(" in getFileInfosFromCommandLine: loneFilename=%s, fi.Name=%s, IsDir=%t\n", loneFilename, fi.Name(), fi.IsDir())
+		}
+
 		if fi.IsDir() {
-			fileInfos = myReadDir(fi.Name())
+			fileInfos = myReadDir(loneFilename)
 		} else {
 			fileInfos = append(fileInfos, fi)
 		}
