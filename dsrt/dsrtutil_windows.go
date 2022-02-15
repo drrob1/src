@@ -16,6 +16,7 @@ REVISION HISTORY
 -------- -------
  8 Feb 22 -- Found a bug in glob flag when I tested with "z:*.TXT" that didn't happen w/ the separate glob.go, fast.go or dsrt z:*.txt
                I got an error from Lstat in that it tried to Lstat z:\z:filename.TXT.
+15 Feb 22 -- Replaced testFlag w/ verboseFlag.  Finally.
 */
 
 /* Not used here.
@@ -70,7 +71,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		if fileName == "" { // need this to not be blank because of the call to Match below.
 			fileName = "*"
 		}
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
@@ -85,7 +86,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 				return nil
 			}
 			dirName = "" // make this an empty string because the name returned by glob includes the dir info.
-			if testFlag {
+			if verboseFlag {
 				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 			}
 
@@ -104,7 +105,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			}
 		} // if globFlag
 
-		if testFlag {
+		if verboseFlag {
 			fmt.Printf(" len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 		}
 		fileInfos = make([]os.FileInfo, 0, len(filenames))
