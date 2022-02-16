@@ -22,7 +22,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 15, 2022"
+const LastAltered = "Feb 16, 2022"
 
 /*
 Revision History
@@ -109,6 +109,7 @@ Revision History
  4 Feb 22 -- Added c2 and c3 flags to set 2 and 3 column modes.
  9 Feb 22 -- Fixed bug on sorting line, sorting the wrong file.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag, finally.
+16 Feb 22 -- Time to remove the upper case flags that I don't use.
 */
 
 type dirAliasMapType map[string]string
@@ -216,8 +217,8 @@ func main() {
 
 	// flag definitions and processing
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
-	var RevFlag bool
-	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
+	var RevFlag bool                                                                         // will always be false.
+	//flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var nscreens = flag.Int("n", 1, "number of screens to display") // Ptr
 	var NLines int
@@ -228,8 +229,8 @@ func main() {
 	flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
 	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
-	var SizeFlag bool
-	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+	var SizeFlag bool                                                       // will always be false.
+	//flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 
 	flag.BoolVar(&dirListFlag, "d", false, "include directories in the output listing")
 

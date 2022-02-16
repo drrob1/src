@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "15 Feb 2022"
+const LastAltered = "16 Feb 2022"
 
 /*
 Revision History
@@ -112,6 +112,7 @@ Revision History
 10 Feb 22 -- Fixing bug of when an error is returned to MyReadDir.
 14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag
+16 Feb 22 -- Time to remove the upper case flags that I don't use.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -211,16 +212,16 @@ func main() {
 	}
 
 	revflag := flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
-	var RevFlag bool
-	flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
+	var RevFlag bool                                                                      // will always be false.  I'll leave it this way for now.
+	//flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
 	var NLines int
 	flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
 
 	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
-	var SizeFlag bool
-	flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+	var SizeFlag bool                                                       // will always be false.  I'll leave it this way for now.
+	//flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 
 	var DirListFlag = flag.Bool("d", false, "include directories in the output listing") // pointer
 
