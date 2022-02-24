@@ -17,6 +17,7 @@ REVISION HISTORY
  8 Feb 22 -- Found a bug in glob flag when I tested with "z:*.TXT" that didn't happen w/ the separate glob.go, fast.go or dsrt z:*.txt
                I got an error from Lstat in that it tried to Lstat z:\z:filename.TXT.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag.  Finally.
+24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.
 */
 
 /* Not used here.
@@ -26,14 +27,12 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 
 */
 
-// processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
+// getFileInfosFromCommandLine() will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, but doesn't sort the slice before returning it, because of difficulty passing
 // the sortfcn.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
-	//var workingDir string
-	//var er error
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
@@ -112,7 +111,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		const sepStr = string(os.PathSeparator)
 		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
 			var path string
-			if strings.Contains(f, sepStr) || strings.Contains(f, ":") {
+			if strings.Contains(f, sepStr) || strings.Contains(f, ":") || dirName == "" {
 				path = f
 			} else {
 				path = dirName + sepStr + f

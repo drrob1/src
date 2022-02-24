@@ -19,7 +19,7 @@ import (
 	"unicode"
 )
 
-const LastAltered = "16 Feb 2022"
+const LastAltered = "24 Feb 2022"
 
 /*
 REVISION HISTORY
@@ -110,6 +110,7 @@ REVISION HISTORY
 14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
 15 Feb 22 -- Really replaced testFlag w/ VerboseFlag, because as I maintain the code, I forget if this has verboseFlag.  Now it does and doesn't have testFlag.
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
+24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.
 */
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
