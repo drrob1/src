@@ -17,7 +17,7 @@ REVISION HISTORY
  8 Feb 22 -- Found a bug in glob flag when I tested with "z:*.TXT" that didn't happen w/ the separate glob.go, fast.go or dsrt z:*.txt
                I got an error from Lstat in that it tried to Lstat z:\z:filename.TXT.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag.  Finally.
-24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.
+24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
 */
 
 /* Not used here.
@@ -111,7 +111,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		const sepStr = string(os.PathSeparator)
 		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
 			var path string
-			if strings.Contains(f, sepStr) || strings.Contains(f, ":") || dirName == "" {
+			if strings.Contains(f, sepStr) || strings.Contains(f, ":") || globFlag {
 				path = f
 			} else {
 				path = dirName + sepStr + f
