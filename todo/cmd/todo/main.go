@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"src/todo"
 	"strings"
 	"time"
@@ -23,14 +24,17 @@ REVISION HISTORY
 17 Jan 22 -- Added default actions if no switch is provided.  If there are arguments then add as a task, if not list tasks.
  8 Feb 22 -- Will show a timestamp of adding a task, done by updating the stringer method in todo.go.  I changed how the
                filename is constructed.  I am considering adding another environment variable, called TODO_PREFIX to more easily cover the networking prefix.
+26 Feb 22 -- I want the list operation to show all completed tasks first, then show all uncompleted tasks.  This does not require changing the stringer method
+               which only returns the string for one task.
 */
 
-const lastModified = "9 Feb 2022"
+const lastModified = "27 Feb 2022"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
 var prefix string
 var fileExists bool
+var fullFilenameJson, fullFilenameBin string
 
 var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
 
@@ -38,6 +42,12 @@ var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
 var add = flag.Bool("add", false, "Add task to the ToDo list.")
 var complete = flag.Int("complete", 0, "Item to be completed.") // here, 0 means NTD.  That's why we have to start at 1 for item numbers.
 var listFlag = flag.Bool("list", false, "List all tasks to the display.")
+var aboutFlag = flag.Bool("about", false, "Show the about string from the todo package.")
+
+type structForListing struct {
+	i int
+	s string
+}
 
 func main() {
 	flag.Usage = func() {
@@ -57,7 +67,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir is %v.\n", err)
 	}
 
-	var fullFilenameJson, fullFilenameBin string
 	envFN, ok := os.LookupEnv("TODO_FILENAME")
 	if ok {
 		todoFilename = envFN + ".json"
@@ -135,14 +144,22 @@ func main() {
 		// This should invoke the stringer interface from the fmt package.  IE, call the String method I defined in todo.  But it's not working.
 		// I kept playing w/ it and I read the docs at golang.org.  I concluded that the stringer interface required a value receiver.  I had
 		// followed the book that defined it as a pointer receiver.  So I defined it in todo.go as a value receiver, and it started to work.
+
 		if fileExists {
-			fmt.Println(l)
+			itemStrings := getSortedSliceOfTasks(l)
+			for _, itemString := range itemStrings {
+				fmt.Print(itemString)
+			}
+			fmt.Println()
+			fmt.Println()
+			fmt.Println()
 		} else {
 			fmt.Fprintf(os.Stderr, " Cannot list todo files (%s or %s) as they cannot be found.\n", fullFilenameJson, fullFilenameBin)
+			os.Exit(1)
 		}
 
 		//fmt.Printf("%s", l)   // this does not work.
-		//fmt.Print(l.String()) // this works.  But I figured out why it didn't work at first like the book said it should.  See the above comment.
+		//fmt.Print(l.String()) // this works.  But I figured out why it originally didn't work like the book said it should.  See the above comment.
 	case *complete > 0:
 		if !fileExists {
 			fmt.Fprintf(os.Stderr, " Cannot complete todo entries because files (%s or %s) cannot be found.\n", fullFilenameJson, fullFilenameBin)
@@ -176,7 +193,10 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
 		}
-	default: // task add
+	case *aboutFlag:
+		fmt.Printf("%s\n", l.About())
+		fmt.Println()
+	default: // depending on whether there are command line params or not.
 		if flag.NArg() > 0 {
 			tsk := strings.Join(flag.Args(), " ")
 			l.Add(tsk)
@@ -190,7 +210,14 @@ func main() {
 			}
 		} else {
 			if fileExists {
-				fmt.Println(l)
+				itemStrings := getSortedSliceOfTasks(l)
+				for _, itemString := range itemStrings {
+					fmt.Print(itemString)
+				}
+				fmt.Println()
+				fmt.Println()
+				fmt.Println()
+				// fmt.Println(l) old way of listing them.
 			} else {
 				fmt.Fprintf(os.Stderr, " Cannot list todo files (%s or %s) as they cannot be found.\n", fullFilenameJson, fullFilenameBin)
 			}
@@ -214,4 +241,46 @@ func getTask(r io.Reader, args ...string) (string, error) { // decides where to 
 	}
 
 	return scnr.Text(), nil
+}
+
+func getSortedSliceOfTasks(l todo.ListType) []string {
+
+	completedToBeSorted := make([]structForListing, 0, len(l))
+	notCompletedToBeSorted := make([]structForListing, 0, len(l))
+	stringSlice := make([]string, 0, len(l)+1)
+	if fileExists {
+		for i := range l {
+			lstStruct := structForListing{
+				i: i + 1,
+				s: l.GetString(i), // tasks are a 1 origin numbering system.
+			}
+			if l[i].Done {
+				completedToBeSorted = append(completedToBeSorted, lstStruct)
+			} else {
+				notCompletedToBeSorted = append(notCompletedToBeSorted, lstStruct)
+			}
+		}
+		completedSortFcn := func(i, j int) bool {
+			return completedToBeSorted[i].i < completedToBeSorted[j].i
+		}
+		notCompletedSortFcn := func(i, j int) bool {
+			return notCompletedToBeSorted[i].i < notCompletedToBeSorted[j].i
+		}
+		sort.Slice(completedToBeSorted, completedSortFcn)
+		sort.Slice(notCompletedToBeSorted, notCompletedSortFcn)
+		for _, item := range completedToBeSorted {
+			stringSlice = append(stringSlice, item.s)
+		}
+		stringSlice = append(stringSlice, " -- "+"\n")
+		for _, item := range notCompletedToBeSorted {
+			stringSlice = append(stringSlice, item.s)
+		}
+		if *verboseFlag {
+			fmt.Printf(" in getSortedSliceOfTasks: len(completed)=%d, len(not completed)=%d \n", len(completedToBeSorted), len(notCompletedToBeSorted))
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, " Cannot list todo files (%s or %s) as they cannot be found.\n", fullFilenameJson, fullFilenameBin)
+		return nil
+	}
+	return stringSlice
 }

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const lastModified = "Feb 9, 2022"
+const lastModified = "Feb 27, 2022"
 
 /*
 REVISION HISTORY
@@ -18,6 +18,7 @@ REVISION HISTORY
 15 Jan 22 -- Changed behavior of the file read to return the error if file was not found.
                Then added the String() method using value receiver as fmt package requires that to work.
  8 Feb 22 -- Will show the created at field in the Stringer method.
+26 Feb 22 -- Added GetString to be able to list separately the completed vs the not completed tasks.
 */
 
 type item struct {
@@ -127,22 +128,49 @@ func (l *ListType) About() string {
 	return lastModified
 }
 
-func (l ListType) String() string { // implements the fmt.Stringer interface, which must be a value receiver
+func (l *ListType) GetString(i int) string { // this is a 1 origin coordinate system.
 	var formatted string
 
-	for i, t := range l { // loop to have all tasks in the returned string
-		suffix := ".  "
-		prefix := "  "
+	if i < 0 || i >= len(*l) {
+		return ""
+	}
 
-		createdAt := ", created " + t.CreatedAt.Format("Jan-02-2006 15:04") + ", "
+	suffix := ".  "
+	prefix := "  "
 
-		if t.Done {
-			prefix = "X "
-			//suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
-			suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04") + ".  "
+	t := (*l)[i] // This code uses i=0 to mean no item number was given.  So have to correct from 1 origin to 0 origin.
+
+	createdAt := ", created " + t.CreatedAt.Format("Jan-02-2006 15:04") + ", "
+	if t.Done {
+		prefix = "X "
+		suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04") + ".  "
+	}
+	// Need to adjust to 1-origin task numbers
+	formatted += fmt.Sprintf("%s%d: %s%s%s\n", prefix, i+1, t.Task, createdAt, suffix) // notice that the string includes the newline character.
+	return formatted
+}
+
+func (l ListType) String() string { // implements the fmt.Stringer interface, which must be a value receiver.  And it returns a single string, not a slice of strings.
+	var formatted string
+	/*
+		for i, t := range l { // loop to have all tasks in the returned string
+			suffix := ".  "
+			prefix := "  "
+
+			createdAt := ", created " + t.CreatedAt.Format("Jan-02-2006 15:04") + ", "
+
+			if t.Done {
+				prefix = "X "
+				//suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04:05") + ".  "
+				suffix = " completed at " + t.CompletedAt.Format("Jan-02-2006 15:04") + ".  "
+			}
+			// Need to adjust to 1-origin task numbers
+			formatted += fmt.Sprintf("%s%d: %s%s%s\n", prefix, i+1, t.Task, createdAt, suffix)
 		}
-		// Need to adjust to 1-origin task numbers
-		formatted += fmt.Sprintf("%s%d: %s%s%s\n", prefix, i+1, t.Task, createdAt, suffix)
+
+	*/
+	for i := range l {
+		formatted += l.GetString(i + 1) // adjust to 1 origin task numbers.
 	}
 	return formatted
 }
