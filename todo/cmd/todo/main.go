@@ -25,7 +25,7 @@ REVISION HISTORY
  8 Feb 22 -- Will show a timestamp of adding a task, done by updating the stringer method in todo.go.  I changed how the
                filename is constructed.  I am considering adding another environment variable, called TODO_PREFIX to more easily cover the networking prefix.
 26 Feb 22 -- I want the list operation to show all completed tasks first, then show all uncompleted tasks.  This does not require changing the stringer method
-               which only returns the string for one task.
+               which only returns the string for one task.  And added an about option.
 */
 
 const lastModified = "27 Feb 2022"
@@ -194,7 +194,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, " List could not be saved in binary format because %v \n", err)
 		}
 	case *aboutFlag:
-		fmt.Printf("%s\n", l.About())
+		fmt.Printf("todo library last modified %s, main last modified %s\n", l.About(), lastModified)
 		fmt.Println()
 	default: // depending on whether there are command line params or not.
 		if flag.NArg() > 0 {
@@ -271,7 +271,7 @@ func getSortedSliceOfTasks(l todo.ListType) []string {
 		for _, item := range completedToBeSorted {
 			stringSlice = append(stringSlice, item.s)
 		}
-		stringSlice = append(stringSlice, " -- "+"\n")
+		stringSlice = append(stringSlice, "--------"+"\n")
 		for _, item := range notCompletedToBeSorted {
 			stringSlice = append(stringSlice, item.s)
 		}
