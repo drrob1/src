@@ -52,7 +52,8 @@ type structForListing struct {
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s. \n", os.Args[0], lastModified)
-		fmt.Fprintf(flag.CommandLine.Output(), "TODO_PREFIX and TODO_FILENAME are the environment variables used.  Do not use an extension for TODO_FILENAME")
+		fmt.Fprintf(flag.CommandLine.Output(), "Default filename is %s, TODO_PREFIX=%q and TODO_FILENAME=%q are the environment variables used.  Do not use an extension for TODO_FILENAME",
+			todoFilename, os.Getenv("TODO_PREFIX"), os.Getenv("TODO_FILENAME"))
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		flag.PrintDefaults()
 	}
