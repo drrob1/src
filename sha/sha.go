@@ -49,9 +49,10 @@ import (
    7 Mar 21 -- added strings.TrimSpace
    8 Apr 21 -- Converted import list to module named src.  So essentially, very little has changed except for these import statements.
   13 Feb 22 -- filepicker API changed recently.  So I'm updating the code here that uses filepicker.
+   9 Mar 22 -- Using package constants instead of my magic numbers.
 */
 
-const LastCompiled = "13 Feb 2022"
+const LastCompiled = "9 Mar 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -211,15 +212,15 @@ func main() {
 		defer TargetFile.Close()
 
 		if WhichHash == undetermined {
-			if hashlength == 64 {
+			if hashlength == 2*sha256.Size { // 64, and the Size constant is number of bytes, not number of digits.
 				WhichHash = sha256hash
-			} else if hashlength == 128 {
+			} else if hashlength == 2*sha512.Size { // 128
 				WhichHash = sha512hash
-			} else if hashlength == 40 {
+			} else if hashlength == 2*sha1.Size { // 40
 				WhichHash = sha1hash
-			} else if hashlength == 96 {
+			} else if hashlength == 2*sha512.Size384 { // 96
 				WhichHash = sha384hash
-			} else if hashlength == 32 {
+			} else if hashlength == 2*md5.Size { // 32
 				WhichHash = md5hash
 			} else {
 				fmt.Fprintln(os.Stderr, " Could not determine hash type for file.  Skipping.")

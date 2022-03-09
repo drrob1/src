@@ -12,6 +12,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"runtime"
 
 	"src/filepicker"
 	"src/tknptr"
@@ -48,9 +49,10 @@ import (
    7 Mar 21 -- Added use of strings.TrimSpace()
    8 Apr 21 -- Converting to module version of ~/go/src.
   24 Jan 22 -- Adding a help message using the flag package.  And since I recently changed the interface for filepicker, I have to fix that here too.
+   9 Mar 22 -- Using package constants instead of my magic numbers.
 */
 
-const LastCompiled = "25 Jan 2022"
+const LastCompiled = "9 Mar 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -97,7 +99,9 @@ func main() {
 	flag.Parse()
 
 	//fmt.Print(" sha.go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-	//fmt.Println(".  Last altered", LastCompiled, ", compiled using", runtime.Version())
+	if verboseFlag {
+		fmt.Printf("\n Last altered %s, and compiled using %s\n\n", LastCompiled, runtime.Version())
+	}
 
 	// filepicker stuff.
 
@@ -227,15 +231,15 @@ func main() {
 		defer TargetFile.Close()
 
 		if WhichHash == undetermined {
-			if hashlength == 64 {
+			if hashlength == 2*sha256.Size { // 64 digits
 				WhichHash = sha256hash
-			} else if hashlength == 128 {
+			} else if hashlength == 2*sha512.Size { // 128 digits
 				WhichHash = sha512hash
-			} else if hashlength == 40 {
+			} else if hashlength == 2*sha1.Size { // 40 digits
 				WhichHash = sha1hash
-			} else if hashlength == 96 {
+			} else if hashlength == 2*sha512.Size384 { // 96 digits
 				WhichHash = sha384hash
-			} else if hashlength == 32 {
+			} else if hashlength == 2*md5.Size { // 32 digits
 				WhichHash = md5hash
 			} else {
 				fmt.Fprintln(os.Stderr, " Could not determine hash type for file.  Skipping.")
