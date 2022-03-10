@@ -139,12 +139,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	//   now to compute the hash, compare them, and output results
+	//   now to compute the hashes,  compare them, and output results
 
-	// Create Hash Section
-	md5hash1 := md5.New()
-	md5hash2 := md5.New()
-
+	// crc32 IEEE section.  1 and 3 are derived from file1, while 2 and 4 are derived from file2
 	crc32ieeehash1 := crc32.NewIEEE()
 	crc32ieeehash2 := crc32.NewIEEE()
 	io.Copy(crc32ieeehash1, file1ByteReader)
@@ -167,26 +164,38 @@ func main() {
 		fmt.Printf("\n crc32 IEEE code: val2=%x does not equal ieeeval4=%x  \n\n")
 	}
 
-	crc32TableCastagnoli := crc32.MakeTable(crc32.Castagnoli)
-	crc32Casthash1 := crc32.New(crc32TableCastagnoli)
-	crc32Casthash2 := crc32.New(crc32TableCastagnoli)
+	// I forgot to compare val1 and val2, which is the whole purpose of this exercise, after all.
 
+	// crc32 Castagnoli polynomial section
+	crc32TableCastagnoli := crc32.MakeTable(crc32.Castagnoli)
+	crc32CastVal1 := crc32.Checksum(file1ByteSlice, crc32TableCastagnoli)
+	crc32Casthash1 := crc32.New(crc32TableCastagnoli)
+	io.Copy(crc32Casthash1, file1ByteReader)
+	crc32CastVal3 := crc32Casthash1.Sum(nil)
+	CastVal3, _ := binary.Uvarint(crc32CastVal3)
+
+	crc32CastVal2 := crc32.Checksum(file2ByteSlice, crc32TableCastagnoli)
+	crc32CastHash2 := crc32.New(crc32TableCastagnoli)
+	io.Copy(crc32CastHash2, file2ByteReader)
+	crc32CastVal4 := crc32CastHash2.Sum(nil)
+	CastVal4, _ := binary.Uvarint(crc32CastVal4)
+	if
+
+
+
+	// crc32 Koopman polynomial section
 	crc32TableKoopman := crc32.MakeTable(crc32.Koopman)
 	crc32Koopman1 := crc32.New(crc32TableKoopman)
 	crc32Koopman2 := crc32.New(crc32TableKoopman)
 
+	// crc64 ECMA section
 	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
 	crc64Hash1 := crc64.New(crc64TableECMA)
 	crc64Hash2 := crc64.New(crc64TableECMA)
 
-	sha1hash1 := sha1.New()
-	sha1hash2 := sha1.New()
-
-	sha256hash1 := sha256.New()
-	sha256hash2 := sha256.New()
-
-	sha512hash1 := sha512.New()
-	sha512hash2 := sha512.New()
+	// md5 section
+	md5hash1 := md5.New()
+	md5hash2 := md5.New()
 
 	fileSize1, err := io.Copy(md5hash1, file1ByteReader)
 	check(err, "md5 hash1 io.copy err is ")
@@ -200,6 +209,10 @@ func main() {
 	}
 	fmt.Printf(" equal.\n\n")
 
+	// sha1 section
+	sha1hash1 := sha1.New()
+	sha1hash2 := sha1.New()
+
 	fileSize1, err = io.Copy(sha1hash1, file1ByteReader)
 	check(err, "sha1 hash1 io.copy err is ")
 	fileSize2, err3 = io.Copy(sha1hash2, file2ByteReader)
@@ -212,9 +225,17 @@ func main() {
 	}
 	fmt.Printf(" equal.\n\n")
 
+	// sha256 section
+	sha256hash1 := sha256.New()
+	sha256hash2 := sha256.New()
+
+	// sha512 section
+	sha512hash1 := sha512.New()
+	sha512hash2 := sha512.New()
+
 	fmt.Println()
 	fmt.Println()
-} // Main for sha116.go.
+} // Main for feq.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
@@ -223,6 +244,7 @@ func check(e error, msg string) {
 	}
 }
 
+/*
 // ------------------------------------------------------- min ---------------------------------
 func min(a, b int) int {
 	if a < b {
@@ -231,3 +253,6 @@ func min(a, b int) int {
 		return b
 	}
 }
+
+
+ */
