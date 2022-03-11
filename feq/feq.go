@@ -49,6 +49,7 @@ import (
    9 Mar 22 -- Using package constants instead of my magic numbers.
                   Now called feq for File Equal, that is, it will determine if 2 files are equal by computing a bunch of hashes.
                   And as this can apply to non-text files as well as text, I won't assume an extension.  Binaries on linux don't have one, anyway.
+                  Turns out that crc is much more complex than I expected.  I tried each method just to see if I could get it to work.  But only once.
 */
 
 const LastCompiled = "12 Mar 2022"
@@ -141,57 +142,85 @@ func main() {
 
 	//   now to compute the hashes,  compare them, and output results
 
-	// crc32 IEEE section.  1 and 3 are derived from file1, while 2 and 4 are derived from file2
+	// crc32 IEEE section.  1a uses Sum and Uvarient, while 1b uses Checksum.
 	crc32ieeehash1 := crc32.NewIEEE()
 	crc32ieeehash2 := crc32.NewIEEE()
 	io.Copy(crc32ieeehash1, file1ByteReader)
-	crc32ieeeVal1 := crc32ieeehash1.Sum(nil) // this should be []byte, but I don't know which endian it is.
-	val1, _ := binary.Uvarint(crc32ieeeVal1)
-	crc32ieeeVal3 := crc32.ChecksumIEEE(file1ByteSlice) // this should be uint32
-	if val1 != uint64(crc32ieeeVal3) {
-		fmt.Printf("\n crc32 IEEE code: val1=%x does not equal ieeeval3=%x\n\n", val1, crc32ieeeVal3)
+	crc32ieeeVal1a := crc32ieeehash1.Sum(nil) // this should be []byte, but I don't know which endian it is.
+	crc32IEEEval1a, _ := binary.Uvarint(crc32ieeeVal1a)
+	crc32IEEEVal1b := crc32.ChecksumIEEE(file1ByteSlice) // this should be uint32
+	if crc32IEEEval1a != uint64(crc32IEEEVal1b) {
+		fmt.Printf("\n crc32 IEEE code: val1=%x does not equal ieeeval3=%x\n\n", crc32IEEEval1a, crc32IEEEVal1b)
 	} else {
-		fmt.Printf(" crc32 IEEE code val1 == val3.  crc32ieeeVal3=%x\n", crc32ieeeVal3)
+		fmt.Printf(" crc32 IEEE code val1a == val1b.  crc32ieeeVal3=%x\n", crc32IEEEVal1b)
 	}
 
+	// crc32 IEEE section.  2a uses Sum and Uvarient, while 2b uses Checksum.
 	io.Copy(crc32ieeehash2, file2ByteReader)
-	crc32ieeeVal2 := crc32ieeehash2.Sum(nil) // this should be []byte, but I don't know which endian it is.
-	val2, _ := binary.Uvarint(crc32ieeeVal2)
-	crc32ieeeVal4 := crc32.ChecksumIEEE(file2ByteSlice) // this should be uint32
-	if val2 == uint64(crc32ieeeVal4) {
-		fmt.Printf(" crc32 IEEE code val2 == val4.  crc32ieeeVal4=%x\n")
+	crc32ieeeval2a := crc32ieeehash2.Sum32()  // this should return a type of uint32
+	crc32ieeeVal2a := crc32ieeehash2.Sum(nil) // this should be []byte, but I don't know which endian it is.
+	crc32IEEEval2a, _ := binary.Uvarint(crc32ieeeVal2a)
+	crc32IEEEval2b := crc32.ChecksumIEEE(file2ByteSlice) // this should be uint32
+	fmt.Printf(" result from crc32ieeehash2.Sum32 is %x\n", crc32ieeeval2a)
+	if crc32IEEEval2a == uint64(crc32IEEEval2b) {
+		fmt.Printf(" crc32 IEEE code val2 == val4.  crc32ieeeVal2b=%x\n", crc32IEEEval2b)
 	} else {
-		fmt.Printf("\n crc32 IEEE code: val2=%x does not equal ieeeval4=%x  \n\n")
+		fmt.Printf("\n crc32 IEEE code: crc32IEEEval2a=%x does not equal crc32IEEEval2b=%x  \n\n", crc32IEEEval2a, crc32IEEEval2b)
 	}
 
-	// I forgot to compare val1 and val2, which is the whole purpose of this exercise, after all.
+	if crc32IEEEVal1b == crc32IEEEval2b {
+		fmt.Printf(" IEEE CRC32 Checksum for %s and %s are equal.\n ", filename1, filename2)
+	} else {
+		fmt.Printf(" IEEE CRC32 CheckSums are not equal.  %s = %x and %s = %x are not equal.\n\n", filename1, crc32IEEEVal1b, filename2, crc32IEEEval2b)
+	}
 
 	// crc32 Castagnoli polynomial section
 	crc32TableCastagnoli := crc32.MakeTable(crc32.Castagnoli)
-	crc32CastVal1 := crc32.Checksum(file1ByteSlice, crc32TableCastagnoli)
+	crc32CastVal1b := crc32.Checksum(file1ByteSlice, crc32TableCastagnoli)
 	crc32Casthash1 := crc32.New(crc32TableCastagnoli)
 	io.Copy(crc32Casthash1, file1ByteReader)
-	crc32CastVal3 := crc32Casthash1.Sum(nil)
-	CastVal3, _ := binary.Uvarint(crc32CastVal3)
+	crc32CastVal1a := crc32Casthash1.Sum32()
+	if crc32CastVal1a == crc32CastVal1b {
+		fmt.Printf(" crc32 Castagnoli a and b are equal.  The value is %x.\n", crc32CastVal1a)
+	} else {
+		fmt.Printf(" crc32 Castagnoli a and b are not equal.  a = %x, b = %x\n\n", crc32CastVal1a, crc32CastVal1b)
+	}
 
-	crc32CastVal2 := crc32.Checksum(file2ByteSlice, crc32TableCastagnoli)
+	crc32CastVal2b := crc32.Checksum(file2ByteSlice, crc32TableCastagnoli)
 	crc32CastHash2 := crc32.New(crc32TableCastagnoli)
 	io.Copy(crc32CastHash2, file2ByteReader)
-	crc32CastVal4 := crc32CastHash2.Sum(nil)
-	CastVal4, _ := binary.Uvarint(crc32CastVal4)
-	if
+	crc32CastVal2a := crc32CastHash2.Sum32()
+	if crc32CastVal2a == crc32CastVal2b {
+		fmt.Printf(" crc32 Castagnoli a and b are equal.  The value is %x.\n", crc32CastVal2a)
+	} else {
+		fmt.Printf(" crc32 Castagnoli a and b are not equal.  a = %x, b = %x\n\n", crc32CastVal2a, crc32CastVal2b)
+	}
 
-
+	if crc32CastVal1b == crc32CastVal2b {
+		fmt.Printf(" crc32 Castagnoli for %s and %s are equal.  It is %x.\n", filename1, filename2, crc32CastVal2b)
+	} else {
+		fmt.Printf(" crc32 Castagnoli for files are not equal. %s = %x and %s = %x.\n\n", filename1, crc32CastVal1b, filename2, crc32CastVal2b)
+	}
 
 	// crc32 Koopman polynomial section
 	crc32TableKoopman := crc32.MakeTable(crc32.Koopman)
-	crc32Koopman1 := crc32.New(crc32TableKoopman)
-	crc32Koopman2 := crc32.New(crc32TableKoopman)
+	crc32KoopVal1 := crc32.Checksum(file1ByteSlice, crc32TableKoopman)
+	crc32KoopVal2 := crc32.Checksum(file2ByteSlice, crc32TableKoopman)
+	if crc32KoopVal1 == crc32KoopVal2 {
+		fmt.Printf(" crc32Koopman for %s and %s are equal.  It is %x.\n", filename1, filename2, crc32KoopVal1)
+	} else {
+		fmt.Printf(" crc32 Koopman for the files are not equal.  %s = %x, %s = %x\n\n", filename1, crc32KoopVal1, filename2, crc32KoopVal2)
+	}
 
 	// crc64 ECMA section
 	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
-	crc64Hash1 := crc64.New(crc64TableECMA)
-	crc64Hash2 := crc64.New(crc64TableECMA)
+	crc64ECMAval1 := crc64.Checksum(file1ByteSlice, crc64TableECMA)
+	crc64ECMAval2 := crc64.Checksum(file2ByteSlice, crc64TableECMA)
+	if crc64ECMAval1 == crc64ECMAval2 {
+		fmt.Printf(" crc64ECMA values for %s and %s are equal.  It is %x.\n", filename1, filename2, crc64ECMAval1)
+	} else {
+		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n\n", filename1, crc64ECMAval1, filename2, crc64ECMAval2)
+	}
 
 	// md5 section
 	md5hash1 := md5.New()
@@ -203,11 +232,11 @@ func main() {
 	check(err3, " md5 hash2 io.copy error is ")
 	hashValueComputedStr1 := hex.EncodeToString(md5hash1.Sum(nil))
 	hashValueComputedStr2 := hex.EncodeToString(md5hash2.Sum(nil))
-	fmt.Printf(" md5 results: filesizes are %d = %d; hash strings are %s:%s, and are", fileSize1, fileSize2, hashValueComputedStr1, hashValueComputedStr2)
+	fmt.Printf(" md5 results: filesizes are %d = %d; hash strings are %s:%s, and are ", fileSize1, fileSize2, hashValueComputedStr1, hashValueComputedStr2)
 	if hashValueComputedStr1 != hashValueComputedStr2 {
-		fmt.Printf(" NOT")
+		fmt.Printf("NOT ")
 	}
-	fmt.Printf(" equal.\n\n")
+	fmt.Printf("equal.\n\n")
 
 	// sha1 section
 	sha1hash1 := sha1.New()
@@ -219,19 +248,42 @@ func main() {
 	check(err3, " sha1 hash2 io.copy err is ")
 	hashValueComputedStr1 = hex.EncodeToString(sha1hash1.Sum(nil))
 	hashValueComputedStr2 = hex.EncodeToString(sha1hash2.Sum(nil))
-	fmt.Printf(" sha1 results: filesizes are %d = %d; hash strings are %s:%s, and are", fileSize1, fileSize2, hashValueComputedStr1, hashValueComputedStr2)
+	fmt.Printf(" sha1 results: filesizes are %d = %d; hash strings are %s:%s, and are ", fileSize1, fileSize2, hashValueComputedStr1, hashValueComputedStr2)
 	if hashValueComputedStr1 != hashValueComputedStr2 {
-		fmt.Printf(" NOT")
+		fmt.Printf("NOT ")
 	}
-	fmt.Printf(" equal.\n\n")
+	fmt.Printf("equal.\n\n")
 
 	// sha256 section
 	sha256hash1 := sha256.New()
+	fileSize1, err = io.Copy(sha256hash1, file1ByteReader)
+	check(err, "sha256 hash1 io.copy err is")
+	hashValueComputedStr1 = hex.EncodeToString(sha256hash1.Sum(nil))
 	sha256hash2 := sha256.New()
+	fileSize2, err = io.Copy(sha256hash2, file2ByteReader)
+	check(err, "sha256 hash2 io.copy err is")
+	hashValueComputedStr2 = hex.EncodeToString(sha256hash2.Sum(nil))
+	fmt.Printf(" sha256 results: filesizes are %d = %d; hash strings are %s:%s, and are ", fileSize1, fileSize2, hashValueComputedStr1, hashValueComputedStr2)
+	if hashValueComputedStr1 != hashValueComputedStr2 {
+		fmt.Printf("NOT ")
+	}
+	fmt.Printf("equal.\n\n")
 
 	// sha512 section
 	sha512hash1 := sha512.New()
+	fileSize1, err = io.Copy(sha512hash1, file1ByteReader)
+	check(err, "sha512 hash1 io.copy err is")
+	hashValueComputedStr1 = hex.EncodeToString(sha512hash1.Sum(nil))
 	sha512hash2 := sha512.New()
+	fileSize2, err = io.Copy(sha512hash2, file2ByteReader)
+	check(err, "sha512 hash2 io.copy err is")
+	hashValueComputedStr2 = hex.EncodeToString(sha512hash2.Sum(nil))
+
+	fmt.Printf(" sha512 results: filesizes are %d = %d; hash strings are %s:%s, and are ", fileSize1, fileSize2, hashValueComputedStr1, hashValueComputedStr2)
+	if hashValueComputedStr1 != hashValueComputedStr2 {
+		fmt.Printf("NOT ")
+	}
+	fmt.Printf("equal.\n\n")
 
 	fmt.Println()
 	fmt.Println()
@@ -255,4 +307,4 @@ func min(a, b int) int {
 }
 
 
- */
+*/
