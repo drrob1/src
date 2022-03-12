@@ -318,9 +318,9 @@ func main() {
 	check(err, "sha512 hash2 io.copy err is")
 	hashValueComputedStr2 = hex.EncodeToString(sha512hash2.Sum(nil))
 	if hashValueComputedStr1 == hashValueComputedStr2 {
-		fmt.Printf("sha512 results: equal to hash string 2.\n\n")
+		fmt.Printf("sha512 results: %s equal to %s.\n\n", filename1, filename2)
 	} else {
-		fmt.Printf("sha512 results: NOT equal to hash string 2 \n\n")
+		fmt.Printf("sha512 results: %s NOT equal to %s.\n\n", filename1, filename2)
 	}
 	if verboseFlag {
 		fmt.Printf(" sha512 results: %s is %s; %s is %s; filesize1= %d; filesize2= %d\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
