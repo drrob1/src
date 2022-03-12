@@ -236,7 +236,7 @@ func main() {
 	if crc64ECMAval1 == crc64ECMAval2 {
 		fmt.Printf(" crc64ECMA values for %s and %s are equal.\n\n", filename1, filename2)
 	} else {
-		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n\n", filename1, filename2)
+		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n\n", filename1, crc64ECMAval1, filename2, crc64ECMAval2)
 	}
 	if verboseFlag {
 		fmt.Printf(" crc64 ECMA 1 is %x for %s; ECMA 2 is %x for %s\n\n", crc64ECMAval1, filename1, crc64ECMAval2, filename2)
@@ -254,10 +254,10 @@ func main() {
 	check(err3, " md5 hash2 io.copy error is ")
 	hashValueComputedStr1 := hex.EncodeToString(md5hash1.Sum(nil))
 	hashValueComputedStr2 := hex.EncodeToString(md5hash2.Sum(nil))
-	if hashValueComputedStr1 != hashValueComputedStr2 {
-		fmt.Printf(" md5 results: %s does not equal %s.\n\n", filename1, filename2)
-	} else {
+	if hashValueComputedStr1 == hashValueComputedStr2 {
 		fmt.Printf(" md5 results: %s equals %s.\n\n", filename1, filename2)
+	} else {
+		fmt.Printf(" md5 results: %s does not equal %s.\n\n", filename1, filename2)
 	}
 	if verboseFlag {
 		fmt.Printf(" md5 for %s is %s; for %s is %s.  FileSize1 = %d, filesize2 = %d\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2, fileSize1, fileSize2)
@@ -275,10 +275,10 @@ func main() {
 	check(err3, " sha1 hash2 io.copy err is ")
 	hashValueComputedStr1 = hex.EncodeToString(sha1hash1.Sum(nil))
 	hashValueComputedStr2 = hex.EncodeToString(sha1hash2.Sum(nil))
-	if hashValueComputedStr1 != hashValueComputedStr2 {
-		fmt.Printf(" sha1 results: %s does not equal %s.\n\n", filename1, filename2)
-	} else {
+	if hashValueComputedStr1 == hashValueComputedStr2 {
 		fmt.Printf(" sha1 results: %s equals %s.\n\n", filename1, filename2)
+	} else {
+		fmt.Printf(" sha1 results: %s does not equal %s.\n\n", filename1, filename2)
 	}
 	if verboseFlag {
 		fmt.Printf(" sha1 results: for %s is %s; for %s is %s; filesize1= %d, filesize2= %d.\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
@@ -296,10 +296,10 @@ func main() {
 	fileSize2, err = io.Copy(sha256hash2, file2ByteReader)
 	check(err, "sha256 hash2 io.copy err is")
 	hashValueComputedStr2 = hex.EncodeToString(sha256hash2.Sum(nil))
-	if hashValueComputedStr1 != hashValueComputedStr2 {
-		fmt.Printf(" sha256 result: %s NOT equal %s.\n\n", filename1, filename2)
-	} else {
+	if hashValueComputedStr1 == hashValueComputedStr2 {
 		fmt.Printf(" sha256 result: %s equal to %s.\n\n", filename1, filename2)
+	} else {
+		fmt.Printf(" sha256 result: %s NOT equal %s.\n\n", filename1, filename2)
 	}
 	if verboseFlag {
 		fmt.Printf(" sha256 result: %s = %s; %s = %s; filesize1 = %d, filesize2 = %d.\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
@@ -317,10 +317,10 @@ func main() {
 	fileSize2, err = io.Copy(sha512hash2, file2ByteReader)
 	check(err, "sha512 hash2 io.copy err is")
 	hashValueComputedStr2 = hex.EncodeToString(sha512hash2.Sum(nil))
-	if hashValueComputedStr1 != hashValueComputedStr2 {
-		fmt.Printf("NOT equal to hash string 2 of %s\n\n", hashValueComputedStr2)
+	if hashValueComputedStr1 == hashValueComputedStr2 {
+		fmt.Printf("sha512 results: equal to hash string 2.\n\n")
 	} else {
-		fmt.Printf("equal to hash string 2.\n\n")
+		fmt.Printf("sha512 results: NOT equal to hash string 2 \n\n")
 	}
 	if verboseFlag {
 		fmt.Printf(" sha512 results: %s is %s; %s is %s; filesize1= %d; filesize2= %d\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
