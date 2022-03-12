@@ -65,7 +65,7 @@ func main() {
 
 	// flag help message
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester, last modified %s.\n", LastCompiled)
+		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to hash and compare are given on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
