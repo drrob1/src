@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Oct 23, 2021"
+const LastAlteredDate = "Mar 12, 2022"
 
 /*
   REVISION HISTORY
@@ -67,6 +67,7 @@ const LastAlteredDate = "Oct 23, 2021"
    4 Jan 21 -- Adding ModifiedQuickSort, and will sort output times.  And will not run N**2 sorts on datasets > tooBig.
   27 Aug 21 -- Converting to modules by removing getcommandline, and removed the depricated ioutil.
   23 Oct 21 -- Removed call to make slice to receive words file.
+  12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
 */
 
 const tooBig = 170_000
@@ -774,6 +775,23 @@ func ModifiedMergeSort(L []string) []string {
 	}
 }
 
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
+			return sb.String(), err
+		}
+		if byte == '\n' {
+			return sb.String(), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return sb.String(), err
+		}
+	}
+}
+
 //-----------------------------------------------------------------------+
 //                               MAIN PROGRAM                            |
 //-----------------------------------------------------------------------+
@@ -837,7 +855,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
+	//bytesbuffer := bytes.NewBuffer(byteslice)
+	bytesReader := bytes.NewReader(byteslice)
 
 	OutFilename := BaseFilename + OutDefault
 	//	OutputFile, err := os.Create(OutFilename)
@@ -880,11 +899,12 @@ func main() {
 	check(err)
 
 	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
-		word, err := bytesbuffer.ReadString('\n')
+		//word, err := bytesbuffer.ReadString('\n')
+		//word = strings.TrimSpace(word)
+		word, err := readLine(bytesReader)
 		if err != nil {
 			break
 		}
-		word = strings.TrimSpace(word)
 		//	word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 4 {
 			continue

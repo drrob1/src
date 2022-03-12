@@ -14,18 +14,18 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "22 Oct 2021"
+const LastAlteredDate = "12 Mar 2022"
 
 /*
   REVISION HISTORY
   ----------------
   July 2017 -- First version
   26 July 17 -- Will try to learn delve (dlv) by using it to debug the routines here that don't work.
-   7 Aug  17 -- Thinking about a mergeSort with an insertionshort below, maybe 5 elements.
+   7 Aug  17 -- Thinking about a mergeSort with an insertionSort below, maybe 5 elements.
    8 Nov  17 -- Added comparing to sort.Slice.  I need to remember how I did this, so it will take a day or so.
   10 July 19 -- Added better comments and output strings.
   28 July 19 -- Adding Stable, and SliceStable
-  29 July 19 -- Changing some formating of the output.
+  29 July 19 -- Changing some formatting of the output.
   15 May  20 -- Fixed ShellSort after starting to read High Performance Go by Ron Stephen.  I then remembered that ShellSort
                   is a modified BubbleSort, so I coded it as such.  And now it works.
   16 May  20 -- Decided to try to fix the old ShellSort, now called BadShellSort.
@@ -36,7 +36,7 @@ const LastAlteredDate = "22 Oct 2021"
   21 May  20 -- Removed unneeded commented out code.  I'm not recompiling.
   23 May  20 -- Copied ShellSort by Sedgewick here.  Renamed ShellSort that I based on bubble sort to MyShellSort
   24 May  20 -- All the nonrecursive Quicksort routines I found create their own stack of indices.  I'll try
-                  my hand at creating my own stack operations push and pop.  I was not able to write a routine based on code inSedgewick.
+                  my hand at creating my own stack operations push and pop.  I was not able to write a routine based on code in Sedgewick.
   25 May  20 -- Thoughts on mysorts.go and mysorts2.go.
                Over the last 2 weeks I've been able to get the bad code working.  I now have 3 versions of ShellSort, and 2 versions of nonrecursive quick sort.
         I got ShellSort working by noticing a non idiomatic for loop, and Rob Pike in his book says the advantages of using idioms is that they help avoid bugs.
@@ -50,12 +50,13 @@ const LastAlteredDate = "22 Oct 2021"
                a stack too small was my problem all along.
 
                And I fixed a bug in that MyShellSort was not being tested after all.
-               When I correctly tested Sedgewick's approch to the ShellSort interval, I found it to be substantially better than what
+               When I correctly tested Sedgewick's approach to the ShellSort interval, I found it to be substantially better than what
                Wirth did.  So I changed all of them to Sedgewick's approach.  The routines became must faster as a result.
-  26 May  20 -- Only updating some comments.
+  26 May 20 -- Only updating some comments.
                 Now called fastsorts, in which I will only compare the n*log(n) sorts.  I will leave in the binary insertion sort.
-                I will use more idiomatic Go for my stack routines in the nonrecursive quick sort routines.
-  22 Oct 21 --  Optimizing code that uses bytes.NewBuffer().  And removed the depracated ioutil to use os.ReadFile.
+                I will use more idiomatic Go for my stack routines in the non-recursive quick sort routines.
+  22 Oct 21 -- Optimizing code that uses bytes.NewBuffer().  And removed the deprecated ioutil to use os.ReadFile.
+  12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
 */
 
 type intStackType []int
@@ -105,7 +106,7 @@ func (s *hiloStackType) len() int {
 	return length
 }
 
-// var maxStackSize int // so I can determine the max stack size.
+// var maxStackSize int    so I can determine the max stack size.
 //                         Using PaulKrugman.dat full file, Modula-2 version showed 12, and Oberon version showed 24.
 //                         Oberon version would have blown its stack as it defined a stack of 0..12.
 //                         The Modula-2 version would have made it w/ one element to spare.
@@ -324,7 +325,7 @@ func HeapSort(a []string) []string { // I think this is based on Wirth's code in
 } // END HeapSort
 // -----------------------------------------------------------
 // -----------------------------------------------------------
-
+/*
 func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn't work.
 	n := len(a)
 	L := n / 2
@@ -356,6 +357,8 @@ func ModifiedHeapSort(a []string) []string { // I did this myself, but it doesn'
 	} // END for-while R > 0
 	return a
 } // END ModifiedHeapSort
+
+*/
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
@@ -736,21 +739,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	//byteslice := make([]byte, 0, filesize+5) // add 5 just in case
-	//byteslice, err := ioutil.ReadFile(Filename)
 	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
+	bytesReader := bytes.NewReader(byteslice)
 
 	OutFilename := BaseFilename + OutDefault
-	//	OutputFile, err := os.Create(OutFilename)
-	OutputFile, err := os.OpenFile(OutFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		fmt.Println(" Error while opening OutputFile ", OutFilename, ".  Exiting.")
+	OutputFile, er := os.OpenFile(OutFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if er != nil {
+		fmt.Println(" Error while opening OutputFile ", OutFilename, "is", er, "  Exiting.")
 		os.Exit(1)
 	}
 	defer OutputFile.Close()
@@ -787,11 +787,12 @@ func main() {
 	check(err)
 
 	for totalwords := 0; totalwords < requestedwordcount; totalwords++ { // Main processing loop
-		word, err := bytesbuffer.ReadString('\n')
+		//word, err := bytesReader.ReadString('\n')
+		//word = strings.TrimSpace(word)
+		word, err := readLine(bytesReader)
 		if err != nil {
 			break
 		}
-		word = strings.TrimSpace(word)
 		//	word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 4 {
 			continue
@@ -1160,7 +1161,7 @@ func main() {
 	if allowoutput {
 		fmt.Println("before 2nd sort.StringSlice:", sliceofwords)
 	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	NativeWords = sliceofwords
 	t9 = time.Now()
 	NativeWords.Sort()
 	NativeSortTime = time.Since(t9)
@@ -1183,7 +1184,7 @@ func main() {
 	if allowoutput {
 		fmt.Println("before sort.Sort:", sliceofwords)
 	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	NativeWords = sliceofwords
 	t9 = time.Now()
 	sort.Sort(NativeWords)
 	NativeSortTime = time.Since(t9)
@@ -1206,7 +1207,7 @@ func main() {
 	if allowoutput {
 		fmt.Println("before sort.Stable:", sliceofwords)
 	}
-	NativeWords = sort.StringSlice(sliceofwords)
+	NativeWords = sliceofwords
 	t9 = time.Now()
 	sort.Stable(NativeWords)
 	NativeSortTime = time.Since(t9)
@@ -1316,12 +1317,30 @@ func check(e error) {
 	}
 }
 
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
+			return sb.String(), err
+		}
+		if byte == '\n' {
+			return sb.String(), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return sb.String(), err
+		}
+	}
+}
+
+/*
 func pause() {
 	fmt.Print(" hit <enter> to continue")
 	fmt.Scanln()
 }
 
-/*
+
   Timing for first full data file, ScienceOfHappiness.dat, ~67,500 words.  More complete information is now in the .sorted file
 
  after NativeSort: 47.745145ms
