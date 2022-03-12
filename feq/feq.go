@@ -50,11 +50,11 @@ import (
                   Now called feq for File Equal, that is, it will determine if 2 files are equal by computing a bunch of hashes.
                   And as this can apply to non-text files as well as text, I won't assume an extension.  Binaries on linux don't have one, anyway.
                   Turns out that crc is much more complex than I expected.  I tried each method just to see if I could get it to work.  But only once.
-  13 Mar 22 -- Adding timing info.  For a 3.5 GB file, the results on leox are:
+  12 Mar 22 -- Adding timing info.  For a 3.5 GB file, the results on leox are:
                   Castognoli 2.4s, IEEE 3.6s, byte-by-byte 4.7s, crc64 ECMA 11.5s, sha1 20.3s, md5 28.2s, sha512 35.7s, Koopman 46.8s, sha256 52.8s.
 */
 
-const LastCompiled = "13 Mar 2022"
+const LastCompiled = "12 Mar 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
