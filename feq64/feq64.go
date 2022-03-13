@@ -77,7 +77,7 @@ func main() {
 	flag.Parse()
 
 	if verboseFlag {
-		fmt.Printf("\n feqlarge File equal for LARGE files, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
+		fmt.Printf("\n feq64 File equal only using crc64 ECMA, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
 	}
 
 	if flag.NArg() == 0 {
