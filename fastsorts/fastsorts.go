@@ -1317,19 +1317,22 @@ func check(e error) {
 	}
 }
 
+// -----------------------------------------------------------
+// readLine
+
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
 		byte, err := r.ReadByte()
 		if err != nil {
-			return sb.String(), err
+			return strings.TrimSpace(sb.String()), err
 		}
 		if byte == '\n' {
-			return sb.String(), nil
+			return strings.TrimSpace(sb.String()), nil
 		}
 		err = sb.WriteByte(byte)
 		if err != nil {
-			return sb.String(), err
+			return strings.TrimSpace(sb.String()), err
 		}
 	}
 }

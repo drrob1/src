@@ -773,24 +773,27 @@ func ModifiedMergeSort(L []string) []string {
 		right := ModifiedMergeSort(L[middle:])
 		return merge(left, right)
 	}
-}
+} // ModifiedMergeSort
+
+// ----------------------------------------------------------
+// readLine
 
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
 		byte, err := r.ReadByte()
 		if err != nil {
-			return sb.String(), err
+			return strings.TrimSpace(sb.String()), err
 		}
 		if byte == '\n' {
-			return sb.String(), nil
+			return strings.TrimSpace(sb.String()), nil
 		}
 		err = sb.WriteByte(byte)
 		if err != nil {
-			return sb.String(), err
+			return strings.TrimSpace(sb.String()), err
 		}
 	}
-}
+} // readLine
 
 //-----------------------------------------------------------------------+
 //                               MAIN PROGRAM                            |
@@ -1413,12 +1416,12 @@ func check(e error) {
 	}
 }
 
+/*
 func pause() {
 	fmt.Print(" hit <enter> to continue")
 	fmt.Scanln()
 }
 
-/*
   Timing for first full data file, ScienceOfHappiness.dat, ~67,500 words.  More complete information is now in the .sorted file
 
  after NativeSort: 47.745145ms
