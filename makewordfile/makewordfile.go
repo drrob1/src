@@ -20,25 +20,28 @@ REVISION HISTORY
 
 const LastAlteredDate = "14 Mar 22"
 
-func readWord(r *bytes.Reader) (string, error) {
+func readWord(rdr *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
-		byte, err := r.ReadByte()
+		r, sz, err := rdr.ReadRune()
 		if err != nil {
 			return sb.String(), err
 		}
-		if unicode.IsSpace(rune(byte)) {
+		if unicode.IsSpace(r) {
 			if sb.Len() > 0 {
 				return sb.String(), nil
 			} else {
 				continue
 			}
 		}
-		if err := sb.WriteByte(byte); err != nil {
-			return sb.String(), err
+		if sz == 1 && (unicode.IsDigit(r) || unicode.IsLetter(r)) { // skip -, =, /, ', " and anything else not an ASCII letter or number.  Dates won't be returned as such.
+			if err := sb.WriteByte(byte(r)); err != nil {
+				return sb.String(), err
+			}
+		} else {
+			continue
 		}
 	}
-
 }
 
 func main() {
