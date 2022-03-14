@@ -1,10 +1,7 @@
-package main // for feq.go
+package main // for feqlarge.go
 
 import (
 	"bytes"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
 	"flag"
@@ -52,6 +49,10 @@ import (
                   Turns out that crc is much more complex than I expected.  I tried each method just to see if I could get it to work.  But only once.
   12 Mar 22 -- Adding timing info.  For a 3.5 GB file, the results on leox are:
                   Castognoli 2.4s, IEEE 3.6s, byte-by-byte 4.7s, crc64 ECMA 11.5s, sha1 20.3s, md5 28.2s, sha512 35.7s, Koopman 46.8s, sha256 52.8s.
+                  Now called feqlarge.go, intended for files that are quite large.  I will only open one file at a time, calculate some of the hashes, and
+                  compare them afterwards.  When I tested feq.go on a large file (22GB, IIRC), the OS shut it down.
+                  I'll only use Castognoli, crc64 ECMA and sha512.  I can't do byte-by-byte because this is intended for very large files that can't both be in memory.
+                  I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
 */
 
 const LastCompiled = "12 Mar 2022"
@@ -68,8 +69,8 @@ func main() {
 
 	// flag help message
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to hash and compare are given on the command line.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester for very large files, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 		fmt.Fprintln(flag.CommandLine.Output())
@@ -80,261 +81,95 @@ func main() {
 	flag.Parse()
 
 	if verboseFlag {
-		fmt.Printf("\n feq File equal determination, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
+		fmt.Printf("\n feqlarge File equal for LARGE files, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
 	}
 
-	if flag.NArg() == 0 { // need to use filepicker, or not.
+	if flag.NArg() == 0 {
 		fmt.Printf("\n Need two files on the command line to determine if they're equal.  Exiting. \n\n")
 		os.Exit(1)
-	} else { // will use filename entered on commandline
+	} else if flag.NArg() >= 2 { // will use first 2 filenames entered on commandline
 		filename1 = flag.Arg(0)
 		filename2 = flag.Arg(1)
-		if len(filename1) == 0 || len(filename2) == 0 {
-			fmt.Printf("\n Need two files on the command line to determine if they're equal.  Exiting. ")
-			os.Exit(1)
-		}
-	}
-
-	fmt.Println()
-
-	file1ByteSlice, err1 := os.ReadFile(filename1)
-	file1ByteReader := bytes.NewReader(file1ByteSlice)
-	file2ByteSlice, err2 := os.ReadFile(filename2)
-	file2ByteReader := bytes.NewReader(file2ByteSlice)
-
-	if err1 != nil || err2 != nil {
-		fmt.Fprintf(os.Stderr, "\nos.ReadFile: %s error is %v, and %s error is %v\n\n", filename1, err1, filename2, err2)
+	} else {
+		fmt.Printf("\n Need two files on the command line to determine if they're equal.  Exiting. ")
 		os.Exit(1)
 	}
 
-	//   now to compute the hashes,  compare them, and output results
+	fileByteSlice, err := os.ReadFile(filename1)
+	check(err, " Reading first file error is")
 
-	// crc32 IEEE section.  1a uses Sum32, 1b uses Checksum and 1c uses Sum32.
-	tc0 := time.Now()
-	crc32ieeehash1 := crc32.NewIEEE()
-	size1, _ := io.Copy(crc32ieeehash1, file1ByteReader)
-	crc32IEEEval1a := crc32ieeehash1.Sum32()
-	crc32IEEEVal1b := crc32.ChecksumIEEE(file1ByteSlice)
-	if crc32IEEEval1a == crc32IEEEVal1b {
-		if verboseFlag {
-			fmt.Printf(" crc32 IEEE code val1a == val1b.  crc32ieeeVal1b = %x\n\n", crc32IEEEVal1b)
-		}
-	} else {
-		fmt.Printf("\n crc32 IEEE code: val1a = %x does not equal ieeeval1b = %x\n\n", crc32IEEEval1a, crc32IEEEVal1b)
-	}
+	// now to compute the Castognoli, ECMA and sha512 hashes first for file 1, then for file 2, then compare them and output results.
 
-	// crc32 IEEE section.  2a uses Sum32, 2b uses Checksum.
-	crc32ieeehash2 := crc32.NewIEEE()
-	size2, _ := io.Copy(crc32ieeehash2, file2ByteReader)
-	if verboseFlag {
-		fmt.Printf(" io.Copy size1 = %d, size2 = %d, type of 1a is %T, type of 1b is %T \n", size1, size2, crc32IEEEval1a, crc32IEEEVal1b)
-	}
-
-	crc32ieeeVal2a := crc32ieeehash2.Sum32()
-	crc32IEEEval2b := crc32.ChecksumIEEE(file2ByteSlice)
-	if crc32ieeeVal2a == crc32IEEEval2b {
-		if verboseFlag {
-			fmt.Printf(" crc32 IEEE code val2a == val2b.  crc32ieeeVal2b = %x\n\n", crc32IEEEval2b)
-		}
-	} else {
-		fmt.Printf("\n crc32 IEEE code: crc32IEEEval2a = %x does not equal crc32IEEEval2b = %x  \n\n", crc32ieeeVal2a, crc32IEEEval2b)
-	}
-
-	if crc32IEEEVal1b == crc32IEEEval2b {
-		fmt.Printf(" IEEE CRC32 Checksum for %s and %s are equal.\n", filename1, filename2)
-	} else {
-		fmt.Printf(" IEEE CRC32 CheckSums are not equal.  %s = %x and %s = %x are not equal.\n", filename1, crc32IEEEVal1b, filename2, crc32IEEEval2b)
-	}
-	fmt.Printf(" Elapsed time for CRC32 IEEE format is %s\n\n", time.Since(tc0))
-
-	// crc32 Castagnoli polynomial section
-	tc1 := time.Now()
+	// first file's first.
+	t0 := time.Now()
 	crc32TableCastagnoli := crc32.MakeTable(crc32.Castagnoli)
-	crc32CastVal1b := crc32.Checksum(file1ByteSlice, crc32TableCastagnoli)
-	crc32Casthash1 := crc32.New(crc32TableCastagnoli)
-	file1ByteReader.Reset(file1ByteSlice)
-	size, err := io.Copy(crc32Casthash1, file1ByteReader)
-	check(err, " io.Copy crc32Casthash1 error is")
-	crc32CastVal1a := crc32Casthash1.Sum32()
-	if crc32CastVal1a == crc32CastVal1b {
+	crc32CastVal1 := crc32.Checksum(fileByteSlice, crc32TableCastagnoli)
+
+	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
+	crc64ECMAval1 := crc64.Checksum(fileByteSlice, crc64TableECMA)
+
+	fileByteReader := bytes.NewReader(fileByteSlice)
+	sha512hash1 := sha512.New()
+	fileSize1, er := io.Copy(sha512hash1, fileByteReader)
+	check(er, "sha512 hash1 io.copy err is")
+	sha512ValueComputedStr1 := hex.EncodeToString(sha512hash1.Sum(nil))
+
+	if verboseFlag {
+		fmt.Printf(" file 1 %s: crc32 Cast = %x, crc64 ECMA = %x, file size = %d, elapsed time = %s, sha512 = %s\n",
+			filename1, crc32CastVal1, crc64ECMAval1, fileSize1, time.Since(t0), sha512ValueComputedStr1)
+	}
+
+	// second file's next, and then comparing the values.
+	fileByteSlice, er = os.ReadFile(filename2)
+	check(er, " Reading 2nd file error is")
+
+	crc32CastVal2 := crc32.Checksum(fileByteSlice, crc32TableCastagnoli)
+
+	if crc32CastVal1 == crc32CastVal2 {
 		if verboseFlag {
-			fmt.Printf(" crc32 Castagnoli 1 a and b are equal.  The value is %x.\n", crc32CastVal1a)
+			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.\n\n", filename1, filename2)
+		} else {
+			fmt.Printf(" crc32 Castagnoli hashes are equal.\n")
 		}
 	} else {
-		fmt.Printf(" crc32 Castagnoli 1 a and b are not equal.  a = %x, b = %x and size = %d\n", crc32CastVal1a, crc32CastVal1b, size)
+		fmt.Printf(" crc32 Castagnoli values are not equal.  File 2:  %s = %x\n\n", filename2, crc32CastVal2)
 	}
-
-	crc32CastVal2b := crc32.Checksum(file2ByteSlice, crc32TableCastagnoli)
-	crc32CastHash2 := crc32.New(crc32TableCastagnoli)
-	file2ByteReader.Reset(file2ByteSlice)
-	size, err = io.Copy(crc32CastHash2, file2ByteReader)
-	check(err, "io.Copy crc32CastHash2 error is")
-	crc32CastVal2a := crc32CastHash2.Sum32()
-	if crc32CastVal2a == crc32CastVal2b {
-		if verboseFlag {
-			fmt.Printf(" crc32 Castagnoli 2 a and b are equal.  The value is %x.\n\n", crc32CastVal2a)
-		}
-	} else {
-		fmt.Printf(" crc32 Castagnoli 2 a and b are not equal.  a = %x, b = %x and size = %d\n\n", crc32CastVal2a, crc32CastVal2b, size)
-	}
-
-	if crc32CastVal1b == crc32CastVal2b {
-		fmt.Printf(" crc32 Castagnoli for %s and %s are equal.\n", filename1, filename2)
-	} else {
-		fmt.Printf(" crc32 Castagnoli for %s and %s are not equal.\n", filename1, filename2)
-	}
-	if verboseFlag {
-		fmt.Printf(" crc32 Castagnoli 1 is %x for %s; Castagnoli 2 is %x for %s\n\n", crc32CastVal1b, filename1, crc32CastVal2b, filename2)
-	}
-	fmt.Printf(" Elapsed time for crc32 Castagnoli polynomial is %s\n\n", time.Since(tc1))
-
-	// crc32 Koopman polynomial section
-	tc2 := time.Now()
-	crc32TableKoopman := crc32.MakeTable(crc32.Koopman)
-	crc32KoopVal1 := crc32.Checksum(file1ByteSlice, crc32TableKoopman)
-	crc32KoopVal2 := crc32.Checksum(file2ByteSlice, crc32TableKoopman)
-	if crc32KoopVal1 == crc32KoopVal2 {
-		fmt.Printf(" crc32Koopman for %s and %s are equal.\n", filename1, filename2)
-	} else {
-		fmt.Printf(" crc32 Koopman for %s and %s are not equal.\n", filename1, filename2)
-	}
-	if verboseFlag {
-		fmt.Printf(" crc32 Koopman 1 is %x for %s; Koopman 2 is %x for %s\n\n", crc32KoopVal1, filename1, crc32KoopVal2, filename2)
-	}
-	fmt.Printf(" Elapsed time for crc32 Koopman polynomial is %s\n\n", time.Since(tc2))
 
 	// crc64 ECMA section
-	tc3 := time.Now()
-	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
-	crc64ECMAval1 := crc64.Checksum(file1ByteSlice, crc64TableECMA)
-	crc64ECMAval2 := crc64.Checksum(file2ByteSlice, crc64TableECMA)
+	crc64ECMAval2 := crc64.Checksum(fileByteSlice, crc64TableECMA)
 	if crc64ECMAval1 == crc64ECMAval2 {
-		fmt.Printf(" crc64ECMA values for %s and %s are equal.\n", filename1, filename2)
+		if verboseFlag {
+			fmt.Printf(" crc64ECMA values for %s and %s are equal.\n\n", filename1, filename2)
+		} else {
+			fmt.Printf(" crc64 ECMA values are equal.\n")
+		}
 	} else {
-		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n", filename1, crc64ECMAval1, filename2, crc64ECMAval2)
+		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n\n", filename1, crc64ECMAval1, filename2, crc64ECMAval2)
 	}
-	if verboseFlag {
-		fmt.Printf(" crc64 ECMA 1 is %x for %s; ECMA 2 is %x for %s\n\n", crc64ECMAval1, filename1, crc64ECMAval2, filename2)
-	}
-	fmt.Printf(" Elapsed time for crc64 ECMA method is %s\n\n", time.Since(tc3))
-
-	// md5 section
-	md5hash1 := md5.New()
-	md5hash2 := md5.New()
-
-	tmd5 := time.Now()
-	file1ByteReader.Reset(file1ByteSlice)
-	file2ByteReader.Reset(file2ByteSlice)
-	fileSize1, err2 := io.Copy(md5hash1, file1ByteReader)
-	check(err2, "md5 hash1 io.copy err is ")
-	fileSize2, err3 := io.Copy(md5hash2, file2ByteReader)
-	check(err3, " md5 hash2 io.copy error is ")
-	hashValueComputedStr1 := hex.EncodeToString(md5hash1.Sum(nil))
-	hashValueComputedStr2 := hex.EncodeToString(md5hash2.Sum(nil))
-	if hashValueComputedStr1 == hashValueComputedStr2 {
-		fmt.Printf(" md5 results: %s equals %s.\n", filename1, filename2)
-	} else {
-		fmt.Printf(" md5 results: %s does not equal %s.\n", filename1, filename2)
-	}
-	if verboseFlag {
-		fmt.Printf(" md5 for %s is %s; for %s is %s.  FileSize1 = %d, filesize2 = %d\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2, fileSize1, fileSize2)
-	}
-	fmt.Printf(" Elapsed time for md5 is %s\n\n", time.Since(tmd5))
-
-	// sha1 section
-	sha1hash1 := sha1.New()
-	sha1hash2 := sha1.New()
-
-	file1ByteReader.Reset(file1ByteSlice)
-	file2ByteReader.Reset(file2ByteSlice)
-	tsha1 := time.Now()
-	fileSize1, err = io.Copy(sha1hash1, file1ByteReader)
-	check(err, "sha1 hash1 io.copy err is ")
-	fileSize2, err3 = io.Copy(sha1hash2, file2ByteReader)
-	check(err3, " sha1 hash2 io.copy err is ")
-	hashValueComputedStr1 = hex.EncodeToString(sha1hash1.Sum(nil))
-	hashValueComputedStr2 = hex.EncodeToString(sha1hash2.Sum(nil))
-	if hashValueComputedStr1 == hashValueComputedStr2 {
-		fmt.Printf(" sha1 results: %s equals %s.\n", filename1, filename2)
-	} else {
-		fmt.Printf(" sha1 results: %s does not equal %s.\n", filename1, filename2)
-	}
-	if verboseFlag {
-		fmt.Printf(" sha1 results: for %s is %s; for %s is %s; filesize1= %d, filesize2= %d.\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
-			fileSize1, fileSize2)
-	}
-	fmt.Printf(" Elapsed time for sha1 is %s\n\n", time.Since(tsha1))
-
-	// sha256 section
-	sha256hash1 := sha256.New()
-	file1ByteReader.Reset(file1ByteSlice)
-
-	tsha256 := time.Now()
-	fileSize1, err = io.Copy(sha256hash1, file1ByteReader)
-	check(err, "sha256 hash1 io.copy err is")
-	hashValueComputedStr1 = hex.EncodeToString(sha256hash1.Sum(nil))
-	sha256hash2 := sha256.New()
-	file2ByteReader.Reset(file2ByteSlice)
-	fileSize2, err = io.Copy(sha256hash2, file2ByteReader)
-	check(err, "sha256 hash2 io.copy err is")
-	hashValueComputedStr2 = hex.EncodeToString(sha256hash2.Sum(nil))
-	if hashValueComputedStr1 == hashValueComputedStr2 {
-		fmt.Printf(" sha256 result: %s equal to %s.\n", filename1, filename2)
-	} else {
-		fmt.Printf(" sha256 result: %s NOT equal %s.\n", filename1, filename2)
-	}
-	if verboseFlag {
-		fmt.Printf(" sha256 result: %s = %s; %s = %s; filesize1 = %d, filesize2 = %d.\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
-			fileSize1, fileSize2)
-	}
-	fmt.Printf(" Elapsed time for sha256 is %s\n\n", time.Since(tsha256))
 
 	// sha512 section
-	sha512hash1 := sha512.New()
-	file1ByteReader.Reset(file1ByteSlice)
-	tsha512 := time.Now()
-	fileSize1, err = io.Copy(sha512hash1, file1ByteReader)
-	check(err, "sha512 hash1 io.copy err is")
-	hashValueComputedStr1 = hex.EncodeToString(sha512hash1.Sum(nil))
 	sha512hash2 := sha512.New()
-	file2ByteReader.Reset(file2ByteSlice)
-	fileSize2, err = io.Copy(sha512hash2, file2ByteReader)
+	fileByteReader = bytes.NewReader(fileByteSlice)
+	fileSize2, err := io.Copy(sha512hash2, fileByteReader)
 	check(err, "sha512 hash2 io.copy err is")
-	hashValueComputedStr2 = hex.EncodeToString(sha512hash2.Sum(nil))
-	if hashValueComputedStr1 == hashValueComputedStr2 {
-		fmt.Printf("sha512 results: %s equal to %s.\n", filename1, filename2)
+	sha512ValueComputedStr2 := hex.EncodeToString(sha512hash2.Sum(nil))
+	if sha512ValueComputedStr1 == sha512ValueComputedStr2 {
+		if verboseFlag {
+			fmt.Printf("sha512 results: %s equal to %s.\n", filename1, filename2)
+		} else {
+			fmt.Printf(" sha512 values are equal.\n")
+		}
 	} else {
 		fmt.Printf("sha512 results: %s NOT equal to %s.\n", filename1, filename2)
 	}
 	if verboseFlag {
-		fmt.Printf(" sha512 results: %s is %s; %s is %s; filesize1= %d; filesize2= %d\n\n", filename1, hashValueComputedStr1, filename2, hashValueComputedStr2,
-			fileSize1, fileSize2)
+		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, sha512 = %s\n\n",
+			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, time.Since(t0), sha512ValueComputedStr2)
 	}
-	fmt.Printf(" Elapsed time for sha512 is %s\n\n", time.Since(tsha512))
-
-	// byte-by-byte section
-	var matched bool
-	tbyte := time.Now()
-	if len(file1ByteSlice) == len(file2ByteSlice) {
-		for i := range file1ByteSlice {
-			if file1ByteSlice[i] != file2ByteSlice[i] {
-				matched = false
-				break
-			}
-			matched = true
-		}
-	}
-	fmt.Printf(" Byte-by-byte method: %s and %s ", filename1, filename2)
-	if matched {
-		fmt.Printf("are equal.\n")
-	} else {
-		fmt.Printf("are not equal.\n")
-	}
-	fmt.Printf(" Elapsed time for byte-by-byte is %s\n", time.Since(tbyte))
 
 	fmt.Println()
 	fmt.Println()
-} // Main for feq.go.
+} // Main for feqlarge.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
@@ -342,16 +177,3 @@ func check(e error, msg string) {
 		fmt.Fprintln(os.Stderr, msg, e)
 	}
 }
-
-/*
-// ------------------------------------------------------- min ---------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
-
-
-*/
