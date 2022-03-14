@@ -14,8 +14,6 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "Mar 12, 2022"
-
 /*
   REVISION HISTORY
   ----------------
@@ -70,6 +68,7 @@ const LastAlteredDate = "Mar 12, 2022"
   12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
 */
 
+const LastAlteredDate = "Mar 12, 2022"
 const tooBig = 170_000
 
 var intStack []int // for non-recursive quick sorts

@@ -1,27 +1,45 @@
-// (C) 1990-2017.  Robert W.  Solomon.  All rights reserved.
+// (C) 1990-2021.  Robert W.  Solomon.  All rights reserved.
 // makewordfile.go
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	//
-	"getcommandline"
+	"unicode"
 )
 
-const LastAlteredDate = "19 July 17"
-const k = 1024
-
 /*
-	     REVISION HISTORY
-	     ----------------
-		 19 July 17 -- Started writing this sort testing routine.
+REVISION HISTORY
+----------------
+19 July 17 -- Started writing this sort testing routine.
+14 Mar 22 -- Converting to Go 1.16 by removing ioutils, and updating w/ the stuff I've learned over the 5 yrs since I wrote this.
 */
+
+const LastAlteredDate = "14 Mar 22"
+
+func readWord(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
+			return sb.String(), err
+		}
+		if unicode.IsSpace(rune(byte)) {
+			if sb.Len() > 0 {
+				return sb.String(), nil
+			} else {
+				continue
+			}
+		}
+		if err := sb.WriteByte(byte); err != nil {
+			return sb.String(), err
+		}
+	}
+
+}
 
 func main() {
 	var filesize int64
@@ -37,7 +55,7 @@ func main() {
 	Ext2Default := ".out"
 	OutDefault := ".dat"
 
-	commandline := getcommandline.GetCommandLineString()
+	commandline := os.Args[1]
 	BaseFilename := filepath.Clean(commandline)
 	Filename := ""
 	FileExists := false
@@ -70,28 +88,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, filesize+50) // add 50 just in case
-	byteslice, err := ioutil.ReadFile(Filename)
+	fileContents, err := os.ReadFile(Filename)
 	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile when reading ", Filename, ".  Exiting.")
+		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
-
-	OutFilename := BaseFilename + OutDefault
-	OutputFile, err := os.Create(OutFilename)
-	if err != nil {
-		fmt.Println(" Error while opening OutputFile ", OutFilename, ".  Exiting.")
-		os.Exit(1)
-	}
-	defer OutputFile.Close()
-	OutBufioWriter := bufio.NewWriter(OutputFile)
-	defer OutBufioWriter.Flush()
+	fileReader := bytes.NewReader(fileContents)
+	fileWriteBuffer := bytes.NewBuffer(make([]byte, 0, len(fileContents)))
 
 	totalwords := 0
 	for { // Main processing loop
-		word, err := bytesbuffer.ReadString(' ')
+		word, err := readWord(fileReader)
 		if err != nil {
 			break
 		}
@@ -100,17 +108,21 @@ func main() {
 			continue
 		}
 
-		// now have to write out this word to the file.  I didn't open the file yet.
-		_, err = OutBufioWriter.WriteString(word)
+		_, err = fileWriteBuffer.WriteString(word)
 		check(err)
-		_, err = OutBufioWriter.WriteRune('\n')
+		_, err = fileWriteBuffer.WriteRune('\n')
 		check(err)
 		totalwords++
 	}
 
-	OutBufioWriter.Flush()
-	defer OutputFile.Close()
-	fmt.Println(" Wrote", totalwords, "words")
+	OutFilename := BaseFilename + OutDefault
+	if err := os.WriteFile(OutFilename, fileWriteBuffer.Bytes(), 0666); err != nil {
+		fmt.Printf(" Error while writing %s is %v\n ", OutFilename, err)
+		os.Exit(1)
+	}
+
+	fmt.Printf(" Found %d words of correct length to write to %s from %s of %d bytes read in.  Bytes to write was %d.\n",
+		totalwords, OutFilename, Filename, filesize, fileWriteBuffer.Len())
 } // main in rpng.go
 
 // ------------------------------------------------------- check -------------------------------

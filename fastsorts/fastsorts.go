@@ -14,8 +14,6 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "12 Mar 2022"
-
 /*
   REVISION HISTORY
   ----------------
@@ -58,6 +56,8 @@ const LastAlteredDate = "12 Mar 2022"
   22 Oct 21 -- Optimizing code that uses bytes.NewBuffer().  And removed the deprecated ioutil to use os.ReadFile.
   12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
 */
+
+const LastAlteredDate = "12 Mar 2022"
 
 type intStackType []int
 
