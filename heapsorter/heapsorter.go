@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
+	"runtime"
 
 	"os"
 	"path/filepath"
@@ -800,7 +801,7 @@ func readLine(r *bytes.Reader) (string, error) {
 
 func main() {
 	var filesize int64
-	fmt.Println(" Sort a slice of strings, using the different algorithms.  Last altered", LastAlteredDate)
+	fmt.Println(" Sort a slice of strings, using the different algorithms.  Last altered", LastAlteredDate, ", compiled by", runtime.Version())
 	fmt.Println()
 
 	// File I/O.  Construct filenames

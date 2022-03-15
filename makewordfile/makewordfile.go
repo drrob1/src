@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode"
 )
@@ -18,7 +19,7 @@ REVISION HISTORY
 14 Mar 22 -- Converting to Go 1.16 by removing ioutils, and updating w/ the stuff I've learned over the 5 yrs since I wrote this.
 */
 
-const LastAlteredDate = "14 Mar 22"
+const LastAlteredDate = "15 Mar 22"
 
 func readWord(rdr *bytes.Reader) (string, error) {
 	var sb strings.Builder
@@ -46,7 +47,7 @@ func readWord(rdr *bytes.Reader) (string, error) {
 
 func main() {
 	var filesize int64
-	fmt.Println(" Make a file of words, one per line, for testing of my sort routines, written in Go.  Last altered ", LastAlteredDate)
+	fmt.Println(" Make a file of words, one per line, for testing of my sort routines, written in Go.  Last altered ", LastAlteredDate, ", compiled by", runtime.Version())
 	fmt.Println()
 
 	if len(os.Args) <= 1 {
