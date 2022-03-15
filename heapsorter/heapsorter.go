@@ -68,7 +68,7 @@ import (
   12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
 */
 
-const LastAlteredDate = "Mar 12, 2022"
+const LastAlteredDate = "Mar 15, 2022"
 const tooBig = 170_000
 
 var intStack []int // for non-recursive quick sorts
@@ -876,7 +876,7 @@ func main() {
 	check(err)
 
 	// Read in the words to sort
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(os.Stdin) // this reads from stdin.  I would not do this today; I'd use fmt.Scanln.
 	fmt.Print(" Enter number of words for this run.  0 means full file: ")
 	scanner.Scan()
 	answer := scanner.Text()
@@ -908,9 +908,9 @@ func main() {
 			break
 		}
 		//	word = strings.ToLower(strings.TrimSpace(word))
-		if len(word) < 4 {
-			continue
-		}
+		//if len(word) < 4 {  This is already in makewordfile, so I don't need it here, too.
+		//	continue          makewordfile also removes all non-alphanumeric characters, also.
+		//}
 		mastersliceofwords = append(mastersliceofwords, word)
 	}
 
@@ -1360,8 +1360,7 @@ func main() {
 		sortedheapofwords = append(sortedheapofwords, str)
 	}
 	sortedheapofwordsTime := time.Since(t13)
-	s = fmt.Sprintf(" after container/heap: time=%s for %d entries by heapofwords.Len(), and %d by Len(sortedheapofworda) \n",
-		sortedheapofwordsTime.String(), heapofwords.Len(), len(sortedheapofwords))
+	s = fmt.Sprintf(" after container/heap: time=%s \n", sortedheapofwordsTime.String())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Print(s)
