@@ -18,6 +18,7 @@ REVISION HISTORY
 27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
 30 Sep 21 -- Added KeyAsterisk and removed redundant code (as per Andy Williams)
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.  And other things from img.go.
+16 Mar 22 -- Only writing using fmt.Print calls if verboseFlag is set.
 */
 
 package main
@@ -48,7 +49,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 4, 2021"
+const LastModified = "Mary 16, 2022"
 const maxWidth = 1800
 const maxHeight = 900
 const keyCmdChanSize = 20
@@ -98,7 +99,9 @@ func main() {
 	}
 
 	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
-	fmt.Println(str) // this works as intended
+	if *verboseFlag {
+		fmt.Println(str) // this works as intended
+	}
 
 	imgfilename := flag.Arg(0)
 	_, err := os.Stat(imgfilename)
@@ -551,8 +554,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		scaleFactor *= 0.9
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyV:
-		*verboseFlag = true
-		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
+		*verboseFlag = !*verboseFlag
+		fmt.Printf(" Verbose flag is now %t, Sticky is %t, and scaleFactor is %2.2g\n", *verboseFlag, sticky, scaleFactor)
 	case fyne.KeyZ:
 		sticky = !sticky
 		*verboseFlag = !*verboseFlag

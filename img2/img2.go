@@ -22,6 +22,7 @@ REVISION HISTORY
                automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
  4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
 26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
+16 Mar 22 -- Will only write using fmt.Print calls if verboseFlag is set.
 */
 
 package main
@@ -55,7 +56,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 27, 2021"
+const LastModified = "Mar 16, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -211,7 +212,9 @@ func main() {
 	}
 
 	str := fmt.Sprintf("Single Image Viewer2 last modified %s, compiled using %s", LastModified, runtime.Version())
-	fmt.Println(str) // this works as intended
+	if *verboseFlag {
+		fmt.Println(str) // this works as intended
+	}
 
 	imgfilename := flag.Arg(0)
 	_, err := os.Stat(imgfilename)
@@ -597,8 +600,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		scaleFactor *= 0.9
 		loadTheImage()
 	case fyne.KeyV:
-		*verboseFlag = true
-		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
+		*verboseFlag = !*verboseFlag
+		fmt.Printf(" Verbose flag is now %t, Sticky is and scaleFactor is %2.2g\n", *verboseFlag, sticky, scaleFactor)
 	case fyne.KeyZ:
 		sticky = !sticky
 		if *verboseFlag {

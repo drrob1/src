@@ -20,6 +20,7 @@
  8 Jan 22 -- Will detect File Not Found error and handle it differently than other errors.  I now know how based on "Powerful Command Line Applications in Go."
                And will have keyTyped go back into the Entry widget.  I think it looks nicer.
 12 Feb 22 -- Going back to not have keyTyped to into the entry widget.  This allows <space> to be a delimiter.  I like that better.
+16 Mar 22 -- Removing fmt.Print calls so a terminal window doesn't appear, unless I use the -v flag.
 */
 
 package main
@@ -51,7 +52,7 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Feb 12, 2022"
+const lastModified = "Mar 16, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -95,12 +96,16 @@ const Storage3FileName = "RPNfyneStorage3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 
 func main() {
-	fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
 
 	var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
+	var verboseFlag = flag.Bool("v", false, "Verbose mode enabled.")
 	flag.Parse()
 
-	var Stk hpcalc2.StackType // used when time to write out the stack upon exit.
+	if *verboseFlag {
+		fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
+	}
+
+	var Stk hpcalc2.StackType // used when it's time to write out the stack upon exit.
 	var err error
 	DisplayTape = make([]string, 0, 100)
 	DisplayTape = append(DisplayTape, "History of entered commands")

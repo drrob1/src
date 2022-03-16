@@ -28,6 +28,7 @@ REVISION HISTORY
  3 Dec 21 -- Some clean up that I learned from Bill Kennedy.
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
+16 Mar 22 -- Only writing using fmt.Print calls if verbose or flags are set.
 */
 
 package main
@@ -63,7 +64,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Dec 26, 2021"
+const LastModified = "Mar 16, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -110,7 +111,9 @@ func main() {
 	}
 
 	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
-	fmt.Println(str)
+	if *verboseFlag {
+		fmt.Println(str)
+	}
 
 	imgfilename := flag.Arg(0)
 	_, err := os.Stat(imgfilename)
@@ -522,8 +525,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		//loadTheImage()
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyV:
-		*verboseFlag = true
-		fmt.Println(" Verbose flag is now on, and Sticky is", sticky, ", and scaleFactor is", scaleFactor)
+		*verboseFlag = !*verboseFlag
+		fmt.Printf(" Verbose flag is now %t, Sticky is %t, and scaleFactor is %2.2g\n", *verboseFlag, sticky, scaleFactor)
 	case fyne.KeyZ:
 		sticky = !sticky
 		*verboseFlag = !*verboseFlag
