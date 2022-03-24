@@ -1,6 +1,7 @@
 package main // for feqlarge.go
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha512"
 	"encoding/hex"
@@ -17,7 +18,7 @@ import (
 /*
   REVISION HISTORY
   ----------------
-   6 Apr 13 -- M2:  First modified version of module.  I will use VLI to compare all digits of the hashes.
+   6 Apr 13 -- M2:  First modified version of module.  I will use VLI to compare all digits of the hashes.  And it's called CompareHashes.mod
   23 Apr 13 -- Fixed problem of a single line in the hashes file, that does not contain an EOL character, causes
                 an immediate return without processing of the characters just read in.
   24 Apr 13 -- Added output of which file either matches or does not match.
@@ -53,9 +54,10 @@ import (
                   compare them afterwards.  When I tested feq.go on a large file (22GB, IIRC), the OS shut it down.
                   I'll only use Castognoli, crc64 ECMA and sha512.  I can't do byte-by-byte because this is intended for very large files that can't both be in memory.
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
+  24 Mar 22 -- Adding b flag to do a byte by byte comparison but by using bufio to open both files.  Thinking this will work even on huge files.
 */
 
-const LastCompiled = "12 Mar 2022"
+const LastCompiled = "24 Mar 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -76,8 +78,9 @@ func main() {
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
-	var verboseFlag bool
-	flag.BoolVar(&verboseFlag, "v", false, " verbose mode.")
+	var verboseFlag, byteByByteFlag bool
+	flag.BoolVar(&verboseFlag, "v", false, " verbose mode flag.")
+	flag.BoolVar(&byteByByteFlag, "b", false, " byte by byte comparison flag.")
 	flag.Parse()
 
 	if verboseFlag {
@@ -165,6 +168,36 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, sha512 = %s\n\n",
 			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, time.Since(t0), sha512ValueComputedStr2)
+	}
+
+	// Comparing byte by byte, if requested by the b flag.
+	if byteByByteFlag {
+		file1, e := os.Open(filename1)
+		check(e, " byteByByte section and opening file1 error is")
+		file2, errr := os.Open(filename2)
+		check(errr, " bytebybyte section and opening file2 error is")
+
+		fReader1 := bufio.NewReader(file1)
+		fReader2 := bufio.NewReader(file2)
+
+		var matched bool
+
+		t0 := time.Now()
+
+		for {
+			b1, err1 := fReader1.ReadByte()
+			b2, err2 := fReader2.ReadByte()
+
+			if err1 != nil || err2 != nil { // should mostly be EOF condition.
+				break
+			}
+			if b1 != b2 {
+				matched = false
+				break
+			}
+			matched = true
+		}
+		fmt.Printf(" Byte by byte comparison result is %t for %s and %s, taking %s\n", matched, filename1, filename2, time.Since(t0))
 	}
 
 	fmt.Println()
