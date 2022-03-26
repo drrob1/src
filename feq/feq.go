@@ -55,9 +55,10 @@ import (
                   I'll only use Castognoli, crc64 ECMA and sha512.  I can't do byte-by-byte because this is intended for very large files that can't both be in memory.
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
   24 Mar 22 -- Adding b flag to do a byte by byte comparison but by using bufio to open both files.  Thinking this will work even on huge files.
+  26 Mar 22 -- Tweaked output when the hashes don't match.
 */
 
-const LastCompiled = "24 Mar 2022"
+const LastCompiled = "26 Mar 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -135,7 +136,7 @@ func main() {
 			fmt.Printf(" crc32 Castagnoli hashes are equal.\n")
 		}
 	} else {
-		fmt.Printf(" crc32 Castagnoli values are not equal.  File 2:  %s = %x\n\n", filename2, crc32CastVal2)
+		fmt.Printf(" crc32 Castagnoli values are not equal.  File 1: %s = %x;  File 2: %s = %x\n\n", filename1, crc32CastVal1, filename2, crc32CastVal2)
 	}
 
 	// crc64 ECMA section
@@ -166,7 +167,8 @@ func main() {
 		fmt.Printf("sha512 results: %s NOT equal to %s.\n", filename1, filename2)
 	}
 	if verboseFlag {
-		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, sha512 = %s\n\n",
+		fmt.Printf(" file 1 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, \n sha512 = %s\n", filename1, crc32CastVal1, crc64ECMAval1, fileSize1, sha512ValueComputedStr2)
+		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, \n sha512 = %s\n\n",
 			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, time.Since(t0), sha512ValueComputedStr2)
 	}
 
