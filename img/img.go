@@ -29,6 +29,7 @@ REVISION HISTORY
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 16 Mar 22 -- Only writing using fmt.Print calls if verbose or flags are set.
+26 Mar 22 -- Expanding to allow a directory other than the current one.
 */
 
 package main
@@ -38,7 +39,6 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2/app"
 	"math"
-
 	//"fyne.io/fyne/v2/internal/widget"
 	//"fyne.io/fyne/v2/layout"
 	//"fyne.io/fyne/v2/container"
@@ -64,7 +64,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Mar 16, 2022"
+const LastModified = "Mar 26, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -130,6 +130,7 @@ func main() {
 	keyCmdChan = make(chan int, keyCmdChanSize)
 	basefilename := filepath.Base(imgfilename)
 	fullFilename, err := filepath.Abs(imgfilename)
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from filepath.Abs on", imgfilename, "is", err)
 		os.Exit(1)
@@ -381,7 +382,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	fi := make([]os.FileInfo, 0, len(names))
 	for _, name := range names {
 		if isImage(name) {
-			imgInfo, err := os.Lstat(name)
+			imgInfo, err := os.Lstat(dir + string(filepath.Separator) + name)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
 				continue

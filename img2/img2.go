@@ -23,6 +23,7 @@ REVISION HISTORY
  4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
 26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
 16 Mar 22 -- Will only write using fmt.Print calls if verboseFlag is set.
+26 Mar 22 -- Expanding to work when display directory is not current directory
 */
 
 package main
@@ -56,7 +57,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Mar 16, 2022"
+const LastModified = "Mar 26, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -110,6 +111,7 @@ func (iw *ImageWidget) CreateRenderer() fyne.WidgetRenderer {
 	return &rndrr
 }
 
+/*
 func newImageWidget(fn string, clk func(e *fyne.PointEvent), scrl func(e *fyne.ScrollEvent)) *ImageWidget {
 	e := ImageWidget{click: clk, scrolled: scrl}
 	imgURI := storage.NewFileURI(fn)
@@ -133,7 +135,7 @@ func newImageWidget(fn string, clk func(e *fyne.PointEvent), scrl func(e *fyne.S
 	e.ExtendBaseWidget(&e)
 	return &e
 }
-
+*/
 /*
 //type ImageCanvas struct {
 //	widget.BaseWidget
@@ -469,7 +471,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	fi := make([]os.FileInfo, 0, len(names))
 	for _, name := range names {
 		if isImage(name) {
-			imgInfo, err := os.Lstat(name)
+			imgInfo, err := os.Lstat(dir + string(filepath.Separator) + name)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
 				continue

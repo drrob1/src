@@ -19,6 +19,8 @@ REVISION HISTORY
 30 Sep 21 -- Added KeyAsterisk and removed redundant code (as per Andy Williams)
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.  And other things from img.go.
 16 Mar 22 -- Only writing using fmt.Print calls if verboseFlag is set.
+26 Mar 22 -- Handles correctly when dir is not current dir; I did not need to port the code from img.go as it always worked here.
+               It works because the sort is alphabetical, not by date, so I don't need to call Lstat.
 */
 
 package main
@@ -49,7 +51,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Mary 16, 2022"
+const LastModified = "March 26, 2022"
 const maxWidth = 1800
 const maxHeight = 900
 const keyCmdChanSize = 20
