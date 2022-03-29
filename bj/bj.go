@@ -41,29 +41,27 @@ package main
   And I'll add something just learned w/ the stats output Jun 15, 2020.  This reinforces not to call "even money" when have BJ and dealer shows an Ace.
   Simulator shows 0.075 of getting BJ when dealer ace is showing.  And .046 of BJ pushes.
   Thinking about this some more, I realized that "getting BJ w/ dealer ace showing" includes Bj pushes.  So about 60% of the time I get BJ w/ dealer ace
-  showing, I push a BJ.  But BJ pays 3:2.  That makes it ~ 60:60.  So evan odds is close enough to being right.  In the future, I'll take evan money.
+  showing, I push a BJ.  But BJ pays 3:2.  That makes it ~ 60:40.  So evan odds is close enough to being right.  In the future, I'll take even money.
 
 */
 import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"getcommandline"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"src/tknptr"
 	"strconv"
 	"strings"
 	"time"
-	"tknptr"
+	//"getcommandline"  I really haven't needed this for years.
+	//"io/ioutil"
 )
-
-const lastAltered = "June 15, 2020"
 
 /*
   REVISION HISTORY
@@ -75,7 +73,12 @@ const lastAltered = "June 15, 2020"
   11 Jun 20 -- Fixing computation of runs if surrender is allowed.  Can't have only 2 states for last hand.
   12 Jun 20 -- Working as needed.  I'll consider this the first fully working version.
   15 Jun 20 -- Now to putput some more stats.
+  29 Mar 22 -- Fix it to compile under Go 1.18.
+                 I added bytes.Reader instead of bytes.Buffer for reading in the strategy matrix.
+                 I added use of a strings.Builder instead of my += construct for building the output line.
 */
+
+const lastAltered = "Mar 29, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -107,6 +110,7 @@ type OptionRowType []int // first element is for the ace, last element is for al
 var StrategyMatrix [22]OptionRowType // Modula-2 ARRAY [5..21] OF OptionRowType.  I'm going to ignore rows that are not used.
 
 // Because of change in logic, SoftStrategyMatrix needs enough rows to handle more cases.  Maybe.  I changed the soft hand logic also.
+
 var SoftStrategyMatrix [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
 
 var PairStrategyMatrix [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
@@ -115,7 +119,6 @@ var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because 
 
 const numOfDecks = 8
 
-//const numOfDecks = 1 // for testing of shuffles.  When I'm confident shuffling works correctly, I'll return it to 8 decks.
 const maxNumOfPlayers = 100       // used for the make function on playerHand.
 const maxNumOfHands = 100_000_000 // 100 million, for now.  Should be about 20 sec.
 const NumOfCards = 52 * numOfDecks
@@ -187,6 +190,7 @@ func initSurrenderStrategyMatrix() {
 }
 
 // ------------------------------------------------------- GetOption -----------------------------------
+
 func GetOption(tkn tknptr.TokenType) int {
 	if tkn.Str == "S" {
 		return Stand
@@ -204,12 +208,17 @@ func GetOption(tkn tknptr.TokenType) int {
 }
 
 // ------------------------------------------------------- ReadStrategyMatrix -----------------------------------
-func ReadStrategyMatrix(buf *bytes.Buffer) {
+
+//func ReadStrategyMatrix(buf *bytes.Buffer) {
+
+func ReadStrategyMatrix(buf *bytes.Reader) {
 	for {
-		rowbuf, err := buf.ReadString('\n')
-		if err == io.EOF {
-			break
-		} else if err != nil {
+		//rowbuf, err := buf.ReadString('\n')
+		rowbuf, err := readLine(buf)
+		//if err == io.EOF {  redundant now that this test is in readLine.
+		//	break
+		//} else
+		if err != nil {
 			fmt.Println(" Error from bytes.Buffer ReadString is", err)
 			os.Exit(1)
 		}
@@ -323,7 +332,9 @@ func ReadStrategyMatrix(buf *bytes.Buffer) {
 } // ReadStrategyMatrix
 
 // ------------------------------------------------------- WriteStrategy -----------------------------------
+
 func WriteStrategyMatrix(filehandle *bufio.Writer) {
+	var sb strings.Builder
 	filehandle.WriteString(" Regular Strategy Matrix: \n")
 
 	// First write out regular StrategyMatrix
@@ -332,11 +343,14 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 			continue
 		}
 		outputline := fmt.Sprintf(" %2d: ", i)
+		sb.WriteString(outputline)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
-			outputline += s
+			sb.WriteString(s)
+			//outputline += s
 		}
-		filehandle.WriteString(outputline)
+		//filehandle.WriteString(outputline)
+		filehandle.WriteString(sb.String())
 		filehandle.WriteRune('\n')
 	}
 
@@ -347,11 +361,15 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 			continue
 		}
 		outputline := fmt.Sprintf(" s%2d: ", i)
+		sb.Reset()
+		sb.WriteString(outputline)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
-			outputline += s
+			sb.WriteString(s)
+			//outputline += s
 		}
-		filehandle.WriteString(outputline)
+		//filehandle.WriteString(outputline)
+		filehandle.WriteString(sb.String())
 		filehandle.WriteRune('\n')
 	}
 
@@ -362,11 +380,15 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 			continue
 		}
 		outputline := fmt.Sprintf(" %2d-%2d: ", i, i)
+		sb.Reset()
+		sb.WriteString(outputline)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
-			outputline += s
+			sb.WriteString(s)
+			//outputline += s
 		}
-		filehandle.WriteString(outputline)
+		//filehandle.WriteString(outputline)
+		filehandle.WriteString(sb.String())
 		filehandle.WriteRune('\n')
 	}
 
@@ -376,6 +398,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 } // WriteStrategyMatrix
 
 // ------------------------------------------------------- InitDeck -----------------------------------
+
 func InitDeck() { // Initalize the deck of cards.
 	for i := 0; i < 4*numOfDecks; i++ {
 		for j := 1; j <= 10; j++ { // There is no card Zero
@@ -465,7 +488,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		} // if soft hand or not.
+		}                                                                       // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1356,7 +1379,7 @@ func wrStatsToFile() {
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
 func main() {
-	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s \n", lastAltered)
+	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s \n", lastAltered, runtime.Version())
 
 	InputExtDefault := ".strat"
 	OutputExtDefault := ".results"
@@ -1377,7 +1400,8 @@ func main() {
 
 	deck = make([]int, 0, NumOfCards)
 
-	commandline := getcommandline.GetCommandLineString()
+	//commandline := getcommandline.GetCommandLineString()
+	commandline := os.Args[1] // Args[0] is the name of the executable binary
 	BaseFilename := filepath.Clean(commandline)
 	Filename := ""
 
@@ -1387,22 +1411,22 @@ func main() {
 		Filename = BaseFilename + InputExtDefault
 	}
 
-	FI, err := os.Stat(Filename)
+	_, err := os.Stat(Filename)
 	if err != nil {
 		fmt.Println(Filename, "does not exist.  Exiting.")
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, FI.Size()+50)
-	byteslice, err = ioutil.ReadFile(Filename)
-	if err != nil {
-		fmt.Println(" Error from ioutil.ReadFile: ", err, ".  Exiting.")
+	//byteslice := make([]byte, 0, FI.Size()+50)
+	byteSlice, er := os.ReadFile(Filename)
+	if er != nil {
+		fmt.Println(" Error from os.ReadFile: ", er, ".  Exiting.")
 		os.Exit(1)
 	}
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
+	bytesReader := bytes.NewReader(byteSlice) // NewReader does not allocate memory like NewBuffer does.
 
-	ReadStrategyMatrix(bytesbuffer)
+	ReadStrategyMatrix(bytesReader)
 
 	// Construct results filename to receive the results.
 	OutputFilename = BaseFilename + OutputExtDefault
@@ -1635,3 +1659,29 @@ PlayAllRounds:
 	wrStatsToFile()
 
 } // main
+
+// ----------------------------------------------------------
+// readLine
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byt, err := r.ReadByte() // byte is a reserved word for a variable type.
+		if err == io.EOF {
+			return strings.TrimSpace(sb.String()), nil
+		} else if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+		if byt == '\n' {
+			return strings.TrimSpace(sb.String()), nil
+		}
+		if byt == '\r' {
+			continue
+		}
+		err = sb.WriteByte(byt)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+	}
+} // readLine
+
