@@ -47,6 +47,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"math/rand"
@@ -137,13 +138,15 @@ var hand handType
 var dealerHand handType
 var numOfPlayers, currentCard int
 var deck []int
-var prevResult []int
+
+//var prevResult []int
 var runsWon, runsLost []int
 var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
 var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
-var winsInARow, lossesInARow int
+
+//var winsInARow, lossesInARow int
 var score float64
 var clearscreen map[string]func()
 
@@ -161,6 +164,7 @@ var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
 var OutputFilename string
 var OutputHandle *os.File
 var bufOutputFileWriter *bufio.Writer
+var verboseFlag bool
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {
@@ -211,18 +215,23 @@ func GetOption(tkn tknptr.TokenType) int {
 
 //func ReadStrategyMatrix(buf *bytes.Buffer) {
 
-func ReadStrategyMatrix(buf *bytes.Reader) {
+func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
+	if verboseFlag {
+		fmt.Printf(" Entering ReadStrategyMatrix\n")
+	}
 	for {
 		//rowbuf, err := buf.ReadString('\n')
 		rowbuf, err := readLine(buf)
-		//if err == io.EOF {  redundant now that this test is in readLine.
-		//	break
-		//} else
-		if err != nil {
-			fmt.Println(" Error from bytes.Buffer ReadString is", err)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			fmt.Println(" Error from readLine is", err)
 			os.Exit(1)
 		}
-		rowbuf = strings.TrimSpace(rowbuf)
+		if verboseFlag {
+			fmt.Printf(" read a line using readLine.  rowbuf=%q, len(rowbuf)=%d\n", rowbuf, len(rowbuf))
+		}
+		//rowbuf = strings.TrimSpace(rowbuf)  redundant as this is done by readLine now.
 		if len(rowbuf) == 0 { // ignore blank lines
 			continue
 		}
@@ -272,13 +281,17 @@ func ReadStrategyMatrix(buf *bytes.Reader) {
 			default:
 				fmt.Println(" Invalid Pair Row value:", rowID) // rowID is a struct, so all of it will be output.
 				fmt.Print(" continue? y/n ")
-				ans := ""
-				_, _ = fmt.Scanln(&ans)
+				var ans string
+				n, err := fmt.Scanln(&ans)
+				if err != nil || n == 0 {
+					ans = "n"
+				}
 				ans = strings.ToLower(ans)
 				if ans != "y" {
 					os.Exit(1)
 				}
-			} // end switch-case
+			} // end switch-case for pairs.
+
 		} else if rowID.State == tknptr.ALLELSE {
 			if rowID.Str == "AA" {
 				PairStrategyMatrix[1] = row
@@ -329,6 +342,9 @@ func ReadStrategyMatrix(buf *bytes.Reader) {
 		}
 
 	}
+	if verboseFlag {
+		fmt.Printf(" Leaving ReadStrategyMatrix.\n\n")
+	}
 } // ReadStrategyMatrix
 
 // ------------------------------------------------------- WriteStrategy -----------------------------------
@@ -349,9 +365,11 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 			sb.WriteString(s)
 			//outputline += s
 		}
+		sb.WriteRune('\n')
 		//filehandle.WriteString(outputline)
 		filehandle.WriteString(sb.String())
-		filehandle.WriteRune('\n')
+		//filehandle.WriteRune('\n')
+		sb.Reset()
 	}
 
 	// Now write out Soft StrategyMatrix
@@ -368,9 +386,10 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 			sb.WriteString(s)
 			//outputline += s
 		}
+		sb.WriteRune('\n')
 		//filehandle.WriteString(outputline)
 		filehandle.WriteString(sb.String())
-		filehandle.WriteRune('\n')
+		//filehandle.WriteRune('\n')
 	}
 
 	// Now write out Pair StrategyMatrix
@@ -387,6 +406,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 			sb.WriteString(s)
 			//outputline += s
 		}
+		sb.WriteRune('\n')
 		//filehandle.WriteString(outputline)
 		filehandle.WriteString(sb.String())
 		filehandle.WriteRune('\n')
@@ -1381,37 +1401,46 @@ func wrStatsToFile() {
 func main() {
 	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s \n", lastAltered, runtime.Version())
 
-	InputExtDefault := ".strat"
-	OutputExtDefault := ".results"
+	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode")
+	flag.Parse()
+
+	const InputExtDefault = ".strat"
+	const OutputExtDefault = ".results"
 
 	if len(os.Args) < 2 {
 		fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
 		os.Exit(1)
 	}
 
-	fmt.Print(" Display each round? Y/n ")
-	ans := ""
-	_, e := fmt.Scanln(&ans)
-	if e != nil {
-		displayRound = true
-	} else if ans == "y" {
-		displayRound = true
-	}
-
+	/* now handled by verbose mode.
+	       fmt.Print(" Display each round? Y/n ")
+	   	ans := ""
+	   	_, e := fmt.Scanln(&ans)
+	   	if e != nil {
+	   		displayRound = false
+	   	} else if ans == "y" {
+	   		displayRound = true
+	   	}
+	*/
+	displayRound = verboseFlag
 	deck = make([]int, 0, NumOfCards)
 
 	//commandline := getcommandline.GetCommandLineString()
-	commandline := os.Args[1] // Args[0] is the name of the executable binary
-	BaseFilename := filepath.Clean(commandline)
-	Filename := ""
+	//commandline := os.Args[1] // Args[0] is the name of the executable binary
+	commandLine := flag.Arg(0)
+	BaseFilename := filepath.Clean(commandLine)
+	var Filename string
 
 	if strings.Contains(BaseFilename, ".") {
 		Filename = BaseFilename
 	} else {
 		Filename = BaseFilename + InputExtDefault
 	}
+	if verboseFlag {
+		fmt.Printf("\n Strategy matrix filename is %s. \n\n", Filename)
+	}
 
-	_, err := os.Stat(Filename)
+	fi, err := os.Stat(Filename)
 	if err != nil {
 		fmt.Println(Filename, "does not exist.  Exiting.")
 		os.Exit(1)
@@ -1424,20 +1453,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	if verboseFlag {
+		fmt.Printf(" Read %s but not yet processed; len(byteSlice) = %d, filesize = %d \n\n", fi.Name(), len(byteSlice), fi.Size())
+	}
+
 	bytesReader := bytes.NewReader(byteSlice) // NewReader does not allocate memory like NewBuffer does.
 
+	if verboseFlag {
+		pause()
+	}
+
 	ReadStrategyMatrix(bytesReader)
+	if verboseFlag {
+		fmt.Printf(" StrategyMatrix read and processed successfully.\n")
+	}
 
 	// Construct results filename to receive the results.
 	OutputFilename = BaseFilename + OutputExtDefault
 	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		fmt.Println(" Cound not write output file.  If on my Windows Desktop, likely my security precautions in effect and I have to let this pgm thru.  Exiting.")
+		fmt.Println(" Cound not write output file.  If on my Windows Desktop, its likely my security precautions are in effect and I have to let this pgm thru.  Exiting.")
 		os.Exit(1)
 	}
+	defer OutputHandle.Close()
 	bufOutputFileWriter = bufio.NewWriter(OutputHandle)
 	defer bufOutputFileWriter.Flush()
-	defer OutputHandle.Close()
 
 	_, _ = bufOutputFileWriter.WriteString("==============================================================================\n")
 	_, _ = bufOutputFileWriter.WriteString("==============================================================================\n")
@@ -1471,7 +1511,7 @@ func main() {
 	InitDeck()
 	initSurrenderStrategyMatrix() // only used when the surrender option is wanted in the Strategy matrix.
 
-	if displayRound {
+	if verboseFlag {
 		fmt.Println(" Initialized deck.  There are", len(deck), "cards in this deck.")
 		fmt.Println(deck)
 		fmt.Println()
@@ -1479,19 +1519,21 @@ func main() {
 
 	t0 := time.Now()
 
-	rand.Seed(int64(time.Now().Nanosecond()))
+	rand.Seed(int64(t0.Nanosecond()))
+
 	//       need to shuffle here
-	swapfnt := func(i, j int) {
+	swapFnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
-	millisec := date.Nanosecond() / 1e6
-	for i := 0; i < millisec; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
-		rand.Shuffle(len(deck), swapfnt)
-		rand.Shuffle(len(deck), swapfnt)
+	milliSec := date.Nanosecond() / 1e6
+	for i := 0; i < milliSec; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
+		_ = rand.Int()
+		rand.Shuffle(len(deck), swapFnt)
+		//rand.Shuffle(len(deck), swapfnt)  I think this is too much.
 	}
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	if displayRound {
-		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  millisec=", millisec, ".")
+	if displayRound || verboseFlag {
+		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  millisec=", milliSec, ".")
 		fmt.Println()
 		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
 		fmt.Println(deck)
@@ -1560,6 +1602,7 @@ PlayAllRounds:
 			fmt.Println()
 			fmt.Print(" Continue? Y/n:  Stop or Exit also work.  ")
 			fmt.Println()
+			var ans string
 			_, err := fmt.Scanln(&ans)
 			if err != nil {
 				ans = ""
@@ -1667,9 +1710,14 @@ func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
 		byt, err := r.ReadByte() // byte is a reserved word for a variable type.
-		if err == io.EOF {
-			return strings.TrimSpace(sb.String()), nil
-		} else if err != nil {
+		/*		if verboseFlag {
+					fmt.Printf(" %c %v ", byt, err)
+					pause()
+				}
+		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		//	return strings.TrimSpace(sb.String()), nil
+		//} else
+		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}
 		if byt == '\n' {
@@ -1685,3 +1733,11 @@ func readLine(r *bytes.Reader) (string, error) {
 	}
 } // readLine
 
+// ----------------------------------------------------------------------
+
+func pause() {
+	fmt.Printf(" hit any key to continue   ")
+	var ans string
+	fmt.Scanln(&ans)
+	fmt.Printf("%s\n", ans)
+}
