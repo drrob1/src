@@ -411,7 +411,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 		sb.WriteRune('\n')
 		//filehandle.WriteString(outputline)
 		filehandle.WriteString(sb.String())
-		filehandle.WriteRune('\n')
+		//filehandle.WriteRune('\n')
 	}
 
 	filehandle.WriteRune('\n')
