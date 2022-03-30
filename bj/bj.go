@@ -77,6 +77,7 @@ import (
   29 Mar 22 -- Fix it to compile under Go 1.18.
                  I added bytes.Reader instead of bytes.Buffer for reading in the strategy matrix.
                  I added use of a strings.Builder instead of my += construct for building the output line.
+  30 Mar 22 -- Will allow comments to start w/ '#' as in bash, and '/' as almost like C-ish.  The change is in readLine.
 */
 
 const lastAltered = "Mar 29, 2022"
@@ -222,14 +223,15 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 	for {
 		//rowbuf, err := buf.ReadString('\n')
 		rowbuf, err := readLine(buf)
+		if verboseFlag {
+			fmt.Printf(" read a line using readLine.  rowbuf=%q, len(rowbuf)=%d, err= %v\n", rowbuf, len(rowbuf), err)
+			pause()
+		}
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			fmt.Println(" Error from readLine is", err)
 			os.Exit(1)
-		}
-		if verboseFlag {
-			fmt.Printf(" read a line using readLine.  rowbuf=%q, len(rowbuf)=%d\n", rowbuf, len(rowbuf))
 		}
 		//rowbuf = strings.TrimSpace(rowbuf)  redundant as this is done by readLine now.
 		if len(rowbuf) == 0 { // ignore blank lines
@@ -508,7 +510,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1714,17 +1716,21 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}
-		if byt == '\n' {
+		if byt == '\n' { // will stop scanning a line after seeing these characters like in bash or C-ish.
 			return strings.TrimSpace(sb.String()), nil
 		}
 		if byt == '\r' {
 			continue
+		}
+		if byt == '#' || byt == '/' {
+			discardRestOfLine(r)
+			return strings.TrimSpace(sb.String()), nil
 		}
 		err = sb.WriteByte(byt)
 		if err != nil {
@@ -1732,6 +1738,18 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
+// ----------------------------------------------------------------------
+func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
+	for { // keep swallowing characters until EOL or an error.
+		rn, _, err := r.ReadRune()
+		if err != nil {
+			return
+		}
+		if rn == '\n' {
+			return
+		}
+	}
+}
 
 // ----------------------------------------------------------------------
 
