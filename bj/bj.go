@@ -36,12 +36,12 @@ package main
   I forgot to compute the maxruns, and output the slices of runs.
   And for tomorrow, I'll create and output ratio matricies, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
 
-  Looks like my original classic strategy is correct.  But if surrender is allowed, sur1516.strat is optimal.
+  Looks like my original classic strategy is almost correct.  But if surrender is allowed, sur1516.strat is optimal.
 
   And I'll add something just learned w/ the stats output Jun 15, 2020.  This reinforces not to call "even money" when have BJ and dealer shows an Ace.
   Simulator shows 0.075 of getting BJ when dealer ace is showing.  And .046 of BJ pushes.
   Thinking about this some more, I realized that "getting BJ w/ dealer ace showing" includes Bj pushes.  So about 60% of the time I get BJ w/ dealer ace
-  showing, I push a BJ.  But BJ pays 3:2.  That makes it ~ 60:40.  So evan odds is close enough to being right.  In the future, I'll take even money.
+  showing, I push a BJ.  But BJ pays 3:2.  That makes it ~ 60:40.  So even odds is close enough to being right.  In the future, I'll take even money.
 
 */
 import (
@@ -122,7 +122,7 @@ var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because 
 const numOfDecks = 8
 
 const maxNumOfPlayers = 100       // used for the make function on playerHand.
-const maxNumOfHands = 100_000_000 // 100 million, for now.  Should be about 20 sec.
+const maxNumOfHands = 100_000_000 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that.
 const NumOfCards = 52 * numOfDecks
 
 var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
