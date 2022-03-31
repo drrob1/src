@@ -78,9 +78,10 @@ import (
                  I added bytes.Reader instead of bytes.Buffer for reading in the strategy matrix.
                  I added use of a strings.Builder instead of my += construct for building the output line.
   30 Mar 22 -- Will allow comments to start w/ '#' as in bash, and '/' as almost like C-ish.  The change is in readLine.
+  31 Mar 22 -- Now checks against maxnumofplayers.
 */
 
-const lastAltered = "Mar 29, 2022"
+const lastAltered = "Mar 31, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -121,7 +122,8 @@ var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because 
 
 const numOfDecks = 8
 
-const maxNumOfPlayers = 100 // used for the make function on playerHand.
+const maxNumOfPlayers = 10 // used for the make function on playerHand.
+const sizeOfSlices = 100
 
 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million.
 const maxNumOfHands = 100_000_000
@@ -512,7 +514,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1411,7 +1413,7 @@ func main() {
 	const InputExtDefault = ".strat"
 	const OutputExtDefault = ".results"
 
-	if len(os.Args) < 2 {
+	if flag.NArg() < 1 {
 		fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
 		os.Exit(1)
 	}
@@ -1548,10 +1550,13 @@ func main() {
 	if err != nil {
 		numOfPlayers = 1
 	}
+	if numOfPlayers > maxNumOfPlayers { // just in case I forget and put in a number like 500, which I just did.
+		numOfPlayers = maxNumOfPlayers
+	}
 
-	playerHand = make([]handType, 0, maxNumOfPlayers)
-	runsWon = make([]int, 0, maxNumOfPlayers)
-	runsLost = make([]int, 0, maxNumOfPlayers)
+	playerHand = make([]handType, 0, sizeOfSlices)
+	runsWon = make([]int, 0, sizeOfSlices)
+	runsLost = make([]int, 0, sizeOfSlices)
 	/* Just a demo of what GoLand can do automatically
 	   hand = handType{
 	       card1:           0,
@@ -1718,7 +1723,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1742,7 +1747,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
