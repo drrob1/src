@@ -125,7 +125,8 @@ const numOfDecks = 8
 const maxNumOfPlayers = 10 // used for the make function on playerHand.
 const sizeOfSlices = 100
 
-// 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million.
+// 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million and 1 min for 1 billion.
+// I set 1 billion hands as the max.
 const maxNumOfHands = 100_000_000
 const NumOfCards = 52 * numOfDecks
 
