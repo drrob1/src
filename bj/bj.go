@@ -121,8 +121,10 @@ var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because 
 
 const numOfDecks = 8
 
-const maxNumOfPlayers = 100       // used for the make function on playerHand.
-const maxNumOfHands = 100_000_000 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that.
+const maxNumOfPlayers = 100 // used for the make function on playerHand.
+
+// 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million.
+const maxNumOfHands = 100_000_000
 const NumOfCards = 52 * numOfDecks
 
 var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
@@ -510,7 +512,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		} // if soft hand or not.
+		}                                                                       // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1716,7 +1718,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1740,7 +1742,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
