@@ -44,11 +44,13 @@ package main
   showing, I push a BJ.  But BJ pays 3:2.  That makes it ~ 60:40.  So even odds is close enough to being right.  In the future, I'll consider taking even money.
 
 Mar 31, 2022
-A comment about the StrategyMatrix.  Ace is the first position.  Ten value cards are the last position.  I think I have to correct the indexing from Ace = 1 to
-a zero origin system.  So the .strat files have one format, and my take away cheat sheet has a different format.
+A comment about the StrategyMatrix.  Ace is the first column, also called column zero.  Ten value cards are the last position.
+I think I have to correct the indexing from Ace = 1 to a zero origin system.  Column index is dealear card1 - 1 to do this correction.  Row index is the hand total.
+So the .strat files have one format, and my take away cheat sheet has a different format.
 I sometimes forget that.
 
 */
+
 import (
 	"bufio"
 	"bytes"
@@ -258,7 +260,7 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 			if eol {
 				break
 			}
-			if EOL || token.State != tknptr.ALLELSE {
+			if token.State != tknptr.ALLELSE {
 				return
 			}
 			i := GetOption(token)
@@ -520,7 +522,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1729,7 +1731,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1753,7 +1755,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
