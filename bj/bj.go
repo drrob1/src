@@ -56,6 +56,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	pb "github.com/schollz/progressbar/v3"
 	"io"
 	"math/rand"
 	"os"
@@ -67,8 +68,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	//"getcommandline"  I really haven't needed this for years.
-	//"io/ioutil"
 )
 
 /*
@@ -86,9 +85,10 @@ import (
                  I added use of a strings.Builder instead of my += construct for building the output line.
   30 Mar 22 -- Will allow comments to start w/ '#' as in bash, and '/' as almost like C-ish.  The change is in readLine.
   31 Mar 22 -- Now checks against maxnumofplayers.
+   2 Apr 22 -- Adding a progress bar
 */
 
-const lastAltered = "Mar 31, 2022"
+const lastAltered = "Apr 2, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -1471,13 +1471,13 @@ func main() {
 		fmt.Printf(" Read %s but not yet processed; len(byteSlice) = %d, filesize = %d \n\n", fi.Name(), len(byteSlice), fi.Size())
 	}
 
-	bytesReader := bytes.NewReader(byteSlice) // NewReader does not allocate memory like NewBuffer does.
+	strategyReader := bytes.NewReader(byteSlice) // NewReader does not allocate memory like NewBuffer does.
 
 	if verboseFlag {
 		pause()
 	}
 
-	ReadStrategyMatrix(bytesReader)
+	ReadStrategyMatrix(strategyReader)
 	if verboseFlag {
 		fmt.Printf(" StrategyMatrix read and processed successfully.\n")
 	}
@@ -1486,7 +1486,7 @@ func main() {
 	OutputFilename = BaseFilename + OutputExtDefault
 	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		fmt.Println(" Cound not write output file.  If on my Windows Desktop, its likely my security precautions are in effect and I have to let this pgm thru.  Exiting.")
+		fmt.Println(" Could not write output file.  If on my Windows Desktop, its likely my security precautions are in effect and I have to let this pgm thru.  Exiting.")
 		os.Exit(1)
 	}
 	defer OutputHandle.Close()
@@ -1531,21 +1531,21 @@ func main() {
 		fmt.Println()
 	}
 
-	t0 := time.Now()
-
-	rand.Seed(int64(t0.Nanosecond()))
+	rand.Seed(int64(date.Nanosecond()))
 
 	//       need to shuffle here
 	swapFnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
 	milliSec := date.Nanosecond() / 1e6
-	for i := 0; i < milliSec; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
+	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year()
+	shuffleStartTime := time.Now()
+	for i := 0; i < shuffleAmount; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
 		_ = rand.Int()
 		rand.Shuffle(len(deck), swapFnt)
 		//rand.Shuffle(len(deck), swapfnt)  I think this is too much.
 	}
-	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
+	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
 	if displayRound || verboseFlag {
 		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  millisec=", milliSec, ".")
 		fmt.Println()
@@ -1599,12 +1599,17 @@ func main() {
 	           }}} */
 	t1 := time.Now()
 	// Main loop of this simulator, to play all rounds
+
+	progBar := pb.Default(maxNumOfHands / 1_000_000)
+
 PlayAllRounds:
 	for j := 0; j < maxNumOfHands; j++ {
 		playAllHands()
 		showDown()
 		incrementStats()
-
+		if j%1_000_000 == 0 {
+			progBar.Add(1)
+		}
 		if displayRound {
 			fmt.Printf("\n\n There are %d hand(s), including splits \n\n", len(playerHand))
 			for i := range playerHand {
@@ -1671,7 +1676,7 @@ PlayAllRounds:
 		float64(totalSurrenders)/2
 	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
 		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
-	fmt.Println(scoreString)
+	fmt.Print(scoreString)
 
 	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
 	ratioTotalDblWins = float64(totalDblWins) / float64(totalDblWins+totalDblLosses)
@@ -1681,7 +1686,7 @@ PlayAllRounds:
 	ratioScore := 100 * score / float64(totalHands)
 	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.4f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
-	fmt.Println(ratioString)
+	fmt.Print(ratioString)
 	bufOutputFileWriter.WriteString(ratioString)
 
 	bufOutputFileWriter.WriteString(elapsedString)
@@ -1695,11 +1700,11 @@ PlayAllRounds:
 	ratioBJdealerAce := float64(totalBJwithDealerAce) / totalBJhandFloat
 	ratioBusts := float64(totalBusts) / totalHandsFloat
 	ratioSplits := float64(totalSplits) / totalHandsFloat
-	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n\n", ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
+	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n", ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
 	fmt.Print(outputratiostring)
 	bufOutputFileWriter.WriteString(outputratiostring)
 	outputratiostring = fmt.Sprintf(
-		" ratio Hands Won/total hands= %.3f, total busts= %d, ratio Busts/total hands= %.3f, total splits= %d, ratio splits= %.4f \n\n",
+		" ratio Hands Won/total hands= %.3f, total busts= %d, ratio Busts/total hands= %.3f, total splits= %d, ratio splits= %.4f \n",
 		ratioHandsWon, totalBusts, ratioBusts, totalSplits, ratioSplits)
 	fmt.Print(outputratiostring)
 	bufOutputFileWriter.WriteString(outputratiostring)
@@ -1713,8 +1718,8 @@ PlayAllRounds:
 
 	runswonstring = fmt.Sprintf(" runs of won hands: %v \n", runsWon[:20])
 	runsloststring = fmt.Sprintf(" runs of lost hands: %v \n", runsLost[:20])
-	fmt.Println(runswonstring)
-	fmt.Println(runsloststring)
+	fmt.Print(runswonstring)
+	fmt.Print(runsloststring)
 
 	wrStatsToFile()
 
