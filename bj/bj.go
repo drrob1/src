@@ -85,7 +85,7 @@ import (
                  I added use of a strings.Builder instead of my += construct for building the output line.
   30 Mar 22 -- Will allow comments to start w/ '#' as in bash, and '/' as almost like C-ish.  The change is in readLine.
   31 Mar 22 -- Now checks against maxnumofplayers.
-   2 Apr 22 -- Adding a progress bar
+   2 Apr 22 -- Adding a progress bar.  And changed doTheShuffle to actually shuffle.  It only did 1 pass thru the deck before.  That was silly.
 */
 
 const lastAltered = "Apr 2, 2022"
@@ -131,10 +131,12 @@ const numOfDecks = 8
 
 const maxNumOfPlayers = 10 // used for the make function on playerHand.
 const sizeOfSlices = 100
+const loopDivisor = 100 // used for the new progressbar functions.
 
 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million and 1 min for 1 billion.
 // I set 1 billion hands as the max.
-const maxNumOfHands = 100_000_000
+//const maxNumOfHands = 100_000_000
+const maxNumOfHands = 1_000_000
 const NumOfCards = 52 * numOfDecks
 
 var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
@@ -447,10 +449,17 @@ func InitDeck() { // Initalize the deck of cards.
 // ------------------------------------------------------- doTheShuffle -----------------------------------
 func doTheShuffle() {
 	currentCard = 0
+	now := time.Now()
+	shuffleAmount := now.Nanosecond() / 1e6 // + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year().  This took too long every time.  Former 10 sec run -> 9 hrs.  That's nuts.
 	swapfnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
-	rand.Shuffle(len(deck), swapfnt)
+	for i := 0; i < shuffleAmount; i++ {
+		rand.Shuffle(len(deck), swapfnt)
+	}
+	if verboseFlag {
+		fmt.Printf(" Shuffled %d times, which took %s.\n", shuffleAmount, time.Since(now))
+	}
 }
 
 // ------------------------------------------------------- getCard -----------------------------------
@@ -522,7 +531,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		} // if soft hand or not.
+		}                                                                       // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1547,7 +1556,7 @@ func main() {
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
 	if displayRound || verboseFlag {
-		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  millisec=", milliSec, ".")
+		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  shuffleAmount=", shuffleAmount, ".")
 		fmt.Println()
 		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
 		fmt.Println(deck)
@@ -1560,6 +1569,9 @@ func main() {
 	}
 	if numOfPlayers > maxNumOfPlayers { // just in case I forget and put in a number like 500, which I just did.
 		numOfPlayers = maxNumOfPlayers
+	}
+	if numOfPlayers < 1 {
+		numOfPlayers = 1
 	}
 
 	playerHand = make([]handType, 0, sizeOfSlices)
@@ -1600,16 +1612,17 @@ func main() {
 	t1 := time.Now()
 	// Main loop of this simulator, to play all rounds
 
-	progBar := pb.Default(maxNumOfHands / 1_000_000)
+	progBar := pb.Default(maxNumOfHands)
 
 PlayAllRounds:
 	for j := 0; j < maxNumOfHands; j++ {
 		playAllHands()
 		showDown()
 		incrementStats()
-		if j%1_000_000 == 0 {
-			progBar.Add(1)
+		if j%loopDivisor == 0 {
+			progBar.Add(loopDivisor)
 		}
+
 		if displayRound {
 			fmt.Printf("\n\n There are %d hand(s), including splits \n\n", len(playerHand))
 			for i := range playerHand {
@@ -1736,7 +1749,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1760,7 +1773,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
