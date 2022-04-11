@@ -157,7 +157,7 @@ var displayRound, resplitAcesFlag, dealerHitsSoft17 bool
 var playerHand []handType
 var hand handType
 var dealerHand handType
-var numOfPlayers, currentCard int
+var numOfPlayers, currentCard, numOfShuffles int
 var deck []int
 
 //var prevResult []int
@@ -451,6 +451,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 // ------------------------------------------------------- doTheShuffle -----------------------------------
 func doTheShuffle() {
 	currentCard = 0
+	numOfShuffles++
 
 	shuffleAmount := rand.Intn(10) + 1 // lightly shuffle, so deck is mostly based on the initial file.
 	swapfnt := func(i, j int) {
@@ -1626,7 +1627,7 @@ PlayAllRounds:
 	}
 
 	elapsed := time.Since(t1)
-	elapsedString := fmt.Sprintf(" Playing %d hands took %s \n", totalHands, elapsed.String())
+	elapsedString := fmt.Sprintf(" Playing %d hands took %s, and deck was shuffled %d times. \n", totalHands, elapsed.String(), numOfShuffles)
 	fmt.Println(elapsedString)
 
 	// time for the stats.
