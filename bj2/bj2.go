@@ -1647,12 +1647,6 @@ PlayAllRounds:
 	defer bufOutputFileWriter.Flush()
 	defer OutputHandle.Close()
 
-	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
-		float64(totalSurrenders)/2
-	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
-		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
-	fmt.Print(scoreString)
-
 	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
 	ratioTotalDblWins = float64(totalDblWins) / float64(totalDblWins+totalDblLosses)
 	ratioTotalDblLosses = float64(totalDblLosses) / float64(totalDblWins+totalDblLosses)
@@ -1663,6 +1657,12 @@ PlayAllRounds:
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
 	fmt.Print(ratioString)
 	bufOutputFileWriter.WriteString(ratioString)
+
+	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
+		float64(totalSurrenders)/2
+	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
+		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
+	fmt.Print(scoreString)
 
 	bufOutputFileWriter.WriteString(elapsedString)
 	bufOutputFileWriter.WriteString(scoreString)

@@ -21,8 +21,8 @@ import (
   10 Apr 22 -- Now home from boat, and I changed the name from makedeck.go to cardshuffler.go.  Runs of 1000 decks on linux-laptop took 7-10 min each and ~500K iterations.
 */
 
-const lastAltered = "Apr 10, 2022"
-const numOfDecks = 1000 // used to be 8.
+const lastAltered = "Apr 11, 2022"
+const numOfDecks = 100_000 // used to be 8.  1 million was estimated at 2 weeks by progressbar.  100K estimated to take 32 hours.  I plan on waiting for it here on leox.
 const NumOfCards = 52 * numOfDecks
 
 var deck []int
