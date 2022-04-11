@@ -19,10 +19,11 @@ import (
   ======== =======
    9 Apr 22 -- While on boat, I'm coding this rtn to make the very big shoe.  I've been thinking about it all week.
   10 Apr 22 -- Now home from boat, and I changed the name from makedeck.go to cardshuffler.go.  Runs of 1000 decks on linux-laptop took 7-10 min each and ~500K iterations.
+  11 Apr 22 -- Leox: 1 million estimated at 2 weeks by progressBar, 100K estimated at 32 hrs.  I'll change the shuffling amount.
 */
 
 const lastAltered = "Apr 11, 2022"
-const numOfDecks = 100_000 // used to be 8.  1 million was estimated at 2 weeks by progressbar.  100K estimated to take 32 hours.  I plan on waiting for it here on leox.
+const numOfDecks = 100_000 // used to be 8 and was a const.  1 million was estimated at 2 weeks by progressbar.  100K estimated to take 32 hours.  I plan on waiting for it here on leox.
 const NumOfCards = 52 * numOfDecks
 
 var deck []int
@@ -63,13 +64,14 @@ func InitDeck() { // Initalize the deck of cards.
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
 func main() {
-	fmt.Printf("BlackJack Simulation Prgram to write the deck of cards, written in Go.  Last altered %s, compiled by %s \n", lastAltered, runtime.Version())
+	fmt.Printf("BlackJack Simulation Program to write the deck of cards, written in Go.  Last altered %s, compiled by %s \n", lastAltered, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode")
 	flag.Parse()
 
 	const deckExtDefaultBinary = ".deck"
 	const deckExtDefaultJson = ".json"
+	var shufflingAmount int
 
 	deck = make([]int, 0, NumOfCards)
 	if verboseFlag {
@@ -108,17 +110,21 @@ func main() {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
 
-	shuffleAmount := date.Nanosecond()/1000 + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year()
-	if verboseFlag {
-		fmt.Printf(" Will shuffle %d times.\n", shuffleAmount)
+	if numOfDecks < 10_000 { // just allowing me to change this value and not to have to remember to change the shufflingAmount calculation.
+		shufflingAmount = date.Nanosecond() / 1000
+	} else {
+		shufflingAmount = date.Nanosecond() / 10_000
 	}
-	progBar := pb.Default(int64(shuffleAmount))
+	shufflingAmount += date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year()
+	if verboseFlag {
+		fmt.Printf(" Will shuffle %d times.\n", shufflingAmount)
+	}
+	progBar := pb.Default(int64(shufflingAmount))
 
 	shuffleStartTime := time.Now()
-	for i := 0; i < shuffleAmount; i++ {
+	for i := 0; i < shufflingAmount; i++ {
 		rand.Shuffle(len(deck), swapFnt)
 		progBar.Add(1)
-		//rand.Shuffle(len(deck), swapfnt)  I think this is too much.
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
 	if verboseFlag {
