@@ -93,7 +93,7 @@ import (
   10 Apr 22 -- Now called bj2.go.  Will use a .deck file.
 */
 
-const lastAltered = "Apr 10, 2022"
+const lastAltered = "Apr 11, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -132,7 +132,7 @@ var PairStrategyMatrix [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowT
 
 var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because I only consider surrendering 14, 15, 16.
 
-const numOfDecks = 8
+const numOfDecks = 1000
 
 const maxNumOfPlayers = 10 // used for the make function on playerHand.
 const sizeOfSlices = 100
@@ -141,7 +141,7 @@ const loopDivisor = 100 // used for the new progressbar functions.
 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million and 1 min for 1 billion.
 // I set 1 billion hands as the max.
 //const maxNumOfHands = 100_000_000
-const maxNumOfHands = 10_000_000
+const maxNumOfHands = 100_000_000
 const NumOfCards = 52 * numOfDecks
 const shuffleWhen = NumOfCards - 10*maxNumOfPlayers // Likely will shuffle when have less than 100 cards left in deck.jk
 
@@ -1479,7 +1479,11 @@ func main() {
 
 	deckDecoder := gob.NewDecoder(deckHandle)
 	deck = make([]int, 0, NumOfCards)
-	er = deckDecoder.Decode(&deck) // I don't know if this will work correctly
+	err = deckDecoder.Decode(&deck) // I don't know if this will work correctly
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from gob decoding the deck, %s, is %v.  Exiting \n", deckFilename, err)
+		os.Exit(1)
+	}
 
 	// Will read and process the strategy file.
 	stratByteSlice, er := os.ReadFile(strategyFilename)
@@ -1504,7 +1508,7 @@ func main() {
 	}
 
 	// Construct results filename to receive the results.
-	OutputFilename = strategyFilename + OutputExtDefault
+	OutputFilename = flag.Arg(1) + OutputExtDefault
 	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(" Could not write output file.  If on my Windows Desktop, its likely my security precautions are in effect and I have to let this pgm thru.  Exiting.")
