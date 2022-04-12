@@ -19,7 +19,7 @@ import (
   ======== =======
    9 Apr 22 -- While on boat, I'm coding this rtn to make the very big shoe.  I've been thinking about it all week.
   10 Apr 22 -- Now home from boat, and I changed the name from makedeck.go to cardshuffler.go.  Runs of 1000 decks on linux-laptop took 7-10 min each and ~500K iterations.
-  11 Apr 22 -- Leox: 1 million estimated at 2 weeks by progressBar, 100K estimated at 32 hrs.  I'll change the shuffling amount.
+  11 Apr 22 -- Leox: 1 million estimated at 2 weeks by progressBar, 100K estimated at 32 hrs.  I'll change the shuffling amount.  Current estimate for thelio is ~ 1/2 hr.  I'll wait.
 */
 
 const lastAltered = "Apr 11, 2022"
@@ -127,9 +127,7 @@ func main() {
 		progBar.Add(1)
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	if verboseFlag {
-		fmt.Printf(" It took %s to shuffle %d cards.\n", timeToShuffle.String(), NumOfCards)
-	}
+	fmt.Printf(" It took %s to shuffle %d cards.\n", timeToShuffle.String(), NumOfCards)
 
 	t1 := time.Now()
 	js, err := json.Marshal(deck)
@@ -158,24 +156,3 @@ func main() {
 	fmt.Printf(" Elapsed time for the file writing for both json and binary is %s.\n", time.Since(t1))
 
 } // main
-
-// ----------------------------------------------------------------------
-/*func (l *ListType) SaveBinary(filename string) error {
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	encoder := gob.NewEncoder(f)
-	err = encoder.Encode(*l)
-	return err // I want to make sure that the write operation occurs before the close operation.
-}
-*/
-func pause() {
-	fmt.Printf(" hit any key to continue   ")
-	var ans string
-	fmt.Scanln(&ans)
-	fmt.Printf("%s\n", ans)
-}

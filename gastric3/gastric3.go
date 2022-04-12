@@ -70,9 +70,10 @@ REVISION HISTORY
                and converted to modules.
 22 Oct 21 -- Removed ioutil, which was depracated as of Go 1.16.
 23 Oct 21 -- Stopped pre-allocating the slice of file contents.
+11 Apr 22 -- Modernizing the filepicker output.  Changed from bytes.buffer to bytes.reader.  Added comment characters of # and / like for BJ strategy files.
 */
 
-const LastAltered = "Oct 23, 2021"
+const LastAltered = "Apr 11, 2022"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -98,6 +99,7 @@ const ToleranceFactor = 1.e-5 // used for old code that's been ressurrected.
 
 // stdev relates to counts, or the ordinate.  This algorithm used to apply it to the abscissa also.
 // Version 2 handles these separately in fitexy.
+
 type Point struct {
 	x, y, OrigY, stdev,
 	sigx, sigy, xx, yy, sx, sy, ww, // added when I added fitexy in Sep 2017, v 2.
@@ -143,8 +145,6 @@ func main() {
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingdir, execname)
-	//	fmt.Println(ExecFI.Name(), " has timestamp of", LastLinkedTimeStamp, ".  Working directory is", workingdir, ".")
-	//	fmt.Println(" Full name of executable file is", execname)
 	fmt.Println()
 
 	InExtDefault := ".txt"
@@ -154,13 +154,18 @@ func main() {
 	FileExists := false
 
 	if len(os.Args) <= 1 { // need to use filepicker
-		filenames := filepicker.GetFilenames("gastric*.txt")
+		filenames, err := filepicker.GetFilenames("gastric*.txt")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from filepicker using pattern of gastric*.txt is %v.  Exiting.\n", err)
+			os.Exit(1)
+		}
+
 		for i := 0; i < min(len(filenames), 26); i++ {
-			fmt.Println("filename[", i, "] is", filenames[i])
+			fmt.Printf("filename[%d, %c] is %s\n", i, i, filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
-		fmt.Scanln(&ans)
-		if len(ans) == 0 {
+		_, err = fmt.Scanln(&ans)
+		if len(ans) == 0 || err != nil {
 			ans = "0"
 		}
 		i, err := strconv.Atoi(ans)
@@ -200,15 +205,13 @@ func main() {
 		fmt.Println(" Filename is", Filename)
 	}
 
-	//byteslice := make([]byte, 0, 5000) // don't need to do this, so I'm removing this at of 10/23/21
-	//byteslice, err = ioutil.ReadFile(Filename)
-	byteslice, err := os.ReadFile(Filename)
+	byteSlice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error", err, " from iotuil.ReadFile when reading", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
-	bytesbuffer := bytes.NewBuffer(byteslice)
+	bytesReader := bytes.NewReader(byteSlice)
 
 	outfilename := BaseFilename + OutExtDefault
 	OutputFile, err := os.OpenFile(outfilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -223,17 +226,16 @@ func main() {
 	check(err)
 
 	for { // Main input reading loop to read all lines
-		line, e := bytesbuffer.ReadString('\n')
+		line, e := readLine(bytesReader) // bytesbuffer.ReadString('\n')  A modernization.
 		if e != nil {
 			break
 		}
-		tokenreader := tknptr.NewToken(line)
-		//col := 0
+		tokenReader := tknptr.NewToken(line)
 		ir := make(inputrow, 0, 3) // type inputrow []float64; input row for time, ant counts, post counts.
 
 		// loop to process first 2 digit tokens on this line and ignore the rest
 		for {
-			token, EOL := tokenreader.GETTKNREAL()
+			token, EOL := tokenReader.GETTKNREAL()
 			if EOL || token.State != tknptr.DGT { // better way to handle non digit tokens.
 				break
 			}
@@ -1418,4 +1420,52 @@ func FindLocalCountsPeak(rows []Point) int {
 		}
 	}
 	return pointindex
+}
+
+// ----------------------------------------------------------
+// readLine
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byt, err := r.ReadByte() // byte is a reserved word for a variable type.
+		/*		if verboseFlag {
+					fmt.Printf(" %c %v ", byt, err)
+					pause()
+				}
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		//	return strings.TrimSpace(sb.String()), nil
+		//} else
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+		if byt == '\n' { // will stop scanning a line after seeing these characters like in bash or C-ish.
+			return strings.TrimSpace(sb.String()), nil
+		}
+		if byt == '\r' {
+			continue
+		}
+		if byt == '#' || byt == '/' {
+			discardRestOfLine(r)
+			return strings.TrimSpace(sb.String()), nil
+		}
+		err = sb.WriteByte(byt)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+	}
+} // readLine
+
+// ----------------------------------------------------------------------
+
+func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
+	for { // keep swallowing characters until EOL or an error.
+		rn, _, err := r.ReadRune()
+		if err != nil {
+			return
+		}
+		if rn == '\n' {
+			return
+		}
+	}
 }

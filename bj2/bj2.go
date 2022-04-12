@@ -95,6 +95,8 @@ import (
 
 const lastAltered = "Apr 11, 2022"
 
+const numOfDecks = 100_000 // took ~1/2 hr to run on thelio.
+
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
 const Ace = 1
@@ -131,8 +133,6 @@ var SoftStrategyMatrix [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowT
 var PairStrategyMatrix [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
 
 var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because I only consider surrendering 14, 15, 16.
-
-const numOfDecks = 1000
 
 const maxNumOfPlayers = 10 // used for the make function on playerHand.
 const sizeOfSlices = 100
