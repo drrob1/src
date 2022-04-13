@@ -61,6 +61,8 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	pb "github.com/schollz/progressbar/v3"
 	"io"
 	"math/rand"
@@ -91,9 +93,12 @@ import (
   31 Mar 22 -- Now checks against maxnumofplayers.
    2 Apr 22 -- Adding a progress bar.  And changed doTheShuffle to actually shuffle.  It only did 1 pass thru the deck before.  That was silly.
   10 Apr 22 -- Now called bj2.go.  Will use a .deck file.
+  12 Apr 22 -- Colorizing output so that the ratio score is easier to see.  I'm going to use yellow first.  And use a flag, maybe "o" for output, if more than
+                 the score ratio is to be displayed to the screen; all the data is always written to the result file.
+                 A modified score ratio will subtract out BJ and doubles from the total # of hands.  I may have to play w/ this for a bit before it's useful.
 */
 
-const lastAltered = "Apr 11, 2022"
+const lastAltered = "Apr 13, 2022"
 
 const numOfDecks = 100_000 // took ~1/2 hr to run on thelio.
 
@@ -128,10 +133,8 @@ var StrategyMatrix [22]OptionRowType // Modula-2 ARRAY [5..21] OF OptionRowType.
 
 // Because of change in logic, SoftStrategyMatrix needs enough rows to handle more cases.  Maybe.  I changed the soft hand logic also.
 
-var SoftStrategyMatrix [22]OptionRowType // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
-
-var PairStrategyMatrix [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
-
+var SoftStrategyMatrix [22]OptionRowType      // Modula-2 ARRAY [2..11] of OptionRowType.  Also going to ignore rows that are not used.
+var PairStrategyMatrix [11]OptionRowType      // Modula-2 ARRAY [1..10] of OptionRowType.  Same about unused rows.
 var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because I only consider surrendering 14, 15, 16.
 
 const maxNumOfPlayers = 10 // used for the make function on playerHand.
@@ -140,7 +143,6 @@ const loopDivisor = 100 // used for the new progressbar functions.
 
 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million and 1 min for 1 billion.
 // I set 1 billion hands as the max.
-//const maxNumOfHands = 100_000_000
 const maxNumOfHands = 100_000_000
 const NumOfCards = 52 * numOfDecks
 const shuffleWhen = NumOfCards - 10*maxNumOfPlayers // Likely will shuffle when have less than 100 cards left in deck.jk
@@ -185,7 +187,7 @@ var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
 var OutputFilename string
 var OutputHandle *os.File
 var bufOutputFileWriter *bufio.Writer
-var verboseFlag, veryVerboseFlag bool
+var verboseFlag, veryVerboseFlag, outputFlag bool
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {
@@ -453,7 +455,7 @@ func doTheShuffle() {
 	currentCard = 0
 	numOfShuffles++
 
-	shuffleAmount := rand.Intn(10) + 1 // lightly shuffle, so deck is mostly based on the initial file.
+	shuffleAmount := rand.Intn(5) + 1 // lightly shuffle, so deck is mostly based on the initial file.
 	swapfnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
@@ -534,7 +536,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		} // if soft hand or not.
+		}                                                                       // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1428,7 +1430,8 @@ func main() {
 	fmt.Printf("BlackJack Simulation Program, written in Go.  Last altered %s, compiled by %s. \n", lastAltered, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode")
-	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag to display each hand one by one.")
+	flag.BoolVar(&veryVerboseFlag, "vv", false, " Very verbose flag to display each hand one by one.")
+	flag.BoolVar(&outputFlag, "o", false, " Output more stats to the screen.")
 	flag.Parse()
 
 	const InputExtDefault = ".strat"
@@ -1658,15 +1661,15 @@ PlayAllRounds:
 	ratioScore := 100 * score / float64(totalHands)
 	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.4f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
-	fmt.Print(ratioString)
+	//fmt.Print(ratioString)
+	ctfmt.Printf(ct.Yellow, false, "%s", ratioString)
 	bufOutputFileWriter.WriteString(ratioString)
 
 	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
 		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
-	fmt.Print(scoreString)
-
-	bufOutputFileWriter.WriteString(elapsedString)
-	bufOutputFileWriter.WriteString(scoreString)
+	if outputFlag {
+		fmt.Print(scoreString)
+	}
 
 	totalHandsFloat := float64(totalHands)
 	totalBJhandFloat := float64(totalBJwon + totalBJpushed)
@@ -1676,8 +1679,19 @@ PlayAllRounds:
 	ratioBJdealerAce := float64(totalBJwithDealerAce) / totalBJhandFloat
 	ratioBusts := float64(totalBusts) / totalHandsFloat
 	ratioSplits := float64(totalSplits) / totalHandsFloat
-	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n", ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
-	fmt.Print(outputratiostring)
+	bufOutputFileWriter.WriteString(elapsedString)
+	bufOutputFileWriter.WriteString(scoreString)
+
+	// Calculate the modified score, modified score ratio
+	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) - float64(totalSurrenders)
+	modifiedWinsRatio := float64(totalWins) / modifiedTotalHandsFloat
+	ctfmt.Printf(ct.Yellow, true, " Modified wins ratio = %.4f, modified total hands = %.0f\n", modifiedWinsRatio, modifiedTotalHandsFloat)
+
+	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n",
+		ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
+	if outputFlag {
+		fmt.Print(outputratiostring)
+	}
 	bufOutputFileWriter.WriteString(outputratiostring)
 	outputratiostring = fmt.Sprintf(
 		" ratio Hands Won/total hands= %.3f, total busts= %d, ratio Busts/total hands= %.3f, total splits= %d, ratio splits= %.4f \n",
@@ -1712,7 +1726,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1736,7 +1750,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
