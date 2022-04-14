@@ -98,7 +98,7 @@ import (
                  A modified score ratio will subtract out BJ and doubles from the total # of hands.  I may have to play w/ this for a bit before it's useful.
 */
 
-const lastAltered = "Apr 13, 2022"
+const lastAltered = "Apr 14, 2022"
 
 const numOfDecks = 100_000 // took ~1/2 hr to run on thelio.
 
@@ -536,7 +536,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1545,9 +1545,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// just in case there is a panic of some type, this file will be closed so I can inspect it so far.
+	// just in case there is a panic of some type, this file will be closed so I can inspect it.
 	bufOutputFileWriter.Flush()
-	OutputHandle.Close() // I can, and do, continue to write to this file.  This trick works.  I don't remember where I saw it, or if I just tried it.
+	OutputHandle.Close() // Below, I reopen the file in append mode.  That's why closing it and then reopening it works.
 
 	// Init the deck and SurrenderStrategyMatrix, and shuffle the deck
 	// InitDeck()  Not needed since I'm reading in an already shuffled deck.
@@ -1581,6 +1581,7 @@ func main() {
 	t1 := time.Now()
 	// Main loop of this simulator, to play all rounds
 
+	fmt.Printf("\n\n")
 	progBar := pb.Default(maxNumOfHands)
 
 PlayAllRounds:
@@ -1640,6 +1641,7 @@ PlayAllRounds:
 	// time for the stats.
 	// need to remember to display totalsplits, totaldoubles, totalbusts, totalHands.
 	// need to calculate a run, how long it ran, and display these.  That's in the runs slice of int.
+	// Now I'll calculate all the stats and then output them.  That will allow me to be more selective about what to display.
 
 	OutputHandle, err = os.OpenFile(OutputFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
@@ -1660,12 +1662,6 @@ PlayAllRounds:
 	ratioTotalLosses = float64(totalLosses) / float64(totalWins+totalLosses)
 	ratioScore := 100 * score / float64(totalHands)
 
-	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
-		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
-	if outputFlag {
-		fmt.Print(scoreString)
-	}
-
 	totalHandsFloat := float64(totalHands)
 	totalBJhandFloat := float64(totalBJwon + totalBJpushed)
 	ratioBJwon := float64(totalBJwon) / totalBJhandFloat
@@ -1674,8 +1670,12 @@ PlayAllRounds:
 	ratioBJdealerAce := float64(totalBJwithDealerAce) / totalBJhandFloat
 	ratioBusts := float64(totalBusts) / totalHandsFloat
 	ratioSplits := float64(totalSplits) / totalHandsFloat
+	bufOutputFileWriter.WriteString(datestring)
+	bufOutputFileWriter.WriteRune('\n')
 	bufOutputFileWriter.WriteString(elapsedString)
-	bufOutputFileWriter.WriteString(scoreString)
+
+	scoreString := fmt.Sprintf(" Raw score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
+		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
 
 	// Calculate the modified score, modified score ratio
 	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) - float64(totalSurrenders)
@@ -1684,7 +1684,17 @@ PlayAllRounds:
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
 	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.6f, Classic total wins ratio = %.6f,   modified total hands = %.0f\n",
 		modifiedWinsRatio, ratioTotalWins, modifiedTotalHandsFloat)
-	//ctfmt.Printf(ct.Yellow, true, " Modified wins ratio = %.4f, modified total hands = %.0f\n", modifiedWinsRatio, modifiedTotalHandsFloat)
+
+	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
+	sort.Sort(sort.Reverse(sort.IntSlice(runsLost)))
+	runswonstring := fmt.Sprintf(" runs of won hands: %v \n", runsWon[:25]) // Else there are too many of them
+	runsloststring := fmt.Sprintf(" runs of lost hands: %v \n", runsLost[:25])
+
+	if outputFlag {
+		fmt.Print(scoreString)
+	}
+	bufOutputFileWriter.WriteString(scoreString)
+
 	ctfmt.Printf(ct.Yellow, false, "%s", ratioString)
 	bufOutputFileWriter.WriteString(ratioString)
 	ctfmt.Printf(ct.Yellow, true, modifiedWinsRatioString)
@@ -1699,20 +1709,20 @@ PlayAllRounds:
 	outputratiostring = fmt.Sprintf(
 		" ratio Hands Won/total hands= %.3f, total busts= %d, ratio Busts/total hands= %.3f, total splits= %d, ratio splits= %.4f \n",
 		ratioHandsWon, totalBusts, ratioBusts, totalSplits, ratioSplits)
-	fmt.Print(outputratiostring)
+	if outputFlag {
+		fmt.Print(outputratiostring)
+	}
 	bufOutputFileWriter.WriteString(outputratiostring)
-
-	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
-	sort.Sort(sort.Reverse(sort.IntSlice(runsLost)))
-	runswonstring := fmt.Sprintf(" runs of won hands: %v \n", runsWon[:25]) // Else there are too many of them
-	runsloststring := fmt.Sprintf(" runs of lost hands: %v \n", runsLost[:25])
 	bufOutputFileWriter.WriteString(runswonstring)
 	bufOutputFileWriter.WriteString(runsloststring)
 
 	runswonstring = fmt.Sprintf(" runs of won hands: %v \n", runsWon[:20])
 	runsloststring = fmt.Sprintf(" runs of lost hands: %v \n", runsLost[:20])
-	fmt.Print(runswonstring)
-	fmt.Print(runsloststring)
+	if outputFlag {
+		fmt.Print(runswonstring)
+		fmt.Print(runsloststring)
+	}
+	fmt.Printf("\n\n")
 
 	wrStatsToFile()
 
@@ -1729,7 +1739,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1753,7 +1763,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
