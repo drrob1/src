@@ -1659,11 +1659,6 @@ PlayAllRounds:
 	ratioTotalWins = float64(totalWins) / float64(totalWins+totalLosses)
 	ratioTotalLosses = float64(totalLosses) / float64(totalWins+totalLosses)
 	ratioScore := 100 * score / float64(totalHands)
-	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.4f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
-		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
-	//fmt.Print(ratioString)
-	ctfmt.Printf(ct.Yellow, false, "%s", ratioString)
-	bufOutputFileWriter.WriteString(ratioString)
 
 	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
 		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
@@ -1685,7 +1680,15 @@ PlayAllRounds:
 	// Calculate the modified score, modified score ratio
 	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) - float64(totalSurrenders)
 	modifiedWinsRatio := float64(totalWins) / modifiedTotalHandsFloat
-	ctfmt.Printf(ct.Yellow, true, " Modified wins ratio = %.4f, modified total hands = %.0f\n", modifiedWinsRatio, modifiedTotalHandsFloat)
+	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.6f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
+		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
+	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.6f, Classic total wins ratio = %.6f,   modified total hands = %.0f\n",
+		modifiedWinsRatio, ratioTotalWins, modifiedTotalHandsFloat)
+	//ctfmt.Printf(ct.Yellow, true, " Modified wins ratio = %.4f, modified total hands = %.0f\n", modifiedWinsRatio, modifiedTotalHandsFloat)
+	ctfmt.Printf(ct.Yellow, false, "%s", ratioString)
+	bufOutputFileWriter.WriteString(ratioString)
+	ctfmt.Printf(ct.Yellow, true, modifiedWinsRatioString)
+	bufOutputFileWriter.WriteString(modifiedWinsRatioString)
 
 	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n",
 		ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
