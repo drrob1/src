@@ -53,6 +53,10 @@ Apr 10, 2022
 Back from the boat.
 CardShuffler works.  I wrote it on the boat.
 Now I have to make bj2 use a .deck file.
+
+Apr 15, 2022
+I'm changing the shuffle routine.  It will only increment the start pointer, so the cards dealt will be shifted by 1 each time.  That should give me reproducible runs
+that I can test small changes.
 */
 
 import (
@@ -96,9 +100,10 @@ import (
   12 Apr 22 -- Colorizing output so that the ratio score is easier to see.  I'm going to use yellow first.  And use a flag, maybe "o" for output, if more than
                  the score ratio is to be displayed to the screen; all the data is always written to the result file.
                  A modified score ratio will subtract out BJ and doubles from the total # of hands.  I may have to play w/ this for a bit before it's useful.
+  15 Apr 22 -- Changed how doTheShuffle works.
 */
 
-const lastAltered = "Apr 14, 2022"
+const lastAltered = "Apr 15, 2022"
 
 const numOfDecks = 100_000 // took ~1/2 hr to run on thelio.
 
@@ -452,19 +457,22 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 */
 // ------------------------------------------------------- doTheShuffle -----------------------------------
 func doTheShuffle() {
-	currentCard = 0
 	numOfShuffles++
+	currentCard = numOfShuffles
 
-	shuffleAmount := rand.Intn(5) + 1 // lightly shuffle, so deck is mostly based on the initial file.
-	swapfnt := func(i, j int) {
-		deck[i], deck[j] = deck[j], deck[i]
-	}
-	for i := 0; i < shuffleAmount; i++ {
-		rand.Shuffle(len(deck), swapfnt)
-	}
-	if veryVerboseFlag {
-		fmt.Printf(" Shuffled %d times.\n", shuffleAmount)
-	}
+	/*
+		currentCard = 0
+		shuffleAmount := rand.Intn(5) + 1 // lightly shuffle, so deck is mostly based on the initial file.
+		swapfnt := func(i, j int) {
+			deck[i], deck[j] = deck[j], deck[i]
+		}
+		for i := 0; i < shuffleAmount; i++ {
+			rand.Shuffle(len(deck), swapfnt)
+		}
+		if veryVerboseFlag {
+			fmt.Printf(" Shuffled %d times.\n", shuffleAmount)
+		}
+	*/
 }
 
 // ------------------------------------------------------- getCard -----------------------------------
