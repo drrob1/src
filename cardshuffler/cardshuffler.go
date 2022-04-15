@@ -25,7 +25,7 @@ import (
 const lastAltered = "Apr 11, 2022"
 
 //const numOfDecks = 100_000 // used to be 8 and was a const.  1 million was estimated at 2 weeks by progressbar.  100K estimated to take 32 hours.  I plan on waiting for it here on leox.
-const numOfDecks = 500_000 // On leox, this is estimated to take 14 hrs.
+const numOfDecks = 500_000 // On leox, this took 14 hrs for 26 million cards.
 const NumOfCards = 52 * numOfDecks
 
 var deck []int

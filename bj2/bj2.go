@@ -100,12 +100,12 @@ import (
   12 Apr 22 -- Colorizing output so that the ratio score is easier to see.  I'm going to use yellow first.  And use a flag, maybe "o" for output, if more than
                  the score ratio is to be displayed to the screen; all the data is always written to the result file.
                  A modified score ratio will subtract out BJ and doubles from the total # of hands.  I may have to play w/ this for a bit before it's useful.
-  15 Apr 22 -- Changed how doTheShuffle works.
+  15 Apr 22 -- Changed how doTheShuffle works.  And will extract the number of decks from the filename of the .deck file.
 */
 
 const lastAltered = "Apr 15, 2022"
 
-const numOfDecks = 100_000 // took ~1/2 hr to run on thelio.
+var numOfDecks = 100_000 // took ~1/2 hr to run on thelio at this default value.  It's now a var because I'm extracting the value from the .deck filename.
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -149,8 +149,9 @@ const loopDivisor = 100 // used for the new progressbar functions.
 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million and 1 min for 1 billion.
 // I set 1 billion hands as the max.
 const maxNumOfHands = 100_000_000
-const NumOfCards = 52 * numOfDecks
-const shuffleWhen = NumOfCards - 10*maxNumOfPlayers // Likely will shuffle when have less than 100 cards left in deck.jk
+
+var NumOfCards = 52 * numOfDecks                  // Now that numOfDecks is a var, so this has to be a var, and will be recalculated as needed.
+var shuffleWhen = NumOfCards - 10*maxNumOfPlayers // Likely will shuffle when have less than 100 cards left in deck.  And this now has to be a var and will be recalculated as needed.
 
 var resultNames = []string{"lost", "pushed", "won", "surrend", "LostDbl", "WonDbl", "LostToBJ", "PushedBJ", "WonBJ"}
 
@@ -1467,6 +1468,17 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Deck file %s error is %v, so exiting.\n", deckFilename)
 		os.Exit(1)
 	}
+	deckValue := extractNumOfDecks(deckFilename)
+	if deckValue == 0 {
+		fmt.Printf(" The filename of the .deck file has to include the value for the numOfDecks.  It doesn't so will exit now.")
+		os.Exit(1)
+	}
+	numOfDecks = deckValue
+	NumOfCards = 52 * numOfDecks
+	shuffleWhen = NumOfCards - 10*maxNumOfPlayers
+	if verboseFlag {
+		fmt.Printf(" numOfDecks = %d, numofCards = %d and shuffleWhen = %d\n", numOfDecks, NumOfCards, shuffleWhen)
+	}
 
 	strategyFilename := flag.Arg(1) + InputExtDefault
 	_, err = os.Stat(strategyFilename)
@@ -1789,4 +1801,16 @@ func pause() {
 	var ans string
 	fmt.Scanln(&ans)
 	fmt.Printf("%s\n", ans)
+}
+
+// ----------------------------------------------------------------------
+
+func extractNumOfDecks(fn string) int {
+	tknslice := tknptr.TokenSlice(fn)
+	for _, t := range tknslice {
+		if t.State == tknptr.DGT {
+			return t.Isum
+		}
+	}
+	return 0 // means no number token was found in the provided filename string.
 }
