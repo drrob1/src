@@ -1703,7 +1703,7 @@ PlayAllRounds:
 	modifiedWinsRatio := float64(totalWins) / modifiedTotalHandsFloat
 	ratioString := fmt.Sprintf(" RatioScore= %.6f%%,  TotalWins= %.6f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
-	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.7f, Classic total wins ratio = %.7f,   modified total hands = %.0f\n",
+	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.6f, Classic total wins ratio = %.6f,   modified total hands = %.0f\n",
 		modifiedWinsRatio, ratioTotalWins, modifiedTotalHandsFloat)
 
 	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
