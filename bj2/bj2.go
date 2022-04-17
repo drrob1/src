@@ -1483,7 +1483,8 @@ func main() {
 	strategyFilename := flag.Arg(1) + InputExtDefault
 	_, err = os.Stat(strategyFilename)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Strategy file %s error is %v, so exiting.\n", strategyFilename)
+		fmt.Fprintf(os.Stderr, " Strategy file %s error is %v, so exiting.\n", strategyFilename, err)
+		os.Exit(1)
 	}
 
 	rand.Seed(int64(time.Now().Nanosecond()))
