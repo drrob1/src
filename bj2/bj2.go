@@ -445,7 +445,8 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 
 // ------------------------------------------------------- InitDeck -----------------------------------
 
-/*func InitDeck() { // Initalize the deck of cards.
+/*
+func InitDeck() { // Initalize the deck of cards.
 	for i := 0; i < 4*numOfDecks; i++ {
 		for j := 1; j <= 10; j++ { // There is no card Zero
 			deck = append(deck, j)
@@ -556,7 +557,6 @@ func hitDealer() {
 } // hitDealer
 
 // ------------------------------------------------------- hitMePlayer -----------------------------------
-// This only takes one card for the playerHand, but for the dealer it plays until stand or bust.
 // Note that blackjack has already been checked for, in playAhand().
 func hitMePlayer(i int) {
 	cannotDouble := false
@@ -825,7 +825,7 @@ func playAllHands() {
 	for i := 0; i < len(playerHand); i++ { // can't range over hands because splits add to the hands slice.
 		playAhand(i)
 	}
-	hitDealer() // play the dealer's hand.  i is ignored so I'm just using the zero as a filler.
+	hitDealer()
 } // playAllHands
 
 // ------------------------------------------------------- showDown -----------------------------------
@@ -903,7 +903,7 @@ func showDown() {
 // it's still just 1 hand.  I think I'll include each and every split hand it this as a separate hand.
 // The local SoftFlag must be used because the playerHand[i].SoftFlag is set if ANY subsequent cards are an Ace, so it can properly handle soft hands.
 func incrementStats() {
-	for i := range playerHand { // range over all hannds, including split hands.
+	for i := range playerHand { // range over all hands, including split hands.
 		initialPlayerTotal := playerHand[i].card1 + playerHand[i].card2
 		FirstDealerCard := dealerHand.card1
 		SoftFlag := playerHand[i].card1 == Ace || playerHand[i].card2 == Ace
@@ -1566,7 +1566,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// just in case there is a panic of some type, this file will be closed so I can inspect it.
+	// just in case there is a panic of some type, this file will be closed, so I can inspect it.  It is reopened in append mode below when it's time to write to it again.
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close() // Below, I reopen the file in append mode.  That's why closing it and then reopening it works.
 
@@ -1651,7 +1651,7 @@ PlayAllRounds:
 		}
 		if displayRound {
 			fmt.Println(" deck current position is, possibly after a shuffle.", currentCard)
-			fmt.Printf(" %d hands were planned; %d were actually played. \n\n", j, totalHands)
+			fmt.Printf(" %d hands were planned; %d were actually played. \n\n", j+1, totalHands) // j starts at 0, of course
 		}
 	}
 
@@ -1701,9 +1701,9 @@ PlayAllRounds:
 	// Calculate the modified score, modified score ratio
 	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) - float64(totalSurrenders)
 	modifiedWinsRatio := float64(totalWins) / modifiedTotalHandsFloat
-	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.6f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
+	ratioString := fmt.Sprintf(" RatioScore= %.6f%%,  TotalWins= %.6f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
-	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.6f, Classic total wins ratio = %.6f,   modified total hands = %.0f\n",
+	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.7f, Classic total wins ratio = %.7f,   modified total hands = %.0f\n",
 		modifiedWinsRatio, ratioTotalWins, modifiedTotalHandsFloat)
 
 	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
@@ -1721,14 +1721,14 @@ PlayAllRounds:
 	ctfmt.Printf(ct.Yellow, true, modifiedWinsRatioString)
 	bufOutputFileWriter.WriteString(modifiedWinsRatioString)
 
-	outputratiostring := fmt.Sprintf(" ratio BJ won= %.3f, ratio BJ pushed= %.3f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n",
+	outputratiostring := fmt.Sprintf(" ratio BJ won= %.4f, ratio BJ pushed= %.4f, BJ w/ dealer Ace = %d,  ratio BJ with dlr Ace= %.4f \n",
 		ratioBJwon, ratioBJpushed, totalBJwithDealerAce, ratioBJdealerAce)
 	if outputFlag {
 		fmt.Print(outputratiostring)
 	}
 	bufOutputFileWriter.WriteString(outputratiostring)
 	outputratiostring = fmt.Sprintf(
-		" ratio Hands Won/total hands= %.3f, total busts= %d, ratio Busts/total hands= %.3f, total splits= %d, ratio splits= %.4f \n",
+		" ratio Hands Won/total hands= %.4f, total busts= %d, ratio Busts/total hands= %.4f, total splits= %d, ratio splits= %.4f \n",
 		ratioHandsWon, totalBusts, ratioBusts, totalSplits, ratioSplits)
 	if outputFlag {
 		fmt.Print(outputratiostring)
