@@ -57,6 +57,11 @@ Now I have to make bj2 use a .deck file.
 Apr 15, 2022
 I'm changing the shuffle routine.  It will only increment the start pointer, so the cards dealt will be shifted by 1 each time.  That should give me reproducible runs
 that I can test small changes.
+
+Apr 17, 2022
+I found mistakes in the matrix where it recommended splitting too many hands.  Then it said hit, like 7's against a 6.  But the pgm ignored that, as when it
+got to hitMePlayer, the routine stood on 14.  That confused me for a bit, because the stats didn't change.  Then I realized that the hit instruction in the
+pair matrix was being ignored.
 */
 
 import (
@@ -546,7 +551,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		} // if soft hand or not.
+		}                                                                       // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1760,7 +1765,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1784,7 +1789,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
