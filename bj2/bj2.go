@@ -108,7 +108,7 @@ import (
   15 Apr 22 -- Changed how doTheShuffle works.  And will extract the number of decks from the filename of the .deck file.
 */
 
-const lastAltered = "Apr 15, 2022"
+const lastAltered = "Apr 19, 2022"
 
 var numOfDecks = 100_000 // took ~1/2 hr to run on thelio at this default value.  It's now a var because I'm extracting the value from the .deck filename.
 
@@ -551,7 +551,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -726,6 +726,9 @@ func dealCards() {
 } // dealCards
 
 // ------------------------------------------------------- splitHand -----------------------------------
+// This routine splits by keeping one hand of the split at the playerHand[i] position, and the other is in hnd which gets appended to the playerHand slice.
+// The for loops here use pointer semantics so I can extend the length of the slice in the loop.  Then I use recursion to process the new hand at this same location, i.
+// I trim the slice back to the correct length in the play all hands loop in main().
 func splitHand(i int) {
 	if displayRound {
 		fmt.Printf("\n Entering splitHand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
@@ -1677,11 +1680,12 @@ PlayAllRounds:
 	bufOutputFileWriter = bufio.NewWriter(OutputHandle)
 	defer bufOutputFileWriter.Flush()
 	defer OutputHandle.Close()
+	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
 
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
 		float64(totalSurrenders)/2
+	scoreWithoutBJ := score - 1.5*float64(totalBJwon)
 
-	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
 	ratioTotalDblWins = float64(totalDblWins) / float64(totalDblWins+totalDblLosses)
 	ratioTotalDblLosses = float64(totalDblLosses) / float64(totalDblWins+totalDblLosses)
 	ratioTotalWins = float64(totalWins) / float64(totalWins+totalLosses)
@@ -1704,12 +1708,13 @@ PlayAllRounds:
 		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
 
 	// Calculate the modified score, modified score ratio
-	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) - float64(totalSurrenders)
+	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) //- float64(totalSurrenders) don't subtract here anymore.
 	modifiedWinsRatio := float64(totalWins) / modifiedTotalHandsFloat
-	ratioString := fmt.Sprintf(" RatioScore= %.6f%%,  TotalWins= %.6f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
+	ratioScoreWithoutBJ := scoreWithoutBJ / modifiedTotalHandsFloat
+	ratioString := fmt.Sprintf(" Ratio score w/ BJ= %.6f%%,  TotalWinsRatio= %.6f, TotalLossesRatio= %.4f, TotalDblWinsRatio= %.4f, TotalDblLossesRatio= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
-	modifiedWinsRatioString := fmt.Sprintf(" Modified wins ratio = %.6f, Classic total wins ratio = %.6f,   modified total hands = %.0f\n",
-		modifiedWinsRatio, ratioTotalWins, modifiedTotalHandsFloat)
+	modifiedWinsRatioString := fmt.Sprintf(" Ratio score w/o BJ = %.6f, Modified wins ratio = %.6f, Classic total wins ratio = %.6f\n",
+		ratioScoreWithoutBJ, modifiedWinsRatio, ratioTotalWins)
 
 	sort.Sort(sort.Reverse(sort.IntSlice(runsWon)))
 	sort.Sort(sort.Reverse(sort.IntSlice(runsLost)))
@@ -1765,7 +1770,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1789,7 +1794,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
