@@ -1710,7 +1710,7 @@ PlayAllRounds:
 	// Calculate the modified score, modified score ratio
 	modifiedTotalHandsFloat := totalHandsFloat - totalBJhandFloat - float64(totalDoubles) //- float64(totalSurrenders) don't subtract here anymore.
 	modifiedWinsRatio := float64(totalWins) / modifiedTotalHandsFloat
-	ratioScoreWithoutBJ := scoreWithoutBJ / modifiedTotalHandsFloat
+	ratioScoreWithoutBJ := scoreWithoutBJ / (totalHandsFloat - totalBJhandFloat) // denom just subtracts the BJ hands since the score also subtracted BJ.
 	ratioString := fmt.Sprintf(" Ratio score w/ BJ= %.6f%%,  TotalWinsRatio= %.6f, TotalLossesRatio= %.4f, TotalDblWinsRatio= %.4f, TotalDblLossesRatio= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
 	modifiedWinsRatioString := fmt.Sprintf(" Ratio score w/o BJ = %.6f, Modified wins ratio = %.6f, Classic total wins ratio = %.6f\n",
