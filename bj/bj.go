@@ -86,9 +86,10 @@ import (
   30 Mar 22 -- Will allow comments to start w/ '#' as in bash, and '/' as almost like C-ish.  The change is in readLine.
   31 Mar 22 -- Now checks against maxnumofplayers.
    2 Apr 22 -- Adding a progress bar.  And changed doTheShuffle to actually shuffle.  It only did 1 pass thru the deck before.  That was silly.
+  20 Apr 22 -- Backporting the bytes.Reader code from bj2, that allows comments and such in the strategy file.  Nevermind, it's already there.
 */
 
-const lastAltered = "Apr 2, 2022"
+const lastAltered = "Apr 20, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -531,7 +532,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1749,7 +1750,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1773,7 +1774,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
