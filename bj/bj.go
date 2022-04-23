@@ -87,9 +87,10 @@ import (
   31 Mar 22 -- Now checks against maxnumofplayers.
    2 Apr 22 -- Adding a progress bar.  And changed doTheShuffle to actually shuffle.  It only did 1 pass thru the deck before.  That was silly.
   20 Apr 22 -- Backporting the bytes.Reader code from bj2, that allows comments and such in the strategy file.  Nevermind, it's already there.
+  23 Apr 22 -- Will use idiomatic Go in Split a hand.
 */
 
-const lastAltered = "Apr 20, 2022"
+const lastAltered = "Apr 23, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -692,7 +693,7 @@ func dealCards() {
 	}
 	dealerHand = handType{} // init the new dealer's hand, also.
 	dealerHand.card1 = getCard()
-	dealerHand.softflag = (dealerHand.card1 == Ace)
+	dealerHand.softflag = dealerHand.card1 == Ace
 	for i := range playerHand {
 		playerHand[i].card2 = getCard()
 		playerHand[i].total = playerHand[i].card1 + playerHand[i].card2
@@ -702,9 +703,9 @@ func dealCards() {
 	}
 	dealerHand.card2 = getCard()
 	dealerHand.total = dealerHand.card1 + dealerHand.card2
-	dealerHand.pair = (dealerHand.card1 == dealerHand.card2)
-	dealerHand.softflag = (dealerHand.softflag || (dealerHand.card2 == Ace))
-	dealerHand.BJflag = (dealerHand.total == 11 && dealerHand.softflag)
+	dealerHand.pair = dealerHand.card1 == dealerHand.card2
+	dealerHand.softflag = dealerHand.softflag || dealerHand.card2 == Ace
+	dealerHand.BJflag = dealerHand.total == 11 && dealerHand.softflag
 } // dealCards
 
 // ------------------------------------------------------- splitHand -----------------------------------
@@ -712,9 +713,12 @@ func splitHand(i int) {
 	if displayRound {
 		fmt.Printf("\n Entering splitHand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
 	}
-	hnd := handType{}
-	hnd.card1 = playerHand[i].card2
-	hnd.card2 = getCard()
+	hnd := handType{
+		card1: playerHand[i].card2,
+		card2: getCard(),
+	}
+	//hnd.card1 = playerHand[i].card2
+	//hnd.card2 = getCard()
 	hnd.pair = (hnd.card2 == hnd.card1)
 	hnd.softflag = (hnd.card1 == Ace) || (hnd.card2 == Ace)
 	hnd.total = hnd.card1 + hnd.card2
@@ -1661,7 +1665,7 @@ PlayAllRounds:
 		}
 		if displayRound {
 			fmt.Println(" deck current position is, possibly after a shuffle.", currentCard)
-			fmt.Printf(" %d hands were planned; %d were actually played. \n\n", j, totalHands)
+			fmt.Printf(" %d hands were planned; %d were actually played. \n\n", j+1, totalHands)
 		}
 		//		if j > 100_000 {  Not needed.  It seems it takes ~ 1/3 - 1/2 sec to run thru 1 million hands.
 		//			break         A lot has changed over 20 years, when it took about 20 min to run thru 1 million hands, IIRC.

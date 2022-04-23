@@ -106,9 +106,10 @@ import (
                  the score ratio is to be displayed to the screen; all the data is always written to the result file.
                  A modified score ratio will subtract out BJ and doubles from the total # of hands.  I may have to play w/ this for a bit before it's useful.
   15 Apr 22 -- Changed how doTheShuffle works.  And will extract the number of decks from the filename of the .deck file.
+  23 Apr 22 -- Changed how split hands are constructed, which is now more idiomatic for Go.
 */
 
-const lastAltered = "Apr 19, 2022"
+const lastAltered = "Apr 23, 2022"
 
 var numOfDecks = 100_000 // took ~1/2 hr to run on thelio at this default value.  It's now a var because I'm extracting the value from the .deck filename.
 
@@ -733,10 +734,11 @@ func splitHand(i int) {
 	if displayRound {
 		fmt.Printf("\n Entering splitHand.  card1=%d, card2=%d \n", playerHand[i].card1, playerHand[i].card2)
 	}
-	hnd := handType{}
-	hnd.card1 = playerHand[i].card2
-	hnd.card2 = getCard()
-	hnd.pair = (hnd.card2 == hnd.card1)
+	hnd := handType{
+		card1: playerHand[i].card2,
+		card2: getCard(),
+	}
+	hnd.pair = hnd.card2 == hnd.card1
 	hnd.softflag = (hnd.card1 == Ace) || (hnd.card2 == Ace)
 	hnd.total = hnd.card1 + hnd.card2
 	hnd.splitflag = true
