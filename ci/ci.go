@@ -19,26 +19,6 @@ The built-in type error is an interface that defines a single method w/ the sign
 
 const lastModified = "Apr 23, 2022"
 
-func run(proj string, out io.Writer) error {
-	if proj == "" {
-		//return fmt.Errorf("project directory is required")
-		return fmt.Errorf("project directory is required: %w", ErrValidation)
-	}
-
-	// arguments for the go command, go build in this case.  The dot is to represent the current directory.  The go build is to verify the program's correctness to compile, rather
-	// than the creation of an exe binary file.  Go build does not create a file when building multiple packages at the same time.  The other package to be built will be the errors
-	// package from the standard library.
-	args := []string{"build", ".", "errors"}
-
-	cmd := exec.Command("go", args...)
-	cmd.Dir = proj
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf(" go build failed: %s", err)
-	}
-	_, err := fmt.Fprintln(out, "Go build succeeded.")
-	return err
-}
-
 var ErrValidation = errors.New("validation failed")
 
 type stepErr struct {
@@ -57,6 +37,31 @@ func (se *stepErr) Is(target error) bool {
 		return false
 	}
 	return t.step == se.step
+}
+
+func (se *stepErr) Unwrap() error { // attempt to unwrap the error to see if an underlying error matches the target.
+	return se.cause
+}
+
+func run(proj string, out io.Writer) error {
+	if proj == "" {
+		//return fmt.Errorf("project directory is required")
+		return fmt.Errorf("project directory is required: %w", ErrValidation)
+	}
+
+	// arguments for the go command, go build in this case.  The dot is to represent the current directory.  The go build is to verify the program's correctness to compile, rather
+	// than the creation of an exe binary file.  Go build does not create a file when building multiple packages at the same time.  The other package to be built will be the errors
+	// package from the standard library.
+	args := []string{"build", ".", "errors"}
+
+	cmd := exec.Command("go", args...)
+	cmd.Dir = proj
+	if err := cmd.Run(); err != nil {
+		return &stepErr{step: "go build", msg: "go build failed", cause: err} // this instantiates and returns a new stepErr w/ custom content.
+		//return fmt.Errorf(" go build failed: %s", err)   Initial version of this code, now expanded to use custom error types.
+	}
+	_, err := fmt.Fprintln(out, "Go build succeeded")
+	return err
 }
 
 func main() {
