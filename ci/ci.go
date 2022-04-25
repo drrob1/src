@@ -97,13 +97,20 @@ func run(proj string, out io.Writer) error {
 	//}
 	//_, err := fmt.Fprintln(out, "Go build succeeded")
 
-	pipeline := make([]step, 1) // start w/ one step element, but more will be added soon.
+	pipeline := make([]step, 2) // started w/ one step element, but now has 2.
 	pipeline[0] = newStep(
 		"go build",
 		"go",
 		"Go Build: SUCCESS",
 		proj,
 		[]string{"build", ".", "errors"},
+	)
+	pipeline[1] = newStep(
+		"go test",
+		"go",
+		"Go Test: SUCCESS",
+		proj,
+		[]string{"test", "-v"},
 	)
 
 	for _, stp := range pipeline {
