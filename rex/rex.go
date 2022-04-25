@@ -322,11 +322,29 @@ func main() {
 	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
+	/*  Doesn't work, I think.
 	NumLines := numOfLines
 	if NLines > 0 {
 		NumLines = NLines
 	}
 	NumLines *= *nscreens
+	*/
+
+	if NLines > 0 { // priority is -N option
+		numOfLines = NLines
+	} else if dsrtParam.numlines > 0 { // then check this
+		numOfLines = dsrtParam.numlines
+	} else if autoHeight > 0 { // finally use autoHeight.
+		numOfLines = autoHeight - 7
+	} else { // intended if autoHeight fails, like if the display is redirected
+		numOfLines = defaultHeight
+	}
+
+	numOfLines *= *nscreens
+
+	if halfFlag {
+		numOfLines /= 2
+	}
 
 	//var excludeRegex *regexp.Regexp
 	if len(excludeRegexPattern) > 0 {
@@ -468,7 +486,7 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		fmt.Println()
-		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, NumLines)
+		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, numOfLines)
 		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
 			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag)
