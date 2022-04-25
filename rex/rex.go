@@ -22,8 +22,6 @@ import (
 	"unicode"
 )
 
-const LastAltered = "Feb 16, 2022"
-
 /*
 Revision History
 ----------------
@@ -110,7 +108,10 @@ Revision History
  9 Feb 22 -- Fixed bug on sorting line, sorting the wrong file.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag, finally.
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
+25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 */
+
+const LastAltered = "Apr 25, 2022"
 
 type dirAliasMapType map[string]string
 
@@ -133,7 +134,7 @@ const min3Width = 170
 //const dateSize = 30  // space the filesize and date occupy.
 
 var excludeRegex *regexp.Regexp
-var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag bool
+var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag, halfFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
 
@@ -256,6 +257,7 @@ func main() {
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag for noisy tests.")
 
 	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
+	flag.BoolVar(&halfFlag, "1", false, "display 1/2 of the screen.")
 
 	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")

@@ -19,8 +19,6 @@ import (
 	"unicode"
 )
 
-const LastAltered = "25 Feb 2022"
-
 /*
 REVISION HISTORY
 ----------------
@@ -111,7 +109,10 @@ REVISION HISTORY
 15 Feb 22 -- Really replaced testFlag w/ VerboseFlag, because as I maintain the code, I forget if this has verboseFlag.  Now it does and doesn't have testFlag.
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
 24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
+25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 */
+
+const LastAltered = "25 Apr 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -130,7 +131,7 @@ const defaultHeight = 40
 const minWidth = 90
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var globFlag, veryVerboseFlag bool
+var globFlag, veryVerboseFlag, halfFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -269,6 +270,7 @@ func main() {
 	flag.BoolVar(&globFlag, "g", false, "Use glob function on Windows.")
 
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose option for when I really want it.")
+	flag.BoolVar(&halfFlag, "1", false, "display 1/2 of the screen.")
 
 	flag.Parse()
 
@@ -282,11 +284,15 @@ func main() {
 		numOfLines = dsrtParam.numlines
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
-	} else { // intended if autoHeight fails, just in case.
+	} else { // intended if autoHeight fails, like of the output is being redirected.
 		numOfLines = defaultHeight
 	}
 
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
+
+	if halfFlag {
+		numOfLines /= 2
+	}
 
 	if verboseFlag {
 		execname, _ := os.Executable()
