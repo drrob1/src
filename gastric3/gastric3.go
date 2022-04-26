@@ -73,7 +73,7 @@ REVISION HISTORY
 11 Apr 22 -- Modernizing the filepicker output.  Changed from bytes.buffer to bytes.reader.  Added comment characters of # and / like for BJ strategy files.
 */
 
-const LastAltered = "Apr 11, 2022"
+const LastAltered = "Apr 26, 2022"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -161,7 +161,7 @@ func main() {
 		}
 
 		for i := 0; i < min(len(filenames), 26); i++ {
-			fmt.Printf("filename[%d, %c] is %s\n", i, i, filenames[i])
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
 		_, err = fmt.Scanln(&ans)
