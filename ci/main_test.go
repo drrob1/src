@@ -13,9 +13,9 @@ func TestRun(t *testing.T) {
 		out    string // espected output message
 		expErr error
 	}{
-		{name: "build success", proj: "./testdata/tool/", out: "Go Build: SUCCESS\n", expErr: nil},
+		{name: "build success", proj: "./testdata/tool/", out: "Go Build: SUCCESS\nGo Test: SUCCESS\n", expErr: nil},
 		{name: "build fail", proj: "./testdata/toolErr", out: "", expErr: &stepErr{step: "go build"}},
-		{name: "test success", proj: "./testdata/tool/", out: "Go Test: SUCCESS\n", expErr: nil},
+		{name: "test success", proj: "./testdata/tool/", out: "Go Build: SUCCESS\nGo Test: SUCCESS\n", expErr: nil},
 	}
 
 	for _, tc := range testCases { // range over the table of tests.  Right now there are only 2.
