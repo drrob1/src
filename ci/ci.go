@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,11 +20,23 @@ The built-in type error is an interface that defines a single method w/ the sign
 Now the run routine will be refactored to make it easier to configure, so we'll add a custom type, step, that represents a pipeline step and associate the method
 execute() to it.  And we'll add a constructor function called newStep() to create a new step.  When we need to add a new step to the build pipeline, we
 instantiate the step type w/ the appropriate values.
+
+28 Apr 2022 -- Handling output from external programs (p 179).  The version of the "execute()" method of the step type does not handle the program output.
+               We will create another type called exceptionStep that extends the step type and implements another version of the "execute()" method to handle pgm output.
+               This results in less complex functions that are easier to maintain, than extending the first execute() method.
+                   We'll also introduce a new interface called executer that expects a single execute() method that returns a string and an error.  This interface will
+               be used in the pipeline definition so that any type that satisfies the interface can be added to the pipeline.
+               The gofmt tool will be used to validate the go file.  Its default behavior is to print the properly formatted version to stdout.  We will use the -l option (-el)
+               which will return the name of the files that did not match the correct formatting.
 */
 
 const lastModified = "Apr 23, 2022"
 
 var ErrValidation = errors.New("validation failed")
+
+type executer interface {
+	execute() (string, error)
+}
 
 type stepErr struct {
 	step  string
@@ -77,6 +90,43 @@ func (stp step) execute() (string, error) {
 		return "", &se // pointer semantics, because the Error() method is defined as having a pointer receiver.
 	}
 	return stp.message, nil
+}
+
+type exceptionStep struct { // from p 180
+	step // by embedding this type, all the fields and methods of this type are available to this new type.  So can have anew version of the "execute()" method.
+}
+
+func newExceptionStep(name, exe, message, proj string, args []string) exceptionStep {
+	stp := exceptionStep{}
+	stp.step = newStep(name, exe, message, proj, args)
+
+	return stp
+}
+
+func (es exceptionStep) execute() (string, error) { // extends step.execute()
+	var out bytes.Buffer
+	cmd := exec.Command(es.exe, es.args...)
+	cmd.Stdout = &out
+	cmd.Dir = es.proj
+	if err := cmd.Run(); err != nil {
+		se := stepErr{ // This is the style taught by Bill Kennedy, not the style used in this book.
+			step:  es.name,
+			msg:   "failed to execute",
+			cause: err,
+		}
+		return "", &se // make it clear that we're returning a pointer.
+	}
+
+	if out.Len() > 0 { // Command has run and finished.  If this buffer has content then a file errored out.
+		se := stepErr{
+			step:  es.name,
+			msg:   fmt.Sprintf("invalid format: %s", out.String()),
+			cause: nil,
+		}
+		return "", &se
+	}
+
+	return es.message, nil
 }
 
 func run(proj string, out io.Writer) error {
