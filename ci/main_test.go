@@ -16,6 +16,8 @@ func TestRun(t *testing.T) {
 		{name: "build success", proj: "./testdata/tool/", out: "Go Build: SUCCESS\nGo Test: SUCCESS\n", expErr: nil},
 		{name: "build fail", proj: "./testdata/toolErr", out: "", expErr: &stepErr{step: "go build"}},
 		{name: "test success", proj: "./testdata/tool/", out: "Go Build: SUCCESS\nGo Test: SUCCESS\n", expErr: nil},
+		{name: "success", proj: "./testdata/tool/", out: "Go Build: SUCCESS\nGO Test: SUCCESS\nGofmt: SUCCESS\n"},
+		{name: "failFormat", proj: "./testdata/toolFmtErr", out: "", expErr: &stepErr{step: "go fmt"}},
 	}
 
 	for _, tc := range testCases { // range over the table of tests.  Right now there are only 2.

@@ -30,7 +30,7 @@ instantiate the step type w/ the appropriate values.
                which will return the name of the files that did not match the correct formatting.
 */
 
-const lastModified = "Apr 23, 2022"
+const lastModified = "May 1, 2022"
 
 var ErrValidation = errors.New("validation failed")
 
@@ -104,8 +104,8 @@ func newExceptionStep(name, exe, message, proj string, args []string) exceptionS
 }
 
 func (es exceptionStep) execute() (string, error) { // extends step.execute()
-	var out bytes.Buffer
 	cmd := exec.Command(es.exe, es.args...)
+	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Dir = es.proj
 	if err := cmd.Run(); err != nil {
@@ -147,7 +147,7 @@ func run(proj string, out io.Writer) error {
 	//}
 	//_, err := fmt.Fprintln(out, "Go build succeeded")
 
-	pipeline := make([]step, 2) // started w/ one step element, but now has 2.
+	pipeline := make([]executer, 3) // started w/ one step element, the 2, and now 3.  First []step, now what is there
 	pipeline[0] = newStep(
 		"go build",
 		"go",
@@ -161,6 +161,13 @@ func run(proj string, out io.Writer) error {
 		"Go Test: SUCCESS",
 		proj,
 		[]string{"test", "-v"},
+	)
+	pipeline[2] = newExceptionStep(
+		"go fmt",
+		"gofmt",
+		"Gofmt: SUCCESS",
+		proj,
+		[]string{"-l", "."},
 	)
 
 	for _, stp := range pipeline {
@@ -178,10 +185,16 @@ func run(proj string, out io.Writer) error {
 
 func main() {
 	fmt.Printf(" Go CI continuous improvement, last modified %s, compiled %s\n", lastModified, runtime.Version())
-	proj := flag.String("p", "", "Project directory")
+
+	var proj string
+	flag.StringVar(&proj, "p", "", "Project directory")
 	flag.Parse()
 
-	if err := run(*proj, os.Stdout); err != nil {
+	if flag.NArg() > 0 {
+		proj = flag.Arg(0)
+	}
+
+	if err := run(proj, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
