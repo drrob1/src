@@ -1,13 +1,10 @@
 package hpcalc2
 
 import (
-	"bytes"
 	"encoding/gob"
 	"fmt"
 	"math"
 	"os"
-	"os/exec"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,7 +14,7 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "2 Nov 2021"
+const LastAlteredDate = "4 May 2022"
 
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
@@ -127,6 +124,8 @@ REVISION HISTORY
 19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call MapClose directly anymore.
 16 Sep 21 -- I increased the number of digits for the %g verb when output is dump'd.
  2 Nov 21 -- Adjusted dumpedfixed so that very large or very small numbers are output in general format to not mess up the display
+ 4 May 22 -- PIOVER6 never coded, so that's now added.  And I decided to use platform specific code for toclip/fromclip, contained in clippy.go.
+               And stoclip and rclclip are now synonyms for toclip and fromclip.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -241,6 +240,7 @@ func init() {
 	cmdMap["GREG"] = 340
 	cmdMap["DOW"] = 350
 	cmdMap["PI"] = 360
+	cmdMap["PIOVER6"] = 365
 	cmdMap["CHS"] = 370
 	cmdMap["_"] = 370
 	cmdMap["HOL"] = 380
@@ -259,7 +259,9 @@ func init() {
 	cmdMap["D2R"] = 500
 	cmdMap["R2D"] = 510
 	cmdMap["TOCLIP"] = 520
+	cmdMap["STOCLIP"] = 520
 	cmdMap["FROMCLIP"] = 530
+	cmdMap["RCLCLIP"] = 530
 	cmdMap["LB2G"] = 540
 	cmdMap["OZ2G"] = 550
 	cmdMap["CM2IN"] = 560
@@ -872,7 +874,7 @@ outerloop:
 			ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
 			ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
 			ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
-			ss = append(ss, " TOCLIP, FROMCLIP -- uses xclip on linux and tcc 22 on Windows to access the clipboard.")
+			ss = append(ss, " TOCLIP, FROMCLIP, STOCLIP, RCLCLIP -- uses xclip on linux and tcc on Windows to access the clipboard.")
 			ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
 			ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 			ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
@@ -1029,6 +1031,9 @@ outerloop:
 		case 360: // PI
 			PushMatrixStacks()
 			PUSHX(PI)
+		case 365: // PIOVER6
+			PushMatrixStacks()
+			PUSHX(PI / 6)
 		case 370: // CHS or _
 			PushMatrixStacks()
 			LastX = Stack[X]
@@ -1112,85 +1117,96 @@ outerloop:
 			PushMatrixStacks()
 			LastX = Stack[X]
 			Stack[X] *= 180.0 / PI
-		case 520: // TOCLIP
-			R := READX()
-			s := strconv.FormatFloat(R, 'g', -1, 64)
-			if runtime.GOOS == "linux" {
-				linuxclippy := func(s string) {
-					buf := []byte(s)
-					rdr := bytes.NewReader(buf)
-					cmd := exec.Command("xclip")
-					cmd.Stdin = rdr
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-					ss = append(ss, fmt.Sprintf(" Sent %s to xclip.", s))
-				}
-				linuxclippy(s)
-			} else if runtime.GOOS == "windows" {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if !ok {
-					ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
-					break outerloop
-				}
-				winclippy := func(s string) {
-					//cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
-					cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-					ss = append(ss, fmt.Sprintf(" Sent %s to %s.", s, comspec))
-				}
-				winclippy(s)
-			}
+		case 520: // TOCLIP, now in platform specific code
+			msg := toClip(READX())
+			ss = append(ss, msg)
 
-		case 530: // FROMCLIP
+			//R := READX()
+			//s := strconv.FormatFloat(R, 'g', -1, 64)
+			//if runtime.GOOS == "linux" {
+			//	linuxclippy := func(s string) {
+			//		buf := []byte(s)
+			//		rdr := bytes.NewReader(buf)
+			//		cmd := exec.Command("xclip")
+			//		cmd.Stdin = rdr
+			//		cmd.Stdout = os.Stdout
+			//		cmd.Run()
+			//		ss = append(ss, fmt.Sprintf(" Sent %s to xclip.", s))
+			//	}
+			//	linuxclippy(s)
+			//} else if runtime.GOOS == "windows" {
+			//	comspec, ok := os.LookupEnv("ComSpec")
+			//	if !ok {
+			//		ss = append(ss, " Environment does not have ComSpec entry.  ToClip unsuccessful.")
+			//		break outerloop
+			//	}
+			//	winclippy := func(s string) {
+			//		//cmd := exec.Command("c:/Program Files/JPSoft/tcmd22/tcc.exe", "-C", "echo", s, ">clip:")
+			//		cmd := exec.Command(comspec, "-C", "echo", s, ">clip:")
+			//		cmd.Stdout = os.Stdout
+			//		cmd.Run()
+			//		ss = append(ss, fmt.Sprintf(" Sent %s to %s.", s, comspec))
+			//	}
+			//	winclippy(s)
+			//}
+
+		case 530: // FROMCLIP, now in platform specific code
 			PushMatrixStacks()
 			LastX = Stack[X]
-			w := bytes.NewBuffer([]byte{}) // From "Go Standard Library Cookbook" as referenced above.
-			if runtime.GOOS == "linux" {
-				cmdfromclip := exec.Command("xclip", "-o")
-				cmdfromclip.Stdout = w
-				cmdfromclip.Run()
-				str := w.String()
-				s := fmt.Sprintf(" Received %s from xclip.", str)
-				str = strings.ReplaceAll(str, "\n", "")
-				str = strings.ReplaceAll(str, "\r", "")
-				str = strings.ReplaceAll(str, ",", "")
-				str = strings.ReplaceAll(str, " ", "")
-				s = s + fmt.Sprintf("  After removing all commas and spaces it becomes %s.", str)
-				ss = append(ss, s)
-				R, err := strconv.ParseFloat(str, 64)
-				if err != nil {
-					ss = append(ss, fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored."))
-				} else {
-					PUSHX(R)
-				}
-			} else if runtime.GOOS == "windows" {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if !ok {
-					ss = append(ss, " Environment does not have ComSpec entry.  FromClip unsuccessful.")
-					break outerloop
-				}
-
-				cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
-				cmdfromclip.Stdout = w
-				cmdfromclip.Run()
-				lines := w.String()
-				s := fmt.Sprint(" Received ", lines, "from ", comspec)
-				linessplit := strings.Split(lines, "\n")
-				str := strings.ReplaceAll(linessplit[1], "\"", "")
-				str = strings.ReplaceAll(str, "\n", "")
-				str = strings.ReplaceAll(str, "\r", "")
-				str = strings.ReplaceAll(str, ",", "")
-				str = strings.ReplaceAll(str, " ", "")
-				s = s + fmt.Sprintln(", after post processing the string becomes", str)
-				ss = append(ss, s)
-				R, err := strconv.ParseFloat(str, 64)
-				if err != nil {
-					ss = append(ss, fmt.Sprintln(" fromclip", err, ".  Value ignored."))
-				} else {
-					PUSHX(R)
-				}
+			f, msg, err := fromClip()
+			if err == nil {
+				PUSHX(f)
+			} else {
+				msg = fmt.Sprintf("%s  Error fromClip is %v.", msg, err)
 			}
+			ss = append(ss, msg)
+
+			//w := bytes.NewBuffer([]byte{}) // From "Go Standard Library Cookbook" as referenced above.
+			//if runtime.GOOS == "linux" {
+			//	cmdfromclip := exec.Command("xclip", "-o")
+			//	cmdfromclip.Stdout = w
+			//	cmdfromclip.Run()
+			//	str := w.String()
+			//	s := fmt.Sprintf(" Received %s from xclip.", str)
+			//	str = strings.ReplaceAll(str, "\n", "")
+			//	str = strings.ReplaceAll(str, "\r", "")
+			//	str = strings.ReplaceAll(str, ",", "")
+			//	str = strings.ReplaceAll(str, " ", "")
+			//	s = s + fmt.Sprintf("  After removing all commas and spaces it becomes %s.", str)
+			//	ss = append(ss, s)
+			//	R, err := strconv.ParseFloat(str, 64)
+			//	if err != nil {
+			//		ss = append(ss, fmt.Sprintln(" fromclip on linux conversion returned error", err, ".  Value ignored."))
+			//	} else {
+			//		PUSHX(R)
+			//	}
+			//} else if runtime.GOOS == "windows" {
+			//	comspec, ok := os.LookupEnv("ComSpec")
+			//	if !ok {
+			//		ss = append(ss, " Environment does not have ComSpec entry.  FromClip unsuccessful.")
+			//		break outerloop
+			//	}
+			//
+			//	cmdfromclip := exec.Command(comspec, "-C", "echo", "%@clip[0]")
+			//	cmdfromclip.Stdout = w
+			//	cmdfromclip.Run()
+			//	lines := w.String()
+			//	s := fmt.Sprint(" Received ", lines, "from ", comspec)
+			//	linessplit := strings.Split(lines, "\n")
+			//	str := strings.ReplaceAll(linessplit[1], "\"", "")
+			//	str = strings.ReplaceAll(str, "\n", "")
+			//	str = strings.ReplaceAll(str, "\r", "")
+			//	str = strings.ReplaceAll(str, ",", "")
+			//	str = strings.ReplaceAll(str, " ", "")
+			//	s = s + fmt.Sprintln(", after post processing the string becomes", str)
+			//	ss = append(ss, s)
+			//	R, err := strconv.ParseFloat(str, 64)
+			//	if err != nil {
+			//		ss = append(ss, fmt.Sprintln(" fromclip", err, ".  Value ignored."))
+			//	} else {
+			//		PUSHX(R)
+			//	}
+			//}
 
 		case 540: // lb2g = 453.59238
 			r := READX() * lb2g
