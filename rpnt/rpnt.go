@@ -22,12 +22,11 @@ import (
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "31 Dec 2021"
-
-// runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
+// runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.  Supplanted by os.UserHomeDir.
 
 /*
-This module uses the HPCALC module to simulate an RPN type calculator.
+This module uses the HPCALC2 module to simulate an RPN type calculator.
+
 REVISION HISTORY
 ----------------
  1 Dec 89 -- Changed prompt.
@@ -121,7 +120,10 @@ REVISION HISTORY
 17 Jun 21 -- Converted to modules, and added the stuff I've learned over the last 4 months.
 24 Jul 21 -- tcell v2 is now imported.
 31 Dec 21 -- Decided to call it rpnt.go, and will clear out dead code.
+ 5 May 22 -- HPCALC2 now uses OS specific code to handle clipboard events.  No changes made here.
 */
+
+const LastAltered = "5 May 2022"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 

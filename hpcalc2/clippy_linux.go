@@ -29,7 +29,7 @@ func fromClip() (float64, string, error) {
 	s = strings.ReplaceAll(s, "\r", "")
 	s = strings.ReplaceAll(s, ",", "")
 	s = strings.ReplaceAll(s, " ", "")
-	msg := fmt.Sprintf(" Received %s from xclip.  After removing cleaning it up it became %s.", str, s)
+	msg := fmt.Sprintf(" Received %q from xclip.  After cleaning it up it becomes %q.", str, s)
 	f, err := strconv.ParseFloat(str, 64)
 	return f, msg, err
 }

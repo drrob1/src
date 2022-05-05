@@ -14,8 +14,6 @@ import (
 	"src/tknptr"
 )
 
-const LastAlteredDate = "4 May 2022"
-
 /* (C) 1990.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
 ----------------
@@ -127,6 +125,8 @@ REVISION HISTORY
  4 May 22 -- PIOVER6 never coded, so that's now added.  And I decided to use platform specific code for toclip/fromclip, contained in clippy.go.
                And stoclip and rclclip are now synonyms for toclip and fromclip.
 */
+
+const LastAlteredDate = "5 May 2022"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -292,10 +292,10 @@ func init() {
 	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
 	//fmt.Println(" init code: fullmappedRegFilename is", fullmappedRegFilename)
 
-	mappedRegFile, err := os.Open(fullmappedRegFilename) // open for reading
-	if os.IsNotExist(err) {
+	mappedRegFile, er := os.Open(fullmappedRegFilename) // open for reading
+	if os.IsNotExist(er) {
 		mappedRegExists = false
-	} else if err != nil {
+	} else if er != nil {
 		mappedRegExists = false
 	} else {
 		mappedRegExists = true

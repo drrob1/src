@@ -1,28 +1,3 @@
-/* From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
- 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
- 8 Sep 21 -- Working as expected.  By george I think I've done it!
- 9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
-10 Sep 21 -- Adding a way to have input box get input without having to click in it.  And it works!
-13 Sep 21 -- After Andy wrote back as how to code what I want, I had already taken a stab at it.
-               Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
-16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
-17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
-19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
-29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
-30 Sep 21 -- changing function of <space>
- 1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
-11 Oct 21 -- Starting to add a pop-up modal form for register names.  This was finished the next evening.
-14 Oct 21 -- Added trim to the popup text
-21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
-               And added commas to big X display when > 10K instead of 1M.
-31 Oct 21 -- Will allow fixed, float and gen to switch output modes.  So fix will also change modes, but sigfig will not.
-               And fix, lastx both use letter X which immediately exits.  Now fixed.
- 8 Jan 22 -- Will detect File Not Found error and handle it differently than other errors.  I now know how based on "Powerful Command Line Applications in Go."
-               And will have keyTyped go back into the Entry widget.  I think it looks nicer.
-12 Feb 22 -- Going back to not have keyTyped to into the entry widget.  This allows <space> to be a delimiter.  I like that better.
-16 Mar 22 -- Removing fmt.Print calls so a terminal window doesn't appear, unless I use the -v flag.
-*/
-
 package main
 
 import (
@@ -52,7 +27,33 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const lastModified = "Mar 16, 2022"
+/* From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
+ 5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
+ 8 Sep 21 -- Working as expected.  By george I think I've done it!
+ 9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
+10 Sep 21 -- Adding a way to have input box get input without having to click in it.  And it works!
+13 Sep 21 -- After Andy wrote back as how to code what I want, I had already taken a stab at it.
+               Turns out that keyTyped func is much more complex than it needs to be.  So I left in what I had already coded, and added what Andy suggested.
+16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
+17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
+19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
+29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
+30 Sep 21 -- changing function of <space>
+ 1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
+11 Oct 21 -- Starting to add a pop-up modal form for register names.  This was finished the next evening.
+14 Oct 21 -- Added trim to the popup text
+21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
+               And added commas to big X display when > 10K instead of 1M.
+31 Oct 21 -- Will allow fixed, float and gen to switch output modes.  So fix will also change modes, but sigfig will not.
+               And fix, lastx both use letter X which immediately exits.  Now fixed.
+ 8 Jan 22 -- Will detect File Not Found error and handle it differently than other errors.  I now know how based on "Powerful Command Line Applications in Go."
+               And will have keyTyped go back into the Entry widget.  I think it looks nicer.
+12 Feb 22 -- Going back to not have keyTyped to into the entry widget.  This allows <space> to be a delimiter.  I like that better.
+16 Mar 22 -- Removing fmt.Print calls so a terminal window doesn't appear, unless I use the -v flag.
+ 5 May 22 -- HPCALC2 was changed to use OS specific code.  No changes here, though.
+*/
+
+const lastModified = "May 5, 2022"
 
 const ( // output modes
 	outputfix = iota

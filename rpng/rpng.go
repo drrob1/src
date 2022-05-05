@@ -38,8 +38,6 @@ ctfmt go-colortext/fmt
    func Println(cl ct.Color, bright bool, a ...interface{}) (n int, err error)
 */
 
-const lastAlteredDate = "23 Jun 2021"
-
 /*
 REVISION HISTORY
 ----------------
@@ -119,7 +117,10 @@ REVISION HISTORY
 16 Jun 21 -- Added os.UserHomeDir(), which became avail as of Go 1.12
 18 Jun 21 -- Now using defer hpcalc2.MapClose(), since I never liked having to include that at the bottom, for fear of forgetting.
 23 Jun 21 -- Cleaning up some code, esp w/ file processing.
+ 5 May 22 -- Changed hpcalc2 to use OS specific code.
 */
+
+const lastAlteredDate = "5 May 2022"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -161,15 +162,15 @@ func main() {
 	WindowsFlag = runtime.GOOS == "windows"
 
 	/*
-	if runtime.GOOS == "linux" {
-		HomeDir = os.Getenv("HOME")
-	} else if runtime.GOOS == "windows" {
-		HomeDir = os.Getenv("userprofile")
-		WindowsFlag = true
-	} else { // then HomeDir will be empty.
-		fmt.Println(" runtime.GOOS does not say linux or windows.  Is this a Mac?")
-	}
-	 */
+		if runtime.GOOS == "linux" {
+			HomeDir = os.Getenv("HOME")
+		} else if runtime.GOOS == "windows" {
+			HomeDir = os.Getenv("userprofile")
+			WindowsFlag = true
+		} else { // then HomeDir will be empty.
+			fmt.Println(" runtime.GOOS does not say linux or windows.  Is this a Mac?")
+		}
+	*/
 
 	fmt.Println()
 	ctfmt.Println(ct.Blue, WindowsFlag, " GOOS =", runtime.GOOS, ".  HomeDir =", HomeDir, ".  ARCH=", runtime.GOARCH,
