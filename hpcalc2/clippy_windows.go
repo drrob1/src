@@ -31,7 +31,9 @@ func fromClip() (float64, string, error) {
 		return 0, " Environment does not have ComSpec entry.  ToClip unsuccessful.", fmt.Errorf("ComSpec not found.")
 	}
 
-	w := bytes.NewBufferString("")
+	//w := bytes.NewBufferString("")
+	w := bytes.NewBuffer(make([]byte, 0, 1000)) // I'm playing now.  I believe this is better to only allocate memory once, but I don't really know.
+
 	cmd := exec.Command(comspec, "-C", "echo", "%@clip[0]")
 	cmd.Stdout = w
 	cmd.Run()
