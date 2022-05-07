@@ -123,10 +123,12 @@ REVISION HISTORY
 16 Sep 21 -- I increased the number of digits for the %g verb when output is dump'd.
  2 Nov 21 -- Adjusted dumpedfixed so that very large or very small numbers are output in general format to not mess up the display
  4 May 22 -- PIOVER6 never coded, so that's now added.  And I decided to use platform specific code for toclip/fromclip, contained in clippy.go.
-               And stoclip and rclclip are now synonyms for toclip and fromclip.
+               And stoclip and rclclip are now synonyms for toclip and fromclip.  But these only work at the command line,
+               as sto and rcl are processed by rpng and rpnf without passing them to HPCALC2.
+ 7 May 22 -- Played a bit in clippy_linux.go, where I'm using make to initialize bytes.NewBuffer().
 */
 
-const LastAlteredDate = "5 May 2022"
+const LastAlteredDate = "7 May 2022"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -512,7 +514,7 @@ func DumpStackFloat() []string {
 
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {

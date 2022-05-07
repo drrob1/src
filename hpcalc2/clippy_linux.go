@@ -20,8 +20,9 @@ func toClip(f float64) string {
 }
 
 func fromClip() (float64, string, error) {
-	w := bytes.NewBuffer([]byte{})
-	cmd := exec.Command("xclip", "-o") // that an oh flag
+	// w := bytes.NewBuffer([]byte{})  Now I'm playing
+	w := bytes.NewBuffer(make([]byte, 0, 1000)) // Now I'm playing
+	cmd := exec.Command("xclip", "-o")          // that an oh flag
 	cmd.Stdout = w
 	cmd.Run()
 	str := w.String()
