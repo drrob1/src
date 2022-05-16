@@ -51,9 +51,10 @@ import (
 12 Feb 22 -- Going back to not have keyTyped to into the entry widget.  This allows <space> to be a delimiter.  I like that better.
 16 Mar 22 -- Removing fmt.Print calls so a terminal window doesn't appear, unless I use the -v flag.
  5 May 22 -- HPCALC2 was changed to use OS specific code.  No changes here, though.
+16 May 22 -- Removed a superfluous select statement in Doit.  I understand concurrency better now.
 */
 
-const lastModified = "May 5, 2022"
+const lastModified = "May 16, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -96,10 +97,13 @@ const Storage2FileName = "RPNfyneStorage2.gob"
 const Storage3FileName = "RPNfyneStorage3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 
+var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
+var verboseFlag = flag.Bool("v", false, "Verbose mode enabled.")
+var screenWidth = flag.Float64("sw", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
+var screenHeight = flag.Float64("sh", 1000, "screen height for the resizze method in Doit.")
+
 func main() {
 
-	var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
-	var verboseFlag = flag.Bool("v", false, "Verbose mode enabled.")
 	flag.Parse()
 
 	if *verboseFlag {
@@ -226,9 +230,7 @@ func main() {
 func Doit() {
 	INBUF := ""
 	for { // main processing loop
-		select {
-		case INBUF = <-inbufChan: // this is blocking
-		}
+		INBUF = <-inbufChan // this is blocking
 		if len(INBUF) > 0 {
 			//                                                                                                INBUF = makesubst.MakeSubst(INBUF)
 			INBUF = makesubst.MakeReplaced(INBUF)
@@ -751,6 +753,9 @@ func populateUI() {
 	combinedColumns := container.NewHBox(leftColumn, rightColumn)
 
 	globalW.SetContent(combinedColumns)
-	globalW.Resize(fyne.Size{Width: 950, Height: 1000})
+	globalW.Resize(fyne.Size{
+		Width:  float32(*screenWidth),
+		Height: float32(*screenHeight),
+	})
 
 } // end populateUI
