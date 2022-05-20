@@ -1,4 +1,4 @@
-package main // for feqlarge.go
+package main // for feq.go
 
 import (
 	"bufio"
@@ -56,9 +56,10 @@ import (
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
   24 Mar 22 -- Adding b flag to do a byte by byte comparison but by using bufio to open both files.  Thinking this will work even on huge files.
   26 Mar 22 -- Tweaked output when the hashes don't match.
+  20 May 22 -- Want to add timing info, but here it's not easy to time them all separately, so I'll have to do it all combined.
 */
 
-const LastCompiled = "26 Mar 2022"
+const LastCompiled = "20 May 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -131,7 +132,7 @@ func main() {
 
 	if crc32CastVal1 == crc32CastVal2 {
 		if verboseFlag {
-			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.\n\n", filename1, filename2)
+			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.  \n\n", filename1, filename2)
 		} else {
 			fmt.Printf(" crc32 Castagnoli hashes are equal.\n")
 		}
@@ -171,6 +172,7 @@ func main() {
 		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, \n sha512 = %s\n\n",
 			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, time.Since(t0), sha512ValueComputedStr2)
 	}
+	fmt.Printf(" Entire run took %s\n", time.Since(t0))
 
 	// Comparing byte by byte, if requested by the b flag.
 	if byteByByteFlag {
@@ -184,7 +186,7 @@ func main() {
 
 		var matched bool
 
-		t0 := time.Now()
+		t1 := time.Now()
 
 		for {
 			b1, err1 := fReader1.ReadByte()
@@ -199,7 +201,7 @@ func main() {
 			}
 			matched = true
 		}
-		fmt.Printf(" Byte by byte comparison result is %t for %s and %s, taking %s\n", matched, filename1, filename2, time.Since(t0))
+		fmt.Printf(" Byte by byte comparison result is %t for %s and %s, taking %s\n", matched, filename1, filename2, time.Since(t1))
 	}
 
 	fmt.Println()
