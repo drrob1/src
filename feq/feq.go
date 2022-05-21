@@ -105,17 +105,23 @@ func main() {
 
 	// now to compute the Castognoli, ECMA and sha512 hashes first for file 1, then for file 2, then compare them and output results.
 
+	t1 := time.Now()
 	// first file's first.
-	t0 := time.Now()
 	crc32TableCastagnoli := crc32.MakeTable(crc32.Castagnoli)
+	t0 := time.Now()
 	crc32CastVal1 := crc32.Checksum(fileByteSlice, crc32TableCastagnoli)
+	crc32Duration := time.Since(t0)
 
 	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
+	t0 = time.Now()
 	crc64ECMAval1 := crc64.Checksum(fileByteSlice, crc64TableECMA)
+	crc64Duration := time.Since(t0)
 
 	fileByteReader := bytes.NewReader(fileByteSlice)
 	sha512hash1 := sha512.New()
+	t0 = time.Now()
 	fileSize1, er := io.Copy(sha512hash1, fileByteReader)
+	sha512Duration := time.Since(t0)
 	check(er, "sha512 hash1 io.copy err is")
 	sha512ValueComputedStr1 := hex.EncodeToString(sha512hash1.Sum(nil))
 
@@ -128,51 +134,59 @@ func main() {
 	fileByteSlice, er = os.ReadFile(filename2)
 	check(er, " Reading 2nd file error is")
 
+	t0 = time.Now()
 	crc32CastVal2 := crc32.Checksum(fileByteSlice, crc32TableCastagnoli)
+	crc32Duration += time.Since(t0) / 2
 
 	if crc32CastVal1 == crc32CastVal2 {
 		if verboseFlag {
-			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.  \n\n", filename1, filename2)
+			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.  Average time for one file is %s.  \n\n", filename1, filename2, crc32Duration.String())
 		} else {
-			fmt.Printf(" crc32 Castagnoli hashes are equal.\n")
+			fmt.Printf(" crc32 Castagnoli hashes are equal.  Average time for one file is %s.\n", crc32Duration.String())
 		}
 	} else {
-		fmt.Printf(" crc32 Castagnoli values are not equal.  File 1: %s = %x;  File 2: %s = %x\n\n", filename1, crc32CastVal1, filename2, crc32CastVal2)
+		fmt.Printf(" crc32 Castagnoli values are not equal.  File 1: %s = %x;  File 2: %s = %x.  Average time for 1 file is %s.\n\n",
+			filename1, crc32CastVal1, filename2, crc32CastVal2, crc32Duration.String())
 	}
 
 	// crc64 ECMA section
+	t0 = time.Now()
 	crc64ECMAval2 := crc64.Checksum(fileByteSlice, crc64TableECMA)
+	crc64Duration += time.Since(t0) / 2
 	if crc64ECMAval1 == crc64ECMAval2 {
 		if verboseFlag {
-			fmt.Printf(" crc64ECMA values for %s and %s are equal.\n\n", filename1, filename2)
+			fmt.Printf(" crc64ECMA values for %s and %s are equal.  Average time for 1 file is %s.\n\n", filename1, filename2, crc64Duration.String())
 		} else {
-			fmt.Printf(" crc64 ECMA values are equal.\n")
+			fmt.Printf(" crc64 ECMA values are equal.  Average time for 1 file is %s.\n", crc64Duration.String())
 		}
 	} else {
-		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n\n", filename1, crc64ECMAval1, filename2, crc64ECMAval2)
+		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.  Average time for 1 file is %s.\n\n",
+			filename1, crc64ECMAval1, filename2, crc64ECMAval2, crc64Duration.String())
 	}
 
 	// sha512 section
 	sha512hash2 := sha512.New()
 	fileByteReader = bytes.NewReader(fileByteSlice)
+	t0 = time.Now()
 	fileSize2, err := io.Copy(sha512hash2, fileByteReader)
+	sha512Duration += time.Since(t0) / 2
 	check(err, "sha512 hash2 io.copy err is")
 	sha512ValueComputedStr2 := hex.EncodeToString(sha512hash2.Sum(nil))
 	if sha512ValueComputedStr1 == sha512ValueComputedStr2 {
 		if verboseFlag {
-			fmt.Printf("sha512 results: %s equal to %s.\n", filename1, filename2)
+			fmt.Printf("sha512 results: %s equal to %s.  Average time for 1 file is %s.\n", filename1, filename2, sha512Duration.String())
 		} else {
-			fmt.Printf(" sha512 values are equal.\n")
+			fmt.Printf(" sha512 values are equal.  Average time for 1 file is %s.\n", sha512Duration.String())
 		}
 	} else {
-		fmt.Printf("sha512 results: %s NOT equal to %s.\n", filename1, filename2)
+		fmt.Printf("sha512 results: %s NOT equal to %s.  Average time for 1 file is %s.\n", filename1, filename2, sha512Duration.String())
 	}
 	if verboseFlag {
 		fmt.Printf(" file 1 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, \n sha512 = %s\n", filename1, crc32CastVal1, crc64ECMAval1, fileSize1, sha512ValueComputedStr2)
 		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, \n sha512 = %s\n\n",
 			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, time.Since(t0), sha512ValueComputedStr2)
 	}
-	fmt.Printf(" Entire run took %s\n", time.Since(t0))
+	fmt.Printf(" Entire run took %s\n", time.Since(t1))
 
 	// Comparing byte by byte, if requested by the b flag.
 	if byteByByteFlag {
@@ -186,7 +200,7 @@ func main() {
 
 		var matched bool
 
-		t1 := time.Now()
+		t2 := time.Now()
 
 		for {
 			b1, err1 := fReader1.ReadByte()
@@ -201,7 +215,7 @@ func main() {
 			}
 			matched = true
 		}
-		fmt.Printf(" Byte by byte comparison result is %t for %s and %s, taking %s\n", matched, filename1, filename2, time.Since(t1))
+		fmt.Printf(" Byte by byte comparison result is %t for %s and %s, taking %s\n", matched, filename1, filename2, time.Since(t2))
 	}
 
 	fmt.Println()
