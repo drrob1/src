@@ -1,9 +1,11 @@
 package main // for feq64.go
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"hash/crc64"
+	"io"
 	"os"
 	"runtime"
 	"time"
@@ -49,9 +51,10 @@ import (
                   I'll only use Castognoli, crc64 ECMA and sha512.  I can't do byte-by-byte because this is intended for very large files that can't both be in memory.
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
                Now called feq64.go, and will only compute crc64 ECMA checksum, in a way that only opens 1 file at a time.  And it doesn't need a bytes.Reader.
+  21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
 */
 
-const LastCompiled = "12 Mar 2022"
+const LastCompiled = "21 May 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -91,38 +94,50 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileByteSlice, err := os.ReadFile(filename1)
+	//fileByteSlice, err := os.ReadFile(filename1)  Needs too much memory if file is huge, like when > 3 or 4 GB.
+	openedFile, err := os.Open(filename1)
 	check(err, " Reading first file error is")
+	fileReader := bufio.NewReader(openedFile)
 
-	// now to compute the Castognoli, ECMA and sha512 hashes first for file 1, then for file 2, then compare them and output results.
+	// now to compute the ECMA 64 bit hash first for file 1, then for file 2, then compare them and output results.
 
 	// first file's first.
+	//crc64ECMAval1 := crc64.Checksum(fileByteSlice, crc64TableECMA)
 	t0 := time.Now()
 	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
-	crc64ECMAval1 := crc64.Checksum(fileByteSlice, crc64TableECMA)
+	crc64Hash1 := crc64.New(crc64TableECMA)
+	io.Copy(crc64Hash1, fileReader)
+	crc64ECMAval1 := crc64Hash1.Sum64()
 
 	if verboseFlag {
 		fmt.Printf(" file 1 %s: crc64 ECMA = %x, elapsed time = %s\n\n", filename1, crc64ECMAval1, time.Since(t0))
 	}
 
 	// second file's second, and then comparing the values.
-	fileByteSlice, err = os.ReadFile(filename2)
+	//fileByteSlice, err = os.ReadFile(filename2)
+	openedFile, err = os.Open(filename2)
 	check(err, " Reading 2nd file error is")
+	fileReader = bufio.NewReader(openedFile)
 
 	// crc64 ECMA section
-	crc64ECMAval2 := crc64.Checksum(fileByteSlice, crc64TableECMA)
+	//crc64ECMAval2 := crc64.Checksum(fileByteSlice, crc64TableECMA)
+	crc64Hash2 := crc64.New(crc64TableECMA)
+	io.Copy(crc64Hash2, fileReader)
+	crc64ECMAval2 := crc64Hash2.Sum64()
+
 	if crc64ECMAval1 == crc64ECMAval2 {
 		if verboseFlag {
-			fmt.Printf(" crc64ECMA values for %s and %s are equal.\n\n", filename1, filename2)
+			fmt.Printf(" crc64ECMA values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
 		} else {
-			fmt.Printf(" crc64 ECMA values are equal.\n")
+			fmt.Printf(" crc64 ECMA values are equal.  Total elapsed time is %s.\n", time.Since(t0))
 		}
 	} else {
-		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.\n\n", filename1, crc64ECMAval1, filename2, crc64ECMAval2)
+		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.  Total elapsed time is %s.\n\n",
+			filename1, crc64ECMAval1, filename2, crc64ECMAval2, time.Since(t0))
 	}
 
 	if verboseFlag {
-		fmt.Printf(" file 2 %s: crc64 ECMA = %x, total elapsed time = %s \n\n",
+		fmt.Printf(" file 2 %s: crc64 ECMA = %x, total elapsed time = %s. \n\n",
 			filename2, crc64ECMAval2, time.Since(t0))
 	}
 
