@@ -27,7 +27,7 @@ import (
   23 Apr 13 -- Fixed problem of a single line in the hashes file, that does not contain an EOL character, causes
                 an immediate return without processing of the characters just read in.
   24 Apr 13 -- Added output of which file either matches or does not match.
-  19 Sep 16 -- Finished conversion to Go, that was started 13 Sep 16.  Added the removed of '*' which is part of a std linux formated hash file.  And I forgot that
+  19 Sep 16 -- Finished conversion to Go, that was started 13 Sep 16.  Added the removal of '*' which is part of a std linux formatted hash file.  And I forgot that
                  the routine allowed either order in the file.  If the token has a '.' I assume it is a filename, else it is a hash value.
   21 Sep 16 -- Fixed the case issue in tokenize.GetToken.  Edited code here to correspond to this fix.
   25 Nov 16 -- Need to not panic when target file is not found, only panic when hash file is not found.
