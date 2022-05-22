@@ -7,17 +7,17 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"filepicker"
 	"fmt"
-	"getcommandline"
 	"hash"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
+	"src/filepicker"
+	"src/getcommandline"
+	"src/tknptr"
 	"strconv"
 	"strings"
-	"tknptr"
 )
 
 /*
@@ -44,9 +44,10 @@ import (
   27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
                  And I'm going to change from tokenize to tknptr.  Just to see if it works.
   25 Feb 21 -- Added 999 as a stop code.
+  22 May 22 -- Edited so it will now compile if needed.  But it's not needed.
 */
 
-const LastCompiled = "25 Feb 2021"
+const LastCompiled = "22 May 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -87,7 +88,10 @@ func main() {
 	// filepicker stuff.
 
 	if len(os.Args) <= 1 { // need to use filepicker
-		filenames := filepicker.GetFilenames("*.sha*")
+		filenames, err := filepicker.GetFilenames("*.sha*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from filepicker is %v.\n", err)
+		}
 		for i := 0; i < min(len(filenames), 10); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
