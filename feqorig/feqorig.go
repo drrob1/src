@@ -52,6 +52,11 @@ import (
                   Turns out that crc is much more complex than I expected.  I tried each method just to see if I could get it to work.  But only once.
   12 Mar 22 -- Adding timing info.  For a 3.5 GB file, the results on leox are:
                   Castognoli 2.4s, IEEE 3.6s, byte-by-byte 4.7s, crc64 ECMA 11.5s, sha1 20.3s, md5 28.2s, sha512 35.7s, Koopman 46.8s, sha256 52.8s.
+  22 May 22 -- Adding timing info for a 500 MB file on leox:
+                  Castognoli 190 ms, iEEE 232 ms, byte-by-byte 257 ms, crc64 616 ms, sha1 1.05 s, md5 1.49 s, sha512 1.85 s, Koopman 2.4 s, sha256 2.65 s.
+               Timing info for a 500 MB file on Win10:
+                  IEEE 1177 ms, Castognoli 145 ms, byte-by-byte 227 ms, crc64 417 ms, sha1 619 ms, sha512 1.04 s, md5 1.04 s, sha256 1.60 s, Koopman 1.72 s.
+                  It's interesting that there the order is different.  More sig figs for: sha512 1.0396545s, md5 1.0398004s.
 */
 
 const LastCompiled = "12 Mar 2022"

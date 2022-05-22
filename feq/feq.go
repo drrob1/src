@@ -57,9 +57,10 @@ import (
   24 Mar 22 -- Adding b flag to do a byte by byte comparison but by using bufio to open both files.  Thinking this will work even on huge files.
   26 Mar 22 -- Tweaked output when the hashes don't match.
   20 May 22 -- Want to add timing info, but here it's not easy to time them all separately, so I'll have to do it all combined.
+  21 May 22 -- Timing will now not be per file, but for both files.
 */
 
-const LastCompiled = "20 May 2022"
+const LastCompiled = "21 May 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -136,31 +137,31 @@ func main() {
 
 	t0 = time.Now()
 	crc32CastVal2 := crc32.Checksum(fileByteSlice, crc32TableCastagnoli)
-	crc32Duration += time.Since(t0) / 2
+	crc32Duration += time.Since(t0)
 
 	if crc32CastVal1 == crc32CastVal2 {
 		if verboseFlag {
-			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.  Average time for one file is %s.  \n\n", filename1, filename2, crc32Duration.String())
+			fmt.Printf(" crc32 Castagnoli for %s and %s are equal.  Time for both files is %s.  \n\n", filename1, filename2, crc32Duration.String())
 		} else {
-			fmt.Printf(" crc32 Castagnoli hashes are equal.  Average time for one file is %s.\n", crc32Duration.String())
+			fmt.Printf(" crc32 Castagnoli hashes are equal.  Time for both files is %s.\n", crc32Duration.String())
 		}
 	} else {
-		fmt.Printf(" crc32 Castagnoli values are not equal.  File 1: %s = %x;  File 2: %s = %x.  Average time for 1 file is %s.\n\n",
+		fmt.Printf(" crc32 Castagnoli values are not equal.  File 1: %s = %x;  File 2: %s = %x.  Time for both files is %s.\n\n",
 			filename1, crc32CastVal1, filename2, crc32CastVal2, crc32Duration.String())
 	}
 
 	// crc64 ECMA section
 	t0 = time.Now()
 	crc64ECMAval2 := crc64.Checksum(fileByteSlice, crc64TableECMA)
-	crc64Duration += time.Since(t0) / 2
+	crc64Duration += time.Since(t0)
 	if crc64ECMAval1 == crc64ECMAval2 {
 		if verboseFlag {
-			fmt.Printf(" crc64ECMA values for %s and %s are equal.  Average time for 1 file is %s.\n\n", filename1, filename2, crc64Duration.String())
+			fmt.Printf(" crc64ECMA values for %s and %s are equal.  Time for both files is %s.\n\n", filename1, filename2, crc64Duration.String())
 		} else {
-			fmt.Printf(" crc64 ECMA values are equal.  Average time for 1 file is %s.\n", crc64Duration.String())
+			fmt.Printf(" crc64 ECMA values are equal.  Time for both files is %s.\n", crc64Duration.String())
 		}
 	} else {
-		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.  Average time for 1 file is %s.\n\n",
+		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.  Time for both files is %s.\n\n",
 			filename1, crc64ECMAval1, filename2, crc64ECMAval2, crc64Duration.String())
 	}
 
@@ -169,22 +170,22 @@ func main() {
 	fileByteReader = bytes.NewReader(fileByteSlice)
 	t0 = time.Now()
 	fileSize2, err := io.Copy(sha512hash2, fileByteReader)
-	sha512Duration += time.Since(t0) / 2
+	sha512Duration += time.Since(t0)
 	check(err, "sha512 hash2 io.copy err is")
 	sha512ValueComputedStr2 := hex.EncodeToString(sha512hash2.Sum(nil))
 	if sha512ValueComputedStr1 == sha512ValueComputedStr2 {
 		if verboseFlag {
-			fmt.Printf("sha512 results: %s equal to %s.  Average time for 1 file is %s.\n", filename1, filename2, sha512Duration.String())
+			fmt.Printf("sha512 results: %s equal to %s.  Time for both files is %s.\n", filename1, filename2, sha512Duration.String())
 		} else {
-			fmt.Printf(" sha512 values are equal.  Average time for 1 file is %s.\n", sha512Duration.String())
+			fmt.Printf(" sha512 values are equal.  Time for both files is %s.\n", sha512Duration.String())
 		}
 	} else {
-		fmt.Printf("sha512 results: %s NOT equal to %s.  Average time for 1 file is %s.\n", filename1, filename2, sha512Duration.String())
+		fmt.Printf("sha512 results: %s NOT equal to %s.  Time for both files is %s.\n", filename1, filename2, sha512Duration.String())
 	}
 	if verboseFlag {
 		fmt.Printf(" file 1 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, \n sha512 = %s\n", filename1, crc32CastVal1, crc64ECMAval1, fileSize1, sha512ValueComputedStr2)
-		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, total elapsed time = %s, \n sha512 = %s\n\n",
-			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, time.Since(t0), sha512ValueComputedStr2)
+		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d,  \n sha512 = %s\n\n",
+			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, sha512ValueComputedStr2)
 	}
 	fmt.Printf(" Entire run took %s\n", time.Since(t1))
 
@@ -220,7 +221,7 @@ func main() {
 
 	fmt.Println()
 	fmt.Println()
-} // Main for feqlarge.go.
+} // Main for feq.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
