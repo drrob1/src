@@ -58,9 +58,13 @@ import (
   26 Mar 22 -- Tweaked output when the hashes don't match.
   20 May 22 -- Want to add timing info, but here it's not easy to time them all separately, so I'll have to do it all combined.
   21 May 22 -- Timing will now not be per file, but for both files.
+  26 May 22 -- Adding check for filesize and if too big, will abort.
 */
 
-const LastCompiled = "21 May 2022"
+const LastCompiled = "26 May 2022"
+
+//const tooBig = 2_000_000_000
+const tooBig = 2e9
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -98,6 +102,15 @@ func main() {
 		filename2 = flag.Arg(1)
 	} else {
 		fmt.Printf("\n Need two files on the command line to determine if they're equal.  Exiting. ")
+		os.Exit(1)
+	}
+
+	fi1, err1 := os.Stat(filename1)
+	check(err1, " Error calling Stat on file1 is")
+	fi2, err2 := os.Stat(filename2)
+	check(err2, " Error calling Stat on file2 is")
+	if fi1.Size() > tooBig || fi2.Size() > tooBig {
+		fmt.Fprintf(os.Stderr, " Either size of %s or %s or both is > %2g.  Need feq1, feq32, feq64 or feqbbb.\n\n", filename1, filename2, tooBig)
 		os.Exit(1)
 	}
 
