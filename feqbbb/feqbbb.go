@@ -53,9 +53,11 @@ import (
   21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
                   Now called feq32, to play w/ the crc32 functions.  Since I intend this for huge files (> 3 GB), I'll use a flag to determine which crc32 to use.
   24 May 22 -- Now called feqbbb, for byte by byte.  I'll read in chunks and compare them, so very large files can be handled, too.
+                 On leox, a 2.3 GB file comparison is ~1.6 s, about the same as feq32 -IEEE, and slightly slower than feq32 -cast which is ~1.4 s.
+                 Using a 10 MB buffer instead of a 1 MB buffer is slower, at ~1.9 s.  Imagine that.
 */
 
-const LastCompiled = "25 May 2022"
+const LastCompiled = "26 May 2022"
 const K = 1024
 const M = K * K
 
@@ -122,8 +124,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	buf1 := make([]byte, M) // I initially wrote this as ([]byte,0,M) so the slice was 0 bytes long.  This is what I need when using append() as in other code.
-	buf2 := make([]byte, M) // But it's completely wrong here.  The backing array of size M is irrelevant; the slice behaves as a buffer of length 0.
+	buf1 := make([]byte, 1*M) // I initially wrote this as ([]byte,0,M) so the slice was 0 bytes long.  This is what I need when using append() as in other code.
+	buf2 := make([]byte, 1*M) // But it's completely wrong here.  The backing array of size M is irrelevant; the slice behaves as a buffer of length 0.
 
 	t0 := time.Now()
 	matched := true
