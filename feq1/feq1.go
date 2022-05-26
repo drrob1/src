@@ -1,7 +1,9 @@
-package main // for feqbbb.go
+package main // for feq1.go
 
 import (
 	"bufio"
+	"crypto/sha1"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -51,15 +53,10 @@ import (
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
                Now called feq64.go, and will only compute crc64 ECMA checksum, in a way that only opens 1 file at a time.  And it doesn't need a bytes.Reader.
   21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
-                  Now called feq32, to play w/ the crc32 functions.  Since I intend this for huge files (> 3 GB), I'll use a flag to determine which crc32 to use.
-  24 May 22 -- Now called feqbbb, for byte by byte.  I'll read in chunks and compare them, so very large files can be handled, too.
-  26 May 22 -- On leox, a 2.3 GB file comparison is ~1.6 s, about the same as feq32 -IEEE, and slightly slower than feq32 -cast which is ~1.4 s.
-                 Using a 10 MB buffer instead of a 1 MB buffer is slower, at ~1.9 s.  Imagine that.
+  26 May 22 -- Now called feq1 and will only use the sha1 algorithm
 */
 
 const LastCompiled = "26 May 2022"
-const K = 1024
-const M = K * K
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -73,7 +70,7 @@ func main() {
 
 	// flag help message
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " file equal byte by byte tester, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester only using sha1, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
@@ -85,7 +82,7 @@ func main() {
 	flag.Parse()
 
 	if verboseFlag {
-		fmt.Printf("\n feqbbb File equal using byte by byte comparisons of chunks, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
+		fmt.Printf("\n feq64 File equal only using crc64 ECMA, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
 	}
 
 	if flag.NArg() == 0 {
@@ -99,86 +96,51 @@ func main() {
 		os.Exit(1)
 	}
 
-	openedFile1, err1 := os.Open(filename1)
-	check(err1, " Reading first file error is")
-	defer openedFile1.Close()
-	fi1, e1 := openedFile1.Stat()
-	if e1 != nil {
-		fmt.Fprintf(os.Stderr, " Opening %s and error is: %v.  Exiting. \n", filename1, e1)
-		os.Exit(1)
-	}
-	fileReader1 := bufio.NewReader(openedFile1)
+	openedFile, err := os.Open(filename1)
+	check(err, " Reading first file error is")
+	fileReader := bufio.NewReader(openedFile)
 
-	openedFile2, err2 := os.Open(filename2)
-	check(err2, " Reading 2nd file error is")
-	defer openedFile2.Close()
-	fi2, e2 := openedFile2.Stat()
-	if e2 != nil {
-		fmt.Fprintf(os.Stderr, " Opening %s and error is %v.  Exiting.\n", filename2, e2)
-		os.Exit(1)
-	}
-	fileReader2 := bufio.NewReader(openedFile2)
+	// now to compute the sha1 hash first for file 1, then for file 2, then compare them and output results.
 
-	if fi1.Size() != fi2.Size() {
-		fmt.Printf(" Files not equal as their sizes are not equal.  %s size is %d, and %s size is %d.\n", filename1, fi1.Size(), filename2, fi2.Size())
-		os.Exit(1)
-	}
-
-	buf1 := make([]byte, 1*M) // I initially wrote this as ([]byte,0,M) so the slice was 0 bytes long.  This is what I need when using append() as in other code.
-	buf2 := make([]byte, 1*M) // But it's completely wrong here.  The backing array of size M is irrelevant; the slice behaves as a buffer of length 0.
-
+	// first file's first.
 	t0 := time.Now()
-	matched := true
+	sha1Hash1 := sha1.New()
+	io.Copy(sha1Hash1, fileReader)
+	sha1val1 := sha1Hash1.Sum(nil)
+	sha1Str1 := hex.EncodeToString(sha1val1)
 
-	var counter int
+	if verboseFlag {
+		fmt.Printf(" file 1 %s, sha1 = \n%x \n%s, elapsed time so far = %s\n\n", filename1, sha1val1, sha1Str1, time.Since(t0))
+	}
 
-outerLoop:
-	for { //outer loop to refill the buffers
-		n1, er1 := fileReader1.Read(buf1)
-		n2, er2 := fileReader2.Read(buf2)
-		counter++
-		if er1 != nil || er2 != nil {
-			if er1 == io.EOF || er2 == io.EOF {
-				break outerLoop
-			}
-			fmt.Fprintf(os.Stderr, " File read errors.  %s err is %v, %s err is %v\n\n", filename1, er1, filename2, er2)
-			break outerLoop
-		}
-		if n1 != n2 { // should never happen.  If file sizes are different should be caught above by the stat calls.
-			matched = false
-			fmt.Printf(" n1 is %d, n2 is %d\n", n1, n2)
-			break outerLoop
-		}
-		if n1 == 0 || n2 == 0 { // I don't know if this will ever happen.
-			break outerLoop
-		}
+	// second file's second, and then comparing the values.
+	//fileByteSlice, err = os.ReadFile(filename2)
+	openedFile, err = os.Open(filename2)
+	check(err, " Reading 2nd file error is")
+	fileReader = bufio.NewReader(openedFile)
 
-		for i := range buf1 {
-			if buf1[i] != buf2[i] {
-				matched = false
-				fmt.Printf(" First mismatching character is at position %d in loop %d.\n", i, counter)
-				if verboseFlag {
-					fmt.Printf(" The mismatched characters are %c in %s, and %c in %s.\n", buf1[i], filename1, buf2[i], filename2)
-				}
-				break outerLoop
-			}
+	sha1Hash2 := sha1.New()
+	io.Copy(sha1Hash2, fileReader)
+	sha1val2 := sha1Hash2.Sum(nil)
+	sha1Str2 := hex.EncodeToString(sha1val2)
+
+	if sha1Str1 == sha1Str2 {
+		if verboseFlag {
+			fmt.Printf(" Sha1 values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
+		} else {
+			fmt.Printf(" sha1values are equal.  Total elapsed time is %s.\n", time.Since(t0))
 		}
+	} else {
+		fmt.Printf(" Sha1 for the files are not equal.  %s = %x, %s = %x.  Total elapsed time is %s.\n\n",
+			filename1, sha1val1, filename2, sha1val2, time.Since(t0))
 	}
 
 	if verboseFlag {
-		fmt.Printf(" Outer loop counter is %d.  %s and %s are ", counter, filename1, filename2)
-	} else {
-		fmt.Print(" Files are ")
+		fmt.Printf(" file 2 %s, sha1 = \n%x, \n%s total elapsed time = %s. \n\n",
+			filename2, sha1val2, sha1Str2, time.Since(t0))
 	}
 
-	if matched {
-		fmt.Print("equal")
-	} else {
-		fmt.Print("NOT equal")
-	}
-	fmt.Printf(".  Elapsed time is %s\n\n", time.Since(t0))
-
-} // Main for feqbbb.go.
+} // Main for feq1.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
