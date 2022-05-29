@@ -59,12 +59,13 @@ import (
   20 May 22 -- Want to add timing info, but here it's not easy to time them all separately, so I'll have to do it all combined.
   21 May 22 -- Timing will now not be per file, but for both files.
   26 May 22 -- Adding check for filesize and if too big, will abort.
+  29 May 22 -- Fixed output message for sha512.  And made the tooBig constant smaller, now at 1 GB.
 */
 
-const LastCompiled = "26 May 2022"
+const LastCompiled = "29 May 2022"
 
 //const tooBig = 2_000_000_000
-const tooBig = 2e9
+const tooBig = 1e9
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -78,7 +79,7 @@ func main() {
 
 	// flag help message
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester for very large files, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester for files up to %.2g bytes, last modified %s, compiled with %s.\n", tooBig, LastCompiled, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
@@ -91,7 +92,7 @@ func main() {
 	flag.Parse()
 
 	if verboseFlag {
-		fmt.Printf("\n feqlarge File equal for LARGE files, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
+		fmt.Printf("\n feq file equal tester for files up to %.2g bytes, last modified %s, compiled by %s\n\n", tooBig, LastCompiled, runtime.Version())
 	}
 
 	if flag.NArg() == 0 {
@@ -196,7 +197,7 @@ func main() {
 		fmt.Printf("sha512 results: %s NOT equal to %s.  Time for both files is %s.\n", filename1, filename2, sha512Duration.String())
 	}
 	if verboseFlag {
-		fmt.Printf(" file 1 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, \n sha512 = %s\n", filename1, crc32CastVal1, crc64ECMAval1, fileSize1, sha512ValueComputedStr2)
+		fmt.Printf(" file 1 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d, \n sha512 = %s\n", filename1, crc32CastVal1, crc64ECMAval1, fileSize1, sha512ValueComputedStr1)
 		fmt.Printf(" file 2 %s: crc32 Cast = %x, crc64 ECMA = %x, filesize = %d,  \n sha512 = %s\n\n",
 			filename2, crc32CastVal2, crc64ECMAval2, fileSize2, sha512ValueComputedStr2)
 	}
