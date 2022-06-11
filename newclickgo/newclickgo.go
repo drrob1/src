@@ -22,7 +22,7 @@ import (
 
 */
 
-const lastModified = "June 10, 2022"
+const lastModified = "June 11, 2022"
 
 var verboseFlag bool
 var pid int
@@ -35,7 +35,7 @@ type pet struct {
 }
 
 func main() {
-	fmt.Printf("newclickgo is my attempt to use Go to activate a process so I can click on the screen.  Last modified %s.  Compiled by %s \n",
+	fmt.Printf("newclickgo to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s \n",
 		lastModified, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose flag")
@@ -53,17 +53,18 @@ func main() {
 	fmt.Printf(" There are %d processes found by go-ps.\n", len(processes))
 
 	for i := range processes {
-		fmt.Printf("i = %d, name = %q, PID = %d, PPID = %d.\n", i, processes[i].Executable(), processes[i].Pid(), processes[i].PPid())
+		//fmt.Printf("i = %d, name = %q, PID = %d, PPID = %d.\n", i, processes[i].Executable(), processes[i].Pid(), processes[i].PPid())
 		processNameLower := strings.ToLower(processes[i].Executable())
 		if target != "" && strings.Contains(processNameLower, target) {
 			pid = processes[i].Pid()
-			if !verboseFlag { // if verbose, show all processes even after find a match w/ target.
-				break
-			}
+			fmt.Printf(" Matching process index = %d, pid = %d, PID() = %d, name = %q\n",
+				i, pid, processes[i].Pid(), processes[i].Executable())
+			break
 		}
 	}
 
 	fmt.Printf(" Target is %q, matched pid = %d.\n", target, pid)
+	pause()
 
 	if pid != 0 { // pid == 0 when target is not found.  Don't want to activate process 0.
 		err2 := fg.Activate(pid)
@@ -100,20 +101,26 @@ func main() {
 	fmt.Printf(" Will now show you my pets.\n")
 	pause()
 
-	for _, peT := range pets {
-		fmt.Printf(" PID=%d, exe=%q, Title=%q\n", peT.pid, peT.exec, peT.title)
+	for i, peT := range pets {
+		fmt.Printf(" i=%d; pet: PID=%d, exe=%q, Title=%q; processes pid = %d, name = %q\n",
+			i, peT.pid, peT.exec, peT.title, processes[i].Pid(), processes[i].Executable())
+		if i%40 == 0 {
+			pause()
+		}
 	}
 	fmt.Printf(" There are %d pets and %d processes.\n", len(pets), len(processes))
 
 	pause()
 
 	var piD int32
-	for _, peT := range pets {
+	var index int
+	for i, peT := range pets {
 		if target != "" && (strings.Contains(peT.title, target) || strings.Contains(peT.exec, target)) {
 			piD = peT.pid
-			if !verboseFlag { // if verbose, show all processes even after find a match w/ target.
-				break
-			}
+			index = i
+			fmt.Printf(" index = %d, target = %q matches pet PID of %d.  Corresponding processes PID = %d, title = %q, name = %q\n",
+				index, target, piD, processes[i].Pid(), peT.title, peT.exec)
+			break
 		}
 	}
 
@@ -124,7 +131,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
+	pause()
 }
 
 // --------------------------------------------------------------------------------------------
