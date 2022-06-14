@@ -146,9 +146,9 @@ func main() {
 		FileSize = 0
 		WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
 
-		inputline, err := bytesbuffer.ReadString('\n')
-		inputline = strings.TrimSpace(inputline)  // probably not needed as I tokenize this, but I want to see if this works.
-		if err == io.EOF && len(inputline) == 0 { // reached EOF condition, there are no more lines to read, and no line
+		inputline, er := bytesbuffer.ReadString('\n')
+		inputline = strings.TrimSpace(inputline) // probably not needed as I tokenize this, but I want to see if this works.
+		if er == io.EOF && len(inputline) == 0 { // reached EOF condition, there are no more lines to read, and no line
 			break
 		} else if len(inputline) == 0 && err != nil {
 			fmt.Fprintln(os.Stderr, "While reading from the HashesFile:", err)
@@ -195,7 +195,7 @@ func main() {
 					continue
 				}
 			}
-			TargetFilename = (SecondToken.Str)
+			TargetFilename = SecondToken.Str
 		} // endif have filename first or hash value first
 
 		// now to compute the hash, compare them, and output results
@@ -209,7 +209,7 @@ func main() {
 			check(err, " Error opening TargetFilename.")
 		}
 
-		defer TargetFile.Close()
+		//defer TargetFile.Close()  I'm getting a warning about a resource leak w/ a defer inside a loop.  So I'm removing it.  I don't need it anyway.
 
 		if WhichHash == undetermined {
 			if hashlength == 2*sha256.Size { // 64, and the Size constant is number of bytes, not number of digits.
