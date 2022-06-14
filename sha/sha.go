@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"runtime"
@@ -50,15 +49,17 @@ import (
    8 Apr 21 -- Converted import list to module named src.  So essentially, very little has changed except for these import statements.
   13 Feb 22 -- filepicker API changed recently.  So I'm updating the code here that uses filepicker.
    9 Mar 22 -- Using package constants instead of my magic numbers.
+  13 Jun 22 -- Cleaning up some comments, from Boston's SIR 2022.  And removed unused code.  And finally removed depracated ioutil.
 */
 
-const LastCompiled = "9 Mar 2022"
+const LastCompiled = "13 June 2022"
 
-//* ************************* MAIN ***************************************************************
+// --------------------------------------- MAIN ----------------------------------------------------
 func main() {
 
-	const K = 1024
-	const M = 1024 * 1024
+	//const K = 1024
+	//const M = 1024 * 1024
+	//const ReadBufferSize = M
 
 	const (
 		undetermined = iota
@@ -68,9 +69,6 @@ func main() {
 		sha384hash
 		sha512hash
 	)
-
-	const ReadBufferSize = M
-
 	var HashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "sha512"}
 	var ans, Filename string
 	var WhichHash int
@@ -89,14 +87,14 @@ func main() {
 
 	// filepicker stuff.
 
-	if len(os.Args) <= 1 { // need to use filepicker
+	if len(os.Args) <= 1 {
 		filenames, err := filepicker.GetFilenames("*.sha*")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from filepicker is %v.  Exiting \n", err)
 			os.Exit(1)
 		}
-		for i := 0; i < min(len(filenames), 20); i++ {
-			fmt.Println("filename[", i, "] is", filenames[i])
+		for i := 0; i < min(len(filenames), 26); i++ {
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
 		n, err := fmt.Scanln(&ans)
@@ -128,21 +126,23 @@ func main() {
 
 	// Read and parse the file with the hashes.
 
-	filebyteslice := make([]byte, 0, 2000)
-	f, err := os.Open(Filename)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	//filebyteslice := make([]byte, 0, 2000)
+	//filebyteslice, err = ioutil.ReadAll(f)
 
-	filebyteslice, err = ioutil.ReadAll(f)
+	//f, err := os.Open(Filename)
+	//if err != nil {
+	//	fmt.Fprintln(os.Stderr, err)
+	//	os.Exit(1)
+	//}
+
+	filebyteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
-	for { /* to read multiple lines */
+	for { // to read multiple lines
 		FileSize = 0
 		WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
 
@@ -196,9 +196,9 @@ func main() {
 				}
 			}
 			TargetFilename = (SecondToken.Str)
-		} /* if have filename first or hash value first */
+		} // endif have filename first or hash value first
 
-		//   now to compute the hash, compare them, and output results
+		// now to compute the hash, compare them, and output results
 
 		// Create Hash Section
 		TargetFile, err := os.Open(TargetFilename)
