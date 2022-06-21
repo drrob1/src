@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	w32a "github.com/JamesHovious/w32"
 	fg "github.com/audrenbdb/goforeground"
 	"github.com/go-vgo/robotgo"
+	w32 "github.com/gonutz/w32/v2"
 	"github.com/mitchellh/go-ps"
 	"os"
 	"runtime"
@@ -14,6 +16,7 @@ import (
 	// ps "github.com/mitchellh/go-ps"
 	//"github.com/lxn/win"  I can't get this to be useful.
 	//w32 "github.com/gonutz/w32/v2"  I also can't get this to be useful.
+	//w32a "github.com/JamesHovious/w32"
 )
 
 /*
@@ -26,7 +29,7 @@ import (
                  the command line params appear in the title.
 */
 
-const lastModified = "June 18, 2022"
+const lastModified = "June 20, 2022"
 
 var verboseFlag, suppressFlag bool
 var pidProcess int
@@ -43,7 +46,7 @@ type pet struct {
 }
 
 func main() {
-	fmt.Printf("newclickgo to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
+	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
 		lastModified, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose flag")
@@ -120,15 +123,14 @@ func main() {
 		//fmt.Printf(" after piD = processes[i].Pid(), before robotgo.GetTitle(pid32)\n")
 		title = robotgo.GetTitle(pid32) //this errored out on linux.
 		//title = robotgo.GetTitle(ids[i])  Not sure yet which one to use.
-
 		//if pause(4) {
 		//	os.Exit(1)
 		//}
-
 		//if i >= len(ids) {
 		//	fmt.Printf(" i = %d, len(ids) = %d, so will break out of this loop.\n", i, len(ids))
 		//	break
 		//}
+
 		apet := pet{ // meaning a pet
 			pid:   pid,
 			pid32: pid32,
@@ -243,6 +245,116 @@ func main() {
 			}
 		}
 	}
+
+	fmt.Printf(" Found %d processes, %d id and %d nps\n", len(processes), len(ids), len(nps))
+
+	// w32 section
+
+	fmt.Printf("\n w32 section\n")
+	if pause0() {
+		os.Exit(0)
+	}
+	fmt.Printf(" Now to use w32.FindWindow\n")
+
+	target = "*" + target + "*"
+	//hwnd := w32.FindWindow("", processes[indx].Executable())  doesn't work
+	hwnd := w32.FindWindow("MDIClient", target)
+	fmt.Printf(" indx=%d, processes[%d].pid=%d, ppid=%d, exec name=%q, target=%q, MDIClient hwnd=%d\n", indx, indx,
+		processes[indx].Pid(), processes[indx].PPid(), processes[indx].Executable(), target, hwnd)
+
+	if hwnd > 0 {
+		rslt := w32.SetFocus(hwnd)
+		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+	}
+
+	hwnd = w32.FindWindow("", target)
+	fmt.Printf(" target=%q, empty class hwnd=%d\n", target, hwnd)
+
+	if hwnd > 0 {
+		rslt := w32.SetFocus(hwnd)
+		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+	}
+
+	hwnd = w32.FindWindow("*", target)
+	fmt.Printf(" target=%q, * hwnd=%d\n", target, hwnd)
+
+	if hwnd > 0 {
+		rslt := w32.SetFocus(hwnd)
+		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+	}
+
+	hwnd = w32.FindWindow("*lient*", target) // covers Client and client
+	fmt.Printf(" target=%q, *lient* hwnd=%d\n", target, hwnd)
+
+	if hwnd > 0 {
+		rslt := w32.SetFocus(hwnd)
+		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+	}
+
+	if pause0() {
+		os.Exit(0)
+	}
+
+	var classString string
+	hwnd2 := w32a.FindWindowS(&classString, &target)
+	fmt.Printf(" w32a.FindWindowS empty class, target=%q, hwnd2=%v\n", target, hwnd2)
+
+	classString = "*"
+	hwnd2 = w32a.FindWindowS(&classString, &target)
+	fmt.Printf(" w32a.FindWindowS '*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+
+	classString = "*lient*"
+	hwnd2 = w32a.FindWindowS(&classString, &target)
+	fmt.Printf(" w32a.FindWindowS '*lient*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+
+	classString = "*lass*"
+	hwnd2 = w32a.FindWindowS(&classString, &target)
+	fmt.Printf(" w32a.FindWindowS '*lass*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+
+	if pause0() {
+		os.Exit(0)
+	}
+
+	foreground := w32.GetForegroundWindow()
+	focus := w32.GetFocus()
+	fmt.Printf(" ForegroundWindow()=%v, Getfocus() = %v\n", foreground, focus)
+	fmt.Printf(" if focus > 0, About to setfocus on %d\n", focus)
+	if pause(14) {
+		os.Exit(0)
+	}
+	if focus > 0 {
+		result := w32.SetFocus(focus)
+		fmt.Printf(" result from setfocus(%v) is %v\n", focus, result)
+	}
+
+	fmt.Printf(" if > 0, about to setfocus on foregroundwindow of %v\n", foreground)
+	if pause0() {
+		os.Exit(0)
+	}
+	if foreground > 0 {
+		result := w32.SetFocus(foreground)
+		fmt.Printf(" result after setfocus on %v is %v\n", foreground, result)
+	}
+
+	fmt.Printf(" about to use hardcoded string firefox\n")
+	if pause0() {
+		os.Exit(0)
+	}
+	hwnd = w32.FindWindow("MDIClient", "*firefox*")
+	fmt.Printf(" After FindWindow on firefox.  hwnd = %v\n", hwnd)
+	if hwnd > 0 {
+		rslt := w32.SetFocus(hwnd)
+		fmt.Printf(" after setfocus on firefox.  Rslt = %v\n", rslt)
+	}
+	fmt.Printf(" after possible attempt on setfocus firefox.  Will now try vlc\n")
+	hwnd = w32.FindWindow("MDIClient", "*vlc*")
+	fmt.Printf(" After FindWindow on vlc, hwnd = %v\n", hwnd)
+	if hwnd > 0 {
+		result := w32.SetFocus(hwnd)
+		fmt.Printf(" After setfocus on vlc.  Result = %v\n", result)
+	}
+	fmt.Printf(" done.\n")
+	// hardcoded "firefox" returned 0, but "hardcoded" vlc returned hwnd=1049536.  Maybe I have to use more asterisks.
 }
 
 // --------------------------------------------------------------------------------------------
@@ -252,6 +364,17 @@ func pause(n int) bool {
 	fmt.Print(" Pausing ", n, ".  Hit <enter> to continue.  Or 'n' to exit  ")
 	scanner.Scan()
 	if strings.ToLower(scanner.Text()) == "n" {
+		return true
+	}
+	return false
+}
+
+func pause0() bool {
+	fmt.Print(" Pausing.  Hit <enter> to continue.  Or 'n' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.Contains(ans, "n") {
 		return true
 	}
 	return false
@@ -293,7 +416,18 @@ ReadAll() (string, error)  -- read from clipboard
 WriteAll(text string) error -- write to clipboard
 
 
-
+go get github.com/gonutz/w32/v2
+func FindWindow(className, windowName string) HWND {
+	var class, window uintptr
+	if className != "" {
+		class = uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(className)))
+	}
+	if windowName != "" {
+		window = uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(windowName)))
+	}
+	ret, _, _ := findWindow.Call(class, window)
+	return HWND(ret)
+}
 
 
 
