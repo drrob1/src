@@ -29,9 +29,9 @@ import (
                  the command line params appear in the title.
 */
 
-const lastModified = "June 20, 2022"
+const lastModified = "June 21, 2022"
 
-var verboseFlag, suppressFlag bool
+var verboseFlag, suppressFlag, skipFlag bool
 var pidProcess int
 var target string
 
@@ -52,6 +52,7 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose flag")
 	flag.BoolVar(&suppressFlag, "suppress", false, " Suppress output of non-blank titles")
 	//flag.StringVar(&target, "target", "", " Process name search target")  Will use the environment string TARGET so this doesn't appear in the title.
+	flag.BoolVar(&skipFlag, "skip", false, "Skip to w32 section")
 	flag.Parse()
 
 	target = os.Getenv("TARGET")
@@ -69,7 +70,7 @@ func main() {
 	//pause(1)
 
 	var indx int
-	if target != "" { // only look to match a target if there is one.
+	if target != "" && !skipFlag { // only look to match a target if there is one.
 		for i := range processes {
 			//fmt.Printf("i = %d, name = %q, PID = %d, PPID = %d.\n", i, processes[i].Executable(), processes[i].Pid(), processes[i].PPid())
 			processNameLower := strings.ToLower(processes[i].Executable())
@@ -153,12 +154,17 @@ func main() {
 	//name, _ := robotgo.FindName(ids[100])  random test I made up, but don't need anymore.
 	//fmt.Printf(" robotgo GetTitle for id[%d], title is %q, and name is %q\n", ids[100], robotgo.GetTitle(ids[100]), name)
 
-	fmt.Printf(" Will now show you my pets.\n")
+	if !skipFlag {
+		fmt.Printf(" Will now show you my pets.\n")
+	}
 	if pause(6) {
 		os.Exit(0)
 	}
 
 	for i, peT := range pspets {
+		if skipFlag {
+			break
+		}
 		if suppressFlag && peT.title == "" { // skip empty titles
 			continue
 		}
@@ -177,6 +183,9 @@ func main() {
 	}
 
 	for i, id := range ids {
+		if skipFlag {
+			break
+		}
 		if suppressFlag && robotgo.GetTitle(id) == "" {
 			continue
 		}
@@ -199,6 +208,9 @@ func main() {
 	var piD32 int32
 	var index int
 	for i, peT := range pspets {
+		if skipFlag {
+			break
+		}
 		//if target != "" && (strings.Contains(peT.title, target) || strings.Contains(peT.exec, target)) {
 		//if target != "" && strings.Contains(peT.titleLower, target) { // only wanted to compare against the title, but this doesn't work as hoped.
 		if target != "" && strings.Contains(peT.execLower, target) {
@@ -230,6 +242,9 @@ func main() {
 	}
 	fmt.Printf(" robotgo.Process found %d of nps.\n", len(nps))
 	for i, np := range nps {
+		if skipFlag {
+			break
+		}
 		if suppressFlag && robotgo.GetTitle(np.Pid) == "" {
 			continue
 		}
@@ -254,107 +269,139 @@ func main() {
 	if pause0() {
 		os.Exit(0)
 	}
-	fmt.Printf(" Now to use w32.FindWindow\n")
 
-	target = "*" + target + "*"
-	//hwnd := w32.FindWindow("", processes[indx].Executable())  doesn't work
-	hwnd := w32.FindWindow("MDIClient", target)
-	fmt.Printf(" indx=%d, processes[%d].pid=%d, ppid=%d, exec name=%q, target=%q, MDIClient hwnd=%d\n", indx, indx,
-		processes[indx].Pid(), processes[indx].PPid(), processes[indx].Executable(), target, hwnd)
+	if skipFlag {
+		fmt.Printf(" Now to use w32.FindWindow\n")
 
-	if hwnd > 0 {
-		rslt := w32.SetFocus(hwnd)
-		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
-	}
+		target = "*" + target + "*"
+		//hwnd := w32.FindWindow("", processes[indx].Executable())  doesn't work
+		hwnd := w32.FindWindow("MDIClient", target)
+		fmt.Printf(" indx=%d, processes[%d].pid=%d, ppid=%d, exec name=%q, target=%q, MDIClient hwnd=%d\n", indx, indx,
+			processes[indx].Pid(), processes[indx].PPid(), processes[indx].Executable(), target, hwnd)
 
-	hwnd = w32.FindWindow("", target)
-	fmt.Printf(" target=%q, empty class hwnd=%d\n", target, hwnd)
+		if hwnd > 0 {
+			rslt := w32.SetFocus(hwnd)
+			fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+		}
 
-	if hwnd > 0 {
-		rslt := w32.SetFocus(hwnd)
-		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
-	}
+		hwnd = w32.FindWindow("", target)
+		fmt.Printf(" target=%q, empty class hwnd=%d\n", target, hwnd)
 
-	hwnd = w32.FindWindow("*", target)
-	fmt.Printf(" target=%q, * hwnd=%d\n", target, hwnd)
+		if hwnd > 0 {
+			rslt := w32.SetFocus(hwnd)
+			fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+		}
 
-	if hwnd > 0 {
-		rslt := w32.SetFocus(hwnd)
-		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
-	}
+		hwnd = w32.FindWindow("*", target)
+		fmt.Printf(" target=%q, * hwnd=%d\n", target, hwnd)
 
-	hwnd = w32.FindWindow("*lient*", target) // covers Client and client
-	fmt.Printf(" target=%q, *lient* hwnd=%d\n", target, hwnd)
+		if hwnd > 0 {
+			rslt := w32.SetFocus(hwnd)
+			fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+		}
 
-	if hwnd > 0 {
-		rslt := w32.SetFocus(hwnd)
-		fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
-	}
+		hwnd = w32.FindWindow("*lient*", target) // covers Client and client
+		fmt.Printf(" target=%q, *lient* hwnd=%d\n", target, hwnd)
 
-	if pause0() {
-		os.Exit(0)
-	}
+		if hwnd > 0 {
+			rslt := w32.SetFocus(hwnd)
+			fmt.Printf(" after w32.SetFocus(%d), rslt = %d\n", hwnd, rslt)
+		}
 
-	var classString string
-	hwnd2 := w32a.FindWindowS(&classString, &target)
-	fmt.Printf(" w32a.FindWindowS empty class, target=%q, hwnd2=%v\n", target, hwnd2)
+		if pause0() {
+			os.Exit(0)
+		}
 
-	classString = "*"
-	hwnd2 = w32a.FindWindowS(&classString, &target)
-	fmt.Printf(" w32a.FindWindowS '*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+		var classString string
+		hwnd2 := w32a.FindWindowS(&classString, &target)
+		fmt.Printf(" w32a.FindWindowS empty class, target=%q, hwnd2=%v\n", target, hwnd2)
 
-	classString = "*lient*"
-	hwnd2 = w32a.FindWindowS(&classString, &target)
-	fmt.Printf(" w32a.FindWindowS '*lient*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+		classString = "*"
+		hwnd2 = w32a.FindWindowS(&classString, &target)
+		fmt.Printf(" w32a.FindWindowS '*' class, target=%q, hwnd2=%v\n", target, hwnd2)
 
-	classString = "*lass*"
-	hwnd2 = w32a.FindWindowS(&classString, &target)
-	fmt.Printf(" w32a.FindWindowS '*lass*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+		classString = "*lient*"
+		hwnd2 = w32a.FindWindowS(&classString, &target)
+		fmt.Printf(" w32a.FindWindowS '*lient*' class, target=%q, hwnd2=%v\n", target, hwnd2)
 
-	if pause0() {
-		os.Exit(0)
+		classString = "*lass*"
+		hwnd2 = w32a.FindWindowS(&classString, &target)
+		fmt.Printf(" w32a.FindWindowS '*lass*' class, target=%q, hwnd2=%v\n", target, hwnd2)
+
+		if pause0() {
+			os.Exit(0)
+		}
+
 	}
 
 	foreground := w32.GetForegroundWindow()
 	focus := w32.GetFocus()
 	fmt.Printf(" ForegroundWindow()=%v, Getfocus() = %v\n", foreground, focus)
-	fmt.Printf(" if focus > 0, About to setfocus on %d\n", focus)
-	if pause(14) {
-		os.Exit(0)
-	}
-	if focus > 0 {
-		result := w32.SetFocus(focus)
-		fmt.Printf(" result from setfocus(%v) is %v\n", focus, result)
-	}
+	//fmt.Printf(" if focus > 0, About to setfocus on %d\n", focus)
+	//if pause(14) {
+	//	os.Exit(0)
+	//}
+	//if focus > 0 {
+	//	result := w32.SetFocus(focus)
+	//	fmt.Printf(" result from setfocus(%v) is %v\n", focus, result)
+	//}
+	//
+	//fmt.Printf(" if > 0, about to setfocus on foregroundwindow of %v\n", foreground)
+	//if pause0() {
+	//	os.Exit(0)
+	//}
+	//if foreground > 0 {
+	//	result := w32.SetFocus(foreground)
+	//	fmt.Printf(" result after setfocus on %v is %v\n", foreground, result)
+	//}
+	//
+	//fmt.Printf(" about to use hardcoded string firefox\n")
+	//if pause0() {
+	//	os.Exit(0)
+	//}
+	//hwnd := w32.FindWindow("MDIClient", "*firefox*")
+	//fmt.Printf(" After FindWindow on firefox.  hwnd = %v\n", hwnd)
+	//if hwnd > 0 {
+	//	rslt := w32.SetFocus(hwnd)
+	//	fmt.Printf(" after setfocus on firefox.  Rslt = %v\n", rslt)
+	//}
+	//fmt.Printf(" after possible attempt on setfocus firefox.  Will now try vlc\n")
+	//hwnd = w32.FindWindow("MDIClient", "*vlc*")
+	//fmt.Printf(" After FindWindow on vlc, hwnd = %v\n", hwnd)
+	//if hwnd > 0 {
+	//	result := w32.SetFocus(hwnd)
+	//	fmt.Printf(" After setfocus on vlc.  Result = %v\n", result)
+	//}
 
-	fmt.Printf(" if > 0, about to setfocus on foregroundwindow of %v\n", foreground)
-	if pause0() {
-		os.Exit(0)
-	}
-	if foreground > 0 {
-		result := w32.SetFocus(foreground)
-		fmt.Printf(" result after setfocus on %v is %v\n", foreground, result)
-	}
+	activeWindowH := w32.GetActiveWindow() // these are of type hwnd not of type pid
+	consoleWindowH := w32.GetConsoleWindow()
+	desktopWindowH := w32.GetDesktopWindow()
+	foregroundWindowH := w32.GetForegroundWindow()
+	consoleW32a := w32a.GetConsoleWindow()
+	topWindowH := w32.GetTopWindow(foregroundWindowH)
+	fmt.Printf(" HWND for all: ActiveWindow = %d, ConsoleWindow = %d and %d, DesktopWindow = %d, ForegrndWin = %d, prev foregroundwin = %d, topwin=%d\n",
+		activeWindowH, consoleWindowH, consoleW32a, desktopWindowH, foregroundWindowH, foreground, topWindowH)
+	// ActiveWindow == 0, but the others are non-zero.
 
-	fmt.Printf(" about to use hardcoded string firefox\n")
-	if pause0() {
-		os.Exit(0)
-	}
-	hwnd = w32.FindWindow("MDIClient", "*firefox*")
-	fmt.Printf(" After FindWindow on firefox.  hwnd = %v\n", hwnd)
-	if hwnd > 0 {
-		rslt := w32.SetFocus(hwnd)
-		fmt.Printf(" after setfocus on firefox.  Rslt = %v\n", rslt)
-	}
-	fmt.Printf(" after possible attempt on setfocus firefox.  Will now try vlc\n")
-	hwnd = w32.FindWindow("MDIClient", "*vlc*")
-	fmt.Printf(" After FindWindow on vlc, hwnd = %v\n", hwnd)
-	if hwnd > 0 {
-		result := w32.SetFocus(hwnd)
-		fmt.Printf(" After setfocus on vlc.  Result = %v\n", result)
-	}
-	fmt.Printf(" done.\n")
+	fmt.Printf(" About to setfocus on foreground hwnd \n")
+	pause0()
+	returnHforegroundWH := w32.SetFocus(foregroundWindowH)
+	returncapturefore := w32.SetCapture(foregroundWindowH)
+	fmt.Printf(" hwnd returned by w32.SetFocus(foregroundWindowH=%d) = %d, returncapture = %d\n",
+		foregroundWindowH, returnHforegroundWH, returncapturefore)
+	time.Sleep(2 * time.Second)
+
+	fmt.Printf(" about to setfocus on topwindow\n")
+	returnHtopWindowH := w32.SetFocus(topWindowH)
+	returncapturetopWH := w32.SetCapture(topWindowH)
+	fmt.Printf(" hwnd returned by w32.SetFocus(topWindowH=%d) = %d, returncapture = %d\n", topWindowH, returnHtopWindowH, returncapturetopWH)
+
+	//pause0()
+
+	fmt.Printf("\n done.\n")
 	// hardcoded "firefox" returned 0, but "hardcoded" vlc returned hwnd=1049536.  Maybe I have to use more asterisks.
+	// I posted to gonuts, and was told that the FindWindow function doesn't glob at all.  And was advised to try EnumWindows
+
 }
 
 // --------------------------------------------------------------------------------------------
