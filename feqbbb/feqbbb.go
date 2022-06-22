@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
 	"os"
 	"runtime"
@@ -55,9 +57,10 @@ import (
   24 May 22 -- Now called feqbbb, for byte by byte.  I'll read in chunks and compare them, so very large files can be handled, too.
   26 May 22 -- On leox, a 2.3 GB file comparison is ~1.6 s, about the same as feq32 -IEEE, and slightly slower than feq32 -cast which is ~1.4 s.
                  Using a 10 MB buffer instead of a 1 MB buffer is slower, at ~1.9 s.  Imagine that.
+  22 Jun 22 -- Adding techni-color.
 */
 
-const LastCompiled = "26 May 2022"
+const LastCompiled = "22 June 2022"
 const K = 1024
 const M = K * K
 
@@ -120,7 +123,7 @@ func main() {
 	fileReader2 := bufio.NewReader(openedFile2)
 
 	if fi1.Size() != fi2.Size() {
-		fmt.Printf(" Files not equal as their sizes are not equal.  %s size is %d, and %s size is %d.\n", filename1, fi1.Size(), filename2, fi2.Size())
+		ctfmt.Printf(ct.Red, true, " Files not equal as their sizes are not equal.  %s size is %d, and %s size is %d.\n", filename1, fi1.Size(), filename2, fi2.Size())
 		os.Exit(1)
 	}
 
@@ -165,6 +168,7 @@ outerLoop:
 		}
 	}
 
+	winflag := runtime.GOOS == "windows"
 	if verboseFlag {
 		fmt.Printf(" Outer loop counter is %d.  %s and %s are ", counter, filename1, filename2)
 	} else {
@@ -172,9 +176,9 @@ outerLoop:
 	}
 
 	if matched {
-		fmt.Print("equal")
+		ctfmt.Print(ct.Green, winflag, "equal")
 	} else {
-		fmt.Print("NOT equal")
+		ctfmt.Print(ct.Red, winflag, "NOT equal")
 	}
 	fmt.Printf(".  Elapsed time is %s\n\n", time.Since(t0))
 

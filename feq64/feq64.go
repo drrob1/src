@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"hash/crc64"
 	"io"
 	"os"
@@ -52,9 +54,10 @@ import (
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
                Now called feq64.go, and will only compute crc64 ECMA checksum, in a way that only opens 1 file at a time.  And it doesn't need a bytes.Reader.
   21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
+  22 Jun 22 -- Now in techni-color.
 */
 
-const LastCompiled = "21 May 2022"
+const LastCompiled = "22 June 2022"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -125,14 +128,15 @@ func main() {
 	io.Copy(crc64Hash2, fileReader)
 	crc64ECMAval2 := crc64Hash2.Sum64()
 
+	winflag := runtime.GOOS == "windows"
 	if crc64ECMAval1 == crc64ECMAval2 {
 		if verboseFlag {
-			fmt.Printf(" crc64ECMA values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
+			ctfmt.Printf(ct.Green, winflag, " crc64ECMA values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
 		} else {
-			fmt.Printf(" crc64 ECMA values are equal.  Total elapsed time is %s.\n", time.Since(t0))
+			ctfmt.Printf(ct.Green, winflag, " crc64 ECMA values are equal.  Total elapsed time is %s.\n", time.Since(t0))
 		}
 	} else {
-		fmt.Printf(" crc64 ECMA for the files are not equal.  %s = %x, %s = %x.  Total elapsed time is %s.\n\n",
+		ctfmt.Printf(ct.Red, winflag, " crc64 ECMA for the files are not equal.\n %s = %x\n %s = %x\n Total elapsed time is %s.\n\n",
 			filename1, crc64ECMAval1, filename2, crc64ECMAval2, time.Since(t0))
 	}
 
