@@ -1,8 +1,8 @@
-package main // for feq1.go
+package main // for feq5.go
 
 import (
 	"bufio"
-	"crypto/sha1"
+	"crypto/sha512"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -57,6 +57,7 @@ import (
   21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
   26 May 22 -- Now called feq1 and will only use the sha1 algorithm
   22 Jun 22 -- Adding color to the output.
+                 Now called feq5 and will use sha512.
 */
 
 const LastCompiled = "22 June 2022"
@@ -86,7 +87,7 @@ func main() {
 	flag.Parse()
 
 	if verboseFlag {
-		fmt.Printf("\n feq64 File equal only using sha1, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
+		fmt.Printf("\n feq64 File equal only using crc64 ECMA, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
 	}
 
 	if flag.NArg() == 0 {
@@ -104,43 +105,42 @@ func main() {
 	check(err, " Reading first file error is")
 	fileReader := bufio.NewReader(openedFile)
 
-	// now to compute the sha1 hash first for file 1, then for file 2, then compare them and output results.
+	// now to compute the sha512 hash first for file 1, then for file 2, then compare them and output results.
 
 	// first file's first.
 	t0 := time.Now()
-	sha1Hash1 := sha1.New()
+	sha1Hash1 := sha512.New()
 	io.Copy(sha1Hash1, fileReader)
 	sha1val1 := sha1Hash1.Sum(nil)
 	sha1Str1 := hex.EncodeToString(sha1val1)
 
 	if verboseFlag {
-		fmt.Printf(" file 1 %s, sha1 = \n%x \n%s, elapsed time so far = %s\n\n", filename1, sha1val1, sha1Str1, time.Since(t0))
+		fmt.Printf(" file 1 %s, sha512 = \n%x \n%s, elapsed time so far = %s\n\n", filename1, sha1val1, sha1Str1, time.Since(t0))
 	}
 
 	// second file's second, and then comparing the values.
-	//fileByteSlice, err = os.ReadFile(filename2)
 	openedFile, err = os.Open(filename2)
 	check(err, " Reading 2nd file error is")
 	fileReader = bufio.NewReader(openedFile)
 
-	sha1Hash2 := sha1.New()
+	sha1Hash2 := sha512.New()
 	io.Copy(sha1Hash2, fileReader)
 	sha1val2 := sha1Hash2.Sum(nil)
 	sha1Str2 := hex.EncodeToString(sha1val2)
 
 	if sha1Str1 == sha1Str2 {
 		if verboseFlag {
-			ctfmt.Printf(ct.Green, winflag, " Sha1 values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
+			ctfmt.Printf(ct.Green, winflag, " Sha512 values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
 		} else {
-			ctfmt.Printf(ct.Green, winflag, " sha1 values are equal.  Total elapsed time is %s.\n", time.Since(t0))
+			ctfmt.Printf(ct.Green, winflag, " sha512 values are equal.  Total elapsed time is %s.\n", time.Since(t0))
 		}
 	} else {
-		ctfmt.Printf(ct.Red, winflag, " Sha1 for the files are not equal.\n %s = %x\n %s = %x\n Total elapsed time is %s.\n\n",
+		ctfmt.Printf(ct.Red, winflag, " Sha512 for the files are not equal.\n %s = %x\n %s = %x\n Total elapsed time is %s.\n\n",
 			filename1, sha1val1, filename2, sha1val2, time.Since(t0))
 	}
 
 	if verboseFlag {
-		fmt.Printf(" file 2 %s, sha1 = \n%x, \n%s total elapsed time = %s. \n\n",
+		fmt.Printf(" file 2 %s, sha512 = \n%x, \n%s total elapsed time = %s. \n\n",
 			filename2, sha1val2, sha1Str2, time.Since(t0))
 	}
 
