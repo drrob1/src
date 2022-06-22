@@ -140,11 +140,11 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Printf(" file 2 %s, sha1 = \n%x, \n%s total elapsed time = %s. \n\n",
+		fmt.Printf(" file 2 %s, sha256 = \n%x, \n%s total elapsed time = %s. \n\n",
 			filename2, sha1val2, sha1Str2, time.Since(t0))
 	}
 
-} // Main for feq1.go.
+} // Main for feq2.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {

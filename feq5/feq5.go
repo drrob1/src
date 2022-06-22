@@ -144,7 +144,7 @@ func main() {
 			filename2, sha1val2, sha1Str2, time.Since(t0))
 	}
 
-} // Main for feq1.go.
+} // Main for feq512.go.
 
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
