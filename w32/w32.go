@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 	// ps "github.com/mitchellh/go-ps"
 	//"github.com/lxn/win"  I can't get this to be useful.
 	//w32 "github.com/gonutz/w32/v2"  I also can't get this to be useful.
@@ -29,6 +30,22 @@ import (
 */
 
 const lastModified = "June 23, 2022"
+
+const (
+	SW_HIDE       = iota // 0 = hide window and activate another one
+	SW_ShowNormal        // 1 = activates and displays a window.  If the window is minimized or maximized, the system restores it to its original size and posn.
+	//                          App should use this when first displaying a window.
+	SW_ShowMinimized  // 2 = activate the window and display it minimized.
+	SW_ShowMaximized  // 3 = activate the window and display it maximized.
+	SW_ShowNoActivate // 4 = display window in its most recent size and position, but window is not activated.
+	SW_Show           // 5 = activate window and display it in its current size and posn.
+	SW_Minimize       // 6 = minimize window and activate the next top-level window in the Z-order.
+	SW_MinNoActive    // 7 = display the window as a minimized window, but don't activate it.
+	SW_ShowNA         // 8 = display the window in its current size and position, but don't activate it.
+	SW_Restore        // 9 = activate and display the window, and if min or max restore it to its original size and posn.
+	SW_ShowDefault    // 10 = sets the show state based on the SW_ value specified in the STARTUPINFO struct passed to the CreateProcess fcn by the pgm that started the app.
+	SW_ForceMinimize  // 11 = minimize the window even if the thread that started it is not responding.  Should only be used for windows from a different thread.
+)
 
 var verboseFlag, suppressFlag, skipFlag bool
 var pidProcess int
@@ -105,7 +122,7 @@ func main() {
 		pid := processes[i].Pid()
 		pid32 := int32(pid)
 		title = robotgo.GetTitle(pid32) //this errored out on linux.
-		apet := pet{                    // meaning a pet
+		apet := pet{ // meaning a pet
 			pid:   pid,
 			pid32: pid32,
 			//id:         ids[i],  This doesn't sync w/ processes.  I'm separating them out.
@@ -196,10 +213,10 @@ func main() {
 			ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, found, ht.className) // the type of the className is string.
 
 		ctr++
-		if ctr%2 == 0 { // every other line output an extra line.
-			fmt.Println()
-		}
-		if ctr%20 == 0 && ctr > 0 {
+		//if ctr%2 == 0 { // every other line output an extra line.
+		//	fmt.Println()
+		//}
+		if ctr%10 == 0 && ctr > 0 {
 			if pause0() {
 				os.Exit(0)
 			}
@@ -208,13 +225,20 @@ func main() {
 		if found {
 			fmt.Printf(" about to setforeground for the found window")
 			if pause(true) {
-				w32.ShowWindowAsync(hwnd, 0)
+				ok5 := w32.ShowWindow(hwnd, SW_HIDE)
+				time.Sleep(10 * time.Millisecond)
+				ok2 := w32.ShowWindow(hwnd, SW_ShowNormal)
+				time.Sleep(10 * time.Millisecond)
+				ok3 := w32.ShowWindow(hwnd, SW_Minimize)
+				time.Sleep(10 * time.Millisecond)
+				ok4 := w32.ShowWindow(hwnd, SW_Show)
+				fmt.Printf(" ShowWindow hide returned %t, Normal returned %t, Min returned %t, and Show returned %t.\n", ok5, ok2, ok3, ok4)
+
 				//ok2 := w32.ShowWindowAsync(hwnd, 1)
 				//ookk := w32.SetForegroundWindow(hwnd) doesn't work, returns 0
 				//enabled := w32.EnableWindow(hwnd, true)  doesn't work, returns false
 				//result := w32.SetFocus(hwnd) doesn't work.  Always returns 0.
 				//result := w32.SetCapture(hwnd) doesn't work, returns 0
-
 				//fmt.Printf(" Result from SetForegroundWindow(%d) is %t, ShowWindow result is %t, enabled = %t and captured = %v\n", hwnd, ookk, ok2, enabled, result)
 				//time.Sleep(5 * time.Second)
 			}
@@ -240,7 +264,7 @@ func pause(b bool) bool {
 	scanner.Scan()
 	if b && strings.ToLower(scanner.Text()) == "y" { // the boolean means to return true on "y"
 		return true
-	} else if strings.ToLower(scanner.Text()) == "n" { // here it returns true on "n"
+	} else if !b && strings.ToLower(scanner.Text()) == "n" { // here it returns true on "n"
 		return true
 	}
 	return false
