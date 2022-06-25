@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	w32a "github.com/JamesHovious/w32"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/go-vgo/robotgo"
 	w32 "github.com/gonutz/w32/v2"
 	"github.com/mitchellh/go-ps"
@@ -16,6 +18,8 @@ import (
 	//"github.com/lxn/win"  I can't get this to be useful.
 	//w32 "github.com/gonutz/w32/v2"  I also can't get this to be useful.
 	//w32a "github.com/JamesHovious/w32"
+	//	ct "github.com/daviddengcn/go-colortext"
+	//	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 /*
@@ -32,19 +36,18 @@ import (
 const lastModified = "June 25, 2022"
 
 const (
-	SW_HIDE       = iota // 0 = hide window and activate another one
-	SW_ShowNormal        // 1 = activates and displays a window.  If the window is minimized or maximized, the system restores it to its original size and posn.
-	//                          App should use this when first displaying a window.
-	SW_ShowMinimized  // 2 = activate the window and display it minimized.
-	SW_ShowMaximized  // 3 = activate the window and display it maximized.
-	SW_ShowNoActivate // 4 = display window in its most recent size and position, but window is not activated.
-	SW_Show           // 5 = activate window and display it in its current size and posn.
-	SW_Minimize       // 6 = minimize window and activate the next top-level window in the Z-order.
-	SW_MinNoActive    // 7 = display the window as a minimized window, but don't activate it.
-	SW_ShowNA         // 8 = display the window in its current size and position, but don't activate it.
-	SW_Restore        // 9 = activate and display the window, and if min or max restore it to its original size and posn.
-	SW_ShowDefault    // 10 = sets the show state based on the SW_ value specified in the STARTUPINFO struct passed to the CreateProcess fcn by the pgm that started the app.
-	SW_ForceMinimize  // 11 = minimize the window even if the thread that started it is not responding.  Should only be used for windows from a different thread.
+	SW_HIDE           = iota // 0 = hide window and activate another one
+	SW_ShowNormal            // 1 = activates and displays a window.  If window is min'd or max'd, restores it to its original size and posn.  App should use this when 1st showing window.
+	SW_ShowMinimized         // 2 = activate the window and display it minimized.
+	SW_ShowMaximized         // 3 = activate the window and display it maximized.
+	SW_ShowNoActivate        // 4 = display window in its most recent size and position, but window is not activated.
+	SW_Show                  // 5 = activate window and display it in its current size and posn.
+	SW_Minimize              // 6 = minimize window and activate the next top-level window in the Z-order.
+	SW_MinNoActive           // 7 = display the window as a minimized window, but don't activate it.
+	SW_ShowNA                // 8 = display the window in its current size and position, but don't activate it.
+	SW_Restore               // 9 = activate and display the window, and if min or max restore it to its original size and posn.
+	SW_ShowDefault           // 10 = sets the show state based on the SW_ value specified in the STARTUPINFO struct passed to the CreateProcess fcn by the pgm that started the app.
+	SW_ForceMinimize         // 11 = minimize the window even if the thread that started it is not responding.  Should only be used for windows from a different thread.
 )
 
 var verboseFlag, suppressFlag, skipFlag bool
@@ -184,9 +187,6 @@ func main() {
 	fmt.Printf(" About to start displaying hwnd retrieved by EnumWindows.\n")
 	hwndText := make([]htext, 0, 1000) // magic number I expect will be large enough.
 
-	var ctr int
-	var found bool
-
 	enumCallBack := func(hwnd w32.HWND) bool { // this fcn is what is called by EnumWindows.  Maybe that shouldn't activate a window.  I'm moving this to its own loop.
 		if hwnd == 0 {
 			return false
@@ -199,39 +199,57 @@ func main() {
 			isEnabled: w32.IsWindowEnabled(hwnd),
 			isVisible: w32.IsWindowVisible(hwnd),
 		}
+		ht.className, _ = w32.GetClassName(hwnd)
 		hwndText = append(hwndText, ht)
+		return true
+	}
+	w32.EnumWindows(enumCallBack)
+	ctfmt.Printf(ct.Green, true, " \n Found %d elements in the hwnd text slice. \n Now will find the target of %q.\n", len(hwndText), target)
+
+	pause0()
+
+	var ctr int
+	var found bool
+
+	for i, ht := range hwndText {
 		if ht.title == "" {
-			return true // skip the Printf statements
+			continue // skip the Printf statements
 		}
+
+		ctr++
+
+		fmt.Printf(" i:%d; hwnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
+			i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className) // className is of type string.
+
+		if ctr%40 == 0 && ctr > 0 {
+			if pause0() {
+				os.Exit(0)
+			}
+		}
+
 		if target != "" && strings.Contains(ht.title, target) {
 			found = true
-			ht.className, _ = w32.GetClassName(hwnd)
-
 		} else {
 			found = false
 		}
 
-		fmt.Printf(" hwnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; found is %t; className = %q\n",
-			ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, found, ht.className) // the type of the className is string.
-
-		ctr++
-
 		if found {
-			fmt.Printf(" about to setforeground for the found window")
+			ctfmt.Printf(ct.Yellow, true, " window is found.\n")
+			hWnd := ht.h
 			if pause(true) {
-				ok5 := w32.ShowWindow(hwnd, SW_HIDE)
+				ok5 := false //w32.ShowWindow(hWnd, SW_HIDE)
+				//time.Sleep(10 * time.Millisecond)
+				ok2 := w32.ShowWindow(hWnd, SW_ShowNormal)
 				time.Sleep(10 * time.Millisecond)
-				ok2 := w32.ShowWindow(hwnd, SW_ShowNormal)
+				ok3 := w32.ShowWindow(hWnd, SW_Minimize)
 				time.Sleep(10 * time.Millisecond)
-				ok3 := w32.ShowWindow(hwnd, SW_Minimize)
+				ok4 := w32.ShowWindow(hWnd, SW_Show)
 				time.Sleep(10 * time.Millisecond)
-				ok4 := w32.ShowWindow(hwnd, SW_Show)
+				ok6 := w32.ShowWindow(hWnd, SW_Restore)
 				time.Sleep(10 * time.Millisecond)
-				ok6 := w32.ShowWindow(hwnd, SW_Restore)
-				time.Sleep(10 * time.Millisecond)
-				ok7 := w32.SetForegroundWindow(hwnd)
-				fmt.Printf(" hwnd=%d, ShowWindow hide = %t, Normal = %t, Min = %t, Show = %t, Restore = %t and setforegroundwindow = %t.\n",
-					hwnd, ok5, ok2, ok3, ok4, ok6, ok7)
+				ok7 := w32.SetForegroundWindow(hWnd)
+				fmt.Printf(" hwnd[%d]=%d, ShowWindow hide = %t, Normal = %t, Min = %t, Show = %t, Restore = %t and setforegroundwindow = %t.\n",
+					i, hWnd, ok5, ok2, ok3, ok4, ok6, ok7)
 
 				//ok2 := w32.ShowWindowAsync(hwnd, 1)
 				//ookk := w32.SetForegroundWindow(hwnd) doesn't work, returns 0
@@ -242,21 +260,8 @@ func main() {
 				//time.Sleep(5 * time.Second)
 			}
 		}
-		//if ctr%2 == 0 { // every other line output an extra line.
-		//	fmt.Println()
-		//}
-		if ctr%10 == 0 && ctr > 0 {
-			if pause0() {
-				os.Exit(0)
-			}
-		}
 
-		return true
 	}
-	w32.EnumWindows(enumCallBack)
-	fmt.Printf(" \n Found %d elements in the hwnd text slice, and %d of them have a title. \n", len(hwndText), ctr)
-
-	pause0()
 
 }
 
