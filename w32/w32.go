@@ -29,7 +29,7 @@ import (
   23 Jun 22 -- Now called w32, because I'm going to focus just on those routines.  So far, I can't get the other routines to work.
 */
 
-const lastModified = "June 23, 2022"
+const lastModified = "June 25, 2022"
 
 const (
 	SW_HIDE       = iota // 0 = hide window and activate another one
@@ -122,7 +122,7 @@ func main() {
 		pid := processes[i].Pid()
 		pid32 := int32(pid)
 		title = robotgo.GetTitle(pid32) //this errored out on linux.
-		apet := pet{ // meaning a pet
+		apet := pet{                    // meaning a pet
 			pid:   pid,
 			pid32: pid32,
 			//id:         ids[i],  This doesn't sync w/ processes.  I'm separating them out.
@@ -183,9 +183,11 @@ func main() {
 
 	fmt.Printf(" About to start displaying hwnd retrieved by EnumWindows.\n")
 	hwndText := make([]htext, 0, 1000) // magic number I expect will be large enough.
+
 	var ctr int
 	var found bool
-	enumCallBack := func(hwnd w32.HWND) bool {
+
+	enumCallBack := func(hwnd w32.HWND) bool { // this fcn is what is called by EnumWindows.  Maybe that shouldn't activate a window.  I'm moving this to its own loop.
 		if hwnd == 0 {
 			return false
 		}
@@ -213,14 +215,6 @@ func main() {
 			ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, found, ht.className) // the type of the className is string.
 
 		ctr++
-		//if ctr%2 == 0 { // every other line output an extra line.
-		//	fmt.Println()
-		//}
-		if ctr%10 == 0 && ctr > 0 {
-			if pause0() {
-				os.Exit(0)
-			}
-		}
 
 		if found {
 			fmt.Printf(" about to setforeground for the found window")
@@ -232,7 +226,12 @@ func main() {
 				ok3 := w32.ShowWindow(hwnd, SW_Minimize)
 				time.Sleep(10 * time.Millisecond)
 				ok4 := w32.ShowWindow(hwnd, SW_Show)
-				fmt.Printf(" ShowWindow hide returned %t, Normal returned %t, Min returned %t, and Show returned %t.\n", ok5, ok2, ok3, ok4)
+				time.Sleep(10 * time.Millisecond)
+				ok6 := w32.ShowWindow(hwnd, SW_Restore)
+				time.Sleep(10 * time.Millisecond)
+				ok7 := w32.SetForegroundWindow(hwnd)
+				fmt.Printf(" hwnd=%d, ShowWindow hide = %t, Normal = %t, Min = %t, Show = %t, Restore = %t and setforegroundwindow = %t.\n",
+					hwnd, ok5, ok2, ok3, ok4, ok6, ok7)
 
 				//ok2 := w32.ShowWindowAsync(hwnd, 1)
 				//ookk := w32.SetForegroundWindow(hwnd) doesn't work, returns 0
@@ -241,6 +240,14 @@ func main() {
 				//result := w32.SetCapture(hwnd) doesn't work, returns 0
 				//fmt.Printf(" Result from SetForegroundWindow(%d) is %t, ShowWindow result is %t, enabled = %t and captured = %v\n", hwnd, ookk, ok2, enabled, result)
 				//time.Sleep(5 * time.Second)
+			}
+		}
+		//if ctr%2 == 0 { // every other line output an extra line.
+		//	fmt.Println()
+		//}
+		if ctr%10 == 0 && ctr > 0 {
+			if pause0() {
+				os.Exit(0)
 			}
 		}
 
