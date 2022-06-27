@@ -33,8 +33,9 @@ import (
   23 Jun 22 -- Now called w32, because I'm going to focus just on those routines.  So far, I can't get the other routines to work.
 */
 
-const lastModified = "June 25, 2022"
+const lastModified = "June 27, 2022"
 
+/*
 const (
 	SW_HIDE           = iota // 0 = hide window and activate another one
 	SW_ShowNormal            // 1 = activates and displays a window.  If window is min'd or max'd, restores it to its original size and posn.  App should use this when 1st showing window.
@@ -49,7 +50,7 @@ const (
 	SW_ShowDefault           // 10 = sets the show state based on the SW_ value specified in the STARTUPINFO struct passed to the CreateProcess fcn by the pgm that started the app.
 	SW_ForceMinimize         // 11 = minimize the window even if the thread that started it is not responding.  Should only be used for windows from a different thread.
 )
-
+*/
 var verboseFlag, veryVerboseFlag, suppressFlag, skipFlag bool
 var pidProcess int
 var target string
@@ -94,26 +95,26 @@ func main() {
 		fmt.Printf(" Target is %q after calling Getenv for TARGET\n", target)
 	}
 
-	if veryVerboseFlag {
-		fmt.Printf(" SW_HIDE=%d, ShowNormal=%d, ShowMin=%d, ShowMax=%d, ShowNoActv=%d, Show=%d, Min=%d, MinNoActv=%d, ShowNA=%d, Restr=%d, Deft=%d, Force=%d\n",
-			SW_HIDE, SW_ShowNormal, SW_ShowMinimized, SW_ShowMaximized, SW_ShowNoActivate, SW_Show, SW_Minimize, SW_MinNoActive, SW_ShowNA,
-			SW_Restore, SW_ShowDefault, SW_ForceMinimize)
-		/*
-			SW_HIDE           = iota // 0 = hide window and activate another one
-			SW_ShowNormal            // 1 = activates and displays a window.  If window is min'd or max'd, restores it to its original size and posn.  App should use this when 1st showing window.
-			SW_ShowMinimized         // 2 = activate the window and display it minimized.
-			SW_ShowMaximized         // 3 = activate the window and display it maximized.
-			SW_ShowNoActivate        // 4 = display window in its most recent size and position, but window is not activated.
-			SW_Show                  // 5 = activate window and display it in its current size and posn.
-			SW_Minimize              // 6 = minimize window and activate the next top-level window in the Z-order.
-			SW_MinNoActive           // 7 = display the window as a minimized window, but don't activate it.
-			SW_ShowNA                // 8 = display the window in its current size and position, but don't activate it.
-			SW_Restore               // 9 = activate and display the window, and if min or max restore it to its original size and posn.
-			SW_ShowDefault           // 10 = sets the show state based on the SW_ value specified in the STARTUPINFO struct passed to the CreateProcess fcn by the pgm that started the app.
-			SW_ForceMinimize         // 11 = minimize the window even if the thread that started it is not responding.  Should only be used for windows from a different thread.
-		*/
+	//if veryVerboseFlag {
+	//	fmt.Printf(" SW_HIDE=%d, ShowNormal=%d, ShowMin=%d, ShowMax=%d, ShowNoActv=%d, Show=%d, Min=%d, MinNoActv=%d, ShowNA=%d, Restr=%d, Deft=%d, Force=%d\n",
+	//		SW_HIDE, SW_ShowNormal, SW_ShowMinimized, SW_ShowMaximized, SW_ShowNoActivate, SW_Show, SW_Minimize, SW_MinNoActive, SW_ShowNA,
+	//		SW_Restore, SW_ShowDefault, SW_ForceMinimize)
+	/*
+		SW_HIDE           = iota // 0 = hide window and activate another one
+		SW_ShowNormal            // 1 = activates and displays a window.  If window is min'd or max'd, restores it to its original size and posn.  App should use this when 1st showing window.
+		SW_ShowMinimized         // 2 = activate the window and display it minimized.
+		SW_ShowMaximized         // 3 = activate the window and display it maximized.
+		SW_ShowNoActivate        // 4 = display window in its most recent size and position, but window is not activated.
+		SW_Show                  // 5 = activate window and display it in its current size and posn.
+		SW_Minimize              // 6 = minimize window and activate the next top-level window in the Z-order.
+		SW_MinNoActive           // 7 = display the window as a minimized window, but don't activate it.
+		SW_ShowNA                // 8 = display the window in its current size and position, but don't activate it.
+		SW_Restore               // 9 = activate and display the window, and if min or max restore it to its original size and posn.
+		SW_ShowDefault           // 10 = sets the show state based on the SW_ value specified in the STARTUPINFO struct passed to the CreateProcess fcn by the pgm that started the app.
+		SW_ForceMinimize         // 11 = minimize the window even if the thread that started it is not responding.  Should only be used for windows from a different thread.
+	*/
 
-	}
+	//}
 
 	processes, err := ps.Processes()
 	if err != nil {
@@ -150,7 +151,7 @@ func main() {
 		pid := processes[i].Pid()
 		pid32 := int32(pid)
 		title = robotgo.GetTitle(pid32) //this errored out on linux.
-		apet := pet{ // meaning a pet
+		apet := pet{                    // meaning a pet
 			pid:   pid,
 			pid32: pid32,
 			//id:         ids[i],  This doesn't sync w/ processes.  I'm separating them out.
@@ -183,7 +184,7 @@ func main() {
 	focus := w32.GetFocus()
 	fmt.Printf(" ForegroundWindow()=%v, Getfocus() = %v\n", foreground, focus)
 
-	activeWindowH := w32.GetActiveWindow()            // these are of type hwnd.  This one is zero.
+	activeWindowH := w32.GetActiveWindow()            // these are of type hwnd.  This one is zero, ie, doesn't work.
 	consoleWindowH := w32.GetConsoleWindow()          // this one is 69412 from both w32 and w32a routines
 	desktopWindowH := w32.GetDesktopWindow()          // this one is 65552
 	foregroundWindowH := w32.GetForegroundWindow()    // this one is 131244
@@ -199,8 +200,9 @@ func main() {
 	fmt.Printf(" EnumAllProcesses returned ok of %t.\n\n", ok)
 
 	computerName := w32.GetComputerName()
-	version := w32.GetVersion()
-	fmt.Printf(" ComputerName = %v, version = %v\n\n", computerName, version)
+	version := w32.GetVersion() // seems to be a number without meaning.  like decimal 1248067954, or 0x4a64000a.
+	//fmt.Printf(" ComputerName = %v, version = %v\n\n", computerName, version)
+	fmt.Printf(" ComputerName = %q, version = %x\n\n", computerName, version)
 
 	x, y, okk := w32.GetCursorPos() // this means mouse position.
 	fmt.Printf(" x = %d, y = %d, ok = %t\n\n", x, y, okk)
@@ -243,12 +245,14 @@ func main() {
 
 		ctr++
 
-		fmt.Printf(" i:%d; hwnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
-			i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className) // className is of type string.
+		if !skipFlag {
+			fmt.Printf(" i:%d; hwnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
+				i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className) // className is of type string.
 
-		if ctr%40 == 0 && ctr > 0 {
-			if pause0() {
-				os.Exit(0)
+			if ctr%40 == 0 && ctr > 0 {
+				if pause0() {
+					os.Exit(0)
+				}
 			}
 		}
 
@@ -258,30 +262,28 @@ func main() {
 			found = false
 		}
 
-		if found {
+		if found && !skipFlag {
 			ctfmt.Printf(ct.Yellow, true, " window is found.\n")
 			hWnd := ht.h
 			if pause(true) {
 				ctfmt.Printf(ct.Magenta, true, " hWnd = %d\n", hWnd)
-				//ok5 := false //w32.ShowWindow(hWnd, SW_HIDE)
-				//time.Sleep(10 * time.Millisecond)
-				ok2 := w32.ShowWindow(hWnd, SW_ShowNormal)
+				ok2 := w32.ShowWindow(hWnd, w32.SW_SHOWNORMAL)
 				if !ok2 {
 					break
 				}
 				time.Sleep(10 * time.Millisecond)
 				//ok3 := w32.ShowWindow(hWnd, SW_Minimize) this isn't working, so I'll try something else that might work.
-				ok3 := w32.ShowWindow(hWnd, SW_Restore)
+				ok3 := w32.ShowWindow(hWnd, w32.SW_RESTORE)
 				if !ok3 {
 					break
 				}
 				time.Sleep(10 * time.Millisecond)
-				ok4 := w32.ShowWindow(hWnd, SW_Show)
+				ok4 := w32.ShowWindow(hWnd, w32.SW_SHOW)
 				if !ok4 {
 					break
 				}
 				time.Sleep(10 * time.Millisecond)
-				ok6 := w32.ShowWindow(hWnd, SW_Restore)
+				ok6 := w32.ShowWindow(hWnd, w32.SW_RESTORE)
 				if !ok6 {
 					break
 				}
@@ -293,13 +295,17 @@ func main() {
 				fmt.Printf(" hwnd[%d]=%d, ShowWindow Normal = %t, Restore = %t, Show = %t, Restore = %t and setforegroundwindow = %t.\n",
 					i, hWnd, ok2, ok3, ok4, ok6, ok7)
 
-				//ok2 := w32.ShowWindowAsync(hwnd, 1)
-				//ookk := w32.SetForegroundWindow(hwnd) doesn't work, returns 0
-				//enabled := w32.EnableWindow(hwnd, true)  doesn't work, returns false
-				//result := w32.SetFocus(hwnd) doesn't work.  Always returns 0.
-				//result := w32.SetCapture(hwnd) doesn't work, returns 0
-				//fmt.Printf(" Result from SetForegroundWindow(%d) is %t, ShowWindow result is %t, enabled = %t and captured = %v\n", hwnd, ookk, ok2, enabled, result)
-				//time.Sleep(5 * time.Second)
+			}
+			var uFlags, param uint
+			if ht.isVisible {
+				param = w32.SWP_NOACTIVATE
+			}
+			uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_SHOWWINDOW | param
+			w32.SetWindowPos(hWnd, w32.HWND_TOP, 0, 0, 0, 0, uFlags)
+			w32.SetForegroundWindow(hWnd)
+			fmt.Printf(" Did setWindowPos and then SetForegroundWindow.\n") // and it worked!!!!.
+			if pause0() {
+				os.Exit(0)
 			}
 		}
 	}
