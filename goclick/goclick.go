@@ -56,7 +56,6 @@ func main() {
 	target = strings.ToLower(target)
 	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
 	//replaced.Replace(target)
-	target = strings.ReplaceAll(target, "~", " ") // this will allow me to use ~ as a space in the target.
 
 	if verboseFlag {
 		fmt.Printf(" Target is %q after calling Getenv for TARGET\n", target)
@@ -86,6 +85,7 @@ func main() {
 			isEnabled: w32.IsWindowEnabled(hwnd),
 			isVisible: w32.IsWindowVisible(hwnd),
 		}
+		ht.title = strings.ReplaceAll(ht.title, " ", "~") // this will allow me to use ~ as a space in the target.  I hope.
 		ht.className, _ = w32.GetClassName(hwnd)
 		hwndText = append(hwndText, ht)
 		return true
