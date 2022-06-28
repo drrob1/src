@@ -25,13 +25,15 @@ import (
   18 Jun 22 -- Will separate the different ways of getting the pid.  They're not compatible.  And will use TARGET environment variable because
                  the command line params appear in the title.
   27 Jun 22 -- The testing version I called w32 now works, based on the help I got from Howard C. Shaw III.  Now I have to fine tune it.
-                 I'm going to remove all the PID based stuff as that didn't work anyway.  It's saved as oldgoclick, anyway.
+                 I'm going to remove all the PID based stuff as that didn't work anyway.  It's saved as oldgoclick.
                  But this will take a little while.
+  28 Jun 22 -- TARGET can use tilde squiggle character to represent a space in the title.  I use strings.ReplaceAll " " to "~" on the titles.
+                 Added noFlag to do a trial run of what matches before trying to activate it.
 */
 
-const lastModified = "June 27, 2022"
+const lastModified = "June 28, 2022"
 
-var verboseFlag, suppressFlag, skipFlag bool
+var verboseFlag, suppressFlag, skipFlag, noFlag bool
 var target string
 
 type htext struct {
@@ -48,8 +50,9 @@ func main() {
 		lastModified, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose flag")
-	flag.BoolVar(&suppressFlag, "suppress", false, " Suppress output of non-blank titles")
-	flag.BoolVar(&skipFlag, "skip", false, "Skip to w32 section")
+	flag.BoolVar(&suppressFlag, "suppress", false, " Suppress output of non-blank titles.  Now default behavior, so this is ignored.")
+	flag.BoolVar(&skipFlag, "skip", false, "Skip output of all hwnd's found")
+	flag.BoolVar(&noFlag, "no", false, "No activating any windows.  IE, do a trial run.")
 	flag.Parse()
 
 	target = os.Getenv("TARGET")
@@ -122,43 +125,25 @@ func main() {
 			found = false
 		}
 
-	}
-	for i, ht := range hwndText {
-		if ht.title == "" {
-			continue // skip the Printf and search
-		}
-
-		ctr++
-
-		if !skipFlag {
-			fmt.Printf(" i:%d; hwnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
-				i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className) // className is of type string.
-
-			if ctr%40 == 0 && ctr > 0 {
-				if pause0() {
-					os.Exit(0)
-				}
-			}
-		}
-
-		if target != "" && strings.Contains(ht.title, target) {
-			found = true
-		} else {
-			found = false
-		}
-
 		if found {
 			ctfmt.Printf(ct.Yellow, true, " window is found.\n")
-			hWnd := ht.h
+			ctfmt.Printf(ct.Cyan, true, " i:%d; hWnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
+				i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className)
 
-			var uFlags, param uint
-			if ht.isVisible {
-				param = w32.SWP_NOACTIVATE
+			if noFlag {
+				// I might think of something to put here.  Nothing comes to mind yet.
+			} else {
+				hWnd := ht.h
+
+				var uFlags, param uint
+				if ht.isVisible {
+					param = w32.SWP_NOACTIVATE
+				}
+				uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_SHOWWINDOW | param
+				w32.SetWindowPos(hWnd, w32.HWND_TOP, 0, 0, 0, 0, uFlags)
+				w32.SetForegroundWindow(hWnd)
+				fmt.Printf(" I did setWindowPos and then SetForegroundWindow.  I hope it works.\n") // and it worked!!!!.
 			}
-			uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_SHOWWINDOW | param
-			w32.SetWindowPos(hWnd, w32.HWND_TOP, 0, 0, 0, 0, uFlags)
-			w32.SetForegroundWindow(hWnd)
-			fmt.Printf(" I did setWindowPos and then SetForegroundWindow.  I hope it works.\n") // and it worked!!!!.
 			if pause0() {
 				os.Exit(0)
 			}
