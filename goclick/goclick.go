@@ -35,6 +35,7 @@ const lastModified = "June 28, 2022"
 
 var verboseFlag, suppressFlag, skipFlag, noFlag bool
 var target string
+var timer int
 
 type htext struct {
 	h         w32.HWND
@@ -53,6 +54,7 @@ func main() {
 	flag.BoolVar(&suppressFlag, "suppress", false, " Suppress output of non-blank titles.  Now default behavior, so this is ignored.")
 	flag.BoolVar(&skipFlag, "skip", false, "Skip output of all hwnd's found")
 	flag.BoolVar(&noFlag, "no", false, "No activating any windows.  IE, do a trial run.")
+	flag.IntVar(&timer, "t", 5, "Timer value for ShowTimer ")
 	flag.Parse()
 
 	target = os.Getenv("TARGET")
@@ -144,9 +146,11 @@ func main() {
 				w32.SetForegroundWindow(hWnd)
 				fmt.Printf(" I did setWindowPos and then SetForegroundWindow.  I hope it works.\n") // and it worked!!!!.
 			}
-			if pause0() {
-				os.Exit(0)
-			}
+			fmt.Printf(" Will now call ShowTimer w/ t=%d\n", timer)
+			//if pause0() {
+			//	os.Exit(0)
+			//}
+			showTimer(timer) // in the file called showtimer_windows.go
 		}
 	}
 }
