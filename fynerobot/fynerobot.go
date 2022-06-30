@@ -10,6 +10,7 @@ REVISION HISTORY
  3 Sep 21 -- I found on Yussi's computer (empirically) that a value of X=450 and Y=325 works well, and each row is 100 pixels lower, ie, Y += 100.
                Just one spot double-clicked did not keep Epic awake.  I have to do more like what I do w/ the take command batch file.
                Maybe 3 lines in succession, each w/ X incremented or decremented by 10, and Y incremented each time by 100 pixels.
+29 Jun 22 -- Fixed depracated MoveMouse -> Move and MouseClick -> Click.
 */
 
 package main
@@ -28,10 +29,9 @@ import (
 	"os"
 	"runtime"
 	"time"
-
 )
 
-const LastModified = "Sep 4, 2021"
+const LastModified = "June 29, 2022"
 const clickedX = 450
 const clickedY = 325
 const incrementY = 100
@@ -96,7 +96,7 @@ func main() {
 
 // ---------------------------------------------------------- changeContent ---------------------------
 func changeContent(cnvs fyne.Canvas) {
-	time.Sleep(10*time.Second)
+	time.Sleep(10 * time.Second)
 	countdowntimer := *timer
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -104,7 +104,7 @@ func changeContent(cnvs fyne.Canvas) {
 
 	for {
 		select {
-		case <- ticker.C:
+		case <-ticker.C:
 			countdowntimer--
 			timeStr := fmt.Sprintf("%d", countdowntimer)
 			globalW.SetTitle(timeStr)
@@ -121,23 +121,31 @@ func changeContent(cnvs fyne.Canvas) {
 
 				Xcol := *X
 				Yrow := *Y
-				robotgo.MoveMouse(Xcol, Yrow)
-				robotgo.MouseClick("left", true)
+				//robotgo.MoveMouse(Xcol, Yrow)  depracated
+				//robotgo.MouseClick("left", true) depracated
+				robotgo.Move(Xcol, Yrow)
+				robotgo.Click("left", true) // button, double
 				time.Sleep(500 * time.Millisecond)
 
 				Xcol += incrementX
 				Yrow += incrementY
-				robotgo.MoveMouse(Xcol, Yrow)
-				robotgo.MouseClick("left", true)
-				time.Sleep(500 * time.Millisecond)
+				//robotgo.MoveMouse(Xcol, Yrow) depracated
+				//robotgo.MouseClick("left", true) depracated
+				robotgo.Move(Xcol, Yrow)
+				robotgo.Click("left", true)
+				time.Sleep(400 * time.Millisecond) // used to be 500
 
 				Xcol -= incrementX
 				Yrow += incrementY
-				robotgo.MoveMouse(Xcol, Yrow)
-				robotgo.MouseClick("left", true)
-				time.Sleep(500 * time.Millisecond)
+				//robotgo.MoveMouse(Xcol, Yrow) depracated
+				//robotgo.MouseClick("left", true) depracated
+				robotgo.Move(Xcol, Yrow)
+				robotgo.Click("left", true)
 
-				robotgo.MoveMouse(currentX, currentY)
+				time.Sleep(300 * time.Millisecond) // used to be 500
+
+				//robotgo.MoveMouse(currentX, currentY)
+				robotgo.Move(currentX, currentY)
 			}
 
 		default:
@@ -146,6 +154,7 @@ func changeContent(cnvs fyne.Canvas) {
 		}
 	}
 }
+
 /*
 // ---------------------------------------------------------- ShowAnother ----------------------------
 func showAnother(a fyne.App) {
@@ -159,8 +168,7 @@ func showAnother(a fyne.App) {
 	win2nd.Close()
 }
 
- */
-
+*/
 
 // ------------------------------------------------------------ keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index is a global var
