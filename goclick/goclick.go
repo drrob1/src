@@ -118,12 +118,15 @@ func main() {
 	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking")
 
 	flag.Parse()
+	if allFlag { // if I want to show all matches of a TARGET, then I don't want to activate any of them.
+		noFlag = true
+	}
 
 	//var target string
 	target := os.Getenv("TARGET")
 	target = strings.ToLower(target)
 	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
-	//replaced.Replace(target)
+	//replaced.Replace(target) // but the match failed.  So I reversed it by making all spaces a '~' and can match against '~'
 
 	if verboseFlag {
 		fmt.Printf(" Target is %q after calling Getenv for TARGET\n", target)
@@ -131,15 +134,17 @@ func main() {
 
 	// w32 section
 
-	fmt.Printf("\n w32 section\n")
-	if pause0() {
-		os.Exit(0)
+	if !skipFlag {
+		fmt.Printf("\n w32 section\n")
+
+		if pause0() {
+			os.Exit(0)
+		}
 	}
 
-	fmt.Printf("\n done.\n")
+	//fmt.Printf("\n done.\n")
 
-	fmt.Printf(" About to start displaying hwnd retrieved by EnumWindows.\n")
-	hWinText = make([]htext, 0, 1000) // magic number I expect will be large enough.
+	hWinText = make([]htext, 0, 1000) // magic number I expect will be large enough.  Should be about 500 hwnd on a typical computer.
 
 	enumCallBack := func(hwnd w32.HWND) bool { // this callback fcn is used by EnumWindows to capture the hwnd and related data, esp modified window title.
 		if hwnd == 0 {
@@ -161,18 +166,22 @@ func main() {
 	w32.EnumWindows(enumCallBack)
 	ctfmt.Printf(ct.Green, true, " \n Found %d elements in the handle to window text slice. \n Now will find the target of %q.\n", len(hWinText), target)
 
-	pause0()
-
-	var ctr int
+	if !skipFlag {
+		if pause0() {
+			os.Exit(0)
+		}
+	}
 
 	for i, ht := range hWinText {
 		if skipFlag { // this is the default.  Need -skip=false to change this
 			break
 		}
+		var ctr int
 
 		if ht.title == "" {
 			continue // skip the Printf and search
 		}
+		fmt.Printf(" About to start displaying hwnd retrieved by EnumWindows.\n")
 
 		ctr++
 
@@ -191,18 +200,51 @@ func main() {
 	}
 
 	if !noFlag {
-		activateFirstWindow(target)
+		i, _ := activateFirstWindow(target)
+		if i < 0 {
+			fmt.Printf(" TARGET of %q was not matched\n\n", target)
+		}
+		time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
 		moveAndClickMouse(mouseX, mouseY)
 	}
 
+	var totalIterations int
 	if timer > 0 {
-		showTimer(timer) // in the file called showtimer_windows.go
-		fmt.Printf(" Simulating a countdown of the timer using sleep\n")
-		for i := timer; i > 0; i-- {
-			fmt.Printf(" %d \r", i)
-			time.Sleep(1 * time.Second)
+		for {
+			showTimer(timer) // in the file called showtimer_windows.go
+			_, err := os.Stat("st.flg")
+			if os.IsNotExist(err) {
+				continue // st.flg is not supposed to exist during the running of this loop.  So keep looping.
+			} else if err != nil {
+				// err is not nil, and it's not because the file doesn't exist.  Time to exit and figure this out.  This isn't supposed to happen at all.
+				fmt.Printf(" Not supposed to have an error here from os.Stat for st.flg.  Err is %v\n\n", err)
+				break // exit and figure out why this errored.
+			}
+			if err == nil { // file exists, so it's time to leave.
+				err = os.Remove("st.flg")
+				if err != nil {
+					fmt.Printf(" Error from os.Remove for st.flg is %v\n\n", err)
+				}
+				break // st.flg exists, so time to exit.\w
+			}
+			totalIterations++
+			if !noFlag { // this allows me to test the looping w/ the -all flag and nothing will activate.
+				i, _ := activateFirstWindow(target)
+				if i < 0 {
+					fmt.Printf(" TARGET of %q was not matched\n\n", target)
+				}
+				time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
+				moveAndClickMouse(mouseX, mouseY)
+			}
 		}
 	}
+	//fmt.Printf(" Simulating a countdown of the timer using sleep\n")
+	//for i := timer; i > 0; i-- {
+	//	fmt.Printf(" %d \r", i)
+	//	time.Sleep(1 * time.Second)
+	//}
+	fmt.Printf(" Completed %d iterations of activating the window with the title of %q.\n\n", totalIterations, target)
+
 }
 
 // --------------------------------------------------------------------------------------------
