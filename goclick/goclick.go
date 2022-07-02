@@ -29,9 +29,11 @@ import (
                  But this will take a little while.
   28 Jun 22 -- TARGET can use tilde squiggle character to represent a space in the title.  I use strings.ReplaceAll " " to "~" on the titles.
                  Added noFlag to do a trial run of what matches before trying to activate it.
+   1 Jul 22 -- Repeated calls to activateFirstMatchingWindow don't work, only the first call worked.  Now I have to figure out how to get repeated
+                 calls to work.  Perhaps by having another routine move the target window to the bottom of the Z-stack.
 */
 
-const lastModified = "June 30, 2022"
+const lastModified = "July 1, 2022"
 const clickedX = 450
 const clickedY = 325
 const incrementY = 100
@@ -51,7 +53,7 @@ type htext struct {
 
 var hWinText []htext
 
-func activateFirstWindow(target string) (int, htext) {
+func activateFirstMatchingWindow(target string) (int, htext) {
 	// The hWinText slice is created in main().  This finds the first match of the target and activates it.  Then it returns.
 	// This will return -1 for an error.  So far, errors are either target is empty or target not found.
 	if target == "" {
@@ -86,7 +88,7 @@ func activateFirstWindow(target string) (int, htext) {
 		}
 	}
 	return -1, htext{} // if not found, will return zero values for each.  For the htext struct that means it's an empty struct.
-} // activateFirstWindow
+} // activateFirstMatchingWindow
 
 func showAllTargetMatches(target string) { // the hWinText slice is created in main().  This finds all matchs of the target and shows it without activating them.
 	if target == "" {
@@ -104,6 +106,15 @@ func showAllTargetMatches(target string) { // the hWinText slice is created in m
 		}
 	}
 } // showAllTargetMatches
+
+func minimizeTargetMatchedWindow(indx int) { // will just use prev'ly located index into the hWinText slice.
+	var uFlags uint
+	//uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_HIDEWINDOW | w32.SWP_NOACTIVATE
+	uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_NOACTIVATE
+	hWnd := hWinText[indx].h
+	w32.SetWindowPos(hWnd, w32.HWND_BOTTOM, 0, 0, 0, 0, uFlags)
+	time.Sleep(1 * time.Second)
+}
 
 func main() {
 	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
@@ -200,21 +211,28 @@ func main() {
 	}
 
 	if !noFlag {
-		i, _ := activateFirstWindow(target)
+		i, _ := activateFirstMatchingWindow(target)
 		if i < 0 {
 			fmt.Printf(" TARGET of %q was not matched\n\n", target)
+		} else {
+			fmt.Printf(" TARGET of %q was matched with hWinText[%d]\n", target, i)
 		}
 		time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
 		moveAndClickMouse(mouseX, mouseY)
+		time.Sleep(1 * time.Second)
+		minimizeTargetMatchedWindow(i) // this routine builds in a delay of 2 sec.
 	}
 
 	var totalIterations int
+
 	if timer > 0 {
 		for {
+			totalIterations++
 			showTimer(timer) // in the file called showtimer_windows.go
 			_, err := os.Stat("st.flg")
+
 			if os.IsNotExist(err) {
-				continue // st.flg is not supposed to exist during the running of this loop.  So keep looping.
+				// st.flg is not supposed to exist during the running of this loop.  So keep looping.  But have to get to the if !noFlag sttmnt below.
 			} else if err != nil {
 				// err is not nil, and it's not because the file doesn't exist.  Time to exit and figure this out.  This isn't supposed to happen at all.
 				fmt.Printf(" Not supposed to have an error here from os.Stat for st.flg.  Err is %v\n\n", err)
@@ -227,14 +245,17 @@ func main() {
 				}
 				break // st.flg exists, so time to exit.\w
 			}
-			totalIterations++
+
 			if !noFlag { // this allows me to test the looping w/ the -all flag and nothing will activate.
-				i, _ := activateFirstWindow(target)
+				i, _ := activateFirstMatchingWindow(target)
 				if i < 0 {
 					fmt.Printf(" TARGET of %q was not matched\n\n", target)
 				}
+
 				time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
 				moveAndClickMouse(mouseX, mouseY)
+				time.Sleep(time.Second)
+				minimizeTargetMatchedWindow(i)
 			}
 		}
 	}
