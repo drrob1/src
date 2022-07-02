@@ -33,12 +33,14 @@ import (
                  calls to work.  Perhaps by having another routine move the target window to the bottom of the Z-stack.
 */
 
-const lastModified = "July 1, 2022"
-const clickedX = 450
-const clickedY = 325
+const lastModified = "July 2, 2022"
+const clickedX = 450 // default for Jamaica
+const clickedY = 325 // default for Jamaica
 const incrementY = 100
+const fhX = 348
+const fhY = 370
 
-var verboseFlag, skipFlag, noFlag, allFlag bool
+var verboseFlag, skipFlag, noFlag, allFlag, fhFlag bool
 
 var timer, mouseX, mouseY int
 
@@ -114,7 +116,7 @@ func minimizeTargetMatchedWindow(indx int) { // will just use prev'ly located in
 	hWnd := hWinText[indx].h
 	w32.SetWindowPos(hWnd, w32.HWND_BOTTOM, 0, 0, 0, 0, uFlags)
 	time.Sleep(1 * time.Second)
-}
+} // minimizeTargetMatchedWindow
 
 func main() {
 	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
@@ -127,10 +129,19 @@ func main() {
 	flag.BoolVar(&allFlag, "all", false, "Show all matches of the TARGET environment variable in the modified titles.")
 	flag.IntVar(&mouseX, "x", clickedX, "x coordinate for mouse double clicking")
 	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking")
+	flag.BoolVar(&fhFlag, "fh", false, " FH defaults instead of JH defaults")
 
 	flag.Parse()
 	if allFlag { // if I want to show all matches of a TARGET, then I don't want to activate any of them.
 		noFlag = true
+	}
+
+	if fhFlag {
+		mouseX = fhX
+		mouseY = fhY
+	}
+	if verboseFlag {
+		fmt.Printf(" X = %d, y = %d\n", mouseX, mouseY)
 	}
 
 	//var target string
