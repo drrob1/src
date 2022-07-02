@@ -110,6 +110,9 @@ func showAllTargetMatches(target string) { // the hWinText slice is created in m
 } // showAllTargetMatches
 
 func minimizeTargetMatchedWindow(indx int) { // will just use prev'ly located index into the hWinText slice.
+	if indx < 0 {
+		return // and do nothing.
+	}
 	var uFlags uint
 	//uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_HIDEWINDOW | w32.SWP_NOACTIVATE
 	uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_NOACTIVATE
@@ -311,6 +314,14 @@ func moveAndClickMouse(x, y int) {
 	oldX, oldY, ok := w32.GetCursorPos()
 	if !ok {
 		return
+	}
+	robotX, robotY := robotgo.GetMousePos()
+	if oldX != robotX || oldY != robotY {
+		fmt.Printf(" w32 and robotgo packages return different values.  w32 x = %d, robot x = %d, w32 y = %d, robot y = %d\n",
+			oldX, robotX, oldY, robotY)
+	}
+	if verboseFlag {
+		fmt.Printf(" w32 x = %d, robot x = %d, w32 y = %d, robot y = %d\n", oldX, robotX, oldY, robotY)
 	}
 	ok = w32.SetCursorPos(x, y)
 	if !ok {
