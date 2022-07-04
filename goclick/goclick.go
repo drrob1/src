@@ -7,6 +7,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/go-vgo/robotgo"
 	"github.com/gonutz/w32/v2"
+	"math/rand"
 	"os"
 	"runtime"
 	"strings"
@@ -40,7 +41,7 @@ const incrementY = 100
 const fhX = 348
 const fhY = 370
 
-var verboseFlag, skipFlag, noFlag, allFlag, fhFlag bool
+var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag bool
 
 var timer, mouseX, mouseY int
 
@@ -125,14 +126,15 @@ func main() {
 	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
 		lastModified, runtime.Version())
 
-	flag.BoolVar(&verboseFlag, "v", false, " Verbose flag")
-	flag.BoolVar(&skipFlag, "skip", true, "Skip output of all hwnd's found")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag.")
+	flag.BoolVar(&skipFlag, "skip", true, "Skip output of all hwnd's found.")
 	flag.BoolVar(&noFlag, "no", false, "No activating any windows.  IE, do a trial run.")
-	flag.IntVar(&timer, "t", 0, "Timer value for ShowTimer ")
+	flag.IntVar(&timer, "t", 0, "Timer value for ShowTimer.")
 	flag.BoolVar(&allFlag, "all", false, "Show all matches of the TARGET environment variable in the modified titles.")
-	flag.IntVar(&mouseX, "x", clickedX, "x coordinate for mouse double clicking")
-	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking")
-	flag.BoolVar(&fhFlag, "fh", false, " FH defaults instead of JH defaults")
+	flag.IntVar(&mouseX, "x", clickedX, "x coordinate for mouse double clicking.")
+	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking.")
+	flag.BoolVar(&fhFlag, "fh", false, "FH defaults instead of JH defaults.")
+	flag.BoolVar(&gofshowFlag, "g", false, "gofShowTimer to be used instead of ShowTimer written in Modula-2. ")
 
 	flag.Parse()
 	if allFlag { // if I want to show all matches of a TARGET, then I don't want to activate any of them.
@@ -147,7 +149,6 @@ func main() {
 		fmt.Printf(" X = %d, y = %d\n", mouseX, mouseY)
 	}
 
-	//var target string
 	target := os.Getenv("TARGET")
 	target = strings.ToLower(target)
 	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
@@ -227,7 +228,8 @@ func main() {
 	if !noFlag {
 		i, _ := activateFirstMatchingWindow(target)
 		if i < 0 {
-			fmt.Printf(" TARGET of %q was not matched\n\n", target)
+			fmt.Printf(" TARGET of %q was not matched.  Exiting\n\n", target)
+			os.Exit(1)
 		} else {
 			fmt.Printf(" TARGET of %q was matched with hWinText[%d]\n", target, i)
 		}
@@ -240,24 +242,46 @@ func main() {
 	var totalIterations int
 
 	if timer > 0 {
+		rand.Seed(time.Now().Unix()) // I'm being cute here, randomly choosing version 1 or 2 of gShowTimer just to make sure both are correct.
+		var ans string
+
 		for {
 			totalIterations++
-			showTimer(timer) // in the file called showtimer_windows.go
-			_, err := os.Stat("st.flg")
-
-			if os.IsNotExist(err) {
-				// st.flg is not supposed to exist during the running of this loop.  So keep looping.  But have to get to the if !noFlag sttmnt below.
-			} else if err != nil {
-				// err is not nil, and it's not because the file doesn't exist.  Time to exit and figure this out.  This isn't supposed to happen at all.
-				fmt.Printf(" Not supposed to have an error here from os.Stat for st.flg.  Err is %v\n\n", err)
-				break // exit and figure out why this errored.
-			}
-			if err == nil { // file exists, so it's time to leave.
-				err = os.Remove("st.flg")
-				if err != nil {
-					fmt.Printf(" Error from os.Remove for st.flg is %v\n\n", err)
+			if gofshowFlag { // a flag to use gShowTimer instead of the ShowTimer written in Modula-2.
+				n := rand.Intn(2) // so result should be 0 or 1.
+				if n == 0 {
+					ans = gShowTimer1(timer)
+				} else {
+					ans = gShowTimer2(timer)
 				}
-				break // st.flg exists, so time to exit.\w
+				if ans == "escaped" {
+					if verboseFlag {
+						fmt.Printf(" hit escaped.  n = %d\n", n)
+					}
+
+					break
+				}
+				if verboseFlag {
+					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
+				}
+			} else {
+				showTimer(timer) // in the file called showtimer_windows.go
+				_, err := os.Stat("st.flg")
+
+				if os.IsNotExist(err) {
+					// st.flg is not supposed to exist during the running of this loop.  So keep looping.  But have to get to the if !noFlag sttmnt below.
+				} else if err != nil {
+					// err is not nil, and it's not because the file doesn't exist.  Time to exit and figure this out.  This isn't supposed to happen at all.
+					fmt.Printf(" Not supposed to have an error here from os.Stat for st.flg.  Err is %v\n\n", err)
+					break // exit and figure out why this errored.
+				}
+				if err == nil { // file exists, so it's time to leave.
+					err = os.Remove("st.flg")
+					if err != nil {
+						fmt.Printf(" Error from os.Remove for st.flg is %v\n\n", err)
+					}
+					break // st.flg exists, so time to exit.\w
+				}
 			}
 
 			if !noFlag { // this allows me to test the looping w/ the -all flag and nothing will activate.

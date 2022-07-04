@@ -35,10 +35,12 @@ import (
 )
 
 const LastModified = "July 3, 2022"
-const clickedX = 450
-const clickedY = 325
-const incrementY = 100
-const incrementX = 10
+
+//const clickedX = 450  This was needed in fynerobot but it's not needed here.
+//const clickedY = 325
+//const incrementY = 100
+//const incrementX = 10
+
 const timerDefault = 870
 const minTimer = 5
 
@@ -49,9 +51,10 @@ var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
 var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
 var gray = color.Gray{Y: 100}
 var firstX, firstY int
-var timer = flag.Int("timer", timerDefault, "timer value in seconds")
-var X = flag.Int("x", clickedX, "X (col) value")
-var Y = flag.Int("y", clickedY, "Y (row) value")
+var timer = flag.Int("t", timerDefault, "timer value in seconds")
+
+//var X = flag.Int("x", clickedX, "X (col) value")  Also needed in fynerobot but not here.
+//var Y = flag.Int("y", clickedY, "Y (row) value")
 
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
@@ -99,15 +102,13 @@ func main() {
 
 // ---------------------------------------------------------- changeContent ---------------------------
 func changeContent(cnvs fyne.Canvas) {
-	time.Sleep(5 * time.Second)
+	time.Sleep(500 * time.Millisecond) // I keep making this shorter and shorter.  It started out as 5 sec.
 	countdowntimer := *timer
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for {
-		//select {  I'm commenting out all parts of the select channel statement, as I want to see if I really need it.  I may then just remove them.
-		//case
 		<-ticker.C //:
 		countdowntimer--
 		timeStr := fmt.Sprintf("%d", countdowntimer)
@@ -120,44 +121,40 @@ func changeContent(cnvs fyne.Canvas) {
 		cnvs.SetContent(vbox)
 
 		if countdowntimer == 0 {
-			countdowntimer = *timer
-			currentX, currentY := robotgo.GetMousePos()
+			io.WriteString(os.Stdout, "normal") // write this string so it's picked up by goclick.
+			globalW.Close()
 
-			Xcol := *X
-			Yrow := *Y
-			//robotgo.MoveMouse(Xcol, Yrow)  depracated and changed June 2022
-			//robotgo.MouseClick("left", true) depracated and changed June 2022
-			robotgo.Move(Xcol, Yrow)
-			robotgo.Click("left", true) // button, double
-			time.Sleep(500 * time.Millisecond)
-
-			Xcol += incrementX
-			Yrow += incrementY
-			//robotgo.MoveMouse(Xcol, Yrow) depracated
-			//robotgo.MouseClick("left", true) depracated
-			robotgo.Move(Xcol, Yrow)
-			robotgo.Click("left", true)
-			time.Sleep(400 * time.Millisecond) // used to be 500
-
-			Xcol -= incrementX
-			Yrow += incrementY
-			//robotgo.MoveMouse(Xcol, Yrow) depracated
-			//robotgo.MouseClick("left", true) depracated
-			robotgo.Move(Xcol, Yrow)
-			robotgo.Click("left", true)
-
-			time.Sleep(300 * time.Millisecond) // used to be 500
-
-			//robotgo.MoveMouse(currentX, currentY)
-			robotgo.Move(currentX, currentY)
+			// These are commented out and were part of fynerobot, but now based on ShowTimer so it's just to countdown and exit.
+			//countdowntimer = *timer
+			//currentX, currentY := robotgo.GetMousePos()
+			//Xcol := *X
+			//Yrow := *Y
+			//robotgo.Move(Xcol, Yrow)
+			//robotgo.Click("left", true) // button, double
+			//time.Sleep(500 * time.Millisecond)
+			//
+			//Xcol += incrementX
+			//Yrow += incrementY
+			////robotgo.MoveMouse(Xcol, Yrow) depracated
+			////robotgo.MouseClick("left", true) depracated
+			//robotgo.Move(Xcol, Yrow)
+			//robotgo.Click("left", true)
+			//time.Sleep(400 * time.Millisecond) // used to be 500
+			//
+			//Xcol -= incrementX
+			//Yrow += incrementY
+			////robotgo.MoveMouse(Xcol, Yrow) depracated
+			////robotgo.MouseClick("left", true) depracated
+			//robotgo.Move(Xcol, Yrow)
+			//robotgo.Click("left", true)
+			//
+			//time.Sleep(300 * time.Millisecond) // used to be 500
+			//
+			////robotgo.MoveMouse(currentX, currentY)
+			//robotgo.Move(currentX, currentY)
 		}
-
-		//default:
-		// do nothing at the moment, but it will loop without blocking.  I don't know which is better.
-
-		//}
 	}
-}
+} // end changeContent
 
 /*
 // ---------------------------------------------------------- ShowAnother ----------------------------
@@ -196,4 +193,4 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEnter, fyne.KeyReturn:
 		globalW.Close()
 	}
-}
+} // end keyTyped
