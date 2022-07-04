@@ -149,6 +149,22 @@ func main() {
 		fmt.Printf(" X = %d, y = %d\n", mouseX, mouseY)
 	}
 
+	if gofshowFlag {
+		_, err := os.Stat("gofshowtimer.exe")
+		if err != nil {
+			dir, _ := os.Executable()
+			fmt.Printf(" gofshowtimer.exe not in %q directory, and gofShowTimer flag is set.  Exiting\n", dir)
+			os.Exit(1)
+		}
+	} else {
+		_, err := os.Stat("showtimer.exe")
+		if err != nil {
+			dir, _ := os.Executable()
+			fmt.Printf(" showtimer.exe not in %q directory, and gofShowTimer flag is not set.  Exiting\n", dir)
+			os.Exit(1)
+		}
+	}
+	
 	target := os.Getenv("TARGET")
 	target = strings.ToLower(target)
 	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
