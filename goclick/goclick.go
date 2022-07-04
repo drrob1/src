@@ -33,7 +33,7 @@ import (
                  calls to work.  Perhaps by having another routine move the target window to the bottom of the Z-stack.
 */
 
-const lastModified = "July 2, 2022"
+const lastModified = "July 4, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
