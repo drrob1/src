@@ -7,6 +7,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/go-vgo/robotgo"
 	"github.com/gonutz/w32/v2"
+	"github.com/jonhadfield/findexec"
 	"math/rand"
 	"os"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 	// ps "github.com/mitchellh/go-ps" // using pid doesn't work to activate a window
 	//"github.com/lxn/win"  I can't get this to be useful.
 	//w32a "github.com/JamesHovious/w32"
+	//"github.com/jonhadfield/findexec"
 )
 
 /*
@@ -156,6 +158,10 @@ func main() {
 			fmt.Printf(" gofshowtimer.exe not in %q directory, and gofShowTimer flag is set.  Exiting\n", dir)
 			os.Exit(1)
 		}
+		execStr := findexec.Find("gofshowtimer.exe", "")
+		if execStr == "" { // then not found
+
+		}
 	} else {
 		_, err := os.Stat("showtimer.exe")
 		if err != nil {
@@ -163,8 +169,12 @@ func main() {
 			fmt.Printf(" showtimer.exe not in %q directory, and gofShowTimer flag is not set.  Exiting\n", dir)
 			os.Exit(1)
 		}
+		execStr := findexec.Find("showtimer.exe", "")
+		if execStr == "" { // then not found
+
+		}
 	}
-	
+
 	target := os.Getenv("TARGET")
 	target = strings.ToLower(target)
 	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
