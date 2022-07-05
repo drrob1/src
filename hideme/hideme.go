@@ -1,4 +1,4 @@
-package main
+package main // hideme.go
 
 import (
 	"flag"
@@ -8,7 +8,6 @@ import (
 	"github.com/go-vgo/robotgo"
 	"github.com/gonutz/w32/v2"
 	"github.com/jonhadfield/findexec"
-	"math/rand"
 	"os"
 	"runtime"
 	"strings"
@@ -22,7 +21,7 @@ import (
 /*
   HISTORY
   -------
-   8 Jun 22 -- Started playing w/ this.  This will take a while, as I have SIR in Boston soon.
+   8 Jun 22 -- Started playing w/ this and I called it goclick.go.  This will take a while, as I have SIR in Boston soon.
   10 Jun 22 -- Seems to be mostly working.  Tomorrow going to Boston.
   17 Jun 22 -- Back from Boston.  It doesn't work very well on linux.  Time again to try on Win10.
   18 Jun 22 -- Will separate the different ways of getting the pid.  They're not compatible.  And will use TARGET environment variable because
@@ -34,6 +33,8 @@ import (
                  Added noFlag to do a trial run of what matches before trying to activate it.
    1 Jul 22 -- Repeated calls to activateFirstMatchingWindow don't work, only the first call worked.  Now I have to figure out how to get repeated
                  calls to work.  Perhaps by having another routine move the target window to the bottom of the Z-stack.
+   5 Jul 22 -- Now called hideme, and it's purpose is to hide aidoc at work.  This way I don't have to kill its task using the task manager.
+                 I'll pass the title name the same way I did for goclick, ie, via a TARGET environment variable.
 */
 
 const lastModified = "July 5, 2022"
@@ -58,7 +59,7 @@ type htext struct {
 
 var hWinText []htext
 
-func activateFirstMatchingWindow(target string) (int, htext) {
+func hideFirstMatchingWindow(target string) (int, htext) {
 	// The hWinText slice is created in main().  This finds the first match of the target and activates it.  Then it returns.
 	// This will return -1 for an error.  So far, errors are either target is empty or target not found.
 	if target == "" {
@@ -85,7 +86,8 @@ func activateFirstMatchingWindow(target string) (int, htext) {
 				if ht.isVisible {
 					param = w32.SWP_NOACTIVATE
 				}
-				uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_SHOWWINDOW | param
+				//uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_SHOWWINDOW | param
+				uFlags = w32.SWP_HIDEWINDOW | w32.SWP_NOSIZE | w32.SWP_NOMOVE | param
 				w32.SetWindowPos(hWnd, w32.HWND_TOP, 0, 0, 0, 0, uFlags)
 				w32.SetForegroundWindow(hWnd)
 			}
@@ -93,7 +95,7 @@ func activateFirstMatchingWindow(target string) (int, htext) {
 		}
 	}
 	return -1, htext{} // if not found, will return zero values for each.  For the htext struct that means it's an empty struct.
-} // activateFirstMatchingWindow
+} // hideFirstMatchingWindow
 
 func showAllTargetMatches(target string) { // the hWinText slice is created in main().  This finds all matchs of the target and shows it without activating them.
 	if target == "" {
@@ -124,6 +126,18 @@ func minimizeTargetMatchedWindow(indx int) { // will just use prev'ly located in
 	time.Sleep(1 * time.Second)
 } // minimizeTargetMatchedWindow
 
+func unhideTargetMatchedWindow(indx int) { // will just use prev'ly located index into the hWinText slice.
+	if indx < 0 {
+		return // and do nothing.
+	}
+	var uFlags uint
+	//uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_HIDEWINDOW | w32.SWP_NOACTIVATE
+	uFlags = w32.SWP_NOMOVE | w32.SWP_NOSIZE | w32.SWP_NOACTIVATE | w32.SWP_SHOWWINDOW
+	hWnd := hWinText[indx].h
+	w32.SetWindowPos(hWnd, w32.HWND_BOTTOM, 0, 0, 0, 0, uFlags)
+	time.Sleep(1 * time.Second)
+} // minimizeTargetMatchedWindow
+
 func main() {
 	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
 		lastModified, runtime.Version())
@@ -131,7 +145,7 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag.")
 	flag.BoolVar(&skipFlag, "skip", true, "Skip output of all hwnd's found.")
 	flag.BoolVar(&noFlag, "no", false, "No activating any windows.  IE, do a trial run.")
-	flag.IntVar(&timer, "t", 0, "Timer value for ShowTimer.")
+	flag.IntVar(&timer, "t", 1, "Timer value for ShowTimer.")
 	flag.BoolVar(&allFlag, "all", false, "Show all matches of the TARGET environment variable in the modified titles.")
 	flag.IntVar(&mouseX, "x", clickedX, "x coordinate for mouse double clicking.")
 	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking.")
@@ -157,15 +171,10 @@ func main() {
 			fmt.Printf(" Looking for gofshowtimer and exec string is %q\n", execStr)
 		}
 
-		//_, err := os.Stat("gofshowtimer.exe")  Using findexec.Find is better as it searches the entire path.
-		//if err != nil {
-		if execStr == "" {
-			//dir, _ := os.Getwd()
-			fmt.Printf(" gofshowtimer.exe not in path.  Exiting\n")
-			os.Exit(1)
-		}
-		//if execStr == "" { // then not found
-
+		//if execStr == "" {
+		//	//dir, _ := os.Getwd()
+		//	fmt.Printf(" gofshowtimer.exe not in path.  Exiting\n")
+		//	os.Exit(1)
 		//}
 	} else {
 		execStr := findexec.Find("showtimer.exe", "")
@@ -173,13 +182,11 @@ func main() {
 			fmt.Printf(" Looking for showtimer and exec string is %q\n", execStr)
 		}
 
-		//_, err := os.Stat("showtimer.exe")  Using findexec.Find is better as it searches the entire path.
-		//if err != nil {
-		if execStr == "" {
-			//dir, _ := os.Getwd()
-			fmt.Printf(" showtimer.exe not in path.  Exiting\n")
-			os.Exit(1)
-		}
+		//if execStr == "" {
+		//	//dir, _ := os.Getwd()
+		//	fmt.Printf(" showtimer.exe not in path.  Exiting\n")
+		//	os.Exit(1)
+		//}
 	}
 
 	target := os.Getenv("TARGET")
@@ -259,103 +266,29 @@ func main() {
 	}
 
 	if !noFlag {
-		i, _ := activateFirstMatchingWindow(target)
+		i, _ := hideFirstMatchingWindow(target)
 		if i < 0 {
 			fmt.Printf(" TARGET of %q was not matched.  Exiting\n\n", target)
 			os.Exit(1)
 		} else {
 			fmt.Printf(" TARGET of %q was matched with hWinText[%d]\n", target, i)
 		}
-		time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
-		moveAndClickMouse(mouseX, mouseY)
-		time.Sleep(1 * time.Second)
-		minimizeTargetMatchedWindow(i) // this routine builds in a delay of 2 sec.
-	}
 
-	var totalIterations int
+		moveAndClickMouse(mouseX, mouseY) // this is here so the cmd window is clicked and thereby activated.  Without this the command window does not have focus.
 
-	if timer > 0 {
-		rand.Seed(time.Now().Unix()) // I'm being cute here, randomly choosing version 1 or 2 of gShowTimer just to make sure both are correct.
-		var ans string
-
-		for {
-			totalIterations++
-			if gofshowFlag { // a flag to use gShowTimer instead of the ShowTimer written in Modula-2.
-				n := rand.Intn(2) // so result should be 0 or 1.
-				if n == 0 {
-					ans = gShowTimer1(timer)
-				} else {
-					ans = gShowTimer2(timer)
-				}
-				if ans == "escaped" {
-					if verboseFlag {
-						fmt.Printf(" hit escaped.  n = %d\n", n)
-					}
-
-					break
-				}
-				if verboseFlag {
-					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
-				}
-			} else {
-				showTimer(timer) // in the file called showtimer_windows.go
-				_, err := os.Stat("st.flg")
-
-				if os.IsNotExist(err) {
-					// st.flg is not supposed to exist during the running of this loop.  So keep looping.  But have to get to the if !noFlag sttmnt below.
-				} else if err != nil {
-					// err is not nil, and it's not because the file doesn't exist.  Time to exit and figure this out.  This isn't supposed to happen at all.
-					fmt.Printf(" Not supposed to have an error here from os.Stat for st.flg.  Err is %v\n\n", err)
-					break // exit and figure out why this errored.
-				}
-				if err == nil { // file exists, so it's time to leave.
-					err = os.Remove("st.flg")
-					if err != nil {
-						fmt.Printf(" Error from os.Remove for st.flg is %v\n\n", err)
-					}
-					break // st.flg exists, so time to exit.\w
-				}
-			}
-
-			if !noFlag { // this allows me to test the looping w/ the -all flag and nothing will activate.
-				i, _ := activateFirstMatchingWindow(target)
-				if i < 0 {
-					fmt.Printf(" TARGET of %q was not matched\n\n", target)
-				}
-
-				time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
-				moveAndClickMouse(mouseX, mouseY)
-				time.Sleep(time.Second)
-				minimizeTargetMatchedWindow(i)
-			}
+		fmt.Printf(" Called hide me on %q.  About to unhide if allowed.", target)
+		if pause0() {
+			os.Exit(0)
 		}
-	}
-	//fmt.Printf(" Simulating a countdown of the timer using sleep\n")
-	//for i := timer; i > 0; i-- {
-	//	fmt.Printf(" %d \r", i)
-	//	time.Sleep(1 * time.Second)
-	//}
-	fmt.Printf(" Completed %d iterations of activating the window with the title of %q.\n\n", totalIterations, target)
 
+		if timer > 0 {
+			time.Sleep(time.Duration(timer) * time.Second)
+		}
+
+		unhideTargetMatchedWindow(i) // just to test if this works.  It does, and if run again it will unhide what was hidden in a previous run.
+	}
 }
 
-// --------------------------------------------------------------------------------------------
-/*  Not actually used at the moment.
-func pause(b bool) bool {
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print(" Pausing.  Hit <enter> to continue.  ")
-	if b {
-		fmt.Printf(" or 'y' to allow the action.  ")
-	}
-	scanner.Scan()
-	if b && strings.ToLower(scanner.Text()) == "y" { // the boolean means to return true on "y"
-		return true
-	} else if !b && strings.ToLower(scanner.Text()) == "n" { // here it returns true on "n"
-		return true
-	}
-	return false
-}
-*/
 func pause0() bool {
 	fmt.Print(" Pausing.  Hit <enter> to continue.  Or 'n' to exit  ")
 	var ans string

@@ -191,6 +191,7 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 	case fyne.KeyEnd:
 		//lastImage()
 	case fyne.KeyEnter, fyne.KeyReturn:
+		io.WriteString(os.Stdout, "early")
 		globalW.Close()
 	}
 } // end keyTyped
