@@ -1,5 +1,5 @@
 ## gocode
-All of my go code as of June 8, 2022
+All of my go code as of July 5, 2022
 
 1. sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.
 2. rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
@@ -33,6 +33,8 @@ All of my go code as of June 8, 2022
 29. feq -- file equal pgms mostly comparing different hash functions
 30. img, imga, img2 -- GUI pgm to show an image, and then switch easily
 31. freq -- letter counting and sorting, for use in wordle
+32. goclick, gofshowtime -- for work to keep a window active
+33. hideme -- for work, intended for the Aidoc demon.
 
 
 All the other files were either used in testing or are support files for the above programs.
