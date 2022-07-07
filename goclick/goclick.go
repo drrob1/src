@@ -10,6 +10,7 @@ import (
 	"github.com/jonhadfield/findexec"
 	"math/rand"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -34,18 +35,21 @@ import (
                  Added noFlag to do a trial run of what matches before trying to activate it.
    1 Jul 22 -- Repeated calls to activateFirstMatchingWindow don't work, only the first call worked.  Now I have to figure out how to get repeated
                  calls to work.  Perhaps by having another routine move the target window to the bottom of the Z-stack.
+   6 Jul 22 -- No longer looking for an environment string called TARGET.  Search string will be in targetStr; interpretation of that string depends on value of useRegexFlag.
+                 Will use -rex to set useRegexFlag.
 */
 
-const lastModified = "July 5, 2022"
+const lastModified = "July 6, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
 const fhX = 348
 const fhY = 370
 
-var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag bool
-
+var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag, useRegexFlag bool
+var targetStr string // regexStr is in targetStr if useRegexFlag is true
 var timer, mouseX, mouseY int
+var compRex *regexp.Regexp
 
 type htext struct {
 	h         w32.HWND
@@ -58,26 +62,40 @@ type htext struct {
 
 var hWinText []htext
 
-func activateFirstMatchingWindow(target string) (int, htext) {
+func activateFirstMatchingWindow() (int, htext) {
 	// The hWinText slice is created in main().  This finds the first match of the target and activates it.  Then it returns.
-	// This will return -1 for an error.  So far, errors are either target is empty or target not found.
-	if target == "" {
-		return -1, htext{}
-	}
+	// This will return -1 for an error.  So far, error is target not found.  Can't be empty because I check for that first now.
+
+	//if target == "" {
+	//	return -1, htext{}
+	//}
 
 	for i, ht := range hWinText {
 		if ht.title == "" {
 			continue // skip the Printf and search
 		}
+		if strings.HasPrefix(ht.title, "tcc") {
+			continue // ignore the tcc window itself, as the title will have the command it's currently executing.
+		}
 
 		var found bool
-		if target != "" && strings.Contains(ht.title, target) {
-			found = true
+		if useRegexFlag {
+			if compRex.MatchString(ht.title) { // title still is devoid of its spaces
+				found = true
+			}
+		} else {
+			if strings.Contains(ht.title, targetStr) { // title still is devoid of its spaces
+				found = true
+			}
 		}
 
 		if found {
 			if noFlag {
-				// I might think of something to put here.  Nothing comes to mind yet.
+				if useRegexFlag {
+					fmt.Printf(" matched regex of %q with title of %q in slice element [%d]\n", targetStr, ht.title, i)
+				} else {
+					fmt.Printf(" matched target of %q with title of %q in slice element [%d]", targetStr, ht.title, i)
+				}
 			} else {
 				hWnd := ht.h
 
@@ -95,20 +113,30 @@ func activateFirstMatchingWindow(target string) (int, htext) {
 	return -1, htext{} // if not found, will return zero values for each.  For the htext struct that means it's an empty struct.
 } // activateFirstMatchingWindow
 
-func showAllTargetMatches(target string) { // the hWinText slice is created in main().  This finds all matchs of the target and shows it without activating them.
-	if target == "" {
-		return
-	}
+func showAllTargetMatches() { // the hWinText slice is created in main().  This finds all matches of the target and shows it without activating them.  Now target may be a regex.
 	for i, ht := range hWinText {
 		if ht.title == "" {
 			continue // skip the Printf and search
 		}
-
-		if target != "" && strings.Contains(ht.title, target) {
-			ctfmt.Printf(ct.Yellow, true, " window is found.\n")
-			ctfmt.Printf(ct.Cyan, true, " i:%d; hWnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
-				i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className)
+		if strings.HasPrefix(ht.title, "tcc") {
+			continue // ignore the tcc window itself, as the title will have the command it's currently executing.
 		}
+
+		if useRegexFlag {
+			if compRex.MatchString(ht.title) {
+				ctfmt.Printf(ct.Yellow, true, " window is found by regex.\n")
+				ctfmt.Printf(ct.Cyan, true, " i:%d; hWnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
+					i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className)
+			}
+		} else {
+			if strings.Contains(ht.title, targetStr) {
+				ctfmt.Printf(ct.Yellow, true, " window is found by simple match.\n")
+				ctfmt.Printf(ct.Cyan, true, " i:%d; hWnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
+					i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className)
+			}
+
+		}
+
 	}
 } // showAllTargetMatches
 
@@ -137,8 +165,18 @@ func main() {
 	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking.")
 	flag.BoolVar(&fhFlag, "fh", false, "FH defaults instead of JH defaults.")
 	flag.BoolVar(&gofshowFlag, "g", false, "gofShowTimer to be used instead of ShowTimer written in Modula-2. ")
-
+	flag.BoolVar(&useRegexFlag, "rex", false, " The command line expression is a regex (or not if false).")
+	//flag.StringVar(&regexStr, "rex", "", "Regular expression string for the target")
+	//flag.StringVar(&targetStr, "target", "", " Ordinary string to be matched against titles.") // I'm not using PIDs anymore, so command tails don't matter now.
 	flag.Parse()
+
+	if flag.Arg(0) == "" {
+		fmt.Printf(" No target provided.  Will exit now.")
+		os.Exit(0)
+	} else {
+		targetStr = strings.ToLower(flag.Arg(0))
+	}
+
 	if allFlag { // if I want to show all matches of a TARGET, then I don't want to activate any of them.
 		noFlag = true
 	}
@@ -182,16 +220,17 @@ func main() {
 		}
 	}
 
-	target := os.Getenv("TARGET")
-	target = strings.ToLower(target)
+	var err error
+	if useRegexFlag {
+		compRex, err = regexp.Compile(targetStr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from compiling the regex of %q is %v\n", targetStr, err)
+			os.Exit(1)
+		}
+	}
+	// targetStr = os.Getenv("TARGET")  Environment not used anymore.  targetStr now set by the command line.
 	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
 	//replaced.Replace(target) // but the match failed.  So I reversed it by making all spaces a '~' and can match against '~'
-
-	if verboseFlag {
-		fmt.Printf(" Target is %q after calling Getenv for TARGET\n", target)
-	}
-
-	// w32 section
 
 	if !skipFlag {
 		fmt.Printf("\n w32 section\n")
@@ -223,7 +262,12 @@ func main() {
 		return true
 	}
 	w32.EnumWindows(enumCallBack)
-	ctfmt.Printf(ct.Green, true, " \n Found %d elements in the handle to window text slice. \n Now will find the target of %q.\n", len(hWinText), target)
+	ctfmt.Printf(ct.Green, true, " \n Found %d elements in the handle to window text slice.\n", len(hWinText))
+	if useRegexFlag {
+		ctfmt.Printf(ct.Green, true, " Now will search for the regex of %q.\n", targetStr)
+	} else {
+		ctfmt.Printf(ct.Green, true, " Now will search for the simple target of %q.\n", targetStr)
+	}
 
 	if !skipFlag {
 		if pause0() {
@@ -255,16 +299,16 @@ func main() {
 	}
 
 	if allFlag {
-		showAllTargetMatches(target)
+		showAllTargetMatches() // now either the regex or simple target are passed globally.  The routine uses the useRegexFlag to determine which method is used.
 	}
 
 	if !noFlag {
-		i, _ := activateFirstMatchingWindow(target)
+		i, _ := activateFirstMatchingWindow() // now either the regex or simple target are passed globally.  The routine uses the useRegexFlag to determine which method is used.
 		if i < 0 {
-			fmt.Printf(" TARGET of %q was not matched.  Exiting\n\n", target)
+			fmt.Printf(" Regex or target of %q was not matched.  Exiting\n\n", targetStr)
 			os.Exit(1)
 		} else {
-			fmt.Printf(" TARGET of %q was matched with hWinText[%d]\n", target, i)
+			fmt.Printf(" Regex or target of %q was matched with hWinText[%d]\n", targetStr, i)
 		}
 		time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
 		moveAndClickMouse(mouseX, mouseY)
@@ -318,9 +362,9 @@ func main() {
 			}
 
 			if !noFlag { // this allows me to test the looping w/ the -all flag and nothing will activate.
-				i, _ := activateFirstMatchingWindow(target)
+				i, _ := activateFirstMatchingWindow() // now either the regex or simple target are passed globally.  The routine uses the useRegexFlag to determine which method is used.
 				if i < 0 {
-					fmt.Printf(" TARGET of %q was not matched\n\n", target)
+					fmt.Printf(" Regex or simple target of %q was not matched\n\n", targetStr)
 				}
 
 				time.Sleep(2 * time.Second) // need time for the activation (if successful) to occur, else the clicks don't make it onto the activated window.
@@ -335,8 +379,7 @@ func main() {
 	//	fmt.Printf(" %d \r", i)
 	//	time.Sleep(1 * time.Second)
 	//}
-	fmt.Printf(" Completed %d iterations of activating the window with the title of %q.\n\n", totalIterations, target)
-
+	fmt.Printf(" Completed %d iterations of activating the window with the title matching %q.\n\n", totalIterations, targetStr)
 }
 
 // --------------------------------------------------------------------------------------------
