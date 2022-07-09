@@ -37,9 +37,10 @@ import (
                  calls to work.  Perhaps by having another routine move the target window to the bottom of the Z-stack.
    6 Jul 22 -- No longer looking for an environment string called TARGET.  Search string will be in targetStr; interpretation of that string depends on value of useRegexFlag.
                  Will use -rex to set useRegexFlag.
+   9 Jul 22 -- useRegexFlag now defaulted to true.  Would need -rex=false to unset the flag.
 */
 
-const lastModified = "July 6, 2022"
+const lastModified = "July 9, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -153,7 +154,7 @@ func minimizeTargetMatchedWindow(indx int) { // will just use prev'ly located in
 } // minimizeTargetMatchedWindow
 
 func main() {
-	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s\n",
+	fmt.Printf("goclick to use Go to activate a process so can be clicked on the screen.  Last modified %s.  Compiled by %s.  For more info use -h \n",
 		lastModified, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag.")
@@ -165,9 +166,15 @@ func main() {
 	flag.IntVar(&mouseY, "y", clickedY, "y coordinate for mouse double clicking.")
 	flag.BoolVar(&fhFlag, "fh", false, "FH defaults instead of JH defaults.")
 	flag.BoolVar(&gofshowFlag, "g", false, "gofShowTimer to be used instead of ShowTimer written in Modula-2. ")
-	flag.BoolVar(&useRegexFlag, "rex", false, " The command line expression is a regex (or not if false).")
+	flag.BoolVar(&useRegexFlag, "rex", true, " The command line expression is a regex (or not if false).")
 	//flag.StringVar(&regexStr, "rex", "", "Regular expression string for the target")
 	//flag.StringVar(&targetStr, "target", "", " Ordinary string to be matched against titles.") // I'm not using PIDs anymore, so command tails don't matter now.
+
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " Search expression defaults to a regular expression.  Would need to set rex=false to change this.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " First test expression using -all flag, then with -no flag, then can set a timer value that is non-zero.  \n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if flag.Arg(0) == "" {
