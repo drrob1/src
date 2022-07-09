@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"src/todo"
 	"strings"
@@ -26,9 +27,10 @@ REVISION HISTORY
                filename is constructed.  I am considering adding another environment variable, called TODO_PREFIX to more easily cover the networking prefix.
 26 Feb 22 -- I want the list operation to show all completed tasks first, then show all uncompleted tasks.  This does not require changing the stringer method
                which only returns the string for one task.  And added an about option.
+ 9 Jul 22 -- Help message now includes a call to runtime.Version().
 */
 
-const lastModified = "27 Feb 2022"
+const lastModified = "9 July 2022"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
@@ -51,7 +53,7 @@ type structForListing struct {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s. \n", os.Args[0], lastModified)
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s, compiled with %s. \n", os.Args[0], lastModified, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), "Default filename is %s, TODO_PREFIX=%q and TODO_FILENAME=%q are the environment variables used.  Do not use an extension for TODO_FILENAME",
 			todoFilename, os.Getenv("TODO_PREFIX"), os.Getenv("TODO_FILENAME"))
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
