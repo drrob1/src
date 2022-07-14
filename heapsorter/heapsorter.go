@@ -67,6 +67,10 @@ import (
   27 Aug 21 -- Converting to modules by removing getcommandline, and removed the depricated ioutil.
   23 Oct 21 -- Removed call to make slice to receive words file.
   12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
+  14 Jul 22 -- Added comment in both non-recursive quicksorts about stack being blown in book code, hence the broken routines.
+                 In Modula-2 the stack was [1..12] which is too small, as the index went to 12 in this go code, which would blow the stack.
+                 In the oberon version, the stack is [12], which is 0..11.  My measurements went to an index of 24, which blew well past the stack limit.
+                 I don't know why the code didn't panic w/ array index out of bounds; it merely didn't work.  It would be hard to pull out the non-working code now.
 */
 
 const LastAlteredDate = "Mar 15, 2022"
@@ -666,7 +670,7 @@ func NonRecursiveQuickSort(a []string) []string {
 		} // REPEAT ... UNTIL L >= R
 
 	} // REPEAT ... UNTIL hiloStack is empty
-	// fmt.Println(" Modula-2 NonRecursiveQuickSort maxStackSize =", maxStackSize)  This showed 12 on the full PaulKrugman.dat file.
+	// fmt.Println(" Modula-2 NonRecursiveQuickSort maxStackSize =", maxStackSize)  This showed 12 on the full PaulKrugman.dat file.  Code in the book defined stack as [1..12], so the stack was blown in the book code.
 	return a
 } // END NonRecursiveQuickSort
 
@@ -714,7 +718,7 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 		} // for L < R
 
 	} // for stack not empty
-	// fmt.Println(" NonRecursiveQuickSortOberan maxStackSize=", maxStackSize) This showed 24 on the full PaulKrugman.dat file.
+	// fmt.Println(" NonRecursiveQuickSortOberon maxStackSize=", maxStackSize) This showed 24 on the full PaulKrugman.dat file.  Code in the book defined stack as [1..12], so the stack was blown out of the water in the book code.
 	return a
 } // 	END NonRecursiveQuickSortOberon
 
