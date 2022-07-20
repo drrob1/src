@@ -175,7 +175,7 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 			continue
 		} else if excludeStringEmpty {
 			fileNames = append(fileNames, d.Name())
-		} else {                                  // excludeString is not empty, so must test against it
+		} else { // excludeString is not empty, so must test against it
 			if !excludeRegex.MatchString(lower) { // I have to guard against using an empty excludeRegex, or it will panic.
 				fileNames = append(fileNames, d.Name())
 			}

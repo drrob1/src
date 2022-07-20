@@ -7,11 +7,11 @@ import (
 	"io"
 	"log"
 	"os"
-	"runtime"
+	"path/filepath"
 	"strings"
 )
 
-const LastAltered = "Dec 6, 2019"
+const LastAltered = "June 20, 2020"
 
 const bookmarkfilename = "bookmarkfile.gob"
 
@@ -24,31 +24,39 @@ const bookmarkfilename = "bookmarkfile.gob"
                    Aliasdef has to include  g %@execstr[dirbkmk %1], and it works like dirb on bash!
    2 Dec 2019 -- Added code to output more info under help || about
    6 Dec 2019 -- Now called dirb, based on code from dirbkmk.  Makedirbkmk works, so now I can use that map.  Or at least try it out.
+  17 Jun 2020 -- Added newline to output string.  I don't know what this will do in tcc, but I'm hoping it will help when not in tcc.
+  20 Jun 2020 -- If the bookmark is not in the map, treat it as a change directory, cd command.
+  20 Jul 2022 -- Adding replacement of ~ with HomeDir.  And now will use os.HomeDir.
 */
 
 func main() {
 	var bookmark map[string]string
-	var HomeDir string
+	//var HomeDir string  removed when use of os.UserHomeDir() added.
 	sep := string(os.PathSeparator)
+	HomeDir, err := os.UserHomeDir()
 
-	if runtime.GOOS == "linux" {
-		HomeDir = os.Getenv("HOME") + sep
-	} else if runtime.GOOS == "windows" {
-		HomeDir = os.Getenv("userprofile") + sep
-	} else {
-		fmt.Println(" not running on expected platform.  Will exit.  In fact, probably won't even compile.")
-		os.Exit(1)
-	}
+	/*
+		if runtime.GOOS == "linux" {
+			HomeDir = os.Getenv("HOME") + sep
+		} else if runtime.GOOS == "windows" {
+			HomeDir = os.Getenv("userprofile") + sep
+		} else {
+			fmt.Println(" not running on expected platform.  Will exit.  In fact, probably won't even compile.")
+			os.Exit(1)
+		}
+
+	*/
+
 	target := "cd" + " " + HomeDir
-	fullbookmarkfilename := HomeDir + bookmarkfilename
+	fullbookmarkfilename := HomeDir + sep + bookmarkfilename
 
-	if len(os.Args) == 1 {
+	if len(os.Args) == 1 { // No destination dir found on cmd line.
 		io.WriteString(os.Stdout, target)
 		os.Exit(0)
 	}
 
 	// read or init directory bookmark file
-	_, err := os.Stat(fullbookmarkfilename)
+	_, err = os.Stat(fullbookmarkfilename)
 	if err == nil { // need to read in bookmarkfile
 		bookmarkfile, err := os.Open(fullbookmarkfilename)
 		if err != nil {
@@ -103,6 +111,17 @@ func main() {
 		os.Exit(0)
 	}
 
-	target = bookmark[os.Args[1]]
+	var ok bool
+
+	target, ok = bookmark[os.Args[1]]
+	if !ok {
+		destination := os.Args[1] + sep
+		destination = filepath.Clean(destination)
+		if strings.HasPrefix(destination, "~") {
+			strings.Replace(destination, "~", destination, 1)
+		}
+		target = "cdd " + destination
+	}
+	target = target + "\n"
 	io.WriteString(os.Stdout, target)
 }
