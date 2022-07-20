@@ -89,7 +89,6 @@ func main() {
 
 	now := time.Now()
 	rand.Seed(now.UnixNano())
-	//shuffleAmount := now.Nanosecond() / 1e6 // + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year().
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
 	swapfnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
@@ -103,23 +102,23 @@ func main() {
 
 	// ready to start calling vlc
 
-	if pause() {
-		os.Exit(0)
-	}
-
 	if verboseFlag {
 		fmt.Printf(" About to call vlc w/ each filename.\n")
+	}
+
+	if pause() {
+		os.Exit(0)
 	}
 
 	// Turns out that the shell searches against the path on Windows, but just executing it here doesn't.  So I have to search the path myself.
 	// Nope, I still have that wrong.  I need to start a command processor, too.
 
-	var execStr, shellStr string
+	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
-		execStr = findexec.Find("vlc.exe", "")
+		vlcStr = findexec.Find("vlc.exe", "")
 		shellStr = os.Getenv("ComSpec")
 	} else if runtime.GOOS == "linux" {
-		execStr = findexec.Find("vlc", "")
+		vlcStr = findexec.Find("vlc", "")
 		shellStr = "/bin/bash" // not needed as I found out by some experimentation on leox.
 	}
 
@@ -128,12 +127,12 @@ func main() {
 	var execCmd *exec.Cmd
 	for _, name := range fileNames {
 		if runtime.GOOS == "windows" {
-			execCmd = exec.Command(shellStr, "-C", execStr, name)
+			execCmd = exec.Command(shellStr, "-C", vlcStr, name)
+			//execCmd = exec.Command(shellStr, "-C", "vlc", name) // just to see if this works now.  It does, since I'm starting a tcc shell.
 		} else if runtime.GOOS == "linux" {
-			execCmd = exec.Command(execStr, name)
+			execCmd = exec.Command(vlcStr, name)
 		}
 
-		fmt.Printf(" the type of cmd is %T\n", execCmd)
 		execCmd.Stdin = os.Stdin
 		execCmd.Stdout = os.Stdout
 		execCmd.Stderr = os.Stderr
