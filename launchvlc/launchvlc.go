@@ -21,6 +21,7 @@ import (
              From the resultant slice of matches of this regexp, I'll shuffle it and then feed them one at a time into vlc.
              So it looks like I'll need pieces of rex.go, shuffle code from bj.go, and then launching and external pgm code like I do in a few places now.
              The final launching loop will pause and exit if I want it to, like I did w/ the pid and windows title matching routines.  I'll let the import list auto-populate.
+20 Jul 22 -- Added verboseFlag being set will have it output the filename w/ each loop iteration.  And I added 'x' to the exit key behavior.
 */
 
 const lastModified = "July 20, 2022"
@@ -106,23 +107,24 @@ func main() {
 		fmt.Printf(" About to call vlc w/ each filename.\n")
 	}
 
-	if pause() {
-		os.Exit(0)
-	}
+	//if pause() { This turns out to not be needed anymore.
+	//	os.Exit(0)
+	//}
 
 	// Turns out that the shell searches against the path on Windows, but just executing it here doesn't.  So I have to search the path myself.
 	// Nope, I still have that wrong.  I need to start a command processor, too.
 
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc.exe", "")
+		//vlcStr = findexec.Find("vlc.exe", "")  Turns out that vlc is not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.
+		vlcStr = "vlc"
 		shellStr = os.Getenv("ComSpec")
 	} else if runtime.GOOS == "linux" {
 		vlcStr = findexec.Find("vlc", "")
 		shellStr = "/bin/bash" // not needed as I found out by some experimentation on leox.
 	}
 
-	// Time to run vlc.  I didn't change the code yet for linux, but linux does not need to call bash first, and certainly not
+	// Time to run vlc.
 
 	var execCmd *exec.Cmd
 	for _, name := range fileNames {
@@ -131,6 +133,10 @@ func main() {
 			//execCmd = exec.Command(shellStr, "-C", "vlc", name) // just to see if this works now.  It does, since I'm starting a tcc shell.
 		} else if runtime.GOOS == "linux" {
 			execCmd = exec.Command(vlcStr, name)
+		}
+
+		if verboseFlag {
+			fmt.Printf(" vlcStr = %q, and filename is %q\n", vlcStr, name)
 		}
 
 		execCmd.Stdin = os.Stdin
@@ -187,11 +193,11 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 // ------------------------------ pause -----------------------------------------
 
 func pause() bool {
-	fmt.Print(" Pausing.  Hit <enter> to continue.  Or 'n' to exit  ")
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
 	var ans string
 	fmt.Scanln(&ans)
 	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") {
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
 		return true
 	}
 	return false
