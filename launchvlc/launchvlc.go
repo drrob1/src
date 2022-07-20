@@ -120,17 +120,24 @@ func main() {
 		shellStr = os.Getenv("ComSpec")
 	} else if runtime.GOOS == "linux" {
 		execStr = findexec.Find("vlc", "")
-		shellStr = "/bin/bash"
+		shellStr = "/bin/bash" // not needed as I found out by some experimentation on leox.
 	}
 
-	// Time to run vlc.
+	// Time to run vlc.  I didn't change the code yet for linux, but linux does not need to call bash first, and certainly not
 
+	var execCmd *exec.Cmd
 	for _, name := range fileNames {
-		cmd := exec.Command(shellStr, "-C", execStr, name) // maybe this is finally right
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		e := cmd.Run()
+		if runtime.GOOS == "windows" {
+			execCmd = exec.Command(shellStr, "-C", execStr, name)
+		} else if runtime.GOOS == "linux" {
+			execCmd = exec.Command(execStr, name)
+		}
+
+		fmt.Printf(" the type of cmd is %T\n", execCmd)
+		execCmd.Stdin = os.Stdin
+		execCmd.Stdout = os.Stdout
+		execCmd.Stderr = os.Stderr
+		e := execCmd.Run()
 		if e != nil {
 			fmt.Printf(" Error returned by running vlc %s is %v\n", name, e)
 		}
@@ -169,7 +176,7 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 			continue
 		} else if excludeStringEmpty {
 			fileNames = append(fileNames, d.Name())
-		} else { // excludeString is not empty, so must test against it
+		} else {                                  // excludeString is not empty, so must test against it
 			if !excludeRegex.MatchString(lower) { // I have to guard against using an empty excludeRegex, or it will panic.
 				fileNames = append(fileNames, d.Name())
 			}
