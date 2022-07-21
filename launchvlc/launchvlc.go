@@ -126,6 +126,10 @@ func main() {
 
 	// Time to run vlc.
 
+	if verboseFlag {
+		fmt.Printf(" Found %d matching file names.\n", len(fileNames))
+	}
+	
 	var execCmd *exec.Cmd
 	for _, name := range fileNames {
 		if runtime.GOOS == "windows" {
@@ -181,7 +185,7 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 			continue
 		} else if excludeStringEmpty {
 			fileNames = append(fileNames, d.Name())
-		} else { // excludeString is not empty, so must test against it
+		} else {                                  // excludeString is not empty, so must test against it
 			if !excludeRegex.MatchString(lower) { // I have to guard against using an empty excludeRegex, or it will panic.
 				fileNames = append(fileNames, d.Name())
 			}
