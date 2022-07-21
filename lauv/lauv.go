@@ -1,4 +1,4 @@
-package main // launchVLC.go
+package main // lauv.go
 
 import (
 	"flag"
@@ -22,13 +22,15 @@ import (
              So it looks like I'll need pieces of rex.go, shuffle code from bj.go, and then launching and external pgm code like I do in a few places now.
              The final launching loop will pause and exit if I want it to, like I did w/ the pid and windows title matching routines.  I'll let the import list auto-populate.
 20 Jul 22 -- Added verboseFlag being set will have it output the filename w/ each loop iteration.  And I added 'x' to the exit key behavior.
+21 Jul 22 -- Now called lauv, it will output n files on the command line to vlc.  This way I can use 'n' from within vlc.
 */
 
 const lastModified = "July 21, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, excludeStringEmpty bool
+var verboseFlag bool
 var includeRexString, excludeRexString string
+var numNames int
 
 func main() {
 	fmt.Printf(" launch vlc.go.  Last modified %s, compiled w/ %s\n\n", lastModified, runtime.Version())
@@ -40,16 +42,17 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp against all filenames in the current directory\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then feed them one at a time into vlc.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output 'n' of them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchvlc <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: lauv <options> <input-regex> where <input-regex> cannot be empty. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
+	flag.IntVar(&numNames, "n", 5, " Number of file names to output on the commandline to vlc.")
 	flag.Parse()
 
 	if verboseFlag {
@@ -69,21 +72,18 @@ func main() {
 		fmt.Printf(" Error from compiling the regexp input string is %v\n", err)
 		os.Exit(1)
 	}
-	if excludeRexString == "" {
-		excludeStringEmpty = true
-	} else {
+	if excludeRexString != "" {
 		excludeRegex, err = regexp.Compile(strings.ToLower(excludeRexString))
 		if err != nil {
 			fmt.Printf(" Error from compiling the exclude regexp is %v\n", err)
 			os.Exit(1)
 		}
-		excludeStringEmpty = false
 	}
 
 	fileNames := getFileNames(workingDir, includeRegex) // this slice of filenames matches the includeRegexp and does not match the excludeRegexp, if given.
 	if verboseFlag {
-		fmt.Printf(" There are %d filenames found using includeRexString = %q and %q, excludeStringNotEmpty = %t, and excludeRexString = %q\n",
-			len(fileNames), includeRexString, includeRegex.String(), excludeStringEmpty, excludeRexString)
+		fmt.Printf(" There are %d filenames found using includeRexString = %q and %q, and excludeRexString = %q\n",
+			len(fileNames), includeRexString, includeRegex.String(), excludeRexString)
 	}
 
 	// Now to shuffle the file names slice.
@@ -123,29 +123,35 @@ func main() {
 	// Time to run vlc.
 
 	var execCmd *exec.Cmd
-	for _, name := range fileNames {
-		if runtime.GOOS == "windows" {
-			execCmd = exec.Command(shellStr, "-C", vlcStr, name)
-			//execCmd = exec.Command(shellStr, "-C", "vlc", name) // just to see if this works now.  It does, since I'm starting a tcc shell.
-		} else if runtime.GOOS == "linux" {
-			execCmd = exec.Command(vlcStr, name)
-		}
+	//	for _, name := range fileNames {  no longer need this loop
 
-		if verboseFlag {
-			fmt.Printf(" vlcStr = %q, and filename is %q\n", vlcStr, name)
-		}
+	n := minInt(numNames, len(fileNames))
+	nameStr := strings.Join(fileNames[:n], " ")
+	nameStr = fmt.Sprintf("%q", nameStr) // get these quoted.
 
-		execCmd.Stdin = os.Stdin
-		execCmd.Stdout = os.Stdout
-		execCmd.Stderr = os.Stderr
-		e := execCmd.Run()
-		if e != nil {
-			fmt.Printf(" Error returned by running vlc %s is %v\n", name, e)
-		}
-		if pause() {
-			os.Exit(0)
-		}
+	if runtime.GOOS == "windows" {
+		execCmd = exec.Command(shellStr, "-C", vlcStr, nameStr) // this isn't working.  Don't know why
+		//execCmd = exec.Command(vlcStr, nameStr) // I'll try this.
+		//_ = shellStr                            // so I don't have to delete this variable yet.
+	} else if runtime.GOOS == "linux" {
+		execCmd = exec.Command(vlcStr, nameStr)
 	}
+
+	if verboseFlag {
+		fmt.Printf(" vlcStr = %q, and filename is %s\n", vlcStr, nameStr)
+	}
+
+	execCmd.Stdin = os.Stdin
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	e := execCmd.Run()
+	if e != nil {
+		fmt.Printf(" Error returned by running vlc %s is %v\n", nameStr, e)
+	}
+	//if pause() {
+	//	os.Exit(0)
+	//}
+	//	}
 } // end main()
 
 // ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
@@ -175,9 +181,10 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 		lower := strings.ToLower(d.Name())
 		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
 			continue
-		} else if excludeStringEmpty {
+			//} else if excludeStringEmpty {
+		} else if excludeRegex == nil {
 			fileNames = append(fileNames, d.Name())
-		} else { // excludeString is not empty, so must test against it
+		} else {                                  // excludeString is not empty, so must test against it
 			if !excludeRegex.MatchString(lower) { // I have to guard against using an empty excludeRegex, or it will panic.
 				fileNames = append(fileNames, d.Name())
 			}
@@ -197,4 +204,13 @@ func pause() bool {
 		return true
 	}
 	return false
+}
+
+// ------------------------------- minInt ----------------------------------------
+
+func minInt(i, j int) int {
+	if i <= j {
+		return i
+	}
+	return j
 }
