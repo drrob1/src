@@ -127,7 +127,7 @@ func main() {
 
 	n := minInt(numNames, len(fileNames))
 	nameStr := strings.Join(fileNames[:n], " ")
-	nameStr = fmt.Sprintf("%q", nameStr) // get these quoted.
+	// nameStr = fmt.Sprintf("%q", nameStr) // get these quoted.  now not quoted again.
 
 	if runtime.GOOS == "windows" {
 		execCmd = exec.Command(shellStr, "-C", vlcStr, nameStr) // this isn't working.  Don't know why
@@ -181,13 +181,13 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 		lower := strings.ToLower(d.Name())
 		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
 			continue
-			//} else if excludeStringEmpty {
-		} else if excludeRegex == nil {
-			fileNames = append(fileNames, d.Name())
-		} else {                                  // excludeString is not empty, so must test against it
-			if !excludeRegex.MatchString(lower) { // I have to guard against using an empty excludeRegex, or it will panic.
-				fileNames = append(fileNames, d.Name())
-			}
+		}
+
+		quotedString := fmt.Sprintf("%q", d.Name())
+		if excludeRegex == nil {
+			fileNames = append(fileNames, quotedString)
+		} else if !excludeRegex.MatchString(lower) { // excludeString is not empty, I have to guard against using an empty excludeRegex, or it will panic.
+			fileNames = append(fileNames, quotedString)
 		}
 	}
 	return fileNames
