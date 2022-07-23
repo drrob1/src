@@ -91,6 +91,11 @@ func main() {
 			len(fileNames), includeRexString, includeRegex.String(), excludeRexString)
 	}
 
+	if len(fileNames) == 0 {
+		fmt.Printf(" No filenames matched the regexp of %q and were excluded by %q.  Exiting  \n", includeRexString, excludeRexString)
+		os.Exit(0)
+	}
+
 	// Now to shuffle the file names slice.
 
 	now := time.Now()
