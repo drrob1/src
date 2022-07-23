@@ -213,7 +213,7 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 } // myReadDir
 
 // ------------------------------ pause -----------------------------------------
-
+/*
 func pause() bool {
 	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
 	var ans string
@@ -224,6 +224,7 @@ func pause() bool {
 	}
 	return false
 }
+*/
 
 // ------------------------------- minInt ----------------------------------------
 
