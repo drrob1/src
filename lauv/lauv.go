@@ -27,9 +27,10 @@ REVISION HISTORY
 20 Jul 22 -- Added verboseFlag being set will have it output the filename w/ each loop iteration.  And I added 'x' to the exit key behavior.
 21 Jul 22 -- Now called lauv, it will output n files on the command line to vlc.  This way I can use 'n' from within vlc.
 22 Jul 22 -- I can't get this to work by putting several filenames on the command line and it reading them all in.  Maybe I'll try redirection.
+23 Jul 22 -- I finally figured out how to work w/ variadic params, after searching online.  An answer in stack overflow helped me a lot.  Now it works.
 */
 
-const lastModified = "July 22, 2022"
+const lastModified = "July 23, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag bool
@@ -124,11 +125,7 @@ func main() {
 
 	var execCmd *exec.Cmd
 
-	/*	TodaysDateString := MakeDateStr()
-		outFilename := "matchingfiles" + TodaysDateString + ".txt"
-	*/
 	n := minInt(numNames, len(fileNames))
-	nameStr := "--open=" + strings.Join(fileNames[:n], "\n")
 	variadicParam := []string{"-C", "vlc"}
 	variadicParam = append(variadicParam, fileNames...)
 	variadicParam = variadicParam[:n]
@@ -136,44 +133,37 @@ func main() {
 	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.  I got this answer from stack overflow.
 
 	if runtime.GOOS == "windows" {
-		switch n { // just to see if this works.  Once I figured out the variadic syntax I don't need a switch case statement here.
-		case 1:
-			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0])
-		case 2:
-			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1])
-		case 3:
-			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2])
-		case 4:
-			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3])
-		case 5:
-			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3], fileNames[4])
-		default:
-			execCmd = exec.Command(shellStr, variadicParam...)
-		}
-		//execCmd = exec.Command(shellStr, "-C", vlcStr, nameStr) // nameStr now has full paths
-		//execCmd = exec.Command(vlcStr, nameStr) // I'll try using a string reader
-		//_ = shellStr                            // so I don't have to delete this variable yet.
+		execCmd = exec.Command(shellStr, variadicParam...)
+		//switch n { // just to see if this works.  Once I figured out the variadic syntax I don't need a switch case statement here.
+		//case 1:
+		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0])
+		//case 2:
+		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1])
+		//case 3:
+		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2])
+		//case 4:
+		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3])
+		//case 5:
+		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3], fileNames[4])
+		//default:
+		//	execCmd = exec.Command(shellStr, variadicParam...)
+		//}
 	} else if runtime.GOOS == "linux" { // I'm ignoring this for now.  I'll come back to it after I get the Windows code working.
-		execCmd = exec.Command(vlcStr, nameStr)
-		//execCmd = exec.Command(vlcStr, nameStr) // I'll try using a string reader
+		execCmd = exec.Command(vlcStr, fileNames...)
 	}
 
 	if verboseFlag {
-		fmt.Printf(" vlcStr = %q, and filename is %s\n", vlcStr, nameStr)
+		nameStr := strings.Join(fileNames, " ")
+		fmt.Printf(" vlcStr = %q, and filenames are %s\n", vlcStr, nameStr)
 	}
 
-	nameRdr := strings.NewReader(nameStr)
-	execCmd.Stdin = nameRdr // doesn't seem to work, either.  I'll leave it anyway.
+	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
-	e := execCmd.Run()
+	e := execCmd.Start()
 	if e != nil {
-		fmt.Printf(" Error returned by running vlc %s is %v\n", nameStr, e)
+		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
 	}
-	//if pause() {
-	//	os.Exit(0)
-	//}
-	//	}
 } // end main()
 
 // ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
@@ -183,7 +173,7 @@ func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
 	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
 
 	if verboseFlag {
-		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
+		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
 	}
 
 	return fileNames

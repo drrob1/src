@@ -24,7 +24,7 @@ import (
 20 Jul 22 -- Added verboseFlag being set will have it output the filename w/ each loop iteration.  And I added 'x' to the exit key behavior.
 */
 
-const lastModified = "July 21, 2022"
+const lastModified = "July 23, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, excludeStringEmpty bool
@@ -155,7 +155,7 @@ func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
 	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
 
 	if verboseFlag {
-		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
+		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
 	}
 
 	return fileNames
