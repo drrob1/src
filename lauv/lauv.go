@@ -7,15 +7,18 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/timlibg"
+	"strconv"
 	"strings"
 	"time"
 )
 
 /*
-   HISTORY
-   =======
+REVISION HISTORY
+======== =======
 19 Jul 22 -- First version.  I'm writing this as I go along, pulling code from other pgms as I need them.
              I want this to take an input string on the command line.  This string will be a regexp used to match against a filename, like what rex.go does.
              From the resultant slice of matches of this regexp, I'll shuffle it and then feed them one at a time into vlc.
@@ -23,9 +26,10 @@ import (
              The final launching loop will pause and exit if I want it to, like I did w/ the pid and windows title matching routines.  I'll let the import list auto-populate.
 20 Jul 22 -- Added verboseFlag being set will have it output the filename w/ each loop iteration.  And I added 'x' to the exit key behavior.
 21 Jul 22 -- Now called lauv, it will output n files on the command line to vlc.  This way I can use 'n' from within vlc.
+22 Jul 22 -- I can't get this to work by putting several filenames on the command line and it reading them all in.  Maybe I'll try redirection.
 */
 
-const lastModified = "July 21, 2022"
+const lastModified = "July 22, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag bool
@@ -91,11 +95,11 @@ func main() {
 	now := time.Now()
 	rand.Seed(now.UnixNano())
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
-	swapfnt := func(i, j int) {
+	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
 	for i := 0; i < shuffleAmount; i++ {
-		rand.Shuffle(len(fileNames), swapfnt)
+		rand.Shuffle(len(fileNames), swapFnt)
 	}
 	if verboseFlag {
 		fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
@@ -103,12 +107,8 @@ func main() {
 
 	// ready to start calling vlc
 
-	if verboseFlag {
-		fmt.Printf(" About to call vlc w/ each filename.\n")
-	}
-
 	// Turns out that the shell searches against the path on Windows, but just executing it here doesn't.  So I have to search the path myself.
-	// Nope, I still have that wrong.  I need to start a command processor, too.
+	// Nope, I still have that wrong.  I need to start a command processor, too.  And vlc is not in the %PATH, but it does work when I just give it as a command without a path.
 
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
@@ -123,25 +123,47 @@ func main() {
 	// Time to run vlc.
 
 	var execCmd *exec.Cmd
-	//	for _, name := range fileNames {  no longer need this loop
 
+	/*	TodaysDateString := MakeDateStr()
+		outFilename := "matchingfiles" + TodaysDateString + ".txt"
+	*/
 	n := minInt(numNames, len(fileNames))
-	nameStr := strings.Join(fileNames[:n], " ")
-	// nameStr = fmt.Sprintf("%q", nameStr) // get these quoted.  now not quoted again.
+	nameStr := "--open=" + strings.Join(fileNames[:n], "\n")
+	variadicParam := []string{"-C", "vlc"}
+	variadicParam = append(variadicParam, fileNames...)
+	variadicParam = variadicParam[:n]
+
+	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.  I got this answer from stack overflow.
 
 	if runtime.GOOS == "windows" {
-		execCmd = exec.Command(shellStr, "-C", vlcStr, nameStr) // this isn't working.  Don't know why
-		//execCmd = exec.Command(vlcStr, nameStr) // I'll try this.
+		switch n { // just to see if this works.  Once I figured out the variadic syntax I don't need a switch case statement here.
+		case 1:
+			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0])
+		case 2:
+			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1])
+		case 3:
+			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2])
+		case 4:
+			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3])
+		case 5:
+			execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3], fileNames[4])
+		default:
+			execCmd = exec.Command(shellStr, variadicParam...)
+		}
+		//execCmd = exec.Command(shellStr, "-C", vlcStr, nameStr) // nameStr now has full paths
+		//execCmd = exec.Command(vlcStr, nameStr) // I'll try using a string reader
 		//_ = shellStr                            // so I don't have to delete this variable yet.
-	} else if runtime.GOOS == "linux" {
+	} else if runtime.GOOS == "linux" { // I'm ignoring this for now.  I'll come back to it after I get the Windows code working.
 		execCmd = exec.Command(vlcStr, nameStr)
+		//execCmd = exec.Command(vlcStr, nameStr) // I'll try using a string reader
 	}
 
 	if verboseFlag {
 		fmt.Printf(" vlcStr = %q, and filename is %s\n", vlcStr, nameStr)
 	}
 
-	execCmd.Stdin = os.Stdin
+	nameRdr := strings.NewReader(nameStr)
+	execCmd.Stdin = nameRdr // doesn't seem to work, either.  I'll leave it anyway.
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
 	e := execCmd.Run()
@@ -183,11 +205,16 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 			continue
 		}
 
-		quotedString := fmt.Sprintf("%q", d.Name())
+		//quotedString := fmt.Sprintf("%q", d.Name())
+		fullPath, e := filepath.Abs(d.Name())
+		if e != nil {
+			fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
+		}
+		fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
 		if excludeRegex == nil {
-			fileNames = append(fileNames, quotedString)
-		} else if !excludeRegex.MatchString(lower) { // excludeString is not empty, I have to guard against using an empty excludeRegex, or it will panic.
-			fileNames = append(fileNames, quotedString)
+			fileNames = append(fileNames, fullPath)
+		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
+			fileNames = append(fileNames, fullPath)
 		}
 	}
 	return fileNames
@@ -214,3 +241,24 @@ func minInt(i, j int) int {
 	}
 	return j
 }
+
+/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
+
+func MakeDateStr() string {
+
+	const DateSepChar = "-"
+	var dateStr string
+
+	m, d, y := timlibg.TIME2MDY()
+	timeNow := timlibg.GetDateTime()
+
+	MSTR := strconv.Itoa(m)
+	DSTR := strconv.Itoa(d)
+	YSTR := strconv.Itoa(y)
+	Hr := strconv.Itoa(timeNow.Hours)
+	Min := strconv.Itoa(timeNow.Minutes)
+	Sec := strconv.Itoa(timeNow.Seconds)
+
+	dateStr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar + Sec + "__" + timeNow.DayOfWeekStr
+	return dateStr
+} // MakeDateStr
