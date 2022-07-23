@@ -156,8 +156,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		nameStr := strings.Join(fileNames, " ")
-		fmt.Printf(" vlcStr = %q, and filenames are %s\n", vlcStr, nameStr)
+		fmt.Printf(" vlcStr = %q, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
 	}
 
 	execCmd.Stdin = os.Stdin
