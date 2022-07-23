@@ -7,11 +7,8 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"runtime"
-	"src/timlibg"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -201,15 +198,15 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 		}
 
 		//quotedString := fmt.Sprintf("%q", d.Name())
-		fullPath, e := filepath.Abs(d.Name())
-		if e != nil {
-			fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
-		}
-		fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
+		//fullPath, e := filepath.Abs(d.Name())
+		//if e != nil {
+		//	fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
+		//}
+		//fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
 		if excludeRegex == nil {
-			fileNames = append(fileNames, fullPath)
+			fileNames = append(fileNames, d.Name())
 		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
-			fileNames = append(fileNames, fullPath)
+			fileNames = append(fileNames, d.Name())
 		}
 	}
 	return fileNames
@@ -238,7 +235,7 @@ func minInt(i, j int) int {
 }
 
 /* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
-
+/*
 func MakeDateStr() string {
 
 	const DateSepChar = "-"
@@ -257,3 +254,4 @@ func MakeDateStr() string {
 	dateStr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar + Sec + "__" + timeNow.DayOfWeekStr
 	return dateStr
 } // MakeDateStr
+*/
