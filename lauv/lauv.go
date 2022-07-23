@@ -54,8 +54,9 @@ func main() {
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
-	flag.IntVar(&numNames, "n", 5, " Number of file names to output on the commandline to vlc.")
+	flag.IntVar(&numNames, "n", 10, " Number of file names to output on the commandline to vlc.")
 	flag.Parse()
+	numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.
 
 	if verboseFlag {
 		fmt.Printf(" %s has timestamp of %s, working directory is %s, and full name of executable is %s.\n",
