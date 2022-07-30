@@ -27,7 +27,7 @@ func main() {
 
 	result, err := svc.CreateBucket(input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		if aerr, ok := err.(awserr.Error); ok { // this is a type assertion test.
 			switch aerr.Code() {
 			case s3.ErrCodeBucketAlreadyExists:
 				log.Fatal("Error: Bucket already exists")
@@ -47,5 +47,5 @@ func main() {
 /*
   This code doesn't work on backblaze.  I'm getting an error
   invalid argument: location constraint specifies another region, Backblaze does not support cross-region requests.
-  I wonder if the error message is not quite right.  I may have to create the bucket from the web interface, and d/w the keys so I can then access the bucket.
+  I wonder if the error message is not quite right.  I may have to create the bucket from the web interface, and d/l the keys, so I can then access the bucket.
 */
