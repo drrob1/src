@@ -27,6 +27,7 @@ REVISION HISTORY
 23 Jul 22 -- I finally figured out how to work w/ variadic params, after searching online.  An answer in stack overflow helped me a lot.  Now it works.
 24 Jul 22 -- I allow n, or numNames, to be zero.  That means that there is no limit to what's passed into vlc.
 30 Jul 22 -- Decided to always have it print out number of matches and shuffling time.
+             Now called launchv, because the old name of lauv just wasn't working for me.  It was hard to type.
 */
 
 const lastModified = "July 30, 2022"
@@ -66,7 +67,7 @@ func main() {
 	}
 
 	if flag.NArg() < 1 { // if there are more than 1 arguments, the extra ones are ignored.
-		fmt.Printf(" Usage: lauv <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
+		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
 		os.Exit(0)
 	}
 
@@ -107,9 +108,9 @@ func main() {
 	for i := 0; i < shuffleAmount; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
-	if verboseFlag {
-		fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
-	}
+	//if verboseFlag { // now always shows this message
+	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
+	//}
 
 	// ready to start calling vlc
 
