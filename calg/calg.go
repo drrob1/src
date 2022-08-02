@@ -43,6 +43,8 @@ package main
  18 Jun 21 -- Juneteenth added, as it became a legal federal holiday yesterday, signed into law by Biden.
                 And converted to modules.
   9 Aug 21 -- Added -v to be a synonym of test.
+  2 Aug 22 -- Now outputing the cal files requires use of an option flag.  I mostly didn't want them output whenever I started the pgm.
+                And I'll remove the nofiles flags.  Both of them.
 */
 
 import (
@@ -67,7 +69,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Aug 9, 2021"
+const LastCompiled = "Aug 2, 2022"
 
 // BLANKCHR is used in DAY2STR.
 
@@ -120,7 +122,7 @@ type MonthMatrix [6]WeekVector
 type AllMonthsArray [NumOfMonthsInYear]MonthMatrix
 
 var EntireYear AllMonthsArray
-var windowsFlag bool
+var windowsFlag, outputFlag bool
 
 var (
 	WIM                                                                          [NumOfMonthsInYear]int
@@ -743,17 +745,16 @@ func main() {
 	ClearScreen()
 
 	// flag definitions and processing
-	var nofilesflag = flag.Bool("no", false, "do not generate output cal1 and cal12 files.") // Ptr
-	var NoFilesFlag = flag.Bool("n", false, "do not generate output cal1 and cal12 files.")  // Ptr
 
 	var helpflag = flag.Bool("h", false, "print help message.") // pointer
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "help", false, "print help message.")
 
 	var testFlag bool
-	flag.BoolVar(&testFlag,"test", false, "test mode flag.")
+	flag.BoolVar(&testFlag, "test", false, "test mode flag.")
 	flag.BoolVar(&testFlag, "v", false, "Verbose (test) mode.")
 
+	flag.BoolVar(&outputFlag, "o", false, "output the cal files, which now needs this flag to be output.")
 	flag.Parse()
 
 	if *helpflag || HelpFlag {
@@ -834,10 +835,9 @@ func main() {
 	AssignYear(year)
 	HolidayAssign(year)
 
-	AllowFilesFlag := !(*nofilesflag || *NoFilesFlag)
 	Cal1FilenameFlag = false  // default value
 	Cal12FilenameFlag = false // default value
-	if AllowFilesFlag {
+	if outputFlag {
 		BaseFilename := YEARSTR
 		Cal1Filename = BaseFilename + "_cal1" + Ext1Default
 		Cal12Filename = BaseFilename + "_cal12" + Ext12Default
@@ -863,7 +863,7 @@ func main() {
 
 	if testFlag {
 		fmt.Println()
-		fmt.Println(" Completed year matrix.  AllowFilesFlag is", AllowFilesFlag, ".")
+		fmt.Println(" Completed year matrix.  outputFlag is", outputFlag, ".")
 		fmt.Print(" pausing.  Hit <enter> to contiue.")
 		ans := ""
 		fmt.Scanln(&ans)
