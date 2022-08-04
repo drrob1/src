@@ -12,7 +12,9 @@ REVISION HISTORY
                Maybe 3 lines in succession, each w/ X incremented or decremented by 10, and Y incremented each time by 100 pixels.
 29 Jun 22 -- Fixed depracated MoveMouse -> Move and MouseClick -> Click.
  3 Jul 22 -- Now called gofshowtimer, so I can convert this code to have the ShowTimer function that I currently in Modula-2.
- 3 Aug 22 -- Adding <tab> that will send the message "tabbed", and <space> is same as <enter>, X or Q.
+ 3 Aug 22 -- Now called gofshorttimer, intended to popup for 10 sec as a warning for when the clicks are about to start.
+               Hitting any key will stop the clicks for that round.  Letting it timeout is what I want for the clicks to start.
+               No, nevermind.  Right now, <enter> starts clicks now, <esc> aborts.  And <tab> will allow breaking out.
 */
 
 package main
@@ -37,12 +39,7 @@ import (
 
 const LastModified = "August 3, 2022"
 
-//const clickedX = 450  This was needed in fynerobot but it's not needed here.
-//const clickedY = 325
-//const incrementY = 100
-//const incrementX = 10
-
-const timerDefault = 870
+const timerDefault = 10
 const minTimer = 5
 
 var globalA fyne.App
@@ -54,13 +51,10 @@ var gray = color.Gray{Y: 100}
 var firstX, firstY int
 var timer = flag.Int("t", timerDefault, "timer value in seconds")
 
-//var X = flag.Int("x", clickedX, "X (col) value")  Also needed in fynerobot but not here.
-//var Y = flag.Int("y", clickedY, "Y (row) value")
-
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 
-	str := fmt.Sprintf("gofShowTimer last modified %s, compiled using %s", LastModified, runtime.Version())
+	str := fmt.Sprintf("gofShortTimer last modified %s, compiled using %s", LastModified, runtime.Version())
 
 	flag.Parse()
 
@@ -124,35 +118,6 @@ func changeContent(cnvs fyne.Canvas) {
 		if countdowntimer == 0 {
 			io.WriteString(os.Stdout, "normal") // write this string so it's picked up by goclick.
 			globalW.Close()
-
-			// These are commented out and were part of fynerobot, but now based on ShowTimer so it's just to countdown and exit.
-			//countdowntimer = *timer
-			//currentX, currentY := robotgo.GetMousePos()
-			//Xcol := *X
-			//Yrow := *Y
-			//robotgo.Move(Xcol, Yrow)
-			//robotgo.Click("left", true) // button, double
-			//time.Sleep(500 * time.Millisecond)
-			//
-			//Xcol += incrementX
-			//Yrow += incrementY
-			////robotgo.MoveMouse(Xcol, Yrow) depracated
-			////robotgo.MouseClick("left", true) depracated
-			//robotgo.Move(Xcol, Yrow)
-			//robotgo.Click("left", true)
-			//time.Sleep(400 * time.Millisecond) // used to be 500
-			//
-			//Xcol -= incrementX
-			//Yrow += incrementY
-			////robotgo.MoveMouse(Xcol, Yrow) depracated
-			////robotgo.MouseClick("left", true) depracated
-			//robotgo.Move(Xcol, Yrow)
-			//robotgo.Click("left", true)
-			//
-			//time.Sleep(300 * time.Millisecond) // used to be 500
-			//
-			////robotgo.MoveMouse(currentX, currentY)
-			//robotgo.Move(currentX, currentY)
 		}
 	}
 } // end changeContent
@@ -173,23 +138,24 @@ func showAnother(a fyne.App) {
 */
 
 // ------------------------------------------------------------ keyTyped ------------------------------
-func keyTyped(e *fyne.KeyEvent) { // index is a global var
+func keyTyped(e *fyne.KeyEvent) {
 	switch e.Name {
 	case fyne.KeyUp:
-		//prevImage()
+
 	case fyne.KeyDown:
-		//nextImage()
+
 	case fyne.KeyLeft:
-		//prevImage()
+
 	case fyne.KeyRight:
-		//nextImage()
-	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX, fyne.KeySpace:
+
+	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		io.WriteString(os.Stdout, "escaped")
-		globalW.Close() // quit's the app if this is the last window, which it is.
+		globalW.Close() // quits the app if this is the last window, which it is.
+
 	case fyne.KeyHome:
-		//firstImage()
+
 	case fyne.KeyEnd:
-		//lastImage()
+
 	case fyne.KeyEnter, fyne.KeyReturn:
 		io.WriteString(os.Stdout, "early")
 		globalW.Close()

@@ -38,9 +38,12 @@ import (
    6 Jul 22 -- No longer looking for an environment string called TARGET.  Search string will be in targetStr; interpretation of that string depends on value of useRegexFlag.
                  Will use -rex to set useRegexFlag.
    9 Jul 22 -- useRegexFlag now defaulted to true.  Would need -rex=false to unset the flag.
+   3 Aug 22 -- Adding another fyne pgm to act as a 10 second warning before the clicks start, as I do in tcmd.  I just figured out that I don't need a separate routine, I can use
+                 what I already have.  And I'll configure this to primarily use gofshowtimer instead of showtimer written in M-2.
+                 For me to be able to use the 10 sec popup that can cancel the clicks this round, I must use gofshowtimer.  I'll change the code here and not check for showtimer.
 */
 
-const lastModified = "July 9, 2022"
+const lastModified = "August 3, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -135,9 +138,7 @@ func showAllTargetMatches() { // the hWinText slice is created in main().  This 
 				ctfmt.Printf(ct.Cyan, true, " i:%d; hWnd %d, title=%q, isWndw %t, isEnbld %t, isVis %t; className = %q\n",
 					i, ht.h, ht.title, ht.isWindow, ht.isEnabled, ht.isVisible, ht.className)
 			}
-
 		}
-
 	}
 } // showAllTargetMatches
 
@@ -167,8 +168,6 @@ func main() {
 	flag.BoolVar(&fhFlag, "fh", false, "FH defaults instead of JH defaults.")
 	flag.BoolVar(&gofshowFlag, "g", false, "gofShowTimer to be used instead of ShowTimer written in Modula-2. ")
 	flag.BoolVar(&useRegexFlag, "rex", true, " The command line expression is a regex (or not if false).")
-	//flag.StringVar(&regexStr, "rex", "", "Regular expression string for the target")
-	//flag.StringVar(&targetStr, "target", "", " Ordinary string to be matched against titles.") // I'm not using PIDs anymore, so command tails don't matter now.
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Search expression defaults to a regular expression.  Would need to set rex=false to change this.\n")
@@ -196,36 +195,31 @@ func main() {
 		fmt.Printf(" X = %d, y = %d\n", mouseX, mouseY)
 	}
 
-	if gofshowFlag {
-		execStr := findexec.Find("gofshowtimer.exe", "")
-		if verboseFlag {
-			fmt.Printf(" Looking for gofshowtimer and exec string is %q\n", execStr)
-		}
-
-		//_, err := os.Stat("gofshowtimer.exe")  Using findexec.Find is better as it searches the entire path.
-		//if err != nil {
-		if execStr == "" {
-			//dir, _ := os.Getwd()
-			fmt.Printf(" gofshowtimer.exe not in path.  Exiting\n")
-			os.Exit(1)
-		}
-		//if execStr == "" { // then not found
-
-		//}
-	} else {
-		execStr := findexec.Find("showtimer.exe", "")
-		if verboseFlag {
-			fmt.Printf(" Looking for showtimer and exec string is %q\n", execStr)
-		}
-
-		//_, err := os.Stat("showtimer.exe")  Using findexec.Find is better as it searches the entire path.
-		//if err != nil {
-		if execStr == "" {
-			//dir, _ := os.Getwd()
-			fmt.Printf(" showtimer.exe not in path.  Exiting\n")
-			os.Exit(1)
-		}
+	execStr := findexec.Find("gofshowtimer.exe", "")
+	if verboseFlag {
+		fmt.Printf(" Looking for gofshowtimer and exec string is %q\n", execStr)
 	}
+
+	if execStr == "" {
+		fmt.Printf(" gofshowtimer.exe not in path.  Will no longer look for showtimer.exe, so exiting ...\n")
+		os.Exit(1)
+		/*
+			gofshowFlag = false
+			execStr = findexec.Find("showtimer.exe", "")
+			if execStr == "" {
+				fmt.Printf(" showtimer.exe also not in path.  Exiting \n")
+				os.Exit(1)
+			}
+			if verboseFlag {
+				fmt.Printf(" Looking for showtimer and exec string is %q\n", execStr)
+			}
+
+		*/
+	} else {
+		gofshowFlag = true
+	}
+
+	// execStr now has gofshowtimer.exe.  I don't check for showtimer.exe as I don't want it anymore.
 
 	var err error
 	if useRegexFlag {
@@ -236,8 +230,8 @@ func main() {
 		}
 	}
 	// targetStr = os.Getenv("TARGET")  Environment not used anymore.  targetStr now set by the command line.
-	//replaced := strings.NewReplacer("~", " ") // this will allow me to use ~ as a space in the target.
-	//replaced.Replace(target) // but the match failed.  So I reversed it by making all spaces a '~' and can match against '~'
+	//replaced := strings.NewReplacer("~", " ") // not used anymore as I'm using a regular expression.
+	//replaced.Replace(target)
 
 	if !skipFlag {
 		fmt.Printf("\n w32 section\n")
@@ -246,8 +240,6 @@ func main() {
 			os.Exit(0)
 		}
 	}
-
-	//fmt.Printf("\n done.\n")
 
 	hWinText = make([]htext, 0, 1000) // magic number I expect will be large enough.  Should be about 500 hwnd on a typical computer.
 
@@ -332,6 +324,13 @@ func main() {
 		for {
 			totalIterations++
 			if gofshowFlag { // a flag to use gShowTimer instead of the ShowTimer written in Modula-2.
+				ans = gShowTimer1(10)
+				if ans == "escaped" { // This is the 10 sec popup warning that the clicks are about to come.
+					continue
+				} else if ans == "tabbed" { // this allows <tab> to stop the loop completely.  This is different from the tcmd version which can't be stopped from the 10 sec popup.
+					break
+				}
+
 				n := rand.Intn(2) // so result should be 0 or 1.
 				if n == 0 {
 					ans = gShowTimer1(timer)
@@ -348,7 +347,8 @@ func main() {
 				if verboseFlag {
 					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
 				}
-			} else {
+			} else { // this is a no-go branch because if gofshowtimer isn't found, the program will exit.
+				showTimer(10)
 				showTimer(timer) // in the file called showtimer_windows.go
 				_, err := os.Stat("st.flg")
 
