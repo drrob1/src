@@ -43,7 +43,7 @@ import (
                  For me to be able to use the 10 sec popup that can cancel the clicks this round, I must use gofshowtimer.  I'll change the code here and not check for showtimer.
 */
 
-const lastModified = "August 3, 2022"
+const lastModified = "August 4, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -324,13 +324,6 @@ func main() {
 		for {
 			totalIterations++
 			if gofshowFlag { // a flag to use gShowTimer instead of the ShowTimer written in Modula-2.
-				ans = gShowTimer1(10)
-				if ans == "escaped" { // This is the 10 sec popup warning that the clicks are about to come.
-					continue
-				} else if ans == "tabbed" { // this allows <tab> to stop the loop completely.  This is different from the tcmd version which can't be stopped from the 10 sec popup.
-					break
-				}
-
 				n := rand.Intn(2) // so result should be 0 or 1.
 				if n == 0 {
 					ans = gShowTimer1(timer)
@@ -347,6 +340,17 @@ func main() {
 				if verboseFlag {
 					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
 				}
+
+				ans = gShowTimer1(10)
+				if verboseFlag {
+					fmt.Printf(" answer returned from 10 sec timer is %q\n", ans)
+				}
+				if ans == "escaped" { // This is the 10 sec popup warning that the clicks are about to come.
+					continue
+				} else if ans == "tabbed" { // this allows <tab> to stop the loop completely.  This is different from the tcmd version which can't be stopped from the 10 sec popup.
+					break
+				}
+
 			} else { // this is a no-go branch because if gofshowtimer isn't found, the program will exit.
 				showTimer(10)
 				showTimer(timer) // in the file called showtimer_windows.go
