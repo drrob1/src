@@ -13,6 +13,7 @@ REVISION HISTORY
 29 Jun 22 -- Fixed depracated MoveMouse -> Move and MouseClick -> Click.
  3 Jul 22 -- Now called gofshowtimer, so I can convert this code to have the ShowTimer function that I currently in Modula-2.
  3 Aug 22 -- Adding <tab> that will send the message "tabbed", and <space> is same as <enter>, X or Q.
+ 4 Aug 22 -- Seems that <tab> is reserved and not being passed to fyne, so I changed the message to 'cycled'
 */
 
 package main
@@ -35,7 +36,7 @@ import (
 	"time"
 )
 
-const LastModified = "August 3, 2022"
+const LastModified = "August 4, 2022"
 
 //const clickedX = 450  This was needed in fynerobot but it's not needed here.
 //const clickedY = 325
@@ -194,8 +195,8 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 		io.WriteString(os.Stdout, "early")
 		globalW.Close()
 
-	case fyne.KeyTab:
-		io.WriteString(os.Stdout, "tabbed")
+	case fyne.KeyBackTick, fyne.KeyF1, fyne.KeyF2:
+		io.WriteString(os.Stdout, "cycled")
 		globalA.Quit() // just for some variety.
 	}
 } // end keyTyped

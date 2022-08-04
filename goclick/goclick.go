@@ -326,9 +326,9 @@ func main() {
 			if gofshowFlag { // a flag to use gShowTimer instead of the ShowTimer written in Modula-2.
 				n := rand.Intn(2) // so result should be 0 or 1.
 				if n == 0 {
-					ans = gShowTimer1(timer)
+					ans = gShowTimer1(execStr, timer) // adding execStr because if gofshowtimer is in workingDir, it doesn't start correctly.
 				} else {
-					ans = gShowTimer2(timer)
+					ans = gShowTimer2(execStr, timer) // adding execStr because if gofshowtimer is in workingDir, it doesn't start correctly.
 				}
 				if ans == "escaped" {
 					if verboseFlag {
@@ -341,13 +341,13 @@ func main() {
 					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
 				}
 
-				ans = gShowTimer1(10)
+				ans = gShowTimer1(execStr, 10) // adding execStr because if gofshowtimer is in workingDir, it doesn't start correctly.
 				if verboseFlag {
 					fmt.Printf(" answer returned from 10 sec timer is %q\n", ans)
 				}
 				if ans == "escaped" { // This is the 10 sec popup warning that the clicks are about to come.
 					continue
-				} else if ans == "tabbed" { // this allows <tab> to stop the loop completely.  This is different from the tcmd version which can't be stopped from the 10 sec popup.
+				} else if ans == "cycled" { // this allows <tab> to stop the loop completely.  This is different from the tcmd version which can't be stopped from the 10 sec popup.
 					break
 				}
 
