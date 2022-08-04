@@ -117,9 +117,11 @@ func changeContent(cnvs fyne.Canvas) {
 		globalW.SetTitle(timeStr)
 		now := time.Now()
 		nowStr := now.Format("Mon Jan 2 2006 15:04:05 MST")
-		fynetext := canvas.NewText(timeStr, green)
-		fynenow := canvas.NewText(nowStr, blue)
-		vbox := container.NewVBox(fynetext, fynenow)
+		fyneText := canvas.NewText(timeStr, green)
+		fyneNow := canvas.NewText(nowStr, blue)
+		msg := "esc, q, x: escaped \t return, space: early \t backtick, F1, F2: cycled"
+		msgText := canvas.NewText(msg, blue)
+		vbox := container.NewVBox(fyneText, fyneNow, msgText)
 		cnvs.SetContent(vbox)
 
 		if countdowntimer == 0 {
@@ -199,4 +201,5 @@ func keyTyped(e *fyne.KeyEvent) { // index is a global var
 		io.WriteString(os.Stdout, "cycled")
 		globalA.Quit() // just for some variety.
 	}
+
 } // end keyTyped
