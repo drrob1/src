@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/gen2brain/beeep"
 	"github.com/go-vgo/robotgo"
 	"github.com/gonutz/w32/v2"
 	"github.com/jonhadfield/findexec"
@@ -41,14 +42,16 @@ import (
    3 Aug 22 -- Adding another fyne pgm to act as a 10 second warning before the clicks start, as I do in tcmd.  I just figured out that I don't need a separate routine, I can use
                  what I already have.  And I'll configure this to primarily use gofshowtimer instead of showtimer written in M-2.
                  For me to be able to use the 10 sec popup that can cancel the clicks this round, I must use gofshowtimer.  I'll change the code here and not check for showtimer.
+   5 Aug 22 -- Will exclude system32 or cmd.exe, so it won't catch command line params from work that has to use cmd.exe
 */
 
-const lastModified = "August 4, 2022"
+const lastModified = "August 5, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
 const fhX = 348
 const fhY = 370
+const beepDuration = 500 // in ms
 
 var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag, useRegexFlag bool
 var targetStr string // regexStr is in targetStr if useRegexFlag is true
@@ -78,8 +81,8 @@ func activateFirstMatchingWindow() (int, htext) {
 		if ht.title == "" {
 			continue // skip the Printf and search
 		}
-		if strings.HasPrefix(ht.title, "tcc") {
-			continue // ignore the tcc window itself, as the title will have the command it's currently executing.
+		if strings.HasPrefix(ht.title, "tcc") || strings.Contains(ht.title, "system32") || strings.Contains(ht.title, "cmd.exe") {
+			continue // ignore the tcc window itself, as the title will have the command it's currently executing, as will cmd.exe at work.
 		}
 
 		var found bool
@@ -122,8 +125,8 @@ func showAllTargetMatches() { // the hWinText slice is created in main().  This 
 		if ht.title == "" {
 			continue // skip the Printf and search
 		}
-		if strings.HasPrefix(ht.title, "tcc") {
-			continue // ignore the tcc window itself, as the title will have the command it's currently executing.
+		if strings.HasPrefix(ht.title, "tcc") || strings.Contains(ht.title, "system32") || strings.Contains(ht.title, "cmd.exe") {
+			continue // ignore the tcc window itself, as the title will have the command it's currently executing, as will cmd.exe at work.
 		}
 
 		if useRegexFlag {
@@ -339,6 +342,16 @@ func main() {
 				}
 				if verboseFlag {
 					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
+				}
+
+				// will now beep
+				er := beeep.Beep(beeep.DefaultFreq, beepDuration) // duration in ms
+				if er != nil {
+					fmt.Printf(" Error from beep is %v\n", er)
+				}
+				er = beeep.Notify("10 sec warning", "Clicks can be aborted w/ <esc>", "")
+				if er != nil {
+					fmt.Printf(" Error from notify is %v\n", er)
 				}
 
 				ans = gShowTimer1(execStr, 10) // adding execStr because if gofshowtimer is in workingDir, it doesn't start correctly.
