@@ -43,15 +43,17 @@ import (
                  what I already have.  And I'll configure this to primarily use gofshowtimer instead of showtimer written in M-2.
                  For me to be able to use the 10 sec popup that can cancel the clicks this round, I must use gofshowtimer.  I'll change the code here and not check for showtimer.
    5 Aug 22 -- Will exclude system32 or cmd.exe, so it won't catch command line params from work that has to use cmd.exe
+   8 Aug 22 -- Have to add a time delay for the timer loop in case it can't find gofshowtimer.
 */
 
-const lastModified = "August 5, 2022"
+const lastModified = "August 8, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
 const fhX = 348
 const fhY = 370
 const beepDuration = 500 // in ms
+const minTime = 5        // in sec
 
 var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag, useRegexFlag bool
 var targetStr string // regexStr is in targetStr if useRegexFlag is true
@@ -344,6 +346,8 @@ func main() {
 					fmt.Printf(" answer returned from n=%d is %q\n", n, ans)
 				}
 
+				t0 := time.Now()
+
 				// will now beep
 				er := beeep.Beep(beeep.DefaultFreq, beepDuration) // duration in ms
 				if er != nil {
@@ -362,6 +366,13 @@ func main() {
 					continue
 				} else if ans == "cycled" { // this allows <tab> to stop the loop completely.  This is different from the tcmd version which can't be stopped from the 10 sec popup.
 					break
+				}
+
+				// now to make sure enough time has elapsed before continuing w/ this loop
+
+				for time.Now().Before(t0.Add(minTime * time.Second)) {
+					fmt.Printf(" waiting  \n")
+					time.Sleep(1 * time.Second)
 				}
 
 			} else { // this is a no-go branch because if gofshowtimer isn't found, the program will exit.
