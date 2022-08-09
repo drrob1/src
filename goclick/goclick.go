@@ -11,6 +11,7 @@ import (
 	"github.com/jonhadfield/findexec"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -44,9 +45,10 @@ import (
                  For me to be able to use the 10 sec popup that can cancel the clicks this round, I must use gofshowtimer.  I'll change the code here and not check for showtimer.
    5 Aug 22 -- Will exclude system32 or cmd.exe, so it won't catch command line params from work that has to use cmd.exe
    8 Aug 22 -- Have to add a time delay for the timer loop in case it can't find gofshowtimer.
+   9 Aug 22 -- Still trying to understand why gofshowtimer isn't being called if the binary is in the current directory instead of merely in the path.
 */
 
-const lastModified = "August 8, 2022"
+const lastModified = "August 9, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -200,9 +202,17 @@ func main() {
 		fmt.Printf(" X = %d, y = %d\n", mouseX, mouseY)
 	}
 
-	execStr := findexec.Find("gofshowtimer.exe", "")
+	// I'm expanding the search directory here
+	path := os.Getenv("PATH")
+	home, e := os.UserHomeDir()
+	if e != nil {
+		fmt.Printf(" os.UserHomeDir returned error of %v\n", e)
+	}
+	searchpath := "." + string(filepath.Separator) + ";" + home + string(filepath.Separator) + ";" + path
+	//execStr := findexec.Find("gofshowtimer.exe", searchpath)
+	execStr := findexec.Find("gofshowtimer", searchpath)
 	if verboseFlag {
-		fmt.Printf(" Looking for gofshowtimer and exec string is %q\n", execStr)
+		fmt.Printf(" Looking for gofshowtimer.  Searchpath is %q\n and exec string is %q and %s\n", searchpath, execStr, execStr)
 	}
 
 	if execStr == "" {
@@ -222,6 +232,12 @@ func main() {
 		*/
 	} else {
 		gofshowFlag = true
+	}
+	if !strings.Contains(execStr, ":") { // then it's not a full path
+		execStr = ".\\" + execStr
+		if verboseFlag {
+			fmt.Printf(" Modified execStr is %s\n", execStr)
+		}
 	}
 
 	// execStr now has gofshowtimer.exe.  I don't check for showtimer.exe as I don't want it anymore.
