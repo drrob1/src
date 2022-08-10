@@ -18,8 +18,6 @@ import (
 	"src/hpcalc2"
 )
 
-const LastCompiled = "21 Jun 2021"
-
 /*
 This module uses the HPCALC2 module to simulate an RPN type calculator.
 REVISION HISTORY
@@ -27,7 +25,7 @@ REVISION HISTORY
  1 Dec 89 -- Changed prompt.
 24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
 25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
- 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
+ 3 Mar 96 -- Fixed bug in string display of real2str fails because number is too large (ie, Avogadro's Number).
 18 May 03 -- First Win32 version.  And changed name.
  1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
               And will save/restore the stack to/from a file.
@@ -66,7 +64,10 @@ REVISION HISTORY
 17 Jun 21 -- Testing to see if the defer I put there works.  It does.
 19 Jun 21 -- Changed hpcalc2 MAP commands so that the STO and DEL call MapClose, so I don't have to do that explicitly.
 21 Jun 21 -- Changing the awkward looking code that reads in the stack from the stackfile.
+10 Aug 22 -- "about" will print info about the exe file.
 */
+
+const LastCompiled = "August 10, 2022"
 
 var suppressDump map[string]bool
 
@@ -80,6 +81,10 @@ func main() {
 
 	var Stk hpcalc2.StackType // used when time to write out the stack upon exit.
 	var err error
+
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 
 	suppressDump = make(map[string]bool)
 	suppressDump["PRIME"] = true
@@ -165,6 +170,7 @@ func main() {
 
 		if strings.ToLower(INBUF) == "about" {
 			ctfmt.Println(ct.Cyan, windowsFlag, " Last changed rpn.go ", LastCompiled)
+			ctfmt.Printf(ct.Cyan, windowsFlag, " %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execname)
 			allowDumpFlag = false
 		}
 

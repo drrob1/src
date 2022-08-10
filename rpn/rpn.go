@@ -18,17 +18,13 @@ import (
 	"src/makesubst"
 )
 
-const LastCompiled = "22 June 2021"
-
 /*
 REVISION HISTORY
 ----------------
  1 Dec 89 -- Changed prompt.
 24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
-25 Jul 93 -- Output result without trailing insignificant zeros,
-	                 imported UL2, and changed prompt again.
- 3 Mar 96 -- Fixed bug in string display if real2str fails because
-	                 number is too large (ie, Avogadro's Number).
+25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
+ 3 Mar 96 -- Fixed bug in string display of real2str fails because number is too large (ie, Avogadro's Number).
 18 May 03 -- First Win32 version.  And changed name.
  1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
 	                 And will save/restore the stack to/from a file.
@@ -62,7 +58,10 @@ REVISION HISTORY
 19 Jun 21 -- Now uses the new MAP code written in hpcalc2 that does not require calling MapClose, which was never done here anyway.
 21 Jun 21 -- As the ioutil package is depracated, I'm replacing it with the os package calls.
 22 Jun 21 -- I'm rewriting the file reading code.  I wrote that 5 yrs ago.  It looks painful to me now.
+10 Aug 22 -- "about" will now display info about the executable file.
 */
+
+const LastCompiled = "10 August 2022"
 
 var suppressDump map[string]bool
 
@@ -75,6 +74,10 @@ func main() {
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 
 	var err error
+
+	execname, _ := os.Executable()
+	ExecFI, _ := os.Stat(execname)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 
 	suppressDump = make(map[string]bool)
 	suppressDump["PRIME"] = true
@@ -96,7 +99,7 @@ func main() {
 	StackFileExists := true
 	//InputByteSlice := make([]byte, 8*hpcalc.StackSize)
 
-	InputByteSlice, err := os.ReadFile(StackFileName);
+	InputByteSlice, err := os.ReadFile(StackFileName)
 	if err != nil {
 		fmt.Printf(" Error from os.ReadFile.  Probably because no Stack File found: %v\n", err)
 		StackFileExists = false
@@ -154,6 +157,7 @@ func main() {
 
 		if strings.ToLower(INBUF) == "about" {
 			fmt.Println(" Last compiled rpn.go ", LastCompiled)
+			fmt.Printf(" %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execname)
 			allowDumpFlag = false
 		}
 

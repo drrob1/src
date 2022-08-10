@@ -46,15 +46,19 @@ import (
    5 Aug 22 -- Will exclude system32 or cmd.exe, so it won't catch command line params from work that has to use cmd.exe
    8 Aug 22 -- Have to add a time delay for the timer loop in case it can't find gofshowtimer.
    9 Aug 22 -- Still trying to understand why gofshowtimer isn't being called if the binary is in the current directory instead of merely in the path.
+  10 Aug 22 -- It's working as hoped at JH.  Now I want to add click function, so that I can click a point on the screen and that will become the new starting (x,y).
+                 Wait, that's part of the functions offered by fyne.  This isn't using fyne.  I need to think a bit more.
+                 I got it.  There is minTime (5 sec) count down timer that will read current mouse pointer and then ask to use these coordinates.  If not, it
+                 displays the values of mouseX and mouseY that will be used.  I can escape out if I wish.
 */
 
-const lastModified = "August 9, 2022"
+const lastModified = "August 10, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
-const fhX = 348
+const fhX = 348 //  Supplanted by reading current mouse position and asking to use that as starting values
 const fhY = 370
-const beepDuration = 500 // in ms
+const beepDuration = 300 // in ms
 const minTime = 5        // in sec
 
 var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag, useRegexFlag bool
@@ -209,7 +213,7 @@ func main() {
 		fmt.Printf(" os.UserHomeDir returned error of %v\n", e)
 	}
 	searchpath := "." + string(filepath.Separator) + ";" + home + string(filepath.Separator) + ";" + path
-	//execStr := findexec.Find("gofshowtimer.exe", searchpath)
+	//                                                         execStr := findexec.Find("gofshowtimer.exe", searchpath)
 	execStr := findexec.Find("gofshowtimer", searchpath)
 	if verboseFlag {
 		fmt.Printf(" Looking for gofshowtimer.  Searchpath is %q\n and exec string is %q and %s\n", searchpath, execStr, execStr)
@@ -241,6 +245,33 @@ func main() {
 	}
 
 	// execStr now has gofshowtimer.exe.  I don't check for showtimer.exe as I don't want it anymore.
+
+	// will now set desired start mouse position for the clicking.
+	fmt.Printf(" Counting down from minTime (5 sec) and will set starting mouse position for the clicking functions.\n")
+	for i := minTime; i > 0; i-- {
+		fmt.Printf(" %d \r", i)
+		time.Sleep(1 * time.Second)
+	}
+
+	var ans string
+	currentX, currentY, ok := w32.GetCursorPos()
+	if !ok {
+		fmt.Printf(" w32.GetCursorPos() returned not ok.  This is odd.  Should I exit? ")
+		fmt.Scanln(&ans)
+		ans = strings.ToLower(ans)
+		if strings.Contains(ans, "y") {
+			os.Exit(1)
+		}
+	}
+	fmt.Println()
+	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these to set X and Y? ", currentX, currentY)
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.Contains(ans, "y") {
+		mouseX, mouseY = currentX, currentY
+	} else {
+		fmt.Printf(" Will be using X = %d and Y = %d\n", mouseX, mouseY)
+	}
 
 	var err error
 	if useRegexFlag {
@@ -431,7 +462,7 @@ func main() {
 	//	time.Sleep(1 * time.Second)
 	//}
 	fmt.Printf(" Completed %d iterations of activating the window with the title matching %q.\n\n", totalIterations, targetStr)
-}
+} // end main()
 
 // --------------------------------------------------------------------------------------------
 /*  Not actually used at the moment.
