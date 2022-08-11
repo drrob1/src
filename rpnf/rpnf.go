@@ -52,9 +52,10 @@ import (
 16 Mar 22 -- Removing fmt.Print calls so a terminal window doesn't appear, unless I use the -v flag.
  5 May 22 -- HPCALC2 was changed to use OS specific code.  No changes here, though.
 16 May 22 -- Removed a superfluous select statement in Doit.  I understand concurrency better now.
+11 Aug 22 -- About command will give more info about the exe binary
 */
 
-const lastModified = "May 16, 2022"
+const lastModified = "Aug 11, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -101,6 +102,9 @@ var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
 var verboseFlag = flag.Bool("v", false, "Verbose mode enabled.")
 var screenWidth = flag.Float64("sw", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
 var screenHeight = flag.Float64("sh", 1000, "screen height for the resizze method in Doit.")
+
+var execname, execTimeStamp string
+var execFI os.FileInfo
 
 func main() {
 
@@ -161,6 +165,10 @@ func main() {
 	globalA = app.New()
 	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
+
+	execname, _ = os.Executable()
+	execFI, _ = os.Stat(execname)
+	execTimeStamp = execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 
 	populateUI()
 	go Doit()
@@ -316,6 +324,10 @@ func Doit() {
 				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
 					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
 					stringslice = append(stringslice, str)
+
+					str = fmt.Sprintf(" %s timestamp is %s.  Full exec name is %s.\n", execFI.Name(), execTimeStamp, execname)
+					stringslice = append(stringslice, str)
+
 				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc sets output mode AND number of significant figures.
 					outputMode = outputfix
 				}

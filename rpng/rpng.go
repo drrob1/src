@@ -118,9 +118,10 @@ REVISION HISTORY
 18 Jun 21 -- Now using defer hpcalc2.MapClose(), since I never liked having to include that at the bottom, for fear of forgetting.
 23 Jun 21 -- Cleaning up some code, esp w/ file processing.
  5 May 22 -- Changed hpcalc2 to use OS specific code.
+11 Aug 22 -- I changed the other rpn pgms so that about command will give more info about the exe binary.  This program already does that at startup.
 */
 
-const lastAlteredDate = "5 May 2022"
+const lastAlteredDate = "Aug 11, 2022"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -225,9 +226,9 @@ func main() {
 	ctfmt.Println(ct.Yellow, WindowsFlag, " HP-type RPN calculator written in Go.  Code was last altered ", lastAlteredDate,
 		", NoFileFlag is ", *nofileflag)
 	execname, _ := os.Executable()
-	ExecFI, _ := os.Stat(execname)
-	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	ctfmt.Println(ct.Cyan, WindowsFlag, ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+	execFI, _ := os.Stat(execname)
+	execTimeStamp := execFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	ctfmt.Println(ct.Cyan, WindowsFlag, execFI.Name(), "timestamp is", execTimeStamp, ".  Full exec is", execname)
 	fmt.Println()
 	_, stringslice = hpcalc.GetResult("DUMPFIXED")
 	for _, ss := range stringslice {
