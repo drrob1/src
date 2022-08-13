@@ -50,9 +50,10 @@ import (
                  Wait, that's part of the functions offered by fyne.  This isn't using fyne.  I need to think a bit more.
                  I got it.  There is minTime (5 sec) count down timer that will read current mouse pointer and then ask to use these coordinates.  If not, it
                  displays the values of mouseX and mouseY that will be used.  I can escape out if I wish.
+  13 Aug 22 -- I want better defaults.  Now the defaults will depend on allFlag and timer values.
 */
 
-const lastModified = "August 10, 2022"
+const lastModified = "August 13, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -60,6 +61,7 @@ const fhX = 348 //  Supplanted by reading current mouse position and asking to u
 const fhY = 370
 const beepDuration = 300 // in ms
 const minTime = 5        // in sec
+const defaultTimer = 870 // in sec
 
 var verboseFlag, skipFlag, noFlag, allFlag, fhFlag, gofshowFlag, useRegexFlag bool
 var targetStr string // regexStr is in targetStr if useRegexFlag is true
@@ -244,11 +246,15 @@ func main() {
 		}
 	}
 
+	if timer == 0 && !allFlag { // if allFlag is set, will leave timer alone.  If allFlag is not set and timer is at the default of 0, will make it defaultTimer
+		timer = defaultTimer // value is 870 sec as of this writing.
+	}
+
 	// execStr now has gofshowtimer.exe.  I don't check for showtimer.exe as I don't want it anymore.
 
 	// will now set desired start mouse position for the clicking.
-	fmt.Printf(" Counting down from minTime (5 sec) and will set starting mouse position for the clicking functions.\n")
-	for i := minTime; i > 0; i-- {
+	fmt.Printf(" Counting down from 3 sec and will set starting mouse position for the clicking functions.\n")
+	for i := 3; i > 0; i-- {
 		fmt.Printf(" %d \r", i)
 		time.Sleep(1 * time.Second)
 	}
@@ -369,6 +375,9 @@ func main() {
 
 	var totalIterations int
 
+	if verboseFlag {
+		fmt.Printf(" timer = %d, allFlag = %t\n", timer, allFlag)
+	}
 	if timer > 0 {
 		rand.Seed(time.Now().Unix()) // I'm being cute here, randomly choosing version 1 or 2 of gShowTimer just to make sure both are correct.
 		var ans string
