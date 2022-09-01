@@ -127,7 +127,7 @@ REVISION HISTORY
                And I added verboseFlag, but I can't see what it's writing to the screen, so I'll write to a file in the current directory.
 */
 
-const LastAltered = "31 Aug 2022"
+const LastAltered = "1 Sep 2022"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
@@ -383,6 +383,7 @@ func main() {
 
 	for len(INBUF) > 0 { // Main processing loop for whole lines
 		INBUF = strings.ToUpper(INBUF)
+		DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 		realTknSlice := tknptr.RealTokenSlice(INBUF)
 		if *verboseFlag {
 			s := fmt.Sprintf(" INBUF=%q, length of realTknSlice=%d\n", INBUF, len(realTknSlice))
