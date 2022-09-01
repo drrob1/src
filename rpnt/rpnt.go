@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"src/timlibg"
+	"src/tknptr"
 	"strconv"
 	"strings"
 	"time"
@@ -121,9 +122,12 @@ REVISION HISTORY
 24 Jul 21 -- tcell v2 is now imported.
 31 Dec 21 -- Decided to call it rpnt.go, and will clear out dead code.
  5 May 22 -- HPCALC2 now uses OS specific code to handle clipboard events.  No changes made here.
+31 Aug 22 -- Changing proccessing of commands to match rpnf and rpng.  IE, will respect commands like rcl+.  And removing the "!" command recall syntax.  I could
+               not remember its syntax anyway, and I did not implement this in rpnf or rpng anyway.
+               And I added verboseFlag, but I can't see what it's writing to the screen, so I'll write to a file in the current directory.
 */
 
-const LastAltered = "5 May 2022"
+const LastAltered = "31 Aug 2022"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
@@ -137,7 +141,7 @@ var DisplayTape, stringslice []string
 var Divider string
 var clear map[string]func()
 
-var StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol, PromptRow, outputmode, n int
+var startCol, startRow, sigfig, maxRow, maxCol, titleRow, stackRow, regRow, outputRow, displayCol, promptRow, outputmode, n int
 
 const ( // output modes
 	outputfix = iota
@@ -152,6 +156,7 @@ const DisplayTapeFilename = "displaytape.txt"
 const TextFilenameOut = "rpntcelloutput.txt"
 const TextFilenameIn = "rpntcellinput.txt"
 const HelpFileName = "helprpn.txt"
+const verboseFileName = "verbose.txt"
 
 /*
 const SpaceFiller = "     |     "       Not used so I commented it out 6/17/21.
@@ -171,8 +176,12 @@ var Red = style.Foreground(tcell.ColorRed)
 var BoldYellow = Yellow.Bold(true)
 var BoldRed = Red.Bold(true)
 var BoldGreen = Green.Bold(true)
+var verboseFile *os.File
 
 var scrn tcell.Screen
+
+var verboseFlag = flag.Bool("v", false, "Verbose mode, mostly for debugging.")
+var noFileFlag = flag.Bool("n", false, "no files read or written.") // pointer
 
 func putln(str string) {
 	puts(scrn, style, 1, gblrow, str)
@@ -225,7 +234,6 @@ func main() {
 	var Stk hpcalc.StackType // used when time to write out the stack upon exit.
 	var err error
 
-	var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
 	flag.Parse()
 
 	scrn, err = tcell.NewScreen()
@@ -263,7 +271,7 @@ func main() {
 
 	defer scrn.Fini()
 
-	MaxCol, MaxRow = scrn.Size()
+	maxCol, maxRow = scrn.Size()
 
 	//                       scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 	scrn.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorDefault)) // this worked.
@@ -280,8 +288,8 @@ func main() {
 
 	stringslice = make([]string, 0, 50)
 	sigfig = -1 // now only applies to WriteRegToScreen
-	StartRow := 0
-	StartCol := 0
+	// StartRow := 0  Now defined globally,
+	// StartCol := 0  and of course it's initialized to zero.
 	outputmode = outputfix
 
 	HomeDir, err = os.UserHomeDir()
@@ -289,17 +297,17 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Error from os.UserHomeDir() is", err)
 		os.Exit(1)
 	}
-	Divider = strings.Repeat("-", MaxCol-StartCol)
+	Divider = strings.Repeat("-", maxCol-startCol)
 
-	x = StartCol
-	TitleRow = StartRow
-	StackRow = StartRow + 4
-	RegRow = StackRow + 12
-	OutputRow = RegRow + 10
-	DisplayCol = MaxCol/2 + 2
-	PromptRow = StartRow + 1
-	execname, _ := os.Executable()
-	ExecFI, _ := os.Stat(execname)
+	x = startCol
+	titleRow = startRow
+	stackRow = startRow + 4
+	regRow = stackRow + 12
+	outputRow = regRow + 10
+	displayCol = maxCol/2 + 2
+	promptRow = startRow + 1
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
 	DisplayTape = make([]string, 0, 100)
@@ -309,7 +317,7 @@ func main() {
 	Storage3FullFilename := HomeDir + string(os.PathSeparator) + Storage3FileName
 
 	var thefile *os.File
-	if !*nofileflag {
+	if !*noFileFlag {
 		thefile, err = os.Open(StorageFullFilename) // open for reading
 		if os.IsNotExist(err) {
 			log.Print(" thefile does not exist for reading. ")
@@ -336,248 +344,274 @@ func main() {
 		} // thefileexists for both the Stack variable, Stk, and the Storage registers.
 	}
 
-	WriteStack(x, StackRow)
-	n = WriteRegToScreen(x, RegRow)
+	WriteStack(x, stackRow)
+	n = WriteRegToScreen(x, regRow)
 	if n > 8 {
-		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = StartRow + 1
+		outputRow = regRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
+		promptRow = startRow + 1
 	}
 
 	args := flag.Args()
 	if len(args) > 0 {
 		INBUF = strings.Join(args, " ")
 	} else {
-		puts(scrn, Cyan, x, PromptRow, InputPrompt)
+		puts(scrn, Cyan, x, promptRow, InputPrompt)
 		x += len(InputPrompt) + 2
-		scrn.ShowCursor(x, PromptRow)
-		INBUF = GetInputString(x, PromptRow)
+		scrn.ShowCursor(x, promptRow)
+		INBUF = GetInputString(x, promptRow)
 		if strings.HasPrefix(INBUF, "Q") {
 			os.Exit(0)
 		}
-		x = StartCol
+		x = startCol
 	} // if command tail exists
 	scrn.Show()
-
-	INBUF = strings.ToUpper(INBUF)
 
 	hpcalc.PushMatrixStacks()
 	defer hpcalc.MapClose()
 
-	for len(INBUF) > 0 { // Main processing loop
-		// check for new use history command patterned after bash, ie, using ! to start it.
-		INBUF = strings.ToUpper(INBUF)
-		if strings.HasPrefix(INBUF, "!") {
-			i := 0
-			if len(INBUF) > 1 {
-				ch := INBUF[1] // the 2nd position
-				i = GetRegIdx(ch)
-			}
-			INBUF = GetHx(i)
-		} else if INBUF == "UP" {
-			INBUF = GetHx(1)
-
-		} else if INBUF == "DN" {
-			// leaving it alone will pop the stack down.
-
-		} else if INBUF == "PGUP" {
-			INBUF = "UP" // and sent into GetResult to push the stack up
-
-		} else if INBUF == "PGDN" {
-			INBUF = "DN" // and sent into GetResult to pop the stack down
-
-		} else { // only put typed command lines into the hx.
-			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
+	if *verboseFlag {
+		verboseFile, err = os.OpenFile(verboseFileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from opening the verbose file is %v\n", err)
+			*verboseFlag = false
+		} else {
+			verboseFile.WriteString(Divider)
+			verboseFile.WriteString("\n")
+			defer verboseFile.Close()
 		}
+	}
 
-		x = StartCol
-		// These commands are not run thru hpcalc2 as they are processed before calling GetResult.
-		if INBUF == "ZEROREG" {
-			for c := range Storage {
-				Storage[c].Value = 0.0
-				Storage[c].Name = ""
+	for len(INBUF) > 0 {
+		INBUF = strings.ToUpper(INBUF)
+		realTknSlice := tknptr.RealTokenSlice(INBUF)
+		if *verboseFlag {
+			s := fmt.Sprintf(" INBUF=%q, length of realTknSlice=%d\n", INBUF, len(realTknSlice))
+			verboseFile.WriteString(s)
+		}
+		for _, rtkn := range realTknSlice { // Main processing loop
+			// check for new use history command patterned after bash, ie, using ! to start it.  Nevermind.  Removed 31 Aug 22.
+			/*
+				if strings.HasPrefix(INBUF, "!") {
+					i := 0
+					if len(INBUF) > 1 {
+						ch := INBUF[1] // the 2nd position
+						i = GetRegIdx(ch)
+					}
+					INBUF = GetHx(i)
+				} else if INBUF == "UP" {
+					INBUF = GetHx(1)
+
+				} else if INBUF == "DN" {
+					// leaving it alone will pop the stack down.
+
+				} else if INBUF == "PGUP" {
+					INBUF = "UP" // and sent into GetResult to push the stack up
+
+				} else if INBUF == "PGDN" {
+					INBUF = "DN" // and sent into GetResult to pop the stack down
+
+				} else { // only put typed command lines into the hx.
+					DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
+				}
+
+			*/
+			if *verboseFlag {
+				s := fmt.Sprintf(" rtkn.Str=%q, and %#v\n", rtkn.Str, rtkn)
+				verboseFile.WriteString(s)
 			}
-		} else if strings.HasPrefix(INBUF, "STO") {
-			i := 0
-			if len(INBUF) > 3 {
-				ch := INBUF[3] // The 4th position.
-				i = GetRegIdx(ch)
-			}
-			Storage[i].Value = hpcalc.READX()
-			n = WriteRegToScreen(x, RegRow)
-			if n > 8 {
-				clearline(PromptRow)
-				clearline(OutputRow)
-				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-				PromptRow = StartRow + 1   // used to be OutputRow -1
-			}
-			if i > 0 {
+
+			x = startCol
+			// These commands are not run thru hpcalc2 as they are processed before calling GetResult.
+			if rtkn.Str == "ZEROREG" {
+				for c := range Storage {
+					Storage[c].Value = 0.0
+					Storage[c].Name = ""
+				}
+			} else if strings.HasPrefix(rtkn.Str, "STO") {
+				i := 0
+				if len(rtkn.Str) > 3 {
+					ch := rtkn.Str[3] // The 4th position.
+					i = GetRegIdx(ch)
+				}
+				Storage[i].Value = hpcalc.READX()
+				n = WriteRegToScreen(x, regRow)
+				if n > 8 {
+					clearline(promptRow)
+					clearline(outputRow)
+					outputRow = regRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
+					promptRow = startRow + 1   // used to be OutputRow -1
+				}
+				if i > 0 {
+					Storage[i].Name = GetNameStr()
+				}
+			} else if strings.HasPrefix(rtkn.Str, "RCL") {
+				i := 0
+				if len(rtkn.Str) > 3 {
+					ch := rtkn.Str[3] // the 4th position.
+					i = GetRegIdx(ch)
+				}
+				hpcalc.PUSHX(Storage[i].Value)
+				RepaintScreen(startCol)
+			} else if strings.HasPrefix(rtkn.Str, "SHO") || rtkn.Str == "LS" || strings.HasPrefix(rtkn.Str, "LIST") {
+				n = WriteRegToScreen(startCol, regRow)
+				if n > 8 {
+					outputRow = regRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
+					promptRow = startRow + 1   // used to be OutputRow -1
+				}
+				WriteDisplayTapeToScreen(displayCol, stackRow)
+			} else if strings.HasPrefix(rtkn.Str, "NAME") || strings.HasPrefix(rtkn.Str, "LABL") { // prefix must be 4 chars.
+				//var ans string
+				var i int // remember that this auto-zero'd
+				if len(rtkn.Str) > 4 {
+					ch := rtkn.Str[4] // the 5th position
+					i = GetRegIdx(ch)
+				}
 				Storage[i].Name = GetNameStr()
-			}
-		} else if strings.HasPrefix(INBUF, "RCL") {
-			i := 0
-			if len(INBUF) > 3 {
-				ch := INBUF[3] // the 4th position.
-				i = GetRegIdx(ch)
-			}
-			hpcalc.PUSHX(Storage[i].Value)
-			RepaintScreen(StartCol)
-		} else if strings.HasPrefix(INBUF, "SHO") || INBUF == "LS" || strings.HasPrefix(INBUF, "LIST") {
-			n = WriteRegToScreen(StartCol, RegRow)
-			if n > 8 {
-				OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-				PromptRow = StartRow + 1   // used to be OutputRow -1
-			}
-			WriteDisplayTapeToScreen(DisplayCol, StackRow)
-		} else if strings.HasPrefix(INBUF, "NAME") || strings.HasPrefix(INBUF, "LABL") { // prefix must be 4 chars.
-			//var ans string
-			var i int // remember that this auto-zero'd
-			if len(INBUF) > 4 {
-				ch := INBUF[4] // the 5th position
-				i = GetRegIdx(ch)
-			}
-			Storage[i].Name = GetNameStr()
-		} else if strings.HasPrefix(INBUF, "SIG") || strings.HasPrefix(INBUF, "FIX") { // SigFigN command, or FIX
-			ch := INBUF[len(INBUF)-1] // ie, the last character.
-			sigfig = GetRegIdx(ch)
-			if sigfig > 9 { // If sigfig greater than this max value, make it -1 again.
-				sigfig = -1
-			}
-			_, _ = hpcalc.GetResult(INBUF) // Have to send this into hpcalc also
-			outputmode = outputfix
-		} else if INBUF == "HELP" || INBUF == "?" || INBUF == "H" {
-			WriteHelp(StartCol+2, StartRow)
-		} else if strings.HasPrefix(INBUF, "DUMP") {
-			// do nothing, ie, don't send it into hpcalc.GetResult
+			} else if strings.HasPrefix(rtkn.Str, "SIG") || strings.HasPrefix(rtkn.Str, "FIX") { // SigFigN command, or FIX
+				ch := rtkn.Str[len(rtkn.Str)-1] // ie, the last character.
+				sigfig = GetRegIdx(ch)
+				if sigfig > 9 { // If sigfig greater than this max value, make it -1 again.
+					sigfig = -1
+				}
+				_, _ = hpcalc.GetResult(rtkn.Str) // Have to send this into hpcalc also
+				outputmode = outputfix
+			} else if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" {
+				WriteHelp(startCol+2, startRow)
+			} else if strings.HasPrefix(rtkn.Str, "DUMP") {
+				// do nothing, ie, don't send it into hpcalc.GetResult
 
-		} else if strings.HasPrefix(INBUF, "OUTPUTFI") { // allow outputfix, etc
-			outputmode = outputfix
-		} else if strings.HasPrefix(INBUF, "OUTPUTFL") { // allow outputfloat, etc
-			outputmode = outputfloat
-		} else if strings.HasPrefix(INBUF, "OUTPUTGE") { // allow outputgen, etc.
-			outputmode = outputgen
-		} else if INBUF == "CLEAR" || INBUF == "CLS" {
-			scrn.Clear()
-			scrn.Fill(' ', plain)
-			scrn.Sync()
-			gblrow = 0
-			RepaintScreen(StartCol)
-		} else if INBUF == "REPAINT" {
-			RepaintScreen(StartCol)
-		} else if INBUF == "DEBUG" {
-			style = Cyan
-			putf(x, OutputRow+8, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
-			//			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
-			putf(0, OutputRow+9, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
+			} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") { // allow outputfix, etc
+				outputmode = outputfix
+			} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") { // allow outputfloat, etc
+				outputmode = outputfloat
+			} else if strings.HasPrefix(rtkn.Str, "OUTPUTGE") { // allow outputgen, etc.
+				outputmode = outputgen
+			} else if rtkn.Str == "CLEAR" || rtkn.Str == "CLS" {
+				scrn.Clear()
+				scrn.Fill(' ', plain)
+				scrn.Sync()
+				gblrow = 0
+				RepaintScreen(startCol)
+			} else if rtkn.Str == "REPAINT" {
+				RepaintScreen(startCol)
+			} else if rtkn.Str == "DEBUG" {
+				style = Cyan
+				putf(x, outputRow+8, " HP-type RPN calculator written in Go.  Last altered %s", LastAltered)
+				//			Printf_tb(0, OutputRow+9, BrightCyan, Black, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execname)
+				putf(0, outputRow+9, "%s was last linked on %s.  Full executable is %s.", ExecFI.Name(), LastLinkedTimeStamp, execName)
 
-			style = Yellow
-			putf(StartCol, OutputRow+10, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d",
-				StartCol, StartRow, MaxCol, MaxRow, TitleRow, StackRow, RegRow, OutputRow, PromptRow)
-			putf(StartCol, OutputRow+11, " DisplayCol=%d", DisplayCol)
-			putf(x, OutputRow+13, " StorageFullFilename 1:%s, 2:%s, 3:%s", StorageFullFilename, Storage2FullFilename, Storage3FullFilename)
-			style = Cyan
-		} else if strings.HasPrefix(INBUF, ":W") || strings.HasPrefix(INBUF, "WR") {
-			xstring := GetXstring()
-			XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-			if err != nil {
 				style = Yellow
-				putf(0, OutputRow, " Error %v while opening %s", err, TextFilenameOut)
+				putf(startCol, outputRow+10, " StartCol=%d,StartRow=%d,MaxCol=%d,MaxRow=%d,TitleRow=%d,StackRow=%d,RegRow=%d,OutputRow=%d,PromptRow=%d",
+					startCol, startRow, maxCol, maxRow, titleRow, stackRow, regRow, outputRow, promptRow)
+				putf(startCol, outputRow+11, " DisplayCol=%d", displayCol)
+				putf(x, outputRow+13, " StorageFullFilename 1:%s, 2:%s, 3:%s", StorageFullFilename, Storage2FullFilename, Storage3FullFilename)
 				style = Cyan
-			}
-			defer XStringFile.Close()
-			XstringWriter := bufio.NewWriter(XStringFile)
-			defer XstringWriter.Flush()
-			today := time.Now()
-			datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
-			_, err = XstringWriter.WriteString("------------------------------------------------------\n")
-			_, err = XstringWriter.WriteString(datestring)
-			_, err = XstringWriter.WriteRune('\n')
-			_, err = XstringWriter.WriteString(xstring)
-			_, err = XstringWriter.WriteRune('\n')
-			check(err)
+			} else if strings.HasPrefix(rtkn.Str, ":W") || strings.HasPrefix(rtkn.Str, "WR") {
+				xstring := GetXstring()
+				XStringFile, err := os.OpenFile(TextFilenameOut, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+				if err != nil {
+					style = Yellow
+					putf(0, outputRow, " Error %v while opening %s", err, TextFilenameOut)
+					style = Cyan
+				}
+				defer XStringFile.Close()
+				XstringWriter := bufio.NewWriter(XStringFile)
+				defer XstringWriter.Flush()
+				today := time.Now()
+				datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+				_, err = XstringWriter.WriteString("------------------------------------------------------\n")
+				_, err = XstringWriter.WriteString(datestring)
+				_, err = XstringWriter.WriteRune('\n')
+				_, err = XstringWriter.WriteString(xstring)
+				_, err = XstringWriter.WriteRune('\n')
+				check(err)
 
-			_, err = XstringWriter.WriteString("\n\n")
-			check(err)
-			XstringWriter.Flush()
-			XStringFile.Close()
-		} else if strings.HasPrefix(INBUF, ":R") || INBUF == "READ" || INBUF == "RD" {
-			XstringFileExists := true
-			XstringFile, err := os.Open(TextFilenameIn) // open for reading
-			if os.IsNotExist(err) {
-				style = Yellow
-				putf(0, OutputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
-				style = Cyan
-				XstringFileExists = false
-			} else if err != nil {
-				style = BoldYellow
-				putf(0, OutputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
-				style = Cyan
-				XstringFileExists = false
-			}
+				_, err = XstringWriter.WriteString("\n\n")
+				check(err)
+				XstringWriter.Flush()
+				XStringFile.Close()
+			} else if strings.HasPrefix(rtkn.Str, ":R") || rtkn.Str == "READ" || rtkn.Str == "RD" {
+				XstringFileExists := true
+				XstringFile, err := os.Open(TextFilenameIn) // open for reading
+				if os.IsNotExist(err) {
+					style = Yellow
+					putf(0, outputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+					style = Cyan
+					XstringFileExists = false
+				} else if err != nil {
+					style = BoldYellow
+					putf(0, outputRow, "\n %s does not exist for reading in this directory.  Command ignored.\n", TextFilenameIn)
+					style = Cyan
+					XstringFileExists = false
+				}
 
-			if XstringFileExists {
-				defer XstringFile.Close()
-				XstringScanner := bufio.NewScanner(XstringFile)
-				XstringScanner.Scan()
-				Xstring := strings.TrimSpace(XstringScanner.Text())
-				if err := XstringScanner.Err(); err != nil {
-					log.Println(" Error while reading from ", TextFilenameIn, ".  Error is ", err, ".  Command ignored.")
-				} else {
-					r, err := strconv.ParseFloat(Xstring, 64)
-					check(err)
-					// fmt.Println(" Read ", r, " from ", TextFilenameIn, ".")  a debugging statement
-					hpcalc.PUSHX(r)
+				if XstringFileExists {
+					defer XstringFile.Close()
+					XstringScanner := bufio.NewScanner(XstringFile)
+					XstringScanner.Scan()
+					Xstring := strings.TrimSpace(XstringScanner.Text())
+					if err := XstringScanner.Err(); err != nil {
+						log.Println(" Error while reading from ", TextFilenameIn, ".  Error is ", err, ".  Command ignored.")
+					} else {
+						r, err := strconv.ParseFloat(Xstring, 64)
+						check(err)
+						// fmt.Println(" Read ", r, " from ", TextFilenameIn, ".")  a debugging statement
+						hpcalc.PUSHX(r)
+					}
+				}
+			} else {
+
+				// ----------------------------------------------------------------------------------------------
+				//                                                _, stringslice = hpcalc.GetResult(INBUF) // Here is where GetResult is called
+				//                                                The old GETRESULT is long gone.
+				_, stringslice = hpcalc.Result(rtkn) // Now need to call Result which accepts a token instead of a string.
+				// ----------------------------------------------------------------------------------------------
+				y := outputRow
+				for _, s := range stringslice {
+					puts(scrn, Yellow, x, y, s)
+					y++
+				}
+
+				for y < maxRow {
+					clearline(y)
+					y++
 				}
 			}
-		} else {
 
-			// ----------------------------------------------------------------------------------------------
-			_, stringslice = hpcalc.GetResult(INBUF) // Here is where GetResult is called
-			// ----------------------------------------------------------------------------------------------
-			y := OutputRow
-			for _, s := range stringslice {
-				puts(scrn, Yellow, x, y, s)
-				y++
+			//  These commands are processed after GetResult is called, so these commands are run thru hpcalc2.
+			if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
+				style = Yellow
+				putf(x, outputRow+1, " Last altered rpntcell %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
+				style = Cyan
 			}
 
-			for y < MaxRow {
-				clearline(y)
-				y++
-			}
-		}
-
-		//  These commands are processed after GetResult is called, so these commands are run thru hpcalc2.
-		if strings.ToLower(INBUF) == "about" { // I'm using ToLower here just to experiment a little.
-			style = Yellow
-			putf(x, OutputRow+1, " Last altered rpntcell %s, last linked %s. ", LastAltered, LastLinkedTimeStamp)
-			style = Cyan
-		}
-
-		RepaintScreen(StartCol) // I forgot 4/07/2020 3:02:52 PM how the screen keeps getting cleared.  I finally found how, and then I changed it.
-		x = StartCol
-		puts(scrn, Cyan, x, PromptRow, InputPrompt)
+		} // End Main Processing For Loop where I range over the tokens in INBUF
+		RepaintScreen(startCol) // I forgot 4/07/2020 3:02:52 PM how the screen keeps getting cleared.  I finally found how, and then I changed it.
+		x = startCol
+		puts(scrn, Cyan, x, promptRow, InputPrompt)
 		x += len(InputPrompt) + 2
-		scrn.ShowCursor(x, PromptRow)
+		scrn.ShowCursor(x, promptRow)
 		scrn.Show()
-		ans := GetInputString(x, PromptRow)
+		ans := GetInputString(x, promptRow)
 		INBUF = strings.ToUpper(ans)
 		if len(INBUF) == 0 || strings.HasPrefix(INBUF, "Q") || INBUF == "X" {
 			fmt.Println()
 			break
 		}
 
-	} // End Main Processing For Loop
+	} // end for len(INBUF) > 0
 
 	// Time to write files before exiting.
 
-	if !*nofileflag {
+	if !*noFileFlag {
 		// Rotate StorageFileNames and write
 		err = os.Rename(Storage2FullFilename, Storage3FullFilename)
-		if err != nil && !*nofileflag {
+		if err != nil && !*noFileFlag {
 			_ = fmt.Errorf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
 		}
 
 		err = os.Rename(StorageFullFilename, Storage2FullFilename)
-		if err != nil && !*nofileflag {
+		if err != nil && !*noFileFlag {
 			_ = fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
 		}
 
@@ -960,13 +994,13 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	HelpFile.Flush()
 	HelpOut.Close()
 
-	if y+len(helpstringslice) > MaxRow {
+	if y+len(helpstringslice) > maxRow {
 		FI, err := os.Stat(HelpFileName)
 		check(err)
 		//		Printf_tb(x, y, BrightYellow, Black, " Too many help lines for this small screen.  See %s.", HelpFileName)
 		style = BoldGreen
-		y = OutputRow
-		putf(0, y, "Too many help lines for this small screen.  %d lines exceed %d rows.  See %s.", len(helpstringslice), MaxRow, HelpFileName)
+		y = outputRow
+		putf(0, y, "Too many help lines for this small screen.  %d lines exceed %d rows.  See %s.", len(helpstringslice), maxRow, HelpFileName)
 		y++
 		yr, m, d := FI.ModTime().Date()
 		putf(0, y, "%s from %d/%d/%d is in current directory.", FI.Name(), m, d, yr)
@@ -999,13 +1033,13 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 
 func RepaintScreen(x int) {
 
-	WriteStack(x, StackRow)
-	n = WriteRegToScreen(x, RegRow)
+	WriteStack(x, stackRow)
+	n = WriteRegToScreen(x, regRow)
 	if n > 8 {
-		OutputRow = RegRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
-		PromptRow = StartRow + 1   // PromptRow = OutputRow - 1 was prev assignment.
+		outputRow = regRow + n + 3 // So there is enough space for all the reg's to be displayed above the output
+		promptRow = startRow + 1   // PromptRow = OutputRow - 1 was prev assignment.
 	}
-	WriteDisplayTapeToScreen(DisplayCol, StackRow)
+	WriteDisplayTapeToScreen(displayCol, stackRow)
 	//	Printf_tb(x, MaxRow-1, BrightCyan, Black, Divider)  Not needed for tcell
 	gblrow = 0
 	scrn.Sync()
@@ -1016,8 +1050,8 @@ func RepaintScreen(x int) {
 func GetNameStr() string {
 	var ans string
 	promptstr := "   Input name string, making - or = into a space : "
-	puts(scrn, Yellow, 1, PromptRow, promptstr)
-	ans = GetInputString(len(promptstr)+2, PromptRow)
+	puts(scrn, Yellow, 1, promptRow, promptstr)
+	ans = GetInputString(len(promptstr)+2, promptRow)
 	answer := strings.ToUpper(ans) // don't return a ToUpper(ans)
 	if answer == "TODAY" || answer == "T" {
 		m, d, y := timlibg.TIME2MDY()
