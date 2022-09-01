@@ -381,14 +381,14 @@ func main() {
 		}
 	}
 
-	for len(INBUF) > 0 {
+	for len(INBUF) > 0 { // Main processing loop for whole lines
 		INBUF = strings.ToUpper(INBUF)
 		realTknSlice := tknptr.RealTokenSlice(INBUF)
 		if *verboseFlag {
 			s := fmt.Sprintf(" INBUF=%q, length of realTknSlice=%d\n", INBUF, len(realTknSlice))
 			verboseFile.WriteString(s)
 		}
-		for _, rtkn := range realTknSlice { // Main processing loop
+		for _, rtkn := range realTknSlice { // Main processing loop for tokens within a line.
 			// check for new use history command patterned after bash, ie, using ! to start it.  Nevermind.  Removed 31 Aug 22.
 			/*
 				if strings.HasPrefix(INBUF, "!") {
