@@ -126,12 +126,14 @@ REVISION HISTORY
                And stoclip and rclclip are now synonyms for toclip and fromclip.  But these only work at the command line,
                as sto and rcl are processed by rpng and rpnf without passing them to HPCALC2.
  7 May 22 -- Played a bit in clippy_linux.go, where I'm using make to initialize bytes.NewBuffer().
+ 7 Sep 22 -- Changed the pivot for the JUL command from the current year to a const of 30
 */
 
-const LastAlteredDate = "7 May 2022"
+const LastAlteredDate = "7 Sep 2022"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
+const julPivot = 30
 
 const (
 	X = iota // StackRegNames as int.  No need for a separate type.
@@ -514,7 +516,7 @@ func DumpStackFloat() []string {
 
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -772,7 +774,6 @@ func GetResult(s string) (float64, []string) {
 }
 
 func Result(tkn tknptr.TokenType) (float64, []string) {
-	var year int
 	ss := make([]string, 0, 100) // ss is abbrev for stringslice.
 
 outerloop:
@@ -891,7 +892,7 @@ outerloop:
 			ss = append(ss, " %   -- does XY/100, places result in X.  Leaves Y alone.")
 			ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
 			ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
-			ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.")
+			ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.  Pivot is 30 for 2 digit years.")
 			ss = append(ss, " TODAY, T -- Return Julian date number of today's date.  Pop stack x2.")
 			ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
 			ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
@@ -1001,8 +1002,9 @@ outerloop:
 			PushMatrixStacks()
 			LastX = Stack[X]
 			// allow for 2 digit years
-			_, _, year = timlibg.TIME2MDY()
-			if Stack[X] <= float64(year%100) { // % is the MOD operator
+			//_, _, year := timlibg.TIME2MDY()
+			//if Stack[X] <= float64(year%100) { // changed the pivot for 2 digit years Sep 7, 2022
+			if Stack[X] <= julPivot { // % is the MOD operator.  The pivot is 30 as of this writing.
 				Stack[X] += 2000.0
 			} else if Stack[X] < 100.0 {
 				Stack[X] += 1900.0
