@@ -129,7 +129,7 @@ REVISION HISTORY
  7 Sep 22 -- Changed the pivot for the JUL command from the current year to a const of 30
 */
 
-const LastAlteredDate = "7 Sep 2022"
+const LastAlteredDate = "8 Sep 2022"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -892,7 +892,7 @@ outerloop:
 			ss = append(ss, " %   -- does XY/100, places result in X.  Leaves Y alone.")
 			ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
 			ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
-			ss = append(ss, " JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.  Pivot is 30 for 2 digit years.")
+			ss = append(ss, fmt.Sprintf(" JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.  Pivot is %d for 2 digit years.", julPivot))
 			ss = append(ss, " TODAY, T -- Return Julian date number of today's date.  Pop stack x2.")
 			ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
 			ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
