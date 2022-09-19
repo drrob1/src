@@ -28,12 +28,14 @@ REVISION HISTORY
 24 Jul 22 -- I allow n, or numNames, to be zero.  That means that there is no limit to what's passed into vlc.
 30 Jul 22 -- Decided to always have it print out number of matches and shuffling time.
              Now called launchv, because the old name of lauv just wasn't working for me.  It was hard to type.
+19 Sep 22 -- Trying to get it so I don't need tcc.  I added the notccFlag to test it.  When that started working, I made the default of true, so it's always on.
+               I had to add vlc to the path for it to work.
 */
 
-const lastModified = "July 30, 2022"
+const lastModified = "Sep 19, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag bool
+var verboseFlag, notccFlag bool
 var includeRexString, excludeRexString string
 var numNames int
 
@@ -50,7 +52,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output 'n' of them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: lauv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
@@ -58,6 +60,7 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
 	flag.IntVar(&numNames, "n", 20, " Number of file names to output on the commandline to vlc.")
+	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.Parse()
 	numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.
 
@@ -119,8 +122,8 @@ func main() {
 
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
-		//vlcStr = findexec.Find("vlc.exe", "")  Turns out that vlc is not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.
-		vlcStr = "vlc"
+		vlcStr = findexec.Find("vlc.exe", "") //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+		//vlcStr = "vlc"
 		shellStr = os.Getenv("ComSpec")
 	} else if runtime.GOOS == "linux" {
 		vlcStr = findexec.Find("vlc", "")
@@ -132,6 +135,9 @@ func main() {
 	var execCmd *exec.Cmd
 
 	variadicParam := []string{"-C", "vlc"}
+	if notccFlag {
+		variadicParam = []string{}
+	}
 	variadicParam = append(variadicParam, fileNames...)
 	n := minInt(numNames, len(fileNames))
 	if n > 0 {
@@ -142,7 +148,11 @@ func main() {
 	// I got this answer from stack overflow.
 
 	if runtime.GOOS == "windows" {
-		execCmd = exec.Command(shellStr, variadicParam...)
+		if notccFlag {
+			execCmd = exec.Command(vlcStr, variadicParam...)
+		} else {
+			execCmd = exec.Command(shellStr, variadicParam...)
+		}
 		//switch n { // just to see if this works.  Once I figured out the variadic syntax I don't need a switch case statement here.
 		//case 1:
 		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0])
@@ -162,7 +172,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Printf(" vlcStr = %q, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
+		fmt.Printf(" vlcStr = %s, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
 	}
 
 	execCmd.Stdin = os.Stdin
