@@ -1,4 +1,4 @@
-package main // launchv.go
+package main // findme.go
 
 import (
 	"flag"
@@ -30,15 +30,15 @@ REVISION HISTORY
              Now called launchv, because the old name of lauv just wasn't working for me.  It was hard to type.
 19 Sep 22 -- Trying to get it so I don't need tcc.  I added the notccFlag to test it.  When that started working, I made the default of true, so it's always on.
                I had to add vlc to the path for it to work.
-20 Sep 22 -- After writing and debugging findme, I now know that my issue all along was that actual quote characters were in the VLCPATH environment string.
-               After removing those, the code now works as originally intended.
+20 Sep 22 -- Now called findme.go.  I want to explore how searching thru the path, and adding to the path, works (or doesn't work).  I tried to add the dir for vlc here in an
+               environment variable.  That didn't work.  Why?
 */
 
 const lastModified = "Sep 20, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, notccFlag, ok bool
-var includeRexString, excludeRexString, searchPath, vlcPath, path string
+var verboseFlag, notccFlag bool
+var includeRexString, excludeRexString string
 var numNames int
 
 func main() {
@@ -49,24 +49,11 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	path = os.Getenv("PATH")
-	vlcPath, ok = os.LookupEnv("VLCPATH")
-	if ok {
-		vlcPath = strings.ReplaceAll(vlcPath, `"`, "") // Here I use back quotes to insert a literal quote.
-		searchPath = vlcPath + ";" + path
-	} else {
-		searchPath = path
-	}
-	if verboseFlag {
-		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		listPath(searchPath)
-	}
-
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp against all filenames in the current directory\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output 'n' of them on the command line to vlc.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
-			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
+		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
+			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
@@ -83,11 +70,13 @@ func main() {
 		fmt.Printf(" %s has timestamp of %s, working directory is %s, and full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 	}
+	/*
+		if flag.NArg() < 1 { // if there are more than 1 arguments, the extra ones are ignored.
+			fmt.Printf(" Usage: findme <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
+			os.Exit(0)
+		}
 
-	if flag.NArg() < 1 { // if there are more than 1 arguments, the extra ones are ignored.
-		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
-		os.Exit(0)
-	}
+	*/
 
 	includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	var err error
@@ -135,18 +124,43 @@ func main() {
 	// Turns out that the shell searches against the path on Windows, but just executing it here doesn't.  So I have to search the path myself.
 	// Nope, I still have that wrong.  I need to start a command processor, too.  And vlc is not in the %PATH, but it does work when I just give it as a command without a path.
 
-	var vlcStr, shellStr string
-	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc.exe", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
-		//vlcStr = "vlc"
-		//shellStr = os.Getenv("ComSpec") not needed anymore
-	} else if runtime.GOOS == "linux" {
-		vlcStr = findexec.Find("vlc", "")
-		shellStr = "/bin/bash" // not needed as I found out by some experimentation on leox.
+	pathStr := os.Getenv("PATH")
+	listEnv(pathStr)
+	if pause() {
+		os.Exit(0)
 	}
 
-	if vlcStr == "" {
-		fmt.Printf(" vlcStr is null.  Exiting ")
+	vlcPath, ok := os.LookupEnv("VLCPATH")
+	if ok {
+		fmt.Printf(" vlcPath is %s\n", vlcPath)
+	} else {
+		fmt.Printf(" vlcPath is not found.\n")
+	}
+	vlcPath = strings.ReplaceAll(vlcPath, `"`, "") // Here I use back quotes to insert a literal quote.
+	fmt.Printf(" vlcPath is %s after removing the quote characters, if present.\n", vlcPath)
+	if pause() {
+		os.Exit(0)
+	}
+
+	searchPath := vlcPath + ";" + pathStr
+	listEnv(searchPath)
+	if pause() {
+		os.Exit(0)
+	}
+
+	var vlcStr, shellStr string
+	if runtime.GOOS == "windows" {
+		//vlcStr = findexec.Find("vlc.exe", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  This now works.
+		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  This also works.
+		//vlcStr = filepath.Join(vlcPath, "vlc.exe") // Maybe this will work?  Yes, but I figured out that the vlcPath includes quotes, and that messed everything up.
+		//vlcStr = "vlc"
+		shellStr = os.Getenv("ComSpec")
+	} else if runtime.GOOS == "linux" {
+		vlcStr = findexec.Find("vlc", "") // I'm not changing this line to use searchPath.  I'll leave it as is to use the system $PATH
+		shellStr = "/bin/bash"            // not needed as I found out by some experimentation on leox.
+	}
+	fmt.Printf(" vlcStr is %s \n", vlcStr)
+	if pause() {
 		os.Exit(1)
 	}
 
@@ -154,7 +168,7 @@ func main() {
 
 	var execCmd *exec.Cmd
 
-	variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
+	variadicParam := []string{"-C", "vlc"}
 	if notccFlag {
 		variadicParam = []string{}
 	}
@@ -170,23 +184,9 @@ func main() {
 	if runtime.GOOS == "windows" {
 		if notccFlag {
 			execCmd = exec.Command(vlcStr, variadicParam...)
-		} else { // this isn't needed anymore.  I'll leave it here because it does work, in case I ever need to do this again.
+		} else {
 			execCmd = exec.Command(shellStr, variadicParam...)
 		}
-		//switch n { // just to see if this works.  Once I figured out the variadic syntax I don't need a switch case statement here.
-		//case 1:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0])
-		//case 2:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1])
-		//case 3:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2])
-		//case 4:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3])
-		//case 5:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3], fileNames[4])
-		//default:
-		//	execCmd = exec.Command(shellStr, variadicParam...)
-		//}
 	} else if runtime.GOOS == "linux" { // I'm ignoring this for now.  I'll come back to it after I get the Windows code working.
 		execCmd = exec.Command(vlcStr, fileNames...)
 	}
@@ -233,12 +233,6 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 			continue
 		}
 
-		//quotedString := fmt.Sprintf("%q", d.Name())
-		//fullPath, e := filepath.Abs(d.Name())
-		//if e != nil {
-		//	fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
-		//}
-		//fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
 		if excludeRegex == nil {
 			fileNames = append(fileNames, d.Name())
 		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
@@ -249,18 +243,17 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 } // myReadDir
 
 // ------------------------------ pause -----------------------------------------
-/*
+
 func pause() bool {
-	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	fmt.Print(" Pausing.  Hit <enter> to continue; 'n' or 'x' to exit  ")
 	var ans string
 	fmt.Scanln(&ans)
 	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") || strings.HasPrefix(ans, "q") {
 		return true
 	}
 	return false
 }
-*/
 
 // ------------------------------- minInt ----------------------------------------
 
@@ -271,16 +264,16 @@ func minInt(i, j int) int {
 	return j
 }
 
-// ------------------------------- listPath --------------------------------------
+// ------------------------------- listEnv --------------------------------------
 
-func listPath(path string) {
-	splitEnv := strings.Split(path, ";")
+func listEnv(env string) {
+	splitEnv := strings.Split(env, ";")
 	for _, s := range splitEnv {
 		fmt.Printf(" %s\n", s)
 	}
 }
 
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
+// ------------------------------------------- MakeDateStr ---------------------------------------------------
 /*
 func MakeDateStr() string {
 
