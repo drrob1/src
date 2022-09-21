@@ -34,6 +34,8 @@ REVISION HISTORY
                After removing those, the code now works as originally intended.
 21 Sep 22 -- The code now has a default value for the location of C:\Program Files\VideoLAN\VLC.  The environment value VLCPATH can be used to change this.
                The code will exit if the find function returns a blank string.  This would be an opportunity to use the environment var to help the pgm find vlc.
+               And since linux and windows use different characters as subdir separators in the PATH, and the filesystem uses a different delimiter, I have to use a conditional
+               based on runtime.GOOS.
 */
 
 const lastModified = "Sep 21, 2022"
@@ -57,7 +59,13 @@ func main() {
 	if ok {
 		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
 	}
-	searchPath = vlcPath + ";" + path
+	if runtime.GOOS == "windows" {
+		searchPath = vlcPath + ";" + path
+	} else if runtime.GOOS == "linux" && ok {
+		searchPath = vlcPath + ":" + path
+	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
+		searchPath = path
+	}
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp against all filenames in the current directory\n")
