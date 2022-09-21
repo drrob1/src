@@ -32,13 +32,16 @@ REVISION HISTORY
                I had to add vlc to the path for it to work.
 20 Sep 22 -- After writing and debugging findme, I now know that my issue all along was that actual quote characters were in the VLCPATH environment string.
                After removing those, the code now works as originally intended.
+21 Sep 22 -- The code now has a default value for the location of C:\Program Files\VideoLAN\VLC.  The environment value VLCPATH can be used to change this.
+               The code will exit if the find function returns a blank string.  This would be an opportunity to use the environment var to help the pgm find vlc.
 */
 
-const lastModified = "Sep 20, 2022"
+const lastModified = "Sep 21, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, notccFlag, ok bool
-var includeRexString, excludeRexString, searchPath, vlcPath, path string
+var verboseFlag, veryverboseFlag, notccFlag, ok bool
+var includeRexString, excludeRexString, searchPath, path, vPath string
+var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
 func main() {
@@ -50,17 +53,11 @@ func main() {
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
 	path = os.Getenv("PATH")
-	vlcPath, ok = os.LookupEnv("VLCPATH")
+	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
-		vlcPath = strings.ReplaceAll(vlcPath, `"`, "") // Here I use back quotes to insert a literal quote.
-		searchPath = vlcPath + ";" + path
-	} else {
-		searchPath = path
+		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
 	}
-	if verboseFlag {
-		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		listPath(searchPath)
-	}
+	searchPath = vlcPath + ";" + path
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp against all filenames in the current directory\n")
@@ -73,15 +70,23 @@ func main() {
 	}
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
+	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
 	flag.IntVar(&numNames, "n", 20, " Number of file names to output on the commandline to vlc.")
 	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.Parse()
-	numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.
+	//numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.  Not needed anymore.
+	if veryverboseFlag { // very verbose also turns on verbose flag.
+		verboseFlag = true
+	}
 
 	if verboseFlag {
 		fmt.Printf(" %s has timestamp of %s, working directory is %s, and full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
+	}
+	if verboseFlag {
+		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
+		listPath(searchPath)
 	}
 
 	if flag.NArg() < 1 { // if there are more than 1 arguments, the extra ones are ignored.
@@ -126,9 +131,8 @@ func main() {
 	for i := 0; i < shuffleAmount; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
-	//if verboseFlag { // now always shows this message
+
 	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
-	//}
 
 	// ready to start calling vlc
 
@@ -137,7 +141,7 @@ func main() {
 
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc.exe", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
 		//vlcStr = "vlc"
 		//shellStr = os.Getenv("ComSpec") not needed anymore
 	} else if runtime.GOOS == "linux" {
@@ -191,7 +195,7 @@ func main() {
 		execCmd = exec.Command(vlcStr, fileNames...)
 	}
 
-	if verboseFlag {
+	if veryverboseFlag {
 		fmt.Printf(" vlcStr = %s, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
 	}
 
@@ -210,7 +214,7 @@ func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
 
 	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
 
-	if verboseFlag {
+	if veryverboseFlag {
 		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
 	}
 

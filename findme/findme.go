@@ -34,11 +34,12 @@ REVISION HISTORY
                environment variable.  That didn't work.  Why?
 */
 
-const lastModified = "Sep 20, 2022"
+const lastModified = "Sep 21, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, notccFlag bool
 var includeRexString, excludeRexString string
+var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
 func main() {
@@ -130,13 +131,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	vlcPath, ok := os.LookupEnv("VLCPATH")
+	vPath, ok := os.LookupEnv("VLCPATH")
 	if ok {
-		fmt.Printf(" vlcPath is %s\n", vlcPath)
+		fmt.Printf(" vPath is %s\n", vPath)
 	} else {
-		fmt.Printf(" vlcPath is not found.\n")
+		fmt.Printf(" vPath is not found.\n")
 	}
-	vlcPath = strings.ReplaceAll(vlcPath, `"`, "") // Here I use back quotes to insert a literal quote.
+	vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
 	fmt.Printf(" vlcPath is %s after removing the quote characters, if present.\n", vlcPath)
 	if pause() {
 		os.Exit(0)
