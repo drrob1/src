@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/scanln"
 	"strings"
 	"time"
 	// ps "github.com/mitchellh/go-ps" // using pid doesn't work to activate a window
@@ -55,7 +56,7 @@ import (
   24 Sep 22 -- Now the current mouse pointer is accepted by default.  IE, I reversed the default case.  And I'm adding a timeout so that the default case can be set more quickly.
 */
 
-const lastModified = "August 15, 2022"
+const lastModified = "Sept 24, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -256,16 +257,16 @@ func main() {
 	// execStr now has gofshowtimer.exe.  I don't check for showtimer.exe as I don't want it anymore.
 
 	// will now set desired start mouse position for the clicking.
-	fmt.Printf(" Counting down from 3 sec and will set starting mouse position for the clicking functions.\n")
-	for i := 3; i > 0; i-- {
-		fmt.Printf(" %d \r", i)
-		time.Sleep(1 * time.Second)
-	}
+	//fmt.Printf(" Counting down from 3 sec and will set starting mouse position for the clicking functions.\n")
+	//for i := 3; i > 0; i-- {
+	//	fmt.Printf(" %d \r", i)
+	//	time.Sleep(1 * time.Second)
+	//}
 
 	var ans string
 	currentX, currentY, ok := w32.GetCursorPos()
 	if !ok {
-		fmt.Printf(" w32.GetCursorPos() returned not ok.  This is odd.  Should I exit? ")
+		ctfmt.Printf(ct.Red, true, " w32.GetCursorPos() returned not ok.  This is odd.  Should I exit? ")
 		fmt.Scanln(&ans)
 		ans = strings.ToLower(ans)
 		if strings.Contains(ans, "y") {
@@ -273,16 +274,19 @@ func main() {
 		}
 	}
 	fmt.Println()
-	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these to set X and Y [Y]? ", currentX, currentY)
-	n, e := fmt.Scanln(&ans)
-	if n < 1 || e != nil {
+	fmt.Printf(" Current X = %d, Current Y = %d.  ", currentX, currentY)
+	ans = scanln.WithTimeout("Should I use these values set X and Y: ", 3)
+	//n, e := fmt.Scanln(&ans)
+
+	if ans == "" {
 		mouseX, mouseY = currentX, currentY
-	}
-	ans = strings.ToLower(ans)
-	if strings.Contains(ans, "n") || strings.Contains(ans, "x") { // default is to accept the currentX and currentY as the starting click position.
-		fmt.Printf(" Will be using X = %d and Y = %d\n", mouseX, mouseY)
 	} else {
-		mouseX, mouseY = currentX, currentY
+		ans = strings.ToLower(ans)
+		if strings.Contains(ans, "n") || strings.Contains(ans, "x") { // default is to accept the currentX and currentY as the starting click position.
+			fmt.Printf(" Will be using X = %d and Y = %d\n", mouseX, mouseY)
+		} else {
+			mouseX, mouseY = currentX, currentY
+		}
 	}
 
 	var err error
