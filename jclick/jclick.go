@@ -52,6 +52,7 @@ import (
                  displays the values of mouseX and mouseY that will be used.  I can escape out if I wish.
   13 Aug 22 -- I want better defaults.  Now the defaults will depend on allFlag and timer values.
   15 Aug 22 -- Now called jclick.  I will set up default title name for JH.  If there is a title target on the command line, that will be used, else the default will make sense.
+  24 Sep 22 -- Now the current mouse pointer is accepted by default.  IE, I reversed the default case.  And I'm adding a timeout so that the default case can be set more quickly.
 */
 
 const lastModified = "August 15, 2022"
@@ -272,13 +273,16 @@ func main() {
 		}
 	}
 	fmt.Println()
-	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these to set X and Y? ", currentX, currentY)
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.Contains(ans, "y") {
+	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these to set X and Y [Y]? ", currentX, currentY)
+	n, e := fmt.Scanln(&ans)
+	if n < 1 || e != nil {
 		mouseX, mouseY = currentX, currentY
-	} else {
+	}
+	ans = strings.ToLower(ans)
+	if strings.Contains(ans, "n") || strings.Contains(ans, "x") { // default is to accept the currentX and currentY as the starting click position.
 		fmt.Printf(" Will be using X = %d and Y = %d\n", mouseX, mouseY)
+	} else {
+		mouseX, mouseY = currentX, currentY
 	}
 
 	var err error
