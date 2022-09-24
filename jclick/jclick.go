@@ -283,11 +283,12 @@ func main() {
 	} else {
 		ans = strings.ToLower(ans)
 		if strings.Contains(ans, "n") || strings.Contains(ans, "x") { // default is to accept the currentX and currentY as the starting click position.
-			fmt.Printf(" Will be using X = %d and Y = %d\n", mouseX, mouseY)
+			// do nothing
 		} else {
 			mouseX, mouseY = currentX, currentY
 		}
 	}
+	fmt.Printf("\n Will be using X = %d and Y = %d\n", mouseX, mouseY)
 
 	var err error
 	if useRegexFlag {

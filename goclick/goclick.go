@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/scanln"
 	"strings"
 	"time"
 	// ps "github.com/mitchellh/go-ps" // using pid doesn't work to activate a window
@@ -51,9 +52,10 @@ import (
                  I got it.  There is minTime (5 sec) count down timer that will read current mouse pointer and then ask to use these coordinates.  If not, it
                  displays the values of mouseX and mouseY that will be used.  I can escape out if I wish.
   13 Aug 22 -- I want better defaults.  Now the defaults will depend on allFlag and timer values.
+  24 Sep 22 -- Hey, it's Doug's birthday today.  But that's not why I'm in here.  I'm adapting my new scanln.WithTimeout function for use here.
 */
 
-const lastModified = "August 13, 2022"
+const lastModified = "Sept 24, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -253,16 +255,16 @@ func main() {
 	// execStr now has gofshowtimer.exe.  I don't check for showtimer.exe as I don't want it anymore.
 
 	// will now set desired start mouse position for the clicking.
-	fmt.Printf(" Counting down from 3 sec and will set starting mouse position for the clicking functions.\n")
-	for i := 3; i > 0; i-- {
-		fmt.Printf(" %d \r", i)
-		time.Sleep(1 * time.Second)
-	}
+	//fmt.Printf(" Counting down from 3 sec and will set starting mouse position for the clicking functions.\n")
+	//for i := 3; i > 0; i-- {
+	//	fmt.Printf(" %d \r", i)
+	//	time.Sleep(1 * time.Second)
+	//}
 
 	var ans string
 	currentX, currentY, ok := w32.GetCursorPos()
 	if !ok {
-		fmt.Printf(" w32.GetCursorPos() returned not ok.  This is odd.  Should I exit? ")
+		ctfmt.Printf(ct.Red, true, " w32.GetCursorPos() returned not ok.  This is odd.  Should I exit? ")
 		fmt.Scanln(&ans)
 		ans = strings.ToLower(ans)
 		if strings.Contains(ans, "y") {
@@ -270,14 +272,20 @@ func main() {
 		}
 	}
 	fmt.Println()
-	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these to set X and Y? ", currentX, currentY)
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.Contains(ans, "y") {
+	fmt.Printf(" Current X = %d, Current Y = %d.\n ", currentX, currentY)
+	ans = scanln.WithTimeout("Should I use these values to set X and Y? ", 5)
+	if ans == "" {
 		mouseX, mouseY = currentX, currentY
 	} else {
-		fmt.Printf(" Will be using X = %d and Y = %d\n", mouseX, mouseY)
+		ans = strings.ToLower(ans)
+
+		if strings.Contains(ans, "n") || strings.Contains(ans, "x") {
+			// do nothing
+		} else {
+			mouseX, mouseY = currentX, currentY
+		}
 	}
+	fmt.Printf("\n Will be using X = %d and Y = %d\n", mouseX, mouseY)
 
 	var err error
 	if useRegexFlag {
