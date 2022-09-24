@@ -18,7 +18,7 @@ const maxTimeout = 10
 // If <enter> is hit before the timeout, then it will return an empty string.  If the timeout is reached before anything is entered then it returns a nil string.
 func WithTimeout(prompt string, timeOut int) string {
 	var ans string
-	strChannel := make(chan string, 1)
+	strChannel := make(chan string, 1) // Note that the buffer size of 1 is necessary to avoid deadlock of goroutines and guarantee garbage collection of the timeout channel.
 	defer close(strChannel)
 	ticker := time.NewTicker(1 * time.Second)
 	if timeOut > maxTimeout {
