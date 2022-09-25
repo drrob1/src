@@ -273,7 +273,7 @@ func main() {
 	}
 	fmt.Println()
 	fmt.Printf(" Current X = %d, Current Y = %d.\n ", currentX, currentY)
-	ans = scanln.WithTimeout("Should I use these values to set X and Y? ", 5)
+	ans = scanln.WithTimeoutAndPrompt("Should I use these values to set X and Y? ", 5)
 	if ans == "" {
 		mouseX, mouseY = currentX, currentY
 	} else {

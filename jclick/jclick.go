@@ -274,8 +274,8 @@ func main() {
 		}
 	}
 	fmt.Println()
-	fmt.Printf(" Current X = %d, Current Y = %d.  ", currentX, currentY)
-	ans = scanln.WithTimeout("Should I use these values set X and Y: ", 3)
+	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these values to set X and Y: ", currentX, currentY)
+	ans = scanln.WithTimeout(3)
 	//n, e := fmt.Scanln(&ans)
 
 	if ans == "" {

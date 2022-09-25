@@ -80,6 +80,6 @@ func main() {
 		fmt.Printf(" Entered %s, timeout = %d\n", toutStr, timeout)
 	}
 
-	returnedString := scanln.WithTimeout("enter something before it times out", timeout)
+	returnedString := scanln.WithTimeoutAndPrompt("enter something before it times out", timeout)
 	fmt.Printf(" returnedString is %q\n", returnedString)
 }
