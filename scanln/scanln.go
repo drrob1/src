@@ -11,7 +11,7 @@ REVISION HISTORY
 24 Sep 22 -- First version.
 */
 
-const lastAltered = "Sep 24, 2022"
+const lastAltered = "Sep 25, 2022"
 const maxTimeout = 10
 
 // WithTimeout (prompt string, timeOut int) string

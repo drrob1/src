@@ -55,7 +55,7 @@ import (
   24 Sep 22 -- Hey, it's Doug's birthday today.  But that's not why I'm in here.  I'm adapting my new scanln.WithTimeout function for use here.
 */
 
-const lastModified = "Sept 24, 2022"
+const lastModified = "Sept 25, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100

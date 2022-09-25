@@ -56,7 +56,7 @@ import (
   24 Sep 22 -- Now the current mouse pointer is accepted by default.  IE, I reversed the default case.  And I'm adding a timeout so that the default case can be set more quickly.
 */
 
-const lastModified = "Sept 24, 2022"
+const lastModified = "Sept 25, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
