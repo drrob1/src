@@ -54,9 +54,10 @@ import (
   13 Aug 22 -- I want better defaults.  Now the defaults will depend on allFlag and timer values.
   15 Aug 22 -- Now called jclick.  I will set up default title name for JH.  If there is a title target on the command line, that will be used, else the default will make sense.
   24 Sep 22 -- Now the current mouse pointer is accepted by default.  IE, I reversed the default case.  And I'm adding a timeout so that the default case can be set more quickly.
+  26 Sep 22 -- Fixed a comment.
 */
 
-const lastModified = "Sept 25, 2022"
+const lastModified = "Sept 26, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -131,7 +132,7 @@ func activateFirstMatchingWindow() (int, htext) {
 			return i, ht
 		}
 	}
-	return -1, htext{} // if not found, will return zero values for each.  For the htext struct that means it's an empty struct.
+	return -1, htext{} // not found, so return -1 for i, and an empty struct for htext.
 } // activateFirstMatchingWindow
 
 func showAllTargetMatches() { // the hWinText slice is created in main().  This finds all matches of the target and shows it without activating them.  Now target may be a regex.

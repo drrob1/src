@@ -53,9 +53,10 @@ import (
                  displays the values of mouseX and mouseY that will be used.  I can escape out if I wish.
   13 Aug 22 -- I want better defaults.  Now the defaults will depend on allFlag and timer values.
   24 Sep 22 -- Hey, it's Doug's birthday today.  But that's not why I'm in here.  I'm adapting my new scanln.WithTimeout function for use here.
+  26 Sep 22 -- Fixed a comment.
 */
 
-const lastModified = "Sept 25, 2022"
+const lastModified = "Sept 26, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -129,7 +130,7 @@ func activateFirstMatchingWindow() (int, htext) {
 			return i, ht
 		}
 	}
-	return -1, htext{} // if not found, will return zero values for each.  For the htext struct that means it's an empty struct.
+	return -1, htext{} // not found, so will return -1 for i, and for the htext struct return an empty struct.
 } // activateFirstMatchingWindow
 
 func showAllTargetMatches() { // the hWinText slice is created in main().  This finds all matches of the target and shows it without activating them.  Now target may be a regex.
