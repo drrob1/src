@@ -9,7 +9,7 @@ import (
 REVISION HISTORY
 -------- -------
 24 Sep 22 -- First version.
-28 Sep 22 -- Expanded on the comment in WithTimeOut below.
+28 Sep 22 -- Expanded on the comment in WithTimeOut below.  And fixed an error in logic.
 */
 
 const lastAltered = "Sep 28, 2022"
@@ -22,6 +22,7 @@ func WithTimeout(timeOut int) string {
 	// Note that the buffer size of 1 is necessary to avoid deadlock of goroutines and guarantee garbage collection of the timeout channel.
 	// On closer inspection, the go routine will send 2 strings down the channel if there's a timeout or I hit enter.  But there's only one read from the channel, so the
 	// extra string sits in the buffer and is garbage collected when this routine returns to the caller.
+	// Nevermind, I fixed this by using an else clause.
 	strChannel := make(chan string, 1)
 	defer close(strChannel)
 	ticker := time.NewTicker(1 * time.Second)
@@ -33,8 +34,9 @@ func WithTimeout(timeOut int) string {
 		n, err := fmt.Scanln(&ans)
 		if n == 0 || err != nil {
 			strChannel <- ""
+		} else {
+			strChannel <- ans
 		}
-		strChannel <- ans
 	}()
 
 	for {
