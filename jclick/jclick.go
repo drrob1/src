@@ -55,9 +55,10 @@ import (
   15 Aug 22 -- Now called jclick.  I will set up default title name for JH.  If there is a title target on the command line, that will be used, else the default will make sense.
   24 Sep 22 -- Now the current mouse pointer is accepted by default.  IE, I reversed the default case.  And I'm adding a timeout so that the default case can be set more quickly.
   26 Sep 22 -- Fixed a comment.
+  29 Sep 22 -- Tweaked code dealing w/ my new scanln rtn.
 */
 
-const lastModified = "Sept 26, 2022"
+const lastModified = "Sept 29, 2022"
 const clickedX = 450 // default for Jamaica
 const clickedY = 325 // default for Jamaica
 const incrementY = 100
@@ -275,7 +276,7 @@ func main() {
 		}
 	}
 	fmt.Println()
-	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these values to set X and Y: ", currentX, currentY)
+	fmt.Printf(" Current X = %d, Current Y = %d.  Should I use these values to set X and Y: \n", currentX, currentY)
 	ans = scanln.WithTimeout(3)
 	//n, e := fmt.Scanln(&ans)
 
