@@ -10,9 +10,10 @@ REVISION HISTORY
 -------- -------
 24 Sep 22 -- First version.
 28 Sep 22 -- Expanded on the comment in WithTimeOut below.  And fixed an error in logic.
+29 Sep 22 -- Added WithDuration
 */
 
-const lastAltered = "Sep 28, 2022"
+const lastAltered = "Sep 29, 2022"
 const maxTimeout = 10
 
 // WithTimeout (timeOut int) string -- timeOut is in seconds.
@@ -63,6 +64,37 @@ func WithTimeoutAndPrompt(prompt string, timeOut int) string {
 	}
 	return WithTimeout(timeOut)
 }
+
+// WithDuration (d Duration) string -- Duration from the time package.  Used in the time.After function call.
+// If it times out or <enter> is hit before the timeout, then it will return an empty string.
+func WithDuration(d time.Duration) string {
+	var ans string
+	// Note that the buffer size of 1 is necessary to avoid deadlock of goroutines and guarantee garbage collection of the timeout channel.
+	// On closer inspection, the go routine will send 2 strings down the channel if there's a timeout or I hit enter.  But there's only one read from the channel, so the
+	// extra string sits in the buffer and is garbage collected when this routine returns to the caller.
+	// Nevermind, I fixed this by using an else clause.
+	strChannel := make(chan string, 1)
+	defer close(strChannel)
+	if d > maxTimeout*time.Second {
+		d = maxTimeout * time.Second
+	}
+
+	go func() {
+		//n, err := fmt.Scanln(&ans)
+		fmt.Scanln(&ans) // ignore number of characters entered or any errors
+		strChannel <- ans
+	}()
+
+	for {
+		select {
+		case <-time.After(d): // this channel returns the current time at time of firing, but here that's ignored and discarded.
+			return ""
+
+		case s := <-strChannel:
+			return s
+		}
+	}
+} // WithDuration
 
 /*
 func main() {

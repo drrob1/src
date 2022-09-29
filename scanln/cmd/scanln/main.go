@@ -5,15 +5,17 @@ import (
 	"os"
 	"src/scanln"
 	"strconv"
+	"time"
 )
 
 /*
 REVISION HISTORY
 -------- -------
 24 Sep 22 -- First version.
+29 Sep 22 -- Need to test WithDuration.
 */
 
-const lastAltered = "Sep 24, 2022"
+const lastAltered = "Sep 29, 2022"
 const maxTimeout = 10
 
 /*
@@ -55,9 +57,9 @@ func WithTimeout(prompt string, timeOut int) string {
 */
 
 func main() {
+	fmt.Printf(" scanln test last altered %s, len(os.Args) = %d.\n", lastAltered, len(os.Args))
 	var err error
-	fmt.Printf(" scanlineWithTimeout test last altered %s, len(os.Args) = %d.\n", lastAltered, len(os.Args))
-	timeout := 0
+	var timeout int
 	if len(os.Args) > 1 { // param is entered
 		timeout, err = strconv.Atoi(os.Args[1])
 		if err != nil {
@@ -70,6 +72,7 @@ func main() {
 		n, er := fmt.Scanln(&toutStr)
 		if n == 0 || er != nil {
 			timeout = maxTimeout
+			// fmt.Printf(" Hit <enter> or timed out, answer = %q\n", toutStr)  I don't need this since I show what was returned anyway.
 		} else {
 			timeout, err = strconv.Atoi(toutStr)
 			if err != nil {
@@ -77,9 +80,12 @@ func main() {
 				timeout = maxTimeout
 			}
 		}
-		fmt.Printf(" Entered %s, timeout = %d\n", toutStr, timeout)
+		fmt.Printf(" Entered %q, timeout = %d\n", toutStr, timeout)
 	}
 
 	returnedString := scanln.WithTimeoutAndPrompt("enter something before it times out", timeout)
 	fmt.Printf(" returnedString is %q\n", returnedString)
+
+	returnedString = scanln.WithDuration(time.Duration(timeout) * time.Second)
+	fmt.Printf(" After WithDuration and returnedString is %q\n", returnedString)
 }
