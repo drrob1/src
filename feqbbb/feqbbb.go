@@ -58,6 +58,7 @@ import (
   26 May 22 -- On leox, a 2.3 GB file comparison is ~1.6 s, about the same as feq32 -IEEE, and slightly slower than feq32 -cast which is ~1.4 s.
                  Using a 10 MB buffer instead of a 1 MB buffer is slower, at ~1.9 s.  Imagine that.
   22 Jun 22 -- Adding techni-color.
+  30 Sep 22 -- Edited a comment.  Did not recompile.
 */
 
 const LastCompiled = "22 June 2022"
@@ -127,8 +128,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	buf1 := make([]byte, 1*M) // I initially wrote this as ([]byte,0,M) so the slice was 0 bytes long.  This is what I need when using append() as in other code.
-	buf2 := make([]byte, 1*M) // But it's completely wrong here.  The backing array of size M is irrelevant; the slice behaves as a buffer of length 0.
+	buf1 := make([]byte, 1*M) // I initially wrote this as ([]byte,0,M) so the slice was 0 bytes long and this code didn't work because the slice behaved as a buffer of length 0.
+	buf2 := make([]byte, 1*M) // Of course, the code is working w/ length = capacity = M.
 
 	t0 := time.Now()
 	matched := true
