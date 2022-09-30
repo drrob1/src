@@ -15,6 +15,8 @@
   19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
                  keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
                  Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
+  30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
+                 But if input string has an upper case character, then the search is case sensitive.
 */
 package main
 
@@ -33,7 +35,7 @@ import (
 	"time"
 )
 
-const LastAltered = "19 Dec 2021"
+const LastAltered = "30 Sept 2022"
 const maxSecondsToTimeout = 300
 const workerPoolMultiplier = 20
 
@@ -45,6 +47,7 @@ type grepType struct {
 	goRtnNum int
 }
 
+var caseSensitiveFlag bool // default is false.
 var grepChan chan grepType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
@@ -56,6 +59,7 @@ func main() {
 
 	// flag definitions and processing
 	globflag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
+	verboseFlag := flag.Bool("v", false, "Verbose flag")
 	var timeoutOpt = flag.Int64("timeout", 0, "seconds (0 means no timeout)")
 	flag.Parse()
 
@@ -68,7 +72,17 @@ func main() {
 		log.Fatalln("a regexp to match must be specified")
 	}
 	pattern := args[0]
-	pattern = strings.ToLower(pattern) // this is the change for the pattern.
+	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
+	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
+	if *verboseFlag {
+		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
+	}
+	if !caseSensitiveFlag {
+		pattern = strings.ToLower(pattern) // this is the change for the pattern.
+	}
+	if *verboseFlag {
+		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
+	}
 	files := args[1:]
 	if len(files) < 1 { // no files or globbing pattern on command line.
 		if runtime.GOOS == "windows" {
@@ -128,6 +142,7 @@ func main() {
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
+	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
@@ -143,8 +158,13 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
-		lineStrLower := strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
-		if lineRegex.MatchString(lineStrLower) {
+		if caseSensitiveFlag {
+			lineStrng = lineStr
+		} else {
+			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
+		}
+	
+		if lineRegex.MatchString(lineStrng) { // this is now either case sensitive or not, depending on whether the input pattern has upper case letters.
 			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 			localMatches++
 		}
