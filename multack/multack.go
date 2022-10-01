@@ -2,7 +2,7 @@
 /*
   REVISION HISTORY
   ----------------
-   1 Apr 20 -- Making it multi-threaded by using go routines by copying cgrepi.go and multimap.go.
+   1 Apr 20 -- Making it multithreaded by using go routines by copying cgrepi.go and multimap.go.
                Now created multack.go, derived from anack.go.
                With a ResultType buffer of   1,024 items, it's  <1% faster than anack, if that much.
                With a ResultType buffer of  10,000 items, it's  ~5% faster than anack.
@@ -29,6 +29,9 @@
   12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
                  I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
   16 Dec 21 -- Need a waitgroup after all.  The sleeping at the end is a kludge.
+   1 Oct 22 -- Adding smart case as I did yesterday for cgrepi.  If input pattern is lower case, search is case insensitive.  If input pattern is upper case, the search
+                 is case sensitive.  And adding using a null byte as a marker for a binary file and then aborting that file.  Both ideas came from ripgrep.
+                 Adding a count of matches and files, copied from cgrepi.go.
 */
 package main
 
@@ -44,11 +47,13 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-const lastAltered = "16 Dec 2021"
+const lastAltered = "1 Oct 2022"
 const maxSecondsToTimeout = 300
+const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
@@ -62,7 +67,8 @@ type grepType struct {
 }
 
 var grepChan chan grepType
-
+var caseSensitiveFlag bool // default is false.
+var totFilesScanned, totMatchesFound int64
 var wg sync.WaitGroup
 
 func main() {
@@ -70,6 +76,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
+	verboseFlag := flag.Bool("v", false, "Verbose flag")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
 		log.Fatalln("timeout must be in the range [0,300] seconds")
@@ -83,7 +90,18 @@ func main() {
 		log.Fatalln("a regexp to match must be specified")
 	}
 	pattern := args[0]
-	pattern = strings.ToLower(pattern)
+	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
+	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
+	if *verboseFlag {
+		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
+	}
+	if !caseSensitiveFlag {
+		pattern = strings.ToLower(pattern) // this is the change for the pattern.
+	}
+	if *verboseFlag {
+		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
+	}
+
 	var lineRegex *regexp.Regexp
 	var err error
 	if lineRegex, err = regexp.Compile(pattern); err != nil {
@@ -108,6 +126,14 @@ func main() {
 	fmt.Println()
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v, workerPoolSize=%d.\n\n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, extensions, workerPoolSize)
+
+	workingDir, _ := os.Getwd()
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	if *verboseFlag {
+		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
+	}
 
 	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.
 	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
@@ -239,27 +265,44 @@ func main() {
 	elapsed := time.Since(t0)
 
 	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  I'm trying to stop that.
-	fmt.Println(" Elapsed time is", elapsed, "and number of Go routines is", goRtns)
+	//fmt.Println(" Elapsed time is", elapsed, "and number of Go routines is", goRtns)
+	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 } // end main
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
+	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
+	var localMatches int64
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		file.Close()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches)
+		wg.Done()
+	}()
+
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
 
-		// this is the change I made to make every comparison case insensitive.
-		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
-		lineStrLower := strings.ToLower(lineStr)
+		if strings.ContainsRune(lineStr, null) {
+			return // the defer func()	 will take care of the cleanup here.
+		}
+		if caseSensitiveFlag {
+			lineStrng = lineStr
+		} else {
+			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
+		}
 
-		if lineRegex.MatchString(lineStrLower) {
+		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
+
+		if lineRegex.MatchString(lineStrng) {
 			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+			localMatches++
 		}
 		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
 			//if err != io.EOF { // this became messy, so I'm removing it
@@ -268,7 +311,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 			break // just exit when hit EOF condition.
 		}
 	}
-	wg.Done()
 } // end grepFile
 
 func extractExtensions(files []string) []string {

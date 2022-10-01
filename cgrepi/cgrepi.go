@@ -17,7 +17,7 @@
                  Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
   30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
                  But if input string has an upper case character, then the search is case sensitive.
-   1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.
+   1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
 */
 package main
 
@@ -106,6 +106,14 @@ func main() {
 		LastAltered, pattern, workers, runtime.Version())
 	fmt.Println()
 
+	workingDir, _ := os.Getwd()
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	if *verboseFlag {
+		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
+	}
+
 	if *globflag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
 		files = globCommandLineFiles(files) // this fails vet because it's in the platform specific code file.
 	} else {
@@ -161,7 +169,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
 		if strings.ContainsRune(lineStr, null) {
-			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.
+			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.  The wg.Done() is deferred so it doesn't matter.
 		}
 		if caseSensitiveFlag {
 			lineStrng = lineStr
