@@ -17,6 +17,7 @@
                  Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
   30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
                  But if input string has an upper case character, then the search is case sensitive.
+   1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.
 */
 package main
 
@@ -35,9 +36,10 @@ import (
 	"time"
 )
 
-const LastAltered = "30 Sept 2022"
+const LastAltered = "1 Oct 2022"
 const maxSecondsToTimeout = 300
 const workerPoolMultiplier = 20
+const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 var workers = runtime.NumCPU() * workerPoolMultiplier
 
@@ -158,12 +160,15 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
+		if strings.ContainsRune(lineStr, null) {
+			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.
+		}
 		if caseSensitiveFlag {
 			lineStrng = lineStr
 		} else {
 			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
 		}
-	
+
 		if lineRegex.MatchString(lineStrng) { // this is now either case sensitive or not, depending on whether the input pattern has upper case letters.
 			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 			localMatches++
