@@ -7,6 +7,7 @@ import (
 	"os"
 	"src/scanln"
 	"strings"
+	"time"
 )
 
 /*
@@ -79,10 +80,12 @@ func main() {
 		fmt.Printf(" Size of %s is %d, and length of the read bytes slice is %d.\n", filename1, fi1.Size(), len(fileBytes))
 	}
 
+	now := time.Now()
 	i := bytes.IndexByte(fileBytes, zero)
 	j := bytes.IndexRune(fileBytes, zero)
 	cnt := bytes.Count(fileBytes, []byte{0})
 	lastNull := bytes.LastIndexByte(fileBytes, zero)
+	elapsed := time.Since(now)
 	percentage := float32(cnt) / float32(fi1.Size()) * 100 // I don't need the precision of float64 here.
 
 	if i < 0 {
@@ -90,6 +93,7 @@ func main() {
 	} else {
 		fmt.Printf(" Found first null byte at [%d]  first null rune at [%d]; last null byte found at index of %d; total of %d null bytes were found, %.2f %%.\n",
 			i, j, lastNull, cnt, percentage)
+		fmt.Printf(" Analysis took %s.\n", elapsed)
 	}
 	fmt.Println()
 }

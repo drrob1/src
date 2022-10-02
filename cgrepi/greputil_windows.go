@@ -49,24 +49,24 @@ func commandLineFiles(patterns []string) []string {
 		fmt.Fprintln(os.Stderr, "from commandlinefiles:", err)
 		return nil
 	}
-	direntries, err := os.ReadDir(workingDirname) // became available as of Go 1.16
-	if err != nil {
+	dirEntries, e := os.ReadDir(workingDirname) // became available as of Go 1.16
+	if e != nil {
 		return nil
 	}
 
-	matchingNames := make([]string, 0, len(direntries))
+	matchingNames := make([]string, 0, len(dirEntries))
 
 	for _, pattern := range patterns { // outer loop to test against multiple patterns.
-		for _, d := range direntries { // inner loop to test each pattern against the filenames.
+		for _, d := range dirEntries { // inner loop to test each pattern against the filenames.
 			if d.IsDir() {
 				continue // skip a subdirectory name
 			}
-			bool, err := filepath.Match(pattern, strings.ToLower(d.Name()))
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+			boolean, er := filepath.Match(pattern, strings.ToLower(d.Name()))
+			if er != nil {
+				fmt.Fprintln(os.Stderr, er)
 				continue
 			}
-			if bool {
+			if boolean {
 				matchingNames = append(matchingNames, d.Name())
 			}
 		}

@@ -32,6 +32,8 @@
    1 Oct 22 -- Adding smart case as I did yesterday for cgrepi.  If input pattern is lower case, search is case insensitive.  If input pattern is upper case, the search
                  is case sensitive.  And adding using a null byte as a marker for a binary file and then aborting that file.  Both ideas came from ripgrep.
                  Adding a count of matches and files, copied from cgrepi.go.
+   2 Oct 22 -- Now that I've learned to abort a binary file as one that has null bytes, I don't need the extension system anymore.
+                 And I corrected the order of defer vs if err in the grepFile routine.
 */
 package main
 
@@ -51,7 +53,7 @@ import (
 	"time"
 )
 
-const lastAltered = "1 Oct 2022"
+const lastAltered = "2 Oct 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -108,9 +110,11 @@ func main() {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
+	/*  Made obsolete by realization of meaning of null bytes.  Commented out Oct 2, 2022.
 	extensions := make([]string, 0, 100)
 	if flag.NArg() < 2 {
-		extensions = append(extensions, ".txt")
+		//extensions = append(extensions, ".txt")
+		extensions = append(extensions, "*")
 	} else if runtime.GOOS == "linux" {
 		files := args[1:]
 		extensions = extractExtensions(files)
@@ -120,12 +124,13 @@ func main() {
 			extensions[i] = strings.ToLower(strings.ReplaceAll(extensions[i], "*", ""))
 		}
 	}
+	*/
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v, workerPoolSize=%d.\n\n\n",
-		lastAltered, runtime.Version(), startDirectory, pattern, extensions, workerPoolSize)
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, workerPoolSize=%d.  [Extensions are obsolete]\n\n\n",
+		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -233,7 +238,9 @@ func main() {
 			return nil
 		}
 
-		for _, ext := range extensions { // only search thru indicated extensions.  Especially not thru binary or swap files.
+		// only search thru indicated extensions, especially not thru binary or swap files.  Made obsolete by recognition of role of null bytes in files.
+		/*  commented out 10/2/22.
+		for _, ext := range extensions {
 			fpathLower := strings.ToLower(fpath)
 			fpathExt := filepath.Ext(fpathLower)
 
@@ -244,6 +251,13 @@ func main() {
 					filename: fpath,
 				}
 			}
+		}
+		*/
+
+		wg.Add(1)
+		grepChan <- grepType{ // send this to a worker go routine.
+			regex:    lineRegex,
+			filename: fpath,
 		}
 
 		now := time.Now()
@@ -274,16 +288,16 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	var localMatches int64
 	file, err := os.Open(fpath)
-	if err != nil {
-		log.Printf("grepFile os.Open error : %s\n", err)
-		return
-	}
 	defer func() {
 		file.Close()
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches)
 		wg.Done()
 	}()
+	if err != nil {
+		log.Printf("grepFile os.Open error : %s\n", err)
+		return
+	}
 
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {

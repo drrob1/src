@@ -18,6 +18,16 @@
   30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
                  But if input string has an upper case character, then the search is case sensitive.
    1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
+   2 Oct 22 -- The extension system is made mostly obsolete by null byte detection.  So the default will be *.  But I discovered when the files slice exceeds 1790 elements,
+                 the go routines all deadlock, so the wait group is not exiting.
+
+               Posted to gonuts using the go playground for the code: 10/2/22 @1:35 pm   go playground sharing link: https://go.dev/play/p/gIVVLsiTqod/
+                 Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the syncronization.
+                 Nope, then I got a negative WaitGroup number panic.  I moved it back, for now.
+
+               Looks like the error was the order of the defer and if err statements.  The way I first had it, defer was after the if err, so if there was a file error
+                 (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "MY Pictures") then wg.Done() would not be called.
+                 So the wait group count would not go down to zero.  How subtle, and I needed help from someone else to notice that.
 */
 package main
 
@@ -36,8 +46,9 @@ import (
 	"time"
 )
 
-const LastAltered = "1 Oct 2022"
+const LastAltered = "2 Oct 2022"
 const maxSecondsToTimeout = 300
+
 const workerPoolMultiplier = 20
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -60,9 +71,10 @@ func main() {
 	log.SetFlags(0)
 
 	// flag definitions and processing
-	globflag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
+	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
 	verboseFlag := flag.Bool("v", false, "Verbose flag")
-	var timeoutOpt = flag.Int64("timeout", 0, "seconds (0 means no timeout)")
+	var timeoutOpt = flag.Int64("timeout", maxSecondsToTimeout, "seconds (0 means no timeout)")
+	//maxFiles := flag.Int64("max", 1000, "Maximum files to process.  Looking for why I'm getting a deadlock error.")
 	flag.Parse()
 
 	if *timeoutOpt < 1 || *timeoutOpt > maxSecondsToTimeout {
@@ -88,7 +100,8 @@ func main() {
 	files := args[1:]
 	if len(files) < 1 { // no files or globbing pattern on command line.
 		if runtime.GOOS == "windows" {
-			files = []string{"*.txt"}
+			//files = []string{"*.txt"}
+			files = []string{"*"} // Now that files containing a null byte are skipped, I can default to every file in this directory.
 		} else {
 			files = txtFiles() // intended only for use on linux.
 		}
@@ -114,7 +127,7 @@ func main() {
 		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
 	}
 
-	if *globflag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
+	if *globFlag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
 		files = globCommandLineFiles(files) // this fails vet because it's in the platform specific code file.
 	} else {
 		files = commandLineFiles(files)
@@ -131,12 +144,21 @@ func main() {
 		}()
 	}
 
+	if *verboseFlag {
+		fmt.Printf(" Length of files = %d, minGoRtns = %d.\n\n", len(files), minGoRtns)
+	}
+	//if len(files) > int(*maxFiles) {
+	//	files = files[:*maxFiles]
+	//	if *verboseFlag {
+	//		fmt.Printf(" Length of files = %d.\n", len(files))
+	//	}
+	//}
 	for _, file := range files {
 		wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
 	}
 
-	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
+	goRtns := runtime.NumGoroutine()
 	wg.Wait()
 	close(grepChan) // must close the channel so the worker go routines know to stop.
 
@@ -154,16 +176,16 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
 	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	file, err := os.Open(fpath)
-	if err != nil {
-		log.Printf("grepFile os.Open error : %s\n", err)
-		return
-	}
-	defer func() {
+	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.
+		wg.Done()
 		file.Close()
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches)
-		wg.Done()
 	}()
+	if err != nil {
+		log.Printf("grepFile os.Open error is: %s\n", err)
+		return
+	}
 
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
@@ -209,12 +231,12 @@ func txtFiles() []string { // intended to be needed on linux.
 		if d.IsDir() {
 			continue // skip it
 		}
-		bool, er := filepath.Match(pattern, strings.ToLower(d.Name()))
+		boolean, er := filepath.Match(pattern, strings.ToLower(d.Name()))
 		if er != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
-		if bool {
+		if boolean {
 			matchingNames = append(matchingNames, d.Name())
 		}
 	}
