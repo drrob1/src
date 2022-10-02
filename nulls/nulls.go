@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"src/scanln"
+	"strings"
 )
 
 /*
@@ -17,13 +19,14 @@ import (
                  And maybe find out how many null bytes exist, if I'm curious.  I may need a byte slice containing one element which is zero for some
                  of these functions to work.
                  Some of this code will likely be based on feqbbb.go and eols.go.
+   2 Oct 22 -- Adding a display of %-age of total size.  And maxSize triggers a warning, not an error now.  If it's too big, hope that the OS will shut it down.
 */
 
-const lastModified = "Sep 30, 2022"
-const zero = 0 // I want this to be a null byte.
+const lastModified = "Oct 2, 2022"
+const zero = 0 // I want this to be a null byte or rune.
 const K = 1024
 const M = K * K
-const G = M * M
+const G = M * K
 const maxSize = G
 
 func main() {
@@ -41,7 +44,7 @@ func main() {
 	flag.Parse()
 
 	if verboseFlag {
-		fmt.Printf(" WorkingDir = %s, execName is %s, which was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
+		fmt.Printf(" WorkingDir = %s, %s was last linked %s.  maxSize = %d.\n\n", workingDir, execName, LastLinkedTimeStamp, maxSize)
 	}
 
 	if flag.NArg() == 0 {
@@ -58,8 +61,13 @@ func main() {
 	}
 
 	if fi1.Size() > maxSize {
-		fmt.Fprintf(os.Stderr, " Size of %s is %d, which exceeds the max size allowed of %d.  Exiting \n", filename1, fi1.Size(), maxSize)
-		os.Exit(1)
+		fmt.Printf(" WARNING -- size of %s is %d, which exceeds %d.  Should I exit? \n", filename1, fi1.Size(), maxSize)
+		ans := scanln.WithTimeout(5)
+		fmt.Println()
+		ans = strings.ToLower(ans)
+		if strings.Contains(ans, "y") || strings.Contains(ans, "x") {
+			os.Exit(1)
+		}
 	}
 
 	fileBytes, err := os.ReadFile(filename1)
@@ -71,16 +79,17 @@ func main() {
 		fmt.Printf(" Size of %s is %d, and length of the read bytes slice is %d.\n", filename1, fi1.Size(), len(fileBytes))
 	}
 
-	i := bytes.IndexByte(fileBytes, 0)
+	i := bytes.IndexByte(fileBytes, zero)
 	j := bytes.IndexRune(fileBytes, zero)
 	cnt := bytes.Count(fileBytes, []byte{0})
-	lastNull := bytes.LastIndexByte(fileBytes, 0)
+	lastNull := bytes.LastIndexByte(fileBytes, zero)
+	percentage := float32(cnt) / float32(fi1.Size()) * 100 // I don't need the precision of float64 here.
 
 	if i < 0 {
 		fmt.Printf(" No null bytes found in %s.\n", filename1)
 	} else {
-		fmt.Printf(" Found first null byte at %d index and first null rune at %d index.  Total of %d null bytes were found.  Last null byte found at index of %d\n",
-			i, j, cnt, lastNull)
+		fmt.Printf(" Found first null byte at [%d]  first null rune at [%d]; last null byte found at index of %d; total of %d null bytes were found, %.2f %%.\n",
+			i, j, lastNull, cnt, percentage)
 	}
 	fmt.Println()
 }
