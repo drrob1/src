@@ -25,9 +25,13 @@
                  Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the syncronization.
                  Nope, then I got a negative WaitGroup number panic.  I moved it back, for now.
 
+               First reported to me by Matthew Zimmerman.
                Looks like the error was the order of the defer and if err statements.  The way I first had it, defer was after the if err, so if there was a file error
                  (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "MY Pictures") then wg.Done() would not be called.
                  So the wait group count would not go down to zero.  How subtle, and I needed help from someone else to notice that.
+
+               Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
+                 So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
 */
 package main
 
@@ -64,6 +68,7 @@ var caseSensitiveFlag bool // default is false.
 var grepChan chan grepType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
+
 var wg sync.WaitGroup
 
 func main() {
@@ -157,10 +162,11 @@ func main() {
 		wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
 	}
+	close(grepChan) // must close the channel so the worker go routines know to stop.  Doing this after all work is sent into the channel may mean that I don't need a waitgroup anymore.
 
 	goRtns := runtime.NumGoroutine()
 	wg.Wait()
-	close(grepChan) // must close the channel so the worker go routines know to stop.
+	//close(grepChan) // I had put this after all work was done.  That isn't optimal.
 
 	elapsed := time.Since(t0)
 	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
