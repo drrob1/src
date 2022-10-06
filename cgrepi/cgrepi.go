@@ -66,14 +66,13 @@ type grepType struct {
 	goRtnNum int
 }
 
-//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 type matchType struct {
 	fpath        string
 	lino         int
 	lineContents string
 }
 
-type matchesSliceType []matchType
+type matchesSliceType []matchType // this is a named type.  I need a named type for the sort functions to work.  An anonymous type won't cut it.
 
 func (m matchesSliceType) Len() int {
 	return len(m)
@@ -90,7 +89,7 @@ var grepChan chan grepType
 var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
-var sliceOfStrings []string
+var sliceOfStrings []string // based on an anonymous type.
 
 var wg sync.WaitGroup
 
@@ -184,9 +183,9 @@ func main() {
 	//}
 
 	matchChan = make(chan matchType, workers)
-	sliceOfAllMatches := make(matchesSliceType, 0, len(files))
-	sliceOfStrings = make([]string, 0, len(files))
-	go func() { // start the receiving operation before the sending starts
+	sliceOfAllMatches := make(matchesSliceType, 0, len(files)) // this uses a named type, needed to satisfy the sort interface.
+	sliceOfStrings = make([]string, 0, len(files))             // this uses an anonymous type.
+	go func() {                                                // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
@@ -207,7 +206,7 @@ func main() {
 	elapsed := time.Since(t0)
 
 	fmt.Println()
-	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
+	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 
 	// Time to sort and show
@@ -216,8 +215,7 @@ func main() {
 	//sort.Sort(sliceOfAllMatches)
 	sort.Stable(sliceOfAllMatches)
 	sortMatchedElapsed := time.Since(t0)
-	fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n",
-		sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
+	//fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n", sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
 
 	//for _, s := range sliceOfStrings {  I only want to see the output from sort.Stable
 	//	fmt.Printf("%s", s)
@@ -230,7 +228,7 @@ func main() {
 
 	fmt.Printf(" There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
 	outputElapsed := time.Since(t0)
-	fmt.Printf("\n It took %s to find all of the matches, %s to sort the strings (not shown), and %s to sort the struct (shown above).  Time since this all began is %s.\n\n",
+	fmt.Printf("\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown) and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
 		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 }
 
