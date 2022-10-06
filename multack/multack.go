@@ -34,6 +34,7 @@
                  Adding a count of matches and files, copied from cgrepi.go.
    2 Oct 22 -- Now that I've learned to abort a binary file as one that has null bytes, I don't need the extension system anymore.
                  And I corrected the order of defer vs if err in the grepFile routine.
+   6 Oct 22 -- Will sort output of this routine, so all file matches are output together.  First debugged for cgrepi.
 */
 package main
 
@@ -53,14 +54,16 @@ import (
 	"time"
 )
 
-const lastAltered = "2 Oct 2022"
+const lastAltered = "6 Oct 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
-// I started w/ 1000, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
+// I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
 const workerPoolMultiplier = 20
+
+const sliceSize = 1000 // a magic number I plucked out of the air.
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -68,18 +71,45 @@ type grepType struct {
 	goRtnNum int
 }
 
+type matchType struct {
+	fpath        string
+	lino         int
+	lineContents string
+}
+
+type matchesSliceType []matchType // this is a named type.  I need a named type for the sort functions to work.  An anonymous type won't cut it.
+
+func (m matchesSliceType) Len() int {
+	return len(m)
+}
+func (m matchesSliceType) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+func (m matchesSliceType) Less(i, j int) bool {
+	return strings.ToLower(m[i].fpath) < strings.ToLower(m[j].fpath)
+}
+
 var grepChan chan grepType
+var matchChan chan matchType
 var caseSensitiveFlag bool // default is false.
 var totFilesScanned, totMatchesFound int64
+var sliceOfStrings []string // based on an anonymous type.
 var wg sync.WaitGroup
+var verboseFlag, veryverboseFlag bool
 
 func main() {
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
-	verboseFlag := flag.Bool("v", false, "Verbose flag")
+	//	verboseFlag := flag.Bool("v", false, "Verbose flag")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
+	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
 	flag.Parse()
+	if veryverboseFlag {
+		verboseFlag = true
+	}
+
 	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
 		log.Fatalln("timeout must be in the range [0,300] seconds")
 	}
@@ -94,13 +124,13 @@ func main() {
 	pattern := args[0]
 	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
 	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
 	}
 	if !caseSensitiveFlag {
 		pattern = strings.ToLower(pattern) // this is the change for the pattern.
 	}
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
 	}
 
@@ -136,7 +166,7 @@ func main() {
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
 	}
 
@@ -144,6 +174,17 @@ func main() {
 	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
 	// dirToSkip := make(map[string]bool, 5)  This didn't get triggered in a directory I know has a .git.  I'm removing the overhead.
 	//dirToSkip[".git"] = true
+
+	matchChan = make(chan matchType, sliceSize)
+	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
+	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
+	go func() {                                               // start the receiving operation before the sending starts
+		for match := range matchChan {
+			sliceOfAllMatches = append(sliceOfAllMatches, match)
+			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
+			sliceOfStrings = append(sliceOfStrings, s)
+		}
+	}()
 
 	// start the worker pool
 	grepChan = make(chan grepType, workerPoolSize) // buffered channel
@@ -272,16 +313,33 @@ func main() {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
 
+	close(grepChan) // must close the channel so the worker go routines know to stop.  When get here, all work is sent to the workers.
+
 	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
 	wg.Wait()
-	close(grepChan) // must close the channel so the worker go routines know to stop.
+	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
 
 	elapsed := time.Since(t0)
 
-	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  I'm trying to stop that.
-	//fmt.Println(" Elapsed time is", elapsed, "and number of Go routines is", goRtns)
-	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
+	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
+
+	// Time to sort and show
+	sort.Strings(sliceOfStrings)
+	sortStringElapsed := time.Since(t0)
+	//sort.Sort(sliceOfAllMatches)
+	sort.Stable(sliceOfAllMatches)
+	sortMatchedElapsed := time.Since(t0)
+	//fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n", sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
+
+	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
+		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents) // remember that lineContents includes a \n at the end of each string.
+	}
+
+	fmt.Printf(" There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
+	outputElapsed := time.Since(t0)
+	fmt.Printf("\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown), and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
+		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 } // end main
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
@@ -302,6 +360,12 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
+		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
+			//if err != io.EOF { // this became messy, so I'm removing it
+			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
+			//}
+			break // just exit when hit EOF condition.
+		}
 
 		if strings.ContainsRune(lineStr, null) {
 			return // the defer func()	 will take care of the cleanup here.
@@ -315,18 +379,20 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
 
 		if lineRegex.MatchString(lineStrng) {
-			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+			if veryverboseFlag {
+				fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+			}
 			localMatches++
-		}
-		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
-			//if err != io.EOF { // this became messy, so I'm removing it
-			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
-			//}
-			break // just exit when hit EOF condition.
+			matchChan <- matchType{
+				fpath:        fpath,
+				lino:         lino,
+				lineContents: lineStr,
+			}
 		}
 	}
 } // end grepFile
 
+/*  Made obsolete by null detection.
 func extractExtensions(files []string) []string {
 	var extensions sort.StringSlice
 	extensions = make([]string, 0, 100)
@@ -361,6 +427,8 @@ func extractExtensions(files []string) []string {
 	//fmt.Println()
 	return extensions
 } // end extractExtensions
+*/
+
 /*
 // ------------------------------ isSymlink ---------------------------
 func isSymlink(m os.FileMode) bool {
