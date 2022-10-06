@@ -32,6 +32,7 @@
 
                Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
                  So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
+   5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
 */
 package main
 
@@ -44,13 +45,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-const LastAltered = "2 Oct 2022"
+const LastAltered = "6 Oct 2022"
 const maxSecondsToTimeout = 300
 
 const workerPoolMultiplier = 20
@@ -64,10 +66,31 @@ type grepType struct {
 	goRtnNum int
 }
 
+//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+type matchType struct {
+	fpath        string
+	lino         int
+	lineContents string
+}
+
+type matchesSliceType []matchType
+
+func (m matchesSliceType) Len() int {
+	return len(m)
+}
+func (m matchesSliceType) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+func (m matchesSliceType) Less(i, j int) bool {
+	return strings.ToLower(m[i].fpath) < strings.ToLower(m[j].fpath)
+}
+
 var caseSensitiveFlag bool // default is false.
 var grepChan chan grepType
+var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
+var sliceOfStrings []string
 
 var wg sync.WaitGroup
 
@@ -152,12 +175,26 @@ func main() {
 	if *verboseFlag {
 		fmt.Printf(" Length of files = %d, minGoRtns = %d.\n\n", len(files), minGoRtns)
 	}
+
 	//if len(files) > int(*maxFiles) {
 	//	files = files[:*maxFiles]
 	//	if *verboseFlag {
 	//		fmt.Printf(" Length of files = %d.\n", len(files))
 	//	}
 	//}
+
+	//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+	matchChan = make(chan matchType, workers)
+	sliceOfAllMatches := make(matchesSliceType, 0, len(files))
+	sliceOfStrings = make([]string, 0, len(files))
+	go func() { // start the receiving operation before the sending starts
+		for match := range matchChan {
+			sliceOfAllMatches = append(sliceOfAllMatches, match)
+			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
+			sliceOfStrings = append(sliceOfStrings, s)
+		}
+	}()
+
 	for _, file := range files {
 		wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
@@ -166,16 +203,35 @@ func main() {
 
 	goRtns := runtime.NumGoroutine()
 	wg.Wait()
-	//close(grepChan) // I had put this after all work was done.  That isn't optimal.
+	//close(grepChan) // Here is after all the work is done.  It's better for this channel to be closed when all the work is sent.
+	close(matchChan) // must close the channel so the matchChan for loop will end.
 
 	elapsed := time.Since(t0)
-	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
 
 	fmt.Println()
-	fmt.Println()
-
 	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
+
+	// Time to sort and show
+	sort.Strings(sliceOfStrings)
+	sortStringElapsed := time.Since(t0)
+	//sort.Sort(sliceOfAllMatches)
+	sort.Stable(sliceOfAllMatches)
+	sortMatchedElapsed := time.Since(t0)
+	fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n",
+		sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
+
+	//for _, s := range sliceOfStrings {  I only want to see the output from sort.Stable
+	//	fmt.Printf("%s", s)
+	//}
+	//fmt.Println()
+
+	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
+		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents)
+	}
+
+	outputElapsed := time.Since(t0)
+	fmt.Printf("\n Time since this all began is %s.\n", outputElapsed)
 }
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
@@ -195,7 +251,10 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
-		lineStr, er := reader.ReadString('\n')
+		lineStr, er := reader.ReadString('\n') // lineStr is terminated w/ the \n character.  I would have to call a trim function to remove it.
+		if er != nil {                         // when can't read any more bytes, break.  If any bytes were read, er == nil.
+			break // just exit when hit EOF condition.
+		}
 		if strings.ContainsRune(lineStr, null) {
 			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.  The wg.Done() is deferred so it doesn't matter.
 		}
@@ -206,11 +265,13 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		}
 
 		if lineRegex.MatchString(lineStrng) { // this is now either case sensitive or not, depending on whether the input pattern has upper case letters.
-			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+			//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)  Will now only see the sorted output.
 			localMatches++
-		}
-		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
-			break // just exit when hit EOF condition.
+			matchChan <- matchType{
+				fpath:        fpath,
+				lino:         lino,
+				lineContents: lineStr,
+			}
 		}
 		now := time.Now()
 		if now.After(tfinal) {
