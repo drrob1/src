@@ -34,6 +34,7 @@
                  Adding a count of matches and files, copied from cgrepi.go.
    2 Oct 22 -- Now that I've learned to abort a binary file as one that has null bytes, I don't need the extension system anymore.
                  And I corrected the order of defer vs if err in the grepFile routine.
+   6 Oct 22 -- Will sort output of this routine, so all file matches are output together.  First debugged for cgrepi.
 */
 package main
 
@@ -53,7 +54,7 @@ import (
 	"time"
 )
 
-const lastAltered = "2 Oct 2022"
+const lastAltered = "6 Oct 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 

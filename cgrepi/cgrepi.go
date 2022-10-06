@@ -183,7 +183,6 @@ func main() {
 	//	}
 	//}
 
-	//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, len(files))
 	sliceOfStrings = make([]string, 0, len(files))
@@ -199,12 +198,11 @@ func main() {
 		wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
 	}
-	close(grepChan) // must close the channel so the worker go routines know to stop.  Doing this after all work is sent into the channel may mean that I don't need a waitgroup anymore.
+	close(grepChan) // must close the channel so the worker go routines know to stop.  Doing this after all work is sent into the channel.
 
 	goRtns := runtime.NumGoroutine()
 	wg.Wait()
-	//close(grepChan) // Here is after all the work is done.  It's better for this channel to be closed when all the work is sent.
-	close(matchChan) // must close the channel so the matchChan for loop will end.
+	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
 
 	elapsed := time.Since(t0)
 
@@ -230,8 +228,10 @@ func main() {
 		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents)
 	}
 
+	fmt.Printf(" There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
 	outputElapsed := time.Since(t0)
-	fmt.Printf("\n Time since this all began is %s.\n", outputElapsed)
+	fmt.Printf("\n It took %s to find all of the matches, %s to sort the strings (not shown), and %s to sort the struct (shown above).  Time since this all began is %s.\n\n",
+		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 }
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
