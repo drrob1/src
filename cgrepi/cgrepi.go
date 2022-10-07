@@ -33,6 +33,7 @@
                Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
                  So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
    5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
+   7 Oct 22 -- Added color to output.
 */
 package main
 
@@ -40,6 +41,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -52,7 +55,7 @@ import (
 	"time"
 )
 
-const LastAltered = "6 Oct 2022"
+const LastAltered = "7 Oct 2022"
 const maxSecondsToTimeout = 300
 
 const workerPoolMultiplier = 20
@@ -142,7 +145,8 @@ func main() {
 	}
 
 	fmt.Println()
-	fmt.Printf(" Concurrent grep insensitive case last altered %s, using pattern of %q, %d worker rtns, compiled with %s. \n",
+	gotWin := runtime.GOOS == "windows"
+	ctfmt.Printf(ct.Yellow, gotWin, " Concurrent grep ignore case last altered %s, using pattern of %q, %d worker rtns, compiled with %s. \n",
 		LastAltered, pattern, workers, runtime.Version())
 	fmt.Println()
 
@@ -205,8 +209,7 @@ func main() {
 
 	elapsed := time.Since(t0)
 
-	fmt.Println()
-	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
+	ctfmt.Printf(ct.Green, gotWin, "\n Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 
 	// Time to sort and show
@@ -226,9 +229,9 @@ func main() {
 		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents)
 	}
 
-	fmt.Printf(" There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
+	ctfmt.Printf(ct.Yellow, gotWin, "\n There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
 	outputElapsed := time.Since(t0)
-	fmt.Printf("\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown) and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
+	ctfmt.Printf(ct.Green, gotWin, "\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown) and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
 		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 }
 

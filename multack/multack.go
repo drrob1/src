@@ -35,6 +35,7 @@
    2 Oct 22 -- Now that I've learned to abort a binary file as one that has null bytes, I don't need the extension system anymore.
                  And I corrected the order of defer vs if err in the grepFile routine.
    6 Oct 22 -- Will sort output of this routine, so all file matches are output together.  First debugged for cgrepi.
+   7 Oct 22 -- Will add color to the output messages.
 */
 package main
 
@@ -42,6 +43,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -159,7 +162,7 @@ func main() {
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, workerPoolSize=%d.  [Extensions are obsolete]\n\n\n",
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
 	workingDir, _ := os.Getwd()
@@ -321,7 +324,8 @@ func main() {
 
 	elapsed := time.Since(t0)
 
-	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
+	gotWin := runtime.GOOS == "windows"
+	ctfmt.Printf(ct.Yellow, gotWin, " Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 
 	// Time to sort and show
@@ -336,9 +340,9 @@ func main() {
 		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents) // remember that lineContents includes a \n at the end of each string.
 	}
 
-	fmt.Printf(" There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
+	ctfmt.Printf(ct.Green, gotWin, "\n There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
 	outputElapsed := time.Since(t0)
-	fmt.Printf("\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown), and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
+	ctfmt.Printf(ct.Cyan, gotWin, "\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown), and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
 		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 } // end main
 

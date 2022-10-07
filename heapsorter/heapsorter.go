@@ -71,9 +71,10 @@ import (
                  In Modula-2 the stack was [1..12] which is too small, as the index went to 12 in this go code, which would blow the stack.
                  In the oberon version, the stack is [12], which is 0..11.  My measurements went to an index of 24, which blew well past the stack limit.
                  I don't know why the code didn't panic w/ array index out of bounds; it merely didn't work.  It would be hard to pull out the non-working code now.
+  7 Oct 22 -- Updated output message
 */
 
-const LastAlteredDate = "Mar 15, 2022"
+const LastAlteredDate = "Oct 7, 2022"
 const tooBig = 170_000
 
 var intStack []int // for non-recursive quick sorts
@@ -260,7 +261,7 @@ End Bubblesort
 
 // -----------------------------------------------------------
 // revisiting this as I'm reading "High Performance Go."
-// I based this on bubble sort pseudo-code above that I found in "Essential Algorithms", by Rod Stephens.
+// I based this on bubble sort pseudocode above that I found in "Essential Algorithms", by Rod Stephens.
 // I have this as an ebook.
 // Now I'm going to add the improvement used by Sedgewick in the determination of h.
 
@@ -368,7 +369,7 @@ func HeapSort(a []string) []string { // I think this is based on Wirth's code in
 // -----------------------------------------------------------
 // -----------------------------------------------------------
 // I did this myself, but it doesn't work.  I'm keeping this here so I don't do this again.  I didn't understand how
-// a heap sort works, so this idea was wrong headed.
+// a heap sort works, so this idea was wrong-headed.
 /*
 func ModifiedHeapSort(a []string) []string {
 	n := len(a)
@@ -885,13 +886,13 @@ func main() {
 	fmt.Print(" Enter number of words for this run.  0 means full file: ")
 	scanner.Scan()
 	answer := scanner.Text()
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		os.Exit(1)
 	}
-	requestedwordcount, err := strconv.Atoi(answer)
-	if err != nil {
-		fmt.Println(" No valid answer entered.  Will assume 0.")
+	requestedwordcount, er := strconv.Atoi(answer)
+	if er != nil {
+		//fmt.Println(" No valid answer entered.  Will assume 0.")  This message is silly.
 		requestedwordcount = 0
 	}
 
@@ -933,6 +934,8 @@ func main() {
 	sliceofwords := make([]string, numberofwords)
 	fmt.Println()
 	fmt.Println()
+
+	fmt.Printf(" Requested number of words is %d, actual number of words read in is %d.\n\n", requestedwordcount, numberofwords)
 
 	// make the timesort slice to be sorted at the end
 	timeSort := make([]timesortType, 0, 50)
