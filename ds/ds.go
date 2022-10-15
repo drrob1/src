@@ -112,9 +112,10 @@ Revision History
 15 Feb 22 -- Replaced testFlag w/ verboseFlag
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
+15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
 */
 
-const LastAltered = "25 Apr 2022"
+const LastAltered = "15 Oct 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -143,7 +144,7 @@ const min2Width = 160
 const min3Width = 170
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var globFlag, veryVerboseFlag, halfFlag bool
+var globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -253,6 +254,9 @@ func main() {
 	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
 	flag.BoolVar(&halfFlag, "1", false, "display 1/2 of the screen.")
 
+	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
+	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
+
 	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 	flag.Parse()
@@ -260,6 +264,9 @@ func main() {
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
 		verboseFlag = true
 	}
+
+	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
+
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
 
@@ -268,7 +275,7 @@ func main() {
 
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
-	} else if dsrtParam.numlines > 0 { // then check this
+	} else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
 		numOfLines = dsrtParam.numlines
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7

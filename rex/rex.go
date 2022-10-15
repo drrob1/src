@@ -109,9 +109,10 @@ Revision History
 15 Feb 22 -- Replaced testFlag w/ verboseFlag, finally.
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
+15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
 */
 
-const LastAltered = "Apr 25, 2022"
+const LastAltered = "Oct 15, 2022"
 
 type dirAliasMapType map[string]string
 
@@ -135,6 +136,7 @@ const min3Width = 170
 
 var excludeRegex *regexp.Regexp
 var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag, halfFlag bool
+var maxDimFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
 
@@ -259,6 +261,9 @@ func main() {
 	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
 	flag.BoolVar(&halfFlag, "1", false, "display 1/2 of the screen.")
 
+	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
+	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
+
 	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 	flag.Parse()
@@ -266,6 +271,8 @@ func main() {
 	if veryVerboseFlag { // setting very verbose will also set verbose.
 		verboseFlag = true
 	}
+
+	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
 	fmt.Print(" rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
@@ -332,7 +339,7 @@ func main() {
 
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
-	} else if dsrtParam.numlines > 0 { // then check this
+	} else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
 		numOfLines = dsrtParam.numlines
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
