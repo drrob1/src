@@ -114,6 +114,7 @@ Revision History
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I noticed that the environment string can't process f, for filterFlag.  Now it can.
+               Now I need an option, -F, to undo the filterflag set in an environment var.
 */
 
 const LastAltered = "15 Oct 2022"
@@ -246,6 +247,7 @@ func main() {
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
+	noFilterFlag := flag.Bool("F", false, "Flag to undo an environment var with f set.")
 
 	var w int // width maximum of the filename string to be displayed
 	flag.IntVar(&w, "w", 0, "width for displayed file name")
@@ -290,7 +292,7 @@ func main() {
 		numOfLines /= 2
 	}
 
-	if dsrtParam.filterflag {
+	if dsrtParam.filterflag && !*noFilterFlag {
 		filterFlag = true
 	}
 
