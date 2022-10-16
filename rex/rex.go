@@ -110,6 +110,7 @@ Revision History
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
+               I removed the filter flag from this code when I wrote it.
 */
 
 const LastAltered = "Oct 15, 2022"

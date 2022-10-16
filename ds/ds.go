@@ -113,6 +113,7 @@ Revision History
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
+               I noticed that the environment string can't process f, for filterFlag.  Now it can.
 */
 
 const LastAltered = "15 Oct 2022"
@@ -144,7 +145,7 @@ const min2Width = 160
 const min3Width = 170
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
+var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -244,7 +245,7 @@ func main() {
 	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
+	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	var w int // width maximum of the filename string to be displayed
 	flag.IntVar(&w, "w", 0, "width for displayed file name")
@@ -425,7 +426,7 @@ func main() {
 	}
 
 	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
-	if *filterFlag {
+	if filterFlag {
 		filterAmt = 1_000_000
 	} else if filterStr != "" {
 		if len(filterStr) > 1 {
@@ -450,7 +451,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
+		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
 	}
 
 	fileInfos = getFileInfosFromCommandLine()
@@ -588,6 +589,8 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 			dsrtparam.filenamelistflag = true
 		} else if envChar == 't' { // added 09/12/2018 12:26:01 PM
 			dsrtparam.totalflag = true // for the grand total operation
+		} else if envChar == 'f' {
+			filterFlag = true
 		} else if unicode.IsDigit(rune(envChar)) {
 			dsrtparam.numlines = int(envChar) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
