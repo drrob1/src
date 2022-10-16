@@ -111,9 +111,10 @@ REVISION HISTORY
 24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 14 Oct 22 -- Adding an undo option for the -1 flag, as I want to make it default thru the dsrt env var.  Or something like that.  I'm still thinking.
+15 Oct 22 -- I noticed that the environment string can't process f, for filterFlag.  Now it can.
 */
 
-const LastAltered = "14 Oct 2022"
+const LastAltered = "15 Oct 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -132,7 +133,7 @@ const defaultHeight = 40
 const minWidth = 90
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
+var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -266,7 +267,7 @@ func main() {
 	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.")
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	var filterFlag = flag.Bool("f", false, "filter value to suppress listing individual size below 1 MB.")
+	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 
 	flag.BoolVar(&globFlag, "g", false, "Use glob function on Windows.")
 
@@ -405,7 +406,7 @@ func main() {
 	}
 
 	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
-	if *filterFlag {
+	if filterFlag {
 		filterAmt = 1_000_000
 	} else if filterStr != "" {
 		if len(filterStr) > 1 {
@@ -431,7 +432,7 @@ func main() {
 
 	if verboseFlag {
 		fmt.Println(" *** Here I am ***")
-		fmt.Println(" FilterFlag =", *filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
+		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
 		fmt.Printf(" nscreens=%d, numLines=%d, flag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
 			*nscreens, numLines, flag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}
@@ -571,6 +572,8 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 			dsrtparam.filenamelistflag = true
 		} else if s == 't' { // added 09/12/2018 12:26:01 PM
 			dsrtparam.totalflag = true // for the grand total operation
+		} else if s == 'f' {
+			filterFlag = true
 		} else if unicode.IsDigit(rune(s)) {
 			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
