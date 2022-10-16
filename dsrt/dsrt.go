@@ -112,6 +112,7 @@ REVISION HISTORY
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 14 Oct 22 -- Adding an undo option for the -1 flag, as I want to make it default thru the dsrt env var.  Or something like that.  I'm still thinking.
 15 Oct 22 -- I noticed that the environment string can't process f, for filterFlag.  Now it can.
+               Now I need an option, -F, to undo the filterflag set in an environment var.
 */
 
 const LastAltered = "15 Oct 2022"
@@ -268,6 +269,7 @@ func main() {
 
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
+	noFilterFlag := flag.Bool("F", false, "Flag to undo an environment var with f set.")
 
 	flag.BoolVar(&globFlag, "g", false, "Use glob function on Windows.")
 
@@ -301,7 +303,7 @@ func main() {
 		numOfLines /= 2
 	}
 
-	if dsrtParam.filterflag {
+	if dsrtParam.filterflag && !*noFilterFlag {
 		filterFlag = true
 	}
 
