@@ -125,8 +125,8 @@ const LastAltered = "15 Oct 2022"
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numlines                                                        int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
+	numlines                                                                    int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag bool
 }
 
 const defaultHeight = 40
@@ -299,6 +299,10 @@ func main() {
 
 	if halfFlag {
 		numOfLines /= 2
+	}
+
+	if dsrtParam.filterflag {
+		filterFlag = true
 	}
 
 	if verboseFlag {
@@ -573,7 +577,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 		} else if s == 't' { // added 09/12/2018 12:26:01 PM
 			dsrtparam.totalflag = true // for the grand total operation
 		} else if s == 'f' {
-			filterFlag = true
+			dsrtparam.filterflag = true
 		} else if unicode.IsDigit(rune(s)) {
 			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {

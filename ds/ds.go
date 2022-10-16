@@ -129,8 +129,8 @@ const LastAltered = "15 Oct 2022"
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numlines, w                                                     int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
+	numlines, w                                                                 int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag bool
 }
 
 type colorizedStr struct {
@@ -288,6 +288,10 @@ func main() {
 
 	if halfFlag {
 		numOfLines /= 2
+	}
+
+	if dsrtParam.filterflag {
+		filterFlag = true
 	}
 
 	noExtensionFlag = *extensionflag || *extflag
@@ -590,7 +594,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 		} else if envChar == 't' { // added 09/12/2018 12:26:01 PM
 			dsrtparam.totalflag = true // for the grand total operation
 		} else if envChar == 'f' {
-			filterFlag = true
+			dsrtparam.filterflag = true
 		} else if unicode.IsDigit(rune(envChar)) {
 			dsrtparam.numlines = int(envChar) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
