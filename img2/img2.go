@@ -24,6 +24,7 @@ REVISION HISTORY
 26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
 16 Mar 22 -- Will only write using fmt.Print calls if verboseFlag is set.
 26 Mar 22 -- Expanding to work when display directory is not current directory
+21 Oct 22 -- Fixed bad use of format verb caught by golangci-lint.
 */
 
 package main
@@ -57,7 +58,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Mar 26, 2022"
+const LastModified = "Oct 21, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -603,7 +604,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		loadTheImage()
 	case fyne.KeyV:
 		*verboseFlag = !*verboseFlag
-		fmt.Printf(" Verbose flag is now %t, Sticky is and scaleFactor is %2.2g\n", *verboseFlag, sticky, scaleFactor)
+		fmt.Printf(" Verbose flag is now %t, Sticky is %t and scaleFactor is %2.2g\n", *verboseFlag, sticky, scaleFactor)
 	case fyne.KeyZ:
 		sticky = !sticky
 		if *verboseFlag {

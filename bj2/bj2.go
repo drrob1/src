@@ -107,9 +107,10 @@ import (
                  A modified score ratio will subtract out BJ and doubles from the total # of hands.  I may have to play w/ this for a bit before it's useful.
   15 Apr 22 -- Changed how doTheShuffle works.  And will extract the number of decks from the filename of the .deck file.
   23 Apr 22 -- Changed how split hands are constructed, which is now more idiomatic for Go.
+  21 Oct 22 -- Fixed a bug in an error message, detected by golangci-lint
 */
 
-const lastAltered = "Apr 23, 2022"
+const lastAltered = "Oct 21, 2022"
 
 var numOfDecks = 100_000 // took ~1/2 hr to run on thelio at this default value.  It's now a var because I'm extracting the value from the .deck filename.
 
@@ -1475,7 +1476,7 @@ func main() {
 	deckFilename := flag.Arg(0) + deckExtDefault
 	_, err := os.Stat(deckFilename)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Deck file %s error is %v, so exiting.\n", deckFilename)
+		fmt.Fprintf(os.Stderr, " Deck file %s error is %v, so exiting.\n", deckFilename, err)
 		os.Exit(1)
 	}
 	deckValue := extractNumOfDecks(deckFilename)

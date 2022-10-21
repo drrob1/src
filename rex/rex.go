@@ -111,7 +111,7 @@ Revision History
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I removed the filter flag from this code when I wrote it.
-21 Oct 22 -- Removed unused variable as caught by golangci-lint
+21 Oct 22 -- Removed unused variable as caught by golangci-lint, and incorrect use of format verb.
 */
 
 const LastAltered = "Oct 21, 2022"
@@ -137,7 +137,7 @@ const min3Width = 170
 //const dateSize = 30  // space the filesize and date occupy.
 
 var excludeRegex *regexp.Regexp
-var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag, halfFlag bool
+var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
 var maxDimFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
@@ -831,7 +831,8 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []os.FileInfo {
 
 func includeThis(fn string) bool { // I removed the filter against file size, so the input param can now be a string.
 	if veryVerboseFlag {
-		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
+		//fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
+		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t \n", noExtensionFlag, excludeFlag)
 	}
 	if noExtensionFlag && strings.ContainsRune(fn, '.') {
 		return false

@@ -14,6 +14,7 @@ dsrtre.go
   23 Aug 20 -- Make sure a newline is displayed after the error message.
    5 Sep 20 -- Don't follow symlinked directories
    4 Feb 22 -- Updated code, removing the concurrency pattern as it's not needed.  And removing the tracking of directories visited.
+  21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
 */
 package main
 
@@ -30,7 +31,7 @@ import (
 	"time"
 )
 
-const lastAltered = "4 Feb 2022"
+const lastAltered = "21 Oct 2022"
 
 func main() {
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
@@ -148,7 +149,7 @@ func main() {
 		if BOOL := inputRegex.MatchString(NAME); BOOL {
 			fi, er := d.Info()
 			if er != nil {
-				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name())
+				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name(), er)
 				return er
 			}
 			t := fi.ModTime().Format("Jan-02-2006_15:04:05")

@@ -14,6 +14,7 @@ dsrtr.go
   20 Dec 20 -- Looking to change sort functions based on time to be idiomatic, but there aren't any here.  Go figure.
                  I did remove some dead comments, though.
    2 Feb 22 -- Refactoring -- removing the go routine pattern as it's not necessary.  And experimenting w/ Walk vs WalkDir
+  21 Oct 22 -- Fixed a bad use of format verb on an error message.  Caught by golangci-lint
 */
 package main
 
@@ -29,7 +30,7 @@ import (
 	"time"
 )
 
-const lastAltered = "5 Feb 2022"
+const lastAltered = "21 Oct 2022"
 
 func main() {
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
@@ -129,7 +130,7 @@ func main() {
 		if BOOL, _ := filepath.Match(globPattern, NAME); BOOL {
 			fi, er := d.Info()
 			if er != nil {
-				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name())
+				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name(), er)
 				return er
 			}
 			t := fi.ModTime().Format("Jan-02-2006_15:04:05")
