@@ -30,6 +30,7 @@ REVISION HISTORY
 25 Aug 16 -- Converting to Go.
 23 Mar 21 -- Changed the limits in EASTER function.
  8 Apr 21 -- Converted to module name src.
+21 Oct 21 -- golangci-lint said I have redundant break statements, so I removed them.  I likely lifted that routine from my C++ code which needs them.
 */
 
 type MDType struct { // MDType is a contraction of Month Day Type, and Go export caps rules apply.
@@ -86,75 +87,75 @@ func EASTER(YEAR int) (MM, DD int) {
 		case 1: // APR 14
 			MM = 4
 			DD = 14
-			break
+			//break
 		case 2: // APR 3
 			MM = 4
 			DD = 3
-			break
+			//break
 		case 3: // MAR 23
 			MM = 3
 			DD = 23
-			break
+			//break
 		case 4: // APR 11
 			MM = 4
 			DD = 11
-			break
+			//break
 		case 5: // MAR 31
 			MM = 3
 			DD = 31
-			break
+			//break
 		case 6: // APR 18
 			MM = 4
 			DD = 18
-			break
+			//break
 		case 7: // APR 8
 			MM = 4
 			DD = 8
-			break
+			//break
 		case 8: // MAR 28
 			MM = 3
 			DD = 28
-			break
+			//break
 		case 9: // APR 16
 			MM = 4
 			DD = 16
-			break
+			//break
 		case 10: // APR 5
 			MM = 4
 			DD = 5
-			break
+			//break
 		case 11: // MAR 25
 			MM = 3
 			DD = 25
-			break
+			//break
 		case 12: // APR 13
 			MM = 4
 			DD = 13
-			break
+			//break
 		case 13: // APR 2
 			MM = 4
 			DD = 2
-			break
+			//break
 		case 14: // MAR 22
 			MM = 3
 			DD = 22
-			break
+			//break
 		case 15: // APR 10
 			MM = 4
 			DD = 10
-			break
+			//break
 		case 16: // MAR 30
 			MM = 3
 			DD = 30
-			break
+			//break
 		case 17: // APR 17
 			MM = 4
 			DD = 17
-			break
+			//break
 		case 18: // APR 7
 			MM = 4
 			DD = 7
-			break
+			//break
 		case 19: // MAR 27
 			MM = 3
 			DD = 27

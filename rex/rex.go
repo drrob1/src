@@ -111,9 +111,10 @@ Revision History
 25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I removed the filter flag from this code when I wrote it.
+21 Oct 22 -- Removed unused variable as caught by golangci-lint
 */
 
-const LastAltered = "Oct 15, 2022"
+const LastAltered = "Oct 21, 2022"
 
 type dirAliasMapType map[string]string
 
@@ -136,7 +137,7 @@ const min3Width = 170
 //const dateSize = 30  // space the filesize and date occupy.
 
 var excludeRegex *regexp.Regexp
-var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag, halfFlag bool
+var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag, filterAmt, veryVerboseFlag, halfFlag bool
 var maxDimFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
@@ -380,7 +381,7 @@ func main() {
 	filenameList = !(FilenameListFlag || dsrtParam.filenamelistflag)                                     // need to reverse the flag because D means suppress the output of filenames.
 	ShowGrandTotal := *TotalFlag || dsrtParam.totalflag                                                  // added 09/12/2018 12:32:23 PM
 	longFileSizeListFlag = *longflag
-	showGrandTotal = *TotalFlag || dsrtParam.totalflag
+	//showGrandTotal = *TotalFlag || dsrtParam.totalflag
 
 	inputRegExStr := ""
 	workingDir, er := os.Getwd()

@@ -36,6 +36,7 @@
                  And I corrected the order of defer vs if err in the grepFile routine.
    6 Oct 22 -- Will sort output of this routine, so all file matches are output together.  First debugged for cgrepi.
    7 Oct 22 -- Will add color to the output messages.
+  21 Oct 22 -- Ran golangci-lint and made the changes it recommended.
 */
 package main
 
@@ -57,7 +58,7 @@ import (
 	"time"
 )
 
-const lastAltered = "6 Oct 2022"
+const lastAltered = "21 Oct 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -71,7 +72,7 @@ const sliceSize = 1000 // a magic number I plucked out of the air.
 type grepType struct {
 	regex    *regexp.Regexp
 	filename string
-	goRtnNum int
+	// goRtnNum int  Not used.  I'll remove it for now.
 }
 
 type matchType struct {

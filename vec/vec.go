@@ -20,6 +20,7 @@ package vec
  ================
  20 Dec 2016 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
   1 Aug 2020 -- Cleaned up code and comments, esp comments.
+ 21 Oct 2022 -- Added a use of copy as recommended by golangci-lint.
 
 */
 
@@ -59,9 +60,10 @@ func NewVector(N int) VectorSlice {
 func Copy(A VectorSlice) VectorSlice {
 	var B VectorSlice
 
-	for i := range A {
-		B[i] = A[i]
-	}
+	copy(B, A) // this is what copy is intended for.  Pointed out to me by golangci-lint.
+	//for i := range A {
+	//	B[i] = A[i]
+	//}
 	return B
 }
 

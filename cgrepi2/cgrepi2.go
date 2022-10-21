@@ -15,6 +15,7 @@
   16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
   18 Dec 21 -- Adding optimizations as recommended by Bill Kennedy in his last example.  It's maybe 20% faster, but it's hard for me to be sure.
                  And on Ryzen 9 5950X, it's maybe 5 - 10% faster.  But it is faster.
+  21 Oct 22 -- golangci-lint recommended removing unused field in grepType.
 */
 package main
 
@@ -33,7 +34,7 @@ import (
 	"time"
 )
 
-const LastAltered = "18 Dec 2021"
+const LastAltered = "21 Oct 2021"
 const maxSecondsToTimeout = 300
 const workerPoolMultiplier = 20
 
@@ -42,7 +43,7 @@ var workers = runtime.NumCPU() * workerPoolMultiplier
 type grepType struct {
 	regex    *regexp.Regexp
 	filename string
-	goRtnNum int
+	// goRtnNum int
 }
 
 var grepChan chan grepType

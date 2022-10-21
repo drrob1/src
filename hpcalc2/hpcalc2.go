@@ -127,9 +127,10 @@ REVISION HISTORY
                as sto and rcl are processed by rpng and rpnf without passing them to HPCALC2.
  7 May 22 -- Played a bit in clippy_linux.go, where I'm using make to initialize bytes.NewBuffer().
  7 Sep 22 -- Changed the pivot for the JUL command from the current year to a const of 30
+21 Oct 22 -- golangci-lint says I have an unnecessary Sprintf call.  It's right.
 */
 
-const LastAlteredDate = "8 Sep 2022"
+const LastAlteredDate = "21 Oct 2022"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -979,7 +980,7 @@ outerloop:
 			if (Stack[X] >= -2.0e9) && (Stack[X] <= 1.80e19) {
 				ss = append(ss, fmt.Sprintf(" Value of X reg in hex: %s", ToHex(Stack[X])))
 			} else {
-				ss = append(ss, fmt.Sprintf(" Cannot convert X register to hex string, as number is out of range."))
+				ss = append(ss, " Cannot convert X register to hex string, as number is out of range.") // use of Sprintf here was not needed.  Caught by the golangci-lint.
 			} // Hex command
 		case 280: // HCF
 			c1 := int(math.Abs(Round(Stack[X])))

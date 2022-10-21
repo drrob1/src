@@ -121,10 +121,12 @@ func Copy2(Src, Dest Matrix2D) {
 		return
 	}
 
+	//copy(Dest, Src) // pointed out by golangci-lint.  Doesn't work so I did it wrong.
 	for r := range Src {
-		for c := range Src[r] {
-			Dest[r][c] = Src[r][c]
-		}
+		copy(Dest[r], Src[r]) // this works.
+		//for c := range Src[r] {
+		//	Dest[r][c] = Src[r][c]
+		//}
 	}
 }
 
@@ -135,10 +137,13 @@ func Copy(Src Matrix2D) Matrix2D {
 	SrcCols := len(Src[0])
 
 	Dest := NewMatrix(SrcRows, SrcCols)
+
+	//copy(Dest, Src) // pointed out to me by golangci-lint.  Doesn't work so I did it wrong.
 	for r := range Src {
-		for c := range Src[r] {
-			Dest[r][c] = Src[r][c]
-		}
+		copy(Dest[r], Src[r]) // this works.
+		//for c := range Src[r] {
+		//	Dest[r][c] = Src[r][c]
+		//}
 	}
 	return Dest
 }

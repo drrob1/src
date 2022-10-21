@@ -598,7 +598,7 @@ func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 		return nil
 	}
 
-	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, or a space
+	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, for a space
 	directoryAliasesMap = make(dirAliasMapType, 10)
 
 	dirAliasSlice := strings.Fields(s)

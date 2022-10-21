@@ -115,6 +115,7 @@ Revision History
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I noticed that the environment string can't process f, for filterFlag.  Now it can.
                Now I need an option, -F, to undo the filterflag set in an environment var.
+21 Oct 22 -- golangci-lint said I don't use global directoryAliasMap, so I'm removing it.
 */
 
 const LastAltered = "15 Oct 2022"
@@ -151,7 +152,8 @@ var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
-var directoryAliasesMap dirAliasMapType
+
+//var directoryAliasesMap dirAliasMapType
 var autoWidth, autoHeight int
 
 func main() {

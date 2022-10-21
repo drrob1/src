@@ -53,9 +53,10 @@ import (
  5 May 22 -- HPCALC2 was changed to use OS specific code.  No changes here, though.
 16 May 22 -- Removed a superfluous select statement in Doit.  I understand concurrency better now.
 11 Aug 22 -- About command will give more info about the exe binary
+21 Oct 22 -- golangci-lint caught that I have an unneeded Sprintf call.  I removed both of them.  And added to show when the binary was last linked for the ABOUT cmd.
 */
 
-const lastModified = "Aug 11, 2022"
+const lastModified = "Oct 21, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -322,7 +323,10 @@ func Doit() {
 
 				//  These commands are processed thru GetResult() first, then these are processed here.
 				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
-					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
+					execname, _ := os.Executable()
+					ExecFI, _ := os.Stat(execname)
+					ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s, last linked %s", lastModified, runtime.Version(), ExecTimeStamp)
 					stringslice = append(stringslice, str)
 
 					str = fmt.Sprintf(" %s timestamp is %s.  Full exec name is %s.\n", execFI.Name(), execTimeStamp, execname)
@@ -655,7 +659,8 @@ func OutputRegToString() string {
 	for i, r := range Storage { // r for register
 		if r.Value != 0.0 {
 			if FirstNonZeroStorageFlag {
-				s := fmt.Sprintf("                The following storage registers are not zero")
+				//s := fmt.Sprintf("                The following storage registers are not zero")
+				s := "                The following storage registers are not zero"
 				ss = append(ss, s)
 				FirstNonZeroStorageFlag = false
 			}
@@ -671,7 +676,8 @@ func OutputRegToString() string {
 		} // if storage value is not zero
 	} // for range over Storage
 	if FirstNonZeroStorageFlag {
-		s := fmt.Sprintf("All storage registers are zero.")
+		//s := fmt.Sprintf("All storage registers are zero.")
+		s := "All storage registers are zero."
 		ss = append(ss, s)
 	}
 	jointedStr := strings.Join(ss, "\n")
