@@ -22,12 +22,12 @@ import (
 var LastAlteredDate = "Oct 21, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
-var duration = flag.Duration("d", 5*time.Minute, "find files modified within DURATION")
+var duration = flag.Duration("dur", 5*time.Minute, "find files modified within this duration")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
 var instant = flag.String("t", "", "find files modified since TIME")
 var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
-var days = flag.Int("day", 0, "days duration")
+var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
 
 //var help = flag.Bool("h", false, "print help message")
