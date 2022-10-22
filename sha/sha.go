@@ -50,9 +50,10 @@ import (
   13 Feb 22 -- filepicker API changed recently.  So I'm updating the code here that uses filepicker.
    9 Mar 22 -- Using package constants instead of my magic numbers.
   13 Jun 22 -- Cleaning up some comments, from Boston's SIR 2022.  And removed unused code.  And finally removed depracated ioutil.
+  21 Oct 22 -- Now using strings.EqualFold as recommended by golangci-lint.
 */
 
-const LastCompiled = "13 June 2022"
+const LastCompiled = "21 Oct 2022"
 
 // --------------------------------------- MAIN ----------------------------------------------------
 func main() {
@@ -262,7 +263,8 @@ func main() {
 		fmt.Println("       Read From File:", HashValueReadFromFile)
 		fmt.Println(" Computed hex encoded:", HashValueComputedStr)
 
-		if strings.ToLower(HashValueReadFromFile) == strings.ToLower(HashValueComputedStr) {
+		//if strings.ToLower(HashValueReadFromFile) == strings.ToLower(HashValueComputedStr) {
+		if strings.EqualFold(HashValueReadFromFile, HashValueComputedStr) { // golangci-lint found this optimization.
 			fmt.Print(" Matched.")
 		} else {
 			fmt.Print(" Not matched.")
