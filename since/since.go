@@ -16,16 +16,19 @@ import (
 
 /* REVISION HISTORY
    21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
-   21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag contents is output.
+   21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag contents is output.  If an absolute time is given, use that, else use duration.
 */
 
 var LastAlteredDate = "Oct 21, 2022"
 
-var duration = flag.String("d", "", "find files modified within DURATION")
+//var duration = flag.String("d", "", "find files modified within DURATION")
+var duration = flag.Duration("d", 5*time.Minute, "find files modified within DURATION")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
 var instant = flag.String("t", "", "find files modified since TIME")
 var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
+var days = flag.Int("day", 0, "days duration")
+var weeks = flag.Int("w", 0, "weeks duration")
 
 //var help = flag.Bool("h", false, "print help message")
 
@@ -57,13 +60,19 @@ func main() {
 			os.Exit(1)
 		}
 		when = t
-	case *duration != "":
-		d, err := time.ParseDuration(*duration)
-		if err != nil {
-			fmt.Printf("error parsing duration %q, %s\n", *duration, err)
-			os.Exit(2)
-		}
-		when = now.Add(-d)
+	default:
+		//d, err := time.ParseDuration(*duration)
+		//if err != nil {
+		//	fmt.Printf("error parsing duration %q, %s\n", *duration, err)
+		//	os.Exit(2)
+		//}
+		*duration = *duration + time.Duration(*weeks)*7*24*time.Hour + time.Duration(*days)*24*time.Hour
+		when = now.Add(-*duration) // subtract duration from now.
+	}
+
+	if *verbose {
+		fmt.Printf(" weeks = %d, days = %d, duration = %s\n", *weeks, *days, *duration)
+		fmt.Printf(" when = %s\n", when)
 	}
 
 	// goroutine to collect names of recently-modified files
