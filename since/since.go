@@ -1,44 +1,51 @@
 // since.go
-/* REVISION HISTORY
-   21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
-*/
 
 package main
 
 import (
 	"flag"
 	"fmt"
+	"github.com/MichaelTJones/walk"
 	"log"
 	"os"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
-
-	"github.com/MichaelTJones/walk"
 )
 
-var LastAlteredDate = "Oct 21, 2018"
+/* REVISION HISTORY
+   21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
+   21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag contents is output.
+*/
+
+var LastAlteredDate = "Oct 21, 2022"
 
 var duration = flag.String("d", "", "find files modified within DURATION")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
 var instant = flag.String("t", "", "find files modified since TIME")
 var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
-var help = flag.Bool("h", false, "print help message")
+
+//var help = flag.Bool("h", false, "print help message")
 
 func main() {
-	fmt.Println(" since written in Go.  LastAltered", LastAlteredDate)
+
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s, compiled with %s, last linked %s.\n", os.Args[0], LastAlteredDate, runtime.Version(), ExecTimeStamp)
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: since <options> <start-dir-list> \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Valid time units for duration are ns, us, ms, s, m, h. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -d 5m -- show all files changed within last 5 minutes starting at current directory \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -d 5m $HOME or %%userprofile -- show all files changed within last 5 minutes starting at home directory \n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
-	if *help {
-		fmt.Println()
-		fmt.Println()
-		fmt.Println(" Usage: since <options> <start-dir-list>")
-		fmt.Println(" Valid time units for duration are ns, us, ms, s, m, h.")
-		fmt.Println()
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
+	fmt.Printf(" since written in Go.  LastAltered %s, compiled with %s, last linked %s.\n", LastAlteredDate, runtime.Version(), ExecTimeStamp)
 
 	now := time.Now()
 	when := now
@@ -101,12 +108,19 @@ func main() {
 		if err != nil {
 			log.Fatalln(" error from Getwd is", err)
 		}
-		walk.Walk(dir, sizeVisitor)
+		err = walk.Walk(dir, sizeVisitor)
+		if err != nil {
+			log.Fatalln(" error from walk.Walk is", err)
+		}
 	} else {
 		for _, root := range flag.Args() {
-			walk.Walk(root, sizeVisitor)
+			err := walk.Walk(root, sizeVisitor)
+			if err != nil {
+				log.Fatalln(" error from walk.Walk is", err)
+			}
 		}
 	}
+
 	// wait for traversal results and print
 	close(results) // no more results
 	<-done         // wait for final results and sorting
