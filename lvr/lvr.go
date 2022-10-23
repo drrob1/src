@@ -223,7 +223,7 @@ func getItAll(workingDir string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	files, er := dir.Readdirnames(0)
+	files, er := dir.Readdirnames(0) // this fetches everything, directory names, symlinks and regular files.
 	return files, er
 } // getItAll
 
@@ -231,14 +231,22 @@ func getItAll(workingDir string) ([]string, error) {
 
 func doTheShuffle(infiles []string) []string {
 	n := len(infiles)
-	outfiles := make([]string, 0, n)
+	outFiles := make([]string, 0, n)
 
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < numNames; i++ {
 		j := rand.Intn(n)
-		outfiles = append(outfiles, infiles[j])
+		fi, err := os.Stat(infiles[j])
+		if err != nil {
+			continue // skip errors, and don't report them
+		}
+		if fi.IsDir() {
+			continue // skip directories, too.
+		}
+
+		outFiles = append(outFiles, infiles[j])
 	}
-	return outfiles
+	return outFiles
 }
 
 /*
