@@ -18,8 +18,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -27,15 +25,16 @@ import (
 var hostsCmd = &cobra.Command{
 	Use:   "hosts",
 	Short: "Manage the hosts list",
-	Long: `Manages the hosts lists for pscan
+	Long: `Manages the hosts lists for pScan
 
 Add hosts w/ the add command
 Delete hosts w/ the delete command
 List hosts w/ the list command.`,
 
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("hosts called")
-	},
+	// We don't want hosts command to execute any actions when called without a subcommand, so I commented out the run property.
+	//Run: func(cmd *cobra.Command, args []string) {
+	//	fmt.Println("hosts called")
+	//},
 }
 
 func init() {

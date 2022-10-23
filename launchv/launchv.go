@@ -36,9 +36,10 @@ REVISION HISTORY
                The code will exit if the find function returns a blank string.  This would be an opportunity to use the environment var to help the pgm find vlc.
                And since linux and windows use different characters as subdir separators in the PATH, and the filesystem uses a different delimiter, I have to use a conditional
                based on runtime.GOOS.
+23 Oct 22 -- On linux will call cvlc instead of vlc.  Nevermind, it's not better.  But I changed MyReadDir to skip directories.
 */
 
-const lastModified = "Sep 21, 2022"
+const lastModified = "Oct 23, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok bool
@@ -153,8 +154,8 @@ func main() {
 		//vlcStr = "vlc"
 		//shellStr = os.Getenv("ComSpec") not needed anymore
 	} else if runtime.GOOS == "linux" {
-		vlcStr = findexec.Find("vlc", "")
-		shellStr = "/bin/bash" // not needed as I found out by some experimentation on leox.
+		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
+		shellStr = "/bin/bash"            // not needed as I found out by some experimentation on leox.
 	}
 
 	if vlcStr == "" {
@@ -242,6 +243,9 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 	for _, d := range dirEntries {
 		lower := strings.ToLower(d.Name())
 		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
+			continue
+		}
+		if d.IsDir() { // skip directories
 			continue
 		}
 
