@@ -123,6 +123,7 @@ func main() {
 	*/
 	//fileNames := getFileNames(workingDir, includeRegex) // this slice of filenames matches the includeRegexp and does not match the excludeRegexp, if given.
 	fileNames, er := getItAll(workingDir)
+	fullList := len(fileNames)
 	if er != nil {
 		fmt.Fprintf(os.Stderr, " Error from getItAll is %v.\n")
 		if len(fileNames) == 0 {
@@ -144,7 +145,7 @@ func main() {
 
 	now := time.Now()
 	fileNames = doTheShuffle(fileNames)
-	fmt.Printf(" Shuffled %d filenames once, which took %s.\n", len(fileNames), time.Since(now))
+	fmt.Printf(" Shuffled %d filenames once, which took %s.  The full list contained %d files.\n", len(fileNames), time.Since(now), fullList)
 
 	//rand.Seed(now.UnixNano())
 	//shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
