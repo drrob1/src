@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -17,9 +18,10 @@ import (
 /* REVISION HISTORY
    21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
    21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag contents is output.  If an absolute time is given, use that, else use duration.
+   26 Oct 2022 -- Added '~' processing
 */
 
-var LastAlteredDate = "Oct 21, 2022"
+var LastAlteredDate = "Oct 26, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 5*time.Minute, "find files modified within this duration")
@@ -68,6 +70,11 @@ func main() {
 		//}
 		*duration = *duration + time.Duration(*weeks)*7*24*time.Hour + time.Duration(*days)*24*time.Hour
 		when = now.Add(-*duration) // subtract duration from now.
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from UserHomeDir is %v.\n", err)
 	}
 
 	if *verbose {
@@ -123,7 +130,8 @@ func main() {
 		}
 	} else {
 		for _, root := range flag.Args() {
-			err := walk.Walk(root, sizeVisitor)
+			dir := strings.Replace(root, "~", home, 1) // I decided to not test for windows or presence of ~.  This is pretty fast as it is.
+			err := walk.Walk(dir, sizeVisitor)
 			if err != nil {
 				log.Fatalln(" error from walk.Walk is", err)
 			}
