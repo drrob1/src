@@ -37,6 +37,11 @@
    6 Oct 22 -- Will sort output of this routine, so all file matches are output together.  First debugged for cgrepi.
    7 Oct 22 -- Will add color to the output messages.
   21 Oct 22 -- Ran golangci-lint and made the changes it recommended.
+  26 Oct 22 -- If I pattern this after since, which was essentially written by Michael T. Jones, I can eliminate the need for a waitgroup here.
+                 This is because when the walk function returns, the work has all been sent to the workers and the work channel can be closed.
+                 The new pattern to replace a wait group uses a done channel.
+                 It doesn't work.  The only optimization I can make is that the sort.Strings is in the go routine instead of the main routine.
+                 I can't close the results channel when all work is sent to the workers because of the processing time needed.  I'll restore the wait group.
 */
 package main
 
@@ -106,7 +111,6 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
-	//	verboseFlag := flag.Bool("v", false, "Verbose flag")
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
 	flag.Parse()
@@ -179,7 +183,8 @@ func main() {
 	// dirToSkip := make(map[string]bool, 5)  This didn't get triggered in a directory I know has a .git.  I'm removing the overhead.
 	//dirToSkip[".git"] = true
 
-	matchChan = make(chan matchType, sliceSize)
+	//done := make(chan bool)                                 // unbuffered, so the read is a blocking read.
+	matchChan = make(chan matchType, sliceSize)               // this is a buffered channel.
 	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
 	go func() {                                               // start the receiving operation before the sending starts
@@ -188,6 +193,9 @@ func main() {
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
 			sliceOfStrings = append(sliceOfStrings, s)
 		}
+		sort.Stable(sliceOfAllMatches)
+		sort.Strings(sliceOfStrings) // the sort operation is now done here in the go routine, instead of the main function body.
+		// done <- true   nevermind
 	}()
 
 	// start the worker pool
@@ -320,7 +328,8 @@ func main() {
 	close(grepChan) // must close the channel so the worker go routines know to stop.  When get here, all work is sent to the workers.
 
 	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
-	wg.Wait()
+	wg.Wait()                        // all grep routines are finished when this is allowed to continue.
+	//<-done           // This waits for the done signal on this blocking channel call.  Interestingly, this channel is not closed.  Nevermind
 	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
 
 	elapsed := time.Since(t0)
@@ -330,10 +339,10 @@ func main() {
 	fmt.Println()
 
 	// Time to sort and show
-	sort.Strings(sliceOfStrings)
+	// sort.Strings(sliceOfStrings)  This is now done in the go routine and not here in the main function body.
 	sortStringElapsed := time.Since(t0)
 	//sort.Sort(sliceOfAllMatches)
-	sort.Stable(sliceOfAllMatches)
+	//sort.Stable(sliceOfAllMatches)
 	sortMatchedElapsed := time.Since(t0)
 	//fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n", sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
 

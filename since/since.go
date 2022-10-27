@@ -18,7 +18,7 @@ import (
 /* REVISION HISTORY
    21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
    21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag contents is output.  If an absolute time is given, use that, else use duration.
-   26 Oct 2022 -- Added '~' processing
+   26 Oct 2022 -- Added '~' processing.  And output timing info.
 */
 
 var LastAlteredDate = "Oct 26, 2022"
@@ -79,7 +79,7 @@ func main() {
 
 	if *verbose {
 		fmt.Printf(" weeks = %d, days = %d, duration = %s\n", *weeks, *days, *duration)
-		fmt.Printf(" when = %s\n", when)
+		fmt.Printf(" when = %s, home directory is %s\n", when, home)
 	}
 
 	// goroutine to collect names of recently-modified files
@@ -146,6 +146,8 @@ func main() {
 	for _, r := range result {
 		fmt.Printf("%s\n", r)
 	}
+
+	fmt.Printf(" since ran for %s\n", time.Since(now))
 
 	// print optional verbose summary report
 	if *verbose {
