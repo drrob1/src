@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -29,6 +28,7 @@ import (
                   I posted on golang-nuts for help.  I'm adding the DevID that was recommended, and removing multiple start directories as the pre-processing was complex to work out.
    29 Oct 2022 -- jwalk doesn't work, as it exits too early.  filepath/walk takes ~2 min here on leox.  I'm adding a wait group, and now it works, taking ~7 sec on leox.
                   I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
+                  Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
 */
 
 var LastAlteredDate = "Oct 29, 2022"
@@ -127,7 +127,7 @@ func main() {
 	if er != nil {
 		log.Fatalf(" error from os.Stat(%s) is %v\n", dir, er)
 	}
-	rootDeviceID = GetDeviceID(dir, fi)
+	rootDeviceID = getDeviceID(dir, fi)
 
 	sizeVisitor := func(path string, info os.FileInfo, err error) error {
 		wg.Add(1)
@@ -155,7 +155,7 @@ func main() {
 					}
 					return filepath.SkipDir
 				} else {
-					id := GetDeviceID(path, info)
+					id := getDeviceID(path, info)
 					if rootDeviceID != id {
 						if *verbose {
 							fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping.\n", rootDeviceID, dir, id, path)
@@ -218,9 +218,4 @@ func main() {
 func isSymlink(fm os.FileMode) bool {
 	intermed := fm & os.ModeSymlink
 	return intermed != 0
-}
-
-func GetDeviceID(path string, fi os.FileInfo) devID {
-	var stat = fi.Sys().(*syscall.Stat_t)
-	return devID(stat.Dev)
 }
