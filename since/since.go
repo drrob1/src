@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	jwalk "github.com/MichaelTJones/walk"
+	"github.com/whosonfirst/walk"
 	"log"
 	"os"
 	"path/filepath"
@@ -25,10 +26,12 @@ import (
    26 Oct 2022 -- Added '~' processing.  And output timing info.
    28 Oct 2022 -- On linux this takes an hour to run when I invoke it using my home directory.  I'm looking into why.  I think because it's following a symlink to bigbkupG.
                   Naw, it's also following symlinks to DSM.
-                  I posted on golang-nuts for help.  I'm adding the DevID that was recommended.
+                  I posted on golang-nuts for help.  I'm adding the DevID that was recommended, and removing multiple start directories as the pre-processing was complex to work out.
+   29 Oct 2022 -- jwalk doesn't work, as it exits too early.  filepath/walk takes ~2 min here on leox.  I'm adding a wait group, and now it works, taking ~7 sec on leox.
+                  I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
 */
 
-var LastAlteredDate = "Oct 28, 2022"
+var LastAlteredDate = "Oct 29, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
@@ -38,6 +41,7 @@ var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
 var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
+var wg sync.WaitGroup
 
 type devID uint64
 
@@ -59,7 +63,7 @@ func main() {
 	}
 	flag.Parse()
 
-	fmt.Printf(" since written in Go.  LastAltered %s, compiled with %s, last linked %s.\n", LastAlteredDate, runtime.Version(), ExecTimeStamp)
+	fmt.Printf(" since written in Go.  LastAltered %s, compiled with %s, binary timestamp is %s.\n", LastAlteredDate, runtime.Version(), ExecTimeStamp)
 
 	now := time.Now()
 	when := now
@@ -126,6 +130,8 @@ func main() {
 	rootDeviceID = GetDeviceID(dir, fi)
 
 	sizeVisitor := func(path string, info os.FileInfo, err error) error {
+		wg.Add(1)
+		defer wg.Done()
 		if err == nil {
 			lock.Lock()
 			tFiles += 1
@@ -176,6 +182,7 @@ func main() {
 
 	if *quiet { // just so compiler sees this can potentially still be executed.
 		err = jwalk.Walk(dir, sizeVisitor)
+		err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  So it goes.
 	} else {
 		err = filepath.Walk(dir, sizeVisitor)
 	}
@@ -185,9 +192,9 @@ func main() {
 	}
 
 	// wait for traversal results and print
-	time.Sleep(3 * time.Second) // kludge to see if I really do need a waitgroup.  I think I do after all.
-	close(results)              // no more results
-	<-done                      // wait for final results and sorting
+	close(results) // no more results
+	<-done         // wait for final results and sorting
+	wg.Wait()
 	𝛥t := float64(time.Since(now)) / 1e9
 
 	for _, r := range result {
