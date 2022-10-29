@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	jwalk "github.com/MichaelTJones/walk"
-	"github.com/whosonfirst/walk"
+	// "github.com/whosonfirst/walk"  Not designed for windows, and I doesn't do what I want, so I'll delete it.
 	"log"
 	"os"
 	"path/filepath"
@@ -181,8 +181,8 @@ func main() {
 	}
 
 	if *quiet { // just so compiler sees this can potentially still be executed.
-		err = jwalk.Walk(dir, sizeVisitor)
-		err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  So it goes.
+		err = jwalk.Walk(dir, sizeVisitor) // at least this compiles on Windows.  It doesn't work, but it does compile.
+		// err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  It's not even designed to compile on Windows.
 	} else {
 		err = filepath.Walk(dir, sizeVisitor)
 	}
