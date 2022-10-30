@@ -153,7 +153,7 @@ func main() {
 				id := getDeviceID(path, info)
 				if rootDeviceID != id {
 					if *verbose {
-						fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping %d.\n", rootDeviceID, dir, id, path, path)
+						fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping %s.\n", rootDeviceID, dir, id, path, path)
 					}
 					return filepath.SkipDir
 				}
