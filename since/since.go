@@ -132,51 +132,51 @@ func main() {
 	sizeVisitor := func(path string, info os.FileInfo, err error) error {
 		wg.Add(1)
 		defer wg.Done()
-		if err == nil {
-			lock.Lock()
-			tFiles += 1
-			tBytes += int(info.Size())
-			lock.Unlock()
+		//if err == nil {  turns out that I didn't really want to test against err.  But here it makes no difference that I can find.
+		lock.Lock()
+		tFiles += 1
+		tBytes += int(info.Size())
+		lock.Unlock()
 
-			if info.IsDir() {
-				if filepath.Ext(path) == ".git" {
-					if *verbose {
-						fmt.Printf(" skipping .git\n")
-					}
-					return filepath.SkipDir
-					//} else if strings.Contains(path, ".cache") {
-					//	if *verbose {
-					//		fmt.Printf(" skipping .cache\n")
-					//	}
-					//	return filepath.SkipDir
-				} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.
-					if *verbose {
-						fmt.Printf(" skipping symlink %s\n", path)
-					}
-					return filepath.SkipDir
-				} else {
-					id := getDeviceID(path, info)
-					if rootDeviceID != id {
-						if *verbose {
-							fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping.\n", rootDeviceID, dir, id, path)
-						}
-						return filepath.SkipDir
-					}
+		if info.IsDir() {
+			if filepath.Ext(path) == ".git" {
+				if *verbose {
+					fmt.Printf(" skipping .git\n")
 				}
-			}
-
-			if info.ModTime().After(when) {
-				lock.Lock()
-				rFiles += 1
-				rBytes += int(info.Size())
-				lock.Unlock()
-
-				if !*quiet {
-					// fmt.Printf("%s %s\n", info.ModTime(), path) // simple
-					results <- path // allows sorting into "normal" order
+				return filepath.SkipDir
+				//} else if strings.Contains(path, ".cache") {
+				//	if *verbose {
+				//		fmt.Printf(" skipping .cache\n")
+				//	}
+				//	return filepath.SkipDir
+			} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.
+				if *verbose {
+					fmt.Printf(" skipping symlink %s\n", path)
+				}
+				return filepath.SkipDir
+			} else {
+				id := getDeviceID(path, info)
+				if rootDeviceID != id {
+					if *verbose {
+						fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping.\n", rootDeviceID, dir, id, path)
+					}
+					return filepath.SkipDir
 				}
 			}
 		}
+
+		if info.ModTime().After(when) {
+			lock.Lock()
+			rFiles += 1
+			rBytes += int(info.Size())
+			lock.Unlock()
+
+			if !*quiet {
+				// fmt.Printf("%s %s\n", info.ModTime(), path) // simple
+				results <- path // allows sorting into "normal" order
+			}
+		}
+		//}
 		return nil
 	}
 
