@@ -30,9 +30,10 @@ import (
                   I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
                   Now called sinc.go, so I can play a bit more w/ it.
+   31 Oct 2022 -- I got the idea to call the walk function repeatedly until I get err = nil.  Let's see how that goes.
 */
 
-var LastAlteredDate = "Oct 29, 2022"
+var LastAlteredDate = "Oct 31, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
@@ -175,6 +176,7 @@ func main() {
 	walker = walker.PathHasNotSuffix(".git") // redundant, but I want to see if this will compile.  So far, so good.
 	walker = walker.PathNotContain("vmware") // I don't want it to run thru any vmware stuff.
 	walker = walker.PathNotContain("cache")
+	walker = walker.PathNotContain(".dbus") // this is the permission denied error I keep getting.  This is a kludge, but it doesn't work.
 	walker = walker.IsFile()
 
 	/*	sizeVisitor := func(path string, info os.FileInfo, err error) error {
@@ -238,11 +240,19 @@ func main() {
 
 	*/
 
-	err = walker.Walk(rootDir)
-
-	if err != nil {
-		log.Printf(" error from walk.Walk is %v\n", err)
+	for i := 0; i < 10; i++ { // let me try repeatedly calling Walk until there's no error.  10 times max, just in case this doesn't work.  Nope, it didn't work.
+		//                       I got 10 messages saying /home/rob/.dbus: permission denied.
+		err = walker.Walk(rootDir)
+		if err == nil {
+			break
+		}
+		fmt.Printf(" Error from walker.Walk is %v\n", err)
 	}
+	fmt.Printf(" err from Walk is nil.\n")
+
+	//if err != nil {
+	//	log.Printf(" error from walk.Walk is %v\n", err)
+	//}
 
 	// wait for traversal results and print
 	close(results) // no more results
