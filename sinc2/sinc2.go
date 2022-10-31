@@ -1,13 +1,16 @@
-// sinc.go because I'm going to play a bit more w/ this code.
+// sinc2.go because I'm going to play a bit more w/ this code.
 
 package main
 
 import (
 	"flag"
 	"fmt"
-	pwalk "github.com/peter-mount/go-kernel/util/walk"
+	jwalk "github.com/MichaelTJones/walk"
+	"github.com/stretchr/powerwalk"
+	"github.com/whosonfirst/walk"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -31,6 +34,7 @@ import (
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
                   Now called sinc.go, so I can play a bit more w/ it.
    31 Oct 2022 -- I got the idea to call the walk function repeatedly until I get err = nil.  Let's see how that goes.
+                  Now called sinc2.go.  I'll take another crack at powerwalk and ignoring any errors it finds.
 */
 
 var LastAlteredDate = "Oct 31, 2022"
@@ -45,11 +49,13 @@ var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
 var wg sync.WaitGroup
 
+var concurrentWalks = runtime.NumCPU() * 2
+
 type devID uint64
 
 func main() {
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
@@ -65,7 +71,7 @@ func main() {
 	}
 	flag.Parse()
 
-	fmt.Printf(" sinc written in Go.  LastAltered %s, compiled with %s, binary timestamp is %s.\n", LastAlteredDate, runtime.Version(), ExecTimeStamp)
+	fmt.Printf(" sinc2 written in Go.  LastAltered %s, compiled with %s, binary timestamp is %s.\n", LastAlteredDate, runtime.Version(), ExecTimeStamp)
 
 	t0 := time.Now()
 	when := t0
@@ -78,11 +84,6 @@ func main() {
 		}
 		when = t
 	default:
-		//d, err := time.ParseDuration(*duration)
-		//if err != nil {
-		//	fmt.Printf("error parsing duration %q, %s\n", *duration, err)
-		//	os.Exit(2)
-		//}
 		*duration = *duration + time.Duration(*weeks)*7*24*time.Hour + time.Duration(*days)*24*time.Hour
 		when = t0.Add(-*duration) // subtract duration from now.
 	}
@@ -129,130 +130,80 @@ func main() {
 	if er != nil {
 		log.Fatalf(" error from os.Stat(%s) is %v\n", rootDir, er)
 	}
-	rootDeviceID = getDevID(rootDir, fi)
+	rootDeviceID = getDeviceID(rootDir, fi)
 
-	devPredicate := pwalk.PathPredicate(func(path string, info os.FileInfo) bool { // I probably don't need to declare this func as a PathPredicate.
-		deviceID := getDevID(path, info)
-		if rootDeviceID == deviceID {
-			return true
-		}
-		return false
-	})
-
-	gitPredicate := func(path string, info os.FileInfo) bool { // this has the type of pwalk.PathPredicate, I guess by having the correct signature.
-		if strings.Contains(path, ".git") {
-			return false // don't want to process anything in the .git tree
-		}
-		return true // process everything else, for now
-	}
-
-	dbusPredicate := func(path string, info os.FileInfo) bool { // this has the type of pwalk.PathPredicate, I guess by having the correct signature.
-		if strings.Contains(path, ".dbus") { // I'm getting a permission denied error from /home/rob/.dbus, so I'll block the attempt.
-			return false // don't want to process anything in the .git tree
-		}
-		return true // process everything else, for now
-	}
-
-	walker := pwalk.NewPathWalker()
-
-	walker = func(path string, info os.FileInfo) error {
+	sizeVisitor := func(path string, info os.FileInfo, err error) error {
 		wg.Add(1)
 		defer func() {
 			wg.Done()
 			atomic.AddInt64(&tFiles, 1)
 			atomic.AddInt64(&tBytes, info.Size())
 		}()
+
+		if err != nil {
+			return filepath.SkipDir
+		}
+
+		if info.IsDir() {
+			if filepath.Ext(path) == ".git" {
+				if *verbose {
+					fmt.Printf(" skipping .git\n")
+				}
+				return filepath.SkipDir
+			} else if strings.Contains(path, ".cache") {
+				if *verbose {
+					fmt.Printf(" skipping .cache\n")
+				}
+				return filepath.SkipDir
+			} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.
+				if *verbose {
+					fmt.Printf(" skipping symlink %s\n", path)
+				}
+				return filepath.SkipDir
+			} else if strings.Contains(path, "vmware") {
+				if *verbose {
+					fmt.Printf(" skipping vmware\n")
+				}
+				return filepath.SkipDir
+
+			} else {
+				id := getDeviceID(path, info)
+				if rootDeviceID != id {
+					if *verbose {
+						fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping.\n", rootDeviceID, rootDir, id, path)
+					}
+					return filepath.SkipDir
+				}
+			}
+		}
+
 		if info.ModTime().After(when) {
 			atomic.AddInt64(&rFiles, 1)
 			atomic.AddInt64(&rBytes, info.Size())
-			results <- path // allows sorting into "normal" order
+
+			if !*quiet {
+				// fmt.Printf("%s %s\n", info.ModTime(), path) // simple
+				results <- path // allows sorting into "normal" order
+			}
 		}
+		//}
 		return nil
 	}
 
-	walker = walker.If(devPredicate)
-	walker = walker.If(gitPredicate)
-	walker = walker.If(dbusPredicate)
-	walker = walker.PathHasNotSuffix(".git") // redundant, but I want to see if this will compile.  So far, so good.
-	walker = walker.PathNotContain("vmware") // I don't want it to run thru any vmware stuff.
-	walker = walker.PathNotContain("cache")
-	walker = walker.PathNotContain(".dbus") // this is the permission denied error I keep getting.  This is a kludge, but it doesn't work.
-	walker = walker.IsFile()
-
-	/*	sizeVisitor := func(path string, info os.FileInfo, err error) error {
-			wg.Add(1)
-			defer func() {
-				wg.Done()
-				atomic.AddInt64(&tFiles, 1)
-				atomic.AddInt64(&tBytes, info.Size())
-			}()
-			//err = nil                                  // ignore all errors.
-			//if err == nil || err == filepath.SkipDir { // maybe I've been doing this myself all along w/ my own foot gun.
-			if info.IsDir() {
-				if filepath.Ext(path) == ".git" {
-					if *verbose {
-						fmt.Printf(" skipping .git\n")
-					}
-					return filepath.SkipDir
-				} else if strings.Contains(path, ".cache") {
-					if *verbose {
-						fmt.Printf(" skipping .cache\n")
-					}
-					return filepath.SkipDir
-				} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.
-					if *verbose {
-						fmt.Printf(" skipping symlink %s\n", path)
-					}
-					return filepath.SkipDir
-				} else {
-					id := getDeviceID(path, info)
-					if rootDeviceID != id {
-						if *verbose {
-							fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping.\n", rootDeviceID, dir, id, path)
-						}
-						return filepath.SkipDir
-					}
-				}
-			}
-
-			if info.ModTime().After(when) {
-				atomic.AddInt64(&rFiles, 1)
-				atomic.AddInt64(&rBytes, info.Size())
-
-				if !*quiet {
-					// fmt.Printf("%s %s\n", info.ModTime(), path) // simple
-					results <- path // allows sorting into "normal" order
-				}
-			}
-			//}
-			return nil
-		}
-
-		if *quiet { // just so compiler sees this can potentially still be executed.
-			err = jwalk.Walk(dir, sizeVisitor) // at least this compiles on Windows.  It doesn't work, but it does compile.
-			// err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  It's not even designed to compile on Windows.
-			err = filepath.Walk(dir, sizeVisitor) // this is the only one that works as expected.
-			err = walk.WalkWithNFSKludge(dir, sizeVisitor)
-			err = awalk.Walk(dir, sizeVisitor)
-		} else {
-			err = powerwalk.WalkLimit(dir, sizeVisitor, powerwalk.DefaultConcurrentWalks) // docs say that this routine does not follow symlinks.  Maybe that's what I need?
-		}
-
-	*/
-
-	for i := 0; i < 10; i++ { // let me try repeatedly calling Walk until there's no error.  10 times max, just in case this doesn't work.  Nope, it didn't work.
-		//                       I got 10 messages saying /home/rob/.dbus: permission denied.
-		err = walker.Walk(rootDir)
-		if err == nil {
-			break
-		}
-		fmt.Printf(" Error from walker.Walk is %v\n", err)
+	if *quiet { // just so compiler sees this can potentially still be executed.
+		err = jwalk.Walk(rootDir, sizeVisitor) // at least this compiles on Windows.  It doesn't work, but it does compile.
+		// err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  It's not even designed to compile on Windows.
+		err = walk.WalkWithNFSKludge(rootDir, sizeVisitor)
+		//err = awalk.Walk(rootDir, sizeVisitor)
+		//err = walker.Walk(rootDir)
+		err = powerwalk.WalkLimit(rootDir, sizeVisitor, concurrentWalks) // docs say that this routine does not follow symlinks.  Maybe that's what I need?
+	} else {
+		err = filepath.Walk(rootDir, sizeVisitor) // this is the only one that works as expected.
 	}
-	fmt.Printf(" err from Walk is nil.\n")
 
-	//if err != nil {
-	//	log.Printf(" error from walk.Walk is %v\n", err)
-	//}
+	if err != nil {
+		log.Printf(" error from walk.Walk is %v\n", err)
+	}
 
 	// wait for traversal results and print
 	close(results) // no more results
@@ -284,8 +235,7 @@ func getDevID(path string, fi os.FileInfo) devID {
 	return devID(stat.Dev)
 }
 
-/*func isSymlink(fm os.FileMode) bool {
+func isSymlink(fm os.FileMode) bool {
 	intermed := fm & os.ModeSymlink
 	return intermed != 0
 }
-*/
