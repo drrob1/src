@@ -65,8 +65,8 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s, compiled with %s, last linked %s.\n", os.Args[0], LastAlteredDate, runtime.Version(), ExecTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage: since <options> <start-dir-list> \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Valid time units for duration are ns, us, ms, s, m, h. \n")
-		fmt.Fprintf(flag.CommandLine.Output(), " since -d 5m -- show all files changed within last 5 minutes starting at current directory \n")
-		fmt.Fprintf(flag.CommandLine.Output(), " since -d 5m $HOME or %%userprofile -- show all files changed within last 5 minutes starting at home directory \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -dur 5m -- show all files changed within last 5 minutes starting at current directory \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -dur 5m $HOME or %%userprofile or ~ -- show all files changed within last 5 minutes starting at home directory \n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()

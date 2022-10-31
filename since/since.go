@@ -31,7 +31,7 @@ import (
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
 */
 
-var LastAlteredDate = "Oct 30, 2022"
+var LastAlteredDate = "Oct 31, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
@@ -57,8 +57,8 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last modified %s, compiled with %s, last linked %s.\n", os.Args[0], LastAlteredDate, runtime.Version(), ExecTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage: since <options> <start-dir-list> \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Valid time units for duration are ns, us, ms, s, m, h. \n")
-		fmt.Fprintf(flag.CommandLine.Output(), " since -d 5m -- show all files changed within last 5 minutes starting at current directory \n")
-		fmt.Fprintf(flag.CommandLine.Output(), " since -d 5m $HOME or %%userprofile -- show all files changed within last 5 minutes starting at home directory \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -dur 5m -- show all files changed within last 5 minutes starting at current directory \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -dur 5m ~ or $HOME or %%userprofile -- show all files changed within last 5 minutes starting at home directory \n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
