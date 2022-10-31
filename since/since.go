@@ -29,6 +29,7 @@ import (
    29 Oct 2022 -- jwalk doesn't work, as it exits too early.  filepath/walk takes ~2 min here on leox.  I'm adding a wait group, and now it works, taking ~7 sec on leox.
                   I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
+   31 Oct 2022 -- Happy Halloween.  Turns out that I didn't need to add a wait group after all.  I'll confirm that here by removing it.  Confirmed.
 */
 
 var LastAlteredDate = "Oct 31, 2022"
@@ -41,7 +42,8 @@ var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
 var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
-var wg sync.WaitGroup
+
+//var wg sync.WaitGroup
 
 type devID uint64
 
@@ -130,9 +132,11 @@ func main() {
 	rootDeviceID = getDeviceID(dir, fi)
 
 	sizeVisitor := func(path string, info os.FileInfo, err error) error { // I'm ignoring any tests on err, as I don't want to abort on trivial errors.
-		wg.Add(1)
-		defer wg.Done()
-		//if err == nil {  turns out that I didn't really want to test against err.  But here it makes no difference that I can find.
+		//wg.Add(1)
+		//defer wg.Done()
+		if err != nil {
+			return filepath.SkipDir
+		}
 		lock.Lock()
 		tFiles += 1
 		tBytes += int(info.Size())
@@ -189,7 +193,7 @@ func main() {
 	// wait for traversal results and print
 	close(results) // no more results
 	<-done         // wait for final results and sorting
-	wg.Wait()
+	//wg.Wait()
 	𝛥t := float64(time.Since(now)) / 1e9
 
 	for _, r := range result {

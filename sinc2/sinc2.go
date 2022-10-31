@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -35,6 +34,11 @@ import (
                   Now called sinc.go, so I can play a bit more w/ it.
    31 Oct 2022 -- I got the idea to call the walk function repeatedly until I get err = nil.  Let's see how that goes.
                   Now called sinc2.go.  I'll take another crack at powerwalk and ignoring any errors it finds.
+                  Finally figured it out.  RTFM.  When all else fails, read the manual.  If there's an error, I can return SkipDir and that clears the error state.
+                  So now it works, but run time for this rtn is the same for since which does not use these "concurrent" routines.  That suggests that the std lib version is as
+                  concurrent as it needs to be.  Here, I commented out the atomic add calls to see of the syncronization stuff is slowing it down; it made no difference.
+                  So I got it to work here, but it made no difference compared to the std library.  So it goes.  But I learned something in the process.
+                  Now I'll remove the wait group to see if that was really needed after all.  Doesn't seem so.  I'll remove it from since.go and see what happens there.
 */
 
 var LastAlteredDate = "Oct 31, 2022"
@@ -47,7 +51,8 @@ var quiet = flag.Bool("q", false, "do not print filenames")
 var verbose = flag.Bool("v", false, "print summary statistics")
 var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
-var wg sync.WaitGroup
+
+//var wg sync.WaitGroup
 
 var concurrentWalks = runtime.NumCPU() * 2
 
@@ -133,9 +138,9 @@ func main() {
 	rootDeviceID = getDeviceID(rootDir, fi)
 
 	sizeVisitor := func(path string, info os.FileInfo, err error) error {
-		wg.Add(1)
+		//wg.Add(1)
 		defer func() {
-			wg.Done()
+			//wg.Done()
 			atomic.AddInt64(&tFiles, 1)
 			atomic.AddInt64(&tBytes, info.Size())
 		}()
@@ -209,7 +214,7 @@ func main() {
 	close(results) // no more results
 	<-done         // wait for final results and sorting
 	fmt.Printf(" done has returned, but before waitgroup.  Elapsed time is %s.\n\n", time.Since(t0))
-	wg.Wait()
+	//wg.Wait()
 	𝛥t := float64(time.Since(t0)) / 1e9
 
 	for _, r := range result {
