@@ -32,7 +32,7 @@ import (
    31 Oct 2022 -- Happy Halloween.  Turns out that I didn't need to add a wait group after all.  I'll confirm that here by removing it.  Confirmed.
 */
 
-var LastAlteredDate = "Oct 31, 2022"
+var LastAlteredDate = "Nov 1, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
@@ -109,7 +109,7 @@ func main() {
 		done <- true
 	}()
 
-	// parallel walker and walk to find recently-modified files
+	// concurrent walker and walk to find recently-modified files
 	var lock sync.Mutex
 	var tFiles, tBytes int // total files and bytes
 	var rFiles, rBytes int // recent files and bytes
@@ -135,6 +135,9 @@ func main() {
 		//wg.Add(1)
 		//defer wg.Done()
 		if err != nil {
+			if *verbose {
+				fmt.Printf(" Trying to enter %s, got error %s\n", path, err)
+			}
 			return filepath.SkipDir
 		}
 		lock.Lock()
