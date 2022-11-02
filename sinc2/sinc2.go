@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -39,9 +40,10 @@ import (
                   concurrent as it needs to be.  Here, I commented out the atomic add calls to see of the syncronization stuff is slowing it down; it made no difference.
                   So I got it to work here, but it made no difference compared to the std library.  So it goes.  But I learned something in the process.
                   Now I'll remove the wait group to see if that was really needed after all.  Doesn't seem so.  I'll remove it from since.go and see what happens there.
+    2 Nov 2022 -- Cleaning up some stuff that accumulated while I was sorting this out.  And using jwalk doesn't work.  I'll stop now.
 */
 
-var LastAlteredDate = "Oct 31, 2022"
+var LastAlteredDate = "Nov 2, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
@@ -52,7 +54,7 @@ var verbose = flag.Bool("v", false, "print summary statistics")
 var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
 
-//var wg sync.WaitGroup
+var wg sync.WaitGroup
 
 var concurrentWalks = runtime.NumCPU() * 2
 
@@ -138,16 +140,19 @@ func main() {
 	rootDeviceID = getDeviceID(rootDir, fi)
 
 	sizeVisitor := func(path string, info os.FileInfo, err error) error {
-		//wg.Add(1)
+		if err != nil {
+			if *verbose {
+				fmt.Printf(" Trying to enter %s, got error %s.  Skipping it.\n", path, err)
+			}
+			return filepath.SkipDir
+		}
+
+		wg.Add(1)
 		defer func() {
-			//wg.Done()
+			wg.Done()
 			atomic.AddInt64(&tFiles, 1)
 			atomic.AddInt64(&tBytes, info.Size())
 		}()
-
-		if err != nil {
-			return filepath.SkipDir
-		}
 
 		if info.IsDir() {
 			if filepath.Ext(path) == ".git" {
@@ -196,14 +201,14 @@ func main() {
 	}
 
 	if *quiet { // just so compiler sees this can potentially still be executed.
-		err = jwalk.Walk(rootDir, sizeVisitor) // at least this compiles on Windows.  It doesn't work, but it does compile.
 		// err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  It's not even designed to compile on Windows.
+		err = filepath.Walk(rootDir, sizeVisitor) // this is the only one that works as expected.
 		err = walk.WalkWithNFSKludge(rootDir, sizeVisitor)
 		//err = awalk.Walk(rootDir, sizeVisitor)
 		//err = walker.Walk(rootDir)
 		err = powerwalk.WalkLimit(rootDir, sizeVisitor, concurrentWalks) // docs say that this routine does not follow symlinks.  Maybe that's what I need?
 	} else {
-		err = filepath.Walk(rootDir, sizeVisitor) // this is the only one that works as expected.
+		err = jwalk.Walk(rootDir, sizeVisitor) // at least this compiles on Windows.  It doesn't work, but it does compile.
 	}
 
 	if err != nil {
@@ -214,7 +219,7 @@ func main() {
 	close(results) // no more results
 	<-done         // wait for final results and sorting
 	fmt.Printf(" done has returned, but before waitgroup.  Elapsed time is %s.\n\n", time.Since(t0))
-	//wg.Wait()
+	wg.Wait()
 	𝛥t := float64(time.Since(t0)) / 1e9
 
 	for _, r := range result {

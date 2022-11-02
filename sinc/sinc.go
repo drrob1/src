@@ -31,9 +31,11 @@ import (
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
                   Now called sinc.go, so I can play a bit more w/ it.
    31 Oct 2022 -- I got the idea to call the walk function repeatedly until I get err = nil.  Let's see how that goes.
+    2 Nov 2022 -- Didn't go well, as it didn't work.  I eventually figured out that I have to return SkipDir when I see an error.  But I don't see how to do that here.
+                    I opened an issue at the github site, but I doubt I'll hear back.  The std lib walker is as good as it gets now.
 */
 
-var LastAlteredDate = "Oct 31, 2022"
+var LastAlteredDate = "Nov 2, 2022"
 
 //var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
