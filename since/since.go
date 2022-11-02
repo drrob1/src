@@ -5,8 +5,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	jwalk "github.com/MichaelTJones/walk"
-	// "github.com/whosonfirst/walk"  Not designed for windows, and I doesn't do what I want, so I'll delete it.
 	"log"
 	"os"
 	"path/filepath"
@@ -15,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	// jwalk "github.com/MichaelTJones/walk"  It made no difference vs the std lib, once I figured out that I had to return SkipDir on any errors.
+	// "github.com/whosonfirst/walk"  Not designed for windows, and I doesn't do what I want, so I'll delete it.
 )
 
 /*
@@ -30,6 +30,9 @@ import (
                   I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
    31 Oct 2022 -- Happy Halloween.  Turns out that I didn't need to add a wait group after all.  I'll confirm that here by removing it.  Confirmed.
+    2 Nov 2022 -- Time to clean out the crap that accumulated while I sorted out the code.  The github repo was last modified 8 yrs ago, which is Go 1.3 or 1.4.  A lot has
+                    changed in that time, now that Go 1.19 is current.  I did not find a difference btwn the std library walk vs Michael T Jones' code I called jwalk.
+                    I'll remove that stuff now.
 */
 
 var LastAlteredDate = "Nov 1, 2022"
@@ -109,8 +112,8 @@ func main() {
 		done <- true
 	}()
 
-	// concurrent walker and walk to find recently-modified files
-	var lock sync.Mutex
+	// walk to find recently-modified files
+	var lock sync.Mutex    // I'll leave this mutex pattern here as a reference, though I like the atomic add stuff better as I believe it to be cleaner w/ less code.
 	var tFiles, tBytes int // total files and bytes
 	var rFiles, rBytes int // recent files and bytes
 	var rootDeviceID devID
@@ -136,7 +139,7 @@ func main() {
 		//defer wg.Done()
 		if err != nil {
 			if *verbose {
-				fmt.Printf(" Trying to enter %s, got error %s\n", path, err)
+				fmt.Printf(" Trying to enter %s, got error %s.  Skipping it.\n", path, err)
 			}
 			return filepath.SkipDir
 		}
@@ -182,12 +185,7 @@ func main() {
 		return nil
 	}
 
-	if *quiet { // just so compiler sees this can potentially still be executed.
-		err = jwalk.Walk(dir, sizeVisitor) // at least this compiles on Windows.  It doesn't work, but it does compile.
-		// err = walk.Walk(dir, sizeVisitor) // a fork of jwalk w/ some needed changes.  But it doesn't work, either.  It's not even designed to compile on Windows.
-	} else {
-		err = filepath.Walk(dir, sizeVisitor)
-	}
+	err = filepath.Walk(dir, sizeVisitor)
 
 	if err != nil {
 		log.Printf(" error from walk.Walk is %v\n", err)
@@ -197,7 +195,7 @@ func main() {
 	close(results) // no more results
 	<-done         // wait for final results and sorting
 	//wg.Wait()
-	𝛥t := float64(time.Since(now)) / 1e9
+	𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by nn/s it converts to sec, and is reported that way below.
 
 	for _, r := range result {
 		fmt.Printf("%s\n", r)
