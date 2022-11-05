@@ -42,6 +42,7 @@
                  The new pattern to replace a wait group uses a done channel.
                  It doesn't work.  The only optimization I can make is that the sort.Strings is in the go routine instead of the main routine.
                  I can't close the results channel when all work is sent to the workers because of the processing time needed.  I'll restore the wait group.
+   5 Nov 22 -- Walk function now returns SkipDir on errors, as I recently figured out when updating since.go.  And now allows a start dir after the regexp on command line.
 */
 package main
 
@@ -63,7 +64,7 @@ import (
 	"time"
 )
 
-const lastAltered = "21 Oct 2022"
+const lastAltered = "5 Nov 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -74,10 +75,12 @@ const workerPoolMultiplier = 20
 
 const sliceSize = 1000 // a magic number I plucked out of the air.
 
+type devID uint64
+
 type grepType struct {
 	regex    *regexp.Regexp
 	filename string
-	// goRtnNum int  Not used.  I'll remove it for now.
+	// goRtnNum int
 }
 
 type matchType struct {
@@ -110,7 +113,7 @@ func main() {
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
-	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
+	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
 	flag.Parse()
@@ -125,11 +128,10 @@ func main() {
 		*timeoutOpt = maxSecondsToTimeout
 	}
 
-	args := flag.Args()
-	if len(args) < 1 {
+	if flag.NArg() < 1 {
 		log.Fatalln("a regexp to match must be specified")
 	}
-	pattern := args[0]
+	pattern := flag.Arg(0)
 	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
 	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
 	if verboseFlag {
@@ -165,6 +167,15 @@ func main() {
 	*/
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
+	if flag.NArg() >= 2 {           // will use 2nd arg as start dir and will ignore any others
+		startDirectory = flag.Arg(1)
+	}
+	startInfo, err := os.Stat(startDirectory)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Aborting\n.", startDirectory, err)
+		os.Exit(1)
+	}
+	startDeviceID := getDeviceID(startDirectory, startInfo)
 
 	fmt.Println()
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
@@ -280,12 +291,22 @@ func main() {
 
 	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf(" Error from walk is %v. \n ", err)
-			return nil
+			fmt.Printf(" Error from walkdirFunction is %v. \n ", err)
+			return filepath.SkipDir
+		}
+
+		// I don't want to follow links on linux to other devices like DSM or bigbkupG.
+		info, _ := d.Info()
+		deviceID := getDeviceID(fpath, info)
+		if startDeviceID != deviceID {
+			if verboseFlag {
+				fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)
+				return filepath.SkipDir
+			}
 		}
 
 		if d.IsDir() {
-			if filepath.Ext(fpath) == ".git" {
+			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, ".config") || strings.Contains(fpath, ".local") {
 				return filepath.SkipDir
 			}
 			return nil
