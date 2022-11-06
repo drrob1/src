@@ -2,7 +2,7 @@
 /*
   REVISION HISTORY
   ----------------
-   1 Apr 20 -- Making it multi-threaded by using go routines by copying cgrepi.go and multimap.go.
+   1 Apr 20 -- Making it concurrent by using go routines by copying cgrepi.go and multimap.go.
                Now created multack.go, derived from anack.go.
                With a ResultType buffer of   1,024 items, it's  <1% faster than anack, if that much.
                With a ResultType buffer of  10,000 items, it's  ~5% faster than anack.
@@ -29,15 +29,22 @@
   12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
                  I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
   13 Dec 21 -- Now called multack2.go.  I want to add atomic totFilesScanned and totMatchesFound
-  16 Dec 21 -- Putting back waitgroup.  The sleep at the end is a kludge.
+  16 Dec 21 -- Putting back wait group.  The sleep at the end is a kludge.
   18 Dec 21 -- Now called multack3.go.  I'm going to add the optimizations that Bill Kennedy uses in the last example of his class.
+                 The main difference here is thet each file is read entirely at once, not line by line.
                  I think this code is slightly faster than multack2, but it's hard for me to really know.  I may have to wait to test
                  until after I'm finished using VMware workstation.
+   5 Nov 22 -- Updating code based on what I've learned when writing since.go, and adding nullRune detection instead of needing extensions.
+                 I'm not adding smartcase.  Will skip vmware directories as well as .git ones.
+   6 Nov 22 -- I've been struggling here for 2 days, and the bug was that I forgot to initialize resultsChan w/ a make call.  I finally tripped over that error
+                 when I removed the wait() call and tried to close(resultsChan).  I got an error saying that I tried to close a nil channel.
+                 Now this pgm works.
 */
 package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -52,10 +59,11 @@ import (
 	"time"
 )
 
-const lastAltered = "18 Dec 2021"
+const lastAltered = "6 Nov 2022"
 const maxSecondsToTimeout = 300
+const nullByte = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
-var totFilesScanned, totMatchesFound int64
+var totFilesScanned, totMatchesFound, totalMatchesFound int64
 
 // I started w/ 1000, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
@@ -70,6 +78,8 @@ type grepType struct {
 }
 
 var grepChan chan grepType
+var resultsChan chan string
+var verboseFlag, veryverboseFlag bool
 
 var wg sync.WaitGroup
 
@@ -77,8 +87,14 @@ func main() {
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
-	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
+	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
+	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
 	flag.Parse()
+	if veryverboseFlag {
+		verboseFlag = true
+	}
+
 	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
 		log.Fatalln("timeout must be in the range [0,300] seconds")
 	}
@@ -98,29 +114,40 @@ func main() {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
-	extensions := make([]string, 0, 100)
-	if flag.NArg() < 2 {
-		extensions = append(extensions, ".txt")
-	} else if runtime.GOOS == "linux" {
-		files := args[1:]
-		extensions = extractExtensions(files)
-	} else { // on windows
-		extensions = args[1:]
-		for i := range extensions {
-			extensions[i] = strings.ToLower(strings.ReplaceAll(extensions[i], "*", ""))
+	/*
+		extensions := make([]string, 0, 100)
+		if flag.NArg() < 2 {
+			extensions = append(extensions, ".txt")
+		} else if runtime.GOOS == "linux" {
+			files := args[1:]
+			extensions = extractExtensions(files)
+		} else { // on windows
+			extensions = args[1:]
+			for i := range extensions {
+				extensions[i] = strings.ToLower(strings.ReplaceAll(extensions[i], "*", ""))
+			}
 		}
-	}
 
+	*/
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions=%v, workerPoolSize=%d.\n\n\n",
-		lastAltered, runtime.Version(), startDirectory, pattern, extensions, workerPoolSize)
+	fmt.Printf(" Multi-threaded ack, %s, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions were deleted, workerPoolSize=%d.\n\n\n",
+		os.Args[0], lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
-	// start the worker pool
+	// read resultschan so can sort the results and simulate ordered traversal.
+
+	results := make([]string, 0, workerPoolSize)
+	resultsChan = make(chan string, workerPoolSize)
+	go func() { // start the receiving operation before the sending starts
+		for r := range resultsChan {
+			results = append(results, r)
+		}
+		sort.Strings(results) // the sort operation is now done here in the go routine, instead of the main function body.
+	}()
+
 	grepChan = make(chan grepType, workerPoolSize) // buffered channel
-
-	// until the channel closes.
+	// start the worker pool until the channel closes.
 	for w := 0; w < workerPoolSize; w++ {
 		go func() {
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
@@ -135,30 +162,31 @@ func main() {
 	// walkfunc closure.
 	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf(" Error from walk is %v. \n ", err)
-			return nil
+			fmt.Printf(" Error from walkDirFunc is %v. \n ", err)
+			return filepath.SkipDir
 		}
 
 		if d.IsDir() {
-			if filepath.Ext(fpath) == ".git" {
+			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, "vmware") {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-
-		for _, ext := range extensions { // only search thru indicated extensions.  Especially not thru binary or swap files.
-			fpathLower := strings.ToLower(fpath)
-			fpathExt := filepath.Ext(fpathLower)
-
-			if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-				wg.Add(1)
-				grepChan <- grepType{ // send this to a worker go routine.
-					regex:    lineRegex,
-					filename: fpath,
-				}
-			}
+		wg.Add(1)
+		grepChan <- grepType{ // send this to a worker go routine.
+			regex:    lineRegex,
+			filename: fpath,
 		}
 
+		/*
+			for _, ext := range extensions { // only search thru indicated extensions.  Especially not thru binary or swap files.
+				fpathLower := strings.ToLower(fpath)
+				fpathExt := filepath.Ext(fpathLower)
+
+				if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.  Removed Nov 5, 2022.
+				}
+			}
+		*/
 		now := time.Now()
 		if now.After(tfinal) {
 			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
@@ -168,53 +196,126 @@ func main() {
 
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
 	if err != nil {
-		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
+		log.Printf(" after walkdir and error from filepath.walk is %s.  Elapsed time is %s.", err, time.Since(t0))
+	}
+	goRtnsNum := runtime.NumGoroutine() // must capture this before they shutdown.
+
+	close(grepChan) // must close the channel so the worker go routines know to stop.  IE, closing the channel after all work is sent to the workers.
+	if verboseFlag {
+		fmt.Printf("\n The grepChan is closed now.  Scanned %d files, and found (%d, %d) matches using %d go routines.\n\n",
+			totFilesScanned, totMatchesFound, totalMatchesFound, goRtnsNum)
 	}
 
-	goRtns := runtime.NumGoroutine() // must capture this before they shutdown.
-	close(grepChan)                  // must close the channel so the worker go routines know to stop.
-	wg.Wait()                        // wait until all the go routines stop.
+	wg.Wait() // wait until all the go routines stop.
+
+	close(resultsChan) // Here I'm closing the channel after all the work is done.
+	if verboseFlag {
+		fmt.Printf("\n The resultsChan is closed now.\n\n")
+	}
 
 	elapsed := time.Since(t0)
 
-	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
-	fmt.Printf(" Elapsed time is %s, number of Go routines is %d, and %d matches were found in %d files scanned\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
+	fmt.Printf("\n\n Will now output the results after being sorted.\n")
+	for _, result := range results {
+		fmt.Printf("%s\n", result)
+	}
+
+	fmt.Printf("\n\n Elapsed time is %s, number of Go routines is %d, and %d matches were found in %d files scanned\n", elapsed.String(), goRtnsNum, totMatchesFound, totFilesScanned)
 	fmt.Println()
 } // end main
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
-	file, err := os.ReadFile(fpath) // changing to read entire file in at once.
-	if err != nil {
-		log.Printf("grepFile os.ReadFile error : %s\n", err)
-		return
-	}
 	defer func() {
 		//file.Close()  Not needed now that the entire file is being read in at once.
-		atomic.AddInt64(&totMatchesFound, localMatches) // only need one atomic instruction per go routine
 		wg.Done()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches) // only need one atomic instruction per go routine
 	}()
+	//fi, e := os.Stat(fpath)
+	//if e != nil {
+	//	log.Printf("\n os.Stat(%s) returns error of %s\n\n", fpath, e)
+	//	return
+	//}
+	//if !fi.Mode().IsRegular() {
+	//	log.Printf("\n os.Stat(%s) is not a regular file.  Returning.\n\n", fpath)
+	//	return
+	//}
+	file, err := os.ReadFile(fpath) // changing to read entire file in at once.
+	if err != nil {
+		log.Printf("\ngrepFile os.ReadFile error : %s\n\n", err)
+		wg.Done()
+		return
+	}
+	//file = append(file, byte('\n')) // sentinel marker
 
-	atomic.AddInt64(&totFilesScanned, 1)
 	//reader := bufio.NewReader(file) // don't need this now that entire file is read in at once.
-	reader := bytes.NewBuffer(file)
+	reader := bytes.NewReader(file)
 	for lino := 1; ; lino++ {
-		lineStr, er := reader.ReadString('\n')
+		lineStr, er := readLine(reader)
+		if er != nil { // when can't read any more bytes, break.
+			break // just exit when hit any error, which will mostly be either end of file or binary file containing a null byte.
+		}
 
 		// this is the change I made to make every comparison case insensitive.
 		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
 		lineStrLower := strings.ToLower(lineStr)
 
 		if lineRegex.MatchString(lineStrLower) {
-			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 			localMatches++ // a local variable does not need to be atomically incremented.
-		}
-		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
-			break // just exit when hit EOF condition.
+			atomic.AddInt64(&totalMatchesFound, 1)
+			s := fmt.Sprintf("%s:%d:%s", fpath, lino, lineStr)
+			if veryverboseFlag {
+				fmt.Printf("%s\n", s)
+			}
+			resultsChan <- s
 		}
 	}
 } // end grepFile
 
+// ----------------------------------------------------------
+// readLine
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		rn, siz, err := r.ReadRune() // byte and rune are reserved words for a variable type.
+		/*		if verboseFlag {
+					fmt.Printf(" %c %v ", byt, err)
+					pause()
+				}
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		//	return strings.TrimSpace(sb.String()), nil
+		//} else
+		if err != nil || siz == 0 {
+			//return strings.TrimSpace(sb.String()), err
+			return sb.String(), err
+		}
+		if siz > 1 {
+			continue
+		}
+		if rn == '\n' { // will stop scanning a line after seeing these characters like in bash or C-ish.
+			//return strings.TrimSpace(sb.String()), nil
+			break
+		}
+		if rn == '\r' {
+			continue
+		}
+		if rn == nullByte {
+			e := errors.New("null byte found interpretted as a file to be skipped")
+			return "", e
+		}
+		_, err = sb.WriteRune(rn)
+		if err != nil {
+			//return strings.TrimSpace(sb.String()), err
+			return sb.String(), err
+		}
+	}
+	//return strings.TrimSpace(sb.String()), nil
+	return sb.String(), nil
+} // readLine
+
+/*
 func extractExtensions(files []string) []string {
 	var extensions sort.StringSlice
 	extensions = make([]string, 0, 100)
@@ -249,6 +350,8 @@ func extractExtensions(files []string) []string {
 	//fmt.Println()
 	return extensions
 } // end extractExtensions
+*/
+
 /*
 // ------------------------------ isSymlink ---------------------------
 func isSymlink(m os.FileMode) bool {
