@@ -216,6 +216,8 @@ func main() {
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
 				grepFile(g.regex, g.filename)
 			}
+			//g := <-grepChan
+			//grepFile(g.regex, g.filename) // Does this work?  Is that what I really need, though using the for loop does work.  No, this doesn't work.  All go routines are asleep error.
 		}()
 	}
 
