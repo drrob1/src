@@ -39,6 +39,7 @@
    6 Nov 22 -- I've been struggling here for 2 days, and the bug was that I forgot to initialize resultsChan w/ a make call.  I finally tripped over that error
                  when I removed the wait() call and tried to close(resultsChan).  I got an error saying that I tried to close a nil channel.
                  Now this pgm works.
+   7 Nov 22 -- Well, it doesn't work on Windows.  If there's a file error, then the wait group count goes below zero and panics.  I found the extra call to wg.Done(), and removed it.
 */
 package main
 
@@ -59,7 +60,7 @@ import (
 	"time"
 )
 
-const lastAltered = "6 Nov 2022"
+const lastAltered = "7 Nov 2022"
 const maxSecondsToTimeout = 300
 const nullByte = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -178,15 +179,6 @@ func main() {
 			filename: fpath,
 		}
 
-		/*
-			for _, ext := range extensions { // only search thru indicated extensions.  Especially not thru binary or swap files.
-				fpathLower := strings.ToLower(fpath)
-				fpathExt := filepath.Ext(fpathLower)
-
-				if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.  Removed Nov 5, 2022.
-				}
-			}
-		*/
 		now := time.Now()
 		if now.After(tfinal) {
 			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
@@ -234,17 +226,18 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	}()
 	//fi, e := os.Stat(fpath)
 	//if e != nil {
-	//	log.Printf("\n os.Stat(%s) returns error of %s\n\n", fpath, e)
+	//	log.Printf(" os.Stat(%s) returns error of %s\n", fpath, e)
 	//	return
 	//}
 	//if !fi.Mode().IsRegular() {
-	//	log.Printf("\n os.Stat(%s) is not a regular file.  Returning.\n\n", fpath)
+	//	log.Printf(" os.Stat(%s) is not a regular file.  Returning.\n", fpath)
 	//	return
 	//}
+
 	file, err := os.ReadFile(fpath) // changing to read entire file in at once.
 	if err != nil {
-		log.Printf("\ngrepFile os.ReadFile error : %s\n\n", err)
-		wg.Done()
+		log.Printf("grepFile os.ReadFile error : %s\n", err)
+		//wg.Done()  too many wg.Done() calls here.  That's why it's panicking.
 		return
 	}
 	//file = append(file, byte('\n')) // sentinel marker
