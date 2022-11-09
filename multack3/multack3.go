@@ -42,6 +42,7 @@
    7 Nov 22 -- Well, it doesn't work on Windows.  If there's a file error, then the wait group count goes below zero and panics.  I found the extra call to wg.Done(), and removed it.
    8 Nov 22 -- I'll add a stat check to make sure I skip files > 100 MB.  And checked for device ID which only makes sense on linux.  Interestingly, this pgm is faster
                  than multack on linux, but much slower on Windows.
+   9 Nov 22 -- I'm going to remove the call to os.Stat().  No difference in the timing.  It's still worse than multack, and sometimes much worse.
 */
 package main
 
@@ -62,11 +63,12 @@ import (
 	"time"
 )
 
-const lastAltered = "8 Nov 2022"
+const lastAltered = "9 Nov 2022"
 const maxSecondsToTimeout = 300
 const nullByte = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 const K = 1024
 const M = K * K
+const fileTooBig = 100 * M
 
 var totFilesScanned, totMatchesFound, totalMatchesFound int64
 
@@ -180,9 +182,15 @@ func main() {
 			}
 			return filepath.SkipDir
 		}
-		if info.Size() > 100*M {
+		if info.Size() > fileTooBig {
 			if verboseFlag {
-				fmt.Printf(" Size for %s is %d which is too big.  Skipping\n", fpath, info.Size())
+				fmt.Printf(" Size for %s is %d which is > than %d.  Skipping\n", fpath, info.Size(), fileTooBig)
+			}
+			return nil
+		}
+		if !info.Mode().IsRegular() {
+			if verboseFlag {
+				fmt.Printf(" %s is not a regular file.  Skipping.\n", fpath)
 			}
 			return nil
 		}
@@ -238,19 +246,19 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches) // only need one atomic instruction per go routine
 	}()
-	fi, e := os.Stat(fpath)
-	if e != nil {
-		log.Printf(" os.Stat(%s) returns error of %s\n", fpath, e)
-		return
-	}
-	if !fi.Mode().IsRegular() {
-		log.Printf(" os.Stat(%s) is not a regular file.  Returning.\n", fpath)
-		return
-	}
-	if fi.Size() > 100*M {
-		log.Printf(" %s is too big and was skipped.  It's size is %d.\n", fpath, fi.Size())
-		return
-	}
+	//fi, e := os.Stat(fpath)
+	//if e != nil {
+	//	log.Printf(" os.Stat(%s) returns error of %s\n", fpath, e)
+	//	return
+	//}
+	//if !fi.Mode().IsRegular() {
+	//	log.Printf(" os.Stat(%s) is not a regular file.  Returning.\n", fpath)
+	//	return
+	//}
+	//if fi.Size() > 100*M {
+	//	log.Printf(" %s is too big and was skipped.  It's size is %d.\n", fpath, fi.Size())
+	//	return
+	//}
 
 	file, err := os.ReadFile(fpath) // changing to read entire file in at once.
 	if err != nil {
