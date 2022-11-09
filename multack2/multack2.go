@@ -1,8 +1,8 @@
-// multack.go
+// multack2.go
 /*
   REVISION HISTORY
   ----------------
-   1 Apr 20 -- Making it multithreaded by using go routines by copying cgrepi.go and multimap.go.
+   1 Apr 20 -- Making it concurrent by using go routines by copying cgrepi.go and multimap.go.
                Now created multack.go, derived from anack.go.
                With a ResultType buffer of   1,024 items, it's  <1% faster than anack, if that much.
                With a ResultType buffer of  10,000 items, it's  ~5% faster than anack.
@@ -28,31 +28,31 @@
   11 Dec 21 -- Now I got the error that too many files were open.  So I need a worker pool.
   12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
                  I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
-  16 Dec 21 -- Need a waitgroup after all.  The sleeping at the end is a kludge.
-   1 Oct 22 -- Adding smart case as I did yesterday for cgrepi.  If input pattern is lower case, search is case insensitive.  If input pattern is upper case, the search
-                 is case sensitive.  And adding using a null byte as a marker for a binary file and then aborting that file.  Both ideas came from ripgrep.
-                 Adding a count of matches and files, copied from cgrepi.go.
-   2 Oct 22 -- Now that I've learned to abort a binary file as one that has null bytes, I don't need the extension system anymore.
-                 And I corrected the order of defer vs if err in the grepFile routine.
-   6 Oct 22 -- Will sort output of this routine, so all file matches are output together.  First debugged for cgrepi.
-   7 Oct 22 -- Will add color to the output messages.
-  21 Oct 22 -- Ran golangci-lint and made the changes it recommended.
-  26 Oct 22 -- If I pattern this after since, which was essentially written by Michael T. Jones, I can eliminate the need for a waitgroup here.
-                 This is because when the walk function returns, the work has all been sent to the workers and the work channel can be closed.
-                 The new pattern to replace a wait group uses a done channel.
-                 It doesn't work.  The only optimization I can make is that the sort.Strings is in the go routine instead of the main routine.
-                 I can't close the results channel when all work is sent to the workers because of the processing time needed.  I'll restore the wait group.
-   5 Nov 22 -- Walk function now returns SkipDir on errors, as I recently figured out when updating since.go.  And now allows a start dir after the regexp on command line.
-   6 Nov 22 -- Experimenting w/ channel receiving patterns.  Getting away for a for loop and trying a direct channel read for a worker go rtn.
+  13 Dec 21 -- Now called multack2.go.  I want to add atomic totFilesScanned and totMatchesFound
+  16 Dec 21 -- Putting back wait group.  The sleep at the end is a kludge.
+  18 Dec 21 -- Now called multack3.go.  I'm going to add the optimizations that Bill Kennedy uses in the last example of his class.
+                 The main difference here is thet each file is read entirely at once, not line by line.
+                 I think this code is slightly faster than multack2, but it's hard for me to really know.  I may have to wait to test
+                 until after I'm finished using VMware workstation.
+   5 Nov 22 -- Updating code based on what I've learned when writing since.go, and adding nullRune detection instead of needing extensions.
+                 I'm not adding smartcase.  Will skip vmware directories as well as .git ones.
+   6 Nov 22 -- I've been struggling here for 2 days, and the bug was that I forgot to initialize resultsChan w/ a make call.  I finally tripped over that error
+                 when I removed the wait() call and tried to close(resultsChan).  I got an error saying that I tried to close a nil channel.
+                 Now this pgm works.
+   7 Nov 22 -- Well, it doesn't work on Windows.  If there's a file error, then the wait group count goes below zero and panics.  I found the extra call to wg.Done(), and removed it.
+   8 Nov 22 -- I'll add a stat check to make sure I skip files > 100 MB.  And checked for device ID which only makes sense on linux.  Interestingly, this pgm is faster
+                 than multack on linux, but much slower on Windows.
+   9 Nov 22 -- I'm going to remove the call to os.Stat().  No difference in the timing.  It's still worse than multack, and sometimes much worse.
+                  So now called multack2.go, and I'll use a different call back walk func that uses os.FileInfo instead of os.DirEntry.  Turns out that using os.FileInfo is
+                  slightly faster than using os.DirEntry, which is contrary to that they claim.
 */
 package main
 
 import (
-	"bufio"
+	"bytes"
+	"errors"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -65,50 +65,34 @@ import (
 	"time"
 )
 
-const lastAltered = "6 Nov 2022"
+const lastAltered = "9 Nov 2022"
 const maxSecondsToTimeout = 300
-const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+const nullByte = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+const K = 1024
+const M = K * K
+const fileTooBig = 100 * M
 
-// I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
+var totFilesScanned, totMatchesFound, totalMatchesFound int64
+
+// I started w/ 1000, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
+// I'll see how this works.  Bill Kennedy keeps saying that less is more regarding go routines, but the channel buffer can take it all.
 const workerPoolMultiplier = 20
-
-const sliceSize = 1000 // a magic number I plucked out of the air.
 
 type devID uint64
 
 type grepType struct {
 	regex    *regexp.Regexp
 	filename string
-	// goRtnNum int
-}
-
-type matchType struct {
-	fpath        string
-	lino         int
-	lineContents string
-}
-
-type matchesSliceType []matchType // this is a named type.  I need a named type for the sort functions to work.  An anonymous type won't cut it.
-
-func (m matchesSliceType) Len() int {
-	return len(m)
-}
-func (m matchesSliceType) Swap(i, j int) {
-	m[i], m[j] = m[j], m[i]
-}
-func (m matchesSliceType) Less(i, j int) bool {
-	return strings.ToLower(m[i].fpath) < strings.ToLower(m[j].fpath)
+	goRtnNum int
 }
 
 var grepChan chan grepType
-var matchChan chan matchType
-var caseSensitiveFlag bool // default is false.
-var totFilesScanned, totMatchesFound int64
-var sliceOfStrings []string // based on an anonymous type.
-var wg sync.WaitGroup
+var resultsChan chan string
 var verboseFlag, veryverboseFlag bool
+
+var wg sync.WaitGroup
 
 func main() {
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
@@ -129,22 +113,12 @@ func main() {
 		*timeoutOpt = maxSecondsToTimeout
 	}
 
-	if flag.NArg() < 1 {
+	args := flag.Args()
+	if len(args) < 1 {
 		log.Fatalln("a regexp to match must be specified")
 	}
-	pattern := flag.Arg(0)
-	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
-	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
-	if verboseFlag {
-		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
-	}
-	if !caseSensitiveFlag {
-		pattern = strings.ToLower(pattern) // this is the change for the pattern.
-	}
-	if verboseFlag {
-		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
-	}
-
+	pattern := args[0]
+	pattern = strings.ToLower(pattern)
 	var lineRegex *regexp.Regexp
 	var err error
 	if lineRegex, err = regexp.Compile(pattern); err != nil {
@@ -152,9 +126,6 @@ func main() {
 	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
-	if flag.NArg() >= 2 {           // will use 2nd arg as start dir and will ignore any others
-		startDirectory = flag.Arg(1)
-	}
 	startInfo, err := os.Stat(startDirectory)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Aborting\n.", startDirectory, err)
@@ -163,68 +134,114 @@ func main() {
 	startDeviceID := getDeviceID(startDirectory, startInfo)
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
-		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
+	fmt.Printf(" Multi-threaded ack, %s, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions were deleted, workerPoolSize=%d.\n\n\n",
+		os.Args[0], lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
-	workingDir, _ := os.Getwd()
-	execName, _ := os.Executable()
-	ExecFI, _ := os.Stat(execName)
-	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	if verboseFlag {
-		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
-	}
+	// read resultschan so can sort the results and simulate ordered traversal.
 
-	// start the worker pool
+	results := make([]string, 0, workerPoolSize)
+	resultsChan = make(chan string, workerPoolSize)
+	go func() { // start the receiving operation before the sending starts
+		for r := range resultsChan {
+			results = append(results, r)
+		}
+		sort.Strings(results) // the sort operation is now done here in the go routine, instead of the main function body.
+	}()
+
 	grepChan = make(chan grepType, workerPoolSize) // buffered channel
+	// start the worker pool until the channel closes.
 	for w := 0; w < workerPoolSize; w++ {
 		go func() {
-			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.  Needs a for loop to keep reading from the channel.
+			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
 				grepFile(g.regex, g.filename)
 			}
-			// g := <-grepChan // doesn't work because it reads once and then goes to sleep forever.  It needs a for loop to keep looking on the channel.  Hence the for range pattern.
-			// grepFile(g.regex, g.filename) // Does this work?  Is that what I really need, though using the for loop does work.  No, this doesn't work.  All go routines are asleep error.
 		}()
 	}
-
-	//done := make(chan bool)                                 // unbuffered, so the read is a blocking read.
-	matchChan = make(chan matchType, sliceSize)               // this is a buffered channel.
-	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
-	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
-	go func() {                                               // start the receiving operation before the sending starts
-		for match := range matchChan {
-			sliceOfAllMatches = append(sliceOfAllMatches, match)
-			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
-			sliceOfStrings = append(sliceOfStrings, s)
-		}
-		sort.Stable(sliceOfAllMatches)
-		sort.Strings(sliceOfStrings) // the sort operation is now done here in the go routine, instead of the main function body.
-		// done <- true   nevermind
-	}()
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
 	// walkfunc closure.
+	//walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
+	//	if err != nil {
+	//		fmt.Printf(" Error from walkDirFunc is %v. \n ", err)
+	//		return filepath.SkipDir
+	//	}
+	//
+	//	if d.IsDir() {
+	//		if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, "vmware") {
+	//			return filepath.SkipDir
+	//		}
+	//		return nil
+	//	}
+	//
+	//	// I don't want to follow links on linux to other devices like DSM or bigbkupG.
+	//	info, _ := d.Info()
+	//	deviceID := getDeviceID(fpath, info)
+	//	if startDeviceID != deviceID {
+	//		if verboseFlag {
+	//			fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)
+	//		}
+	//		return filepath.SkipDir
+	//	}
+	//	if info.Size() > fileTooBig {
+	//		if verboseFlag {
+	//			fmt.Printf(" Size for %s is %d which is > than %d.  Skipping\n", fpath, info.Size(), fileTooBig)
+	//		}
+	//		return nil
+	//	}
+	//	if !info.Mode().IsRegular() {
+	//		if verboseFlag {
+	//			fmt.Printf(" %s is not a regular file.  Skipping.\n", fpath)
+	//		}
+	//		return nil
+	//	}
+	//
+	//	wg.Add(1)
+	//	grepChan <- grepType{ // send this to a worker go routine.
+	//		regex:    lineRegex,
+	//		filename: fpath,
+	//	}
+	//
+	//	now := time.Now()
+	//	if now.After(tfinal) {
+	//		log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+	//	}
+	//	return nil
+	//}
+	//
 
-	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
+	walkFunction := func(fpath string, fi os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf(" Error from walkdirFunction is %v. \n ", err)
+			fmt.Printf(" Error from walkDirFunc is %v. \n ", err)
 			return filepath.SkipDir
 		}
 
+		if fi.IsDir() {
+			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, "vmware") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		// I don't want to follow links on linux to other devices like DSM or bigbkupG.
-		info, _ := d.Info()
-		deviceID := getDeviceID(fpath, info)
+		//info, _ := d.Info()
+		deviceID := getDeviceID(fpath, fi)
 		if startDeviceID != deviceID {
 			if verboseFlag {
 				fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)
-				return filepath.SkipDir
 			}
+			return filepath.SkipDir
 		}
-
-		if d.IsDir() {
-			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, ".config") || strings.Contains(fpath, ".local") {
-				return filepath.SkipDir
+		if fi.Size() > fileTooBig {
+			if verboseFlag {
+				fmt.Printf(" Size for %s is %d which is > than %d.  Skipping\n", fpath, fi.Size(), fileTooBig)
+			}
+			return nil
+		}
+		if !fi.Mode().IsRegular() {
+			if verboseFlag {
+				fmt.Printf(" %s is not a regular file.  Skipping.\n", fpath)
 			}
 			return nil
 		}
@@ -242,93 +259,134 @@ func main() {
 		return nil
 	}
 
-	err = filepath.WalkDir(startDirectory, walkDirFunction)
+	//err = filepath.WalkDir(startDirectory, walkDirFunction)
+	err = filepath.Walk(startDirectory, walkFunction)
 	if err != nil {
-		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
+		log.Printf(" after walkdir and error from filepath.walk is %s.  Elapsed time is %s.", err, time.Since(t0))
+	}
+	goRtnsNum := runtime.NumGoroutine() // must capture this before they shutdown.
+
+	close(grepChan) // must close the channel so the worker go routines know to stop.  IE, closing the channel after all work is sent to the workers.
+	if verboseFlag {
+		fmt.Printf("\n The grepChan is closed now.  Scanned %d files, and found (%d, %d) matches using %d go routines.\n\n",
+			totFilesScanned, totMatchesFound, totalMatchesFound, goRtnsNum)
 	}
 
-	close(grepChan) // must close the channel so the worker go routines know to stop.  When get here, all work is sent to the workers.
+	wg.Wait() // wait until all the go routines stop.
 
-	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
-	wg.Wait()                        // all grep routines are finished when this is allowed to continue.
-	//<-done           // This waits for the done signal on this blocking channel call.  Interestingly, this channel is not closed.  Nevermind
-	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
+	close(resultsChan) // Here I'm closing the channel after all the work is done.
+	if verboseFlag {
+		fmt.Printf("\n The resultsChan is closed now.\n\n")
+	}
 
 	elapsed := time.Since(t0)
 
-	gotWin := runtime.GOOS == "windows"
-	ctfmt.Printf(ct.Yellow, gotWin, " Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
-	fmt.Println()
-
-	// Time to sort and show
-	// sort.Strings(sliceOfStrings)  This is now done in the go routine and not here in the main function body.
-	sortStringElapsed := time.Since(t0)
-	//sort.Sort(sliceOfAllMatches)
-	//sort.Stable(sliceOfAllMatches)
-	sortMatchedElapsed := time.Since(t0)
-	//fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n", sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
-
-	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
-		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents) // remember that lineContents includes a \n at the end of each string.
+	fmt.Printf("\n\n Will now output the results after being sorted.\n")
+	for _, result := range results {
+		fmt.Printf("%s\n", result)
 	}
 
-	ctfmt.Printf(ct.Green, gotWin, "\n There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
-	outputElapsed := time.Since(t0)
-	ctfmt.Printf(ct.Cyan, gotWin, "\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown), and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
-		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
+	fmt.Printf("\n\n Elapsed time is %s, number of Go routines is %d, and %d matches were found in %d files scanned\n", elapsed.String(), goRtnsNum, totMatchesFound, totFilesScanned)
+	fmt.Println()
 } // end main
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
-	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	var localMatches int64
-	file, err := os.Open(fpath)
 	defer func() {
-		file.Close()
-		atomic.AddInt64(&totFilesScanned, 1)
-		atomic.AddInt64(&totMatchesFound, localMatches)
+		//file.Close()  Not needed now that the entire file is being read in at once.
 		wg.Done()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches) // only need one atomic instruction per go routine
 	}()
+	//fi, e := os.Stat(fpath)
+	//if e != nil {
+	//	log.Printf(" os.Stat(%s) returns error of %s\n", fpath, e)
+	//	return
+	//}
+	//if !fi.Mode().IsRegular() {
+	//	log.Printf(" os.Stat(%s) is not a regular file.  Returning.\n", fpath)
+	//	return
+	//}
+	//if fi.Size() > 100*M {
+	//	log.Printf(" %s is too big and was skipped.  It's size is %d.\n", fpath, fi.Size())
+	//	return
+	//}
+
+	file, err := os.ReadFile(fpath) // changing to read entire file in at once.
 	if err != nil {
-		log.Printf("grepFile os.Open error : %s\n", err)
+		log.Printf("grepFile os.ReadFile error : %s\n", err)
+		//wg.Done()  too many wg.Done() calls here.  That's why it's panicking.
 		return
 	}
+	//file = append(file, byte('\n')) // sentinel marker
 
-	reader := bufio.NewReader(file)
+	//reader := bufio.NewReader(file) // don't need this now that entire file is read in at once.
+	reader := bytes.NewReader(file)
 	for lino := 1; ; lino++ {
-		lineStr, er := reader.ReadString('\n')
-		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
-			//if err != io.EOF { // this became messy, so I'm removing it
-			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
-			//}
-			break // just exit when hit EOF condition.
+		lineStr, er := readLine(reader)
+		if er != nil { // when can't read any more bytes, break.
+			break // just exit when hit any error, which will mostly be either end of file or binary file containing a null byte.
 		}
 
-		if strings.ContainsRune(lineStr, null) {
-			return // the defer func()	 will take care of the cleanup here.
-		}
-		if caseSensitiveFlag {
-			lineStrng = lineStr
-		} else {
-			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
-		}
-
+		// this is the change I made to make every comparison case insensitive.
 		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
+		lineStrLower := strings.ToLower(lineStr)
 
-		if lineRegex.MatchString(lineStrng) {
+		if lineRegex.MatchString(lineStrLower) {
+			localMatches++ // a local variable does not need to be atomically incremented.
+			atomic.AddInt64(&totalMatchesFound, 1)
+			s := fmt.Sprintf("%s:%d:%s", fpath, lino, lineStr)
 			if veryverboseFlag {
-				fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
+				fmt.Printf("%s\n", s)
 			}
-			localMatches++
-			matchChan <- matchType{
-				fpath:        fpath,
-				lino:         lino,
-				lineContents: lineStr,
-			}
+			resultsChan <- s
 		}
 	}
 } // end grepFile
 
-/*  Made obsolete by null detection.
+// ----------------------------------------------------------
+// readLine
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		rn, siz, err := r.ReadRune() // byte and rune are reserved words for a variable type.
+		/*		if verboseFlag {
+					fmt.Printf(" %c %v ", byt, err)
+					pause()
+				}
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		//	return strings.TrimSpace(sb.String()), nil
+		//} else
+		if err != nil || siz == 0 {
+			//return strings.TrimSpace(sb.String()), err
+			return sb.String(), err
+		}
+		if siz > 1 {
+			continue
+		}
+		if rn == '\n' { // will stop scanning a line after seeing these characters like in bash or C-ish.
+			//return strings.TrimSpace(sb.String()), nil
+			break
+		}
+		if rn == '\r' {
+			continue
+		}
+		if rn == nullByte {
+			e := errors.New("null byte found interpretted as a file to be skipped")
+			return "", e
+		}
+		_, err = sb.WriteRune(rn)
+		if err != nil {
+			//return strings.TrimSpace(sb.String()), err
+			return sb.String(), err
+		}
+	}
+	//return strings.TrimSpace(sb.String()), nil
+	return sb.String(), nil
+} // readLine
+
+/*
 func extractExtensions(files []string) []string {
 	var extensions sort.StringSlice
 	extensions = make([]string, 0, 100)

@@ -43,7 +43,9 @@
    8 Nov 22 -- I'll add a stat check to make sure I skip files > 100 MB.  And checked for device ID which only makes sense on linux.  Interestingly, this pgm is faster
                  than multack on linux, but much slower on Windows.
    9 Nov 22 -- I'm going to remove the call to os.Stat().  No difference in the timing.  It's still worse than multack, and sometimes much worse.
+                 Here uses a DirEntry callback func.  And it's slightly slower than multack2 which now only differs by using os.FileInfo callback func.
 */
+
 package main
 
 import (
