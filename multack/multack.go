@@ -43,6 +43,7 @@
                  It doesn't work.  The only optimization I can make is that the sort.Strings is in the go routine instead of the main routine.
                  I can't close the results channel when all work is sent to the workers because of the processing time needed.  I'll restore the wait group.
    5 Nov 22 -- Walk function now returns SkipDir on errors, as I recently figured out when updating since.go.  And now allows a start dir after the regexp on command line.
+   8 Nov 22 -- Fixed error as to when to return SkipDir.  I had it depend on verboseFlag, and that was an obvious error.
 */
 package main
 
@@ -64,7 +65,7 @@ import (
 	"time"
 )
 
-const lastAltered = "5 Nov 2022"
+const lastAltered = "8 Nov 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -303,8 +304,8 @@ func main() {
 		if startDeviceID != deviceID {
 			if verboseFlag {
 				fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)
-				return filepath.SkipDir
 			}
+			return filepath.SkipDir
 		}
 
 		if d.IsDir() {

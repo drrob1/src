@@ -40,6 +40,8 @@
                  when I removed the wait() call and tried to close(resultsChan).  I got an error saying that I tried to close a nil channel.
                  Now this pgm works.
    7 Nov 22 -- Well, it doesn't work on Windows.  If there's a file error, then the wait group count goes below zero and panics.  I found the extra call to wg.Done(), and removed it.
+   8 Nov 22 -- I'll add a stat check to make sure I skip files > 100 MB.  And checked for device ID which only makes sense on linux.  Interestingly, this pgm is faster
+                 than multack on linux, but much slower on Windows.
 */
 package main
 
@@ -60,9 +62,11 @@ import (
 	"time"
 )
 
-const lastAltered = "7 Nov 2022"
+const lastAltered = "8 Nov 2022"
 const maxSecondsToTimeout = 300
 const nullByte = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+const K = 1024
+const M = K * K
 
 var totFilesScanned, totMatchesFound, totalMatchesFound int64
 
@@ -71,6 +75,8 @@ var totFilesScanned, totMatchesFound, totalMatchesFound int64
 // Now it will be a multiplier of number of logical CPUs.
 // I'll see how this works.  Bill Kennedy keeps saying that less is more regarding go routines, but the channel buffer can take it all.
 const workerPoolMultiplier = 20
+
+type devID uint64
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -115,22 +121,13 @@ func main() {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
-	/*
-		extensions := make([]string, 0, 100)
-		if flag.NArg() < 2 {
-			extensions = append(extensions, ".txt")
-		} else if runtime.GOOS == "linux" {
-			files := args[1:]
-			extensions = extractExtensions(files)
-		} else { // on windows
-			extensions = args[1:]
-			for i := range extensions {
-				extensions[i] = strings.ToLower(strings.ReplaceAll(extensions[i], "*", ""))
-			}
-		}
-
-	*/
 	startDirectory, _ := os.Getwd() // startDirectory is a string
+	startInfo, err := os.Stat(startDirectory)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Aborting\n.", startDirectory, err)
+		os.Exit(1)
+	}
+	startDeviceID := getDeviceID(startDirectory, startInfo)
 
 	fmt.Println()
 	fmt.Printf(" Multi-threaded ack, %s, written in Go.  Last altered %s, compiled using %s, and will start in %s, pattern=%s, extensions were deleted, workerPoolSize=%d.\n\n\n",
@@ -173,6 +170,23 @@ func main() {
 			}
 			return nil
 		}
+
+		// I don't want to follow links on linux to other devices like DSM or bigbkupG.
+		info, _ := d.Info()
+		deviceID := getDeviceID(fpath, info)
+		if startDeviceID != deviceID {
+			if verboseFlag {
+				fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)
+			}
+			return filepath.SkipDir
+		}
+		if info.Size() > 100*M {
+			if verboseFlag {
+				fmt.Printf(" Size for %s is %d which is too big.  Skipping\n", fpath, info.Size())
+			}
+			return nil
+		}
+
 		wg.Add(1)
 		grepChan <- grepType{ // send this to a worker go routine.
 			regex:    lineRegex,
@@ -224,15 +238,19 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches) // only need one atomic instruction per go routine
 	}()
-	//fi, e := os.Stat(fpath)
-	//if e != nil {
-	//	log.Printf(" os.Stat(%s) returns error of %s\n", fpath, e)
-	//	return
-	//}
-	//if !fi.Mode().IsRegular() {
-	//	log.Printf(" os.Stat(%s) is not a regular file.  Returning.\n", fpath)
-	//	return
-	//}
+	fi, e := os.Stat(fpath)
+	if e != nil {
+		log.Printf(" os.Stat(%s) returns error of %s\n", fpath, e)
+		return
+	}
+	if !fi.Mode().IsRegular() {
+		log.Printf(" os.Stat(%s) is not a regular file.  Returning.\n", fpath)
+		return
+	}
+	if fi.Size() > 100*M {
+		log.Printf(" %s is too big and was skipped.  It's size is %d.\n", fpath, fi.Size())
+		return
+	}
 
 	file, err := os.ReadFile(fpath) // changing to read entire file in at once.
 	if err != nil {
