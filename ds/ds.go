@@ -116,9 +116,10 @@ Revision History
                I noticed that the environment string can't process f, for filterFlag.  Now it can.
                Now I need an option, -F, to undo the filterflag set in an environment var.
 21 Oct 22 -- golangci-lint said I don't use global directoryAliasMap, so I'm removing it.
+11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 */
 
-const LastAltered = "15 Oct 2022"
+const LastAltered = "11 Nov 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -171,8 +172,6 @@ func main() {
 	systemStr := ""
 
 	winFlag := runtime.GOOS == "windows"
-	ctfmt.Print(ct.Magenta, winFlag, "ds -- Directory SoRTed w/ filename truncation.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
-	fmt.Println()
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -182,7 +181,18 @@ func main() {
 	}
 
 	// environment variable processing.  If present, these will be the defaults.
-	dsrtParam = ProcessEnvironString() // This is a function below.
+	dsrtEnviron := os.Getenv("dsrt")
+	dswEnviron := os.Getenv("dsw")
+	dsrtParam = ProcessEnvironString(dsrtEnviron, dswEnviron) // This is a function below.
+
+	ctfmt.Printf(ct.Magenta, winFlag, "ds -- Directory SoRTed w/ filename truncation.  LastAltered %s, compiled with %s", LastAltered, runtime.Version())
+	if dsrtEnviron != "" {
+		ctfmt.Printf(ct.Yellow, winFlag, ", dsrt env = %s", dsrtEnviron)
+	}
+	if dswEnviron != "" {
+		ctfmt.Printf(ct.Yellow, winFlag, ", dsw env = %s", dswEnviron)
+	}
+	fmt.Println()
 
 	sepString := string(filepath.Separator)
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of Go 1.12
@@ -562,28 +572,26 @@ func GetIDname(uidStr string) string {
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
-func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
+func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
-	dswStr, ok := os.LookupEnv("dsw")
-	if ok {
-		n, err := strconv.Atoi(dswStr)
+	if dswEnv != "" {
+		n, err := strconv.Atoi(dswEnv)
 		if err == nil {
 			dsrtparam.w = n
 		} else {
-			fmt.Fprintf(os.Stderr, " dsw environment variable not a valid number.  dswStr = %q, %v.  Ignored.", dswStr, err)
+			fmt.Fprintf(os.Stderr, " dsw environment variable not a valid number.  dswStr = %q, %v.  Ignored.", dswEnv, err)
 			dsrtparam.w = 0
 		}
 	} else { // not ok, ie, dsw variable not found in environment
 		dsrtparam.w = 0
 	}
 
-	envStr, ok := os.LookupEnv("dsrt")
-	if !ok {
+	if dsrtEnv == "" {
 		return dsrtparam
 	}
 
-	indiv := strings.Split(envStr, "") // this splits into individual characters
+	indiv := strings.Split(dsrtEnv, "") // this splits into individual characters
 
 	for j, str := range indiv {
 		envChar := str[0]

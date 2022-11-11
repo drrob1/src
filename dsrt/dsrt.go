@@ -562,11 +562,8 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 
 func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
-	var ok bool
 
-	envStr, ok = os.LookupEnv("dsrt")
-
-	if !ok {
+	if envStr == "" {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
