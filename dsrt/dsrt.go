@@ -113,9 +113,10 @@ REVISION HISTORY
 14 Oct 22 -- Adding an undo option for the -1 flag, as I want to make it default thru the dsrt env var.  Or something like that.  I'm still thinking.
 15 Oct 22 -- I noticed that the environment string can't process f, for filterFlag.  Now it can.
                Now I need an option, -F, to undo the filterflag set in an environment var.
+11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 */
 
-const LastAltered = "15 Oct 2022"
+const LastAltered = "11 Nov 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -154,12 +155,16 @@ func main() {
 	systemStr := ""
 
 	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
-	dsrtParam = ProcessEnvironString() // This is a function below.
-
-	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
-	ctfmt.Print(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered ", LastAltered, ", compiled using ",
-		runtime.Version(), ".")
-	fmt.Println()
+	dsrtEnviron := os.Getenv("dsrt")
+	dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
+	winflag := runtime.GOOS == "windows"          // this is needed because I use it in the color statements, so the colors are bolded only on windows.
+	ctfmt.Printf(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s", LastAltered,
+		runtime.Version())
+	if dsrtEnviron == "" {
+		ctfmt.Printf(ct.Magenta, winflag, "\n")
+	} else {
+		ctfmt.Printf(ct.Green, winflag, ", dsrt env = %s \n", dsrtEnviron)
+	}
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -555,16 +560,17 @@ func GetEnviron() DsrtParamType { // first solution to my environ var need.  Obs
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
-func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
+func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
+	var ok bool
 
-	s, ok := os.LookupEnv("dsrt")
+	envStr, ok = os.LookupEnv("dsrt")
 
 	if !ok {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
-	indiv := strings.Split(s, "")
+	indiv := strings.Split(envStr, "")
 
 	for j, str := range indiv {
 		s := str[0]
