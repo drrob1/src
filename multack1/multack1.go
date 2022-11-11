@@ -45,7 +45,7 @@
    5 Nov 22 -- Walk function now returns SkipDir on errors, as I recently figured out when updating since.go.  And now allows a start dir after the regexp on command line.
    8 Nov 22 -- Fixed error as to when to return SkipDir.  I had it depend on verboseFlag, and that was an obvious error.
   10 Nov 22 -- Now called multack1.go, and I'm playing w/ a few variations on when to call grepFile, and changed the return channel to a string from matchType.
-                 This is slightly faster on Win10.  From ~220 ms down to ~213 ms.
+                 This is slightly faster on Win10.  From ~220 ms down to ~213 ms.  I also removed the creation of the extra slice of matches and sort of that slice.
 */
 package main
 
