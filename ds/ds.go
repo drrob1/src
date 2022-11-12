@@ -153,6 +153,7 @@ var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
+var directoryAliasesMap dirAliasMapType
 
 //var directoryAliasesMap dirAliasMapType
 var autoWidth, autoHeight int
