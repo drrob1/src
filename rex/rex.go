@@ -112,9 +112,10 @@ Revision History
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I removed the filter flag from this code when I wrote it.
 21 Oct 22 -- Removed unused variable as caught by golangci-lint, and incorrect use of format verb.
+11 Nov 22 -- Will show environment variables on startup message, if they're not blank.
 */
 
-const LastAltered = "Oct 21, 2022"
+const LastAltered = "Nov 11, 2022"
 
 type dirAliasMapType map[string]string
 
