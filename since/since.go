@@ -30,7 +30,7 @@ import (
                   I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
                   Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
    31 Oct 2022 -- Happy Halloween.  Turns out that I didn't need to add a wait group after all.  I'll confirm that here by removing it.  Confirmed.
-    2 Nov 2022 -- Time to clean out the crap that accumulated while I sorted out the code.  The github repo was last modified 8 yrs ago, which is Go 1.3 or 1.4.  A lot has
+    2 Nov 2022 -- Time to clean out the crap that accumulated while I sorted out the code.  The GitHub repo was last modified 8 yrs ago, which is Go 1.3 or 1.4.  A lot has
                     changed in that time, now that Go 1.19 is current.  I did not find a difference btwn the std library walk vs Michael T Jones' code I called jwalk.
                     I'll remove that stuff now.
 */
