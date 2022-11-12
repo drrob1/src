@@ -176,7 +176,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Aborting\n.", startDirectory, err)
 		os.Exit(1)
 	}
-	startDeviceID := getDeviceID(startDirectory, startInfo)
+	startDeviceID := getDeviceID(startInfo)
 
 	fmt.Println()
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
@@ -300,7 +300,7 @@ func main() {
 
 		// I don't want to follow links on linux to other devices like DSM or bigbkupG.
 		info, _ := d.Info()
-		deviceID := getDeviceID(fpath, info)
+		deviceID := getDeviceID(info)
 		if startDeviceID != deviceID {
 			if verboseFlag {
 				fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)

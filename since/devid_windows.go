@@ -10,6 +10,6 @@ import (
 //}
 
 // getDeviceID will always return 0 on Windows, so it will compile but have no effect.
-func getDeviceID(path string, fi os.FileInfo) devID {
+func getDeviceID(fi os.FileInfo) devID {
 	return 0
 }

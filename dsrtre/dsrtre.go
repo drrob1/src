@@ -15,6 +15,7 @@ dsrtre.go
    5 Sep 20 -- Don't follow symlinked directories
    4 Feb 22 -- Updated code, removing the concurrency pattern as it's not needed.  And removing the tracking of directories visited.
   21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
+  12 Nov 22 -- Adding device ID code, and error handling code I developed for since and multack.  And I think I need a sync mechanism like a wait group or done channel.
 */
 package main
 
@@ -23,15 +24,18 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const lastAltered = "21 Oct 2022"
+const lastAltered = "12 Nov 2022"
+
+type devID uint64
 
 func main() {
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
@@ -39,6 +43,9 @@ func main() {
 	var inputRegexPattern, startDir string
 	var inputRegex *regexp.Regexp
 	var err error
+	var rootDeviceID devID
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
@@ -76,12 +83,30 @@ func main() {
 	fmt.Println()
 	fmt.Printf(" dsrtre (recursive), written in Go.  Last altered %s, will use regex of %q and will start in %s. \n", lastAltered, inputRegex.String(), startDir)
 	fmt.Println()
-	if *verboseFlag { // I don't really have anything for verbose mode yet.  I'll have to think of something.
+	if *verboseFlag {
 		fmt.Println()
 	}
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	rootFileInfo, err := os.Stat(startDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Exiting\n", startDir, err)
+		os.Exit(1)
+	}
+	rootDeviceID = getDeviceID(rootFileInfo)
+
+	// goroutine to collect names of matching files
+	var result []string
+	done := make(chan bool)
+	results := make(chan string, 1024)
+	go func() {
+		for r := range results {
+			result = append(result, r)
+		}
+		sort.Strings(result) // simulate ordered traversal
+		done <- true
+	}()
 
 	/*	// walkfunc closure
 		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
@@ -131,34 +156,59 @@ func main() {
 
 		er := filepath.Walk(startDirectory, filepathwalkfunction)
 	*/
+
 	filepathWalkDirEntry := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
+			if *verboseFlag {
+				fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
+			}
+			return filepath.SkipDir
+		}
+
+		info, e := d.Info()
+		if e != nil {
+			if *verboseFlag {
+				fmt.Fprintf(os.Stderr, " Error from %s is %s \n", fpath, e)
+			}
+			return filepath.SkipDir
+		}
+		pathDeviceID := getDeviceID(info)
+		if rootDeviceID != pathDeviceID {
+			if *verboseFlag {
+				fmt.Fprintf(os.Stderr, " %s is on a difference device from %s,  Skipping\n", fpath, startDir)
+			}
+			return filepath.SkipDir
+		}
+
+		if d.IsDir() { // if directory, either skip it or return, but don't process it.
+			if strings.Contains(fpath, ".git") {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
-		if d.IsDir() && fpath == ".git" {
-			return filepath.SkipDir
-		} else if isSymlink(d.Type()) {
-			fmt.Printf(" %s is a symlink, name is %s. \n", fpath, d.Name())
-			//return filepath.SkipDir
+		if isSymlink(d.Type()) {
+			if *verboseFlag {
+				fmt.Printf(" %s is a symlink, name is %s. \n", fpath, d.Name())
+			}
+			return nil
 		}
 
 		// Must be a regular file
-		NAME := strings.ToLower(d.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
+		NAME := strings.ToLower(d.Name()) // Despite windows not being case-sensitive, filepath.Match is case-sensitive.  Who new?
 		if BOOL := inputRegex.MatchString(NAME); BOOL {
 			fi, er := d.Info()
 			if er != nil {
 				fmt.Fprintf(os.Stderr, " %s.Info() call error is %v\n", d.Name(), er)
-				return er
+				return filepath.SkipDir
 			}
 			t := fi.ModTime().Format("Jan-02-2006_15:04:05")
 			sizeStr := strconv.Itoa(int(fi.Size()))
 			if fi.Size() > 100_000 {
 				sizeStr = AddCommas(sizeStr)
 			}
-
-			fmt.Printf("%15s %s %s\n", sizeStr, t, fpath)
+			s := fmt.Sprintf("%15s : %s : %s", sizeStr, t, fpath)
+			results <- s
 		}
 
 		now := time.Now()
@@ -171,8 +221,16 @@ func main() {
 
 	err = filepath.WalkDir(startDir, filepathWalkDirEntry)
 	if err != nil {
-		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
+		log.Printf(" Error from filepath.walk is %s.  Elapsed time is %s\n", err, time.Since(t0))
 	}
+	close(results)
+
+	<-done
+
+	for _, r := range result {
+		fmt.Printf(" %s\n", r)
+	}
+	fmt.Println()
 
 	elapsed := time.Since(t0)
 	fmt.Println(" Elapsed time is", elapsed)
@@ -186,6 +244,7 @@ func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 } // InsertIntoByteSlice
 
 //---------------------------------------------------------------------- AddCommas
+
 func AddCommas(instr string) string {
 	var Comma []byte = []byte{','}
 
@@ -201,7 +260,16 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
+// ------------------------------ isSymlink ---------------------------
+func isSymlink(m os.FileMode) bool {
+	intermed := m & os.ModeSymlink
+	result := intermed != 0
+	return result
+} // IsSymlink
+
+/*
 // ---------------------------- GetIDname -----------------------------------------------------------
+
 func GetIDname(uidStr string) string {
 
 	if len(uidStr) == 0 {
@@ -216,10 +284,4 @@ func GetIDname(uidStr string) string {
 	return idname
 
 } // GetIDname
-
-// ------------------------------ isSymlink ---------------------------
-func isSymlink(m os.FileMode) bool {
-	intermed := m & os.ModeSymlink
-	result := intermed != 0
-	return result
-} // IsSymlink
+*/

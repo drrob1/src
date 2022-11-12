@@ -132,7 +132,7 @@ func main() {
 	if er != nil {
 		log.Fatalf(" error from os.Stat(%s) is %v\n", dir, er)
 	}
-	rootDeviceID = getDeviceID(dir, fi)
+	rootDeviceID = getDeviceID(fi)
 
 	sizeVisitor := func(path string, info os.FileInfo, err error) error { // I'm ignoring any tests on err, as I don't want to abort on trivial errors.
 		//wg.Add(1)
@@ -160,7 +160,7 @@ func main() {
 				}
 				return filepath.SkipDir
 			} else {
-				id := getDeviceID(path, info)
+				id := getDeviceID(info)
 				if rootDeviceID != id {
 					if *verbose {
 						fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping %s.\n", rootDeviceID, dir, id, path, path)
