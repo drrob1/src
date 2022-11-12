@@ -137,7 +137,9 @@ const min3Width = 170
 //const dateSize = 30  // space the filesize and date occupy.
 
 var excludeRegex *regexp.Regexp
-var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
+
+//var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
+var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
 var maxDimFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
@@ -152,7 +154,10 @@ func main() {
 	var numOfCols int
 
 	// environment variable processing.  If present, these will be the defaults.
-	dsrtParam = ProcessEnvironString() // This is a function below.
+	dsrtEnviron := os.Getenv("dsrt")
+	dswEnviron := os.Getenv("dsw")
+	dsrtParam = ProcessEnvironString(dsrtEnviron, dswEnviron) // This is a function below.
+	//fmt.Printf(" dsrtEnviron = %s, dswEnviron = %s\n dsrtParam = %v\n", dsrtEnviron, dswEnviron, dsrtParam)
 
 	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
 	winFlag := runtime.GOOS == "windows"
@@ -276,7 +281,13 @@ func main() {
 
 	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
-	fmt.Print(" rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	ctfmt.Print(ct.Magenta, winFlag, " rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version())
+	if dsrtEnviron != "" {
+		ctfmt.Printf(ct.Yellow, winFlag, ", dsrt env = %s", dsrtEnviron)
+	}
+	if dswEnviron != "" {
+		ctfmt.Printf(ct.Yellow, winFlag, ", dsw env = %s", dswEnviron)
+	}
 	fmt.Println()
 
 	noExtensionFlag = *extensionflag || *extflag
@@ -587,29 +598,26 @@ func IsSymlink(m os.FileMode) bool {
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
-func ProcessEnvironString() DsrtParamType { // use system utils when can because they tend to be faster
+func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
-	dswStr, ok := os.LookupEnv("dsw")
-	if ok {
-		n, err := strconv.Atoi(dswStr)
+	if dswEnv == "" {
+		dsrtparam.w = 0 // redundant
+	} else { // dswStr not in environ, ie not ok
+		n, err := strconv.Atoi(dswEnv)
 		if err == nil {
 			dsrtparam.w = n
 		} else {
-			fmt.Fprintf(os.Stderr, " dsw environ var not a valid number.  dswStr= %q, %v.  Ignored.", dswStr, err)
+			fmt.Fprintf(os.Stderr, " dsw environ var not a valid number.  dswStr= %q, %v.  Ignored.", dswEnv, err)
 			dsrtparam.w = 0
 		}
-	} else { // dswStr not in environ, ie not ok
-		dsrtparam.w = 0
 	}
 
-	s, ok := os.LookupEnv("dsrt")
-
-	if !ok {
+	if dsrtEnv == "" {
 		return dsrtparam
 	} // empty dsrtparam is returned
 
-	indiv := strings.Split(s, "")
+	indiv := strings.Split(dsrtEnv, "")
 
 	for j, str := range indiv {
 		s := str[0]
@@ -627,7 +635,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
 				dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
-				break // if have a 2 digit number, it ends processing of the indiv string
+				break // if have a 2-digit number, it ends processing of the indiv string
 			}
 		}
 	}

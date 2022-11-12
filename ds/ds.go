@@ -575,7 +575,9 @@ func GetIDname(uidStr string) string {
 func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system utils when can because they tend to be faster
 	var dsrtparam DsrtParamType
 
-	if dswEnv != "" {
+	if dswEnv == "" {
+		dsrtparam.w = 0 // this si redundant because it's initialized to zero.
+	} else { // not ok, ie, dsw variable not found in environment
 		n, err := strconv.Atoi(dswEnv)
 		if err == nil {
 			dsrtparam.w = n
@@ -583,8 +585,6 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 			fmt.Fprintf(os.Stderr, " dsw environment variable not a valid number.  dswStr = %q, %v.  Ignored.", dswEnv, err)
 			dsrtparam.w = 0
 		}
-	} else { // not ok, ie, dsw variable not found in environment
-		dsrtparam.w = 0
 	}
 
 	if dsrtEnv == "" {
