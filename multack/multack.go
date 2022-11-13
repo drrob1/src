@@ -44,6 +44,7 @@
                  I can't close the results channel when all work is sent to the workers because of the processing time needed.  I'll restore the wait group.
    5 Nov 22 -- Walk function now returns SkipDir on errors, as I recently figured out when updating since.go.  And now allows a start dir after the regexp on command line.
    8 Nov 22 -- Fixed error as to when to return SkipDir.  I had it depend on verboseFlag, and that was an obvious error.
+  13 Nov 22 -- Adding ability to optionally specify a start directory other than the current one.  Nevermind, it already has this.
 */
 package main
 
@@ -65,12 +66,12 @@ import (
 	"time"
 )
 
-const lastAltered = "8 Nov 2022"
+const lastAltered = "13 Nov 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
-// Here on leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
+// On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
 const workerPoolMultiplier = 20
 
