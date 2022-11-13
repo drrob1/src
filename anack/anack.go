@@ -7,11 +7,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// The approach taken here was inspired by an example on the gonuts mailing list by Roger Peppe.
+// The approach taken here was inspired by an example on the golang-nuts mailing list by Roger Peppe.
+// I'm not sure the comment about Roger Peppe is for this version; it's likely for the concurrent version I have in multack.go.
 /*
   REVISION HISTORY
   ----------------
-  20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
+  20 Mar 20 -- Made comparisons case-insensitive.  And decided to make this cgrepi.go.
                  And then I figured I could not improve performance by using more packages.
                  But I can change the side effect of displaying altered case.
   21 Mar 20 -- Another ack name change.  My plan is to reproduce the function of ack, but on windows not require
@@ -25,6 +26,7 @@
    8 Dec 21 -- Removing the test for .git.  It seems that the walk function knows not to enter .git.
   10 Dec 21 -- Nevermind.  I'm testing for .git and will skipdir if found.  And will simply return on IsDir
   13 Dec 21 -- Adding a total number of files scanned, and number of matches found.
+  13 Nov 22 -- Adding some code that I developed for since and is now in multack.  Removed extensions stuff.  Only multack has smart case.
 */
 package main
 
@@ -36,68 +38,71 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"sort"
 	"strings"
 	"time"
 )
 
-const lastAltered = "13 Dec 2021"
+const lastAltered = "13 Nov 2022"
+
+const nullRune = 0
+
+type devID uint64
 
 var totFilesScanned, totMatchesFound int
-
-//var workers = runtime.NumCPU()
+var verboseFlag bool
 
 func main() {
-	//	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
-	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 240, where 0 means max timeout of 240 sec.")
+	var timeoutOpt *int = flag.Int("timeout", 0, "seconds < 240, where 0 means max timeout of 300 sec.")
+	flag.BoolVar(&verboseFlag, "v", false, "verbose flag")
 	flag.Parse()
-	if *timeoutOpt < 0 || *timeoutOpt > 240 {
-		log.Fatalln("timeout must be in the range [0,240] seconds")
+	if *timeoutOpt < 0 || *timeoutOpt > 300 {
+		log.Fatalln("timeout must be in the range [0,300] seconds")
 	}
 	if *timeoutOpt == 0 {
-		*timeoutOpt = 240
+		*timeoutOpt = 300
 	}
-	args := flag.Args()
-	if len(args) < 1 {
+
+	if flag.NArg() < 1 {
 		log.Fatalln("a regexp to match must be specified")
 	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 
-	pattern := args[0]
+	pattern := flag.Arg(0)
 	pattern = strings.ToLower(pattern)
 	var lineRegex *regexp.Regexp
 	var err error
 	if lineRegex, err = regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
-
-	extensions := make([]string, 0, 100)
-	if flag.NArg() < 2 {
-		extensions = append(extensions, ".txt")
-	} else if runtime.GOOS == "linux" {
-		files := args[1:]
-		extensions = extractExtensions(files)
-	} else { // windows branch
-		extensions = args[1:]
-		for i := range extensions {
-			extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
+	/*
+		extensions := make([]string, 0, 100)
+		if flag.NArg() < 2 {
+			extensions = append(extensions, ".txt")
+		} else if runtime.GOOS == "linux" {
+			files := flag.Args()
+			files = files[1:]
+			extensions = extractExtensions(files)
+		} else { // windows branch
+			extensions = args[1:]
+			for i := range extensions {
+				extensions[i] = strings.ReplaceAll(extensions[i], "*", "")
+			}
 		}
-	}
-
+	*/
 	fmt.Println()
-	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions=%v. \n\n\n ",
-		lastAltered, startDirectory, pattern, extensions)
-
-	//DirAlreadyWalked := make(map[string]bool, 500)
-	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
-	//dirToSkip := make(map[string]bool, 5)
-	//dirToSkip[".git"] = true
+	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions are gone. \n\n\n ",
+		lastAltered, startDirectory, pattern)
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	rootFileInfo, err := os.Stat(startDirectory)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Exiting\n", startDirectory, err)
+		os.Exit(1)
+	}
+	rootDeviceID := getDeviceID(rootFileInfo)
 
 	// walkfunc closures.  Only the last one is being used.
 	/*
@@ -158,32 +163,35 @@ func main() {
 
 	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf(" Error from walk is %v. \n ", err)
-			return nil
+			if verboseFlag {
+				fmt.Printf(" Error from walk is %v.  Skipping \n ", err)
+			}
+			return filepath.SkipDir
 		}
 
 		if d.IsDir() {
-			//fmt.Println(fpath, "is a directory")  Yeah, it does return directories and not just files.
-			//ext := filepath.Ext(fpath)  If directory name is .git, then both base and ext will be .git
-			//base := filepath.Base(fpath) if directory name is src, then base is src and ext is empty.
-			//fmt.Println(" fpath is a directory.  fpath =", fpath, ", base =", base, ", ext =", ext)
-			if filepath.Ext(fpath) == ".git" {
+			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, "vmware") {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-
-		//if dirToSkip[fpath] {
-		//	return filepath.SkipDir
-		//}
-
-		for _, ext := range extensions {
-			if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-				grepFile(lineRegex, fpath)
+		/*
+			for _, ext := range extensions {
+				if strings.HasSuffix(fpath, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
+					grepFile(lineRegex, fpath)
+				}
 			}
-		}
+		*/
 
-		//log.Println(" Need to debug this.  Filepath is", fpath, ", fi is", fi.Name(), fi.IsDir())
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		deviceID := getDeviceID(info)
+		if rootDeviceID != deviceID { // don't follow symlinks onto other devices like bigbkupG or DSM.
+			return filepath.SkipDir
+		}
+		grepFile(lineRegex, fpath)
 		now := time.Now()
 		if now.After(tfinal) {
 			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
@@ -215,7 +223,11 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		line, er := reader.ReadString('\n')
 		// line = strings.TrimSpace(line)  I'm going to try without this.
 
-		// this is the change I made to make every comparison case insensitive.  Side effect of output is not original case.
+		if strings.ContainsRune(line, nullRune) { // skip binary files
+			return
+		}
+
+		// this is the change I made to make every comparison case-insensitive.
 		lineStrLower := strings.ToLower(line)
 
 		if lineRegex.MatchString(lineStrLower) {
@@ -231,6 +243,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	}
 } // end grepFile
 
+/*
 func extractExtensions(files []string) []string {
 
 	var extensions sort.StringSlice
@@ -267,3 +280,5 @@ func extractExtensions(files []string) []string {
 	return extensions
 
 } // end extractExtensions
+*/
+
