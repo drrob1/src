@@ -116,6 +116,7 @@ Revision History
                I noticed that the environment string can't process f, for filterFlag.  Now it can.
                Now I need an option, -F, to undo the filterflag set in an environment var.
 21 Oct 22 -- golangci-lint said I don't use global directoryAliasMap, so I'm removing it.
+               Turned out that the linter was wrong, sort of.  I don't use it on linux, but I need it on Windows.  So I had to put it back for Windows.
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 */
 
