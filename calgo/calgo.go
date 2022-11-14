@@ -35,6 +35,7 @@ package main
  22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
  25 Dec 19 -- Fixed termbox, I hope.
  10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
+ 14 Nov 22 -- Fixed import list, so it's now module aware.  But I don't use this pgm now; I use calg instead.
 */
 
 import (
@@ -53,8 +54,8 @@ import (
 
 	//
 	//"getcommandline"
-	"holidaycalc"
-	"timlibg"
+	"src/holidaycalc"
+	"src/timlibg"
 
 	//"tokenize"
 
