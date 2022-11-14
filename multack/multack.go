@@ -45,6 +45,7 @@
    5 Nov 22 -- Walk function now returns SkipDir on errors, as I recently figured out when updating since.go.  And now allows a start dir after the regexp on command line.
    8 Nov 22 -- Fixed error as to when to return SkipDir.  I had it depend on verboseFlag, and that was an obvious error.
   13 Nov 22 -- Adding ability to optionally specify a start directory other than the current one.  Nevermind, it already has this.
+  14 Nov 22 -- Adding a usage message.  I never did that before.  And adding processing for '~' which only applies to Windows.
 */
 package main
 
@@ -66,7 +67,7 @@ import (
 	"time"
 )
 
-const lastAltered = "13 Nov 2022"
+const lastAltered = "14 Nov 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -124,6 +125,7 @@ func main() {
 	}
 
 	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
+		fmt.Printf(" Usage: multack regexp [start Directory]\n")
 		log.Fatalln("timeout must be in the range [0,300] seconds")
 	}
 	if *timeoutOpt == 0 {
@@ -131,6 +133,7 @@ func main() {
 	}
 
 	if flag.NArg() < 1 {
+		fmt.Printf(" Usage: multack regexp [start Directory]\n")
 		log.Fatalln("a regexp to match must be specified")
 	}
 	pattern := flag.Arg(0)
@@ -168,13 +171,25 @@ func main() {
 	}
 	*/
 
-	startDirectory, _ := os.Getwd() // startDirectory is a string
-	if flag.NArg() >= 2 {           // will use 2nd arg as start dir and will ignore any others
+	startDirectory, errr := os.Getwd() // startDirectory is a string
+	if errr != nil {
+		fmt.Printf(" Error from os.Getwd() is %s\n", errr)
+		fmt.Printf(" Usage: multack regexp [start Directory]\n")
+		os.Exit(1)
+	}
+	if flag.NArg() >= 2 { // will use 2nd arg as start dir and will ignore any others
 		startDirectory = flag.Arg(1)
+		home, er := os.UserHomeDir()
+		if er != nil {
+			fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir() is %s.  Exiting. \n", er)
+			os.Exit(1)
+		}
+		startDirectory = strings.ReplaceAll(startDirectory, "~", home)
 	}
 	startInfo, err := os.Stat(startDirectory)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Aborting\n.", startDirectory, err)
+		fmt.Printf(" Usage: multack regexp [start Directory]\n")
 		os.Exit(1)
 	}
 	startDeviceID := getDeviceID(startInfo)
@@ -183,12 +198,16 @@ func main() {
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
-	workingDir, _ := os.Getwd()
-	execName, _ := os.Executable()
-	ExecFI, _ := os.Stat(execName)
-	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	//execDir, _ := os.Getwd()
+	//execName, _ := os.Executable()
+	//ExecFI, _ := os.Stat(execName)
+	//LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 	if verboseFlag {
-		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
+		execDir, _ := os.Getwd()
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
+		LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+		fmt.Printf(" Current working Directory is %s; %s timestamp is %s.\n\n", execDir, execName, LastLinkedTimeStamp)
 	}
 
 	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.

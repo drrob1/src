@@ -27,6 +27,7 @@
   10 Dec 21 -- Nevermind.  I'm testing for .git and will skipdir if found.  And will simply return on IsDir
   13 Dec 21 -- Adding a total number of files scanned, and number of matches found.
   13 Nov 22 -- Adding some code that I developed for since and is now in multack.  Removed extensions stuff.  Only multack has smart case.
+  14 Nov 22 -- Adding a usage message, and processing for '~' that only applies to Windows.
 */
 package main
 
@@ -42,7 +43,7 @@ import (
 	"time"
 )
 
-const lastAltered = "13 Nov 2022"
+const lastAltered = "14 Nov 2022"
 
 const nullRune = 0
 
@@ -64,10 +65,25 @@ func main() {
 	}
 
 	if flag.NArg() < 1 {
+		fmt.Printf(" Usage: anack regexp [start Directory]\n")
 		log.Fatalln("a regexp to match must be specified")
 	}
 
-	startDirectory, _ := os.Getwd() // startDirectory is a string
+	startDirectory, errr := os.Getwd() // startDirectory is a string
+	if errr != nil {
+		fmt.Printf(" Error from os.Getwd() is %s\n", errr)
+		fmt.Printf(" Usage: anack regexp [start Directory]\n")
+		os.Exit(1)
+	}
+	if flag.NArg() >= 2 { // will use 2nd arg as start dir and will ignore any others
+		startDirectory = flag.Arg(1)
+		home, er := os.UserHomeDir()
+		if er != nil {
+			fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir() is %s.  Exiting. \n", er)
+			os.Exit(1)
+		}
+		startDirectory = strings.ReplaceAll(startDirectory, "~", home)
+	}
 
 	pattern := flag.Arg(0)
 	pattern = strings.ToLower(pattern)
@@ -94,6 +110,13 @@ func main() {
 	fmt.Println()
 	fmt.Printf(" Another ack, written in Go.  Last altered %s, and will start in %s, pattern=%s, extensions are gone. \n\n\n ",
 		lastAltered, startDirectory, pattern)
+	if verboseFlag {
+		execDir, _ := os.Getwd()
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
+		LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+		fmt.Printf(" Current working Directory is %s; %s timestamp is %s.\n\n", execDir, execName, LastLinkedTimeStamp)
+	}
 
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
@@ -281,4 +304,3 @@ func extractExtensions(files []string) []string {
 
 } // end extractExtensions
 */
-

@@ -16,6 +16,7 @@ dsrtre.go
    4 Feb 22 -- Updated code, removing the concurrency pattern as it's not needed.  And removing the tracking of directories visited.
   21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
   12 Nov 22 -- Adding device ID code, and error handling code I developed for since and multack.  And I think I need a sync mechanism like a wait group or done channel.
+  14 Nov 22 -- Added processing for "~".
 */
 package main
 
@@ -33,7 +34,7 @@ import (
 	"time"
 )
 
-const lastAltered = "12 Nov 2022"
+const lastAltered = "14 Nov 2022"
 
 type devID uint64
 
@@ -72,18 +73,29 @@ func main() {
 	} else {
 		inputRegexPattern = flag.Arg(0)
 		startDir = flag.Arg(1)
+		home, er := os.UserHomeDir()
+		if er != nil {
+			fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir() is %s.  Exiting. \n", er)
+			os.Exit(1)
+		}
+		startDir = strings.ReplaceAll(startDir, "~", home)
 	}
 
 	inputRegexPattern = strings.ToLower(inputRegexPattern)
 	inputRegex, err = regexp.Compile(inputRegexPattern)
 	if err != nil {
-		log.Fatalln(" error from regex compile function is ", err)
+		log.Fatalf(" error from regex compile function is %s", err)
 	}
 
 	fmt.Println()
 	fmt.Printf(" dsrtre (recursive), written in Go.  Last altered %s, will use regex of %q and will start in %s. \n", lastAltered, inputRegex.String(), startDir)
 	fmt.Println()
 	if *verboseFlag {
+		execDir, _ := os.Getwd()
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
+		LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+		fmt.Printf(" Current working Directory is %s; %s timestamp is %s.\n\n", execDir, execName, LastLinkedTimeStamp)
 		fmt.Println()
 	}
 
