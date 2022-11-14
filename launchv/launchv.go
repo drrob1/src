@@ -37,9 +37,11 @@ REVISION HISTORY
                And since linux and windows use different characters as subdir separators in the PATH, and the filesystem uses a different delimiter, I have to use a conditional
                based on runtime.GOOS.
 23 Oct 22 -- On linux will call cvlc instead of vlc.  Nevermind, it's not better.  But I changed MyReadDir to skip directories.
+14 Nov 22 -- Will use fact that an empty regexp always matches everything.  Turned out to be a bad thing, because therefore the exclude expression excluded everything.
+               I undid it.
 */
 
-const lastModified = "Oct 23, 2022"
+const lastModified = "Nov 14, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok bool
