@@ -45,6 +45,7 @@ package main
   9 Aug 21 -- Added -v to be a synonym of test.
   2 Aug 22 -- Now outputing the cal files requires use of an option flag.  I mostly didn't want them output whenever I started the pgm.
                 And I'll remove the nofiles flags.  Both of them.
+ 20 Nov 22 -- Linter reports a few issues.  I'm addressing them now.
 */
 
 import (
@@ -69,7 +70,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Aug 2, 2022"
+const LastCompiled = "Nov 20, 2022"
 
 // BLANKCHR is used in DAY2STR.
 
@@ -171,7 +172,7 @@ func DAY2STR(DAY int) (string, rune, rune) {
 	*/
 
 	const digits = "0123456789"
-	const ZERO = '0'
+	// const ZERO = '0'  linter complained that this is unused.  So I'll delete it.
 
 	bs := make([]byte, 3)
 
@@ -223,7 +224,8 @@ func DATEASSIGN(MN int) {
 
 func WrMonthForXL(MN int) {
 
-	s0 := fmt.Sprintf("%s", MONNAMSHORT[MN])
+	//s0 := fmt.Sprintf("%s", MONNAMSHORT[MN])  // linter reports that this argument is already a string, so sprintf is not needed.
+	s0 := MONNAMSHORT[MN]
 	s1 := fmt.Sprintf("\t%6s", YEARSTR) // I like the effect here of adding <tab>
 	_, err := OutCal12file.WriteString(s0)
 	check(err, "Error while writing month name short for big calendar")
@@ -422,9 +424,9 @@ func Show3MonthRow(mn int) { // Modified from WrOnePageYear.  main() makes sure 
 
 func HolidayAssign(year int) {
 
-	var Holiday holidaycalc.HolType
+	//var Holiday holidaycalc.HolType // linter reports that I should merge variable declaration w/ assignment on the next line.  Ok.
 
-	Holiday = holidaycalc.GetHolidays(year)
+	Holiday := holidaycalc.GetHolidays(year)
 	Holiday.Valid = true
 
 	/*

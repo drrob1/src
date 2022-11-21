@@ -88,9 +88,10 @@ import (
    2 Apr 22 -- Adding a progress bar.  And changed doTheShuffle to actually shuffle.  It only did 1 pass thru the deck before.  That was silly.
   20 Apr 22 -- Backporting the bytes.Reader code from bj2, that allows comments and such in the strategy file.  Nevermind, it's already there.
   23 Apr 22 -- Will use idiomatic Go in Split a hand.
+  20 Nov 22 -- Ran a static linter and will make recommended changes
 */
 
-const lastAltered = "Apr 23, 2022"
+const lastAltered = "Nov 20, 2022"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -533,14 +534,14 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		} // if soft hand or not.
+		}                                                                       // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
 			return
 		}
 	} // for loop, which allows hands to jump for the hard to soft category.
-	return
+	// return  the linter flagged this as redundant.  It is as no params are returned and the code will return anyway without this statement.  So it is redundant.
 } // hitDealer
 
 // ------------------------------------------------------- hitMePlayer -----------------------------------
@@ -1417,9 +1418,9 @@ func wrStatsToFile() {
 		}
 	}
 
-	_, err = bufOutputFileWriter.WriteRune('\n')
-	_, err = bufOutputFileWriter.WriteRune('\n')
-	_, err = bufOutputFileWriter.WriteRune('\n')
+	_, err = bufOutputFileWriter.WriteRune('\n') // linter says the err value is not used.
+	_, err = bufOutputFileWriter.WriteRune('\n') // it's right.  But I won't change
+	_, err = bufOutputFileWriter.WriteRune('\n') // it now.  Maybe later.
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
 } // wrStatsToFile
@@ -1520,11 +1521,11 @@ func main() {
 	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n",
 		datestring, dealerHitsSoft17, resplitAcesFlag)
 
-	_, err = bufOutputFileWriter.WriteString(str)
+	_, err = bufOutputFileWriter.WriteString(str) // the linter complained that this err value is not used.  It's right but I won't change it now.
 
 	WriteStrategyMatrix(bufOutputFileWriter)
 
-	_, err = bufOutputFileWriter.WriteString("==============================================================================\n")
+	_, err = bufOutputFileWriter.WriteString("==============================================================================\n") // linter said same thing about this err value.
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
@@ -1754,7 +1755,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1778,7 +1779,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return

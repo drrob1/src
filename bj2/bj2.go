@@ -108,9 +108,10 @@ import (
   15 Apr 22 -- Changed how doTheShuffle works.  And will extract the number of decks from the filename of the .deck file.
   23 Apr 22 -- Changed how split hands are constructed, which is now more idiomatic for Go.
   21 Oct 22 -- Fixed a bug in an error message, detected by golangci-lint
+  20 Nov 22 -- Static linter reported more issues, one of which I'll fix and the others not yet.
 */
 
-const lastAltered = "Oct 21, 2022"
+const lastAltered = "Nov 20, 2022"
 
 var numOfDecks = 100_000 // took ~1/2 hr to run on thelio at this default value.  It's now a var because I'm extracting the value from the .deck filename.
 
@@ -560,7 +561,7 @@ func hitDealer() {
 			return
 		}
 	} // for loop, which allows hands to jump for the hard to soft category.
-	return
+	// return  This is redundant as the code will return anyway, without it.  There are no params to return so I don't need it.
 } // hitDealer
 
 // ------------------------------------------------------- hitMePlayer -----------------------------------
@@ -1437,9 +1438,9 @@ func wrStatsToFile() {
 		}
 	}
 
-	_, err = bufOutputFileWriter.WriteRune('\n')
-	_, err = bufOutputFileWriter.WriteRune('\n')
-	_, err = bufOutputFileWriter.WriteRune('\n')
+	_, err = bufOutputFileWriter.WriteRune('\n') // linter reports err not checked.
+	_, err = bufOutputFileWriter.WriteRune('\n') // I'll maybe change this later
+	_, err = bufOutputFileWriter.WriteRune('\n') // but not now.
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
 } // wrStatsToFile
@@ -1566,11 +1567,11 @@ func main() {
 	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n",
 		datestring, dealerHitsSoft17, resplitAcesFlag)
 
-	_, err = bufOutputFileWriter.WriteString(str)
+	_, err = bufOutputFileWriter.WriteString(str) // linter reports this err is not checked.  But I won't change it now.
 
 	WriteStrategyMatrix(bufOutputFileWriter)
 
-	_, err = bufOutputFileWriter.WriteString("==============================================================================\n")
+	_, err = bufOutputFileWriter.WriteString("==============================================================================\n") // linter reports this err is not checked.  I won't change it now.
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
