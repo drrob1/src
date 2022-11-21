@@ -21,6 +21,7 @@ REVISION HISTORY
 16 Mar 22 -- Only writing using fmt.Print calls if verboseFlag is set.
 26 Mar 22 -- Handles correctly when dir is not current dir; I did not need to port the code from img.go as it always worked here.
                It works because the sort is alphabetical, not by date, so I don't need to call Lstat.
+21 Nov 22 -- Fixed some issues flagged by static linter.
 */
 
 package main
@@ -51,7 +52,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "March 26, 2022"
+const LastModified = "Nov 21, 2022"
 const maxWidth = 1800
 const maxHeight = 900
 const keyCmdChanSize = 20
@@ -268,11 +269,11 @@ func loadTheImage() {
 	fullfilename := cwd + string(filepath.Separator) + imgname
 	imageURI := storage.NewFileURI(fullfilename)
 	imgRead, err := storage.Reader(imageURI)
-	defer imgRead.Close()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
 		os.Exit(1)
 	}
+	defer imgRead.Close() // moved as recommended by static linter
 
 	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
 	if err != nil {
@@ -337,7 +338,7 @@ func loadTheImage() {
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
 	globalW.Show()
-	return
+	// return
 } // end loadTheImage
 
 // ------------------------------- filenameAlphaIndex --------------------------------------
@@ -351,7 +352,7 @@ func filenameAlphaIndex(files sort.StringSlice, name string, intchan chan int) {
 		index = -1
 	}
 	intchan <- index
-	return
+	// return
 }
 
 /*
@@ -399,7 +400,7 @@ func MyReadDirForImagesAlphabetically(dir string, imageInfoChan chan []string) {
 	}
 
 	imageInfoChan <- fi
-	return
+	// return
 } // MyReadDirForImagesAlphabetically
 /*
 // ------------------------------- MyReadDirForImages -----------------------------------
@@ -471,7 +472,7 @@ func nextImage() {
 		index--
 	}
 	loadTheImage()
-	return
+	// return
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
@@ -481,7 +482,7 @@ func prevImage() {
 		index++
 	}
 	loadTheImage()
-	return
+	// return
 } // end prevImage
 
 // ------------------------------------------ firstImage -----------------------------------------------------

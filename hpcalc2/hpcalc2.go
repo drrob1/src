@@ -128,9 +128,10 @@ REVISION HISTORY
  7 May 22 -- Played a bit in clippy_linux.go, where I'm using make to initialize bytes.NewBuffer().
  7 Sep 22 -- Changed the pivot for the JUL command from the current year to a const of 30
 21 Oct 22 -- golangci-lint says I have an unnecessary Sprintf call.  It's right.
+21 Nov 22 -- static linter found a few more issues.
 */
 
-const LastAlteredDate = "21 Oct 2022"
+const LastAlteredDate = "21 Nov 2022"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -476,7 +477,7 @@ func DumpStackFixed() []string {
 	var str string
 
 	ss := make([]string, 0, StackSize+2)
-	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
+	ss = append(ss, HeaderDivider) // I had an unneeded call to Sprintf here.
 	for SRN := T1; SRN >= X; SRN-- {
 		if math.Abs(Stack[SRN]) < verySmallNumber || math.Abs(Stack[SRN]) > veryLargeNumber {
 			str = strconv.FormatFloat(Stack[SRN], 'g', sigfig, 64)
@@ -491,7 +492,7 @@ func DumpStackFixed() []string {
 			ss = append(ss, fmt.Sprintf("%2s: %10.2f %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 		}
 	}
-	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
+	ss = append(ss, HeaderDivider) // call to sprintf was unneeded here.
 	return ss
 } // DumpStackFixed
 
@@ -502,7 +503,7 @@ func DumpStackFloat() []string {
 	var str string
 
 	ss := make([]string, 0, StackSize+2)
-	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
+	ss = append(ss, HeaderDivider)
 	for SRN = T1; SRN >= X; SRN-- {
 		str = strconv.FormatFloat(Stack[SRN], 'e', sigfig, 64)
 		//		str = CropNStr(str)  makes no sense for numbers in exponential format
@@ -511,7 +512,7 @@ func DumpStackFloat() []string {
 		//		}
 		ss = append(ss, fmt.Sprintf("%2s: %20.9e %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 	}
-	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
+	ss = append(ss, HeaderDivider)
 	return ss
 } // DumpStackFloat
 
@@ -522,7 +523,7 @@ func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) 
 		fmt.Print("0.0")
 	} else {
 		str := strconv.FormatFloat(r, 'g', sigfig, 64) // when r >= 1e6 this switches to scientific notation.
-		CropNStr(str)
+		str = CropNStr(str)                            // bug here was caught by static linter.
 		fmt.Print(str)
 	}
 } // OutputFixedOrFloat
@@ -534,12 +535,12 @@ func DumpStackGeneral() []string {
 	var str string
 
 	ss := make([]string, 0, StackSize+2)
-	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
+	ss = append(ss, HeaderDivider)
 	for SRN = T1; SRN >= X; SRN-- {
 		str = strconv.FormatFloat(Stack[SRN], 'g', sigfig, 64)
 		ss = append(ss, fmt.Sprintf("%2s: %10.7g %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
 	}
-	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
+	ss = append(ss, HeaderDivider)
 	return ss
 } // DumpStackGeneral
 
@@ -1346,9 +1347,10 @@ outerloop:
 				}
 				mappedReg[regname] = READX()
 				_, stringresult := GetResult("mapsho")
-				for _, str := range stringresult {
-					ss = append(ss, str)
-				}
+				//for _, str := range stringresult {  verbose.  Static linter fixed it for me.
+				//	ss = append(ss, str)
+				//}
+				ss = append(ss, stringresult...)
 				MapClose() // added 6/19/21
 
 			} else if strings.HasPrefix(subcmd, "RCL") {

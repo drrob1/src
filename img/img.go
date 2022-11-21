@@ -1,4 +1,4 @@
-// From Go GUI with Fyne, Chap 4.
+// Based on Go GUI with Fyne, Chap 4.
 /*
 
 This pgm works by the main thread initializing the image display and then starting the display message loop.
@@ -30,6 +30,7 @@ REVISION HISTORY
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 16 Mar 22 -- Only writing using fmt.Print calls if verbose or flags are set.
 26 Mar 22 -- Expanding to allow a directory other than the current one.
+21 Nov 22 -- Made changes recommended by static linter.
 */
 
 package main
@@ -64,7 +65,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Mar 26, 2022"
+const LastModified = "Nov 21, 2022"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -280,11 +281,11 @@ func loadTheImage() {
 	fullfilename := cwd + string(filepath.Separator) + imgname
 	imageURI := storage.NewFileURI(fullfilename)
 	imgRead, err := storage.Reader(imageURI)
-	defer imgRead.Close()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
 		os.Exit(1)
 	}
+	defer imgRead.Close() // moved to here, after checking err, as recommended by static linter.
 
 	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
 	if err != nil {
@@ -350,7 +351,7 @@ func loadTheImage() {
 	globalW.SetTitle(title)
 
 	globalW.Show()
-	return
+	// return  This is flagged as redundant, so I'm removing it.
 } // end loadTheImage
 
 // ------------------------------- filenameIndex --------------------------------------
@@ -362,7 +363,7 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 		}
 	}
 	intchan <- -1
-	return
+	//return  also redundant
 }
 
 // ------------------------------- MyReadDirForImages -----------------------------------
@@ -405,7 +406,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	}
 
 	imageInfoChan <- fi
-	return
+	// return  also redundant
 } // MyReadDirForImages
 
 // ------------------------------------------------------- isSorted -----------------------------------------------
@@ -427,7 +428,7 @@ func nextImage() {
 		index--
 	}
 	loadTheImage()
-	return
+	// return  also redundant
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
@@ -438,7 +439,7 @@ func prevImage() {
 		index++
 	}
 	loadTheImage()
-	return
+	// return  also redundant
 } // end prevImage
 
 // ------------------------------------------ firstImage -----------------------------------------------------
