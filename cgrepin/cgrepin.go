@@ -38,6 +38,7 @@
                  I added my own method to a system type by embedding it into my own type.  IE, myBytesReader absorbed *bytes.Reader.
                  Interestingly, this is ~5% faster w/ the concurrent code in it, when compared to cgrepin2 in which I removed all the current stuff.  So I guess
                  the current stuff is slightly faster after all.
+  20 Nov 22 -- static linter found an issue w/ const null, so I removed it.
 */
 package main
 
@@ -58,11 +59,12 @@ import (
 	"time"
 )
 
-const LastAltered = "26 Oct 2022"
+const LastAltered = "20 Nov 2022"
 const maxSecondsToTimeout = 300
 
 const minMatches = 100
-const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+
+//const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.  But not in this cgrepin version, only in cgrepi.  So I'll remove it.
 
 var caseSensitiveFlag bool // default is false.
 //var grepChan chan grepType

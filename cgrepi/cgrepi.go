@@ -34,6 +34,7 @@
                  So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
    5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
    7 Oct 22 -- Added color to output.
+  20 Nov 22 -- static linter found an issue, so I commented it out.
 */
 package main
 
@@ -55,7 +56,7 @@ import (
 	"time"
 )
 
-const LastAltered = "7 Oct 2022"
+const LastAltered = "20 Nov 2022"
 const maxSecondsToTimeout = 300
 
 const workerPoolMultiplier = 20
@@ -66,7 +67,7 @@ var workers = runtime.NumCPU() * workerPoolMultiplier
 type grepType struct {
 	regex    *regexp.Regexp
 	filename string
-	goRtnNum int
+	// goRtnNum int
 }
 
 type matchType struct {
