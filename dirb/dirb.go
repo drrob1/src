@@ -11,8 +11,6 @@ import (
 	"strings"
 )
 
-const LastAltered = "June 20, 2020"
-
 const bookmarkfilename = "bookmarkfile.gob"
 
 /*
@@ -27,13 +25,20 @@ const bookmarkfilename = "bookmarkfile.gob"
   17 Jun 2020 -- Added newline to output string.  I don't know what this will do in tcc, but I'm hoping it will help when not in tcc.
   20 Jun 2020 -- If the bookmark is not in the map, treat it as a change directory, cd command.
   20 Jul 2022 -- Adding replacement of ~ with HomeDir.  And now will use os.HomeDir.
+  21 Nov 2022 -- static linter found a few issues that I will fix.  It caught a bug in the processing of '~'.
 */
+
+const LastAltered = "Nov 21, 2022"
 
 func main() {
 	var bookmark map[string]string
 	//var HomeDir string  removed when use of os.UserHomeDir() added.
 	sep := string(os.PathSeparator)
 	HomeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf(" os.UserHomeDir returned error of: %s.  Exiting...\n", err)
+		os.Exit(1)
+	}
 
 	/*
 		if runtime.GOOS == "linux" {
@@ -47,7 +52,7 @@ func main() {
 
 	*/
 
-	target := "cd" + " " + HomeDir
+	target := "cdd" + " " + HomeDir
 	fullbookmarkfilename := HomeDir + sep + bookmarkfilename
 
 	if len(os.Args) == 1 { // No destination dir found on cmd line.
@@ -98,10 +103,10 @@ func main() {
 	if strings.ToLower(os.Args[1]) == "help" || os.Args[1] == "about" {
 		fmt.Println(" dirb, a Directory Bookmark program written in Go.  Last altered", LastAltered)
 		fmt.Println()
-		execname, _ := os.Executable()
-		ExecFI, _ := os.Stat(execname)
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println(" bookmark file is", fullbookmarkfilename)
 		fmt.Println()
 		for idx, valu := range bookmark {
@@ -118,7 +123,7 @@ func main() {
 		destination := os.Args[1] + sep
 		destination = filepath.Clean(destination)
 		if strings.HasPrefix(destination, "~") {
-			strings.Replace(destination, "~", destination, 1)
+			destination = strings.Replace(destination, "~", HomeDir, 1)
 		}
 		target = "cdd " + destination
 	}
