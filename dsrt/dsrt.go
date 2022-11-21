@@ -10,7 +10,6 @@ import (
 	"golang.org/x/term"
 	"os"
 	"os/user"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -114,9 +113,10 @@ REVISION HISTORY
 15 Oct 22 -- I noticed that the environment string can't process f, for filterFlag.  Now it can.
                Now I need an option, -F, to undo the filterflag set in an environment var.
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
+21 Nov 22 -- static linter found an issue, I'm going to fix now.
 */
 
-const LastAltered = "11 Nov 2022"
+const LastAltered = "21 Nov 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -209,13 +209,13 @@ func main() {
 		}
 	*/
 
-	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
-	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
-		HomeDirStr = ""
-	}
-	HomeDirStr = HomeDirStr + string(filepath.Separator)
+	//HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  dsutil_windows.go has it's own HomeDirStr, so I'll remove this one.
+	//if err != nil {
+	//	fmt.Fprint(os.Stderr, err)
+	//	fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
+	//	HomeDirStr = ""
+	//}
+	//HomeDirStr = HomeDirStr + string(filepath.Separator)
 
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
@@ -225,7 +225,6 @@ func main() {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
 		}
-		// HomeDirStr = userptr.HomeDir + sepstring
 	}
 
 	// flag definitions and processing
