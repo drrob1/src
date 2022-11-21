@@ -18,7 +18,7 @@ import (
 	// "io/ioutil" depracated as of Go 1.16
 )
 
-const lastModified = "22 Oct 21"
+const lastModified = "21 Nov 22"
 
 /*
   REVISION HISTORY
@@ -84,6 +84,7 @@ const lastModified = "22 Oct 21"
                  and checking if there is a valid token that was ungotten before fetching a new one.
    4 Oct 20 -- Will skip empty tokens
   17 Oct 20 -- Removed strings.ToLower from output file names.
+  21 Nov 22 -- Updating code to compile, as I changed the API for filepicker regexp processing.
 */
 
 const ( // intended for ofxCharType
@@ -175,7 +176,11 @@ func main() {
 
 	fmt.Println(" fromfx.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		filenames, err := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		if err != nil {
+			fmt.Printf(" filepicker.GetRegexFilenames returned error of: %s.  Exiting...\n", err)
+			os.Exit(1)
+		}
 		for i := 0; i < min(len(filenames), 30); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
