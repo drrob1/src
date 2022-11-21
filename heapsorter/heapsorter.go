@@ -72,9 +72,10 @@ import (
                  In the oberon version, the stack is [12], which is 0..11.  My measurements went to an index of 24, which blew well past the stack limit.
                  I don't know why the code didn't panic w/ array index out of bounds; it merely didn't work.  It would be hard to pull out the non-working code now.
   7 Oct 22 -- Updated output message
+ 21 Nov 22 -- static linter found a minor issue, now fixed.
 */
 
-const LastAlteredDate = "Oct 7, 2022"
+const LastAlteredDate = "Nov 21, 2022"
 const tooBig = 170_000
 
 var intStack []int // for non-recursive quick sorts
@@ -876,8 +877,8 @@ func main() {
 	defer OutputFile.Close()
 	OutBufioWriter := bufio.NewWriter(OutputFile)
 	defer OutBufioWriter.Flush()
-	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
-	_, err = OutBufioWriter.WriteString(datestring)
+	OutBufioWriter.WriteString("------------------------------------------------------\n")
+	OutBufioWriter.WriteString(datestring)
 	_, err = OutBufioWriter.WriteRune('\n')
 	check(err)
 
@@ -1392,6 +1393,9 @@ func main() {
 	sort.Slice(timeSort, sortlessfcn)
 	fmt.Println(" \n --- Sorted list of times is: ------")
 	_, err = OutBufioWriter.WriteString(" \n ---- Sorted List of Times ----\n")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " err from OutBufioWriter is: %s\n", err)
+	}
 	for _, t := range timeSort {
 		fmt.Print(t.description)
 		_, err = OutBufioWriter.WriteString(t.description)
