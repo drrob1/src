@@ -21,6 +21,7 @@ package mat
  25 Dec 16 -- Changed the code to use the Go swapping idiom
   1 Aug 20 -- Cleaning up some code.  I'm looking at this again because of adding gohum to solve.go --> gonumsolve.go
  13 Feb 22 -- Updated to modules
+ 21 Nov 22 -- static linter reported issues, so some of them are addressed, and others are ignored.
 */
 
 import (
@@ -138,10 +139,10 @@ func Copy(Src Matrix2D) Matrix2D {
 
 	Dest := NewMatrix(SrcRows, SrcCols)
 
-	//copy(Dest, Src) // pointed out to me by golangci-lint.  Doesn't work so I did it wrong.
+	//copy(Dest, Src) //  Doesn't work so I did it wrong.
 	for r := range Src {
 		copy(Dest[r], Src[r]) // this works.
-		//for c := range Src[r] {
+		//for c := range Src[r] { // golangci-lint recommended I use the copy() built in.
 		//	Dest[r][c] = Src[r][c]
 		//}
 	}
@@ -516,7 +517,7 @@ func Solve(A, B Matrix2D) Matrix2D {
 	// Solves the equation AX = B.  In the present version A must be square and nonsingular.
 	// Dimensions: A is N x N, B is N x M.
 
-	var X Matrix2D
+	//var X Matrix2D  not needed
 
 	N := len(A)
 	M := len(B[0])
@@ -524,8 +525,8 @@ func Solve(A, B Matrix2D) Matrix2D {
 	LU := NewMatrix(N, N)
 	Copy2(A, LU)
 
-	X = NewMatrix(N, M)
-	X = Copy(B)
+	//X = NewMatrix(N, M)  this line was flagged by static linter as this value of X is never used.
+	X := Copy(B)
 
 	perm := make(Permutation, N*4)
 	LU, _ = LUFactor(LU, perm)
@@ -535,10 +536,10 @@ func Solve(A, B Matrix2D) Matrix2D {
 	//  but they might even make things worse, because we're still stuck with the rounding errors in LUFactor.
 
 	if X != nil { // if the LUSolve failed, like because of a singular matrix, X is returned as nil
-		ERROR := NewMatrix(N, M)
+		//ERROR := NewMatrix(N, M)  // flagged as not being used by static linter
 		product := NewMatrix(N, M)
 		product = Mul(A, X)
-		ERROR = Sub(B, product)
+		ERROR := Sub(B, product)
 		ERROR = LUSolve(LU, ERROR, perm)
 		X = Add(X, ERROR)
 	}
@@ -549,15 +550,15 @@ func Solve(A, B Matrix2D) Matrix2D {
 
 func Invert(A Matrix2D) Matrix2D {
 
-	var X Matrix2D
+	//var X Matrix2D
 	// VAR I: ArrayPtr;
 
 	N := len(A)
 	I := NewMatrix(N, N)
 	I = Unit(I)
 
-	X = NewMatrix(N, N)
-	X = Solve(A, I) // Solve (A, I^, X, N, N);
+	// X = NewMatrix(N, N)  flagged as not used.
+	X := Solve(A, I) // Solve (A, I^, X, N, N);
 	// DisposeArray (I, N, N);
 	return X
 } // END Invert;

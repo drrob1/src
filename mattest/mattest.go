@@ -63,6 +63,7 @@ func BasicTest() {
 	}
 	F = mat.NewMatrix(Brows, Bcols)  // testing NewMatrix, not in original code
 	G := mat.NewMatrix(Arows, Acols) //  testing NewMatrix, not in original code
+	fmt.Printf(" NewMatrix F has %d rows and %d columns.  NewMatrix G has %d rows and %d columns.\n", len(F), len(F[0]), len(G), len(G[0]))
 
 	fmt.Println("Test of simple matrix operations.")
 	fmt.Println()
@@ -156,6 +157,12 @@ func BasicTest() {
 	} else {
 		fmt.Print(" E - F failed ")
 		G = mat.Random(G)
+		ss = mat.Write(G, 4)
+		fmt.Println(" Random G after E - F failed.")
+		for _, s := range ss {
+			fmt.Print(s)
+		}
+		fmt.Println()
 	}
 
 	ss = mat.Write(D, 4)
@@ -242,7 +249,7 @@ func SolveTest() {
 	for i := range B {
 		B[i] = make([]float64, Bcols)
 		C[i] = make([]float64, Bcols)
-		C[i] = make([]float64, Bcols)
+		D[i] = make([]float64, Bcols)
 		X[i] = make([]float64, Bcols)
 	}
 
@@ -374,16 +381,16 @@ func InversionTest() {
 	//        W: ARRAY [1..N] OF LONGCOMPLEX;
 
 	A := mat.NewMatrix(N, N)
-	B := mat.NewMatrix(N, N)
-	X := mat.NewMatrix(N, N)
-	W := make([]complex128, N)
+	//B := mat.NewMatrix(N, N)  static linter said this value of B is never used.
+	//X := mat.NewMatrix(N, N)  static linter said this value of X is never used.
+	//W := make([]complex128, N)  static linter said this value of W is never used.
 
 	fmt.Println("INVERTING A SQUARE MATRIX")
 
 	// Give a value to the A matrix.
 
 	A = mat.Random(A) // Random (A, N, N);
-	fmt.Println("Matrix A is")
+	fmt.Println(" Random Matrix A is")
 	ss := mat.Write(A, 4)
 	for _, s := range ss {
 		fmt.Print(s)
@@ -392,7 +399,7 @@ func InversionTest() {
 
 	// Invert it.
 
-	X = mat.Invert(A) //  X = mat.Invert(A, N);
+	X := mat.Invert(A) //  X = mat.Invert(A, N);
 
 	// Write the solution.
 
@@ -406,7 +413,7 @@ func InversionTest() {
 
 	// Check that the solution looks right.
 
-	B = mat.Mul(A, X) // Mul(A, X, N, N, N, B);
+	B := mat.Mul(A, X) // Mul(A, X, N, N, N, B);
 	fmt.Println()
 	fmt.Println("As a check, the product evaluates to the identity matrix")
 	ss = mat.Write(B, 4)
@@ -430,8 +437,8 @@ func InversionTest() {
 	fmt.Println("EIGENVALUES")
 	fmt.Println()
 	fmt.Println("The eigenvalues of A are")
-	W = mat.Eigenvalues(A) // Eigenvalues (A, W, N);
-	for j := range W {     // FOR j := 1 TO N DO
+	W := mat.Eigenvalues(A) // Eigenvalues (A, W, N);
+	for j := range W {      // FOR j := 1 TO N DO
 		fmt.Print("    ")
 		fmt.Print(W[j])
 		fmt.Println()
