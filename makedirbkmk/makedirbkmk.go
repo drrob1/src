@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-const LastAltered = "May 12, 2021"
-
 /*
 REVISION HISTORY
 ================
@@ -34,7 +32,10 @@ REVISION HISTORY
 24 Dec 20 -- Will now sort output from Print command.
 10 May 21 -- Wrote dirPrint() so will sort output when other commands display the map, esp the save cmd.
 12 May 21 -- Remove the dash of an option, if I forget and use it anyway.  These are not options, as I'm not using the flag package.
+21 Nov 22 -- I'm here because of static linter.  And there's an issue w/ dirAliasesMap that doesn't need to be a param.
 */
+
+const LastAltered = "Nov 21, 2022"
 
 const bookmarkfilename = "bookmarkfile.gob"
 
@@ -50,7 +51,7 @@ func main() {
 	sep := string(os.PathSeparator)
 	HomeDir, err := os.UserHomeDir() // this routine became available in Go 1.12
 	if err != nil {
-		fmt.Println(err,"Exiting")
+		fmt.Println(err, "Exiting")
 		os.Exit(1)
 	}
 	target := "cdd" + " " + HomeDir + sep
@@ -116,12 +117,13 @@ func main() {
 		os.Exit(0)
 	} else {
 		ch = strings.ToLower(os.Args[1])
-		if strings.HasPrefix(ch, "-") {
-			ch = ch[1:]
-		}
+		//if strings.HasPrefix(ch, "-") { // removed as recommended by static linter
+		//	ch = ch[1:]
+		//}
+		ch = strings.TrimPrefix(ch, "-") // recommended by static linter
 	}
-//	fmt.Println(" os.Args is", os.Args)
-//	fmt.Println()
+	//	fmt.Println(" os.Args is", os.Args)
+	//	fmt.Println()
 
 	switch ch {
 	case "s": // save current directory or entered directory name
@@ -200,11 +202,10 @@ func dirsave() { // implement s (save) command
 	} else if len(os.Args) == 4 { // have potential directory target on command line
 		target := os.Args[3]
 		if strings.ContainsRune(target, ':') {
-			directoryAliasesMap := GetDirectoryAliases()
-			target = ProcessDirectoryAliases(directoryAliasesMap, target)
-		} else if strings.Contains(target, "~") {
-			target = strings.Replace(target, "~", HomeDir, 1)
-		}
+			//directoryAliasesMap := GetDirectoryAliases() not used anyway.
+			target = ProcessDirectoryAliases(target)
+		} //else if strings.Contains(target, "~") {		}  static linter recommended the removal of this conditional.
+		target = strings.Replace(target, "~", HomeDir, 1)
 		// verify that target is a valid directory or symlink name.
 		_, err := os.Lstat(target)
 		if err == nil {
@@ -269,6 +270,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 } // makesubst
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
+
 func GetDirectoryAliases() map[string]string { // Env variable is diraliases.
 
 	s := os.Getenv("diraliases")
@@ -278,7 +280,6 @@ func GetDirectoryAliases() map[string]string { // Env variable is diraliases.
 
 	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, for a space
 	directoryAliasesMap := make(map[string]string, 10)
-	//anAliasMap := make(dirAliasMapType,1)
 
 	dirAliasSlice := strings.Fields(s)
 
@@ -294,13 +295,15 @@ func GetDirectoryAliases() map[string]string { // Env variable is diraliases.
 } // end GetDirectoryAliases
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
-func ProcessDirectoryAliases(aliasesMap map[string]string, cmdline string) string {
 
+//func ProcessDirectoryAliases(aliasesMap map[string]string, cmdline string) string {
+
+func ProcessDirectoryAliases(cmdline string) string {
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = GetDirectoryAliases()
+	aliasesMap := GetDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {
@@ -315,10 +318,10 @@ func ProcessDirectoryAliases(aliasesMap map[string]string, cmdline string) strin
 func dirPrint() {
 	bkmkslice := make([]bkmkslicetype, 0, len(bookmark))
 	for idx, valu := range bookmark {
-		bkmk := bkmkslicetype{idx, valu}  // structured literal syntax
+		bkmk := bkmkslicetype{idx, valu} // structured literal syntax
 		bkmkslice = append(bkmkslice, bkmk)
 	}
-	sortless := func (i,j int) bool {
+	sortless := func(i, j int) bool {
 		return bkmkslice[i].key < bkmkslice[j].key
 	}
 	sort.Slice(bkmkslice, sortless)
