@@ -113,10 +113,10 @@ REVISION HISTORY
 15 Oct 22 -- I noticed that the environment string can't process f, for filterFlag.  Now it can.
                Now I need an option, -F, to undo the filterflag set in an environment var.
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
-21 Nov 22 -- static linter found an issue, I'm going to fix now.
+21 Nov 22 -- static linter found an issue that I'm going to fix.
 */
 
-const LastAltered = "21 Nov 2022"
+const LastAltered = "22 Nov 2022"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -140,7 +140,8 @@ var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
-var directoryAliasesMap dirAliasMapType
+
+//var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
 func main() {
 	var dsrtParam DsrtParamType
@@ -312,10 +313,10 @@ func main() {
 	}
 
 	if verboseFlag {
-		execname, _ := os.Executable()
-		ExecFI, _ := os.Stat(execname)
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
 		if runtime.GOARCH == "amd64" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
@@ -593,29 +594,6 @@ func ProcessEnvironString(envStr string) DsrtParamType { // use system utils whe
 	return dsrtparam
 }
 
-//------------------------------ GetDirectoryAliases ----------------------------------------
-func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
-	s, ok := os.LookupEnv("diraliases")
-	if !ok {
-		return nil
-	}
-
-	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, for a space
-	directoryAliasesMap = make(dirAliasMapType, 10)
-
-	dirAliasSlice := strings.Fields(s)
-
-	for _, aliasPair := range dirAliasSlice {
-		if string(aliasPair[len(aliasPair)-1]) != "\\" {
-			aliasPair = aliasPair + "\\"
-		}
-		aliasPair = MakeSubst(aliasPair, '-', ' ') // substitute a dash,-, for a space
-		splitAlias := strings.Fields(aliasPair)
-		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
-	}
-	return directoryAliasesMap
-}
-
 // --------------------------- MakeSubst -------------------------------------------
 
 func MakeSubst(instr string, r1, r2 rune) string {
@@ -633,14 +611,37 @@ func MakeSubst(instr string, r1, r2 rune) string {
 	return string(inRune)
 } // makesubst
 
+//------------------------------ GetDirectoryAliases ----------------------------------------
+func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+	s, ok := os.LookupEnv("diraliases")
+	if !ok {
+		return nil
+	}
+
+	s = MakeSubst(s, '_', ' ') // substitute the underscore, _, for a space
+	directoryAliasesMap := make(dirAliasMapType, 10)
+
+	dirAliasSlice := strings.Fields(s)
+
+	for _, aliasPair := range dirAliasSlice {
+		if string(aliasPair[len(aliasPair)-1]) != "\\" {
+			aliasPair = aliasPair + "\\"
+		}
+		aliasPair = MakeSubst(aliasPair, '-', ' ') // substitute a dash,-, for a space
+		splitAlias := strings.Fields(aliasPair)
+		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
+	}
+	return directoryAliasesMap
+}
+
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
+func ProcessDirectoryAliases(cmdline string) string {
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = getDirectoryAliases()
+	aliasesMap := getDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {

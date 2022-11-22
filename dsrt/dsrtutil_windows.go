@@ -53,11 +53,10 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
 		if strings.ContainsRune(pattern, ':') {
-			directoryAliasesMap = getDirectoryAliases()
-			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
-		} else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows.
-			pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
-		}
+			//directoryAliasesMap = getDirectoryAliases()  this is redundant, AFAICT
+			pattern = ProcessDirectoryAliases(pattern)
+		} //else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows. }  Advised by static linter to not do this, just call Replace.
+		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
