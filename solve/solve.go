@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-const LastCompiled = "13 Feb 21"
+const LastCompiled = "21 Nov 22"
 const MaxN = 9
 
 //                          MaxRealArray is not square because the B column vector is in last column of IM
@@ -35,7 +35,7 @@ const MaxN = 9
 
 //type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
 
-var verboseFlag = flag.Bool("v", false, "Verbose mode.")
+var verboseFlag = flag.Bool("v", false, "Verbose mode.") // linter says that this is unused.  I'll have to use it, I guess.
 
 func main() {
 	/************************************************************************)
@@ -133,7 +133,7 @@ CountLinesLoop:
 			col := 0
 			var EOL bool
 			var token tokenize.TokenType
-			for (EOL == false) && (n <= MaxN) { // REPEAT
+			for !EOL && (n <= MaxN) { // linter says to not do (EOL == false), but to change it to what's there now.
 				token, EOL = tokenize.GETTKNREAL() // if I use the gopher operator here, then EOL gets shadowed and is not the variable evaluated in the for condition.
 				if EOL {
 					break
@@ -196,10 +196,10 @@ CountLinesLoop:
 
 	// Check that the solution looks right.
 
-	C := mat.NewMatrix(N, 1)
-	D := mat.NewMatrix(N, 1)
-	C = mat.Mul(A, ans) // Mul (ra1, ans, N, N, 1, ra3);
-	D = mat.Sub(B, C)   //  Sub (ra3, ra2, N, 1, ra4);
+	//C := mat.NewMatrix(N, 1)  linter said this value of C is not used
+	//D := mat.NewMatrix(N, 1)  linter said this value of D is not used
+	C := mat.Mul(A, ans) // Mul (ra1, ans, N, N, 1, ra3);
+	D := mat.Sub(B, C)   //  Sub (ra3, ra2, N, 1, ra4);
 
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	ss = mat.Write(D, 5) //    Write (ra4, N, 1, 4);
