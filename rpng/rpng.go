@@ -119,9 +119,10 @@ REVISION HISTORY
 23 Jun 21 -- Cleaning up some code, esp w/ file processing.
  5 May 22 -- Changed hpcalc2 to use OS specific code.
 11 Aug 22 -- I changed the other rpn pgms so that about command will give more info about the exe binary.  This program already does that at startup.
+21 Nov 22 -- static linter objected to err that was not tested in a few places while using file writes.
 */
 
-const lastAlteredDate = "Aug 11, 2022"
+const lastAlteredDate = "Nov 21, 2022"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -404,11 +405,11 @@ func main() {
 	defer DisplayTapeWriter.Flush()
 	today := time.Now()
 	datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
-	_, err = DisplayTapeWriter.WriteString("------------------------------------------------------\n")
-	_, err = DisplayTapeWriter.WriteString(datestring)
-	_, err = DisplayTapeWriter.WriteRune('\n')
+	DisplayTapeWriter.WriteString("------------------------------------------------------\n")
+	DisplayTapeWriter.WriteString(datestring)
+	DisplayTapeWriter.WriteRune('\n')
 	for _, s := range DisplayTape {
-		_, err = DisplayTapeWriter.WriteString(s)
+		DisplayTapeWriter.WriteString(s)
 		_, err = DisplayTapeWriter.WriteRune('\n')
 		check(err)
 	}
@@ -418,6 +419,7 @@ func main() {
 } // main in rpng.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */
+
 func GetRegIdx(chr byte) int {
 	// Return 0..35 with A = 10 and Z = 35
 	ch := tknptr.CAP(chr)

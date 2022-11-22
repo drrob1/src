@@ -56,7 +56,7 @@ import (
 21 Oct 22 -- golangci-lint caught that I have an unneeded Sprintf call.  I removed both of them.  And added to show when the binary was last linked for the ABOUT cmd.
 */
 
-const lastModified = "Oct 21, 2022"
+const lastModified = "Nov 21, 2022"
 
 const ( // output modes
 	outputfix = iota
@@ -221,11 +221,11 @@ func main() {
 	defer DisplayTapeWriter.Flush()
 	today := time.Now()
 	datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
-	_, err = DisplayTapeWriter.WriteString("------------------------------------------------------\n")
-	_, err = DisplayTapeWriter.WriteString(datestring)
-	_, err = DisplayTapeWriter.WriteRune('\n')
+	DisplayTapeWriter.WriteString("------------------------------------------------------\n")
+	DisplayTapeWriter.WriteString(datestring)
+	DisplayTapeWriter.WriteRune('\n')
 	for _, s := range DisplayTape {
-		_, err = DisplayTapeWriter.WriteString(s)
+		DisplayTapeWriter.WriteString(s)
 		_, err = DisplayTapeWriter.WriteRune('\n')
 		check(err)
 	}
@@ -612,7 +612,7 @@ func getNameFromPopup() {
 	popupName.Canvas().SetOnTypedKey(keyTypedPopup)
 	popupName.Resize(fyne.NewSize(500, 200))
 	popupName.Show()
-	return
+	//return  redundant
 } // end getNameFromPopup
 
 // ------------------------------------------------------- check -------------------------------
@@ -707,7 +707,7 @@ func showHelp(extra []string) {
 	//helpRichText := widget.NewRichTextWithText(helpStr)
 	//dialog.ShowCustom("Help", "OK", helpRichText, globalW)
 
-	return
+	//return  redundant
 } // end showHelp
 
 // -------------------------------------------------------- PopulateUI -------------------------------------------
