@@ -113,9 +113,10 @@ Revision History
                I removed the filter flag from this code when I wrote it.
 21 Oct 22 -- Removed unused variable as caught by golangci-lint, and incorrect use of format verb.
 11 Nov 22 -- Will show environment variables on startup message, if they're not blank.
+21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
 */
 
-const LastAltered = "Nov 11, 2022"
+const LastAltered = "Nov 21, 2022"
 
 type dirAliasMapType map[string]string
 
@@ -151,7 +152,7 @@ func main() {
 	var err error
 	var GrandTotalCount, autoHeight, autoWidth int
 	var excludeRegexPattern string
-	var directoryAliasesMap dirAliasMapType
+	//var directoryAliasesMap dirAliasMapType
 	var numOfCols int
 
 	// environment variable processing.  If present, these will be the defaults.
@@ -445,10 +446,10 @@ func main() {
 
 		if winFlag { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
 			if strings.ContainsRune(workingDir, ':') {
-				workingDir = ProcessDirectoryAliases(directoryAliasesMap, workingDir)
-			} else if strings.Contains(workingDir, "~") { // this can only contain a ~ on Windows.
-				workingDir = strings.Replace(workingDir, "~", HomeDirStr, 1)
-			}
+				workingDir = ProcessDirectoryAliases(workingDir)
+			} //else if strings.Contains(workingDir, "~") { // this can only contain a ~ on Windows.			}  // static linter said just use the Replace func.
+
+			workingDir = strings.Replace(workingDir, "~", HomeDirStr, 1)
 		}
 		fi, e := os.Lstat(workingDir)
 		if e != nil || !fi.Mode().IsDir() {
@@ -688,13 +689,15 @@ func MakeSubst(instr string, r1, r2 rune) string {
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
+//func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {  use of aliasesMap here is wrong as this copy of it is not used
+
+func ProcessDirectoryAliases(cmdline string) string {
 
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = getDirectoryAliases()
+	aliasesMap := getDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {
