@@ -46,6 +46,7 @@
    8 Nov 22 -- Fixed error as to when to return SkipDir.  I had it depend on verboseFlag, and that was an obvious error.
   13 Nov 22 -- Adding ability to optionally specify a start directory other than the current one.  Nevermind, it already has this.
   14 Nov 22 -- Adding a usage message.  I never did that before.  And adding processing for '~' which only applies to Windows.
+  21 Nov 22 -- static linter found an error w/ a format verb.  Now fixed.
 */
 package main
 
@@ -67,7 +68,7 @@ import (
 	"time"
 )
 
-const lastAltered = "14 Nov 2022"
+const lastAltered = "21 Nov 2022"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -323,7 +324,7 @@ func main() {
 		deviceID := getDeviceID(info)
 		if startDeviceID != deviceID {
 			if verboseFlag {
-				fmt.Printf(" DeviceID for %s is %d which is different than %d for %d.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath)
+				fmt.Printf(" DeviceID for %s is %d which is different than %d for %s.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath) // fixed a format verb here.
 			}
 			return filepath.SkipDir
 		}
