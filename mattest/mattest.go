@@ -17,7 +17,7 @@ REVISION HISTORY
 24 Dec 2016 -- Seems to work.
 29 Dec 2016 -- Tweaked Write field size values
 13 Feb 2022 -- Converted to modules
-
+21 Nov 2022 -- static linter found issues.  Now addressed.
 */
 
 import (
