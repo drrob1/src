@@ -116,7 +116,7 @@ Revision History
 21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
 */
 
-const LastAltered = "Nov 21, 2022"
+const LastAltered = "Nov 22, 2022"
 
 type dirAliasMapType map[string]string
 
@@ -152,8 +152,8 @@ func main() {
 	var err error
 	var GrandTotalCount, autoHeight, autoWidth int
 	var excludeRegexPattern string
-	//var directoryAliasesMap dirAliasMapType
 	var numOfCols int
+	//var directoryAliasesMap dirAliasMapType
 
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtEnviron := os.Getenv("dsrt")
@@ -344,14 +344,6 @@ func main() {
 	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
-	/*  Doesn't work, I think.
-	NumLines := numOfLines
-	if NLines > 0 {
-		NumLines = NLines
-	}
-	NumLines *= *nscreens
-	*/
-
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
 	} else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
@@ -448,7 +440,6 @@ func main() {
 			if strings.ContainsRune(workingDir, ':') {
 				workingDir = ProcessDirectoryAliases(workingDir)
 			} //else if strings.Contains(workingDir, "~") { // this can only contain a ~ on Windows.			}  // static linter said just use the Replace func.
-
 			workingDir = strings.Replace(workingDir, "~", HomeDirStr, 1)
 		}
 		fi, e := os.Lstat(workingDir)
@@ -503,10 +494,10 @@ func main() {
 	}
 
 	if verboseFlag {
-		execname, _ := os.Executable()
-		ExecFI, _ := os.Stat(execname)
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
+		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
 		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, numOfLines)
 		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
@@ -644,6 +635,24 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 	return dsrtparam
 }
 
+// --------------------------- MakeSubst -------------------------------------------
+
+func MakeSubst(instr string, r1, r2 rune) string {
+
+	inRune := make([]rune, len(instr))
+	if !strings.ContainsRune(instr, r1) {
+		return instr
+	}
+
+	for i, s := range instr {
+		if s == r1 {
+			s = r2
+		}
+		inRune[i] = s // was byte(s) before I made this a slice of runes.
+	}
+	return string(inRune)
+} // makesubst
+
 //------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
@@ -669,30 +678,9 @@ func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 	return directoryAliasesMap
 }
 
-// --------------------------- MakeSubst -------------------------------------------
-
-func MakeSubst(instr string, r1, r2 rune) string {
-
-	inRune := make([]rune, len(instr))
-	if !strings.ContainsRune(instr, r1) {
-		return instr
-	}
-
-	for i, s := range instr {
-		if s == r1 {
-			s = r2
-		}
-		inRune[i] = s // was byte(s) before I made this a slice of runes.
-	}
-	return string(inRune)
-} // makesubst
-
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-//func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {  use of aliasesMap here is wrong as this copy of it is not used
-
 func ProcessDirectoryAliases(cmdline string) string {
-
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
