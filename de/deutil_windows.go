@@ -18,8 +18,8 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 // processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine() FISliceType {
-	var fileInfos FISliceType
+func getFileInfosFromCommandLine() []os.FileInfo {
+	var fileInfos []os.FileInfo
 	//var workingDir string
 	//var er error
 
@@ -32,12 +32,12 @@ func getFileInfosFromCommandLine() FISliceType {
 	HomeDirStr = HomeDirStr + string(filepath.Separator)
 
 	if flag.NArg() == 0 {
-		workingDir, er := os.Getwd()
-		if er != nil {
-			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
-			os.Exit(1)
-		}
-		fileInfos = MyReadDir(workingDir)
+		//workingDir, er := os.Getwd()
+		//if er != nil {
+		//	//fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
+		//	os.Exit(1)
+		//}
+		//fileInfos = MyReadDir(workingDir)
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
@@ -76,12 +76,12 @@ func getFileInfosFromCommandLine() FISliceType {
 			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
 			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfos = MyReadDir(dirName)
+				//fileInfos = MyReadDir(dirName)
 			}
 
 		}
 
-		fileInfos = make(FISliceType, 0, len(filenames))
+		fileInfos = make([]os.FileInfo, 0, len(filenames))
 		for _, f := range filenames {
 			fi, err := os.Lstat(f)
 			if err != nil {
@@ -110,7 +110,7 @@ func getFileInfosFromCommandLine() FISliceType {
 } // end getFileInfosFromCommandLine
 
 //displayFileInfos only as to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
-func displayFileInfos(fiSlice FISliceType) {
+func displayFileInfos(fiSlice []os.FileInfo) {
 	var lnCount int
 	for _, f := range fiSlice {
 		s := f.ModTime().Format("Jan-02-2006_15:04:05")

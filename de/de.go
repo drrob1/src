@@ -108,6 +108,7 @@ Revision History
  1 Feb 22 -- Added veryVerboseFlag, intended for only when I really need it.  And fixed environ var by making it dsrt instead of what it was, ds.
                And optimized includeThis.
                Now called de.go, for direntry.  I will change this to use []DirEntry instead of []FileInfo, to see if that's an improvement.  The Go team is pushing DirEntry.
+23 Nov 22 -- This routine was giving errors, so I decided to just comment out the error producing code.  I'll never use this anyway, as I've moved way past in the other incarnations of this code.
 */
 
 type dirAliasMapType map[string]string
@@ -390,21 +391,21 @@ func main() {
 		sort.Slice(fileInfos, sortfcn)
 	}
 
-	cs := getColorizedStrings(fileInfos)
+	//cs := getColorizedStrings(fileInfos)
 
 	if testFlag {
-		fmt.Printf(" Len(fileinfos)=%d, len(colorizedStrings)=%d, numOfLines=%d\n", len(fileInfos), len(cs), numOfLines)
+		//fmt.Printf(" Len(fileinfos)=%d, len(colorizedStrings)=%d, numOfLines=%d\n", len(fileInfos), len(cs), numOfLines)
 	}
 
 	// Now to output the colorStringSlice, 1 item per line
-	columnWidth := w - 1 // a tolerance factor.
-	for i, css := range cs {
-		s0 := fixedStringLen(css.str, columnWidth)
-		ctfmt.Printf(css.color, winFlag, "%s\n", s0)
-		if i >= numOfLines {
-			break
-		}
-	}
+	//columnWidth := w - 1 // a tolerance factor.
+	//for i, css := range cs {
+	//	s0 := fixedStringLen(css.str, columnWidth)
+	//	ctfmt.Printf(css.color, winFlag, "%s\n", s0)
+	//	if i >= numOfLines {
+	//		break
+	//	}
+	//}
 
 	fmt.Println()
 
