@@ -59,9 +59,10 @@ REVISION HISTORY
 21 Jun 21 -- As the ioutil package is depracated, I'm replacing it with the os package calls.
 22 Jun 21 -- I'm rewriting the file reading code.  I wrote that 5 yrs ago.  It looks painful to me now.
 10 Aug 22 -- "about" will now display info about the executable file.
+29 Nov 22 -- Starting the addition of banner text.  But I leave for Aruba in 2 days so this may take a while.
 */
 
-const LastCompiled = "10 August 2022"
+const LastCompiled = "29 Nov 2022"
 
 var suppressDump map[string]bool
 
@@ -75,8 +76,8 @@ func main() {
 
 	var err error
 
-	execname, _ := os.Executable()
-	ExecFI, _ := os.Stat(execname)
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 
 	suppressDump = make(map[string]bool)
@@ -141,6 +142,8 @@ func main() {
 
 	hpcalc.PushMatrixStacks()
 
+	bannerIsEnabled := true
+	bannerIsColorEnabled := true
 	for len(INBUF) > 0 { // main reading loop
 		R, stringslice = hpcalc.GetResult(INBUF)
 		ans = strconv.FormatFloat(R, 'g', -1, 64)
@@ -157,7 +160,7 @@ func main() {
 
 		if strings.ToLower(INBUF) == "about" {
 			fmt.Println(" Last compiled rpn.go ", LastCompiled)
-			fmt.Printf(" %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execname)
+			fmt.Printf(" %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execName)
 			allowDumpFlag = false
 		}
 
@@ -166,11 +169,14 @@ func main() {
 			allowDumpFlag = false
 		}
 
+		// output stack now, if allowed.
 		if allowDumpFlag {
 			_, stringslice = hpcalc.GetResult("DUMP") // discard result.  Only need stack dump general executed.
 			for _, ss := range stringslice {
 				fmt.Println(ss)
 			}
+			fmt.Println()
+
 		}
 
 		fmt.Println()
@@ -212,3 +218,9 @@ func main() {
 		fmt.Printf(" os.WriteFile failed with error %v \n", err)
 	}
 } // main in rpn.go
+/*
+  I'm trying out using banner text for X.
+  isEnabled := true
+  isColorEnabled := true
+  banner.Init(colorable.NewColorableStdout(), isEnabled, isColorEnabled, bytes.NewBufferString("My Custom Banner"))
+*/
