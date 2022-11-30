@@ -21,7 +21,9 @@ func main() {
 	if er != nil {
 		log.Fatalf(" io.ReadAll(resp.Body) err returned is: %s\n", er)
 	}
-	err = os.WriteFile("api-github-com-drrob1.txt", respBody, 0666)
+	fmt.Printf(" respnse header content-type is: %#v\n", resp.Header.Get("Content-Type"))
+
+	err = os.WriteFile("api_github_com_drrob1.txt", respBody, 0666)
 	if err != nil {
 		fmt.Printf(" Error from os.WriteFile(api-github) is: %s\n", err)
 	}
