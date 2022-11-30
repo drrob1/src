@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/dimiro1/banner"
+	"github.com/mattn/go-colorable"
+
 	//	"io/ioutil"
 	"os"
 	"runtime"
@@ -176,7 +179,13 @@ func main() {
 				fmt.Println(ss)
 			}
 			fmt.Println()
+			r := hpcalc.READX()
+			rslt := strconv.FormatFloat(r, 'f', 4, 64)
 
+			text := "{{" + ".Title \"" + rslt + "\"  \"banner\" 0" + "}}"
+			yellowText := "{{.AnsiColor.Yellow}}" + text + "{{.AnsiColor.Default}}"
+
+			banner.InitString(colorable.NewColorableStdout(), bannerIsEnabled, bannerIsColorEnabled, yellowText)
 		}
 
 		fmt.Println()
