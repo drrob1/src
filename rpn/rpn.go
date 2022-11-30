@@ -65,7 +65,7 @@ REVISION HISTORY
 29 Nov 22 -- Starting the addition of banner text.  But I leave for Aruba in 2 days so this may take a while.
 */
 
-const LastCompiled = "29 Nov 2022"
+const LastCompiled = "30 Nov 2022"
 
 var suppressDump map[string]bool
 
@@ -174,18 +174,20 @@ func main() {
 
 		// output stack now, if allowed.
 		if allowDumpFlag {
-			_, stringslice = hpcalc.GetResult("DUMP") // discard result.  Only need stack dump general executed.
+			R, stringslice = hpcalc.GetResult("DUMP") // used to discard result, as I used to only need stack dump general stringslice.
 			for _, ss := range stringslice {
 				fmt.Println(ss)
 			}
 			fmt.Println()
-			r := hpcalc.READX()
-			rslt := strconv.FormatFloat(r, 'f', 4, 64)
+			rslt := strconv.FormatFloat(R, 'f', 4, 64)
 
 			text := "{{" + ".Title \"" + rslt + "\"  \"banner\" 0" + "}}"
 			yellowText := "{{.AnsiColor.Yellow}}" + text + "{{.AnsiColor.Default}}"
+			text2 := "{{" + ".Title \"" + rslt + "\"  \"\" 0" + "}}"
+			cyanText := "{{.AnsiColor.Cyan}}" + text2 + "{{.AnsiColor.Default}}"
 
 			banner.InitString(colorable.NewColorableStdout(), bannerIsEnabled, bannerIsColorEnabled, yellowText)
+			banner.InitString(colorable.NewColorableStdout(), bannerIsEnabled, bannerIsColorEnabled, cyanText)
 		}
 
 		fmt.Println()
