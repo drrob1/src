@@ -51,12 +51,14 @@ func githubInfo(login string) (string, int, error) {
 
 	var r struct { // now it's an anonymous struct, which is fine since it's not needed anywhere else in this code.
 		Name string
-		//Public_Repos int  this worked, but I want to do it now w/ field tags, just to demonstrate this.
+		//Public_Repos int // this worked, but I want to do it now w/ field tags, just to demonstrate this.  And now I have both, to see of both work at same time.
 		NumOfRepos int `json:"public_repos"`
+		//NumOfRepos int  having both Public_Repos and NumOfRepos didn't work.  NumOfRepos was right but not the other oee.
 	}
 	decod := json.NewDecoder(resp.Body)      // Remember that unused fields in either the json or the Go struct will be ignored without being an error.
 	if err := decod.Decode(&r); err != nil { // since 'r' has to be changed by the decoder, it must take a pointer instead of a value.
 		log.Fatalf(" can't decode, error is %s\n", err)
 	}
+	//fmt.Printf(" in githubinfo: github name = %s, public_repos = %d, NumOfRepos = %d\n", r.Name, r.Public_Repos, r.NumOfRepos)
 	return r.Name, r.NumOfRepos, nil
 }
