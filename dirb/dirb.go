@@ -3,11 +3,13 @@ package main
 
 import (
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -26,34 +28,34 @@ const bookmarkfilename = "bookmarkfile.gob"
   20 Jun 2020 -- If the bookmark is not in the map, treat it as a change directory, cd command.
   20 Jul 2022 -- Adding replacement of ~ with HomeDir.  And now will use os.HomeDir.
   21 Nov 2022 -- static linter found a few issues that I will fix.  It caught a bug in the processing of '~'.
+  10 Dec 2022 -- Will add flag package; for now I'll just define -v flag.  And removed the old code I used to get homeDir using Getenv of either HOME or userprofile.
+                   This will make the binary slightly larger, but I think that'll be fine.
 */
 
-const LastAltered = "Nov 21, 2022"
+const LastAltered = "Dec 10, 2022"
 
 func main() {
 	var bookmark map[string]string
-	//var HomeDir string  removed when use of os.UserHomeDir() added.
+
+	verboseFlag := flag.Bool("v", false, "verbose message and exit.")
+	flag.Parse()
+
+	if *verboseFlag {
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Printf(" %s last compiled %s by %s.  Full binary is %s with timestamp of %s.\n", os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
+		os.Exit(0)
+	}
 	sep := string(os.PathSeparator)
-	HomeDir, err := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Printf(" os.UserHomeDir returned error of: %s.  Exiting...\n", err)
 		os.Exit(1)
 	}
 
-	/*
-		if runtime.GOOS == "linux" {
-			HomeDir = os.Getenv("HOME") + sep
-		} else if runtime.GOOS == "windows" {
-			HomeDir = os.Getenv("userprofile") + sep
-		} else {
-			fmt.Println(" not running on expected platform.  Will exit.  In fact, probably won't even compile.")
-			os.Exit(1)
-		}
-
-	*/
-
-	target := "cdd" + " " + HomeDir
-	fullbookmarkfilename := HomeDir + sep + bookmarkfilename
+	target := "cdd" + " " + homeDir
+	fullBookmarkFilename := homeDir + sep + bookmarkfilename
 
 	if len(os.Args) == 1 { // No destination dir found on cmd line.
 		io.WriteString(os.Stdout, target)
@@ -61,19 +63,19 @@ func main() {
 	}
 
 	// read or init directory bookmark file
-	_, err = os.Stat(fullbookmarkfilename)
+	_, err = os.Stat(fullBookmarkFilename)
 	if err == nil { // need to read in bookmarkfile
-		bookmarkfile, err := os.Open(fullbookmarkfilename)
+		bookmarkFile, err := os.Open(fullBookmarkFilename)
 		if err != nil {
-			log.Fatalln(" cannot open", fullbookmarkfilename, " as input bookmark file, because of", err)
+			log.Fatalln(" cannot open", fullBookmarkFilename, " as input bookmark file, because of", err)
 		}
-		defer bookmarkfile.Close()
-		decoder := gob.NewDecoder(bookmarkfile)
+		defer bookmarkFile.Close()
+		decoder := gob.NewDecoder(bookmarkFile)
 		err = decoder.Decode(&bookmark)
 		if err != nil {
-			log.Fatalln(" cannot decode", fullbookmarkfilename, ", error is", err, ".  Aborting")
+			log.Fatalln(" cannot decode", fullBookmarkFilename, ", error is", err, ".  Aborting")
 		}
-		bookmarkfile.Close()
+		bookmarkFile.Close()
 		/*
 			fmt.Println(" Bookmark's read in, and are:")
 			for idx, valu := range bookmark {
@@ -106,8 +108,8 @@ func main() {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
-		fmt.Println(" bookmark file is", fullbookmarkfilename)
+		fmt.Println(" HomeDir is", homeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
+		fmt.Println(" bookmark file is", fullBookmarkFilename)
 		fmt.Println()
 		for idx, valu := range bookmark {
 			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
@@ -123,7 +125,7 @@ func main() {
 		destination := os.Args[1] + sep
 		destination = filepath.Clean(destination)
 		if strings.HasPrefix(destination, "~") {
-			destination = strings.Replace(destination, "~", HomeDir, 1)
+			destination = strings.Replace(destination, "~", homeDir, 1)
 		}
 		target = "cdd " + destination
 	}

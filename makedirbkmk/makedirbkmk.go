@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -33,21 +34,36 @@ REVISION HISTORY
 10 May 21 -- Wrote dirPrint() so will sort output when other commands display the map, esp the save cmd.
 12 May 21 -- Remove the dash of an option, if I forget and use it anyway.  These are not options, as I'm not using the flag package.
 21 Nov 22 -- I'm here because of static linter.  And there's an issue w/ dirAliasesMap that doesn't need to be a param.
+10 Dec 22 -- I'm adding use of flag package, for now I'll just use -v and -h.
 */
 
-const LastAltered = "Nov 21, 2022"
+const LastAltered = "Dec 10, 2022"
 
-const bookmarkfilename = "bookmarkfile.gob"
+const bookmarkFilename = "bookmarkfile.gob"
 
 var HomeDir string             // global because it is also needed in my dirsave rtn.
 var bookmark map[string]string // used in all routines.
 
-type bkmkslicetype struct {
+type bkmksliceType struct {
 	key, value string
 }
 
 func main() {
-	fmt.Println(" makedirbkmk written in Go, last altered", LastAltered, "and compiled w/", runtime.Version())
+	fmt.Println(" makedirbkmk is a directory bookmark manager written in Go, last altered", LastAltered, "and compiled w/", runtime.Version())
+
+	verboseFlag := flag.Bool("v", false, "verbose message and exit.")
+	helpFlag := flag.Bool("h", false, "help message.")
+	flag.Parse()
+
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+
+	if *verboseFlag {
+		fmt.Printf(" %s last compiled %s by %s.  Full binary is %s with timestamp of %s.\n", os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
+		os.Exit(0)
+	}
+
 	sep := string(os.PathSeparator)
 	HomeDir, err := os.UserHomeDir() // this routine became available in Go 1.12
 	if err != nil {
@@ -55,23 +71,42 @@ func main() {
 		os.Exit(1)
 	}
 	target := "cdd" + " " + HomeDir + sep
-	fullbookmarkfilename := HomeDir + sep + bookmarkfilename
+	fullBookmarkFilename := HomeDir + sep + bookmarkFilename
+
+	help := func() {
+		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ". ")
+		fmt.Println(" Full exec is", execName, ".  Fullbookmark is", fullBookmarkFilename)
+		fmt.Println()
+		fmt.Println(" s -- save current directory or entered directory name")
+		fmt.Println(" a -- about.")
+		fmt.Println(" d -- delete entry given on same line.")
+		fmt.Println(" p, sl -- print out bookmark list.")
+		fmt.Println(" h -- help.")
+		fmt.Println()
+		flag.PrintDefaults()
+		fmt.Println()
+		fmt.Println()
+	}
+	if *helpFlag {
+		help()
+		os.Exit(0)
+	}
 
 	// read or init directory bookmark file
-	_, err = os.Stat(fullbookmarkfilename)
+	_, err = os.Stat(fullBookmarkFilename)
 	if err == nil { // need to read in bookmarkfile
-		bookmarkfile, err := os.Open(fullbookmarkfilename)
+		bookmarkfile, err := os.Open(fullBookmarkFilename)
 		if err != nil {
-			log.Fatalln(" cannot open", fullbookmarkfilename, " as input bookmark file, because of", err)
+			log.Fatalln(" cannot open", fullBookmarkFilename, " as input bookmark file, because of", err)
 		}
 		defer bookmarkfile.Close()
 		decoder := gob.NewDecoder(bookmarkfile)
 		err = decoder.Decode(&bookmark)
 		if err != nil {
-			log.Fatalln(" cannot decode", fullbookmarkfilename, ", error is", err, ".  Aborting")
+			log.Fatalln(" cannot decode", fullBookmarkFilename, ", error is", err, ".  Aborting")
 		}
 		bookmarkfile.Close()
-		fmt.Println(" Bookmarks read in from", fullbookmarkfilename)
+		fmt.Println(" Bookmarks read in from", fullBookmarkFilename)
 		fmt.Println()
 
 	} else { // need to init bookmarkfile
@@ -90,23 +125,6 @@ func main() {
 		bookmark["bin"] = target + "go" + sep + "bin"
 
 		fmt.Println("Bookmark's initialized.")
-		fmt.Println()
-	}
-
-	execname, _ := os.Executable()
-	ExecFI, _ := os.Stat(execname)
-	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	help := func() {
-		fmt.Println(" makedirbkmk, a Directory Bookmark program written in Go.  Last altered", LastAltered)
-		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ". ")
-		fmt.Println(" Full exec is", execname, ".  Fullbookmark is", fullbookmarkfilename)
-		fmt.Println()
-		fmt.Println(" s -- save current directory or entered directory name")
-		fmt.Println(" a -- about.")
-		fmt.Println(" d -- delete entry given on same line.")
-		fmt.Println(" p, sl -- print out bookmark list.")
-		fmt.Println(" h -- help.")
-		fmt.Println()
 		fmt.Println()
 	}
 
@@ -136,6 +154,7 @@ func main() {
 
 	case "a": // about.
 		help()
+		os.Exit(0)
 
 	case "d": // delete entry given on same line
 		direntrydel()
@@ -144,28 +163,30 @@ func main() {
 		dirPrint()
 		fmt.Println()
 		fmt.Println()
+		os.Exit(0)
 
 	case "h": // help
 		help()
+		os.Exit(0)
 
 	default:
 		fmt.Println(" command not recognized.", ch, "was entered.")
 		os.Exit(0)
 	}
 
-	// write out bookmarkfile
-	bookmarkfile, er := os.Create(fullbookmarkfilename)
+	// write out bookmarkFile
+	bookmarkFile, er := os.Create(fullBookmarkFilename)
 	if er != nil {
 		log.Fatalln(" could not create bookmarkfile upon exiting, because", er)
 	}
-	defer bookmarkfile.Close()
+	defer bookmarkFile.Close()
 
-	encoder := gob.NewEncoder(bookmarkfile)
+	encoder := gob.NewEncoder(bookmarkFile)
 	e := encoder.Encode(&bookmark)
 	if e != nil {
 		log.Println(" could not encode bookmarkfile upon exiting, because", e)
 	}
-	bookmarkfile.Close()
+	bookmarkFile.Close()
 } // end main
 
 // ------------------------------------------ dirsave -----------------------------------------------
@@ -316,9 +337,9 @@ func ProcessDirectoryAliases(cmdline string) string {
 } // ProcessDirectoryAliases
 
 func dirPrint() {
-	bkmkslice := make([]bkmkslicetype, 0, len(bookmark))
+	bkmkslice := make([]bkmksliceType, 0, len(bookmark))
 	for idx, valu := range bookmark {
-		bkmk := bkmkslicetype{idx, valu} // structured literal syntax
+		bkmk := bkmksliceType{idx, valu} // structured literal syntax
 		bkmkslice = append(bkmkslice, bkmk)
 	}
 	sortless := func(i, j int) bool {
