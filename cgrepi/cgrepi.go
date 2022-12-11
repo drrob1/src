@@ -35,6 +35,7 @@
    5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
    7 Oct 22 -- Added color to output.
   20 Nov 22 -- static linter found an issue, so I commented it out.
+  11 Dec 22 -- From the Go course I bought from ArdanLabs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.  So I'll include this limit in the code now.
 */
 package main
 
@@ -56,11 +57,12 @@ import (
 	"time"
 )
 
-const LastAltered = "20 Nov 2022"
+const LastAltered = "11 Dec 2022"
 const maxSecondsToTimeout = 300
 
 const workerPoolMultiplier = 20
-const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+const limitWorkerPool = 750 // Since linux limit is 1024, I'll leave room for other programs.
+const null = 0              // null rune to be used for strings.ContainsRune in GrepFile below.
 
 var workers = runtime.NumCPU() * workerPoolMultiplier
 
@@ -101,11 +103,14 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 
+	if workers > limitWorkerPool {
+		workers = limitWorkerPool
+	}
+
 	// flag definitions and processing
 	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
 	verboseFlag := flag.Bool("v", false, "Verbose flag")
 	var timeoutOpt = flag.Int64("timeout", maxSecondsToTimeout, "seconds (0 means no timeout)")
-	//maxFiles := flag.Int64("max", 1000, "Maximum files to process.  Looking for why I'm getting a deadlock error.")
 	flag.Parse()
 
 	if *timeoutOpt < 1 || *timeoutOpt > maxSecondsToTimeout {
@@ -190,7 +195,7 @@ func main() {
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, len(files)) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, len(files))             // this uses an anonymous type.
-	go func() {                                                // start the receiving operation before the sending starts
+	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
