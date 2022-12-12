@@ -8,9 +8,12 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"hash"
 	"io"
 	"os"
+	"time"
 
 	"runtime"
 	"src/filepicker"
@@ -56,9 +59,10 @@ import (
                  I would need to pass in the hash and filename for each, and let the matchOrNoMatch function determine which hash is in play.
                  And the result channel could be a bool for match or not matched, the filename and hash function used.
                  I guess I need to for range on the input channel which takes a hashType.
+                 I'll first debug without multitasking code
 */
 
-const LastCompiled = "11 Dec 2022"
+const LastCompiled = "12 Dec 2022"
 
 const (
 	undetermined = iota
@@ -70,24 +74,28 @@ const (
 )
 
 type hashType struct {
-	fname   string
-	hashval string
+	fName     string
+	hashValIn string
 }
 
 type resultMatchType struct {
-	fname string
-	match bool
+	fname   string
+	hashNum int
+	match   bool
 }
 
-func matchOrNoMatch(hashStrIn, fName string) (string, int, bool, error) { // returning filename, hash number, matched, error
+func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error
 
-	TargetFile, err := os.Open(fName)
+	TargetFile, err := os.Open(hashIn.fName)
 	defer TargetFile.Close()
 	if err != nil {
-		return fName, 0, false, err
+		result := resultMatchType{
+			fname: hashIn.fName,
+		}
+		return result, err
 	}
 
-	hashLength := len(hashStrIn)
+	hashLength := len(hashIn.hashValIn)
 	var hashFunc hash.Hash
 	var hashInt int
 
@@ -107,42 +115,59 @@ func matchOrNoMatch(hashStrIn, fName string) (string, int, bool, error) { // ret
 		hashInt = md5hash
 		hashFunc = md5.New()
 	} else {
-		return fName, 0, false, fmt.Errorf("indeterminate hash type")
+		result := resultMatchType{
+			fname: hashIn.fName,
+		}
+		return result, fmt.Errorf("indeterminate hash type")
 	}
 
 	_, er := io.Copy(hashFunc, TargetFile)
 	if er != nil {
-		return fName, hashInt, false, er
+		result := resultMatchType{
+			fname: hashIn.fName,
+		}
+		return result, er
 	}
 
 	computedHashValStr := hex.EncodeToString(hashFunc.Sum(nil))
 
-	if strings.EqualFold(computedHashValStr, hashStrIn) { // golangci-lint found this optimization.
-		return fName, hashInt, true, nil
+	if strings.EqualFold(computedHashValStr, hashIn.hashValIn) { // golangci-lint found this optimization.
+		result := resultMatchType{
+			fname:   hashIn.fName,
+			hashNum: hashInt,
+			match:   true,
+		}
+		return result, nil
 	} else {
-		return fName, hashInt, false, nil
+		result := resultMatchType{
+			fname:   hashIn.fName,
+			hashNum: hashInt,
+			match:   false,
+		}
+		return result, nil
 	}
 }
+
+var hashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "sha512"}
 
 // --------------------------------------- MAIN ----------------------------------------------------
 func main() {
 
-	var HashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "sha512"}
 	var ans, Filename string
-	var WhichHash int
-	var TargetFilename, HashValueReadFromFile, HashValueComputedStr string
-	var hasher hash.Hash
-	var FileSize int64
-	var aHash hashType
+	//var WhichHash int
+	//var TargetFilename, HashValueReadFromFile, HashValueComputedStr string
+	var TargetFilename, HashValueReadFromFile string
+	//var hasher hash.Hash
+	//var FileSize int64
+	var h hashType
 	var resultMatch resultMatchType
 
-	fmt.Print(" sha.go.  GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-	fmt.Println(".  Last altered", LastCompiled, ", compiled using", runtime.Version())
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Printf("%s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n", ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
+	fmt.Printf(" multisha.go, last altered %s, compiled with %s, and timestamp is %s\n", LastCompiled, runtime.Version(), LastLinkedTimeStamp)
+	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
 
 	// filepicker stuff.
@@ -181,9 +206,7 @@ func main() {
 
 	fmt.Println()
 
-	// Now ignores extension, always going by hash length.
-
-	// Read and parse the file with the hashes.
+	// Read and parse the file listing the hashes.
 
 	fileByteSlice, err := os.ReadFile(Filename)
 	if err != nil {
@@ -192,9 +215,11 @@ func main() {
 	}
 	bytesBuffer := bytes.NewBuffer(fileByteSlice)
 
+	onWin := runtime.GOOS == "windows"
+	t0 := time.Now()
 	for { // to read multiple lines
-		FileSize = 0
-		WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
+		//FileSize = 0
+		//WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
 
 		inputLine, er := bytesBuffer.ReadString('\n')
 		inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.
@@ -216,7 +241,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
-		hashlength := 0
+		//hashlength := 0
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
 			strings.ContainsRune(FirstToken.Str, '_') { // have filename first on line
@@ -227,11 +252,11 @@ func main() {
 				continue
 			}
 			HashValueReadFromFile = SecondToken.Str
-			hashlength = len(SecondToken.Str)
+			//hashlength = len(SecondToken.Str)
 
 		} else { // have hash first on line
 			HashValueReadFromFile = FirstToken.Str
-			hashlength = len(FirstToken.Str)
+			//hashlength = len(FirstToken.Str)
 			SecondToken, EOL := tokenPtr.GetTokenString(false) // Get name of file on which to compute the hash
 			if EOL {
 				fmt.Fprintln(os.Stderr, " EOL while gatting TargetFilename token in the hashing file.  Skipping")
@@ -248,67 +273,27 @@ func main() {
 			TargetFilename = SecondToken.Str
 		} // endif have filename first or hash value first
 
-		// now to compute the hash, compare them, and output results
-
 		// Create Hash Section
-		TargetFile, err := os.Open(TargetFilename)
+		h = hashType{
+			fName:     TargetFilename,
+			hashValIn: HashValueReadFromFile,
+		}
+
+		resultMatch, err = matchOrNoMatch(h)
 		if os.IsNotExist(err) {
 			fmt.Fprintln(os.Stderr, TargetFilename, " does not exist.  Skipping.")
 			continue
 		} else { // we know that the file exists
-			check(err, " Error opening TargetFilename.")
+			msg := fmt.Sprintf("error opening %s", TargetFilename)
+			check(err, msg)
 		}
 
-		//defer TargetFile.Close()  I'm getting a warning about a resource leak w/ a defer inside a loop.  So I'm removing it.  I don't need it anyway.
-
-		if WhichHash == undetermined {
-			if hashlength == 2*sha256.Size { // 64, and the Size constant is number of bytes, not number of digits.
-				WhichHash = sha256hash
-				hasher = sha256.New()
-			} else if hashlength == 2*sha512.Size { // 128
-				WhichHash = sha512hash
-				hasher = sha512.New()
-			} else if hashlength == 2*sha1.Size { // 40
-				WhichHash = sha1hash
-				hasher = sha1.New()
-			} else if hashlength == 2*sha512.Size384 { // 96
-				WhichHash = sha384hash
-				hasher = sha512.New384()
-			} else if hashlength == 2*md5.Size { // 32
-				WhichHash = md5hash
-				hasher = md5.New()
-			} else {
-				fmt.Fprintln(os.Stderr, " Could not determine hash type for file.  Skipping.")
-				continue
-			}
-			fmt.Println(" hash determined by length to be", HashName[WhichHash])
-			fmt.Println()
-		}
-
-		FileSize, err = io.Copy(hasher, TargetFile)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err, "Skipped.")
-			continue
-		}
-		HashValueComputedStr = hex.EncodeToString(hasher.Sum(nil))
-
-		// I got the idea to use the different base64 versions and my own hex converter code, just to see.
-		// And I can also use Sfprintf with the %x verb.  base64 versions are not useful as they use a larger
-		// character set than hex.  I deleted all references to the base64 versions.  And the hex encoded and
-		// Sprintf using %x were the same, so I removed the sprintf code.
-		//    HashValueComputedSprintf := fmt.Sprintf("%x",hasher.Sum(nil));
-
-		fmt.Printf(" Filename  = %s, filesize = %d, using hash %s.\n", TargetFilename, FileSize, HashName[WhichHash])
-		fmt.Println("       Read From File:", HashValueReadFromFile)
-		fmt.Println(" Computed hex encoded:", HashValueComputedStr)
-
-		//if strings.ToLower(HashValueReadFromFile) == strings.ToLower(HashValueComputedStr) {
-		if strings.EqualFold(HashValueReadFromFile, HashValueComputedStr) { // golangci-lint found this optimization.
-			fmt.Print(" Matched.")
+		if resultMatch.match {
+			ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
 		} else {
-			fmt.Print(" Not matched.")
-		}                  /* if hashes */
-		TargetFile.Close() // Close the handle to allow opening a target from the next line, if there is one.
+			ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
+		}
+		ctfmt.Printf(ct.Yellow, onWin, " Elapsed time was %s.\n", time.Since(t0))
 		fmt.Println()
 		fmt.Println()
 	} // outer LOOP to read multiple lines
@@ -317,8 +302,7 @@ func main() {
 // ------------------------------------------------------- check -------------------------------
 func check(e error, msg string) {
 	if e != nil {
-		fmt.Println(msg)
-		panic(e)
+		fmt.Fprintln(os.Stderr, msg)
 	}
 }
 
