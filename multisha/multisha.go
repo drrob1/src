@@ -74,7 +74,7 @@ const (
 	sha512hash
 )
 
-const numOfWorkers = 10
+const numOfWorkers = 50
 
 type hashType struct {
 	fName     string
@@ -95,9 +95,9 @@ var wg sync.WaitGroup
 //func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 
+	defer wg.Done()
 	TargetFile, err := os.Open(hashIn.fName)
 	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.
-	defer wg.Done()
 
 	if err != nil {
 		result := resultMatchType{
@@ -174,6 +174,7 @@ func main() {
 	var ans, Filename string
 	var TargetFilename, HashValueReadFromFile string
 	var h hashType
+	var counter int
 	//var resultMatch resultMatchType
 
 	workingDir, _ := os.Getwd()
@@ -201,7 +202,7 @@ func main() {
 		for result := range resultChan {
 			if result.err != nil {
 				fmt.Fprintf(os.Stderr, " Error from matchOrNoMatch is %s\n", result.err)
-				return
+				continue // return was bad here.  Now it's working.
 			}
 			if result.match {
 				ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", result.fname, hashName[result.hashNum])
@@ -318,11 +319,13 @@ func main() {
 			hashValIn: HashValueReadFromFile,
 		}
 		wg.Add(1)
+		counter++
 		hashChan <- h
 	}
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
+	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines and counter is %d.\n\n", runtime.NumGoroutine(), counter) // counter = 24 is correct.
 
 	wg.Wait()
 	close(resultChan) // all work is done, so I can close the resultChan.
