@@ -129,15 +129,6 @@ func main() {
 
 	// Read and parse the file with the hashes.
 
-	//filebyteslice := make([]byte, 0, 2000)
-	//filebyteslice, err = ioutil.ReadAll(f)
-
-	//f, err := os.Open(Filename)
-	//if err != nil {
-	//	fmt.Fprintln(os.Stderr, err)
-	//	os.Exit(1)
-	//}
-
 	filebyteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -193,7 +184,7 @@ func main() {
 				continue
 			}
 
-			if strings.ContainsRune(SecondToken.Str, '*') { // If it contains a *, it will be the first position.
+			if strings.HasPrefix(SecondToken.Str, "*") { // If it contains a *, it will be the first position.
 				SecondToken.Str = SecondToken.Str[1:]
 				if strings.ContainsRune(SecondToken.Str, '*') { // this should not happen
 					fmt.Println(" Filename token still contains a * character.  Str:", SecondToken.Str, "  Skipping.")

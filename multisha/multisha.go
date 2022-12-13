@@ -61,9 +61,12 @@ import (
                  And the result channel could be a bool for match or not matched, the filename and hash function used.
                  I guess I need to for range on the input channel which takes a hashType.
                  I'll first debug without multitasking code
+  13 Dec 22 -- On the testing.sha, sequential routine (sha) took 12.3963 sec, and this rtn took 6.0804 sec, ratio is 2.04.  So the concurrent code is 2X faster than non-concurrent.
+                 The first wait group, wg2 below, still had results print after wg2.Wait().  I'll leave it in as the result is interesting to me.
+                 I had to add another wait group that gets decremented after a result is printed.  That one, called wg1 below, does what I need.
 */
 
-const LastCompiled = "12 Dec 2022"
+const LastCompiled = "13 Dec 2022"
 
 const (
 	undetermined = iota
@@ -74,7 +77,7 @@ const (
 	sha512hash
 )
 
-const numOfWorkers = 50
+const numOfWorkers = 25
 
 type hashType struct {
 	fName     string
@@ -90,14 +93,14 @@ type resultMatchType struct {
 
 var hashChan chan hashType
 var resultChan chan resultMatchType
-var wg sync.WaitGroup
+var wg1, wg2 sync.WaitGroup
 
-//func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error
+//func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error.  This was it's testing signature that was sequential, before adding the concurrent code.
+
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
-
-	defer wg.Done()
 	TargetFile, err := os.Open(hashIn.fName)
 	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.
+	defer wg2.Done()
 
 	if err != nil {
 		result := resultMatchType{
@@ -170,12 +173,10 @@ var hashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "s
 
 // --------------------------------------- MAIN ----------------------------------------------------
 func main() {
-
 	var ans, Filename string
 	var TargetFilename, HashValueReadFromFile string
 	var h hashType
 	var counter int
-	//var resultMatch resultMatchType
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -185,7 +186,7 @@ func main() {
 	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
 
-	// starting the receiving worker go routines before the result goroutine.
+	// starting the worker go routines before the result goroutine.  This is a fan out pattern.
 	hashChan = make(chan hashType, numOfWorkers)
 	resultChan = make(chan resultMatchType, numOfWorkers)
 	for w := 0; w < numOfWorkers; w++ {
@@ -196,12 +197,13 @@ func main() {
 		}()
 	}
 
-	// Start the results go routines.
+	// Start the results go routine.  There is only 1 of these.
 	go func() {
 		onWin := runtime.GOOS == "windows"
 		for result := range resultChan {
 			if result.err != nil {
 				fmt.Fprintf(os.Stderr, " Error from matchOrNoMatch is %s\n", result.err)
+				wg1.Done()
 				continue // return was bad here.  Now it's working.
 			}
 			if result.match {
@@ -209,6 +211,7 @@ func main() {
 			} else {
 				ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
 			}
+			wg1.Done()
 		}
 	}()
 
@@ -318,7 +321,8 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
-		wg.Add(1)
+		wg1.Add(1)
+		wg2.Add(1)
 		counter++
 		hashChan <- h
 	}
@@ -327,36 +331,13 @@ func main() {
 	close(hashChan)
 	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines and counter is %d.\n\n", runtime.NumGoroutine(), counter) // counter = 24 is correct.
 
-	wg.Wait()
+	wg2.Wait() // wg2.Done() is called in matchOrNoMatch.
+	fmt.Printf(" After wg2.Wait.\n")
+	wg1.Wait()        // wg1.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg1.Done().
 	close(resultChan) // all work is done, so I can close the resultChan.
 
-	//resultMatch, err = matchOrNoMatch(h)  Don't call the routine now.
-	//	if os.IsNotExist(err) {
-	//		fmt.Fprintln(os.Stderr, TargetFilename, " does not exist.  Skipping.")
-	//		continue
-	//	} else if err != nil { // we know that the file exists
-	//		msg := fmt.Sprintf("error opening %s", TargetFilename)
-	//		check(err, msg)
-	//		continue
-	//	}
-	//
-	//	if resultMatch.match {
-	//		ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
-	//	} else {
-	//		ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
-	//	}
-	//	fmt.Println()
-	//	fmt.Println()
-	//} // outer LOOP to read multiple lines
 	ctfmt.Printf(ct.Yellow, onWin, " Elapsed time for everything was %s.\n\n\n", time.Since(t0))
 } // Main for sha.go.
-
-// ------------------------------------------------------- check -------------------------------
-func check(e error, msg string) {
-	if e != nil {
-		fmt.Fprintln(os.Stderr, msg)
-	}
-}
 
 // ------------------------------------------------------- min ---------------------------------
 func min(a, b int) int {
@@ -366,3 +347,12 @@ func min(a, b int) int {
 		return b
 	}
 }
+
+// ------------------------------------------------------- check -------------------------------
+/*
+func check(e error, msg string) {
+	if e != nil {
+		fmt.Fprintln(os.Stderr, msg)
+	}
+}
+*/
