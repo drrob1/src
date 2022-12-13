@@ -11,6 +11,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"time"
 
 	"runtime"
 	"src/filepicker"
@@ -51,9 +52,10 @@ import (
    9 Mar 22 -- Using package constants instead of my magic numbers.
   13 Jun 22 -- Cleaning up some comments, from Boston's SIR 2022.  And removed unused code.  And finally removed depracated ioutil.
   21 Oct 22 -- Now using strings.EqualFold as recommended by golangci-lint.
+  12 Dec 22 -- Added a timer
 */
 
-const LastCompiled = "21 Oct 2022"
+const LastCompiled = "12 Dec 2022"
 
 // --------------------------------------- MAIN ----------------------------------------------------
 func main() {
@@ -142,6 +144,8 @@ func main() {
 		os.Exit(1)
 	}
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
+
+	t0 := time.Now()
 
 	for { // to read multiple lines
 		FileSize = 0
@@ -268,11 +272,12 @@ func main() {
 			fmt.Print(" Matched.")
 		} else {
 			fmt.Print(" Not matched.")
-		} /* if hashes */
+		}                  /* if hashes */
 		TargetFile.Close() // Close the handle to allow opening a target from the next line, if there is one.
 		fmt.Println()
 		fmt.Println()
 	} // outer LOOP to read multiple lines
+	fmt.Printf(" Elapsed time for everything is %s.\n\n\n", time.Since(t0))
 } // Main for sha.go.
 
 // ------------------------------------------------------- check -------------------------------

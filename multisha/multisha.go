@@ -13,6 +13,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"runtime"
@@ -73,6 +74,8 @@ const (
 	sha512hash
 )
 
+const numOfWorkers = 10
+
 type hashType struct {
 	fName     string
 	hashValIn string
@@ -82,17 +85,27 @@ type resultMatchType struct {
 	fname   string
 	hashNum int
 	match   bool
+	err     error
 }
 
-func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error
+var hashChan chan hashType
+var resultChan chan resultMatchType
+var wg sync.WaitGroup
+
+//func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error
+func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 
 	TargetFile, err := os.Open(hashIn.fName)
-	defer TargetFile.Close()
+	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.
+	defer wg.Done()
+
 	if err != nil {
 		result := resultMatchType{
 			fname: hashIn.fName,
+			err:   err,
 		}
-		return result, err
+		resultChan <- result
+		return
 	}
 
 	hashLength := len(hashIn.hashValIn)
@@ -117,16 +130,20 @@ func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning fil
 	} else {
 		result := resultMatchType{
 			fname: hashIn.fName,
+			err:   fmt.Errorf("indeterminate hash type"),
 		}
-		return result, fmt.Errorf("indeterminate hash type")
+		resultChan <- result
+		return
 	}
 
 	_, er := io.Copy(hashFunc, TargetFile)
 	if er != nil {
 		result := resultMatchType{
 			fname: hashIn.fName,
+			err:   er,
 		}
-		return result, er
+		resultChan <- result
+		return
 	}
 
 	computedHashValStr := hex.EncodeToString(hashFunc.Sum(nil))
@@ -137,16 +154,17 @@ func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning fil
 			hashNum: hashInt,
 			match:   true,
 		}
-		return result, nil
+		resultChan <- result
 	} else {
 		result := resultMatchType{
 			fname:   hashIn.fName,
 			hashNum: hashInt,
 			match:   false,
 		}
-		return result, nil
+		resultChan <- result
 	}
-}
+	// don't need a return statement, as I'm going to allow it to go out the bottom.
+} // end matchOrNoMatch
 
 var hashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "sha512"}
 
@@ -154,13 +172,9 @@ var hashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "s
 func main() {
 
 	var ans, Filename string
-	//var WhichHash int
-	//var TargetFilename, HashValueReadFromFile, HashValueComputedStr string
 	var TargetFilename, HashValueReadFromFile string
-	//var hasher hash.Hash
-	//var FileSize int64
 	var h hashType
-	var resultMatch resultMatchType
+	//var resultMatch resultMatchType
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -169,6 +183,33 @@ func main() {
 	fmt.Printf(" multisha.go, last altered %s, compiled with %s, and timestamp is %s\n", LastCompiled, runtime.Version(), LastLinkedTimeStamp)
 	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
+
+	// starting the receiving worker go routines before the result goroutine.
+	hashChan = make(chan hashType, numOfWorkers)
+	resultChan = make(chan resultMatchType, numOfWorkers)
+	for w := 0; w < numOfWorkers; w++ {
+		go func() {
+			for h := range hashChan {
+				matchOrNoMatch(h)
+			}
+		}()
+	}
+
+	// Start the results go routines.
+	go func() {
+		onWin := runtime.GOOS == "windows"
+		for result := range resultChan {
+			if result.err != nil {
+				fmt.Fprintf(os.Stderr, " Error from matchOrNoMatch is %s\n", result.err)
+				return
+			}
+			if result.match {
+				ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", result.fname, hashName[result.hashNum])
+			} else {
+				ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
+			}
+		}
+	}()
 
 	// filepicker stuff.
 
@@ -182,15 +223,15 @@ func main() {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice : ")
-		n, err := fmt.Scanln(&ans)
-		if n == 0 || err != nil {
+		n, er := fmt.Scanln(&ans)
+		if n == 0 || er != nil {
 			ans = "0"
 		} else if ans == "999" {
 			fmt.Println(" Stop code entered.  Exiting.")
 			os.Exit(0)
 		}
-		i, er := strconv.Atoi(ans)
-		if er == nil {
+		i, e := strconv.Atoi(ans)
+		if e == nil {
 			Filename = filenames[i]
 		} else {
 			s := strings.ToUpper(ans)
@@ -215,24 +256,23 @@ func main() {
 	}
 	bytesBuffer := bytes.NewBuffer(fileByteSlice)
 
-	onWin := runtime.GOOS == "windows"
+	onWin := runtime.GOOS == "windows" // for color output
 	t0 := time.Now()
-	for { // to read multiple lines
-		//FileSize = 0
-		//WhichHash = undetermined // reset it for this next line, allowing multiple types of hashes in same file.
 
+	for { // to read multiple lines
 		inputLine, er := bytesBuffer.ReadString('\n')
 		inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.
-		if er == io.EOF && len(inputLine) == 0 { // reached EOF condition, there are no more lines to read, and no line
+		//fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
+		if er == io.EOF { // reached EOF condition, there are no more lines to read, and no line
 			break
-		} else if len(inputLine) == 0 && err != nil {
-			fmt.Fprintln(os.Stderr, "While reading from the HashesFile:", err)
-			os.Exit(1)
-		}
-
-		if strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") || (len(inputLine) <= 10) {
+		} else if len(inputLine) == 0 {
 			continue
-		} // allow comments and essentially blank lines
+		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
+			continue
+		} else if er != nil {
+			fmt.Fprintln(os.Stderr, "While reading from the HashesFile:", err)
+			continue
+		}
 
 		tokenPtr := tknptr.NewToken(inputLine)
 		tokenPtr.SetMapDelim('*')
@@ -241,7 +281,6 @@ func main() {
 			fmt.Fprintln(os.Stderr, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
-		//hashlength := 0
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
 			strings.ContainsRune(FirstToken.Str, '_') { // have filename first on line
@@ -278,25 +317,35 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
+		wg.Add(1)
+		hashChan <- h
+	}
 
-		resultMatch, err = matchOrNoMatch(h)
-		if os.IsNotExist(err) {
-			fmt.Fprintln(os.Stderr, TargetFilename, " does not exist.  Skipping.")
-			continue
-		} else { // we know that the file exists
-			msg := fmt.Sprintf("error opening %s", TargetFilename)
-			check(err, msg)
-		}
+	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
+	close(hashChan)
 
-		if resultMatch.match {
-			ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
-		} else {
-			ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
-		}
-		ctfmt.Printf(ct.Yellow, onWin, " Elapsed time was %s.\n", time.Since(t0))
-		fmt.Println()
-		fmt.Println()
-	} // outer LOOP to read multiple lines
+	wg.Wait()
+	close(resultChan) // all work is done, so I can close the resultChan.
+
+	//resultMatch, err = matchOrNoMatch(h)  Don't call the routine now.
+	//	if os.IsNotExist(err) {
+	//		fmt.Fprintln(os.Stderr, TargetFilename, " does not exist.  Skipping.")
+	//		continue
+	//	} else if err != nil { // we know that the file exists
+	//		msg := fmt.Sprintf("error opening %s", TargetFilename)
+	//		check(err, msg)
+	//		continue
+	//	}
+	//
+	//	if resultMatch.match {
+	//		ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
+	//	} else {
+	//		ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", resultMatch.fname, hashName[resultMatch.hashNum])
+	//	}
+	//	fmt.Println()
+	//	fmt.Println()
+	//} // outer LOOP to read multiple lines
+	ctfmt.Printf(ct.Yellow, onWin, " Elapsed time for everything was %s.\n\n\n", time.Since(t0))
 } // Main for sha.go.
 
 // ------------------------------------------------------- check -------------------------------
