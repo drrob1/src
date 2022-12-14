@@ -62,8 +62,8 @@ import (
                  I guess I need to for range on the input channel which takes a hashType.
                  I'll first debug without multitasking code
   13 Dec 22 -- On the testing.sha, sequential routine (sha) took 12.3963 sec, and this rtn took 6.0804 sec, ratio is 2.04.  So the concurrent code is 2X faster than non-concurrent.
-                 The first wait group, wg2 below, still had results print after wg2.Wait().  I'll leave it in as the result is interesting to me.
-                 I had to add another wait group that gets decremented after a result is printed.  That one, called wg1 below, does what I need.
+                 The first wait group, wg1 below, still had results print after wg1.Wait().  I'll leave it in as the result is interesting to me.
+                 I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
 */
 
 const LastCompiled = "13 Dec 2022"
@@ -100,7 +100,7 @@ var wg1, wg2 sync.WaitGroup
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 	TargetFile, err := os.Open(hashIn.fName)
 	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.
-	defer wg2.Done()
+	defer wg1.Done()
 
 	if err != nil {
 		result := resultMatchType{
@@ -202,16 +202,16 @@ func main() {
 		onWin := runtime.GOOS == "windows"
 		for result := range resultChan {
 			if result.err != nil {
-				fmt.Fprintf(os.Stderr, " Error from matchOrNoMatch is %s\n", result.err)
-				wg1.Done()
-				continue // return was bad here.  Now it's working.
+				ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", result.err)
+				wg2.Done()
+				continue // Using return was bad here; it's working using continue.
 			}
 			if result.match {
 				ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", result.fname, hashName[result.hashNum])
 			} else {
 				ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
 			}
-			wg1.Done()
+			wg2.Done()
 		}
 	}()
 
@@ -220,7 +220,7 @@ func main() {
 	if len(os.Args) <= 1 {
 		filenames, err := filepicker.GetFilenames("*.sha*")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from filepicker is %v.  Exiting \n", err)
+			ctfmt.Printf(ct.Red, false, " Error from filepicker is %v.  Exiting \n", err)
 			os.Exit(1)
 		}
 		for i := 0; i < min(len(filenames), 26); i++ {
@@ -255,7 +255,7 @@ func main() {
 
 	fileByteSlice, err := os.ReadFile(Filename)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		ctfmt.Println(ct.Red, false, os.Stderr, err)
 		os.Exit(1)
 	}
 	bytesBuffer := bytes.NewBuffer(fileByteSlice)
@@ -274,7 +274,7 @@ func main() {
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
 		} else if er != nil {
-			fmt.Fprintln(os.Stderr, "While reading from the HashesFile:", err)
+			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
 
@@ -282,7 +282,7 @@ func main() {
 		tokenPtr.SetMapDelim('*')
 		FirstToken, EOL := tokenPtr.GetTokenString(false)
 		if EOL {
-			fmt.Fprintln(os.Stderr, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
+			ctfmt.Println(ct.Red, false, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
 
@@ -291,25 +291,23 @@ func main() {
 			TargetFilename = FirstToken.Str
 			SecondToken, EOL := tokenPtr.GetTokenString(false) // Get hash string from the line in the file
 			if EOL {
-				fmt.Fprintln(os.Stderr, " Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping")
+				ctfmt.Println(ct.Red, false, " Got EOL while getting HashValue (2nd) token in the hashing file.  Skipping")
 				continue
 			}
 			HashValueReadFromFile = SecondToken.Str
-			//hashlength = len(SecondToken.Str)
 
 		} else { // have hash first on line
 			HashValueReadFromFile = FirstToken.Str
-			//hashlength = len(FirstToken.Str)
 			SecondToken, EOL := tokenPtr.GetTokenString(false) // Get name of file on which to compute the hash
 			if EOL {
-				fmt.Fprintln(os.Stderr, " EOL while gatting TargetFilename token in the hashing file.  Skipping")
+				ctfmt.Println(ct.Red, false, " EOL while gatting TargetFilename token in the hashing file.  Skipping")
 				continue
 			}
 
-			if strings.ContainsRune(SecondToken.Str, '*') { // If it contains a *, it will be the first position.
+			if strings.HasPrefix(SecondToken.Str, "*") { // If it contains a *, it will be the first position.
 				SecondToken.Str = SecondToken.Str[1:]
 				if strings.ContainsRune(SecondToken.Str, '*') { // this should not happen
-					fmt.Println(" Filename token still contains a * character.  Str:", SecondToken.Str, "  Skipping.")
+					ctfmt.Println(ct.Red, false, " Filename token still contains a * character.  Str:", SecondToken.Str, "  Skipping.")
 					continue
 				}
 			}
@@ -331,9 +329,10 @@ func main() {
 	close(hashChan)
 	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines and counter is %d.\n\n", runtime.NumGoroutine(), counter) // counter = 24 is correct.
 
-	wg2.Wait() // wg2.Done() is called in matchOrNoMatch.
+	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
+	fmt.Printf(" After wg1.Wait.\n")
+	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg1.Done().
 	fmt.Printf(" After wg2.Wait.\n")
-	wg1.Wait()        // wg1.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg1.Done().
 	close(resultChan) // all work is done, so I can close the resultChan.
 
 	ctfmt.Printf(ct.Yellow, onWin, " Elapsed time for everything was %s.\n\n\n", time.Since(t0))
