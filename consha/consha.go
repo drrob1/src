@@ -65,10 +65,11 @@ import (
   13 Dec 22 -- On the testing.sha, sequential routine (sha) took 12.3963 sec, and this rtn took 6.0804 sec, ratio is 2.04.  So the concurrent code is 2X faster than non-concurrent.
                  The first wait group, wg1 below, still had results print after wg1.Wait().  I'll leave it in as the result is interesting to me.
                  I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
-  14 Dec 22 -- Now called consha.go, and I want to simplify the code.  I don't need a receiving go routine; I'll have matchOrNoMatch print the results, too.
-                 Timing results on same testing.sha show that this is slightly slower than multisha.  IE, having separate go routines to collect the results and then show them is slightly
+  14 Dec 22 -- Now called conSha.go, and I want to simplify the code.  I don't need a receiving go routine; I'll have matchOrNoMatch print the results, too.
+                 Timing results on same testing.sha show that this is slightly slower than multiSha.  IE, having separate go routines to collect the results and then show them is slightly
                  faster than doing both in the same routine.  Go figure.  Wait, scratch that.  This routine also has a post counter that is incremented atomically.  This is not in
-                 multisha.  That could also account for the differences in speed.  So I'll say it's a tie.  The difference on win10 desktop is 6.1 sec here vs 6.07 sec from multisha.
+                 multiSha.  That could also account for the differences in speed.  So I'll say it's a tie.  The difference on win10 desktop is 6.1 sec here vs 6.07 sec from multiSha.
+                 And this difference persists even after I added the atomic adds to multiSha.
 */
 
 const LastCompiled = "14 Dec 2022"

@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"runtime"
@@ -64,9 +65,11 @@ import (
   13 Dec 22 -- On the testing.sha, sequential routine (sha) took 12.3963 sec, and this rtn took 6.0804 sec, ratio is 2.04.  So the concurrent code is 2X faster than non-concurrent.
                  The first wait group, wg1 below, still had results print after wg1.Wait().  I'll leave it in as the result is interesting to me.
                  I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
+  15 Dec 22 -- I'm going to add a post counter that has to be atomically added and see how that affects the timings.
+                 Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha.  Interesting.
 */
 
-const LastCompiled = "13 Dec 2022"
+const LastCompiled = "15 Dec 2022"
 
 const (
 	undetermined = iota
@@ -94,6 +97,7 @@ type resultMatchType struct {
 var hashChan chan hashType
 var resultChan chan resultMatchType
 var wg1, wg2 sync.WaitGroup
+var preCounter, postCounter int64 // atomic add requires int64, not int.  I might as well make both of them int64.
 
 //func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error.  This was it's testing signature that was sequential, before adding the concurrent code.
 
@@ -176,7 +180,7 @@ func main() {
 	var ans, Filename string
 	var TargetFilename, HashValueReadFromFile string
 	var h hashType
-	var counter int
+	//var counter int
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -203,6 +207,7 @@ func main() {
 		for result := range resultChan {
 			if result.err != nil {
 				ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", result.err)
+				atomic.AddInt64(&postCounter, 1)
 				wg2.Done()
 				continue // Using return was bad here; it's working using continue.
 			}
@@ -211,6 +216,7 @@ func main() {
 			} else {
 				ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
 			}
+			atomic.AddInt64(&postCounter, 1)
 			wg2.Done()
 		}
 	}()
@@ -321,18 +327,19 @@ func main() {
 		}
 		wg1.Add(1)
 		wg2.Add(1)
-		counter++
+		preCounter++
 		hashChan <- h
 	}
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
-	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines and counter is %d.\n\n", runtime.NumGoroutine(), counter) // counter = 24 is correct.
+	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n",
+		runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
-	fmt.Printf(" After wg1.Wait.\n")
+	fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
 	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg1.Done().
-	fmt.Printf(" After wg2.Wait.\n")
+	fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
 	close(resultChan) // all work is done, so I can close the resultChan.
 
 	ctfmt.Printf(ct.Yellow, onWin, " Elapsed time for everything was %s.\n\n\n", time.Since(t0))
