@@ -66,7 +66,7 @@ import (
                  The first wait group, wg1 below, still had results print after wg1.Wait().  I'll leave it in as the result is interesting to me.
                  I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
   15 Dec 22 -- I'm going to add a post counter that has to be atomically added and see how that affects the timings.
-                 Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha.  Interesting.
+                 Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha, ~ 0.5%.  Interesting.
 */
 
 const LastCompiled = "15 Dec 2022"
