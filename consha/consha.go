@@ -83,7 +83,7 @@ const (
 	sha512hash
 )
 
-const numOfWorkers = 30
+const numOfWorkers = 25
 
 type hashType struct {
 	fName     string
