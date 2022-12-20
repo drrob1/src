@@ -27,57 +27,61 @@ var excludeRegexPattern string
 var directoryAliasesMap dirAliasMapType
 var fileInfos []os.FileInfo
 
-func NewList(sortFcn func(i, j int) bool, excludeMe *regexp.Regexp) []string {
-	return MakeList(sortFcn, excludeMe)
+func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []string {
+	return MakeList(excludeMe, sizeSort, reverse)
 }
 
-func MakeList(sortFcn func(i, j int) bool, excludeRegex *regexp.Regexp) []string {
-
-	// set which sort function will be in the sortfcn var
-	//sortFcn := func(i, j int) bool { return false } // became available as of Go 1.8
-	//if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
-	//	sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
-	//		return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = largest size.")
-	//	}
-	//} else if DateSort && Forward {
-	//	sortFcn = func(i, j int) bool { // this is a closure anonymous function
-	//		//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-	//		return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = newest date.")
-	//	}
-	//} else if SizeSort && Reverse {
-	//	sortFcn = func(i, j int) bool { // this is a closure anonymous function
-	//		return fileInfos[i].Size() < fileInfos[j].Size() // I want an smallest-first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = smallest size.")
-	//	}
-	//} else if DateSort && Reverse {
-	//	sortFcn = func(i, j int) bool { // this is a closure anonymous function
-	//		//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
-	//		return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = oldest date.")
-	//	}
-	//}
+func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []string {
 
 	fileInfos = getFileInfosFromCommandLine(excludeRegex)
+	fmt.Printf(" length of fileInfos = %d\n", len(fileInfos))
+
+	// set which sort function will be in the sortfcn var
+	Forward := !reverse
+	DateSort := !sizeSort
+	sortFcn := func(i, j int) bool { return false } // became available as of Go 1.8
+	if sizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
+		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
+		}
+		if verboseFlag {
+			fmt.Println("sortfcn = largest size.")
+		}
+	} else if DateSort && Forward {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
+			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+		}
+		if verboseFlag {
+			fmt.Println("sortfcn = newest date.")
+		}
+	} else if sizeSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			return fileInfos[i].Size() < fileInfos[j].Size() // I want an smallest-first sort
+		}
+		if verboseFlag {
+			fmt.Println("sortfcn = smallest size.")
+		}
+	} else if DateSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
+			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
+		}
+		if verboseFlag {
+			fmt.Println("sortfcn = oldest date.")
+		}
+	}
+
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortFcn)
 	}
 
-	fileString := make([]string, len(fileInfos))
+	fileString := make([]string, 0, len(fileInfos))
 	for _, fi := range fileInfos {
 		fileString = append(fileString, fi.Name())
 	}
 	return fileString
-}
+} // end MakeList
 
 // ------------------------------- myReadDir -----------------------------------
 

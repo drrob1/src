@@ -24,7 +24,7 @@ import (
 
 */
 
-const LastAltered = "19 Dec 2022" //
+const LastAltered = "20 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -101,10 +101,10 @@ func main() {
 	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
 	Reverse := revFlag
-	Forward := !Reverse // convenience variable
+	//Forward := !Reverse // convenience variable
 
-	SizeSort := sizeFlag
-	DateSort := !SizeSort // convenience variable
+	//SizeSort := sizeFlag
+	//DateSort := !SizeSort // convenience variable
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -129,46 +129,15 @@ func main() {
 			excludeFlag = false
 		}
 		excludeFlag = true
+		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	} else { // there is not excludeRegexPattern
 		excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
+		fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	}
 
-	// set which sort function will be in the sortfcn var
-	sortFcn := func(i, j int) bool { return false } // became available as of Go 1.8
-	if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
-		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
-			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
-		}
-		if verboseFlag {
-			fmt.Println("sortfcn = largest size.")
-		}
-	} else if DateSort && Forward {
-		sortFcn = func(i, j int) bool { // this is a closure anonymous function
-			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
-		}
-		if verboseFlag {
-			fmt.Println("sortfcn = newest date.")
-		}
-	} else if SizeSort && Reverse {
-		sortFcn = func(i, j int) bool { // this is a closure anonymous function
-			return fileInfos[i].Size() < fileInfos[j].Size() // I want an smallest-first sort
-		}
-		if verboseFlag {
-			fmt.Println("sortfcn = smallest size.")
-		}
-	} else if DateSort && Reverse {
-		sortFcn = func(i, j int) bool { // this is a closure anonymous function
-			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
-			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
-		}
-		if verboseFlag {
-			fmt.Println("sortfcn = oldest date.")
-		}
-	}
-
-	fileList := list.MakeList(sortFcn, excludeRegex)
+	fileList := list.MakeList(excludeRegex, sizeFlag, Reverse)
 	if verboseFlag {
+		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 		for i, f := range fileList {
 			fmt.Printf(" first fileList[%d] = %s\n", i, f)
 		}
@@ -177,14 +146,22 @@ func main() {
 
 	// now have the filelist.  Need to check the destination directory.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line.  The first must exist, even if it's just a "."
+	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
+	if destDir == "" {
+		fmt.Print(" Destination directory ? ")
+		_, err = fmt.Scanln(&destDir)
+		if err != nil {
+			destDir = "." + sepString
+		}
+		fmt.Printf("\n destDir = %#v\n", destDir)
+	}
 	fi, err := os.Lstat(destDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the destionation directory, but os.Lstat(%s) = %#v.  Exiting\n", destDir, destDir, err)
+		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but os.Lstat(%s) = %#v.  Exiting\n", destDir, destDir, err)
 		os.Exit(1)
 	}
 	if !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be a directory, but os.Lstat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
+		fmt.Fprintf(os.Stderr, " %s is supposed to be the distination directory, but os.Lstat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
 		os.Exit(1)
 	}
 
@@ -198,6 +175,7 @@ func main() {
 
 	// time to copy the files
 
+	/* after the above stuff is definitely working.
 	for _, f := range fileList {
 		err = CopyList(destDir, f)
 		if err != nil {
@@ -205,7 +183,8 @@ func main() {
 			continue
 		}
 	}
-}
+	*/
+} // end main
 
 // ------------------------------------ Copy ----------------------------------------------
 
@@ -238,21 +217,26 @@ func CopyList(src, destDir string) error {
 		return err
 	}
 	return nil
-}
+} // end CopyList
+
+// --------------------------------------------fileSelection -------------------------------------------------------
 
 func fileSelection(inList []string) []string {
 	outList := make([]string, 0, len(inList))
 	numOfLines := min(autoHeight, minHeight)
 	numOfLines = min(numOfLines, len(inList))
-	var beg int
-	end := len(inList)
-	lenList := end
+	var beg, end int
+	lenList := len(inList)
 	var ans string
 
+outerLoop:
 	for {
-		if lenList < end {
-			break
+		if lenList-beg >= numOfLines {
+			end = beg + numOfLines
+		} else {
+			end = lenList
 		}
+
 		fList := inList[beg:end]
 
 		for i, f := range fList {
@@ -260,20 +244,26 @@ func fileSelection(inList []string) []string {
 		}
 		fmt.Print(" Enter selections: ")
 		_, err := fmt.Scanln(&ans)
-		if err != nil { // usually means that there was no entry at the Scanln prompt.
-			break
+		if err != nil || len(ans) == 0 { // usually means that there was no entry at the Scanln prompt.
+			continue
 		}
-		beg = end
-		end = beg + numOfLines
+		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
+		ans = strings.ToLower(ans)
 		for _, c := range ans { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
+			if c-'a' < 0 || c-'a' > minHeight { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
+				break outerLoop
+			}
 			f := fList[c-'a']
 			outList = append(outList, f)
 		}
+		if end >= lenList {
+			break
+		}
+		beg = end
 	}
 
 	return outList
-
-}
+} // end fileSelection
 
 func min(i, j int) int {
 	if i < j {
