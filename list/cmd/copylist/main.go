@@ -110,7 +110,7 @@ func main() {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
+		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
 		//fmt.Println("winFlag:", winFlag)
 		//fmt.Println()
@@ -138,6 +138,8 @@ func main() {
 	fileList := list.MakeList(excludeRegex, sizeFlag, Reverse)
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
+	}
+	if veryVerboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" first fileList[%d] = %s\n", i, f)
 		}
@@ -248,7 +250,7 @@ outerLoop:
 			continue
 		}
 		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
-		ans = strings.ToLower(ans)
+		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		for _, c := range ans { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			if c-'a' < 0 || c-'a' > minHeight { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
 				break outerLoop
