@@ -12,8 +12,8 @@ import (
 // processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
-	var fileInfos []os.FileInfo
+func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
+	var fileInfoX []FileInfoExType
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
@@ -29,7 +29,7 @@ func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
 			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
 			os.Exit(1)
 		}
-		fileInfos = MyReadDir(workingDir, excludeMe)
+		fileInfoX = MyReadDir(workingDir, excludeMe)
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
@@ -42,8 +42,8 @@ func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
-			fileInfos = MyReadDir(dirName, excludeMe)
-			return fileInfos
+			fileInfoX = MyReadDir(dirName, excludeMe)
+			return fileInfoX
 		}
 		if dirName == "" {
 			dirName = "."
@@ -79,19 +79,19 @@ func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
 			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
 			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfos = MyReadDir(dirName, excludeMe)
+				fileInfoX = MyReadDir(dirName, excludeMe)
 			}
 
 		}
 
-		fileInfos = make([]os.FileInfo, 0, len(filenames))
+		fileInfoX = make([]FileInfoExType, 0, len(filenames))
 		const sepStr = string(os.PathSeparator)
 		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
 			var path string
 			if strings.Contains(f, sepStr) {
 				path = f
 			} else {
-				path = dirName + sepStr + f
+				path = filepath.Join(dirName, f)
 			}
 
 			fi, err := os.Lstat(path)
@@ -110,7 +110,11 @@ func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
 			}
 
 			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
-				fileInfos = append(fileInfos, fi)
+				fix := FileInfoExType{
+					fi:  fi,
+					dir: dirName,
+				}
+				fileInfoX = append(fileInfoX, fix)
 			}
 			if fi.Mode().IsRegular() && showGrandTotal {
 				grandTotal += fi.Size()
@@ -119,9 +123,9 @@ func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
 		} // for f ranges over filenames
 	} // if flag.NArgs()
 
-	return fileInfos
+	return fileInfoX
 
-} // end getFileInfosFromCommandLine
+} // end getFileInfoXFromCommandLine
 
 /*
 func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr {

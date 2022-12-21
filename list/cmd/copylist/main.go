@@ -35,8 +35,9 @@ type dirAliasMapType map[string]string
 
 var autoWidth, autoHeight int
 var err error
-var fileInfos []os.FileInfo
-var maxDimFlag bool
+
+//var fileInfos []os.FileInfo
+//var maxDimFlag bool
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -89,8 +90,8 @@ func main() {
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
-	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
-	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
+	//mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
+	//maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
 
 	flag.Parse()
 
@@ -98,7 +99,7 @@ func main() {
 		verboseFlag = true
 	}
 
-	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
+	//maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
 	Reverse := revFlag
 	//Forward := !Reverse // convenience variable
@@ -155,8 +156,8 @@ func main() {
 		if err != nil {
 			destDir = "." + sepString
 		}
-		fmt.Printf("\n destDir = %#v\n", destDir)
 	}
+	fmt.Printf("\n destDir = %#v\n", destDir)
 	fi, err := os.Lstat(destDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but os.Lstat(%s) = %#v.  Exiting\n", destDir, destDir, err)
@@ -177,45 +178,54 @@ func main() {
 
 	// time to copy the files
 
-	/* after the above stuff is definitely working.
 	for _, f := range fileList {
-		err = CopyList(destDir, f)
+		err = CopyAFile(f, destDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR while copying %s -> %s is %#v.  Skipping to next file.\n", f, destDir, err)
 			continue
 		}
 	}
-	*/
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
 
-func CopyList(src, destDir string) error {
+func CopyAFile(srcFile, destDir string) error {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
-	in, err := os.Open(src)
+	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
+
+	in, err := os.Open(srcFile)
 	defer in.Close()
 	if err != nil {
+		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		return err
 	}
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
+		//fmt.Printf(" CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
 		return err
 	}
 	if !destFI.IsDir() {
-		return fmt.Errorf("%s must be a directory.  Stat is not c/w it being a directory", destDir)
+		return fmt.Errorf("os.Stat(%s) must be a directory.  Stat is not c/w it being a directory", destDir)
 	}
 
-	outName := filepath.Join(destDir, src)
-	out, err := os.Open(outName)
+	baseFile := filepath.Base(srcFile)
+	outName := filepath.Join(destDir, baseFile)
+	//fmt.Printf(" CopyFile after Join: src = %#v, destDir = %#v, outName = %#v\n", srcFile, destDir, outName)
+	out, err := os.Create(outName)
 	defer out.Close()
+	if err != nil {
+		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
+		return err
+	}
 	_, err = io.Copy(out, in)
 	if err != nil {
+		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err
 	}
 	return nil
-} // end CopyList
+} // end CopyFile
 
 // --------------------------------------------fileSelection -------------------------------------------------------
 

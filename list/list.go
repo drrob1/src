@@ -3,6 +3,7 @@ package list
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -17,6 +18,11 @@ import (
 
 type dirAliasMapType map[string]string
 
+type FileInfoExType struct {
+	fi  os.FileInfo
+	dir string
+}
+
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
@@ -25,16 +31,17 @@ var filterStr string
 var excludeRegex *regexp.Regexp
 var excludeRegexPattern string
 var directoryAliasesMap dirAliasMapType
-var fileInfos []os.FileInfo
+var fileInfoX []FileInfoExType
 
 func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []string {
 	return MakeList(excludeMe, sizeSort, reverse)
 }
 
+// MakeList will return a slice of strings that contain a full filename including dir
 func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []string {
 
-	fileInfos = getFileInfosFromCommandLine(excludeRegex)
-	fmt.Printf(" length of fileInfos = %d\n", len(fileInfos))
+	fileInfoX = getFileInfoXFromCommandLine(excludeRegex)
+	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
 
 	// set which sort function will be in the sortfcn var
 	Forward := !reverse
@@ -42,7 +49,7 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []string {
 	sortFcn := func(i, j int) bool { return false } // became available as of Go 1.8
 	if sizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
 		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
-			return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
+			return fileInfoX[i].fi.Size() > fileInfoX[j].fi.Size() // I want a largest first sort
 		}
 		if verboseFlag {
 			fmt.Println("sortfcn = largest size.")
@@ -50,14 +57,14 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []string {
 	} else if DateSort && Forward {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-			return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+			return fileInfoX[i].fi.ModTime().After(fileInfoX[j].fi.ModTime()) // I want a newest-first sort.  Changed 12/20/20
 		}
 		if verboseFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if sizeSort && reverse {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
-			return fileInfos[i].Size() < fileInfos[j].Size() // I want an smallest-first sort
+			return fileInfoX[i].fi.Size() < fileInfoX[j].fi.Size() // I want a smallest-first sort
 		}
 		if verboseFlag {
 			fmt.Println("sortfcn = smallest size.")
@@ -65,33 +72,34 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []string {
 	} else if DateSort && reverse {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
-			return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
+			return fileInfoX[i].fi.ModTime().Before(fileInfoX[j].fi.ModTime()) // I want an oldest-first sort
 		}
 		if verboseFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
 
-	if len(fileInfos) > 1 {
-		sort.Slice(fileInfos, sortFcn)
+	if len(fileInfoX) > 1 {
+		sort.Slice(fileInfoX, sortFcn)
 	}
 
-	fileString := make([]string, 0, len(fileInfos))
-	for _, fi := range fileInfos {
-		fileString = append(fileString, fi.Name())
+	fileString := make([]string, 0, len(fileInfoX))
+	for _, fix := range fileInfoX {
+		f := filepath.Join(fix.dir, fix.fi.Name())
+		fileString = append(fileString, f)
 	}
 	return fileString
 } // end MakeList
 
 // ------------------------------- myReadDir -----------------------------------
 
-func MyReadDir(dir string, excludeMe *regexp.Regexp) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
+func MyReadDir(dir string, excludeMe *regexp.Regexp) []FileInfoExType { // The entire change including use of []DirEntry happens here.  Who knew?
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
 	}
 
-	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
+	fileInfoExs := make([]FileInfoExType, 0, len(dirEntries))
 	for _, d := range dirEntries {
 		fi, e := d.Info()
 		if e != nil {
@@ -99,10 +107,14 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) []os.FileInfo { // The enti
 			continue
 		}
 		if includeThis(fi, excludeMe) {
-			fileInfos = append(fileInfos, fi)
+			fix := FileInfoExType{ // fix is a file info extended var
+				fi:  fi,
+				dir: dir,
+			}
+			fileInfoExs = append(fileInfoExs, fix)
 		}
 	}
-	return fileInfos
+	return fileInfoExs
 } // myReadDir
 
 // ---------------------------------------------------- includeThis ----------------------------------------
