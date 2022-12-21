@@ -207,11 +207,7 @@ func CopyList(src, destDir string) error {
 		return fmt.Errorf("%s must be a directory.  Stat is not c/w it being a directory", destDir)
 	}
 
-	if !strings.HasSuffix(destDir, sepString) {
-		destDir = destDir + sepString
-	}
-
-	outName := destDir + src
+	outName := filepath.Join(destDir, src)
 	out, err := os.Open(outName)
 	defer out.Close()
 	_, err = io.Copy(out, in)
@@ -252,7 +248,8 @@ outerLoop:
 		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		for _, c := range ans { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
-			if c-'a' < 0 || c-'a' > minHeight { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
+			idx := int(c - 'a')
+			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
 				break outerLoop
 			}
 			f := fList[c-'a']

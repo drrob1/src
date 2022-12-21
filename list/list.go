@@ -111,6 +111,9 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
 	//if veryVerboseFlag {
 	//	fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
 	//}
+	if !fi.Mode().IsRegular() {
+		return false
+	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
 		return false
 	} else if filterAmt > 0 {

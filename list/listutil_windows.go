@@ -99,6 +99,9 @@ func getFileInfosFromCommandLine(excludeMe *regexp.Regexp) []os.FileInfo {
 				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
 				continue
 			}
+			//if !fi.Mode().IsRegular() { // skip directories and symlink.  IE, skip anything that is not a regular file.  Too bad it doesn't work.  It does work in IncludeThis, though
+			//	continue
+			//}
 
 			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
 			if er != nil {
