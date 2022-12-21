@@ -14,6 +14,8 @@ import (
   -------- -------
   18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
                    This is going to take a while.
+  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                   And how am I going to handle collisions?
 */
 
 type dirAliasMapType map[string]string
@@ -23,13 +25,16 @@ type FileInfoExType struct {
 	dir string
 }
 
-var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
-var filterAmt, numLines, numOfLines, grandTotalCount int
-var sizeTotal, grandTotal int64
-var filterStr string
-var excludeRegex *regexp.Regexp
-var excludeRegexPattern string
+//var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
+//var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
+//var filterAmt, numLines, numOfLines, grandTotalCount int
+//var sizeTotal, grandTotal int64
+//var filterStr string
+//var excludeRegex *regexp.Regexp
+//var excludeRegexPattern string
+var noExtensionFlag, verboseFlag bool
+var globFlag bool
+var filterAmt int
 var directoryAliasesMap dirAliasMapType
 var fileInfoX []FileInfoExType
 
@@ -57,7 +62,7 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []string {
 	} else if DateSort && Forward {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-			return fileInfoX[i].fi.ModTime().After(fileInfoX[j].fi.ModTime()) // I want a newest-first sort.  Changed 12/20/20
+			return fileInfoX[i].fi.ModTime().After(fileInfoX[j].fi.ModTime()) // I want a newest-first sort.
 		}
 		if verboseFlag {
 			fmt.Println("sortfcn = newest date.")
@@ -142,7 +147,8 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
 }
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
-func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+
+func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 	s, ok := os.LookupEnv("diraliases")
 	if !ok {
@@ -173,7 +179,7 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = getDirectoryAliases()
+	aliasesMap = GetDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {

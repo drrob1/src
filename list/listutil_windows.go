@@ -34,7 +34,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
 		if strings.ContainsRune(pattern, ':') {
-			directoryAliasesMap = getDirectoryAliases()
+			directoryAliasesMap = GetDirectoryAliases()
 			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
 		} else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows.
 			pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
@@ -116,10 +116,10 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 				}
 				fileInfoX = append(fileInfoX, fix)
 			}
-			if fi.Mode().IsRegular() && showGrandTotal {
-				grandTotal += fi.Size()
-				grandTotalCount++
-			}
+			//if fi.Mode().IsRegular() && showGrandTotal { not used here.  Copied from dsrtutils.
+			//	grandTotal += fi.Size()
+			//	grandTotalCount++
+			//}
 		} // for f ranges over filenames
 	} // if flag.NArgs()
 

@@ -21,10 +21,12 @@ import (
   -------- -------
   18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
                    This is going to take a while.
+  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                   And how am I going to handle collisions?
 
 */
 
-const LastAltered = "20 Dec 2022" //
+const LastAltered = "21 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -99,11 +101,10 @@ func main() {
 		verboseFlag = true
 	}
 
-	//maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
-
 	Reverse := revFlag
-	//Forward := !Reverse // convenience variable
 
+	//maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
+	//Forward := !Reverse // convenience variable
 	//SizeSort := sizeFlag
 	//DateSort := !SizeSort // convenience variable
 
@@ -136,7 +137,7 @@ func main() {
 		fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	}
 
-	fileList := list.MakeList(excludeRegex, sizeFlag, Reverse)
+	fileList := list.NewList(excludeRegex, sizeFlag, Reverse)
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
@@ -147,7 +148,7 @@ func main() {
 		fmt.Println()
 	}
 
-	// now have the filelist.  Need to check the destination directory.
+	// now have the fileList.  Need to check the destination directory.
 
 	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
 	if destDir == "" {
@@ -155,6 +156,21 @@ func main() {
 		_, err = fmt.Scanln(&destDir)
 		if err != nil {
 			destDir = "." + sepString
+		}
+		if strings.ContainsRune(destDir, ':') {
+			directoryAliasesMap := list.GetDirectoryAliases()
+			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
+			homeDirStr, _ := os.UserHomeDir()
+			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
+		}
+	} else {
+		if strings.ContainsRune(destDir, ':') {
+			directoryAliasesMap := list.GetDirectoryAliases()
+			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
+			homeDirStr, _ := os.UserHomeDir()
+			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
 		}
 	}
 	fmt.Printf("\n destDir = %#v\n", destDir)
@@ -213,6 +229,13 @@ func CopyAFile(srcFile, destDir string) error {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	//fmt.Printf(" CopyFile after Join: src = %#v, destDir = %#v, outName = %#v\n", srcFile, destDir, outName)
+	outFI, err := os.Stat(outName)
+	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
+		inFI, _ := in.Stat()
+		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+			return fmt.Errorf(" Source %s is older than destination %s.  Skipping\n", srcFile, outName)
+		}
+	}
 	out, err := os.Create(outName)
 	defer out.Close()
 	if err != nil {
@@ -225,7 +248,7 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 	return nil
-} // end CopyFile
+} // end CopyAFile
 
 // --------------------------------------------fileSelection -------------------------------------------------------
 
