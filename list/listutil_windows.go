@@ -99,7 +99,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
 				continue
 			}
-			//if !fi.Mode().IsRegular() { // skip directories and symlink.  IE, skip anything that is not a regular file.  Too bad it doesn't work.  It does work in IncludeThis, though
+			//if !fi.Mode().IsRegular() { // skip anything that is not a regular file.  Too bad it doesn't work.  It does work in IncludeThis, though
 			//	continue
 			//}
 
@@ -111,15 +111,11 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 
 			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
 				fix := FileInfoExType{
-					fi:  fi,
-					dir: dirName,
+					FI:  fi,
+					Dir: dirName,
 				}
 				fileInfoX = append(fileInfoX, fix)
 			}
-			//if fi.Mode().IsRegular() && showGrandTotal { not used here.  Copied from dsrtutils.
-			//	grandTotal += fi.Size()
-			//	grandTotalCount++
-			//}
 		} // for f ranges over filenames
 	} // if flag.NArgs()
 

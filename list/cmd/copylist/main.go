@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
 
 	//ct "github.com/daviddengcn/go-colortext"
@@ -23,17 +25,16 @@ import (
                    This is going to take a while.
   20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
                    And how am I going to handle collisions?
-
+  22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
+                   So I'm propagating that change thru.
 */
 
-const LastAltered = "21 Dec 2022" //
+const LastAltered = "22 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
 const minHeight = 26
 const sepString = string(filepath.Separator)
-
-type dirAliasMapType map[string]string
 
 var autoWidth, autoHeight int
 var err error
@@ -92,9 +93,6 @@ func main() {
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
-	//mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
-	//maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
-
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
@@ -103,20 +101,12 @@ func main() {
 
 	Reverse := revFlag
 
-	//maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
-	//Forward := !Reverse // convenience variable
-	//SizeSort := sizeFlag
-	//DateSort := !SizeSort // convenience variable
-
 	if verboseFlag {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
-		//fmt.Println("winFlag:", winFlag)
-		//fmt.Println()
-		//fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d, numOfCols=%d\n", w, *nscreens, NLines, numOfCols)
 	}
 
 	if len(excludeRegexPattern) > 0 {
@@ -137,13 +127,13 @@ func main() {
 		fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	}
 
-	fileList := list.NewList(excludeRegex, sizeFlag, Reverse)
+	fileList := list.NewList(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
 	if veryVerboseFlag {
 		for i, f := range fileList {
-			fmt.Printf(" first fileList[%d] = %s\n", i, f)
+			fmt.Printf(" first fileList[%d] = %#v\n", i, f)
 		}
 		fmt.Println()
 	}
@@ -187,7 +177,7 @@ func main() {
 	fileList = fileSelection(fileList)
 	if verboseFlag {
 		for i, f := range fileList {
-			fmt.Printf(" second fileList[%d] = %s\n", i, f)
+			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)
 		}
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
@@ -195,11 +185,13 @@ func main() {
 
 	// time to copy the files
 
+	onWin := runtime.GOOS == "windows"
 	for _, f := range fileList {
-		err = CopyAFile(f, destDir)
-		fmt.Printf(" Copying %s -> %s.\n", f, destDir)
+		err = CopyAFile(f.RelPath, destDir)
+		ctfmt.Printf(ct.Green, onWin, " Copying %s -> %s\n", f.RelPath, destDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR while copying %s -> %s is %#v.  Skipping to next file.\n", f, destDir, err)
+			//fmt.Fprintf(os.Stderr, " ERROR while copying %s -> %s is %#v.  Skipping to next file.\n", f.RelPath, destDir, err)
+			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
 			continue
 		}
 	}
@@ -235,7 +227,7 @@ func CopyAFile(srcFile, destDir string) error {
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return fmt.Errorf(" Source %s is same or older than destination %s.  Skipping\n", srcFile, outName)
+			return fmt.Errorf(" Source %s is same or older than destination %s.  Skipping to next file", srcFile, outName)
 		}
 	}
 	out, err := os.Create(outName)
@@ -254,13 +246,14 @@ func CopyAFile(srcFile, destDir string) error {
 
 // --------------------------------------------fileSelection -------------------------------------------------------
 
-func fileSelection(inList []string) []string {
-	outList := make([]string, 0, len(inList))
+func fileSelection(inList []list.FileInfoExType) []list.FileInfoExType {
+	outList := make([]list.FileInfoExType, 0, len(inList))
 	numOfLines := min(autoHeight, minHeight)
 	numOfLines = min(numOfLines, len(inList))
 	var beg, end int
 	lenList := len(inList)
 	var ans string
+	onWin := runtime.GOOS == "windows"
 
 outerLoop:
 	for {
@@ -273,16 +266,21 @@ outerLoop:
 		fList := inList[beg:end]
 
 		for i, f := range fList {
-			fmt.Printf(" %c: %s\n", i+'a', f)
+			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
+			s, colr := getMagnitudeString(f.FI.Size())
+			ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
 		}
 		fmt.Print(" Enter selections: ")
-		_, err := fmt.Scanln(&ans)
-		if err != nil || len(ans) == 0 { // usually means that there was no entry at the Scanln prompt.
+		n, _ := fmt.Scanln(&ans)
+		if n == 0 { // usually means that there was no entry at the Scanln prompt.
 			continue
 		}
 		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		processedAns, err := list.ExpandAllDashes(ans)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %s\n", ans, err)
+		}
 		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			idx := int(c - 'a')
 			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
@@ -305,4 +303,34 @@ func min(i, j int) int {
 		return i
 	}
 	return j
+}
+
+// ----------------------------- getMagnitudeString -------------------------------
+
+func getMagnitudeString(j int64) (string, ct.Color) {
+	var s1 string
+	var f float64
+	var color ct.Color
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		f = float64(j) / 1000000000000
+		s1 = fmt.Sprintf("%.4g TB", f)
+		color = ct.Red
+	case j > 1_000_000_000: // 1 billion, or GB
+		f = float64(j) / 1000000000
+		s1 = fmt.Sprintf("%.4g GB", f)
+		color = ct.White
+	case j > 1_000_000: // 1 million, or MB
+		f = float64(j) / 1000000
+		s1 = fmt.Sprintf("%.4g mb", f)
+		color = ct.Yellow
+	case j > 1000: // KB
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("%.4g kb", f)
+		color = ct.Cyan
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+		color = ct.Green
+	}
+	return s1, color
 }
