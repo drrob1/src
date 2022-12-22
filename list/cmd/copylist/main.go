@@ -190,12 +190,14 @@ func main() {
 			fmt.Printf(" second fileList[%d] = %s\n", i, f)
 		}
 		fmt.Println()
+		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
 
 	// time to copy the files
 
 	for _, f := range fileList {
 		err = CopyAFile(f, destDir)
+		fmt.Printf(" Copying %s -> %s.\n", f, destDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR while copying %s -> %s is %#v.  Skipping to next file.\n", f, destDir, err)
 			continue
@@ -280,7 +282,8 @@ outerLoop:
 		}
 		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
-		for _, c := range ans { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
+		processedAns, err := list.ExpandAllDashes(ans)
+		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			idx := int(c - 'a')
 			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
 				break outerLoop
