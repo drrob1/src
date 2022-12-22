@@ -30,7 +30,7 @@ const LastAltered = "21 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
-const minHeight = 22
+const minHeight = 26
 const sepString = string(filepath.Separator)
 
 type dirAliasMapType map[string]string
@@ -233,7 +233,7 @@ func CopyAFile(srcFile, destDir string) error {
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return fmt.Errorf(" Source %s is older than destination %s.  Skipping\n", srcFile, outName)
+			return fmt.Errorf(" Source %s is same or older than destination %s.  Skipping\n", srcFile, outName)
 		}
 	}
 	out, err := os.Create(outName)

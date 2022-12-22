@@ -190,3 +190,53 @@ func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string 
 	//fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
 } // ProcessDirectoryAliases
+
+// ----------------------------- ExpandADash ---------------------------------------
+
+func ExpandADash(in string) (string, error) {
+
+	if !strings.Contains(in, "-") {
+		return in, nil
+	}
+
+	in = strings.ToLower(in)
+	idx := strings.IndexRune(in, '-')
+	begChar := in[idx-1]
+	if idx+1 >= len(in) {
+		return in, fmt.Errorf("no ending character found for substitution at position %d", idx)
+	}
+	endChar := in[idx+1]
+	c := endChar - 'a'
+	begPart := in[:idx-1]
+	endPart := in[idx+2:]
+	if c < 0 || c > 26 {
+		return in, fmt.Errorf("invalid index found, idx=%d, endChar=%c", idx, endChar)
+	}
+	var sb strings.Builder
+	for i := begChar - 'a'; i < endChar-'a'+1; i++ { // must include the endChar in the expanded string.
+		err := sb.WriteByte(i + 'a')
+		if err != nil {
+			return in, err
+		}
+	}
+
+	result := begPart + sb.String() + endPart
+	return result, nil
+}
+
+// ------------------------------------ ExpandAllDashes --------------------------------------------
+
+func ExpandAllDashes(in string) (string, error) {
+	var workingStr = in
+	var err error
+
+	for strings.Contains(workingStr, "-") {
+		workingStr, err = ExpandADash(workingStr)
+		fmt.Printf(" in ExpandAllDashes: out = %#v, err = %#v\n", workingStr, err)
+		if err != nil {
+			return workingStr, err
+		}
+	}
+
+	return workingStr, nil
+}
