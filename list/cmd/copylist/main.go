@@ -280,7 +280,7 @@ outerLoop:
 		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		processedAns, err := list.ExpandAllDashes(ans)
-		fmt.Printf(" ans = %#v, processedAns = %#v\n", ans, processedAns)
+		//fmt.Printf(" ans = %#v, processedAns = %#v\n", ans, processedAns)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
