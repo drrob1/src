@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
+// getFileInfoXFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
@@ -122,50 +122,3 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 	return fileInfoX
 
 } // end getFileInfoXFromCommandLine
-
-/*
-func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr {
-
-	cs := make([]colorizedStr, 0, len(fiSlice))
-
-	for i, f := range fiSlice {
-		t := f.ModTime().Format("Jan-02-2006_15:04:05")
-		sizeStr := ""
-		if filenameToBeListedFlag && f.Mode().IsRegular() {
-			sizeTotal += f.Size()
-			if longFileSizeListFlag {
-				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
-				if f.Size() > 100000 {
-					sizeStr = AddCommas(sizeStr)
-				}
-				strng := fmt.Sprintf("%16s %s %s", sizeStr, t, f.Name())
-				colorized := colorizedStr{color: ct.Yellow, str: strng}
-				cs = append(cs, colorized)
-
-			} else {
-				var colr ct.Color
-				sizeStr, colr = getMagnitudeString(f.Size())
-				strng := fmt.Sprintf("%-10s %s %s", sizeStr, t, f.Name())
-				colorized := colorizedStr{color: colr, str: strng}
-				cs = append(cs, colorized)
-			}
-
-		} else if IsSymlink(f.Mode()) {
-			s := fmt.Sprintf("%5s %s <%s>", sizeStr, t, f.Name())
-			colorized := colorizedStr{color: ct.White, str: s}
-			cs = append(cs, colorized)
-		} else if dirList && f.IsDir() {
-			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
-			colorized := colorizedStr{color: ct.White, str: s}
-			cs = append(cs, colorized)
-		}
-		if i > numOfLines*cols {
-			break
-		}
-	}
-	if verboseFlag {
-		fmt.Printf(" In getColorizedString.  len(fiSlice)=%d, len(cs)=%d, numofLines=%d\n", len(fiSlice), len(cs), numOfLines)
-	}
-	return cs
-}
-*/
