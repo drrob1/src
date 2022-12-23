@@ -272,19 +272,16 @@ outerLoop:
 		}
 
 		fmt.Print(" Enter selections: ")
-		//n, err := fmt.Scanln(&ans)
-		//if n == 0 || err != nil {
-		//	if end >= lenList {
-		//		break
-		//	}
-		//	beg = end
-		//	continue
-		//}
-		fmt.Scanln(&ans) // ignore error which means that an empty line was entered.
+		n, err := fmt.Scanln(&ans)
+		if n == 0 || err != nil {
+			ans = "" // it seems that if I don't do this, the prev contents are not changed when I just hit <enter>
+		}
 
-		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
+		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		processedAns, err := list.ExpandAllDashes(ans)
+		fmt.Printf(" ans = %#v, processedAns = %#v\n", ans, processedAns)
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
 		}
