@@ -107,14 +107,25 @@ func TestExpandADash(t *testing.T) {
 		fmt.Printf(" No expansion done.  In=%#v, out=%#v\n", str, out)
 	}
 
+	str = ""
+	out, err = ExpandADash(str)
+	if err != nil {
+		t.Errorf(" No expansion found.  But should not be an error.  str=%#v, out=%#v, err=%#v\n", str, out, err)
+	}
+	if out != "" {
+		t.Errorf(" out should be empty, but is %#v instead.\n", out)
+	} else {
+		fmt.Printf(" No expansion done and should be empty.  In=%#v, out=%#v\n", str, out)
+	}
+
 	out, err = ExpandADash("a-")
 	if err != nil {
-		fmt.Printf(" err is No ending character found.  err=%#v and out=%#v, err=%#v\n", err, out, err)
+		fmt.Printf(" err should be No ending character found.  Out=%#v, err=%s\n", out, err)
 	}
 
 	out, err = ExpandADash("a- b")
 	if err != nil {
-		fmt.Printf(" err is Invalid index found.  err=%#v and out=%#v\n", err, out)
+		fmt.Printf(" err should be Invalid index found.  err=%q and out=%#v\n", err, out)
 	}
 }
 
@@ -174,6 +185,17 @@ func TestExpandAllDashes(t *testing.T) {
 		fmt.Printf(" In=%#v, out=%#v\n", str, out)
 	}
 
+	str = ""
+	out, err = ExpandAllDashes(str)
+	if err != nil {
+		t.Fatalf(" ERROR: from call to ExpandallDashes.  str=%#v, out=%#v, err=%s\n", str, out, err)
+	}
+	if out != "" {
+		t.Errorf(" out should be empty but is %#v instead.\n", out)
+	} else {
+		fmt.Printf(" In=%#v, out=%#v\n", str, out)
+	}
+
 	str = "abcde"
 	out, err = ExpandAllDashes(str)
 	if err != nil {
@@ -187,12 +209,12 @@ func TestExpandAllDashes(t *testing.T) {
 
 	out, err = ExpandAllDashes("a-")
 	if err != nil {
-		fmt.Printf(" err is not supposed to be nil.  err=%#v and out=%#v, err=%#v\n", err, out, err)
+		fmt.Printf(" err should be Not supposed to be nil.  err=%s and out=%#v\n", err, out)
 	}
 
 	out, err = ExpandAllDashes("a- b")
 	if err != nil {
-		fmt.Printf(" err is not supposed to be nil.  err=%#v and out=%#v\n", err, out)
+		fmt.Printf(" err should be Invalid index found.  err=%q and out=%#v\n", err, out)
 	}
 }
 

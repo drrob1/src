@@ -29,7 +29,7 @@ import (
                    So I'm propagating that change thru.
 */
 
-const LastAltered = "22 Dec 2022" //
+const LastAltered = "23 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -270,16 +270,23 @@ outerLoop:
 			s, colr := getMagnitudeString(f.FI.Size())
 			ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
 		}
+
 		fmt.Print(" Enter selections: ")
-		n, _ := fmt.Scanln(&ans)
-		if n == 0 { // usually means that there was no entry at the Scanln prompt.
-			continue
-		}
+		//n, err := fmt.Scanln(&ans)
+		//if n == 0 || err != nil {
+		//	if end >= lenList {
+		//		break
+		//	}
+		//	beg = end
+		//	continue
+		//}
+		fmt.Scanln(&ans) // ignore error which means that an empty line was entered.
+
 		// here is where I can scan the ans string looking for a-z or a.z or a,z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		processedAns, err := list.ExpandAllDashes(ans)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %s\n", ans, err)
+			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
 		}
 		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			idx := int(c - 'a')
