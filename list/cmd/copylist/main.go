@@ -29,7 +29,7 @@ import (
                    So I'm propagating that change thru.
 */
 
-const LastAltered = "23 Dec 2022" //
+const LastAltered = "24 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -124,7 +124,7 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	} else { // there is not excludeRegexPattern
 		excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-		fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
+		//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	}
 
 	fileList := list.NewList(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
@@ -154,6 +154,9 @@ func main() {
 			homeDirStr, _ := os.UserHomeDir()
 			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
 		}
+		if !strings.HasSuffix(destDir, sepString) {
+			destDir = destDir + sepString
+		}
 	} else {
 		if strings.ContainsRune(destDir, ':') {
 			directoryAliasesMap := list.GetDirectoryAliases()
@@ -161,6 +164,9 @@ func main() {
 		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
 			homeDirStr, _ := os.UserHomeDir()
 			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
+		}
+		if !strings.HasSuffix(destDir, sepString) {
+			destDir = destDir + sepString
 		}
 	}
 	fmt.Printf("\n destDir = %#v\n", destDir)
