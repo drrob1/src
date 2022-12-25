@@ -27,14 +27,16 @@ import (
                    And how am I going to handle collisions?
   22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
                    So I'm propagating that change thru.
+  25 Dec 2022 -- Moving the file selection stuff to list.go
 */
 
-const LastAltered = "24 Dec 2022" //
+const LastAltered = "25 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
-const minHeight = 26
 const sepString = string(filepath.Separator)
+
+// const minHeight = 26  not used here, but used in FileSection.
 
 var autoWidth, autoHeight int
 var err error
@@ -180,7 +182,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList = fileSelection(fileList)
+	fileList = list.FileSelection(fileList)
 	if verboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)
@@ -249,98 +251,3 @@ func CopyAFile(srcFile, destDir string) error {
 	}
 	return nil
 } // end CopyAFile
-
-// --------------------------------------------fileSelection -------------------------------------------------------
-
-func fileSelection(inList []list.FileInfoExType) []list.FileInfoExType {
-	outList := make([]list.FileInfoExType, 0, len(inList))
-	numOfLines := min(autoHeight, minHeight)
-	numOfLines = min(numOfLines, len(inList))
-	var beg, end int
-	lenList := len(inList)
-	var ans string
-	onWin := runtime.GOOS == "windows"
-
-outerLoop:
-	for {
-		if lenList-beg >= numOfLines {
-			end = beg + numOfLines
-		} else {
-			end = lenList
-		}
-
-		fList := inList[beg:end]
-
-		for i, f := range fList {
-			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
-			s, colr := getMagnitudeString(f.FI.Size())
-			ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
-		}
-
-		fmt.Print(" Enter selections: ")
-		n, err := fmt.Scanln(&ans)
-		if n == 0 || err != nil {
-			ans = "" // it seems that if I don't do this, the prev contents are not changed when I just hit <enter>
-		}
-
-		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
-		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
-		processedAns, err := list.ExpandAllDashes(ans)
-		//fmt.Printf(" ans = %#v, processedAns = %#v\n", ans, processedAns)
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
-		}
-		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
-			idx := int(c - 'a')
-			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
-				break outerLoop
-			}
-			f := fList[c-'a']
-			outList = append(outList, f)
-		}
-		if end >= lenList {
-			break
-		}
-		beg = end
-	}
-
-	return outList
-} // end fileSelection
-
-func min(i, j int) int {
-	if i < j {
-		return i
-	}
-	return j
-}
-
-// ----------------------------- getMagnitudeString -------------------------------
-
-func getMagnitudeString(j int64) (string, ct.Color) {
-	var s1 string
-	var f float64
-	var color ct.Color
-	switch {
-	case j > 1_000_000_000_000: // 1 trillion, or TB
-		f = float64(j) / 1000000000000
-		s1 = fmt.Sprintf("%.4g TB", f)
-		color = ct.Red
-	case j > 1_000_000_000: // 1 billion, or GB
-		f = float64(j) / 1000000000
-		s1 = fmt.Sprintf("%.4g GB", f)
-		color = ct.White
-	case j > 1_000_000: // 1 million, or MB
-		f = float64(j) / 1000000
-		s1 = fmt.Sprintf("%.4g mb", f)
-		color = ct.Yellow
-	case j > 1000: // KB
-		f = float64(j) / 1000
-		s1 = fmt.Sprintf("%.4g kb", f)
-		color = ct.Cyan
-	default:
-		s1 = fmt.Sprintf("%3d bytes", j)
-		color = ct.Green
-	}
-	return s1, color
-}

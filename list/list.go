@@ -2,9 +2,13 @@ package list
 
 import (
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -18,6 +22,7 @@ import (
                    I decided to only copy files if the new one is newer than the old one.
   22 Dec 2022 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
                    And myReadDir creates the relPath field that I added to FileInfoExType.
+  25 Dec 2022 -- Moved FileSection here.
 */
 
 type dirAliasMapType map[string]string
@@ -40,6 +45,24 @@ var globFlag bool
 var filterAmt int
 var directoryAliasesMap dirAliasMapType
 var fileInfoX []FileInfoExType
+
+const defaultHeight = 40
+const minWidth = 90
+const minHeight = 26
+const sepString = string(filepath.Separator)
+
+var autoWidth, autoHeight int
+var err error
+
+func init() {
+	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
+	if err != nil {
+		//autoDefaults = false
+		autoHeight = defaultHeight
+		autoWidth = minWidth
+	}
+	_ = autoWidth
+}
 
 func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
 	return MakeList(excludeMe, sizeSort, reverse)
@@ -243,4 +266,99 @@ func ExpandAllDashes(in string) (string, error) {
 	}
 
 	return workingStr, nil
+}
+
+// -------------------------------------------- FileSelection -------------------------------------------------------
+
+func FileSelection(inList []FileInfoExType) []FileInfoExType {
+	outList := make([]FileInfoExType, 0, len(inList))
+	numOfLines := min(autoHeight, minHeight)
+	numOfLines = min(numOfLines, len(inList))
+	var beg, end int
+	lenList := len(inList)
+	var ans string
+	onWin := runtime.GOOS == "windows"
+
+outerLoop:
+	for {
+		if lenList-beg >= numOfLines {
+			end = beg + numOfLines
+		} else {
+			end = lenList
+		}
+
+		fList := inList[beg:end]
+
+		for i, f := range fList {
+			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
+			s, colr := GetMagnitudeString(f.FI.Size())
+			ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
+		}
+
+		fmt.Print(" Enter selections: ")
+		n, err := fmt.Scanln(&ans)
+		if n == 0 || err != nil {
+			ans = "" // it seems that if I don't do this, the prev contents are not changed when I just hit <enter>
+		}
+
+		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
+		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
+		processedAns, err := ExpandAllDashes(ans)
+		//fmt.Printf(" ans = %#v, processedAns = %#v\n", ans, processedAns)
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
+		}
+		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
+			idx := int(c - 'a')
+			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
+				break outerLoop
+			}
+			f := fList[c-'a']
+			outList = append(outList, f)
+		}
+		if end >= lenList {
+			break
+		}
+		beg = end
+	}
+
+	return outList
+} // end FileSelection
+
+func min(i, j int) int {
+	if i < j {
+		return i
+	}
+	return j
+}
+
+// ----------------------------- GetMagnitudeString -------------------------------
+
+func GetMagnitudeString(j int64) (string, ct.Color) {
+	var s1 string
+	var f float64
+	var color ct.Color
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		f = float64(j) / 1000000000000
+		s1 = fmt.Sprintf("%.4g TB", f)
+		color = ct.Red
+	case j > 1_000_000_000: // 1 billion, or GB
+		f = float64(j) / 1000000000
+		s1 = fmt.Sprintf("%.4g GB", f)
+		color = ct.White
+	case j > 1_000_000: // 1 million, or MB
+		f = float64(j) / 1000000
+		s1 = fmt.Sprintf("%.4g mb", f)
+		color = ct.Yellow
+	case j > 1000: // KB
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("%.4g kb", f)
+		color = ct.Cyan
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+		color = ct.Green
+	}
+	return s1, color
 }
