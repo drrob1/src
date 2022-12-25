@@ -141,46 +141,6 @@ func main() {
 
 	// now have the fileList.  Need to check the destination directory.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
-	if destDir == "" {
-		fmt.Print(" Destination directory ? ")
-		_, err = fmt.Scanln(&destDir)
-		if err != nil {
-			destDir = "." + sepString
-		}
-		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-			homeDirStr, _ := os.UserHomeDir()
-			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-		}
-		if !strings.HasSuffix(destDir, sepString) {
-			destDir = destDir + sepString
-		}
-	} else {
-		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-			homeDirStr, _ := os.UserHomeDir()
-			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-		}
-		if !strings.HasSuffix(destDir, sepString) {
-			destDir = destDir + sepString
-		}
-	}
-	fmt.Printf("\n destDir = %#v\n", destDir)
-	fi, err := os.Lstat(destDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but os.Lstat(%s) = %#v.  Exiting\n", destDir, destDir, err)
-		os.Exit(1)
-	}
-	if !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the distination directory, but os.Lstat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
-		os.Exit(1)
-	}
-
 	fileList = list.FileSelection(fileList)
 
 	for i, f := range fileList {
