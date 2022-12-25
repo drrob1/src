@@ -5,8 +5,6 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io"
-
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
@@ -28,6 +26,7 @@ import (
   22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
                    So I'm propagating that change thru.
   25 Dec 2022 -- Moving the file selection stuff to list.go
+                   Now called dellist.go
 */
 
 const LastAltered = "25 Dec 2022" //
@@ -183,20 +182,31 @@ func main() {
 	}
 
 	fileList = list.FileSelection(fileList)
-	if verboseFlag {
-		for i, f := range fileList {
-			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)
-		}
-		fmt.Println()
-		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
+
+	for i, f := range fileList {
+		fmt.Printf(" to be deleted fileList[%d] = %s\n", i, f.RelPath)
+	}
+	fmt.Println()
+	fmt.Printf(" There are %d files in the file list.\n", len(fileList))
+	fmt.Print(" Continue (y/N)? ")
+	var ans string
+	n, err := fmt.Scanln(&ans)
+	if n == 0 || err != nil {
+		fmt.Printf("\n n = %d, err = %s.  Aborting.\n", n, err)
+		os.Exit(1)
+	}
+	ans = strings.ToLower(ans)
+	if !strings.HasPrefix(ans, "y") { // ans doesn't begin w/ y, so abort
+		fmt.Printf("\n ans = %s, which does not begin with y.  Aborting.", ans)
+		os.Exit(1)
 	}
 
-	// time to copy the files
+	// time to delete the files
 
 	onWin := runtime.GOOS == "windows"
 	for _, f := range fileList {
-		err = CopyAFile(f.RelPath, destDir)
-		ctfmt.Printf(ct.Green, onWin, " Copying %s -> %s\n", f.RelPath, destDir)
+		err = os.Remove(f.RelPath)
+		ctfmt.Printf(ct.Green, onWin, " Deleting %s\n", f.RelPath)
 		if err != nil {
 			//fmt.Fprintf(os.Stderr, " ERROR while copying %s -> %s is %#v.  Skipping to next file.\n", f.RelPath, destDir, err)
 			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
@@ -204,50 +214,3 @@ func main() {
 		}
 	}
 } // end main
-
-// ------------------------------------ Copy ----------------------------------------------
-
-func CopyAFile(srcFile, destDir string) error {
-	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
-	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
-	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
-
-	in, err := os.Open(srcFile)
-	defer in.Close()
-	if err != nil {
-		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
-		return err
-	}
-
-	destFI, err := os.Stat(destDir)
-	if err != nil {
-		//fmt.Printf(" CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
-		return err
-	}
-	if !destFI.IsDir() {
-		return fmt.Errorf("os.Stat(%s) must be a directory.  Stat is not c/w it being a directory", destDir)
-	}
-
-	baseFile := filepath.Base(srcFile)
-	outName := filepath.Join(destDir, baseFile)
-	//fmt.Printf(" CopyFile after Join: src = %#v, destDir = %#v, outName = %#v\n", srcFile, destDir, outName)
-	outFI, err := os.Stat(outName)
-	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		inFI, _ := in.Stat()
-		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return fmt.Errorf(" Source %s is same or older than destination %s.  Skipping to next file", srcFile, outName)
-		}
-	}
-	out, err := os.Create(outName)
-	defer out.Close()
-	if err != nil {
-		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
-		return err
-	}
-	_, err = io.Copy(out, in)
-	if err != nil {
-		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
-		return err
-	}
-	return nil
-} // end CopyAFile
