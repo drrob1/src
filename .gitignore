@@ -38,4 +38,5 @@ solitaire/
 github.com/
 go.mod
 go.sum
+vendor/
 

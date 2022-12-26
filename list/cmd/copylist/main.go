@@ -6,6 +6,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
+	"time"
 
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -28,7 +29,7 @@ import (
   22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
                    So I'm propagating that change thru.
   25 Dec 2022 -- Moving the file selection stuff to list.go
-  26 Dec 2022 -- Shortened the messages.
+  26 Dec 2022 -- Shortened the messages.  And added a timer.
 */
 
 const LastAltered = "26 Dec 2022" //
@@ -194,6 +195,7 @@ func main() {
 	}
 
 	// time to copy the files
+	start := time.Now()
 
 	onWin := runtime.GOOS == "windows"
 	for _, f := range fileList {
@@ -204,6 +206,7 @@ func main() {
 			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
 		}
 	}
+	fmt.Printf("\n Elapsed time is %s\n\n", time.Since(start))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
