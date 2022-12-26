@@ -28,9 +28,10 @@ import (
   22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
                    So I'm propagating that change thru.
   25 Dec 2022 -- Moving the file selection stuff to list.go
+  26 Dec 2022 -- Shortened the messages.
 */
 
-const LastAltered = "25 Dec 2022" //
+const LastAltered = "26 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -225,7 +226,7 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 	if !destFI.IsDir() {
-		return fmt.Errorf("os.Stat(%s) must be a directory.  Stat is not c/w it being a directory", destDir)
+		return fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir)
 	}
 
 	baseFile := filepath.Base(srcFile)
@@ -235,7 +236,7 @@ func CopyAFile(srcFile, destDir string) error {
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return fmt.Errorf(" Source %s is same or older than destination %s.  Skipping to next file", srcFile, outName)
+			return fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 		}
 	}
 	out, err := os.Create(outName)
