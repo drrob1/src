@@ -96,6 +96,7 @@ Revision History
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
                Adding exclude string to allow the exclude regex pattern on the command line.  Convenient for recalling commands.
+26 Dec 22 -- This code became rex, but I'll use it now to see if I figured out how to test for an uninit regexp.
 */
 
 // FileInfo slice
@@ -251,6 +252,10 @@ func main() {
 	}
 
 	var excludeRegex *regexp.Regexp
+	if excludeRegex == nil {
+		fmt.Printf(" regex tested against nil succeeded without a panic.  Great!\n\n\n")
+		os.Exit(0)
+	}
 	if len(excludeRegexPattern) > 0 {
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)

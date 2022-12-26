@@ -125,10 +125,11 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-	} else { // there is not excludeRegexPattern
-		excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-		//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
-	}
+	} //else { // there is not excludeRegexPattern
+	//excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
+	//  but now I test against nil, and it works
+	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
+	//}
 
 	fileList := list.NewList(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if verboseFlag {
@@ -197,11 +198,10 @@ func main() {
 	onWin := runtime.GOOS == "windows"
 	for _, f := range fileList {
 		err = CopyAFile(f.RelPath, destDir)
-		ctfmt.Printf(ct.Green, onWin, " Copying %s -> %s\n", f.RelPath, destDir)
-		if err != nil {
-			//fmt.Fprintf(os.Stderr, " ERROR while copying %s -> %s is %#v.  Skipping to next file.\n", f.RelPath, destDir, err)
+		if err == nil {
+			ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
+		} else {
 			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
-			continue
 		}
 	}
 } // end main

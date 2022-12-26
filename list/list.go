@@ -23,6 +23,7 @@ import (
   22 Dec 2022 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
                    And myReadDir creates the relPath field that I added to FileInfoExType.
   25 Dec 2022 -- Moved FileSection here.
+  26 Dec 2022 -- Changed test against the regexp to be nil instead of "".
 */
 
 type dirAliasMapType map[string]string
@@ -49,7 +50,8 @@ var fileInfoX []FileInfoExType
 const defaultHeight = 40
 const minWidth = 90
 const minHeight = 26
-const sepString = string(filepath.Separator)
+
+//const sepString = string(filepath.Separator) not used, it seems
 
 var autoWidth, autoHeight int
 var err error
@@ -165,7 +167,12 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
 			return false
 		}
 	}
-	if excludeRex.String() != "" {
+	//if excludeRex.String() != "" {
+	//	if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
+	//		return false
+	//	}
+	//}
+	if excludeRex != nil {
 		if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
 		}
