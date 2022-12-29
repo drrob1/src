@@ -32,9 +32,12 @@ import (
   25 Dec 2022 -- Moving the file selection stuff to list.go
   26 Dec 2022 -- Shortened the messages.
                    Now called copyc, meaning copy concurrently.  I'm going for it.  I'll need a channel for cfType and the returned msg string for either success or failure message.
+  29 Dec 2022 -- I'm back in the code.  I want to add ability to end the file selection loop on same pass as selections, make sure the slice index doesn't exceed its bounds,
+                   and look into how to allow command line use of file completion since I can't do that here.  Maybe code a sentinel character that is a placeholder for 1st param
+                   so that the 2nd param can have the command processor do the file completion.  And exit if there are no files that match the patterns.
 */
 
-const LastAltered = "26 Dec 2022" //
+const LastAltered = "29 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -172,6 +175,10 @@ func main() {
 		fmt.Println()
 	}
 
+	if len(fileList) == 0 {
+		fmt.Printf(" Length of the fileList is zero.  Exiting\n")
+		os.Exit(1)
+	}
 	// now have the fileList.  Need to check the destination directory.
 
 	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
@@ -244,6 +251,9 @@ func main() {
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
+	if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
+		time.Sleep(10 * time.Millisecond)
+	}
 	ctfmt.Printf(ct.Cyan, onWin, " Elapsed time is %s\n", time.Since(start))
 } // end main
 

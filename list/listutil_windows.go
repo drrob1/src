@@ -23,7 +23,8 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 	}
 	HomeDirStr = HomeDirStr + string(filepath.Separator)
 
-	if flag.NArg() == 0 {
+	pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+	if flag.NArg() == 0 || pattern == "." {
 		workingDir, er := os.Getwd()
 		if er != nil {
 			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
@@ -31,8 +32,6 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		}
 		fileInfoX = MyReadDir(workingDir, excludeMe)
 	} else { // Must have a pattern on the command line, ie, NArg > 0
-		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
-
 		if strings.ContainsRune(pattern, ':') {
 			directoryAliasesMap = GetDirectoryAliases()
 			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
