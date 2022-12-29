@@ -24,6 +24,7 @@ import (
                    And myReadDir creates the relPath field that I added to FileInfoExType.
   25 Dec 2022 -- Moved FileSection here.
   26 Dec 2022 -- Changed test against the regexp to be nil instead of "".
+  29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
 */
 
 type dirAliasMapType map[string]string

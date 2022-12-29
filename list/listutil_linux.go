@@ -19,6 +19,7 @@ import (
   22 Dec 2022 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
                    And myReadDir creates the relPath field that I added to FileInfoExType.
   22 Dec 2022 -- I'm writing and testing listutil_linux.go.  It's too late to test the code, so I'll do that tomorrow.
+  29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -35,7 +36,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		os.Exit(1)
 	}
 
-	if flag.NArg() == 0 {
+	if flag.NArg() == 0 || flag.Arg(0) == "." { // the "." is the sentinel to be ignored.
 		if verboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
