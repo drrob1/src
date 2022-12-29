@@ -30,9 +30,10 @@ import (
                    So I'm propagating that change thru.
   25 Dec 2022 -- Moving the file selection stuff to list.go
   26 Dec 2022 -- Shortened the messages.  And added a timer.
+  29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
 */
 
-const LastAltered = "26 Dec 2022" //
+const LastAltered = "29 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -42,9 +43,6 @@ const sepString = string(filepath.Separator)
 
 var autoWidth, autoHeight int
 var err error
-
-//var fileInfos []os.FileInfo
-//var maxDimFlag bool
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -141,6 +139,10 @@ func main() {
 			fmt.Printf(" first fileList[%d] = %#v\n", i, f)
 		}
 		fmt.Println()
+	}
+	if len(fileList) == 0 {
+		fmt.Printf(" Length of the filelist is zero.  Aborting\n")
+		os.Exit(1)
 	}
 
 	// now have the fileList.  Need to check the destination directory.

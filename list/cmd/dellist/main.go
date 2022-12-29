@@ -27,9 +27,10 @@ import (
                    So I'm propagating that change thru.
   25 Dec 2022 -- Moving the file selection stuff to list.go
                    Now called dellist.go
+  29 Dec 2022 -- Adding check for an empty list, and the list package code was enhanced to include '.' as a sentinel.
 */
 
-const LastAltered = "25 Dec 2022" //
+const LastAltered = "29 Dec 2022" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -137,6 +138,10 @@ func main() {
 			fmt.Printf(" first fileList[%d] = %#v\n", i, f)
 		}
 		fmt.Println()
+	}
+	if len(fileList) == 0 {
+		fmt.Printf(" Length of the fileList is zero.  Aborting \n")
+		os.Exit(1)
 	}
 
 	// now have the fileList.  Need to check the destination directory.
