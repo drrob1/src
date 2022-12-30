@@ -50,14 +50,15 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		var loneFilename string
 		const sep = filepath.Separator
 		fileInfoX = make([]FileInfoExType, 0, 1)
-		firstChar := rune(flag.Arg(0)[0])
-		if firstChar == sep { // have an absolute path, so don't prepend anything
-			loneFilename = flag.Arg(0)
-		} else {
-			//loneFilename = workingDir + string(sep) + flag.Arg(0)
-			//loneFilename = filepath.Clean(loneFilename)
-			loneFilename = filepath.Join(workingDir, flag.Arg(0))
-		}
+		loneFilename = flag.Arg(0)
+		//firstChar := rune(flag.Arg(0)[0])
+		//if firstChar == sep { // have an absolute path, so don't prepend anything
+		//	loneFilename = flag.Arg(0)
+		//} else {
+		//	//loneFilename = workingDir + string(sep) + flag.Arg(0)
+		//	//loneFilename = filepath.Clean(loneFilename)
+		//	loneFilename = filepath.Join(workingDir, flag.Arg(0))
+		//}
 		fi, err := os.Lstat(loneFilename)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
