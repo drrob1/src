@@ -124,10 +124,10 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-	} else { // there is not excludeRegexPattern
-		excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-		//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
-	}
+	} // else { // there is not excludeRegexPattern, but this is now handled differently, so this needs to be removed for the code to work.
+	//excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
+	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
+	//}
 
 	fileList := list.NewList(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if verboseFlag {
