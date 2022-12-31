@@ -37,12 +37,12 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 	}
 
 	if flag.NArg() == 0 || flag.Arg(0) == "." { // the "." is the sentinel to be ignored.
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
 
 		fileInfoX = MyReadDir(workingDir, excludeMe) // excluding by regex, filesize or having an ext is done by MyReadDir.
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
 		}
 
@@ -70,7 +70,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 			os.Exit(1)
 		}
 
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" in getFileInfoXFromCommandLine: loneFilename=%s, fi.Name=%s, IsDir=%t\n", loneFilename, fi.Name(), fi.IsDir())
 		}
 
@@ -93,7 +93,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			if verboseFlag {
+			if VerboseFlag {
 				fmt.Printf(" in loop: fi.Name=%s, fi.Size=%d, fi.IsDir=%t\n", fi.Name(), fi.Size(), fi.IsDir())
 			}
 			if includeThis(fi, excludeMe) {
@@ -106,7 +106,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 			}
 		}
 	}
-	if verboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" Leaving getFileInfoXFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfoX))
 	}
 	return fileInfoX
