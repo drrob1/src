@@ -50,21 +50,18 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		if fileName == "" { // need this to not be blank because of the call to Match below.
 			fileName = "*"
 		}
-		if verboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
-		}
 
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
 		var filenames []string
-		if globFlag {
+		if GlobFlag {
 			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
 			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
 			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
 			filenames, err = filepath.Glob(pattern)
-			if verboseFlag {
+			if VerboseFlag {
 				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 			}
 

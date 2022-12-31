@@ -25,9 +25,11 @@ import (
   25 Dec 2022 -- Moved FileSection here.
   26 Dec 2022 -- Changed test against the regexp to be nil instead of "".
   29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
+  30 Dec 2022 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
+                   Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
 */
 
-type dirAliasMapType map[string]string
+type DirAliasMapType map[string]string
 
 type FileInfoExType struct {
 	FI      os.FileInfo
@@ -35,17 +37,20 @@ type FileInfoExType struct {
 	RelPath string
 }
 
-//var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 //var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
 //var filterAmt, numLines, numOfLines, grandTotalCount int
 //var sizeTotal, grandTotal int64
 //var filterStr string
 //var excludeRegex *regexp.Regexp
 //var excludeRegexPattern string
-var noExtensionFlag, verboseFlag bool
-var globFlag bool
-var filterAmt int
-var directoryAliasesMap dirAliasMapType
+//var noExtensionFlag bool
+var filterAmt int64
+var VerboseFlag bool
+var VeryVerboseFlag bool
+var FilterFlag bool
+var ReverseFlag bool
+var GlobFlag bool
+var directoryAliasesMap DirAliasMapType
 var fileInfoX []FileInfoExType
 
 const defaultHeight = 40
@@ -60,11 +65,14 @@ var err error
 func init() {
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
 	_ = autoWidth
+}
+
+func New(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
+	return MakeList(excludeMe, sizeSort, reverse)
 }
 
 func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
@@ -74,47 +82,54 @@ func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType 
 // MakeList will return a slice of strings that contain a full filename including dir
 func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
 
+	if FilterFlag {
+		filterAmt = 1_000_000
+	}
+	if VeryVerboseFlag {
+		VerboseFlag = true
+	}
+
 	fileInfoX = getFileInfoXFromCommandLine(excludeRegex)
 	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
 
 	// set which sort function will be in the sortfcn var
-	Forward := !reverse
-	DateSort := !sizeSort
-	sortFcn := func(i, j int) bool { return false } // became available as of Go 1.8
-	if sizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
+	forward := !(reverse || ReverseFlag)
+	dateSort := !sizeSort
+	sortFcn := func(i, j int) bool { return false }
+	if sizeSort && forward { // set the value of sortFcn so only a single line is needed to execute the sort.
 		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return fileInfoX[i].FI.Size() > fileInfoX[j].FI.Size() // I want a largest first sort
 		}
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
-	} else if DateSort && Forward {
+	} else if dateSort && forward {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
 			return fileInfoX[i].FI.ModTime().After(fileInfoX[j].FI.ModTime()) // I want a newest-first sort.
 		}
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if sizeSort && reverse {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			return fileInfoX[i].FI.Size() < fileInfoX[j].FI.Size() // I want a smallest-first sort
 		}
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
-	} else if DateSort && reverse {
+	} else if dateSort && reverse {
 		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
 			return fileInfoX[i].FI.ModTime().Before(fileInfoX[j].FI.ModTime()) // I want an oldest-first sort
 		}
-		if verboseFlag {
+		if VerboseFlag {
 			fmt.Println("sortfcn = oldest date.")
 		}
 	}
 
 	if len(fileInfoX) > 1 {
-		sort.Slice(fileInfoX, sortFcn)
+		sort.Slice(fileInfoX, sortFcn) // sort functions became available as of Go 1.8
 	}
 
 	//fileString := make([]string, 0, len(fileInfoX))
@@ -155,26 +170,33 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) []FileInfoExType { // The e
 // ---------------------------------------------------- includeThis ----------------------------------------
 
 func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
-	//if veryVerboseFlag {
-	//	fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
-	//}
+	if VeryVerboseFlag {
+		fmt.Printf(" includeThis.  FI=%#v, FilterFlag=%t\n", fi, FilterFlag)
+	}
 	if !fi.Mode().IsRegular() {
 		return false
 	}
-	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-		return false
-	} else if filterAmt > 0 {
-		if fi.Size() < int64(filterAmt) {
-			return false
-		}
-	}
+
+	//if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+	//	return false
+	//} else if filterAmt > 0 {
+	//	if fi.Size() < int64(filterAmt) {
+	//		return false
+	//	}
+	//}
 	//if excludeRex.String() != "" {
 	//	if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
 	//		return false
 	//	}
 	//}
+
 	if excludeRex != nil {
 		if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
+			return false
+		}
+	}
+	if FilterFlag {
+		if fi.Size() < filterAmt {
 			return false
 		}
 	}
@@ -183,7 +205,7 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
 
-func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+func GetDirectoryAliases() DirAliasMapType { // Env variable is diraliases.
 
 	s, ok := os.LookupEnv("diraliases")
 	if !ok {
@@ -191,7 +213,7 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 	}
 
 	s = strings.ReplaceAll(s, "_", " ") // substitute the underscore, _, for a space so strings.Fields works correctly
-	directoryAliasesMap := make(dirAliasMapType, 10)
+	directoryAliasesMap := make(DirAliasMapType, 10)
 
 	dirAliasSlice := strings.Fields(s)
 
@@ -208,7 +230,7 @@ func GetDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
+func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string {
 
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.

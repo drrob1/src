@@ -42,6 +42,7 @@ import (
                    I set to M, or skip files < 1 MB in size.  That worked for me and I never change that.  ListVerbose could be V or VV, ListReverse could be true only if set.
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
+  31 Dec 2022 -- Now called copyc2.  I'm removing the separate go routine that displays the messages.  I'm including that in the primary go routine.  Then I won't need the kludge about sleeping.
 */
 
 const LastAltered = "31 Dec 2022" //
@@ -144,11 +145,6 @@ func main() {
 		list.FilterFlag = true
 	}
 
-	if globFlag {
-		list.GlobFlag = true
-	}
-
-
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
 			fmt.Printf(" excludeRegexPattern found and is %d runes. \n", len(excludeRegexPattern))
@@ -168,8 +164,12 @@ func main() {
 	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	//}
 
+	if globFlag {
+		list.GlobFlag = true
+	}
+
 	cfChan = make(chan cfType, fanOut)
-	msgChan = make(chan msgType, fanOut)
+	//msgChan = make(chan msgType, fanOut)
 	for i := 0; i < fanOut; i++ {
 		go func() {
 			for c := range cfChan {
@@ -178,11 +178,11 @@ func main() {
 		}()
 	}
 
-	go func() {
-		for msg := range msgChan {
-			ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
-		}
-	}()
+	//go func() {
+	//	for msg := range msgChan {
+	//		ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
+	//	}
+	//}()
 
 	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if verboseFlag {
@@ -262,19 +262,13 @@ func main() {
 		}
 		//                             wg.Add(1)
 		cfChan <- cf
-		//                             err = CopyAFile(f.RelPath, destDir)
-		//                             if err == nil {
-		//	                               ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
-		//                             } else {
-		//	                               ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
-		//                             }
 	}
 	close(cfChan)
 	wg.Wait()
-	close(msgChan)
-	if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
-		time.Sleep(10 * time.Millisecond)
-	}
+	//close(msgChan)
+	//if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
+	//	time.Sleep(10 * time.Millisecond)
+	//}
 	ctfmt.Printf(ct.Cyan, onWin, " Elapsed time is %s\n", time.Since(start))
 } // end main
 
@@ -290,74 +284,77 @@ func CopyAFile(srcFile, destDir string) {
 	in, err := os.Open(srcFile)
 	defer in.Close()
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
-		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
-		}
-		msgChan <- msg
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+
+		//msg := msgType{
+		//	s:     fmt.Sprintf("%s", err),
+		//	color: ct.Red,
+		//}
+		//msgChan <- msg
 		return
 	}
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
-		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
-		}
-		msgChan <- msg
+		ctfmt.Printf(ct.Red, onWin, " CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
+		//msg := msgType{
+		//	s:     fmt.Sprintf("%s", err),
+		//	color: ct.Red,
+		//}
+		//msgChan <- msg
 		return
 	}
 	if !destFI.IsDir() {
-		msg := msgType{
-			s:     fmt.Sprintf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
-			color: ct.Red,
-		}
-		msgChan <- msg
+		ctfmt.Printf(ct.Red, onWin, " os.Stat(%s) must be a directory, but it's not c/w a directory\n", destDir)
+		//msg := msgType{
+		//	s:     fmt.Sprintf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
+		//	color: ct.Red,
+		//}
+		//msgChan <- msg
 		return
 	}
 
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
-	//fmt.Printf(" CopyFile after Join: src = %#v, destDir = %#v, outName = %#v\n", srcFile, destDir, outName)
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			msg := msgType{
-				s:     fmt.Sprintf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir),
-				color: ct.Red,
-			}
-			msgChan <- msg
+			ctfmt.Printf(ct.Red, onWin, " %s is same or older than destination %s.  Skipping\n", baseFile, destDir)
+			//msg := msgType{
+			//	s:     fmt.Sprintf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir),
+			//	color: ct.Red,
+			//}
+			//msgChan <- msg
 			return
 		}
 	}
 	out, err := os.Create(outName)
 	defer out.Close()
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
-		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
-		}
-		msgChan <- msg
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		//msg := msgType{
+		//	s:     fmt.Sprintf("%s", err),
+		//	color: ct.Red,
+		//}
+		//msgChan <- msg
 		return
 	}
 	_, err = io.Copy(out, in)
 	if err != nil {
-		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
-		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
-		}
-		msgChan <- msg
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		//msg := msgType{
+		//	s:     fmt.Sprintf("%s", err),
+		//	color: ct.Red,
+		//}
+		//msgChan <- msg
 		return
 	}
-	msg := msgType{
-		s:     fmt.Sprintf("%s copied to %s", srcFile, destDir),
-		color: ct.Green,
-	}
-	msgChan <- msg
+	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
+	//msg := msgType{
+	//	s:     fmt.Sprintf("%s copied to %s", srcFile, destDir),
+	//	color: ct.Green,
+	//}
+	//msgChan <- msg
 	return
 } // end CopyAFile
