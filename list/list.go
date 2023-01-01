@@ -325,7 +325,11 @@ outerLoop:
 			s, colr := GetMagnitudeString(f.FI.Size())
 			//ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
 			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
-			ctfmt.Printf(ct.White, onWin, " -- %s", t)
+			clr := ct.White
+			if clr == colr { // don't use same color as rest of the displayed string.
+				clr = ct.Yellow
+			}
+			ctfmt.Printf(clr, onWin, " -- %s", t)
 			ctfmt.Printf(ct.Cyan, onWin, " %s\n", s)
 		}
 
