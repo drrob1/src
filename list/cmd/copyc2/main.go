@@ -45,7 +45,7 @@ import (
   31 Dec 2022 -- Now called copyc2.  I'm removing the separate go routine that displays the messages.  I'm including that in the primary go routine.  Then I won't need the kludge about sleeping.
 */
 
-const LastAltered = "31 Dec 2022" //
+const LastAltered = "1 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90

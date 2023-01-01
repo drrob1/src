@@ -27,6 +27,7 @@ import (
   29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
   30 Dec 2022 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
                    Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
+   1 Jan 2023 -- I changed the display colors for the list.  The line is not all the same color now.
 */
 
 type DirAliasMapType map[string]string
@@ -322,7 +323,10 @@ outerLoop:
 		for i, f := range fList {
 			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
 			s, colr := GetMagnitudeString(f.FI.Size())
-			ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
+			//ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
+			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			ctfmt.Printf(ct.White, onWin, " -- %s", t)
+			ctfmt.Printf(ct.Cyan, onWin, " %s\n", s)
 		}
 
 		fmt.Print(" Enter selections: ")

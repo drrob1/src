@@ -31,9 +31,10 @@ import (
   25 Dec 2022 -- Moving the file selection stuff to list.go
   26 Dec 2022 -- Shortened the messages.  And added a timer.
   29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
+   1 Jan 2023 -- Now uses list.New instead of list.NewList
 */
 
-const LastAltered = "29 Dec 2022" //
+const LastAltered = "1 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -130,7 +131,7 @@ func main() {
 	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	//}
 
-	fileList := list.NewList(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
