@@ -7,6 +7,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	//ct "github.com/daviddengcn/go-colortext"
@@ -43,9 +44,12 @@ import (
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
   31 Dec 2022 -- Now called copyc2.  I'm removing the separate go routine that displays the messages.  I'm including that in the primary go routine.  Then I won't need the kludge about sleeping.
+   2 Jan 2023 -- I'm adding stats on how many were successfully copied and how many were not, probably because they were not newer versions of that file.  So I'm adding a return type to
+                   copyAFile so I can track successes and failures.
+                   All further development is here in copyc2 because I think it's smoother; it doesn't need a kludge of sleep for 10 ms.
 */
 
-const LastAltered = "1 Jan 2023" //
+const LastAltered = "2 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -69,6 +73,7 @@ var fanOut = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
+var totalSucceeded, totalFailed int64
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -169,20 +174,17 @@ func main() {
 	}
 
 	cfChan = make(chan cfType, fanOut)
-	//msgChan = make(chan msgType, fanOut)
 	for i := 0; i < fanOut; i++ {
 		go func() {
 			for c := range cfChan {
-				CopyAFile(c.srcFile, c.destDir)
+				if BOOL := copyAFile(c.srcFile, c.destDir); BOOL {
+					atomic.AddInt64(&totalSucceeded, 1)
+				} else {
+					atomic.AddInt64(&totalFailed, 1)
+				}
 			}
 		}()
 	}
-
-	//go func() {
-	//	for msg := range msgChan {
-	//		ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
-	//	}
-	//}()
 
 	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if verboseFlag {
@@ -265,16 +267,13 @@ func main() {
 	}
 	close(cfChan)
 	wg.Wait()
-	//close(msgChan)
-	//if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
-	//	time.Sleep(10 * time.Millisecond)
-	//}
-	ctfmt.Printf(ct.Cyan, onWin, " Elapsed time is %s\n", time.Since(start))
+
+	ctfmt.Printf(ct.Cyan, onWin, " \nTotal succeeded = %d, total failed = %d, elapsed time is %s\n", totalSucceeded, totalFailed, time.Since(start))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
 
-func CopyAFile(srcFile, destDir string) {
+func copyAFile(srcFile, destDir string) bool {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
@@ -291,7 +290,7 @@ func CopyAFile(srcFile, destDir string) {
 		//	color: ct.Red,
 		//}
 		//msgChan <- msg
-		return
+		return false
 	}
 
 	destFI, err := os.Stat(destDir)
@@ -302,16 +301,11 @@ func CopyAFile(srcFile, destDir string) {
 		//	color: ct.Red,
 		//}
 		//msgChan <- msg
-		return
+		return false
 	}
 	if !destFI.IsDir() {
 		ctfmt.Printf(ct.Red, onWin, " os.Stat(%s) must be a directory, but it's not c/w a directory\n", destDir)
-		//msg := msgType{
-		//	s:     fmt.Sprintf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
-		//	color: ct.Red,
-		//}
-		//msgChan <- msg
-		return
+		return false
 	}
 
 	baseFile := filepath.Base(srcFile)
@@ -321,40 +315,20 @@ func CopyAFile(srcFile, destDir string) {
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ctfmt.Printf(ct.Red, onWin, " %s is same or older than destination %s.  Skipping\n", baseFile, destDir)
-			//msg := msgType{
-			//	s:     fmt.Sprintf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir),
-			//	color: ct.Red,
-			//}
-			//msgChan <- msg
-			return
+			return false
 		}
 	}
 	out, err := os.Create(outName)
 	defer out.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
-		//msg := msgType{
-		//	s:     fmt.Sprintf("%s", err),
-		//	color: ct.Red,
-		//}
-		//msgChan <- msg
-		return
+		return false
 	}
 	_, err = io.Copy(out, in)
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
-		//msg := msgType{
-		//	s:     fmt.Sprintf("%s", err),
-		//	color: ct.Red,
-		//}
-		//msgChan <- msg
-		return
+		return false
 	}
 	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
-	//msg := msgType{
-	//	s:     fmt.Sprintf("%s copied to %s", srcFile, destDir),
-	//	color: ct.Green,
-	//}
-	//msgChan <- msg
-	return
+	return true
 } // end CopyAFile
