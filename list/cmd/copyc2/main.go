@@ -255,6 +255,7 @@ func main() {
 
 	// time to copy the files
 
+	fmt.Printf("\n\n")
 	start := time.Now()
 	wg.Add(len(fileList))
 	for _, f := range fileList {
