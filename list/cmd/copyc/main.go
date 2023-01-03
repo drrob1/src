@@ -7,6 +7,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	//ct "github.com/daviddengcn/go-colortext"
@@ -42,7 +43,7 @@ import (
                    I set to M, or skip files < 1 MB in size.  That worked for me and I never change that.  ListVerbose could be V or VV, ListReverse could be true only if set.
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
-   3 Jan 2023 -- I'm going to fix the wait group so all msg's get printed.
+   3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.
 */
 
 const LastAltered = "3 Jan 2023" //
@@ -57,8 +58,9 @@ type cfType struct { // copy file type
 }
 
 type msgType struct {
-	s     string
-	color ct.Color
+	s       string
+	color   ct.Color
+	success bool
 }
 
 var autoWidth, autoHeight int
@@ -69,6 +71,7 @@ var fanOut = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
+var succeeded, failed int64
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -169,7 +172,6 @@ func main() {
 	//}
 
 	cfChan = make(chan cfType, fanOut)
-	msgChan = make(chan msgType, fanOut)
 	for i := 0; i < fanOut; i++ {
 		go func() {
 			for c := range cfChan {
@@ -178,9 +180,15 @@ func main() {
 		}()
 	}
 
+	msgChan = make(chan msgType, fanOut)
 	go func() {
 		for msg := range msgChan {
 			ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
+			if msg.success {
+				atomic.AddInt64(&succeeded, 1)
+			} else {
+				atomic.AddInt64(&failed, 1)
+			}
 			wg.Done()
 		}
 	}()
@@ -273,10 +281,10 @@ func main() {
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
-	if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
-		time.Sleep(10 * time.Millisecond)
-	}
-	ctfmt.Printf(ct.Cyan, onWin, " Elapsed time is %s\n", time.Since(start))
+	//if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
+	//	time.Sleep(10 * time.Millisecond)
+	//}
+	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, and elapsed time is %s\n", succeeded, failed, time.Since(start))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
@@ -291,8 +299,9 @@ func CopyAFile(srcFile, destDir string) {
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
+			s:       fmt.Sprintf("%s", err),
+			color:   ct.Red,
+			success: false,
 		}
 		msgChan <- msg
 		return
@@ -302,16 +311,18 @@ func CopyAFile(srcFile, destDir string) {
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
 		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
+			s:       fmt.Sprintf("%s", err),
+			color:   ct.Red,
+			success: false,
 		}
 		msgChan <- msg
 		return
 	}
 	if !destFI.IsDir() {
 		msg := msgType{
-			s:     fmt.Sprintf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
-			color: ct.Red,
+			s:       fmt.Sprintf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
+			color:   ct.Red,
+			success: false,
 		}
 		msgChan <- msg
 		return
@@ -325,8 +336,9 @@ func CopyAFile(srcFile, destDir string) {
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			msg := msgType{
-				s:     fmt.Sprintf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir),
-				color: ct.Red,
+				s:       fmt.Sprintf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir),
+				color:   ct.Red,
+				success: false,
 			}
 			msgChan <- msg
 			return
@@ -337,8 +349,9 @@ func CopyAFile(srcFile, destDir string) {
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
+			s:       fmt.Sprintf("%s", err),
+			color:   ct.Red,
+			success: false,
 		}
 		msgChan <- msg
 		return
@@ -347,15 +360,17 @@ func CopyAFile(srcFile, destDir string) {
 	if err != nil {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		msg := msgType{
-			s:     fmt.Sprintf("%s", err),
-			color: ct.Red,
+			s:       fmt.Sprintf("%s", err),
+			color:   ct.Red,
+			success: false,
 		}
 		msgChan <- msg
 		return
 	}
 	msg := msgType{
-		s:     fmt.Sprintf("%s copied to %s", srcFile, destDir),
-		color: ct.Green,
+		s:       fmt.Sprintf("%s copied to %s", srcFile, destDir),
+		color:   ct.Green,
+		success: true,
 	}
 	msgChan <- msg
 	return
