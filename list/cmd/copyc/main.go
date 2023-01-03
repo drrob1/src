@@ -42,9 +42,10 @@ import (
                    I set to M, or skip files < 1 MB in size.  That worked for me and I never change that.  ListVerbose could be V or VV, ListReverse could be true only if set.
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
+   3 Jan 2023 -- I'm going to fix the wait group so all msg's get printed.
 */
 
-const LastAltered = "31 Dec 2022" //
+const LastAltered = "3 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -148,7 +149,6 @@ func main() {
 		list.GlobFlag = true
 	}
 
-
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
 			fmt.Printf(" excludeRegexPattern found and is %d runes. \n", len(excludeRegexPattern))
@@ -181,6 +181,7 @@ func main() {
 	go func() {
 		for msg := range msgChan {
 			ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
+			wg.Done()
 		}
 	}()
 
@@ -284,8 +285,6 @@ func CopyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
-
-	defer wg.Done()
 
 	in, err := os.Open(srcFile)
 	defer in.Close()
