@@ -203,7 +203,6 @@ func main() {
 		}
 		fmt.Println()
 	}
-
 	if len(fileList) == 0 {
 		fmt.Printf(" Length of the fileList is zero.  Exiting\n")
 		os.Exit(1)
@@ -259,6 +258,7 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
+	fmt.Printf("\n\n")
 
 	// time to copy the files
 

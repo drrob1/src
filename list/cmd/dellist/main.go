@@ -145,9 +145,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// now have the fileList.  Need to check the destination directory.
-
 	fileList = list.FileSelection(fileList)
+	fmt.Printf("\n\n")
+
+	// now have the fileList.  Need to check the destination directory.
 
 	for i, f := range fileList {
 		fmt.Printf(" to be deleted fileList[%d] = %s\n", i, f.RelPath)

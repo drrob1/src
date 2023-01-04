@@ -34,7 +34,7 @@ import (
    1 Jan 2023 -- Now uses list.New instead of list.NewList
 */
 
-const LastAltered = "1 Jan 2023" //
+const LastAltered = "4 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -196,6 +196,7 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
+	fmt.Printf("\n\n")
 
 	// time to copy the files
 	start := time.Now()
