@@ -43,7 +43,7 @@ import (
                    I set to M, or skip files < 1 MB in size.  That worked for me and I never change that.  ListVerbose could be V or VV, ListReverse could be true only if set.
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
-   3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.
+   3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.  And then I added displaying the number of go routines.
 */
 
 const LastAltered = "3 Jan 2023" //
@@ -278,13 +278,15 @@ func main() {
 		//	                               ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
 		//                             }
 	}
+	gortns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
 	//if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
 	//	time.Sleep(10 * time.Millisecond)
 	//}
-	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, and elapsed time is %s\n", succeeded, failed, time.Since(start))
+	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n",
+		succeeded, failed, time.Since(start), gortns)
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------

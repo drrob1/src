@@ -47,6 +47,7 @@ import (
    2 Jan 2023 -- I'm adding stats on how many were successfully copied and how many were not, probably because they were not newer versions of that file.  So I'm adding a return type to
                    copyAFile so I can track successes and failures.
                    All further development is here in copyc2 because I think it's smoother; it doesn't need a kludge of sleep for 10 ms.
+   3 Jan 2023 -- Added output of number of go routines.
 */
 
 const LastAltered = "2 Jan 2023" //
@@ -266,10 +267,12 @@ func main() {
 		//                             wg.Add(1)
 		cfChan <- cf
 	}
+	gortns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
 
-	ctfmt.Printf(ct.Cyan, onWin, " \nTotal succeeded = %d, total failed = %d, elapsed time is %s\n", totalSucceeded, totalFailed, time.Since(start))
+	ctfmt.Printf(ct.Cyan, onWin, " \nTotal succeeded = %d, total failed = %d, elapsed time is %s using %d go routines.\n",
+		totalSucceeded, totalFailed, time.Since(start), gortns)
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
