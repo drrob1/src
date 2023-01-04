@@ -6,6 +6,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -28,6 +29,7 @@ import (
   30 Dec 2022 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
                    Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
    1 Jan 2023 -- I changed the display colors for the list.  The line is not all the same color now.
+   4 Jan 2023 -- Adding screen clearing between screen displays.  Copied from rpng.
 */
 
 type DirAliasMapType map[string]string
@@ -53,6 +55,7 @@ var ReverseFlag bool
 var GlobFlag bool
 var directoryAliasesMap DirAliasMapType
 var fileInfoX []FileInfoExType
+var clear map[string]func()
 
 const defaultHeight = 40
 const minWidth = 90
@@ -359,6 +362,9 @@ outerLoop:
 			break
 		}
 		beg = end
+
+		clearFunc := clear[runtime.GOOS]
+		clearFunc()
 	}
 
 	return outList
@@ -399,4 +405,21 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 		color = ct.Green
 	}
 	return s1, color
+}
+
+// ------------------------------------------------------- init -----------------------------------
+
+func init() {
+	clear = make(map[string]func(), 2)
+	clear["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+
+	clear["windows"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
 }

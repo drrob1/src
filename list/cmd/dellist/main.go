@@ -31,7 +31,7 @@ import (
    1 Jan 2023 -- Now uses list.New instead of list.NewList.
 */
 
-const LastAltered = "1 Jan 2023" //
+const LastAltered = "4 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90

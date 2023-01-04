@@ -46,7 +46,7 @@ import (
    3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.  And then I added displaying the number of go routines.
 */
 
-const LastAltered = "3 Jan 2023" //
+const LastAltered = "4 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90

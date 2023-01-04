@@ -107,8 +107,9 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 
 			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
 				fix := FileInfoExType{
-					FI:  fi,
-					Dir: dirName,
+					FI:      fi,
+					Dir:     dirName,
+					RelPath: filepath.Join(dirName, f),
 				}
 				fileInfoX = append(fileInfoX, fix)
 			}

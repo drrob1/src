@@ -50,7 +50,7 @@ import (
    3 Jan 2023 -- Added output of number of go routines.
 */
 
-const LastAltered = "2 Jan 2023" //
+const LastAltered = "4 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
