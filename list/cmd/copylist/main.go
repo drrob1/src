@@ -32,9 +32,10 @@ import (
   26 Dec 2022 -- Shortened the messages.  And added a timer.
   29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
    1 Jan 2023 -- Now uses list.New instead of list.NewList
+   5 Jan 2023 -- Adding stats to the output.
 */
 
-const LastAltered = "4 Jan 2023" //
+const LastAltered = "5 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -201,16 +202,19 @@ func main() {
 	// time to copy the files
 	start := time.Now()
 
+	var success, fail int
 	onWin := runtime.GOOS == "windows"
 	for _, f := range fileList {
 		err = CopyAFile(f.RelPath, destDir)
 		if err == nil {
 			ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
+			success++
 		} else {
 			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
+			fail++
 		}
 	}
-	fmt.Printf("\n Elapsed time is %s\n\n", time.Since(start))
+	fmt.Printf("\n Successfully copied %d files, and FAILED to copy %d files; elapsed time is %s\n\n", success, fail, time.Since(start))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
