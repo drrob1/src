@@ -48,9 +48,10 @@ import (
                    copyAFile so I can track successes and failures.
                    All further development is here in copyc2 because I think it's smoother; it doesn't need a kludge of sleep for 10 ms.
    3 Jan 2023 -- Added output of number of go routines.
+   6 Jan 2023 -- Better error handling now that all list routines return an error variable.  And a stop code was added.
 */
 
-const LastAltered = "4 Jan 2023" //
+const LastAltered = "6 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -187,7 +188,11 @@ func main() {
 		}()
 	}
 
-	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
@@ -244,7 +249,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList = list.FileSelection(fileList)
+	fileList, err = list.FileSelection(fileList)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)

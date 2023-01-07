@@ -12,7 +12,7 @@ import (
 // getFileInfoXFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
+func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
@@ -27,10 +27,14 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 	if flag.NArg() == 0 || pattern == "." {
 		workingDir, er := os.Getwd()
 		if er != nil {
-			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
-			os.Exit(1)
+			return nil, er
+			//fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
+			//os.Exit(1)
 		}
-		fileInfoX = MyReadDir(workingDir, excludeMe)
+		fileInfoX, err = MyReadDir(workingDir, excludeMe)
+		if err != nil {
+			return nil, err
+		}
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		if strings.ContainsRune(pattern, ':') {
 			directoryAliasesMap = GetDirectoryAliases()
@@ -41,8 +45,8 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
-			fileInfoX = MyReadDir(dirName, excludeMe)
-			return fileInfoX
+			fileInfoX, err = MyReadDir(dirName, excludeMe)
+			return fileInfoX, err
 		}
 		if dirName == "" {
 			dirName = "."
@@ -64,6 +68,9 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 			if VerboseFlag {
 				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 			}
+			if err != nil {
+				return nil, err
+			}
 
 		} else {
 			d, err := os.Open(dirName)
@@ -75,9 +82,11 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
 			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfoX = MyReadDir(dirName, excludeMe)
+				fileInfoX, err = MyReadDir(dirName, excludeMe)
+				if err != nil {
+					return nil, err
+				}
 			}
-
 		}
 
 		fileInfoX = make([]FileInfoExType, 0, len(filenames))
@@ -116,6 +125,6 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		} // for f ranges over filenames
 	} // if flag.NArgs()
 
-	return fileInfoX
+	return fileInfoX, nil
 
 } // end getFileInfoXFromCommandLine

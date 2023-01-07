@@ -29,9 +29,10 @@ import (
                    Now called dellist.go
   29 Dec 2022 -- Adding check for an empty list, and the list package code was enhanced to include '.' as a sentinel.
    1 Jan 2023 -- Now uses list.New instead of list.NewList.
+   6 Jan 2023 -- list package functions now return an error.  This allows better error handling and a stop code.
 */
 
-const LastAltered = "4 Jan 2023" //
+const LastAltered = "6 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -43,13 +44,11 @@ var autoWidth, autoHeight int
 var err error
 
 //var fileInfos []os.FileInfo
-//var maxDimFlag bool
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
@@ -69,10 +68,6 @@ func main() {
 	var revFlag bool
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	//var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
-	//var NLines int
-	//flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
-
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
 
@@ -80,9 +75,6 @@ func main() {
 
 	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
-
-	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var excludeFlag bool
 	var excludeRegex *regexp.Regexp
@@ -130,7 +122,11 @@ func main() {
 	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	//}
 
-	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
@@ -145,7 +141,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList = list.FileSelection(fileList)
+	fileList, err = list.FileSelection(fileList)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("\n\n")
 
 	// now have the fileList.  Need to check the destination directory.

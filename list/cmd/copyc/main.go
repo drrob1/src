@@ -44,9 +44,10 @@ import (
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
    3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.  And then I added displaying the number of go routines.
+   6 Jan 2023 -- list now has a stop code, and all routines return an error.
 */
 
-const LastAltered = "4 Jan 2023" //
+const LastAltered = "6 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -193,7 +194,11 @@ func main() {
 		}
 	}()
 
-	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
@@ -250,7 +255,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList = list.FileSelection(fileList)
+	fileList, err = list.FileSelection(fileList)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)

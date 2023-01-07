@@ -33,9 +33,11 @@ import (
   29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
    1 Jan 2023 -- Now uses list.New instead of list.NewList
    5 Jan 2023 -- Adding stats to the output.
+   6 Jan 2023 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
+                   Added a stop code of zero.
 */
 
-const LastAltered = "5 Jan 2023" //
+const LastAltered = "6 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -132,7 +134,11 @@ func main() {
 	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	//}
 
-	fileList := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
@@ -189,7 +195,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList = list.FileSelection(fileList)
+	fileList, err = list.FileSelection(fileList)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error from list.FileSelection is %s\n", err)
+		os.Exit(1)
+	}
 	if verboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)
@@ -214,6 +224,7 @@ func main() {
 			fail++
 		}
 	}
+	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 	fmt.Printf("\n Successfully copied %d files, and FAILED to copy %d files; elapsed time is %s\n\n", success, fail, time.Since(start))
 } // end main
 

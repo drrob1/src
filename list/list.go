@@ -30,6 +30,7 @@ import (
                    Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
    1 Jan 2023 -- I changed the display colors for the list.  The line is not all the same color now.
    4 Jan 2023 -- Adding screen clearing between screen displays.  Copied from rpng.
+   6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
 */
 
 type DirAliasMapType map[string]string
@@ -60,13 +61,14 @@ var clear map[string]func()
 const defaultHeight = 40
 const minWidth = 90
 const minHeight = 26
+const stopCode = "0"
 
 //const sepString = string(filepath.Separator) not used, it seems
 
 var autoWidth, autoHeight int
-var err error
 
 func init() {
+	var err error
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		autoHeight = defaultHeight
@@ -75,16 +77,18 @@ func init() {
 	_ = autoWidth
 }
 
-func New(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
-	return MakeList(excludeMe, sizeSort, reverse)
+func New(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
+	lst, err := MakeList(excludeMe, sizeSort, reverse)
+	return lst, err
 }
 
-func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
-	return MakeList(excludeMe, sizeSort, reverse)
-}
+//func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
+//	return MakeList(excludeMe, sizeSort, reverse)
+//}
 
 // MakeList will return a slice of strings that contain a full filename including dir
-func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
+func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
+	var err error
 
 	if FilterFlag {
 		filterAmt = 1_000_000
@@ -93,7 +97,10 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []FileInfoExT
 		VerboseFlag = true
 	}
 
-	fileInfoX = getFileInfoXFromCommandLine(excludeRegex)
+	fileInfoX, err = getFileInfoXFromCommandLine(excludeRegex)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
 
 	// set which sort function will be in the sortfcn var
@@ -141,15 +148,15 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) []FileInfoExT
 	//	f := filepath.Join(fix.dir, fix.fi.Name())
 	//	fileString = append(fileString, f)
 	//}
-	return fileInfoX
+	return fileInfoX, nil
 } // end MakeList
 
 // ------------------------------- myReadDir -----------------------------------
 
-func MyReadDir(dir string, excludeMe *regexp.Regexp) []FileInfoExType { // The entire change including use of []DirEntry happens here.  Who knew?
-	dirEntries, err := os.ReadDir(dir)
+func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Who knew?
+	dirEntries, err := os.ReadDir(dir) // this function doesn't need to be closed.
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	fileInfoExs := make([]FileInfoExType, 0, len(dirEntries))
@@ -168,7 +175,7 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) []FileInfoExType { // The e
 			fileInfoExs = append(fileInfoExs, fix)
 		}
 	}
-	return fileInfoExs
+	return fileInfoExs, nil
 } // myReadDir
 
 // ---------------------------------------------------- includeThis ----------------------------------------
@@ -304,7 +311,7 @@ func ExpandAllDashes(in string) (string, error) {
 
 // -------------------------------------------- FileSelection -------------------------------------------------------
 
-func FileSelection(inList []FileInfoExType) []FileInfoExType {
+func FileSelection(inList []FileInfoExType) ([]FileInfoExType, error) {
 	outList := make([]FileInfoExType, 0, len(inList))
 	numOfLines := min(autoHeight, minHeight)
 	numOfLines = min(numOfLines, len(inList))
@@ -342,13 +349,18 @@ outerLoop:
 			ans = "" // it seems that if I don't do this, the prev contents are not changed when I just hit <enter>
 		}
 
+		// Check for the stop code anwhere in the input.
+		if strings.Contains(ans, stopCode) {
+			e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
+			return nil, e
+		}
+
 		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
 		processedAns, err := ExpandAllDashes(ans)
-		//fmt.Printf(" ans = %#v, processedAns = %#v\n", ans, processedAns)
-
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
+			return nil, err
 		}
 		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			idx := int(c - 'a')
@@ -367,7 +379,7 @@ outerLoop:
 		clearFunc()
 	}
 
-	return outList
+	return outList, nil
 } // end FileSelection
 
 func min(i, j int) int {
@@ -418,7 +430,8 @@ func init() {
 	}
 
 	clear["windows"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("cmd", "/c", "cls")
+		comspec := os.Getenv("ComSpec")
+		cmd := exec.Command(comspec, "/c", "cls") // this was calling cmd, but I'm trying to preserve the scrollback buffer.
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
