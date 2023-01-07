@@ -41,7 +41,10 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
 
-		fileInfoX = MyReadDir(workingDir, excludeMe) // excluding by regex, filesize or having an ext is done by MyReadDir.
+		fileInfoX, err = MyReadDir(workingDir, excludeMe) // excluding by regex, filesize or having an ext is done by MyReadDir.
+		if err != nil {
+			return nil, err
+		}
 		if VerboseFlag {
 			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
 		}
@@ -69,7 +72,10 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		}
 
 		if fi.IsDir() {
-			fileInfoX = MyReadDir(loneFilename, excludeMe)
+			fileInfoX, err = MyReadDir(loneFilename, excludeMe)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			fix := FileInfoExType{
 				FI:      fi,
