@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -35,7 +36,7 @@ import (
    5 Jan 2023 -- Adding stats to the output.
    6 Jan 2023 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
                    Added a stop code of zero.
-   7 Jan 2023 -- Now called copieslist, and is intended to have multiple targets.  If there is a target on the command line, then there will be only 1 target.
+   7 Jan 2023 -- Now called copiesfiles.go, and is intended to have multiple targets.  If there is a target on the command line, then there will be only 1 target.
                    If this pgm prompts for a target, it will accept multiple targets.  It will have to validate each of them and will only send to the validated targets.
 */
 
@@ -49,6 +50,8 @@ const sepString = string(filepath.Separator)
 
 var autoWidth, autoHeight int
 var err error
+
+var verboseFlag, veryVerboseFlag bool
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -77,8 +80,6 @@ func main() {
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
 
-	var verboseFlag, veryVerboseFlag bool
-
 	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
 
@@ -101,6 +102,9 @@ func main() {
 	}
 
 	Reverse := revFlag
+
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -146,15 +150,20 @@ func main() {
 
 	// now have the fileList.  Need to check the destination directory or directories.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
+	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.  destDir is a simple string
 	targetDirs := make([]string, 0)
 	if destDir == "" { // now to process directories, if needed.
 		fmt.Print(" Destination directories delimited by spaces? ")
-		_, err = fmt.Scanln(&destDir)
-		if err != nil {
+		//_, err := fmt.Scanln(&destDir) this doesn't allow me to read more than 1 string.
+		scanner := bufio.NewReader(os.Stdin) // need this to read the entire line and then parse it myself.
+		destDir, err = scanner.ReadString('\n')
+		//                              fmt.Printf(" err=%s, destdir type is %T, destdir: %#v\n", err, destDir, destDir)
+		destDir = strings.TrimSpace(destDir)
+		if len(destDir) == 0 {
 			destDir = "." + sepString
 		}
 		targetsRaw := strings.Split(destDir, " ")
+		//                                            fmt.Printf("destDir: %#v, targetsRaw: %#v\n", destDir, targetsRaw)
 		for _, target := range targetsRaw {
 			td, err := validateTarget(target)
 			if err != nil {
@@ -162,6 +171,9 @@ func main() {
 				continue
 			}
 			targetDirs = append(targetDirs, td)
+			if veryVerboseFlag {
+				fmt.Printf(" in target and targetsRaw for loop.  target=%s,  td=%s, targetDirs=%#v\n", target, td, targetDirs)
+			}
 		}
 	} else { // a single directory is a param on the command line
 		td, err := validateTarget(destDir)
@@ -175,6 +187,7 @@ func main() {
 	}
 
 	// By here, targetDirs is a slice which may be of length one that contains the target directories for copy operations.  I will copy the full list to each target.
+	//                                                                      fmt.Printf(" targetDirs: %#v\n", targetDirs)
 
 	fileList, err = list.FileSelection(fileList)
 	if err != nil {
@@ -192,7 +205,7 @@ func main() {
 		for i, d := range targetDirs {
 			fmt.Printf("[%d] %q\n", i, d)
 		}
-		fmt.Println("\n") // this will print 2 blank lines
+		fmt.Println()
 	}
 	fmt.Printf("\n\n")
 
@@ -268,7 +281,11 @@ func CopyAFile(srcFile, destDir string) error {
 // --------------------------------------------- validateTarget -----------------------------------------------------
 
 func validateTarget(dir string) (string, error) {
-	var outDir string
+	outDir := dir
+
+	if veryVerboseFlag {
+		fmt.Printf(" in validateTarget.  dir is %s   ", dir)
+	}
 
 	if strings.ContainsRune(dir, ':') {
 		directoryAliasesMap := list.GetDirectoryAliases()
@@ -277,8 +294,13 @@ func validateTarget(dir string) (string, error) {
 		homeDirStr, _ := os.UserHomeDir()
 		outDir = strings.Replace(dir, "~", homeDirStr, 1)
 	}
+
 	if !strings.HasSuffix(outDir, sepString) {
 		outDir = outDir + sepString
+	}
+
+	if list.VeryVerboseFlag {
+		fmt.Printf(" before call to os.Lstat(%s).  outDir is %s\n", dir, outDir)
 	}
 
 	fi, err := os.Lstat(outDir)
@@ -289,5 +311,10 @@ func validateTarget(dir string) (string, error) {
 		e := fmt.Errorf("os.Lstat(%s) is not a directory", outDir)
 		return "", e
 	}
+
+	if list.VeryVerboseFlag {
+		fmt.Printf(" and exiting validateTarget.  outDir is %s\n", outDir)
+	}
+
 	return outDir, nil
 }

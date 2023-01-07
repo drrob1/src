@@ -49,9 +49,10 @@ import (
                    All further development is here in copyc2 because I think it's smoother; it doesn't need a kludge of sleep for 10 ms.
    3 Jan 2023 -- Added output of number of go routines.
    6 Jan 2023 -- Better error handling now that all list routines return an error variable.  And a stop code was added.
+   7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
 */
 
-const LastAltered = "6 Jan 2023" //
+const LastAltered = "7 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -138,6 +139,9 @@ func main() {
 	}
 
 	Reverse := revFlag
+
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()

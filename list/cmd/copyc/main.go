@@ -45,9 +45,10 @@ import (
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
    3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.  And then I added displaying the number of go routines.
    6 Jan 2023 -- list now has a stop code, and all routines return an error.
+   7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
 */
 
-const LastAltered = "6 Jan 2023" //
+const LastAltered = "7 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -135,6 +136,9 @@ func main() {
 	}
 
 	Reverse := revFlag
+
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()

@@ -30,9 +30,10 @@ import (
   29 Dec 2022 -- Adding check for an empty list, and the list package code was enhanced to include '.' as a sentinel.
    1 Jan 2023 -- Now uses list.New instead of list.NewList.
    6 Jan 2023 -- list package functions now return an error.  This allows better error handling and a stop code.
+   7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
 */
 
-const LastAltered = "6 Jan 2023" //
+const LastAltered = "7 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -95,6 +96,9 @@ func main() {
 	}
 
 	Reverse := revFlag
+
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
