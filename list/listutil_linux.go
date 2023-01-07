@@ -1,7 +1,6 @@
 package list
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -20,6 +19,7 @@ import (
                    And myReadDir creates the relPath field that I added to FileInfoExType.
   22 Dec 2022 -- I'm writing and testing listutil_linux.go.  It's too late to test the code, so I'll do that tomorrow.
   29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
+   6 Jan 2023 -- Improving error handling.  Routines now return an error.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -27,7 +27,7 @@ import (
 // The returned slice of FileInfoExType will then be passed to the display rtn to colorize only the needed number of file infos.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
 
-func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
+func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
 
 	workingDir, err := os.Getwd()
@@ -61,13 +61,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 		//}
 		fi, err := os.Lstat(loneFilename)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				fmt.Fprintf(os.Stderr, "%s is a lone filepath and does not exist.  Exiting\n\n", fi.Name())
-				os.Exit(1)
-			}
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Println()
-			os.Exit(1)
+			return nil, err
 		}
 
 		if VerboseFlag {
@@ -109,5 +103,5 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) []FileInfoExType {
 	if VerboseFlag {
 		fmt.Printf(" Leaving getFileInfoXFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfoX))
 	}
-	return fileInfoX
+	return fileInfoX, nil
 }
