@@ -38,6 +38,7 @@ import (
                    Added a stop code of zero.
    7 Jan 2023 -- Now called copiesfiles.go, and is intended to have multiple targets.  If there is a target on the command line, then there will be only 1 target.
                    If this pgm prompts for a target, it will accept multiple targets.  It will have to validate each of them and will only send to the validated targets.
+  10 Jan 2023 -- I've settled into calling this pgm copying.  But I'll do that w/ aliases.
 */
 
 const LastAltered = "7 Jan 2023" //
