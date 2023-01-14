@@ -1,19 +1,16 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
-	"syscall"
 )
 
+/*  Not used, so I'll comment it out.
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
-
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
 		return "", ""
 	}
@@ -25,11 +22,15 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	groupnameStr = GetIDname(gidStr)
 	return usernameStr, groupnameStr
 } // end GetUserGroupStr
+*/
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, but does not sort the slice before returning it, due to difficulty in passing the sort function.
 // The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
+
+// on Jan 14, 2023 I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
+// from args.go.  It worked in dsrt, so now I'm porting that code here.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
 
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
@@ -53,36 +54,41 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fmt.Printf(" after call to myreaddir.  Len(fileInfos)=%d\n", len(fileInfos))
 		}
 
-	} else if flag.NArg() == 1 { // a lone name may mean file not found, as bash will populate what it finds.
-		var loneFilename string
-		const sep = filepath.Separator
+	} else if flag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
+		const sep = string(filepath.Separator)
 		fileInfos = make([]os.FileInfo, 0, 1)
-		firstChar := rune(flag.Arg(0)[0])
-		if firstChar == sep { // have an absolute path, so don't prepend anything
-			loneFilename = flag.Arg(0)
-		} else {
-			loneFilename = workingDir + string(sep) + flag.Arg(0)
+		loneFilename := flag.Arg(0)
+		//firstChar := rune(flag.Arg(0)[0])  bad idea.  Deleted 1/14/23.
+		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
+		if err == nil {
+			stat, _ := fHandle.Stat()
+			if stat.IsDir() { // either a direct or symlinked directory name
+				fHandle.Close()
+				fileInfos = myReadDir(loneFilename)
+				return fileInfos
+			}
+
+		} else { // err must not be nil after attempting to open loneFilename.
+			loneFilename = workingDir + sep + loneFilename
 			loneFilename = filepath.Clean(loneFilename)
 		}
-		fi, err := os.Lstat(loneFilename)
+
+		fHandle, err = os.Open(loneFilename)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				fmt.Fprintf(os.Stderr, "%s is a lone filepath and does not exist.  Exiting\n\n", fi.Name())
-				os.Exit(1)
-			}
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Println()
 			os.Exit(1)
 		}
 
-		if verboseFlag {
-			fmt.Printf(" in getFileInfosFromCommandLine: loneFilename=%s, fi.Name=%s, IsDir=%t\n", loneFilename, fi.Name(), fi.IsDir())
-		}
+		fi, _ := fHandle.Stat()
 
 		if fi.IsDir() {
+			fHandle.Close()
 			fileInfos = myReadDir(loneFilename)
-		} else {
+			return fileInfos
+		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return its fileInfo.
 			fileInfos = append(fileInfos, fi)
+			return fileInfos
 		}
 
 	} else { // must have more than one filename on the command line, populated by bash.

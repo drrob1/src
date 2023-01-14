@@ -118,9 +118,11 @@ Revision History
 21 Oct 22 -- golangci-lint said I don't use global directoryAliasMap, so I'm removing it.
                Turned out that the linter was wrong, sort of.  I don't use it on linux, but I need it on Windows.  So I had to put it back for Windows.
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
+14 Jan 23 -- I wrote args to learn more about how arguments are handled.  I think I got it wrong in dsrtutil_linux.  I'm going to fix it.  Now that it works there
+               I'll fix it here, too
 */
 
-const LastAltered = "11 Nov 2022"
+const LastAltered = "14 Jan 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
