@@ -114,9 +114,10 @@ REVISION HISTORY
                Now I need an option, -F, to undo the filterflag set in an environment var.
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 21 Nov 22 -- static linter found an issue that I'm going to fix.
+14 Jan 23 -- I wrote args to learn more about how arguments are handled.  I think I got it wrong in dsrtutil_linux.  I'm going to fix it.
 */
 
-const LastAltered = "22 Nov 2022"
+const LastAltered = "14 Jan 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.

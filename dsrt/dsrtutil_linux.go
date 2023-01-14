@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -31,6 +30,9 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 // It handles if there are no files populated by bash or file not found by bash, but the sorting will be done in main, as passing the sort fcn was a problem.
 // The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
 
+// on Jan 14, 2023 I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
+// from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
+
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
 	if verboseFlag {
@@ -52,36 +54,44 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		if verboseFlag {
 			fmt.Printf(" after call to myreaddir.  Len(fileInfos)=%d\n", len(fileInfos))
 		}
+		return fileInfos
 
-	} else if flag.NArg() == 1 { // a lone name may mean file not found, as bash will populate what it finds.
-		var loneFilename string
-		const sep = filepath.Separator
+	} else if flag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
+		const sep = string(filepath.Separator)
 		fileInfos = make([]os.FileInfo, 0, 1)
-		firstChar := rune(flag.Arg(0)[0])
-		if firstChar == sep { // have an absolute path, so don't prepend anything
-			loneFilename = flag.Arg(0)
-		} else {
-			loneFilename = workingDir + string(sep) + flag.Arg(0)
+		//firstChar := rune(flag.Arg(0)[0])  I'm changing this 1/14/23
+
+		loneFilename := flag.Arg(0)
+		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
+		if err == nil {
+			stat, _ := fHandle.Stat()
+			if stat.IsDir() { // either a direct or symlinked directory name
+				fHandle.Close()
+				fileInfos = myReadDir(loneFilename)
+				return fileInfos
+			}
+
+		} else { // err must not be nil after attempting to open loneFilename.
+			loneFilename = workingDir + sep + loneFilename
 			loneFilename = filepath.Clean(loneFilename)
 		}
-		fi, err := os.Lstat(loneFilename)
+
+		fHandle, err = os.Open(loneFilename)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				fmt.Fprintf(os.Stderr, "%s does not exist.  Exiting\n\n", loneFilename)
-				os.Exit(1)
-			}
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Println()
 			os.Exit(1)
 		}
-		if verboseFlag {
-			fmt.Printf(" in getFileInfosFromCommandLine: loneFilename=%s, fi.Name=%s\n", loneFilename, fi.Name())
-		}
+
+		fi, _ := fHandle.Stat()
 
 		if fi.IsDir() {
+			fHandle.Close()
 			fileInfos = myReadDir(loneFilename)
-		} else {
+			return fileInfos
+		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return its fileInfo.
 			fileInfos = append(fileInfos, fi)
+			return fileInfos
 		}
 	} else { // must have more than one filename on the command line, populated by bash.
 		fileInfos = make([]os.FileInfo, 0, flag.NArg())
