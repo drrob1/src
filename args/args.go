@@ -10,7 +10,8 @@ import (
 
 /*
 13 Jan 2023 -- On leox.  I had to change the name from cli which collided w/ another pgm here.  This is now called args.go.
-      dot gives no error, isdir=true.  ds-docs gives no error, isdir=false, issymlink=true.
+
+      dot, '.', is passed as is, gives no error, isdir=true.  ds-docs gives no error, isdir=false, issymlink=true.
       Split on "." gives dir of empty string and filename is "."
       And when I call handle.Readdirnames(0) it works.
 

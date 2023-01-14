@@ -20,6 +20,9 @@ import (
   22 Dec 2022 -- I'm writing and testing listutil_linux.go.  It's too late to test the code, so I'll do that tomorrow.
   29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
    6 Jan 2023 -- Improving error handling.  Routines now return an error.
+  14 Jan 2023 -- I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
+                   from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
+
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -49,41 +52,51 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
 		}
 
-	} else if flag.NArg() == 1 { // a lone name may mean file not found, as bash will populate what it finds.
-		var loneFilename string
-		const sep = filepath.Separator
+	} else if flag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
+		const sep = string(filepath.Separator)
 		fileInfoX = make([]FileInfoExType, 0, 1)
-		loneFilename = flag.Arg(0)
-		//firstChar := rune(flag.Arg(0)[0])
-		//if firstChar == sep { // have an absolute path, so don't prepend anything
-		//	loneFilename = flag.Arg(0)
-		//} else {
-		//	//loneFilename = workingDir + string(sep) + flag.Arg(0)
-		//	//loneFilename = filepath.Clean(loneFilename)
-		//	loneFilename = filepath.Join(workingDir, flag.Arg(0))
-		//}
-		fi, err := os.Lstat(loneFilename)
-		if err != nil {
-			return nil, err
+		loneFilename := flag.Arg(0)
+
+		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
+		if err == nil {
+			stat, _ := fHandle.Stat()
+			if stat.IsDir() { // either a direct or symlinked directory name
+				fHandle.Close()
+				fileInfoX, err = MyReadDir(loneFilename, nil) // nil exclude regex
+				return fileInfoX, err
+			}
+
+		} else { // err must not be nil after attempting to open loneFilename.
+			loneFilename = workingDir + sep + loneFilename
+			loneFilename = filepath.Clean(loneFilename)
 		}
 
-		if VerboseFlag {
-			fmt.Printf(" in getFileInfoXFromCommandLine: loneFilename=%s, fi.Name=%s, IsDir=%t\n", loneFilename, fi.Name(), fi.IsDir())
+		fHandle, err = os.Open(loneFilename)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			fmt.Println()
+			os.Exit(1)
 		}
+
+		fi, _ := fHandle.Stat()
 
 		if fi.IsDir() {
-			fileInfoX, err = MyReadDir(loneFilename, excludeMe)
+			fHandle.Close()
+			fileInfoX, err = MyReadDir(loneFilename, nil) // ExcludeMe regex is nil
 			if err != nil {
 				return nil, err
 			}
-		} else {
+			return fileInfoX, nil
+		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return a variable of fileInfoExType fields.
 			fix := FileInfoExType{
 				FI:      fi,
 				Dir:     workingDir,
-				RelPath: filepath.Join(workingDir, loneFilename), // Not sure this is needed, but here it is.
+				RelPath: filepath.Join(workingDir, loneFilename),
 			}
 			fileInfoX = append(fileInfoX, fix)
+			return fileInfoX, nil
 		}
+
 
 	} else { // must have more than one filename on the command line, populated by bash.
 		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
