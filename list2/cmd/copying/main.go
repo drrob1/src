@@ -50,7 +50,7 @@ import (
                    Now called list2.go, as the change to have 'i' inputDir is big enough that all routines need to be changed.
 */
 
-const LastAltered = "15 Jan 2023" //
+const LastAltered = "16 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -133,7 +133,6 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-		list2.ExcludeRex = excludeRegex
 	}
 
 	if rexStr != "" {
@@ -141,7 +140,6 @@ func main() {
 		if err != nil {
 			fmt.Printf(" Input regular expression error is %s.  Ignoring\n", err)
 		}
-		list2.IncludeRex = rex
 	}
 	list2.InputDir = inputStr
 	list2.FilterFlag = filterFlag
@@ -149,7 +147,8 @@ func main() {
 	list2.VeryVerboseFlag = veryVerboseFlag
 	list2.ReverseFlag = revFlag
 	list2.SizeFlag = sizeFlag
-	// list2.ExcludeRex and list2.IncludeRex are assigned above.
+	list2.ExcludeRex = excludeRegex
+	list2.IncludeRex = rex
 
 	// Finished processing the input flags and assigned list2 variables.  Now can get the fileList.
 
