@@ -40,7 +40,7 @@ REVISION HISTORY
 23 Oct 22 -- On linux will call cvlc instead of vlc.  Nevermind, it's not better.  But I changed MyReadDir to skip directories.
 14 Nov 22 -- Will use fact that an empty regexp always matches everything.  Turned out to be a bad thing, because therefore the exclude expression excluded everything.
                I undid it.
-16 Jan 23 -- Now called listvlc.go  It will use the list routines to make a list to shuffle and then include in the vlc call.
+16 Jan 23 -- Now called listvlc.go in list2 tree.  It will use the list routines to make a list to shuffle and then include in the vlc call.
 */
 
 const lastModified = "Jan 16, 2023"
@@ -85,7 +85,7 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
-	flag.IntVar(&numNames, "n", 20, " Number of file names to output on the commandline to vlc.")
+	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.")
 	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 
 	var revFlag bool
@@ -94,18 +94,17 @@ func main() {
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
 
-	var excludeFlag bool
-	var excludeRegexPattern string
+	//var excludeFlag bool
+	//var excludeRegexPattern string
 	//var excludeRegex *regexp.Regexp  declared globally above
-	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
+	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
+	//flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
-
 
 	flag.Parse()
 	//numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.  Not needed anymore.
@@ -147,6 +146,12 @@ func main() {
 	// Finished processing the input flags and assigned list2 variables.  Now can get the fileList.
 
 	fileList, err := list2.New() // fileList used to be []string, but now it's []FileInfoExType.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " ERROR from list2 is: %s\n", err)
+		os.Exit(1)
+	}
+
+	fileList, err = list2.FileSelection(fileList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " ERROR from list2 is: %s\n", err)
 		os.Exit(1)
