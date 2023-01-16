@@ -1,4 +1,4 @@
-package list
+package list2
 
 import (
 	"fmt"
@@ -31,7 +31,8 @@ import (
    1 Jan 2023 -- I changed the display colors for the list.  The line is not all the same color now.
    4 Jan 2023 -- Adding screen clearing between screen displays.  Copied from rpng.
    6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
-  15 Jan 2023 -- Split off list2, which will have the code that takes an input regexp, etc, for copying.go.
+  15 Jan 2023 -- Now called list2 which will use globals and will use InputRex, so I don't need platform specific code.  All command line params will be output directories,
+                   including symlinks.
 */
 
 type DirAliasMapType map[string]string
@@ -48,7 +49,7 @@ var VeryVerboseFlag bool
 var FilterFlag bool
 var ReverseFlag bool
 var GlobFlag bool
-var directoryAliasesMap DirAliasMapType
+var DirectoryAliasesMap DirAliasMapType
 var fileInfoX []FileInfoExType
 var clear map[string]func()
 var ExcludeRex *regexp.Regexp
@@ -73,14 +74,10 @@ func init() {
 	_ = autoWidth
 }
 
-func New(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
-	lst, err := MakeList(excludeMe, sizeSort, reverse)
+func New() ([]FileInfoExType, error) {
+	lst, err := MakeList(ExcludeRex, SizeFlag, ReverseFlag)
 	return lst, err
 }
-
-//func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
-//	return MakeList(excludeMe, sizeSort, reverse)
-//}
 
 // MakeList will return a slice of strings that contain a full filename including dir
 func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
@@ -93,14 +90,14 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 		VerboseFlag = true
 	}
 
-	fileInfoX, err = getFileInfoXFromCommandLine(excludeRegex)
+	fileInfoX, err = getFileInfoXWithGlobals()
 	if err != nil {
 		return nil, err
 	}
 	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
 
 	// set which sort function will be in the sortfcn var
-	forward := !(reverse || ReverseFlag)
+	forward := !ReverseFlag
 	dateSort := !sizeSort
 	sortFcn := func(i, j int) bool { return false }
 	if sizeSort && forward { // set the value of sortFcn so only a single line is needed to execute the sort.
@@ -142,9 +139,9 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 	return fileInfoX, nil
 } // end MakeList
 
-// ------------------------------- myReadDir -----------------------------------
+// ------------------------------- MyReadDir -----------------------------------
 
-func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Who knew?
+func MyReadDir(dir string) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Who knew?
 	dirEntries, err := os.ReadDir(dir) // this function doesn't need to be closed.
 	if err != nil {
 		return nil, err
@@ -157,7 +154,7 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
 			continue
 		}
-		if includeThis(fi, excludeMe) {
+		if includeThis(fi) {
 			fix := FileInfoExType{ // fix is a file info extended var
 				FI:      fi,
 				Dir:     dir,
@@ -171,7 +168,7 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 
 // ---------------------------------------------------- includeThis ----------------------------------------
 
-func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
+func includeThis(fi os.FileInfo) bool {
 	if VeryVerboseFlag {
 		fmt.Printf(" includeThis.  FI=%#v, FilterFlag=%t\n", fi, FilterFlag)
 	}
@@ -179,21 +176,8 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
 		return false
 	}
 
-	//if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-	//	return false
-	//} else if filterAmt > 0 {
-	//	if fi.Size() < int64(filterAmt) {
-	//		return false
-	//	}
-	//}
-	//if excludeRex.String() != "" {
-	//	if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
-	//		return false
-	//	}
-	//}
-
-	if excludeRex != nil {
-		if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
+	if ExcludeRex != nil {
+		if BOOL := ExcludeRex.MatchString(strings.ToLower(fi.Name())); BOOL { // If does match the Exclude Regexp
 			return false
 		}
 	}
@@ -202,8 +186,13 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
 			return false
 		}
 	}
+	if IncludeRex != nil {
+		if BOOL := IncludeRex.MatchString(strings.ToLower(fi.Name())); !BOOL { // if does not match the Include Regexp
+			return false
+		}
+	}
 	return true
-}
+} // end includeThis
 
 //------------------------------ GetDirectoryAliases ----------------------------------------
 
@@ -232,21 +221,20 @@ func GetDirectoryAliases() DirAliasMapType { // Env variable is diraliases.
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string {
+func ProcessDirectoryAliases(cmdline string) string { // the directory aliases map is initialized in init()
 
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = GetDirectoryAliases()
+	//aliasesMap = GetDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
-	aliasValue, ok := aliasesMap[aliasName]
+	aliasValue, ok := DirectoryAliasesMap[aliasName]
 	if !ok {
 		return cmdline
 	}
 	PathNFile := cmdline[idx+1:]
 	completeValue := aliasValue + PathNFile
-	//fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
 	return completeValue
 } // ProcessDirectoryAliases
 
@@ -366,12 +354,15 @@ outerLoop:
 		}
 		beg = end
 
-		clearFunc := clear[runtime.GOOS]
+		//clearFunc := clear[runtime.GOOS]  // I'm playing w/ an alternative to blanking the screen, so the scroll back buffer is preserved.
+		clearFunc := clear["newlines"]
 		clearFunc()
 	}
 
 	return outList, nil
 } // end FileSelection
+
+// ------------------------------------- min ----------------------------------------------------------
 
 func min(i, j int) int {
 	if i < j {
@@ -408,12 +399,12 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 		color = ct.Green
 	}
 	return s1, color
-}
+} // end GetMagnitudeString
 
 // ------------------------------------------------------- init -----------------------------------
 
 func init() {
-	clear = make(map[string]func(), 2)
+	clear = make(map[string]func(), 3)
 	clear["linux"] = func() { // this is a closure, or an anonymous function
 		cmd := exec.Command("clear")
 		cmd.Stdout = os.Stdout
@@ -426,4 +417,49 @@ func init() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
+
+	clear["newlines"] = func() {
+		fmt.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	}
+
+	if runtime.GOOS == "windows" {
+		DirectoryAliasesMap = GetDirectoryAliases()
+	}
 }
+
+// --------------------------------------------- getFileInfoXWithGlobals ------------------------------------------
+
+func getFileInfoXWithGlobals() ([]FileInfoExType, error) {
+	var fileInfoX []FileInfoExType
+	// From globals: InputDir, IncludeRex, ExcludeRex, ReverseFlag, SizeFlag
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from getFileInfoXWithGlobals os.Getwd is %#v\n", err)
+		os.Exit(1)
+	}
+
+	if InputDir != "" {
+		workingDir = InputDir
+		if strings.Contains(InputDir, ":") {
+			workingDir = ProcessDirectoryAliases(InputDir)
+		}
+	}
+
+	if VerboseFlag {
+		fmt.Printf(" workingDir=%s\n", workingDir)
+	}
+
+	fileInfoX, err = MyReadDir(workingDir) // excluding by regex, filesize or having an ext is done by MyReadDir.
+	if err != nil {
+		return nil, err
+	}
+	if VerboseFlag {
+		fmt.Printf(" after call to MyReadDir.  Len(fileInfoX)=%d\n", len(fileInfoX))
+	}
+
+	if VerboseFlag {
+		fmt.Printf(" Leaving GetFileInfoXWithGlobals.  len(fileinfos)=%d\n", len(fileInfoX))
+	}
+	return fileInfoX, nil
+} // end getFileInfoXWithGlobals

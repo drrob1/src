@@ -7,6 +7,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
+	"src/list2"
 	"time"
 
 	//ct "github.com/daviddengcn/go-colortext"
@@ -16,7 +17,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"src/list"
 	"strings"
 )
 
@@ -28,18 +28,26 @@ import (
   20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
                    And how am I going to handle collisions?
   22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                   So I'm propagating that change thru.
+                   So I'm propagating that change through.
   25 Dec 2022 -- Moving the file selection stuff to list.go
   26 Dec 2022 -- Shortened the messages.  And added a timer.
   29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
    1 Jan 2023 -- Now uses list.New instead of list.NewList
    5 Jan 2023 -- Adding stats to the output.
-   6 Jan 2023 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
+   6 Jan 2023 -- Now that it clears the screen each time through the selection loop, I'll print the version message at the end also.
                    Added a stop code of zero.
    7 Jan 2023 -- Now called copiesfiles.go, and is intended to have multiple targets.  If there is a target on the command line, then there will be only 1 target.
                    If this pgm prompts for a target, it will accept multiple targets.  It will have to validate each of them and will only send to the validated targets.
   10 Jan 2023 -- I've settled into calling this pgm copying.  But I'll do that w/ aliases on Windows and symlinks on linux.
-  15 Jan 2023 -- Added assigning filterflag to list variable.
+  14 Jan 2023 -- Now really called copying (I had to remove the aliases and symlinks).  It will allow multiple input files and output directories.
+                   To do this, I'll need flags like 'i' and 'o'.  I'll have to work on this some more.  I may get more mileage out of a GitHub flags package rather than
+                   the std library one.  This will take a while, like maybe a week.
+                   Kingpin looks interesting, as does go-flags.
+  15 Jan 2023 -- I've decided that I only need 'i' flag for include regexp.  The command line will have 1 or more output destinations.  I don't need or want a flag for that.
+                   But I'm going to continue looking at go-flags more closely.
+                   I posted a message for help on golang-nuts as go get isn't working for this one.
+                   I'll use the std flag package for now.
+                   Now called list2.go, as the change to have 'i' inputDir is big enough that all routines need to be changed.
 */
 
 const LastAltered = "15 Jan 2023" //
@@ -51,15 +59,16 @@ const sepString = string(filepath.Separator)
 // const minHeight = 26  not used here, but used in FileSelection.
 
 var autoWidth, autoHeight int
-var err error
 
 var verboseFlag, veryVerboseFlag bool
+var rex *regexp.Regexp
+var rexStr, inputStr string
 
 func main() {
+	var err error
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
@@ -68,10 +77,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-		//	dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
-
+		fmt.Fprintf(flag.CommandLine.Output(), " Needs i flag for input.  Command line params will all be output params.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
@@ -97,17 +103,14 @@ func main() {
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
+	flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
+	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
 		verboseFlag = true
 	}
-
-	Reverse := revFlag
-
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.FilterFlag = filterFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -130,11 +133,29 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
+		list2.ExcludeRex = excludeRegex
 	}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	if rexStr != "" {
+		rex, err = regexp.Compile(rexStr)
+		if err != nil {
+			fmt.Printf(" Input regular expression error is %s.  Ignoring\n", err)
+		}
+		list2.IncludeRex = rex
+	}
+	list2.InputDir = inputStr
+	list2.FilterFlag = filterFlag
+	list2.VerboseFlag = verboseFlag
+	list2.VeryVerboseFlag = veryVerboseFlag
+	list2.ReverseFlag = revFlag
+	list2.SizeFlag = sizeFlag
+	// list2.ExcludeRex and list2.IncludeRex are assigned above.
+
+	// Finished processing the input flags and assigned list2 variables.  Now can get the fileList.
+
+	fileList, err := list2.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		fmt.Fprintf(os.Stderr, " Error from list2.New is %s\n", err)
 		os.Exit(1)
 	}
 	if verboseFlag {
@@ -153,16 +174,18 @@ func main() {
 
 	// now have the fileList.  Need to check the destination directory or directories.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.  destDir is a simple string
-	targetDirs := make([]string, 0)
-	if destDir == "" { // now to process directories, if needed.
+	destDirs := flag.Args()
+	var targetDirs []string
+	if len(destDirs) == 0 { // now to process directories, if needed.
 		fmt.Print(" Destination directories delimited by spaces? ")
-		//_, err := fmt.Scanln(&destDir) this doesn't allow me to read more than 1 string.
 		scanner := bufio.NewReader(os.Stdin) // need this to read the entire line and then parse it myself.
-		destDir, err = scanner.ReadString('\n')
-		//                              fmt.Printf(" err=%s, destdir type is %T, destdir: %#v\n", err, destDir, destDir)
-		destDir = strings.TrimSpace(destDir)
-		if len(destDir) == 0 {
+		ans, err := scanner.ReadString('\n')
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR: %s.  Assuming '.'\n", err)
+			ans = "." + sepString
+		}
+		destDir := strings.TrimSpace(ans)
+		if len(destDir) == 0 { // if destDir empty, default is '.'
 			destDir = "." + sepString
 		}
 		targetsRaw := strings.Split(destDir, " ")
@@ -179,22 +202,26 @@ func main() {
 			}
 		}
 	} else { // a single directory is a param on the command line
-		td, err := validateTarget(destDir)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from validateTarget(%s) is %s.  Target ignored.\n", destDir, err)
-			targetDirs = append(targetDirs, "")
-		} else {
+		for _, target := range destDirs {
+			td, err := validateTarget(target)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from validateTarget(%s) is %s\n", target, err)
+				targetDirs = append(targetDirs, "")
+				continue
+			}
 			targetDirs = append(targetDirs, td)
+			if veryVerboseFlag {
+				fmt.Printf(" in target and targetsRaw for loop.  target=%s,  td=%s, targetDirs=%#v\n", target, td, targetDirs)
+			}
 		}
-
 	}
 
 	// By here, targetDirs is a slice which may be of length one that contains the target directories for copy operations.  I will copy the full list to each target.
 	//                                                                      fmt.Printf(" targetDirs: %#v\n", targetDirs)
 
-	fileList, err = list.FileSelection(fileList)
+	fileList, err = list2.FileSelection(fileList)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error from list.FileSelection is %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error from list2.FileSelection is %s\n", err)
 		os.Exit(1)
 	}
 	if verboseFlag {
@@ -259,7 +286,6 @@ func CopyAFile(srcFile, destDir string) error {
 
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
-	//fmt.Printf(" CopyFile after Join: src = %#v, destDir = %#v, outName = %#v\n", srcFile, destDir, outName)
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
@@ -268,11 +294,11 @@ func CopyAFile(srcFile, destDir string) error {
 		}
 	}
 	out, err := os.Create(outName)
-	defer out.Close()
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
+		//                                      fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err
 	}
+	defer out.Close()
 	_, err = io.Copy(out, in)
 	if err != nil {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
@@ -291,8 +317,7 @@ func validateTarget(dir string) (string, error) {
 	}
 
 	if strings.ContainsRune(dir, ':') {
-		directoryAliasesMap := list.GetDirectoryAliases()
-		outDir = list.ProcessDirectoryAliases(directoryAliasesMap, dir)
+		outDir = list2.ProcessDirectoryAliases(dir)
 	} else if strings.Contains(dir, "~") { // this can only contain a ~ on Windows.
 		homeDirStr, _ := os.UserHomeDir()
 		outDir = strings.Replace(dir, "~", homeDirStr, 1)
@@ -302,22 +327,27 @@ func validateTarget(dir string) (string, error) {
 		outDir = outDir + sepString
 	}
 
-	if list.VeryVerboseFlag {
+	if list2.VeryVerboseFlag {
 		fmt.Printf(" before call to os.Lstat(%s).  outDir is %s\n", dir, outDir)
 	}
 
-	fi, err := os.Lstat(outDir)
+	fHandle, err := os.Open(outDir)
+	defer fHandle.Close()
 	if err != nil {
 		return "", err
+	}
+	fi, er := fHandle.Stat()
+	if er != nil {
+		return "", er
 	}
 	if !fi.IsDir() {
 		e := fmt.Errorf("os.Lstat(%s) is not a directory", outDir)
 		return "", e
 	}
 
-	if list.VeryVerboseFlag {
+	if list2.VeryVerboseFlag {
 		fmt.Printf(" and exiting validateTarget.  outDir is %s\n", outDir)
 	}
 
 	return outDir, nil
-}
+} // validateTarget
