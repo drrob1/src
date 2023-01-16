@@ -6,10 +6,10 @@
                  But I can change the side effect of displaying altered case.
   22 Mar 20 -- Will add timing code that I wrote for anack.
   27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
-  14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is mure complex than it
+  14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is more complex than it
                  needs to be.  I'm going to take a crack at writing a simpler version myself.
                  It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
-                 thru all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
+                 through all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
                  this better.  It seems much too complex.  I'm going to simplify it.
   16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
   19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
@@ -195,7 +195,7 @@ func main() {
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, len(files)) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, len(files))             // this uses an anonymous type.
-	go func() { // start the receiving operation before the sending starts
+	go func() {                                                // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)

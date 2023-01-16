@@ -108,15 +108,16 @@ Revision History
  9 Feb 22 -- Fixed bug on sorting line, sorting the wrong file.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag, finally.
 16 Feb 22 -- Time to remove the upper case flags that I don't use.
-25 Apr 22 -- Added the -1 flag and it's halfFlag variable.  For displaying half the number of lines the screen allows.
+25 Apr 22 -- Added the -1 flag, and it's halfFlag variable.  For displaying half the number of lines the screen allows.
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I removed the filter flag from this code when I wrote it.
 21 Oct 22 -- Removed unused variable as caught by golangci-lint, and incorrect use of format verb.
 11 Nov 22 -- Will show environment variables on startup message, if they're not blank.
 21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
+16 Jan 23 -- Adding smart case
 */
 
-const LastAltered = "Nov 22, 2022"
+const LastAltered = "Jan 16, 2023"
 
 type dirAliasMapType map[string]string
 
@@ -145,6 +146,7 @@ var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFla
 var maxDimFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines int
+var smartCase bool
 
 func main() {
 	var dsrtParam DsrtParamType
@@ -360,7 +362,6 @@ func main() {
 		numOfLines /= 2
 	}
 
-	//var excludeRegex *regexp.Regexp
 	if len(excludeRegexPattern) > 0 {
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
@@ -451,7 +452,12 @@ func main() {
 	if verboseFlag {
 		fmt.Println("inputRegEx=", inputRegExStr, ", and workingdir =", workingDir)
 	}
-	inputRegExStr = strings.ToLower(inputRegExStr)
+
+	smartCaseRegex := regexp.MustCompile("[A-Z]")
+	smartCase = smartCaseRegex.MatchString(inputRegExStr)
+	if !smartCase {
+		inputRegExStr = strings.ToLower(inputRegExStr)
+	}
 	inputRegEx, err := regexp.Compile(inputRegExStr)
 	if err != nil {
 		log.Fatalln(" error from regex compile function is ", err)
@@ -503,7 +509,7 @@ func main() {
 		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
 			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag)
-		fmt.Println(" Dirname is", workingDir)
+		fmt.Printf(" Dirname is %s, smartCase = %t\n", workingDir, smartCase)
 		fmt.Println()
 	}
 
@@ -788,7 +794,7 @@ func fixedStringLen(s string, size int) string {
 
 // ------------------------------------------------------ getFileInfos -------------------------------------------------
 
-// getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed
+// getFileInfos will return a slice of FileInfos after the filter and exclude expression are processed
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
@@ -814,7 +820,9 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []os.FileInfo {
 
 	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
 	for _, d := range dirEntries {
-		if !inputRegex.MatchString(strings.ToLower(d.Name())) { // skip dirEntries that do not match the input regex.
+		if !smartCase && !inputRegex.MatchString(strings.ToLower(d.Name())) { // skip dirEntries that do not match the input regex.
+			continue
+		} else if smartCase && !inputRegex.MatchString(d.Name()) {
 			continue
 		} else if includeThis(d.Name()) {
 			fi, e := d.Info()
