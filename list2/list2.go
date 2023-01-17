@@ -328,7 +328,7 @@ outerLoop:
 			ans = "" // it seems that if I don't do this, the prev contents are not changed when I just hit <enter>
 		}
 
-		// Check for the stop code anwhere in the input.
+		// Check for the stop code anywhere in the input.
 		if strings.Contains(ans, stopCode) {
 			e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
 			return nil, e
