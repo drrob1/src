@@ -48,9 +48,10 @@ import (
                    I posted a message for help on golang-nuts as go get isn't working for this one.
                    I'll use the std flag package for now.
                    Now called list2.go, as the change to have 'i' inputDir is big enough that all routines need to be changed.
+  17 Jan 2023 -- Uses i and rex flags.  And today I'm adding a check for zero results from the fileSelection routine.
 */
 
-const LastAltered = "16 Jan 2023" //
+const LastAltered = "17 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -235,6 +236,10 @@ func main() {
 			fmt.Printf("[%d] %q\n", i, d)
 		}
 		fmt.Println()
+	}
+	if len(fileList) == 0 {
+		fmt.Printf(" Length of the fileList after calling FileSelection is zero.  Aborting.\n")
+		os.Exit(1)
 	}
 	fmt.Printf("\n\n")
 
