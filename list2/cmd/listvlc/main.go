@@ -41,6 +41,7 @@ REVISION HISTORY
 14 Nov 22 -- Will use fact that an empty regexp always matches everything.  Turned out to be a bad thing, because therefore the exclude expression excluded everything.
                I undid it.
 16 Jan 23 -- Now called listvlc.go in list2 tree.  It will use the list routines to make a list to shuffle and then include in the vlc call.
+18 Jan 23 -- Adding smartCase
 */
 
 const lastModified = "Jan 16, 2023"
@@ -123,7 +124,13 @@ func main() {
 
 	includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	var err error
-	includeRegex, err = regexp.Compile(strings.ToLower(includeRexString)) // an empty regex compiles and will include everything.
+	smartCaseRegex := regexp.MustCompile("[A-Z]")
+	smartCaseFlag := smartCaseRegex.MatchString(includeRexString)
+	if smartCaseFlag {
+		includeRegex, err = regexp.Compile(includeRexString) // an empty regex compiles and will include everything.
+	} else {
+		includeRegex, err = regexp.Compile(strings.ToLower(includeRexString)) // an empty regex compiles and will include everything.
+	}
 	if err != nil {
 		fmt.Printf(" Error from compiling the regexp input string is %v\n", err)
 		os.Exit(1)
@@ -142,6 +149,7 @@ func main() {
 	list2.SizeFlag = sizeFlag
 	list2.ExcludeRex = excludeRegex
 	list2.IncludeRex = includeRegex
+	list2.SmartCaseFlag = smartCaseFlag
 
 	// Finished processing the input flags and assigned list2 variables.  Now can get the fileList.
 

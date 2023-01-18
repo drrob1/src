@@ -39,18 +39,19 @@ REVISION HISTORY
 23 Oct 22 -- On linux will call cvlc instead of vlc.  Nevermind, it's not better.  But I changed MyReadDir to skip directories.
 14 Nov 22 -- Will use fact that an empty regexp always matches everything.  Turned out to be a bad thing, because therefore the exclude expression excluded everything.
                I undid it.
+18 Jan 23 -- Adding smartCase
 */
 
 const lastModified = "Nov 14, 2022"
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, veryverboseFlag, notccFlag, ok bool
+var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
 func main() {
-	fmt.Printf(" launch vlc.go.  Last modified %s, compiled w/ %s\n\n", lastModified, runtime.Version())
+	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -71,7 +72,7 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp against all filenames in the current directory\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp using smart case, against all filenames in the current directory\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output 'n' of them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
@@ -107,7 +108,13 @@ func main() {
 
 	includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	var err error
-	includeRegex, err = regexp.Compile(strings.ToLower(includeRexString))
+	smartCase := regexp.MustCompile("[A-Z]")
+	smartCaseFlag = smartCase.MatchString(includeRexString)
+	if smartCaseFlag {
+		includeRegex, err = regexp.Compile(includeRexString)
+	} else {
+		includeRegex, err = regexp.Compile(strings.ToLower(includeRexString))
+	}
 	if err != nil {
 		fmt.Printf(" Error from compiling the regexp input string is %v\n", err)
 		os.Exit(1)
@@ -235,7 +242,6 @@ func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
 // ------------------------------- myReadDir -----------------------------------
 
 func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
-
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
@@ -243,42 +249,25 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 
 	fileNames := make([]string, 0, len(dirEntries))
 	for _, d := range dirEntries {
-		lower := strings.ToLower(d.Name())
-		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
+		maybeLower := d.Name()
+		if !smartCaseFlag {
+			maybeLower = strings.ToLower(maybeLower)
+		}
+		if !inputRegex.MatchString(maybeLower) { // skip dirEntries that do not match the input regex.
 			continue
 		}
 		if d.IsDir() { // skip directories
 			continue
 		}
 
-		//quotedString := fmt.Sprintf("%q", d.Name())
-		//fullPath, e := filepath.Abs(d.Name())
-		//if e != nil {
-		//	fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
-		//}
-		//fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
 		if excludeRegex == nil {
 			fileNames = append(fileNames, d.Name())
-		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
+		} else if !excludeRegex.MatchString(strings.ToLower(d.Name())) { // excludeRegex is not empty, so using it won't panic.  And always use ToLower here.
 			fileNames = append(fileNames, d.Name())
 		}
 	}
 	return fileNames
 } // myReadDir
-
-// ------------------------------ pause -----------------------------------------
-/*
-func pause() bool {
-	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
-	var ans string
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
-		return true
-	}
-	return false
-}
-*/
 
 // ------------------------------- minInt ----------------------------------------
 
@@ -318,4 +307,17 @@ func MakeDateStr() string {
 	dateStr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar + Sec + "__" + timeNow.DayOfWeekStr
 	return dateStr
 } // MakeDateStr
+
+// ------------------------------ pause -----------------------------------------
+
+func pause() bool {
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+		return true
+	}
+	return false
+}
 */

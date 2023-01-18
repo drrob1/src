@@ -33,6 +33,7 @@ import (
    6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
   15 Jan 2023 -- Now called list2 which will use globals and will use InputRex, so I don't need platform specific code.  All command line params will be output directories,
                    including symlinks.
+  18 Jan 2023 -- Adding SmartCaseFlag
 */
 
 type DirAliasMapType map[string]string
@@ -56,6 +57,7 @@ var ExcludeRex *regexp.Regexp
 var IncludeRex *regexp.Regexp
 var InputDir string
 var SizeFlag bool
+var SmartCaseFlag bool
 
 const defaultHeight = 40
 const minWidth = 90
@@ -187,8 +189,14 @@ func includeThis(fi os.FileInfo) bool {
 		}
 	}
 	if IncludeRex != nil {
-		if BOOL := IncludeRex.MatchString(strings.ToLower(fi.Name())); !BOOL { // if does not match the Include Regexp
-			return false
+		if SmartCaseFlag {
+			if BOOL := IncludeRex.MatchString(fi.Name()); !BOOL { // if does not match the Include Regexp
+				return false
+			}
+		} else {
+			if BOOL := IncludeRex.MatchString(strings.ToLower(fi.Name())); !BOOL { // if does not match the Include Regexp
+				return false
+			}
 		}
 	}
 	return true
