@@ -263,7 +263,7 @@ func main() {
 	}
 
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
-	fmt.Printf("\n Successfully copied n")
+	fmt.Printf("\n Successfully copied ")
 	ctfmt.Printf(ct.Green, onWin, "%d files,", success)
 	ctfmt.Printf(ct.Red, onWin, " and failed to copy %d files; ", fail)
 	ctfmt.Printf(ct.Yellow, onWin, "elapsed time is %s\n\n", time.Since(start))
