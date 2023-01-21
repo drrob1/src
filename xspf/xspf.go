@@ -3,8 +3,7 @@ package main
 /*
   REVISION HISTORY
   ----------------
-  29 Nov 13 -- First version based on TestFilePickerBase, vlcshuffle and TestXMLtoken.
-                This uses *.xspf as its default pattern.
+  29 Nov 13 -- First version based on TestFilePickerBase, vlcshuffle and TestXMLtoken. This uses *.xspf as its default pattern.
   11 Jan 14 -- Discovered that if there is only 1 match to pattern, it fails.  And I will
                 have new pattern option also display some potential matches.
   18 Jan 14 -- Add procedure to make sure pattern ends in .xspf.
@@ -29,13 +28,16 @@ package main
                  And I converted to modules.
   13 Feb 22 -- Converted to new API for filepicker.
   19 Jan 23 -- Now called xspf.go.  It will read a vlc xsfp file, shuffle the filenames/titles it finds, and then call vlc w/ possibly a subslice of those names.
+  20 Jan 23 -- It's finally working.  I'm going to stop now.  Maybe I'll come back to this another time, but I've had enough for now.
 */
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/jonhadfield/findexec"
+	"io"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -49,13 +51,14 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "19 Jan 2023"
-const MaxNumOfTracks = 2048
-const blankline = "                                                                             " // ~70 spaces
-const sepline = "-----------------------------------------------------------------------------"
+const LastCompiled = "20 Jan 2023"
+const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
-const (
+//const blankline = "                                                                             " // ~70 spaces
+//const sepline = "-----------------------------------------------------------------------------"
+
+const ( // States of tokens
 	EMPTY    = iota
 	CONTENTS // was string in the old Modula-2 code
 	OPENINGHTML
@@ -63,11 +66,13 @@ const (
 	OTHERERROR
 )
 
+var tokenStateNames = []string{"empty", "contents", "openingHTML", "closingHTML", "otherError"}
+
 //  XMLcharType  which is an enumeration of states of a single character.
 // I removed the EOL state, as it no longer applies.  Modula-2 would return a special EOL character, but this language follows the
 // C tradition of \r for <CR>, ASCII value of 13, and \n for <LF>, value of 10
 
-const (
+const ( // States of characters
 	CTRL = iota
 	OPENANGLE
 	CLOSEANGLE
@@ -93,56 +98,17 @@ type TrackType struct {
 }
 
 var TrackSlice []*TrackType // Global variable.  But still needs to call make in func main.
-
-var lineDelim string
-var tabchar = '\t'
 var veryVerboseFlag bool
+var verboseFlag bool
 
+//var lineDelim string
+//var tabChar = '\t'
 //  var indivTrackNum = 0;  Still don't think I need this.
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
 }
-
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
-
-func MakeDateStr() (datestr string) {
-
-	const DateSepChar = "-"
-
-	m, d, y := timlibg.TIME2MDY()
-	timenow := timlibg.GetDateTime()
-
-	MSTR := strconv.Itoa(m)
-	DSTR := strconv.Itoa(d)
-	YSTR := strconv.Itoa(y)
-	Hr := strconv.Itoa(timenow.Hours)
-	Min := strconv.Itoa(timenow.Minutes)
-	Sec := strconv.Itoa(timenow.Seconds)
-
-	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
-		Sec + "__" + timenow.DayOfWeekStr
-	return datestr
-} // MakeDateStr
-
-/* -------------------------------------------- Shuffle ----------------------------------------------------
-
-func Shuffle() {  replaced by rand.Shuffle
-	// Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
-
-	n := len(TrackSlice)
-
-	for c := 1; c < n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
-		for i := n - 1; i > 0; i-- {
-			// swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k can be
-			k := rand.Intn(i)
-			TrackSlice[i], TrackSlice[k] = TrackSlice[k], TrackSlice[i] // Go swap idiom, to swap pointers to a track that's held in TrackSlice
-		}
-	}
-} // Shuffle;
-
-*/
 
 // ---------------------------------------------------------------- getChar -----------------------------
 
@@ -183,6 +149,9 @@ func GetXMLToken(f *bytes.Reader) (TokenType, error) {
 MainForLoop:
 	for {
 		ch, err := getChar(f)
+		if veryVerboseFlag {
+			fmt.Printf("in top of GETXMLToken for loop.  err=%s, ch= %c:%d\n", err, ch.Ch, ch.State)
+		}
 		if err != nil { // including, and especially, when err is io.EOF
 			return TokenType{}, err
 		}
@@ -200,6 +169,7 @@ MainForLoop:
 			case CTRL:
 			case CLOSEANGLE:
 				XMLtoken.State = OTHERERROR
+				f.UnreadByte()
 				e := fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
 				return XMLtoken, e
 			} // case ch.state when the token state is empty
@@ -235,10 +205,10 @@ MainForLoop:
 			case PLAIN, SLASH, OPENANGLE:
 				tokenString.WriteByte(ch.Ch)
 			case CLOSEANGLE, CTRL:
-				tokenString.WriteByte(ch.Ch)
 				break MainForLoop
 			} // case chstate
 		default:
+			f.UnreadByte()
 			e := fmt.Errorf(" In GetXMLtoken and tokenstate is in default clause of switch case.  Token = %q", tokenString.String())
 			XMLtoken.State = OTHERERROR
 			return XMLtoken, e
@@ -246,20 +216,46 @@ MainForLoop:
 	} // indefinite for loop
 
 	XMLtoken.Str = tokenString.String()
+	if veryVerboseFlag {
+		fmt.Printf("Exiting GetXMLToken.  XMLToken.Str=%s, XMLToken.State=%s\n", XMLtoken.Str, tokenStateNames[XMLtoken.State])
+	}
 	return XMLtoken, nil
 } // GetXMLToken
 
 // -------------------------------------------------- GetTrack --------------------------------------------
 
-func GetTrack(f *bytes.Reader) *TrackType {
+func GetTrack(f *bytes.Reader) (*TrackType, error) {
 
 	// This returns a pointer to TrackType.  Based on what I've learned from Bill Kennedy, I'm rewriting this to more obviously use pointer semantics.
 
 	var trk TrackType
+	var err error
+	var XMLtoken TokenType
+
+	//for { // LOOP to ignoring white space until get the opening track tag
+	//	XMLtoken, err := GetXMLToken(f)
+	//	if verboseFlag {
+	//		fmt.Printf("GetTrack looking for opening track XMLtoken at about line 238: token= %s, state=%s\n", XMLtoken.Str, tokenStateNames[XMLtoken.State])
+	//	}
+	//	if err != nil {
+	//		e := fmt.Errorf(" GetTrack and ERROR %s occurred when trying to get <track>.", err)
+	//		return nil, e
+	//	}
+	//
+	//	if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
+	//		break // if have tracklist, break this inner for loop.
+	//	}
+	//} // loop until get opening tracklist tag
+
 	for {
-		XMLtoken, err := GetXMLToken(f)
+		XMLtoken, err = GetXMLToken(f)
+		if verboseFlag {
+			fmt.Printf("In GetTrack.  err=%s, XMLtoken = %#v\n", err, XMLtoken)
+		}
 		if err != nil {
-			fmt.Printf(" Trying to get XML record and got error of %s\n", err)
+			if !errors.Is(err, io.EOF) { // only show message if not EOF.
+				fmt.Printf(" Trying to get XML record and got error of %s\n", err)
+			}
 			break
 		}
 		if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "LOCATION") { // This is the full filename
@@ -269,12 +265,15 @@ func GetTrack(f *bytes.Reader) *TrackType {
 				break
 			}
 			trk.location = XMLtoken.Str
+			if verboseFlag {
+				fmt.Printf(" in GetTrack.  trk.Location=%s, XMLtoken=%s, and state = %s\n", trk.location, XMLtoken.Str, tokenStateNames[XMLtoken.State])
+			}
 			_, _ = GetXMLToken(f) // retrieve and discard the closinghtml for location
 
 		} else if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "title") {
 			XMLtoken, err = GetXMLToken(f)
 			if err != nil || (XMLtoken.State != CONTENTS) {
-				fmt.Printf(" Trying to get title XML tag and got error %s, or token is not CONTENTS.\n", err)
+				fmt.Printf(" Trying to get title XML tag and got error %s, or token is not CONTENTS.  XMLtoken=%s, XMLState=%s\n", err, XMLtoken.Str, tokenStateNames[XMLtoken.State])
 				break
 			}
 			trk.title = XMLtoken.Str
@@ -319,121 +318,40 @@ func GetTrack(f *bytes.Reader) *TrackType {
 			} // was REPEAT ... UNTIL in original Modula-2 code.
 
 		} else if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
+			if verboseFlag {
+				fmt.Printf(" GetTrack line 322: Got Closing HTML of track, so will break for loop here.\n")
+			}
 			break
 		} else if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") {
-			fmt.Println(" In GetTrack and came upon unexpected </tracklist>")
-			break
+			//fmt.Println(" In GetTrack and came upon unexpected </tracklist>")
+			//break
 			// now should never get here because this tag is really part of the extension tag and it's swallowed there
 		} else if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
-			fmt.Println(" in GetTrack and found an unexpected opening track tag")
-			break
+			//fmt.Println(" in GetTrack and found an unexpected opening track tag")
+			//break
 		} else {
 			//      Have random white space here, typically either a space or a tab before an opening html tag.  Ignore it.
-		} // if XMLtkn.state == whatever
+		} // end if XMLtkn.state == whatever
 	} // Outer for loop for all contents of this track
 
-	return &trk // more obviously uses pointer semantics.
+	if verboseFlag {
+		fmt.Printf("Exiting GetTrack.  Err=%s,  Track= %#v\n", err, trk)
+	}
+
+	//if err == io.EOF && trk.location != "" { // If got EOF but already collected a track, clear the error before returning it.
+	//	err = nil
+	//}
+
+	return &trk, err // more obviously uses pointer semantics.
 
 } // GetTrack
 
-// -------------------------------------------------- PutTrack --------------------------------------------
-/*
-//func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
-//
-//	// indivTrackNum used to be incremented here.  I'll have it incremented in the caller now.
-//	// And the input param is now a pointer to the TrackType, and an array subscript of what was TrackArray in the Modula-2 version of the code.
-//
-//	// lineDelim is already set in main to be <CR><LF> for Windows and <LF> for everything else (Linux).
-//
-//	_, err := f.WriteRune(tabchar)
-//	check(err, " First WriteRune of tabchar in PutTrack and got ")
-//	f.WriteString("<track>")
-//	f.WriteString(lineDelim)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("<location>")
-//	f.WriteString(trk.location) // Remember that TrackSlice is a slice of pointers to a TrackType.
-//	f.WriteString("</location>")
-//	f.WriteString(lineDelim)
-//
-//	if len(trk.title) > 0 { // I don't know if I'm required to explicitly dereference this pointer.
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteString("<title>")
-//		f.WriteString(trk.title)
-//		f.WriteString("</title>")
-//		f.WriteString(lineDelim)
-//	}
-//
-//	if len(trk.creator) > 0 {
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteString("<creator>")
-//		f.WriteString(trk.creator)
-//		f.WriteString("</creator>")
-//		f.WriteString(lineDelim)
-//	}
-//
-//	if len(trk.image) > 0 {
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteString("<image>")
-//		f.WriteString(trk.image)
-//		f.WriteString("</image>")
-//		f.WriteString(lineDelim)
-//	}
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("<duration>")
-//	f.WriteString(trk.duration)
-//	f.WriteString("</duration>")
-//	f.WriteString(lineDelim)
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("<")
-//	f.WriteString(trk.extension)
-//	f.WriteString(">")
-//	f.WriteString(lineDelim)
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("  <vlc:id>")
-//	nstr := strconv.Itoa(TrackNum)
-//	f.WriteString(nstr)
-//	f.WriteString("</vlc:id>")
-//	f.WriteString(lineDelim)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString(" </extension>")
-//	f.WriteString(lineDelim)
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("</track>")
-//	_, err = f.WriteString(lineDelim)
-//	check(err, " Last write of lineDelim in PutTrack, and got ")
-//	return
-//} // PutTrack
-//
-*/
-
-// ---------------------------------------------- ProcessXMLfile    ------------------------------------------
+// ---------------------------------------------- getFilenames, formerly ProcessXMLfile ------------------------------------------
 // Will read the xspf file and return a randomized slice of filenames/titles as a []string
 
-func ProcessXMLFile(inputFile *bytes.Reader) ([]string, error) {
+func getFileNames(inputFile *bytes.Reader) ([]string, error) {
 	var fn []string
-
+	/*  Since I'm not writing a file, I don't need to capture these first 3 lines.
 	_, err := readLine(inputFile) // this is the ?xml version (first) line, incl'g <CR><LF> chars
 	if err != nil {
 		return nil, err
@@ -448,11 +366,11 @@ func ProcessXMLFile(inputFile *bytes.Reader) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	*/
 	for { // LOOP to ignoring white space until get the opening tracklist tag
 		XMLtoken, err := GetXMLToken(inputFile)
-		if veryVerboseFlag {
-			fmt.Printf("ProcessXMLfile looking for opening tracklist XMLtoken: %#v\n", XMLtoken)
+		if verboseFlag {
+			fmt.Printf("getFileNames looking for opening tracklist XMLtoken: %#v\n", XMLtoken)
 		}
 		if err != nil {
 			e := fmt.Errorf(" ProcessXMLfile and %s when trying to get <trackList>.  Ending.", err)
@@ -464,26 +382,20 @@ func ProcessXMLFile(inputFile *bytes.Reader) ([]string, error) {
 		}
 	} // loop until get opening tracklist tag
 
-	for { // ignoring white space until get the opening track tag.  I'm not sure I still need this as a loop.  But it works.
-		XMLtoken, err := GetXMLToken(inputFile)
-		if veryVerboseFlag {
-			fmt.Printf("ProcessXMLfile looking for opening track tag XMLtoken: %#v\n", XMLtoken)
-		}
-		if err != nil {
-			e := fmt.Errorf(" Trying to get opening track tag and got %s.  Ending.", err)
-			return nil, e
-		}
-		if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
-			break
-		}
-	}
-
 	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
 
 	for { // to read the continuous stream of track tokens
-		trackPtr := GetTrack(inputFile)
-		if veryVerboseFlag {
-			fmt.Printf("After GetTrack(inputfile) call and track is %#v\n", *trackPtr)
+		trackPtr, err := GetTrack(inputFile)
+		if verboseFlag {
+			//fmt.Printf("in getFileNames after GetTrack(inputfile) call: err = %s, and *track is %#v\n", err, *trackPtr) Don't need to dereference the pointer.
+			fmt.Printf("in getFileNames after GetTrack(inputfile) call at about line 386: err = %s, track is %#v\n", err, trackPtr)
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			fmt.Printf(" In getFileNames at about line 393.  err = %s, trackPtr is %#v\n", err, trackPtr)
+			return nil, err
 		}
 		TrackSlice = append(TrackSlice, trackPtr) // I'm using a separate assignment to hold the pointer, so I can more easily debug the code, if needed.
 		fn = append(fn, trackPtr.location)
@@ -493,17 +405,25 @@ func ProcessXMLFile(inputFile *bytes.Reader) ([]string, error) {
 		//   is perfect for the GetTrack rtn anyway.
 
 		XMLtoken, err := GetXMLToken(inputFile) // this token should be <track> and then rtn loops again.
+		if verboseFlag {
+			fmt.Printf(" In GetFileNames at about line 405.  XMLtoken=%s, XMLtoken.State=%s\n", XMLtoken.Str, tokenStateNames[XMLtoken.State])
+		}
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				fmt.Printf("In getFileNames and got EOF\n")
+				break
+			}
 			e := fmt.Errorf(" Trying to get another track tag and got %s.  Ending.", err)
 			return nil, e
 		}
 
-		if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") { // unexpected condition
-			break
-		} // if have closing tracklist
+		//if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") { // unexpected condition
+		//	e := fmt.Errorf(" Unexpected tracklist token.  Token = %#V", XMLtoken)
+		//	return nil, e
+		//} // if have closing tracklist
 	} // loop to read in more tracks
 
-	fmt.Printf("Length of TrackSlice = %d, and length of fn = %d\n", len(TrackSlice), len(fn))
+	fmt.Printf("In getFileNames before sort.  Length of TrackSlice = %d, and length of fn = %d\n", len(TrackSlice), len(fn))
 
 	t0 := time.Now()
 
@@ -554,15 +474,7 @@ func ProcessXMLFile(inputFile *bytes.Reader) ([]string, error) {
 	//	_, err = outputfile.WriteString(line)
 	//} // final read and write loop
 
-} // ProcessXMLFile
-
-// -------------------------------------------- check ---------------------------------------------
-//func check(e error, msg string) {
-//	if e != nil {
-//		fmt.Printf("%s : ", msg)
-//		panic(e)
-//	}
-//}
+} // end getFilenames, formerly ProcessXMLFile
 
 // -------------------------------------------- min ---------------------------------------------
 func min(a, b int) int {
@@ -577,7 +489,6 @@ func min(a, b int) int {
 func main() {
 	var ans, filename string
 	var fileExistsFlag bool
-	var verboseFlag bool
 	var searchPath, path, vPath string
 	var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 	var numNames int
@@ -622,8 +533,8 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" %s has timestamp of %s, and full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, execName)
-		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		fmt.Printf(" SearchPath: %#v\n", searchPath)
+		//fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
+		//fmt.Printf(" SearchPath: %#v\n", searchPath)
 	}
 
 	if flag.NArg() == 0 { // need to use filepicker
@@ -716,9 +627,9 @@ func main() {
 	//	lineDelim = "\n"
 	//}
 
-	fileNames, err := ProcessXMLFile(inFileReader)
+	fileNames, err := getFileNames(inFileReader)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from ProcessXMLFile is %s.  Good-bye\n", err)
+		fmt.Fprintf(os.Stderr, " Error from getFileNames is %s.  Good-bye\n", err)
 		os.Exit(1)
 	}
 
@@ -787,3 +698,142 @@ func minInt(i, j int) int {
 	}
 	return j
 }
+
+/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
+/*
+func MakeDateStr() (datestr string) {
+
+	const DateSepChar = "-"
+
+	m, d, y := timlibg.TIME2MDY()
+	timenow := timlibg.GetDateTime()
+
+	MSTR := strconv.Itoa(m)
+	DSTR := strconv.Itoa(d)
+	YSTR := strconv.Itoa(y)
+	Hr := strconv.Itoa(timenow.Hours)
+	Min := strconv.Itoa(timenow.Minutes)
+	Sec := strconv.Itoa(timenow.Seconds)
+
+	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
+		Sec + "__" + timenow.DayOfWeekStr
+	return datestr
+} // MakeDateStr
+
+*/
+
+/* -------------------------------------------- Shuffle ----------------------------------------------------
+
+func Shuffle() {  replaced by rand.Shuffle
+	// Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
+
+	n := len(TrackSlice)
+
+	for c := 1; c < n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
+		for i := n - 1; i > 0; i-- {
+			// swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k can be
+			k := rand.Intn(i)
+			TrackSlice[i], TrackSlice[k] = TrackSlice[k], TrackSlice[i] // Go swap idiom, to swap pointers to a track that's held in TrackSlice
+		}
+	}
+} // Shuffle;
+
+*/
+// -------------------------------------------------- PutTrack --------------------------------------------
+/*
+//func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
+//
+//	// indivTrackNum used to be incremented here.  I'll have it incremented in the caller now.
+//	// And the input param is now a pointer to the TrackType, and an array subscript of what was TrackArray in the Modula-2 version of the code.
+//
+//	// lineDelim is already set in main to be <CR><LF> for Windows and <LF> for everything else (Linux).
+//
+//	_, err := f.WriteRune(tabchar)
+//	check(err, " First WriteRune of tabchar in PutTrack and got ")
+//	f.WriteString("<track>")
+//	f.WriteString(lineDelim)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteString("<location>")
+//	f.WriteString(trk.location) // Remember that TrackSlice is a slice of pointers to a TrackType.
+//	f.WriteString("</location>")
+//	f.WriteString(lineDelim)
+//
+//	if len(trk.title) > 0 { // I don't know if I'm required to explicitly dereference this pointer.
+//		f.WriteRune(tabchar)
+//		f.WriteRune(tabchar)
+//		f.WriteRune(tabchar)
+//		f.WriteString("<title>")
+//		f.WriteString(trk.title)
+//		f.WriteString("</title>")
+//		f.WriteString(lineDelim)
+//	}
+//
+//	if len(trk.creator) > 0 {
+//		f.WriteRune(tabchar)
+//		f.WriteRune(tabchar)
+//		f.WriteRune(tabchar)
+//		f.WriteString("<creator>")
+//		f.WriteString(trk.creator)
+//		f.WriteString("</creator>")
+//		f.WriteString(lineDelim)
+//	}
+//
+//	if len(trk.image) > 0 {
+//		f.WriteRune(tabchar)
+//		f.WriteRune(tabchar)
+//		f.WriteRune(tabchar)
+//		f.WriteString("<image>")
+//		f.WriteString(trk.image)
+//		f.WriteString("</image>")
+//		f.WriteString(lineDelim)
+//	}
+//
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteString("<duration>")
+//	f.WriteString(trk.duration)
+//	f.WriteString("</duration>")
+//	f.WriteString(lineDelim)
+//
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteString("<")
+//	f.WriteString(trk.extension)
+//	f.WriteString(">")
+//	f.WriteString(lineDelim)
+//
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteString("  <vlc:id>")
+//	nstr := strconv.Itoa(TrackNum)
+//	f.WriteString(nstr)
+//	f.WriteString("</vlc:id>")
+//	f.WriteString(lineDelim)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteString(" </extension>")
+//	f.WriteString(lineDelim)
+//
+//	f.WriteRune(tabchar)
+//	f.WriteRune(tabchar)
+//	f.WriteString("</track>")
+//	_, err = f.WriteString(lineDelim)
+//	check(err, " Last write of lineDelim in PutTrack, and got ")
+//	return
+//} // PutTrack
+//
+*/
+// -------------------------------------------- check ---------------------------------------------
+//func check(e error, msg string) {
+//	if e != nil {
+//		fmt.Printf("%s : ", msg)
+//		panic(e)
+//	}
+//}
