@@ -194,10 +194,11 @@ func main() {
 	msgChan = make(chan msgType, fanOut)
 	go func() {
 		for msg := range msgChan {
-			ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
 			if msg.success {
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
 				atomic.AddInt64(&succeeded, 1)
 			} else {
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
 				atomic.AddInt64(&failed, 1)
 			}
 			wg.Done()
@@ -290,12 +291,6 @@ func main() {
 		}
 		//                             wg.Add(1)
 		cfChan <- cf
-		//                             err = CopyAFile(f.RelPath, destDir)
-		//                             if err == nil {
-		//	                               ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
-		//                             } else {
-		//	                               ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
-		//                             }
 	}
 	gortns := runtime.NumGoroutine()
 	close(cfChan)

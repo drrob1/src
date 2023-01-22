@@ -352,6 +352,7 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 	if srcSize != n {
 		ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
+		return false
 	}
 	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
 	return true
