@@ -395,6 +395,7 @@ func CopyAFile(srcFile, destDir string) {
 	ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
 	if srcSize != n {
 		msg := msgType{
+			s:       "",
 			e:       ErrByteCountMismatch,
 			color:   ct.Red,
 			success: false,
@@ -404,6 +405,7 @@ func CopyAFile(srcFile, destDir string) {
 	}
 	msg := msgType{
 		s:       fmt.Sprintf("%s copied to %s", srcFile, destDir),
+		e:       nil,
 		color:   ct.Green,
 		success: true,
 	}
