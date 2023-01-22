@@ -36,9 +36,10 @@ import (
    6 Jan 2023 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
                    Added a stop code of zero.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
+  22 Jan 2023 -- Added Sync call.
 */
 
-const LastAltered = "7 Jan 2023" //
+const LastAltered = "22 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -274,6 +275,10 @@ func CopyAFile(srcFile, destDir string) error {
 	_, err = io.Copy(out, in)
 	if err != nil {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
+		return err
+	}
+	err = out.Sync()
+	if err != nil {
 		return err
 	}
 	return nil
