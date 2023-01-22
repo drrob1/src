@@ -46,9 +46,10 @@ import (
    3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.  And then I added displaying the number of go routines.
    6 Jan 2023 -- list now has a stop code, and all routines return an error.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
+  22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.
 */
 
-const LastAltered = "7 Jan 2023" //
+const LastAltered = "22 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -61,6 +62,7 @@ type cfType struct { // copy file type
 
 type msgType struct {
 	s       string
+	e       error
 	color   ct.Color
 	success bool
 }
@@ -74,6 +76,8 @@ var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
+var ErrNotNew error
+var ErrByteCountMismatch error
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -314,19 +318,20 @@ func CopyAFile(srcFile, destDir string) {
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		msg := msgType{
-			s:       fmt.Sprintf("%s", err),
+			e:       fmt.Errorf("%s", err),
 			color:   ct.Red,
 			success: false,
 		}
 		msgChan <- msg
 		return
 	}
+	srcStat, _ := in.Stat()
+	srcSize := srcStat.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
 		msg := msgType{
-			s:       fmt.Sprintf("%s", err),
+			e:       err,
 			color:   ct.Red,
 			success: false,
 		}
@@ -335,7 +340,7 @@ func CopyAFile(srcFile, destDir string) {
 	}
 	if !destFI.IsDir() {
 		msg := msgType{
-			s:       fmt.Sprintf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
+			e:       fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
 			color:   ct.Red,
 			success: false,
 		}
@@ -345,13 +350,13 @@ func CopyAFile(srcFile, destDir string) {
 
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
-	//fmt.Printf(" CopyFile after Join: src = %#v, destDir = %#v, outName = %#v\n", srcFile, destDir, outName)
+	ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			msg := msgType{
-				s:       fmt.Sprintf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir),
+				e:       ErrNotNew,
 				color:   ct.Red,
 				success: false,
 			}
@@ -362,20 +367,28 @@ func CopyAFile(srcFile, destDir string) {
 	out, err := os.Create(outName)
 	defer out.Close()
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		msg := msgType{
-			s:       fmt.Sprintf("%s", err),
+			e:       err,
 			color:   ct.Red,
 			success: false,
 		}
 		msgChan <- msg
 		return
 	}
-	_, err = io.Copy(out, in)
+	n, err := io.Copy(out, in)
 	if err != nil {
-		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		msg := msgType{
-			s:       fmt.Sprintf("%s", err),
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
+	if srcSize != n {
+		msg := msgType{
+			e:       ErrByteCountMismatch,
 			color:   ct.Red,
 			success: false,
 		}

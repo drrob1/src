@@ -52,9 +52,10 @@ import (
   18 Jan 2023 -- Changing completion stats to be colorized.
   21 Jan 2023 -- I need to build in a hash check for the source and destination files.  If the hashes don't match, delete the destination and copy until the hashes match.
                    I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
+  22 Jan 2023 -- I named 2 of the errors, so I can test for them.
 */
 
-const LastAltered = "21 Jan 2023" //
+const LastAltered = "22 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -67,6 +68,8 @@ var autoWidth, autoHeight int
 var verboseFlag, veryVerboseFlag bool
 var rex *regexp.Regexp
 var rexStr, inputStr string
+var ErrNotNew error
+var ErrByteCountMismatch error
 
 func main() {
 	var err error
@@ -297,11 +300,12 @@ func CopyAFile(srcFile, destDir string) error {
 
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
+	ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+			return ErrNotNew
 		}
 	}
 	out, err := os.Create(outName)
@@ -315,8 +319,9 @@ func CopyAFile(srcFile, destDir string) error {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err
 	}
+	ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
 	if srcSize != n {
-		return fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
+		return ErrByteCountMismatch
 	}
 	return nil
 } // end CopyAFile
