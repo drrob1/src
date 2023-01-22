@@ -143,6 +143,8 @@ func main() {
 
 	list.VerboseFlag = verboseFlag
 	list.VeryVerboseFlag = veryVerboseFlag
+	list.ReverseFlag = revFlag
+	list.FilterFlag = filterFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()

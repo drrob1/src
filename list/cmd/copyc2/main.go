@@ -43,16 +43,18 @@ import (
                    I set to M, or skip files < 1 MB in size.  That worked for me and I never change that.  ListVerbose could be V or VV, ListReverse could be true only if set.
                    I'll have it ignore the dsrt environment variable so I have to explicitly set it here when I want it.
                    Nevermind.  I'll just pass the variables globally.  From the list package to here.  I'll redo the code.
-  31 Dec 2022 -- Now called copyc2.  I'm removing the separate go routine that displays the messages.  I'm including that in the primary go routine.  Then I won't need the kludge about sleeping.
+  31 Dec 2022 -- Now called copyc2.  I'm removing the separate go routine that displays the messages, and including that in the primary go routine.  Then I won't need the kludge about sleeping.
+                   And don't need the msgChan stuff.
    2 Jan 2023 -- I'm adding stats on how many were successfully copied and how many were not, probably because they were not newer versions of that file.  So I'm adding a return type to
                    copyAFile so I can track successes and failures.
                    All further development is here in copyc2 because I think it's smoother; it doesn't need a kludge of sleep for 10 ms.
    3 Jan 2023 -- Added output of number of go routines.
    6 Jan 2023 -- Better error handling now that all list routines return an error variable.  And a stop code was added.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
+  22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  Hmmm, naming the errors doesn't apply here.
 */
 
-const LastAltered = "7 Jan 2023" //
+const LastAltered = "22 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -63,10 +65,11 @@ type cfType struct { // copy file type
 	destDir string
 }
 
-type msgType struct {
-	s     string
-	color ct.Color
-}
+//type msgType struct {
+//	s     string
+//	e     error
+//	color ct.Color
+//}
 
 var autoWidth, autoHeight int
 var err error
@@ -74,9 +77,12 @@ var err error
 var onWin = runtime.GOOS == "windows"
 var fanOut = runtime.NumCPU()
 var cfChan chan cfType
-var msgChan chan msgType
 var wg sync.WaitGroup
 var totalSucceeded, totalFailed int64
+
+//var msgChan chan msgType
+//var ErrNotNew error
+//var ErrByteCountMismatch error
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -142,6 +148,8 @@ func main() {
 
 	list.VerboseFlag = verboseFlag
 	list.VeryVerboseFlag = veryVerboseFlag
+	list.ReverseFlag = revFlag
+	list.FilterFlag = filterFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -301,23 +309,14 @@ func copyAFile(srcFile, destDir string) bool {
 	defer in.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
-
-		//msg := msgType{
-		//	s:     fmt.Sprintf("%s", err),
-		//	color: ct.Red,
-		//}
-		//msgChan <- msg
 		return false
 	}
+	srcStat, _ := in.Stat()
+	srcSize := srcStat.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, " CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
-		//msg := msgType{
-		//	s:     fmt.Sprintf("%s", err),
-		//	color: ct.Red,
-		//}
-		//msgChan <- msg
 		return false
 	}
 	if !destFI.IsDir() {
@@ -341,10 +340,13 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
-	_, err = io.Copy(out, in)
+	n, err := io.Copy(out, in)
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
+	}
+	if srcSize != n {
+		ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
 	}
 	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
 	return true
