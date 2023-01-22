@@ -292,7 +292,7 @@ func main() {
 		//                             wg.Add(1)
 		cfChan <- cf
 	}
-	gortns := runtime.NumGoroutine()
+	goRtns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
@@ -300,7 +300,7 @@ func main() {
 	//	time.Sleep(10 * time.Millisecond)
 	//}
 	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n",
-		succeeded, failed, time.Since(start), gortns)
+		succeeded, failed, time.Since(start), goRtns)
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
@@ -313,8 +313,8 @@ func CopyAFile(srcFile, destDir string) {
 	in, err := os.Open(srcFile)
 	defer in.Close()
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		msg := msgType{
+			s:       "",
 			e:       fmt.Errorf("%s", err),
 			color:   ct.Red,
 			success: false,
@@ -328,6 +328,7 @@ func CopyAFile(srcFile, destDir string) {
 	destFI, err := os.Stat(destDir)
 	if err != nil {
 		msg := msgType{
+			s:       "",
 			e:       err,
 			color:   ct.Red,
 			success: false,
@@ -337,6 +338,7 @@ func CopyAFile(srcFile, destDir string) {
 	}
 	if !destFI.IsDir() {
 		msg := msgType{
+			s:       "",
 			e:       fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
 			color:   ct.Red,
 			success: false,
@@ -353,6 +355,7 @@ func CopyAFile(srcFile, destDir string) {
 		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			msg := msgType{
+				s:       "",
 				e:       ErrNotNew,
 				color:   ct.Red,
 				success: false,
@@ -365,6 +368,7 @@ func CopyAFile(srcFile, destDir string) {
 	defer out.Close()
 	if err != nil {
 		msg := msgType{
+			s:       "",
 			e:       err,
 			color:   ct.Red,
 			success: false,
@@ -375,6 +379,7 @@ func CopyAFile(srcFile, destDir string) {
 	n, err := io.Copy(out, in)
 	if err != nil {
 		msg := msgType{
+			s:       "",
 			e:       err,
 			color:   ct.Red,
 			success: false,
@@ -385,6 +390,7 @@ func CopyAFile(srcFile, destDir string) {
 	err = out.Sync()
 	if err != nil {
 		msg := msgType{
+			s:       "",
 			e:       err,
 			color:   ct.Red,
 			success: false,
