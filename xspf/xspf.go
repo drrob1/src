@@ -3,10 +3,9 @@ package main
 /*
   REVISION HISTORY
   ----------------
-  29 Nov 13 -- First version based on TestFilePickerBase, vlcshuffle and TestXMLtoken. This uses *.xspf as its default pattern.
-  11 Jan 14 -- Discovered that if there is only 1 match to pattern, it fails.  And I will
-                have new pattern option also display some potential matches.
-  18 Jan 14 -- Add procedure to make sure pattern ends in .xspf.
+  29 Nov 13 -- First Modula-2 version based on TestFilePickerBase, vlcshuffle and TestXMLtoken. This uses *.xspf as its default pattern.
+  11 Jan 14 -- Discovered that if there is only 1 match to pattern, it fails.  And I will have new pattern option also display some potential matches.
+  18 Jan 14 -- Add procedure to make sure pattern ends in .xspf.  Last Modula-2 version.
   21 Sep 16 -- Started conversion to Go.  This is going to take a while.  After experimenting with encoding/xml, I decided
                 not to use that package due to it's not ignoring garbage characters like <LF> <tab> <space> etc.
   26 Sep 16 -- Still converting.  It seems that peekXMLtoken is a misnomer.  I don't remember what I was thinking, but
