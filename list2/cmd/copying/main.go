@@ -50,9 +50,11 @@ import (
                    Now called list2.go, as the change to have 'i' inputDir is big enough that all routines need to be changed.
   17 Jan 2023 -- Uses i and rex flags.  And today I'm adding a check for zero results from the fileSelection routine.
   18 Jan 2023 -- Changing completion stats to be colorized.
+  21 Jan 2023 -- I need to build in a hash check for the source and destination files.  If the hashes don't match, delete the destination and copy until the hashes match.
+                   I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
 */
 
-const LastAltered = "19 Jan 2023" //
+const LastAltered = "21 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -281,6 +283,8 @@ func CopyAFile(srcFile, destDir string) error {
 		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		return err
 	}
+	srcFI, err := in.Stat()
+	srcSize := srcFI.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -306,10 +310,13 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 	defer out.Close()
-	_, err = io.Copy(out, in)
+	n, err := io.Copy(out, in)
 	if err != nil {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err
+	}
+	if srcSize != n {
+		return fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
 	}
 	return nil
 } // end CopyAFile

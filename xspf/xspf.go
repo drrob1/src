@@ -592,6 +592,7 @@ func main() {
 		fmt.Println(" Filename is", filename)
 	}
 
+	startTime := time.Now()
 	infile, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Println(" Cannot open input file,", filename, ".  Does it exist?  Error is", err)
@@ -667,6 +668,7 @@ func main() {
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
 	}
+	fmt.Printf(" It took %s for the entire %s program to run.\n", time.Since(startTime), os.Args[0])
 
 } //  vlc main
 
