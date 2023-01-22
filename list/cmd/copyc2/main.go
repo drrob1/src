@@ -345,6 +345,11 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
+	err = out.Sync()
+	if err != nil {
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		return false
+	}
 	if srcSize != n {
 		ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
 	}

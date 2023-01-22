@@ -46,7 +46,7 @@ import (
    3 Jan 2023 -- Fixed the wait group so all msg's get printed, backported the stats to display and I removed the sleep kludge.  And then I added displaying the number of go routines.
    6 Jan 2023 -- list now has a stop code, and all routines return an error.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
-  22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.
+  22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
 */
 
 const LastAltered = "22 Jan 2023" //
@@ -378,6 +378,16 @@ func CopyAFile(srcFile, destDir string) {
 		return
 	}
 	n, err := io.Copy(out, in)
+	if err != nil {
+		msg := msgType{
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	err = out.Sync()
 	if err != nil {
 		msg := msgType{
 			e:       err,

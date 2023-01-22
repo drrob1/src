@@ -52,7 +52,7 @@ import (
   18 Jan 2023 -- Changing completion stats to be colorized.
   21 Jan 2023 -- I need to build in a hash check for the source and destination files.  If the hashes don't match, delete the destination and copy until the hashes match.
                    I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
-  22 Jan 2023 -- I named 2 of the errors, so I can test for them.
+  22 Jan 2023 -- I named 2 of the errors, so I can test for them.  Based on tests w/ copyc and copyc2, I'm not sure the comparison of bytes works.  So I added a call to out.Sync()
 */
 
 const LastAltered = "22 Jan 2023" //
@@ -310,13 +310,15 @@ func CopyAFile(srcFile, destDir string) error {
 	}
 	out, err := os.Create(outName)
 	if err != nil {
-		//                                      fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err
 	}
 	defer out.Close()
 	n, err := io.Copy(out, in)
 	if err != nil {
-		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
+		return err
+	}
+	err = out.Sync()
+	if err != nil {
 		return err
 	}
 	ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
