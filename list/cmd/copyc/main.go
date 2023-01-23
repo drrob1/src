@@ -47,7 +47,7 @@ import (
    6 Jan 2023 -- list now has a stop code, and all routines return an error.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
-  23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).
+  23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixing the date comparison for replacement copies, from .After() to not .Before().
 */
 
 const LastAltered = "23 Jan 2023" //
@@ -353,7 +353,7 @@ func CopyAFile(srcFile, destDir string) {
 	inFI, _ := in.Stat()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 			msg := msgType{
 				s:       "",

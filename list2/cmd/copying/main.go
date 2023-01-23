@@ -301,10 +301,10 @@ func CopyAFile(srcFile, destDir string) error {
 
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
-	ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if outFI.ModTime().After(srcFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		if !outFI.ModTime().Before(srcFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 			return ErrNotNew
 		}
 	}

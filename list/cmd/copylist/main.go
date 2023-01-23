@@ -37,7 +37,7 @@ import (
                    Added a stop code of zero.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 2023 -- Added Sync call.
-  23 Jan 2023 -- Added changing destination file(s) timestamp to match the respective source file(s).
+  23 Jan 2023 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
 */
 
 const LastAltered = "23 Jan 2023" //
@@ -262,7 +262,7 @@ func CopyAFile(srcFile, destDir string) error {
 	inFI, _ := in.Stat()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			return fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 		}
 	}
