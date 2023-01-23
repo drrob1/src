@@ -50,7 +50,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "20 Jan 2023"
+const LastCompiled = "22 Jan 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -350,7 +350,7 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 
 func getFileNames(inputFile *bytes.Reader) ([]string, error) {
 	var fn []string
-	/*  Since I'm not writing a file, I don't need to capture these first 3 lines.
+	//  Since I'm not writing a file, I don't need to capture these first 3 lines.  But I want readLine to be used and to work.  So I'll put it back.
 	_, err := readLine(inputFile) // this is the ?xml version (first) line, incl'g <CR><LF> chars
 	if err != nil {
 		return nil, err
@@ -365,7 +365,7 @@ func getFileNames(inputFile *bytes.Reader) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	*/
+
 	for { // LOOP to ignoring white space until get the opening tracklist tag
 		XMLtoken, err := GetXMLToken(inputFile)
 		if verboseFlag {

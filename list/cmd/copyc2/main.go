@@ -52,9 +52,10 @@ import (
    6 Jan 2023 -- Better error handling now that all list routines return an error variable.  And a stop code was added.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  Hmmm, naming the errors doesn't apply here.
+  23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).
 */
 
-const LastAltered = "22 Jan 2023" //
+const LastAltered = "23 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -326,9 +327,9 @@ func copyAFile(srcFile, destDir string) bool {
 
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
+	inFI, _ := in.Stat()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		inFI, _ := in.Stat()
 		if outFI.ModTime().After(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ctfmt.Printf(ct.Red, onWin, " %s is same or older than destination %s.  Skipping\n", baseFile, destDir)
 			return false
@@ -352,6 +353,16 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 	if srcSize != n {
 		ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
+		return false
+	}
+	err = out.Close()
+	if err != nil {
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		return false
+	}
+	err = os.Chtimes(outName, inFI.ModTime(), inFI.ModTime())
+	if err != nil {
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
 	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
