@@ -31,9 +31,10 @@ import (
    1 Jan 2023 -- Now uses list.New instead of list.NewList.
    6 Jan 2023 -- list package functions now return an error.  This allows better error handling and a stop code.
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
+  24 Jan 2023 -- And added list.ReverseFlag and list.SizeFlag.
 */
 
-const LastAltered = "7 Jan 2023" //
+const LastAltered = "24 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -99,6 +100,8 @@ func main() {
 
 	list.VerboseFlag = verboseFlag
 	list.VeryVerboseFlag = veryVerboseFlag
+	list.SizeFlag = sizeFlag
+	list.ReverseFlag = revFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -152,7 +155,7 @@ func main() {
 	}
 	fmt.Printf("\n\n")
 
-	// now have the fileList.  Need to check the destination directory.
+	// now have the fileList.
 
 	for i, f := range fileList {
 		fmt.Printf(" to be deleted fileList[%d] = %s\n", i, f.RelPath)
