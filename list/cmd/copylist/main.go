@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"hash/crc32"
 	"io"
 	"time"
 
@@ -38,9 +40,10 @@ import (
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 2023 -- Added Sync call.
   23 Jan 2023 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
+  25 Jan 2023 -- Adding verify
 */
 
-const LastAltered = "23 Jan 2023" //
+const LastAltered = "25 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -50,6 +53,7 @@ const sepString = string(filepath.Separator)
 
 var autoWidth, autoHeight int
 var err error
+var verifyFlag bool
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -78,6 +82,8 @@ func main() {
 	//var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
 	//var NLines int
 	//flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
+	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
+	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
@@ -86,9 +92,6 @@ func main() {
 
 	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
-
-	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var excludeFlag bool
 	var excludeRegex *regexp.Regexp
@@ -101,6 +104,8 @@ func main() {
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
+
+	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -281,6 +286,17 @@ func CopyAFile(srcFile, destDir string) error {
 	if err != nil {
 		return err
 	}
+
+	if verifyFlag {
+		if !verifyFiles(in, out) {
+			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", in.Name(), out.Name())
+		}
+		if verifyFlag {
+			onWin := runtime.GOOS == "windows"
+			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
+		}
+	}
+
 	err = out.Close()
 	if err != nil {
 		return err
@@ -289,5 +305,18 @@ func CopyAFile(srcFile, destDir string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 } // end CopyAFile
+
+func verifyFiles(r1, r2 io.Reader) bool {
+	return crc32IEEE(r1) == crc32IEEE(r2)
+}
+
+func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
+	b := bufio.NewReader(r) // I'm using bufio here to reset the io.Reader.  It's the only way I know how to do that.
+	crc32Hash := crc32.NewIEEE()
+	io.Copy(crc32Hash, b)
+	crc32Val := crc32Hash.Sum32()
+	return crc32Val
+}
