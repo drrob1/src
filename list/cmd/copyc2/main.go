@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"hash/crc32"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -53,9 +54,10 @@ import (
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  Hmmm, naming the errors doesn't apply here.
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixed the date comparison for replacement copies.
+  25 Jan 2023 -- Added verify.
 */
 
-const LastAltered = "23 Jan 2023" //
+const LastAltered = "25 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -80,6 +82,8 @@ var fanOut = runtime.NumCPU()
 var cfChan chan cfType
 var wg sync.WaitGroup
 var totalSucceeded, totalFailed int64
+
+var verifyFlag bool
 
 //var msgChan chan msgType
 //var ErrNotNew error
@@ -137,6 +141,8 @@ func main() {
 
 	var globFlag bool
 	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
+
+	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -355,6 +361,11 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
 		return false
 	}
+	err = in.Close()
+	if err != nil {
+		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		return false
+	}
 	err = out.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
@@ -365,6 +376,44 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
+
+	if verifyFlag {
+		in, err = os.Open(srcFile)
+		if err != nil {
+			ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+			return false
+		}
+		out, err = os.Open(outName)
+		if err != nil {
+			ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+			return false
+		}
+
+		if !verifyFiles(in, out) {
+			ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+			return false
+		}
+
+		if list.VerboseFlag {
+			onWin := runtime.GOOS == "windows"
+			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
+		}
+	}
+
 	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
 	return true
 } // end CopyAFile
+
+// ----------------------------------------- verifyFiles ------------------------------------------------------
+
+func verifyFiles(r1, r2 io.Reader) bool {
+	return crc32IEEE(r1) == crc32IEEE(r2)
+}
+
+func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
+	crc32Hash := crc32.NewIEEE()
+	io.Copy(crc32Hash, r)
+	crc32Val := crc32Hash.Sum32()
+	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val) // it works.
+	return crc32Val
+}
