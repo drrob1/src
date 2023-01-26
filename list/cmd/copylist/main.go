@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -117,6 +116,8 @@ func main() {
 
 	list.VerboseFlag = verboseFlag
 	list.VeryVerboseFlag = veryVerboseFlag
+	list.FilterFlag = filterFlag
+	list.ReverseFlag = revFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -287,16 +288,10 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 
-	if verifyFlag {
-		if !verifyFiles(in, out) {
-			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", in.Name(), out.Name())
-		}
-		if verifyFlag {
-			onWin := runtime.GOOS == "windows"
-			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
-		}
+	err = in.Close()
+	if err != nil {
+		return err
 	}
-
 	err = out.Close()
 	if err != nil {
 		return err
@@ -304,6 +299,22 @@ func CopyAFile(srcFile, destDir string) error {
 	err = os.Chtimes(outName, inFI.ModTime(), inFI.ModTime())
 	if err != nil {
 		return err
+	}
+
+	if verifyFlag {
+		in, err = os.Open(srcFile)
+		if err != nil {
+			return err
+		}
+		out, err = os.Open(outName)
+
+		if !verifyFiles(in, out) {
+			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", in.Name(), out.Name())
+		}
+		if list.VerboseFlag { // this is made global by assigning to list above.
+			onWin := runtime.GOOS == "windows"
+			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
+		}
 	}
 
 	return nil
@@ -314,9 +325,9 @@ func verifyFiles(r1, r2 io.Reader) bool {
 }
 
 func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
-	b := bufio.NewReader(r) // I'm using bufio here to reset the io.Reader.  It's the only way I know how to do that.
 	crc32Hash := crc32.NewIEEE()
-	io.Copy(crc32Hash, b)
+	io.Copy(crc32Hash, r)
 	crc32Val := crc32Hash.Sum32()
+	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val)  It works.0
 	return crc32Val
 }

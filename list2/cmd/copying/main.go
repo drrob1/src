@@ -6,6 +6,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"hash/crc32"
 	"io"
 	"src/list2"
 	"time"
@@ -54,9 +55,10 @@ import (
                    I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
   22 Jan 2023 -- I named 2 of the errors, so I can test for them.  Based on tests w/ copyc and copyc2, I'm not sure the comparison of bytes works.  So I added a call to out.Sync()
   23 Jan 2023 -- Will change time of destination file to time of source file.  Before this change, the destination has the time I ran the pgm.
+  25 Jan 2023 -- Adding a verify option, and it uses crc32 IEEE.
 */
 
-const LastAltered = "23 Jan 2023" //
+const LastAltered = "25 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -71,6 +73,7 @@ var rex *regexp.Regexp
 var rexStr, inputStr string
 var ErrNotNew error
 var ErrByteCountMismatch error
+var verifyFlag bool
 
 func main() {
 	var err error
@@ -113,6 +116,8 @@ func main() {
 
 	flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
 	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
+
+	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -321,18 +326,38 @@ func CopyAFile(srcFile, destDir string) error {
 	if err != nil {
 		return err
 	}
+
 	if srcSize != n {
 		ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
 		return ErrByteCountMismatch
 	}
+
 	err = out.Close() // Needed to close destination file before I could change its timestamp.
 	if err != nil {
 		return err
 	}
+
 	err = os.Chtimes(outName, srcFI.ModTime(), srcFI.ModTime())
 	if err != nil {
 		return err
 	}
+
+	if verifyFlag {
+		in, err = os.Open(srcFile)
+		if err != nil {
+			return err
+		}
+		out, err = os.Open(outName)
+
+		if !verifyFiles(in, out) {
+			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", in.Name(), out.Name())
+		}
+		if verboseFlag {
+			onWin := runtime.GOOS == "windows"
+			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
+		}
+	}
+
 	return nil
 } // end CopyAFile
 
@@ -380,3 +405,17 @@ func validateTarget(dir string) (string, error) {
 
 	return outDir, nil
 } // validateTarget
+
+// ----------------------------------------- verifyFiles ------------------------------------------------------
+
+func verifyFiles(r1, r2 io.Reader) bool {
+	return crc32IEEE(r1) == crc32IEEE(r2)
+}
+
+func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
+	crc32Hash := crc32.NewIEEE()
+	io.Copy(crc32Hash, r)
+	crc32Val := crc32Hash.Sum32()
+	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val)  it works.
+	return crc32Val
+}
