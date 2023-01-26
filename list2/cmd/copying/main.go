@@ -55,10 +55,10 @@ import (
                    I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
   22 Jan 2023 -- I named 2 of the errors, so I can test for them.  Based on tests w/ copyc and copyc2, I'm not sure the comparison of bytes works.  So I added a call to out.Sync()
   23 Jan 2023 -- Will change time of destination file to time of source file.  Before this change, the destination has the time I ran the pgm.
-  25 Jan 2023 -- Adding a verify option, and it uses crc32 IEEE.
+  25 Jan 2023 -- Adding a verify option that uses crc32 IEEE.
 */
 
-const LastAltered = "25 Jan 2023" //
+const LastAltered = "26 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -348,13 +348,16 @@ func CopyAFile(srcFile, destDir string) error {
 			return err
 		}
 		out, err = os.Open(outName)
+		if err != nil {
+			return err
+		}
 
 		if !verifyFiles(in, out) {
-			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", in.Name(), out.Name())
+			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
 		}
 		if verboseFlag {
 			onWin := runtime.GOOS == "windows"
-			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
+			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", srcFile, outName)
 		}
 	}
 

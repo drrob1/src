@@ -57,7 +57,7 @@ import (
   25 Jan 2023 -- Added verify.
 */
 
-const LastAltered = "25 Jan 2023" //
+const LastAltered = "26 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -390,13 +390,13 @@ func copyAFile(srcFile, destDir string) bool {
 		}
 
 		if !verifyFiles(in, out) {
-			ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
 			return false
 		}
 
 		if list.VerboseFlag {
 			onWin := runtime.GOOS == "windows"
-			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", in.Name(), out.Name())
+			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", srcFile, outName)
 		}
 	}
 
