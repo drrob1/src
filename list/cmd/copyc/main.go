@@ -48,9 +48,10 @@ import (
    7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixing the date comparison for replacement copies, from .After() to not .Before().
+  27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
 */
 
-const LastAltered = "23 Jan 2023" //
+const LastAltered = "27 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -323,8 +324,8 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	srcStat, _ := in.Stat()
-	srcSize := srcStat.Size()
+	//srcStat, _ := in.Stat()
+	//srcSize := srcStat.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -377,7 +378,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	n, err := io.Copy(out, in)
+	_, err = io.Copy(out, in)
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -399,17 +400,17 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
-	if srcSize != n {
-		msg := msgType{
-			s:       "",
-			e:       ErrByteCountMismatch,
-			color:   ct.Red,
-			success: false,
-		}
-		msgChan <- msg
-		return
-	}
+	//ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
+	//if srcSize != n {
+	//	msg := msgType{
+	//		s:       "",
+	//		e:       ErrByteCountMismatch,
+	//		color:   ct.Red,
+	//		success: false,
+	//	}
+	//	msgChan <- msg
+	//	return
+	//}
 	err = out.Close()
 	if err != nil {
 		msg := msgType{

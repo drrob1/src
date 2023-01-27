@@ -56,9 +56,10 @@ import (
   22 Jan 2023 -- I named 2 of the errors, so I can test for them.  Based on tests w/ copyc and copyc2, I'm not sure the comparison of bytes works.  So I added a call to out.Sync()
   23 Jan 2023 -- Will change time of destination file to time of source file.  Before this change, the destination has the time I ran the pgm.
   25 Jan 2023 -- Adding a verify option that uses crc32 IEEE.
+  27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
 */
 
-const LastAltered = "26 Jan 2023" //
+const LastAltered = "27 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -293,7 +294,7 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 	srcFI, err := in.Stat()
-	srcSize := srcFI.Size()
+	//srcSize := srcFI.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -318,7 +319,7 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 	defer out.Close()
-	n, err := io.Copy(out, in)
+	_, err = io.Copy(out, in)
 	if err != nil {
 		return err
 	}
@@ -327,10 +328,10 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 
-	if srcSize != n {
-		ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
-		return ErrByteCountMismatch
-	}
+	//if srcSize != n {
+	//	ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
+	//	return ErrByteCountMismatch
+	//}
 
 	err = out.Close() // Needed to close destination file before I could change its timestamp.
 	if err != nil {

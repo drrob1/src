@@ -55,6 +55,7 @@ import (
   22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  Hmmm, naming the errors doesn't apply here.
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixed the date comparison for replacement copies.
   25 Jan 2023 -- Added verify.
+  27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
 */
 
 const LastAltered = "26 Jan 2023" //
@@ -318,8 +319,8 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
-	srcStat, _ := in.Stat()
-	srcSize := srcStat.Size()
+	//srcStat, _ := in.Stat()
+	//srcSize := srcStat.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -347,7 +348,7 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
-	n, err := io.Copy(out, in)
+	_, err = io.Copy(out, in)
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
@@ -357,10 +358,10 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
-	if srcSize != n {
-		ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
-		return false
-	}
+	//if srcSize != n {
+	//	ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
+	//	return false
+	//}
 	err = in.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
