@@ -57,9 +57,10 @@ import (
   23 Jan 2023 -- Will change time of destination file to time of source file.  Before this change, the destination has the time I ran the pgm.
   25 Jan 2023 -- Adding a verify option that uses crc32 IEEE.
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
+  28 Jan 2023 -- Added a verify success message.
 */
 
-const LastAltered = "27 Jan 2023" //
+const LastAltered = "28 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -344,6 +345,7 @@ func CopyAFile(srcFile, destDir string) error {
 	}
 
 	if verifyFlag {
+		onWin := runtime.GOOS == "windows"
 		in, err = os.Open(srcFile)
 		if err != nil {
 			return err
@@ -353,11 +355,12 @@ func CopyAFile(srcFile, destDir string) error {
 			return err
 		}
 
-		if !verifyFiles(in, out) {
+		if verifyFiles(in, out) {
+			ctfmt.Printf(ct.Green, onWin, " %s and %s%c%s are verified.    ", srcFile, destDir, filepath.Separator, out.Name()) // No newline here on purpose.
+		} else {
 			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
 		}
 		if verboseFlag {
-			onWin := runtime.GOOS == "windows"
 			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", srcFile, outName)
 		}
 	}

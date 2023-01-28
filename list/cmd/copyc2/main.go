@@ -56,9 +56,10 @@ import (
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixed the date comparison for replacement copies.
   25 Jan 2023 -- Added verify.
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
+  28 Jan 2023 -- Adding verify success message.
 */
 
-const LastAltered = "26 Jan 2023" //
+const LastAltered = "28 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -390,7 +391,9 @@ func copyAFile(srcFile, destDir string) bool {
 			return false
 		}
 
-		if !verifyFiles(in, out) {
+		if verifyFiles(in, out) {
+			ctfmt.Printf(ct.Green, onWin, "%s and %s%c%s are verified.    ", srcFile, destDir, filepath.Separator, out.Name()) // Intentionally without a newline here.
+		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
 			return false
 		}
