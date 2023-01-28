@@ -120,11 +120,11 @@ func main() {
 
 	methodStr := make([]string, 0, 7) // declaring it isn't enough.  I have to also make it.
 	N := flag.NArg()
-	fmt.Printf(" N = %d, args = %#v\n", N, flag.Args())
+	//fmt.Printf(" N = %d, args = %#v\n", N, flag.Args())
 
 	for i := 2; i < N; i++ {
 		s := flag.Arg(i)
-		fmt.Printf(" in MethodStr loop.  i=%d, s=%s, len(methodStr)=%d, cap(methodStr)=%d\n", i, s, len(methodStr), cap(methodStr))
+		//fmt.Printf(" in MethodStr loop.  i=%d, s=%s, len(methodStr)=%d, cap(methodStr)=%d\n", i, s, len(methodStr), cap(methodStr))
 		methodStr = append(methodStr, s)
 	}
 	if verboseFlag {
@@ -136,10 +136,8 @@ func main() {
 
 	// Now have hashing methods.  Do the comparisons.
 	var result bool
+	var methodName string
 	for _, s := range methodStr {
-		var methodName string
-		fileBufReader1.Reset(openedFile1)
-		fileBufReader2.Reset(openedFile2)
 		startTime := time.Now()
 		if s == "1" {
 			result = few.Feq1(fileBufReader1, fileBufReader2)
@@ -172,8 +170,20 @@ func main() {
 		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s do NOT match using %s, taking %s.\n", filename1, filename2, methodName, time.Since(startTime))
 		}
-
 		openedFile1.Close()
 		openedFile2.Close()
+		openedFile1, err = os.Open(filename1)
+		if err != nil {
+			fmt.Printf(" ERROR: %s\n", err)
+		}
+		openedFile2, err = os.Open(filename2)
+		if err != nil {
+			fmt.Printf(" ERROR: %s\n", err)
+		}
+
+		fileBufReader1 = bufio.NewReader(openedFile1)
+		fileBufReader2 = bufio.NewReader(openedFile2)
 	}
+	openedFile1.Close()
+	openedFile2.Close()
 } // Main for few.go.
