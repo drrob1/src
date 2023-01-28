@@ -135,6 +135,7 @@ func main() {
 	}
 
 	// Now have hashing methods.  Do the comparisons.
+	t0 := time.Now()
 	var result bool
 	var methodName string
 	for _, s := range methodStr {
@@ -186,4 +187,6 @@ func main() {
 	}
 	openedFile1.Close()
 	openedFile2.Close()
+
+	fmt.Printf(" Total time for hashing and printing results is %s.\n\n", time.Since(t0))
 } // Main for few.go.
