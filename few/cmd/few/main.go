@@ -2,15 +2,13 @@ package main // for feq1.go
 
 import (
 	"bufio"
-	"crypto/sha1"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io"
 	"os"
 	"runtime"
+	"src/few"
 	"time"
 )
 
@@ -57,16 +55,17 @@ import (
   21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
   26 May 22 -- Now called feq1 and will only use the sha1 algorithm
   22 Jun 22 -- Adding color to the output.
+  27 Jan 23 -- Now called few.go, as it's much easier to type than feq.  It uses src/few routines and will allow command line params to select which and how many of the tests to run.
 */
 
-const LastCompiled = "22 June 2022"
+const LastCompiled = "28 Jan 2023"
 
 //* ************************* MAIN ***************************************************************
 func main() {
 
 	var filename1, filename2 string
 
-	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
+	onWin := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
@@ -74,8 +73,8 @@ func main() {
 
 	// flag help message
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " file equal tester only using sha1, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " few, file equal tester, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line, followed by the tests to run.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 		fmt.Fprintln(flag.CommandLine.Output())
@@ -85,14 +84,15 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " verbose mode.")
 	flag.Parse()
 
+	fmt.Printf("\n %s File equal, last modified %s, compiled by %s \n", os.Args[0], LastCompiled, runtime.Version())
 	if verboseFlag {
-		fmt.Printf("\n feq64 File equal only using sha1, last modified %s, compiled by %s\n\n", LastCompiled, runtime.Version())
+		fmt.Printf(" binary timestamp is %s, NArgs=%d\n\n", LastLinkedTimeStamp, flag.NArg())
 	}
 
 	if flag.NArg() == 0 {
 		fmt.Printf("\n Need two files on the command line to determine if they're equal.  Exiting. \n\n")
 		os.Exit(1)
-	} else if flag.NArg() >= 2 { // will use first 2 filenames entered on commandline
+	} else if flag.NArg() >= 2 { // will use first 2 filenames entered on commandline as the filenames.
 		filename1 = flag.Arg(0)
 		filename2 = flag.Arg(1)
 	} else {
@@ -100,55 +100,80 @@ func main() {
 		os.Exit(1)
 	}
 
-	openedFile, err := os.Open(filename1)
-	check(err, " Reading first file error is")
-	fileReader := bufio.NewReader(openedFile)
-
-	// now to compute the sha1 hash first for file 1, then for file 2, then compare them and output results.
-
-	// first file's first.
-	t0 := time.Now()
-	sha1Hash1 := sha1.New()
-	io.Copy(sha1Hash1, fileReader)
-	sha1val1 := sha1Hash1.Sum(nil)
-	sha1Str1 := hex.EncodeToString(sha1val1)
-
-	if verboseFlag {
-		fmt.Printf(" file 1 %s, sha1 = \n%x \n%s, elapsed time so far = %s\n\n", filename1, sha1val1, sha1Str1, time.Since(t0))
+	openedFile1, err := os.Open(filename1)
+	if err != nil {
+		fmt.Printf(" ERROR: opening file 1 is %s.  Exiting\n", err)
+		os.Exit(1)
 	}
+	fileBufReader1 := bufio.NewReader(openedFile1)
 
 	// second file's second, and then comparing the values.
-	//fileByteSlice, err = os.ReadFile(filename2)
-	openedFile, err = os.Open(filename2)
-	check(err, " Reading 2nd file error is")
-	fileReader = bufio.NewReader(openedFile)
 
-	sha1Hash2 := sha1.New()
-	io.Copy(sha1Hash2, fileReader)
-	sha1val2 := sha1Hash2.Sum(nil)
-	sha1Str2 := hex.EncodeToString(sha1val2)
-
-	if sha1Str1 == sha1Str2 {
-		if verboseFlag {
-			ctfmt.Printf(ct.Green, winflag, " Sha1 values for %s and %s are equal.  Total elapsed time is %s.\n\n", filename1, filename2, time.Since(t0))
-		} else {
-			ctfmt.Printf(ct.Green, winflag, " sha1 values are equal.  Total elapsed time is %s.\n", time.Since(t0))
-		}
-	} else {
-		ctfmt.Printf(ct.Red, winflag, " Sha1 for the files are not equal.\n %s = %x\n %s = %x\n Total elapsed time is %s.\n\n",
-			filename1, sha1val1, filename2, sha1val2, time.Since(t0))
+	openedFile2, err := os.Open(filename2)
+	if err != nil {
+		fmt.Printf(" ERROR: opening file 2 is %s.  Exiting\n", err)
+		os.Exit(1)
 	}
+	fileBufReader2 := bufio.NewReader(openedFile2)
 
+	// Now have the file bufio io.Readers.  Now need to process the methods used for the comparison.  I'll default to crc32, as that's the fastest using a hash function.
+
+	methodStr := make([]string, 0, 7) // declaring it isn't enough.  I have to also make it.
+	N := flag.NArg()
+	fmt.Printf(" N = %d, args = %#v\n", N, flag.Args())
+
+	for i := 2; i < N; i++ {
+		s := flag.Arg(i)
+		fmt.Printf(" in MethodStr loop.  i=%d, s=%s, len(methodStr)=%d, cap(methodStr)=%d\n", i, s, len(methodStr), cap(methodStr))
+		methodStr = append(methodStr, s)
+	}
 	if verboseFlag {
-		fmt.Printf(" file 2 %s, sha1 = \n%x, \n%s total elapsed time = %s. \n\n",
-			filename2, sha1val2, sha1Str2, time.Since(t0))
+		fmt.Printf(" Len(methodStr)=%d, cap=%d, methodStr=%#v\n\n", len(methodStr), cap(methodStr), methodStr)
+	}
+	if len(methodStr) == 0 { // default is crc32 IEEE
+		methodStr = append(methodStr, "32")
 	}
 
-} // Main for feq1.go.
+	// Now have hashing methods.  Do the comparisons.
+	var result bool
+	for _, s := range methodStr {
+		var methodName string
+		fileBufReader1.Reset(openedFile1)
+		fileBufReader2.Reset(openedFile2)
+		startTime := time.Now()
+		if s == "1" {
+			result = few.Feq1(fileBufReader1, fileBufReader2)
+			methodName = "sha1"
+		} else if s == "2" {
+			result = few.Feq2(fileBufReader1, fileBufReader2)
+			methodName = "sha256"
+		} else if s == "3" {
+			result = few.Feq3(fileBufReader1, fileBufReader2)
+			methodName = "sha384"
+		} else if s == "5" {
+			result = few.Feq5(fileBufReader1, fileBufReader2)
+			methodName = "sha512"
+		} else if s == "32" {
+			result = few.Feq32(fileBufReader1, fileBufReader2)
+			methodName = "crc32 IEEE"
+		} else if s == "64" {
+			result = few.Feq64(fileBufReader1, fileBufReader2)
+			methodName = "crc64 ECMA"
+		} else if s == "bbb" {
+			result, err = few.Feqbbb(fileBufReader1, fileBufReader2)
+			if err != nil {
+				fmt.Printf(" ERROR from Feqbbb is %s.  Exiting\n", err)
+				break
+			}
+			methodName = "byte-by-byte"
+		}
+		if result {
+			ctfmt.Printf(ct.Green, onWin, " %s and %s match using %s, taking %s.\n", filename1, filename2, methodName, time.Since(startTime))
+		} else {
+			ctfmt.Printf(ct.Red, onWin, "%s and %s do NOT match using %s, taking %s.\n", filename1, filename2, methodName, time.Since(startTime))
+		}
 
-// ------------------------------------------------------- check -------------------------------
-func check(e error, msg string) {
-	if e != nil {
-		fmt.Fprintln(os.Stderr, msg, e)
+		openedFile1.Close()
+		openedFile2.Close()
 	}
-}
+} // Main for few.go.
