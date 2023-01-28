@@ -392,7 +392,7 @@ func copyAFile(srcFile, destDir string) bool {
 		}
 
 		if verifyFiles(in, out) {
-			ctfmt.Printf(ct.Green, onWin, "%s and %s%c%s are verified.    ", srcFile, destDir, filepath.Separator, out.Name()) // Intentionally without a newline here.
+			ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)
 		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
 			return false

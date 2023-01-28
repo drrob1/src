@@ -356,7 +356,7 @@ func CopyAFile(srcFile, destDir string) error {
 		}
 
 		if verifyFiles(in, out) {
-			ctfmt.Printf(ct.Green, onWin, " %s and %s%c%s are verified.    ", srcFile, destDir, filepath.Separator, out.Name()) // No newline here on purpose.
+			ctfmt.Printf(ct.Green, onWin, " %s and its copy are verified.      ", srcFile) // No newline here on purpose.
 		} else {
 			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
 		}
