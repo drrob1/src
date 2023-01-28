@@ -39,4 +39,4 @@ github.com/
 go.mod
 go.sum
 vendor/
-
+few/testdata/
