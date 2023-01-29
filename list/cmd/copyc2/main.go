@@ -56,10 +56,10 @@ import (
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixed the date comparison for replacement copies.
   25 Jan 2023 -- Added verify.
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
-  28 Jan 2023 -- Adding verify success message.
+  28 Jan 2023 -- Adding verify success message, which was refined the next day.
 */
 
-const LastAltered = "28 Jan 2023" //
+const LastAltered = "29 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -75,6 +75,9 @@ type cfType struct { // copy file type
 //	e     error
 //	color ct.Color
 //}
+//var msgChan chan msgType
+//var ErrNotNew error
+//var ErrByteCountMismatch error
 
 var autoWidth, autoHeight int
 var err error
@@ -87,15 +90,10 @@ var totalSucceeded, totalFailed int64
 
 var verifyFlag bool
 
-//var msgChan chan msgType
-//var ErrNotNew error
-//var ErrByteCountMismatch error
-
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
-	if err != nil {
-		//autoDefaults = false
+	if err != nil {                                                // if output is redirected, for example.
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
@@ -392,7 +390,7 @@ func copyAFile(srcFile, destDir string) bool {
 		}
 
 		if verifyFiles(in, out) {
-			ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)
+			// ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)  This created too many output lines.
 		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
 			return false
@@ -404,7 +402,12 @@ func copyAFile(srcFile, destDir string) bool {
 		}
 	}
 
-	ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
+	if verifyFlag {
+		ctfmt.Printf(ct.Green, onWin, "%s VERIFIED copied to %s\n", srcFile, destDir) // If get here, the verification succeeded.
+	} else {
+		ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
+	}
+
 	return true
 } // end CopyAFile
 
