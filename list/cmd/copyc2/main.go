@@ -403,7 +403,7 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 
 	if verifyFlag {
-		ctfmt.Printf(ct.Green, onWin, "%s VERIFIED copied to %s\n", srcFile, destDir) // If get here, the verification succeeded.
+		ctfmt.Printf(ct.Green, onWin, "%s copied to %s, and then VERIFIED. \n", srcFile, destDir) // If get here, the verification succeeded.
 	} else {
 		ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
 	}

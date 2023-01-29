@@ -42,7 +42,7 @@ import (
   28 Jan 2023 -- Adding verify success message.
 */
 
-const LastAltered = "26 Jan 2023" //
+const LastAltered = "29 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -229,7 +229,11 @@ func main() {
 	for _, f := range fileList {
 		err = CopyAFile(f.RelPath, destDir)
 		if err == nil {
-			ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
+			if verifyFlag {
+				ctfmt.Printf(ct.Green, onWin, " %s Copied to %s, and then VERIFIED. \n", f.RelPath, destDir) // if get here, verification succeeded.
+			} else {
+				ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
+			}
 			success++
 		} else {
 			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
@@ -313,7 +317,7 @@ func CopyAFile(srcFile, destDir string) error {
 		}
 
 		if verifyFiles(in, out) {
-			ctfmt.Printf(ct.Green, onWin, " %s and its copy are verified.   ", srcFile) // no newline here intentionally.
+			//ctfmt.Printf(ct.Green, onWin, " %s and its copy are verified.   ", srcFile) // no newline here intentionally.
 		} else {
 			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
 		}
