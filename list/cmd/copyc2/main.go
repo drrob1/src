@@ -58,6 +58,7 @@ import (
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
   28 Jan 2023 -- Adding verify success message, which was refined the next day.
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
+                   Need more time, so I'll use timeFudgeFactor.
 */
 
 const LastAltered = "30 Jan 2023" //
@@ -65,6 +66,7 @@ const LastAltered = "30 Jan 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
+const timeFudgeFactor = 10 // sec
 
 type cfType struct { // copy file type
 	srcFile string
@@ -374,7 +376,7 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 	t := inFI.ModTime()
 	if !onWin {
-		t.Add(1 * time.Second)
+		t.Add(timeFudgeFactor * time.Second)
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {

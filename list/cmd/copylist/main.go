@@ -48,6 +48,7 @@ const LastAltered = "30 Jan 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
+const timeFudgeFactor = 10 // seconds in CopyAFile
 
 // const minHeight = 26  not used here, but used in FileSelection.
 
@@ -304,7 +305,7 @@ func CopyAFile(srcFile, destDir string) error {
 	}
 	t := inFI.ModTime()
 	if !onWin {
-		t.Add(1 * time.Second)
+		t.Add(timeFudgeFactor * time.Second)
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
