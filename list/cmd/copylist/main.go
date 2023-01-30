@@ -40,7 +40,7 @@ import (
   23 Jan 2023 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
   25 Jan 2023 -- Adding verify.
   28 Jan 2023 -- Adding verify success message.
-  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
+  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
 */
 
 const LastAltered = "30 Jan 2023" //
@@ -48,7 +48,7 @@ const LastAltered = "30 Jan 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 10 // seconds in CopyAFile
+const timeFudgeFactor = 1 // seconds in CopyAFile
 
 // const minHeight = 26  not used here, but used in FileSelection.
 
@@ -305,7 +305,7 @@ func CopyAFile(srcFile, destDir string) error {
 	}
 	t := inFI.ModTime()
 	if !onWin {
-		t.Add(timeFudgeFactor * time.Second)
+		t = t.Add(timeFudgeFactor * time.Second)
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
