@@ -49,9 +49,10 @@ import (
   22 Jan 2023 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixing the date comparison for replacement copies, from .After() to not .Before().
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
+  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
 */
 
-const LastAltered = "27 Jan 2023" //
+const LastAltered = "30 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -422,7 +423,11 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	err = os.Chtimes(outName, inFI.ModTime(), inFI.ModTime())
+	t := inFI.ModTime()
+	if runtime.GOOS == "linux" {
+		t.Add(1 * time.Second)
+	}
+	err = os.Chtimes(outName, t, t)
 	if err != nil {
 		msg := msgType{
 			s:       "",
