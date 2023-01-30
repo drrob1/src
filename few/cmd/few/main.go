@@ -56,9 +56,10 @@ import (
   26 May 22 -- Now called feq1 and will only use the sha1 algorithm
   22 Jun 22 -- Adding color to the output.
   27 Jan 23 -- Now called few.go, as it's much easier to type than feq.  It uses src/few routines and will allow command line params to select which and how many of the tests to run.
+  30 Jan 23 -- Added a default case, saying invalid hash designator.
 */
 
-const LastCompiled = "28 Jan 2023"
+const LastCompiled = "30 Jan 2023"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -165,6 +166,9 @@ func main() {
 				break
 			}
 			methodName = "byte-by-byte"
+		} else {
+			result = false
+			methodName = "invalid hash designator"
 		}
 		if result {
 			ctfmt.Printf(ct.Green, onWin, " %s and %s match using %s, taking %s.\n", filename1, filename2, methodName, time.Since(startTime))
