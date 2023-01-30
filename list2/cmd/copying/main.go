@@ -58,9 +58,10 @@ import (
   25 Jan 2023 -- Adding a verify option that uses crc32 IEEE.
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
   28 Jan 2023 -- Added a verify success message.
+  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
 */
 
-const LastAltered = "29 Jan 2023" //
+const LastAltered = "30 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -292,6 +293,7 @@ func CopyAFile(srcFile, destDir string) error {
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
 
+	onWin := runtime.GOOS == "windows"
 	in, err := os.Open(srcFile)
 	defer in.Close()
 	if err != nil {
@@ -343,13 +345,16 @@ func CopyAFile(srcFile, destDir string) error {
 		return err
 	}
 
-	err = os.Chtimes(outName, srcFI.ModTime(), srcFI.ModTime())
+	t := srcFI.ModTime()
+	if !onWin {
+		t.Add(1 * time.Second)
+	}
+	err = os.Chtimes(outName, t, t)
 	if err != nil {
 		return err
 	}
 
 	if verifyFlag {
-		onWin := runtime.GOOS == "windows"
 		in, err = os.Open(srcFile)
 		if err != nil {
 			return err
