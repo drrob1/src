@@ -60,14 +60,15 @@ import (
   28 Jan 2023 -- Added a verify success message.
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                     I added timeFudgeFactor
+  31 Jan 2023 -- timeFudgeFactor is now a Duration.
 */
 
-const LastAltered = "30 Jan 2023" //
+const LastAltered = "31 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 // seconds
+const timeFudgeFactor = 100 * time.Millisecond
 
 // const minHeight = 26  not used here, but used in FileSelection.
 
@@ -349,7 +350,7 @@ func CopyAFile(srcFile, destDir string) error {
 
 	t := srcFI.ModTime()
 	if !onWin {
-		t = t.Add(timeFudgeFactor * time.Second)
+		t = t.Add(timeFudgeFactor)
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {

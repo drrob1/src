@@ -59,14 +59,15 @@ import (
   28 Jan 2023 -- Adding verify success message, which was refined the next day.
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                    Added timeFudgeFactor.
+  31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now of type Duration.
 */
 
-const LastAltered = "30 Jan 2023" //
+const LastAltered = "31 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 // sec
+const timeFudgeFactor = 100 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
@@ -86,7 +87,7 @@ var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var fanOut = runtime.NumCPU()
+var fanOut = runtime.NumCPU() - 2
 var cfChan chan cfType
 var wg sync.WaitGroup
 var totalSucceeded, totalFailed int64
@@ -376,7 +377,7 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 	t := inFI.ModTime()
 	if !onWin {
-		t = t.Add(timeFudgeFactor * time.Second)
+		t = t.Add(timeFudgeFactor)
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {

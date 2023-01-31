@@ -51,14 +51,15 @@ import (
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                     I added timeFudgeFactor.
+  31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
 */
 
-const LastAltered = "30 Jan 2023" //
+const LastAltered = "31 Jan 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 // seconds
+const timeFudgeFactor = 100 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
@@ -76,15 +77,19 @@ var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var fanOut = runtime.NumCPU()
+var fanOut = runtime.NumCPU() - 2 // account for main and GC routines
 var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
-var ErrByteCountMismatch error
+
+//var ErrByteCountMismatch error
 
 func main() {
+	if fanOut < 1 {
+		fanOut = 1
+	}
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -427,7 +432,7 @@ func CopyAFile(srcFile, destDir string) {
 	}
 	t := inFI.ModTime()
 	if runtime.GOOS == "linux" {
-		t = t.Add(timeFudgeFactor * time.Second)
+		t = t.Add(timeFudgeFactor)
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
