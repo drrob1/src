@@ -166,6 +166,7 @@ func TestFeq32(t *testing.T) {
 
 	fmt.Printf("\n\n")
 }
+
 func TestFeq3(t *testing.T) {
 	f1, err := os.Open("testdata/PaulKrugman.txt")
 	if err != nil {
@@ -384,5 +385,222 @@ func TestFeqbbb(t *testing.T) {
 	f1.Close()
 	f2.Close()
 
+	fmt.Printf("\n\n")
+}
+
+func TestFeqbbbwithNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.FeqbbbwithNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from FeqbbbwithNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feqbbb for PaulKrugman    ")
+		t.Log(" Feqbbb for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feqbbb for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq2withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from FeqbbbwithNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feqbbb for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feqbbb for PaulKrugman and qpid, and did.\n")
+	}
+	fmt.Printf("\n\n")
+}
+
+func TestFeq64withNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.Feq64withNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from Feq64withNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feq64 for PaulKrugman    ")
+		t.Log(" Feq64 for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feq64 for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq2withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from Feq64withNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feq64 for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feq64 for PaulKrugman and qpid, and did.\n")
+	}
+	fmt.Printf("\n\n")
+}
+
+func TestFeq5withNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.Feq5withNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from Feq5withNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feq5 for PaulKrugman    ")
+		t.Log(" Feq5 for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feq5 for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq5withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from Feq5withNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feq5 for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feq5 for PaulKrugman and qpid, and did.\n")
+	}
+	fmt.Printf("\n\n")
+}
+
+func TestFeq3withNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.Feq3withNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from Feq3withNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feq3 for PaulKrugman    ")
+		t.Log(" Feq3 for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feq3 for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq3withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from Feq3withNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feq3 for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feq3 for PaulKrugman and qpid, and did.\n")
+	}
+	fmt.Printf("\n\n")
+}
+
+func TestFeq1withNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.Feq1withNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from Feq1withNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feq1 for PaulKrugman    ")
+		t.Log(" Feq1 for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feq1 for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq1withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from Feq1withNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feq1 for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feq1 for PaulKrugman and qpid, and did.\n")
+	}
+	fmt.Printf("\n\n")
+}
+
+func TestFeq2withNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.Feq2withNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from Feq2withNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feq2 for PaulKrugman    ")
+		t.Log(" Feq2 for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feq2 for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq2withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from Feq2withNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feq2 for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feq2 for PaulKrugman and qpid, and did.\n")
+	}
+	fmt.Printf("\n\n")
+}
+
+func TestFeq32withNames(t *testing.T) {
+	n1 := "testdata/PaulKrugman.txt"
+	n2 := "testdata/qpid.txt"
+
+	BOOL, err := few.Feq32withNames(n1, n1)
+	if err != nil {
+		t.Errorf(" Error from Feq32withNames: %s\n", err)
+	}
+
+	if BOOL {
+		fmt.Printf(" Success from feq32 for PaulKrugman    ")
+		t.Log(" Feq32 for PaulKrugman.txt succeeded")
+	} else {
+		t.Errorf(" Expected to succeed Feq32 for PaulKrugman but it failed.\n")
+		return
+	}
+
+	BOOL, err = few.Feq32withNames(n1, n2)
+	if err != nil {
+		t.Errorf(" Error from Feq32withNames: %s\n", err)
+	}
+
+	if BOOL {
+		t.Errorf(" Success from feq32 for PaulKrugman and qpid.txt.  Should have failed\n")
+		return
+	} else {
+		fmt.Printf(" Expected to fail Feq32 for PaulKrugman and qpid, and did.\n")
+	}
 	fmt.Printf("\n\n")
 }

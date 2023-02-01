@@ -1,6 +1,7 @@
 package few // for few.go, to be used by main in ./cmd/few/main.go
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -9,6 +10,7 @@ import (
 	"hash/crc32"
 	"hash/crc64"
 	"io"
+	"os"
 )
 
 /*
@@ -58,9 +60,27 @@ import (
   27 Jan 23 -- Now called few, because that's much easier than typing feq each time I want it.  This will consist of one top level routine and a sub cmd main pgm that
                  will take the hashes to run as params.  The API will use io.Readers.  The hash types are []byte, which cannot be directly compared.  So I convert the hashes
                  to strings, which can be directly compared.
+   1 Feb 23 -- Adding API that takes filenames, not io.Reader's.
 */
 
-const LastCompiled = "27 Jan 2023"
+const LastCompiled = "1 Feb 2023"
+
+func Feq1withNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+	buf1 := bufio.NewReader(fHandle1)
+	buf2 := bufio.NewReader(fHandle2)
+
+	return Feq1(buf1, buf2), nil
+}
 
 func Feq1(r1, r2 io.Reader) bool { // sha1
 	sha1Hash1 := sha1.New()
@@ -76,6 +96,24 @@ func Feq1(r1, r2 io.Reader) bool { // sha1
 	return sha1Str1 == sha1Str2
 } // feq1
 
+func Feq2withNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+
+	buf1 := bufio.NewReader(fHandle1)
+	buf2 := bufio.NewReader(fHandle2)
+
+	return Feq2(buf1, buf2), nil
+}
+
 func Feq2(r1, r2 io.Reader) bool { // sha256
 	sha256Hash1 := sha256.New()
 	io.Copy(sha256Hash1, r1)
@@ -90,6 +128,24 @@ func Feq2(r1, r2 io.Reader) bool { // sha256
 	return sha256Str1 == sha256Str2
 } // feq2
 
+func Feq32withNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+
+	buf1 := bufio.NewReader(fHandle1)
+	buf2 := bufio.NewReader(fHandle2)
+
+	return Feq32(buf1, buf2), nil
+}
+
 func Feq32(r1, r2 io.Reader) bool { // crc32 IEEE
 	crc32Hash1 := crc32.NewIEEE()
 	io.Copy(crc32Hash1, r1)
@@ -101,6 +157,24 @@ func Feq32(r1, r2 io.Reader) bool { // crc32 IEEE
 
 	return crc32Val1 == crc32Val2
 } // feq32
+
+func Feq3withNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+
+	buf1 := bufio.NewReader(fHandle1)
+	buf2 := bufio.NewReader(fHandle2)
+
+	return Feq3(buf1, buf2), nil
+}
 
 func Feq3(r1, r2 io.Reader) bool { // sha384
 	sha384Hash1 := sha512.New384()
@@ -116,6 +190,24 @@ func Feq3(r1, r2 io.Reader) bool { // sha384
 	return sha384Str1 == sha384Str2
 } // feq3
 
+func Feq5withNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+
+	buf1 := bufio.NewReader(fHandle1)
+	buf2 := bufio.NewReader(fHandle2)
+
+	return Feq5(buf1, buf2), nil
+}
+
 func Feq5(r1, r2 io.Reader) bool { // sha512
 	sha512Hash1 := sha512.New()
 	io.Copy(sha512Hash1, r1)
@@ -130,6 +222,24 @@ func Feq5(r1, r2 io.Reader) bool { // sha512
 	return sha512Str1 == sha512Str2
 } // feq5
 
+func Feq64withNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+
+	buf1 := bufio.NewReader(fHandle1)
+	buf2 := bufio.NewReader(fHandle2)
+
+	return Feq64(buf1, buf2), nil
+}
+
 func Feq64(r1, r2 io.Reader) bool { // crc64
 	// now to compute the ECMA 64-bit hash first for file 1, then for file 2, then compare them and output results.  The final hash is of type uint64
 	crc64TableECMA := crc64.MakeTable(crc64.ECMA)
@@ -143,6 +253,22 @@ func Feq64(r1, r2 io.Reader) bool { // crc64
 
 	return crc64ECMAVal1 == crc64ECMAVal2
 } // feq64
+
+func FeqbbbwithNames(fn1, fn2 string) (bool, error) {
+	fHandle1, err := os.Open(fn1)
+	defer fHandle1.Close()
+	if err != nil {
+		return false, err
+	}
+	fHandle2, err := os.Open(fn2)
+	defer fHandle2.Close()
+	if err != nil {
+		return false, err
+	}
+
+	BOOL, err := Feqbbb(fHandle1, fHandle2)
+	return BOOL, err
+}
 
 func Feqbbb(r1, r2 io.Reader) (bool, error) {
 	const M = 1024 * 1024
