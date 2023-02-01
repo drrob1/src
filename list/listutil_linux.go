@@ -22,7 +22,7 @@ import (
    6 Jan 2023 -- Improving error handling.  Routines now return an error.
   14 Jan 2023 -- I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
                    from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
-
+   1 Feb 2023 -- Fixing how command line arguments are opened when there are > 1 on the line, ie, a source dir and destination dir.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -97,27 +97,20 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			return fileInfoX, nil
 		}
 
-
-	} else { // must have more than one filename on the command line, populated by bash.
+	} else { // must have source and destination directories on command line.  Will only process the first param and hope for the best.
 		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
-		for _, f := range flag.Args() {
-			fi, err := os.Lstat(f)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				continue
-			}
-			if VerboseFlag {
-				fmt.Printf(" in loop: fi.Name=%s, fi.Size=%d, fi.IsDir=%t\n", fi.Name(), fi.Size(), fi.IsDir())
-			}
-			if includeThis(fi, excludeMe) {
-				fix := FileInfoExType{
-					FI:      fi,
-					Dir:     workingDir,
-					RelPath: filepath.Join(workingDir, f),
-				}
-				fileInfoX = append(fileInfoX, fix)
-			}
+		f := flag.Arg(0)
+		fHandle, err := os.Open(f)
+		if err != nil {
+			return nil, err
 		}
+		stat, _ := fHandle.Stat()
+		if VerboseFlag {
+			fmt.Printf(" in loop: fHandle.Name=%s, IsDir=%t\n", fHandle.Name(), stat.IsDir())
+		}
+		fHandle.Close()
+		fileInfoX, err = MyReadDir(f, nil)
+		return fileInfoX, nil
 	}
 	if VerboseFlag {
 		fmt.Printf(" Leaving getFileInfoXFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfoX))

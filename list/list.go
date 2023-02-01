@@ -142,7 +142,7 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 	return fileInfoX, nil
 } // end MakeList
 
-// ------------------------------- myReadDir -----------------------------------
+// ------------------------------- MyReadDir -----------------------------------
 
 func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Who knew?
 	dirEntries, err := os.ReadDir(dir) // this function doesn't need to be closed.
