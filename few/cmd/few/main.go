@@ -1,7 +1,6 @@
 package main // for feq1.go
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -57,9 +56,10 @@ import (
   22 Jun 22 -- Adding color to the output.
   27 Jan 23 -- Now called few.go, as it's much easier to type than feq.  It uses src/few routines and will allow command line params to select which and how many of the tests to run.
   30 Jan 23 -- Added a default case, saying invalid hash designator.
+   2 Feb 23 -- Rewrote to use the new procedures in few.go, that take a filename.
 */
 
-const LastCompiled = "30 Jan 2023"
+const LastCompiled = "2 Feb 2023"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -101,31 +101,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	openedFile1, err := os.Open(filename1)
-	if err != nil {
-		fmt.Printf(" ERROR: opening file 1 is %s.  Exiting\n", err)
-		os.Exit(1)
-	}
-	fileBufReader1 := bufio.NewReader(openedFile1)
-
-	// second file's second, and then comparing the values.
-
-	openedFile2, err := os.Open(filename2)
-	if err != nil {
-		fmt.Printf(" ERROR: opening file 2 is %s.  Exiting\n", err)
-		os.Exit(1)
-	}
-	fileBufReader2 := bufio.NewReader(openedFile2)
-
-	// Now have the file bufio io.Readers.  Now need to process the methods used for the comparison.  I'll default to crc32, as that's the fastest using a hash function.
-
 	methodStr := make([]string, 0, 7) // declaring it isn't enough.  I have to also make it.
 	N := flag.NArg()
-	//fmt.Printf(" N = %d, args = %#v\n", N, flag.Args())
 
 	for i := 2; i < N; i++ {
 		s := flag.Arg(i)
-		//fmt.Printf(" in MethodStr loop.  i=%d, s=%s, len(methodStr)=%d, cap(methodStr)=%d\n", i, s, len(methodStr), cap(methodStr))
 		methodStr = append(methodStr, s)
 	}
 	if verboseFlag {
@@ -139,33 +119,52 @@ func main() {
 	t0 := time.Now()
 	var result bool
 	var methodName string
+	var err error
 	for _, s := range methodStr {
 		startTime := time.Now()
 		if s == "1" {
-			result = few.Feq1(fileBufReader1, fileBufReader2)
 			methodName = "sha1"
-		} else if s == "2" {
-			result = few.Feq2(fileBufReader1, fileBufReader2)
-			methodName = "sha256"
-		} else if s == "3" {
-			result = few.Feq3(fileBufReader1, fileBufReader2)
-			methodName = "sha384"
-		} else if s == "5" {
-			result = few.Feq5(fileBufReader1, fileBufReader2)
-			methodName = "sha512"
-		} else if s == "32" {
-			result = few.Feq32(fileBufReader1, fileBufReader2)
-			methodName = "crc32 IEEE"
-		} else if s == "64" {
-			result = few.Feq64(fileBufReader1, fileBufReader2)
-			methodName = "crc64 ECMA"
-		} else if s == "bbb" {
-			result, err = few.Feqbbb(fileBufReader1, fileBufReader2)
+			result, err = few.Feq1withNames(filename1, filename2)
 			if err != nil {
-				fmt.Printf(" ERROR from Feqbbb is %s.  Exiting\n", err)
+				ctfmt.Printf(ct.Red, onWin, "ERROR from feq1withName: %s\n", err)
+			}
+		} else if s == "2" {
+			methodName = "sha256"
+			result, err = few.Feq2withNames(filename1, filename2)
+			if err != nil {
+				ctfmt.Printf(ct.Red, onWin, "ERROR from feq2withName: %s\n", err)
+			}
+		} else if s == "3" {
+			methodName = "sha384"
+			result, err = few.Feq3withNames(filename1, filename2)
+			if err != nil {
+				ctfmt.Printf(ct.Red, onWin, "ERROR from feq3withName: %s\n", err)
+			}
+		} else if s == "5" {
+			methodName = "sha512"
+			result, err = few.Feq5withNames(filename1, filename2)
+			if err != nil {
+				ctfmt.Printf(ct.Red, onWin, "ERROR from feq5withName: %s\n", err)
+			}
+		} else if s == "32" {
+			methodName = "crc32 IEEE"
+			result, err = few.Feq32withNames(filename1, filename2)
+			if err != nil {
+				ctfmt.Printf(ct.Red, onWin, "ERROR from feq32withName: %s\n", err)
+			}
+		} else if s == "64" {
+			methodName = "crc64 ECMA"
+			result, err = few.Feq64withNames(filename1, filename2)
+			if err != nil {
+				ctfmt.Printf(ct.Red, onWin, "ERROR from feq64withName: %s\n", err)
+			}
+		} else if s == "bbb" {
+			methodName = "byte-by-byte"
+			result, err = few.FeqbbbwithNames(filename1, filename2)
+			if err != nil {
+				ctfmt.Printf(ct.Red, onWin, " ERROR from FeqbbbwithNames is %s.  Exiting\n", err)
 				break
 			}
-			methodName = "byte-by-byte"
 		} else {
 			result = false
 			methodName = "invalid hash designator"
@@ -175,22 +174,7 @@ func main() {
 		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s do NOT match using %s, taking %s.\n", filename1, filename2, methodName, time.Since(startTime))
 		}
-		openedFile1.Close()
-		openedFile2.Close()
-		openedFile1, err = os.Open(filename1)
-		if err != nil {
-			fmt.Printf(" ERROR: %s\n", err)
-		}
-		openedFile2, err = os.Open(filename2)
-		if err != nil {
-			fmt.Printf(" ERROR: %s\n", err)
-		}
-
-		fileBufReader1 = bufio.NewReader(openedFile1)
-		fileBufReader2 = bufio.NewReader(openedFile2)
 	}
-	openedFile1.Close()
-	openedFile2.Close()
 
 	fmt.Printf(" Total time for hashing and printing results is %s.\n\n", time.Since(t0))
 } // Main for few.go.
