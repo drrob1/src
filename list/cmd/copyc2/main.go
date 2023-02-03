@@ -7,6 +7,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"hash/crc32"
 	"io"
+	"src/few"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -60,9 +61,10 @@ import (
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                    Added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now of type Duration.
+   2 Feb 2023 -- Will now use the few file equal routines.
 */
 
-const LastAltered = "31 Jan 2023" //
+const LastAltered = "2 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -386,18 +388,19 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 
 	if verifyFlag {
-		in, err = os.Open(srcFile)
+		result, err := few.Feq32withNames(srcFile, outName)
+		//in, err = os.Open(srcFile)
 		if err != nil {
 			ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 			return false
 		}
-		out, err = os.Open(outName)
-		if err != nil {
-			ctfmt.Printf(ct.Red, onWin, "%s\n", err)
-			return false
-		}
+		//out, err = os.Open(outName)
+		//if err != nil {
+		//	ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		//	return false
+		//}
 
-		if verifyFiles(in, out) {
+		if result {
 			// ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)  This created too many output lines.
 		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
