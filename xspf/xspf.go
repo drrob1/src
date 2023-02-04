@@ -28,6 +28,7 @@ package main
   13 Feb 22 -- Converted to new API for filepicker.
   19 Jan 23 -- Now called xspf.go.  It will read a vlc xsfp file, shuffle the filenames/titles it finds, and then call vlc w/ possibly a subslice of those names.
   20 Jan 23 -- It's finally working.  I'm going to stop now.  Maybe I'll come back to this another time, but I've had enough for now.
+   4 Feb 23 -- Used errors.New() instead of fmt.Errorf in one spot.  No change in function.
 */
 
 import (
@@ -50,7 +51,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "22 Jan 2023"
+const LastCompiled = "4 Feb 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -169,7 +170,8 @@ MainForLoop:
 			case CLOSEANGLE:
 				XMLtoken.State = OTHERERROR
 				f.UnreadByte()
-				e := fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
+				//e := fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
+				e := errors.New(" In peekXMLtoken and got an unexpected close angle.")
 				return XMLtoken, e
 			} // case ch.state when the token state is empty
 		case CONTENTS: // this case was STRING in the original Modula-2 code
