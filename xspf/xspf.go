@@ -27,8 +27,10 @@ package main
                  And I converted to modules.
   13 Feb 22 -- Converted to new API for filepicker.
   19 Jan 23 -- Now called xspf.go.  It will read a vlc xsfp file, shuffle the filenames/titles it finds, and then call vlc w/ possibly a subslice of those names.
-  20 Jan 23 -- It's finally working.  I'm going to stop now.  Maybe I'll come back to this another time, but I've had enough for now.
-   4 Feb 23 -- Used errors.New() instead of fmt.Errorf in one spot.  No change in function.
+                 The main change is reading the file in at once, and then working on a bytes.buffer using the read, unread and write operations.
+  20 Jan 23 -- It's finally working.  I'm going to stop now.  Maybe I'll come back to this another time, but I've had enough for now.  The mistake I made in the translation
+                 was in GetHTMLToken, closing HTML part I had an errant WriteByte so the token had a '>' at the end and then didn't match the == operator.
+   4 Feb 23 -- Used errors.New() instead of fmt.Errorf in one spot.  No change in function.  And added more comment text specific to this version of my code.
 */
 
 import (
