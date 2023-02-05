@@ -1,7 +1,7 @@
 ## gocode
-All of my go code as of July 5, 2022
+All of my go code as of Feb 5, 2023.
 
-1. sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.
+1. sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.  Multisha and consha do this w/ conconcurrency.
 2. rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
 3. rpnterm -- Same RPN style calculator but written to use termbox-go.  Not up to date as I switched to rpntcell.
 4. rpntcell -- Same RPN style calculator but written to use tcell, but doesn't play nice w/ tcmd by JPSoft
@@ -35,6 +35,10 @@ All of my go code as of July 5, 2022
 31. freq -- letter counting and sorting, for use in wordle
 32. goclick, gofshowtime -- for work to keep a window active
 33. hideme -- for work, intended for the Aidoc demon.
+34. launchv, lvr -- used to start vlc with a random list of files on its command line.
+35. copylist, dellist -- create a list on which copy or del is executed.
+36. copyc, copyc2 -- use same list concept to use concurrency in the copying of selected files.
+37. copying -- same basic concept but implemented differently.  Command line params are list of output destinations.  Needs flags to specify inputs.
 
 
 All the other files were either used in testing or are support files for the above programs.
