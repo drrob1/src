@@ -5,7 +5,6 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"hash/crc32"
 	"io"
 	"src/few"
 	"sync"
@@ -422,6 +421,7 @@ func copyAFile(srcFile, destDir string) bool {
 	return true
 } // end CopyAFile
 
+/*  Replaced by few (feq but easier to type) routine.
 // ----------------------------------------- verifyFiles ------------------------------------------------------
 
 func verifyFiles(r1, r2 io.Reader) bool {
@@ -435,3 +435,5 @@ func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
 	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val) // it works.
 	return crc32Val
 }
+
+*/
