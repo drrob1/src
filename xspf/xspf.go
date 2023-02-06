@@ -29,8 +29,9 @@ package main
   19 Jan 23 -- Now called xspf.go.  It will read a vlc xsfp file, shuffle the filenames/titles it finds, and then call vlc w/ possibly a subslice of those names.
                  The main change is reading the file in at once, and then working on a bytes.buffer using the read, unread and write operations.
   20 Jan 23 -- It's finally working.  I'm going to stop now.  Maybe I'll come back to this another time, but I've had enough for now.  The mistake I made in the translation
-                 was in GetHTMLToken, closing HTML part I had an errant WriteByte so the token had a '>' at the end and then didn't match the == operator.
+                 was in GetHTMLToken, closing HTML section had an errant WriteByte so the token had a '>' at the end and then didn't match the == operator.
    4 Feb 23 -- Used errors.New() instead of fmt.Errorf in one spot.  No change in function.  And added more comment text specific to this version of my code.
+   6 Feb 23 -- Added display of number of shufflings to output.  And changed getFilenames -> getShuffledFilenames.
 */
 
 import (
@@ -53,7 +54,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "4 Feb 2023"
+const LastCompiled = "6 Feb 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -349,10 +350,10 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 
 } // GetTrack
 
-// ---------------------------------------------- getFilenames, formerly ProcessXMLfile ------------------------------------------
-// Will read the xspf file and return a randomized slice of filenames/titles as a []string
+// ---------------------------------------------- getShuffledFilenames, formerly ProcessXMLfile ------------------------------------------
+// Will read the xspf file and return a shuffled slice of filenames/titles as a []string
 
-func getFileNames(inputFile *bytes.Reader) ([]string, error) {
+func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 	var fn []string
 	//  Since I'm not writing a file, I don't need to capture these first 3 lines.  But I want readLine to be used and to work.  So I'll put it back.
 	_, err := readLine(inputFile) // this is the ?xml version (first) line, incl'g <CR><LF> chars
@@ -449,7 +450,7 @@ func getFileNames(inputFile *bytes.Reader) ([]string, error) {
 	// Finished shuffling.
 
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	fmt.Printf(" It took %s to shuffle this file.\n", timeToShuffle.String())
+	fmt.Printf(" It took %s to shuffle this file %d times.\n", timeToShuffle.String(), shuffling)
 	fmt.Println()
 
 	// Used to write the output file, here.  Now that I've created the slice to feed to vlc, I'll return it.
@@ -631,7 +632,7 @@ func main() {
 	//	lineDelim = "\n"
 	//}
 
-	fileNames, err := getFileNames(inFileReader)
+	fileNames, err := getShuffledFileNames(inFileReader)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from getFileNames is %s.  Good-bye\n", err)
 		os.Exit(1)

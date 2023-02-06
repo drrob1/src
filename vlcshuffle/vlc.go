@@ -28,6 +28,7 @@ package main
                  and stopped structure end comments for small number of lines, ie, I can see beginning { and ending } on one screen.
                  And I converted to modules.
   13 Feb 22 -- Converted to new API for filepicker.
+   6 Feb 23 -- Fixed a comment and will now show number of shuffling iterations.
 */
 
 import (
@@ -47,10 +48,10 @@ import (
 	"src/timlibg"
 )
 
+const LastCompiled = "Feb 6 2023"
 const MaxNumOfTracks = 2048
 const blankline = "                                                                             " // ~70 spaces
 const sepline = "-----------------------------------------------------------------------------"
-const LastCompiled = "on or about Feb 13, 2022"
 
 const (
 	EMPTY    = iota
@@ -193,8 +194,8 @@ func GetXMLtoken(f *bufio.Reader) (XMLtoken TokenType, EOFFLG bool) {
 	/*
 	   This will use the bufio file operations as I want this as a character stream.
 	   The only delimiters are angle brackets.  This is the only routine where input characters are read and processed.
-	   And I rewrote it to just exist as an XML token getter.  I don't need peeking functionality.  I guess when I
-	   first wrote this, I thought I would need this capability.
+	   And I rewrote it to just exist as an XML token getter.  I need peeking functionality, as in a few sections below I don't advance the file pointer after peeking at
+	   the next byte.
 	*/
 
 	//  XMLtoken := TokenType{};  // nil literal not needed because Go automatically does this for params.
@@ -520,19 +521,19 @@ func ProcessXMLfile(inputfile *bufio.Reader, outputfile *bufio.Writer) {
 
 	//   time to shuffle
 
-	swapfnt := func(i, j int) {
+	swapFnt := func(i, j int) {
 		TrackSlice[i], TrackSlice[j] = TrackSlice[j], TrackSlice[i]
 	}
 
 	Time := timlibg.GetDateTime()
 	shuffling := Time.Month + Time.Day + Time.Hours + Time.Minutes + Time.Year + Time.Seconds
 	for k := 0; k < shuffling; k++ {
-		rand.Shuffle(len(TrackSlice), swapfnt)
+		rand.Shuffle(len(TrackSlice), swapFnt)
 	}
 	// Finished shuffling.
 
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	fmt.Printf(" It took %s to shuffle this file.\n", timeToShuffle.String())
+	fmt.Printf(" It took %s to shuffle this file %d times.\n", timeToShuffle.String(), shuffling)
 	fmt.Println()
 
 	// Write the output file.
