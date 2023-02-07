@@ -660,7 +660,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
-		//fmt.Printf("ERROR: %s\n", err)
+		fmt.Printf("ERROR: %s\n", err)
 		return nil
 	}
 
