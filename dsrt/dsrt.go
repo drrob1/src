@@ -115,6 +115,7 @@ REVISION HISTORY
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 21 Nov 22 -- static linter found an issue that I'm going to fix.
 14 Jan 23 -- I wrote args to learn more about how arguments are handled.  I think I got it wrong in dsrtutil_linux.  I'm going to fix it.
+ 6 Feb 23 -- Directory aliases still don't work perfectly.  I'm going to debug this a bit more.  Nevermind, the problem was a bad directory alias that mapped to the wrong drive letter.
 */
 
 const LastAltered = "14 Jan 2023"
@@ -659,6 +660,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
+		//fmt.Printf("ERROR: %s\n", err)
 		return nil
 	}
 
