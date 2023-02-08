@@ -32,6 +32,7 @@ import (
    4 Jan 2023 -- Adding screen clearing between screen displays.  Copied from rpng.
    6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
   15 Jan 2023 -- Split off list2, which will have the code that takes an input regexp, etc, for copying.go.
+   8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
 */
 
 type DirAliasMapType map[string]string
@@ -71,6 +72,24 @@ func init() {
 		autoWidth = minWidth
 	}
 	_ = autoWidth
+	clear = make(map[string]func(), 2)
+	clear["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+
+	clear["windows"] = func() { // this is a closure, or an anonymous function
+		comspec := os.Getenv("ComSpec")
+		cmd := exec.Command(comspec, "/c", "cls") // this was calling cmd, but I'm trying to preserve the scrollback buffer.
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+
+	clear["newlines"] = func() {
+		fmt.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	}
+
 }
 
 func New(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
@@ -408,22 +427,4 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 		color = ct.Green
 	}
 	return s1, color
-}
-
-// ------------------------------------------------------- init -----------------------------------
-
-func init() {
-	clear = make(map[string]func(), 2)
-	clear["linux"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("clear")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
-
-	clear["windows"] = func() { // this is a closure, or an anonymous function
-		comspec := os.Getenv("ComSpec")
-		cmd := exec.Command(comspec, "/c", "cls") // this was calling cmd, but I'm trying to preserve the scrollback buffer.
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
 }

@@ -34,6 +34,7 @@ import (
   15 Jan 2023 -- Now called list2 which will use globals and will use InputRex, so I don't need platform specific code.  All command line params will be output directories,
                    including symlinks.
   18 Jan 2023 -- Adding SmartCaseFlag
+   8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
 */
 
 type DirAliasMapType map[string]string
@@ -66,6 +67,7 @@ const stopCode = "0"
 
 var autoWidth, autoHeight int
 
+// ------------------------------------------------------- init -----------------------------------
 func init() {
 	var err error
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
@@ -74,6 +76,28 @@ func init() {
 		autoWidth = minWidth
 	}
 	_ = autoWidth
+
+	clear = make(map[string]func(), 3)
+	clear["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+
+	clear["windows"] = func() { // this is a closure, or an anonymous function
+		comspec := os.Getenv("ComSpec")
+		cmd := exec.Command(comspec, "/c", "cls") // this was calling cmd, but I'm trying to preserve the scrollback buffer.
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+
+	clear["newlines"] = func() {
+		fmt.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	}
+
+	if runtime.GOOS == "windows" {
+		DirectoryAliasesMap = GetDirectoryAliases()
+	}
 }
 
 func New() ([]FileInfoExType, error) {
@@ -408,32 +432,6 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 	}
 	return s1, color
 } // end GetMagnitudeString
-
-// ------------------------------------------------------- init -----------------------------------
-
-func init() {
-	clear = make(map[string]func(), 3)
-	clear["linux"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("clear")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
-
-	clear["windows"] = func() { // this is a closure, or an anonymous function
-		comspec := os.Getenv("ComSpec")
-		cmd := exec.Command(comspec, "/c", "cls") // this was calling cmd, but I'm trying to preserve the scrollback buffer.
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	}
-
-	clear["newlines"] = func() {
-		fmt.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-	}
-
-	if runtime.GOOS == "windows" {
-		DirectoryAliasesMap = GetDirectoryAliases()
-	}
-}
 
 // --------------------------------------------- getFileInfoXWithGlobals ------------------------------------------
 
