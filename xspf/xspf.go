@@ -56,7 +56,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "7 Feb 2023"
+const LastCompiled = "8 Feb 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -112,9 +112,10 @@ var verboseFlag bool
 func init() {
 	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
 	goVersion := runtime.Version()
-	goVersion = goVersion[4:] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
 	goVersionInt, err := strconv.Atoi(goVersion)
 	if err == nil {
+		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
 		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
 			return
 		}
