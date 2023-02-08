@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 import format "fmt"
 
@@ -14,5 +15,12 @@ func main() {
 		os.Exit(1)
 	} else {
 		fmt.Printf(" Printed %d characters.\n", n)
+	}
+	s := "20.1"
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		fmt.Printf(" Conversion of 20.1 returned error of %s\n", err)
+	} else {
+		fmt.Printf(" Conversion of 20.1 returned no error and a result of %d\n", n)
 	}
 }
