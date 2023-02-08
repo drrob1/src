@@ -69,6 +69,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			}
 
 		} else { // err must not be nil after attempting to open loneFilename.
+			fHandle.Close()
 			loneFilename = workingDir + sep + loneFilename
 			loneFilename = filepath.Clean(loneFilename)
 		}

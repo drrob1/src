@@ -32,6 +32,8 @@ package main
                  was in GetHTMLToken, closing HTML section had an errant WriteByte so the token had a '>' at the end and then didn't match the == operator.
    4 Feb 23 -- Used errors.New() instead of fmt.Errorf in one spot.  No change in function.  And added more comment text specific to this version of my code.
    6 Feb 23 -- Added display of number of shufflings to output.  And changed getFilenames -> getShuffledFilenames.
+   7 Feb 23 -- Combined output messages and removed dead code commented out earlier.  And Go 1.20 does not need or really want me to call Seed().  I removed that for Go 1.20+.
+                 And I removed an errant call to rand.Seed() just before the shuffling loop in getShuffledFileNames.
 */
 
 import (
@@ -54,7 +56,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "6 Feb 2023"
+const LastCompiled = "7 Feb 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -73,7 +75,7 @@ var tokenStateNames = []string{"empty", "contents", "openingHTML", "closingHTML"
 
 //  XMLcharType  which is an enumeration of states of a single character.
 // I removed the EOL state, as it no longer applies.  Modula-2 would return a special EOL character, but this language follows the
-// C tradition of \r for <CR>, ASCII value of 13, and \n for <LF>, value of 10
+// C tradition of \r for <CR>, ASCII decimal value of 13, and \n for <LF>, decimal value of 10
 
 const ( // States of characters
 	CTRL = iota
@@ -95,6 +97,9 @@ type CharType struct {
 
 // track was an array of TrackType.  Now it's a slice of pointers to TrackType, to make it easier to
 // shuffle.  And so I don't need NumArray anymore which just shuffles an array of indices into TrackArray.
+//var lineDelim string
+//var tabChar = '\t'
+//  var indivTrackNum = 0;  Still don't think I need this.
 
 type TrackType struct {
 	location, title, creator, image, duration, extension string
@@ -104,13 +109,17 @@ var TrackSlice []*TrackType // Global variable.  But still needs to call make in
 var veryVerboseFlag bool
 var verboseFlag bool
 
-//var lineDelim string
-//var tabChar = '\t'
-//  var indivTrackNum = 0;  Still don't think I need this.
-
 func init() {
-	rand.Seed(time.Now().UnixNano())
 	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
+	goVersion := runtime.Version()
+	goVersion = goVersion[4:] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+	goVersionInt, err := strconv.Atoi(goVersion)
+	if err == nil {
+		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+			return
+		}
+	}
+	rand.Seed(time.Now().UnixNano())
 }
 
 // ---------------------------------------------------------------- getChar -----------------------------
@@ -327,12 +336,12 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 			}
 			break
 		} else if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") {
-			//fmt.Println(" In GetTrack and came upon unexpected </tracklist>")
-			//break
+			fmt.Println(" In GetTrack and came upon unexpected </tracklist>")
+			break
 			// now should never get here because this tag is really part of the extension tag and it's swallowed there
 		} else if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
-			//fmt.Println(" in GetTrack and found an unexpected opening track tag")
-			//break
+			fmt.Println(" in GetTrack and found an unexpected opening track tag")
+			break
 		} else {
 			//      Have random white space here, typically either a space or a tab before an opening html tag.  Ignore it.
 		} // end if XMLtkn.state == whatever
@@ -391,8 +400,7 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 	for { // to read the continuous stream of track tokens
 		trackPtr, err := GetTrack(inputFile)
 		if verboseFlag {
-			//fmt.Printf("in getFileNames after GetTrack(inputfile) call: err = %s, and *track is %#v\n", err, *trackPtr) Don't need to dereference the pointer.
-			fmt.Printf("in getFileNames after GetTrack(inputfile) call at about line 386: err = %s, track is %#v\n", err, trackPtr)
+			fmt.Printf("in getFileNames after GetTrack(inputfile) call at about line 402: err = %s, track is %#v\n", err, trackPtr)
 		}
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -427,7 +435,7 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 		//} // if have closing tracklist
 	} // loop to read in more tracks
 
-	fmt.Printf("In getFileNames before sort.  Length of TrackSlice = %d, and length of fn = %d\n", len(TrackSlice), len(fn))
+	//fmt.Printf("In getFileNames before sort.  Length of TrackSlice = %d, and length of fn = %d\n", len(TrackSlice), len(fn))
 
 	t0 := time.Now()
 
@@ -442,7 +450,6 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 	}
 
 	Time := timlibg.GetDateTime()
-	rand.Seed(t0.Unix())
 	shuffling := Time.Month + Time.Day + Time.Hours + Time.Minutes + Time.Year + Time.Seconds
 	for k := 0; k < shuffling; k++ {
 		rand.Shuffle(len(fn), swapFcn)
@@ -450,35 +457,11 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 	// Finished shuffling.
 
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	fmt.Printf(" It took %s to shuffle this file %d times.\n", timeToShuffle.String(), shuffling)
+	fmt.Printf(" It took %s to shuffle this file containing %d filenames %d times.\n", timeToShuffle.String(), len(fn), shuffling)
 	fmt.Println()
 
-	// Used to write the output file, here.  Now that I've created the slice to feed to vlc, I'll return it.
 	return fn, nil
-
-	//_, err = outputfile.WriteRune(tabchar)
-	//check(err, " Starting to write the shuffled tracklist to the output file and got error: ")
-	//outputfile.WriteString("<trackList>")
-	//outputfile.WriteString(lineDelim)
-	//
-	//for c := 0; c < len(TrackSlice); c++ {
-	//	PutTrack(outputfile, TrackSlice[c], c)
-	//}
-	//
-	//outputfile.WriteRune(tabchar)
-	//outputfile.WriteString("</trackList>")
-	//outputfile.WriteString(lineDelim)
-	//
-	//for { // to read and write the rest of the lines
-	//	line, err := inputfile.ReadString('\n')
-	//	if err == io.EOF {
-	//		break
-	//	}
-	//	check(err, " Reading final lines of the inputfile and got this error: ")
-	//	_, err = outputfile.WriteString(line)
-	//} // final read and write loop
-
-} // end getFilenames, formerly ProcessXMLFile
+} // getShuffledFilenames, formerly ProcessXMLFile
 
 // -------------------------------------------- min ---------------------------------------------
 func min(a, b int) int {
@@ -526,7 +509,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose mode flag.")
-	flag.BoolVar(&veryVerboseFlag, "vv", false, "Verbose mode flag.")
+	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very Verbose mode flag.")
 	flag.IntVar(&numNames, "n", 40, " Number of file names to output on the commandline to vlc.")
 	flag.Parse()
 
@@ -604,34 +587,6 @@ func main() {
 	}
 	inFileReader := bytes.NewReader(infile)
 
-	//   Build outfilename.  Nevermind.  Don't need this here
-	//BaseFilename := filepath.Base(filename)
-	//ExtFilename := filepath.Ext(filename)
-	//lastIndex := strings.LastIndex(BaseFilename, ".")
-	//base := BaseFilename[:lastIndex] // base is the name without extension
-	//
-	//TodaysDateString := MakeDateStr()
-	//
-	//outfilename := base + TodaysDateString + ExtFilename
-	//outfile, err := os.Create(outfilename)
-	//if err != nil {
-	//	fmt.Println(" Cannot open outfilename ", outfilename, "  with error ", err)
-	//	os.Exit(1)
-	//}
-	//defer outfile.Close()
-	//
-	//outputfile := bufio.NewWriter(outfile)
-	//defer outputfile.Flush()
-
-	//fmt.Println()
-	//fmt.Println(" GOOS =", runtime.GOOS, ".  ARCH=", runtime.GOARCH)
-	//fmt.Println()
-	//if runtime.GOOS == "windows" {
-	//	lineDelim = "\r\n"
-	//} else {
-	//	lineDelim = "\n"
-	//}
-
 	fileNames, err := getShuffledFileNames(inFileReader)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from getFileNames is %s.  Good-bye\n", err)
@@ -705,29 +660,6 @@ func minInt(i, j int) int {
 	return j
 }
 
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
-/*
-func MakeDateStr() (datestr string) {
-
-	const DateSepChar = "-"
-
-	m, d, y := timlibg.TIME2MDY()
-	timenow := timlibg.GetDateTime()
-
-	MSTR := strconv.Itoa(m)
-	DSTR := strconv.Itoa(d)
-	YSTR := strconv.Itoa(y)
-	Hr := strconv.Itoa(timenow.Hours)
-	Min := strconv.Itoa(timenow.Minutes)
-	Sec := strconv.Itoa(timenow.Seconds)
-
-	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
-		Sec + "__" + timenow.DayOfWeekStr
-	return datestr
-} // MakeDateStr
-
-*/
-
 /* -------------------------------------------- Shuffle ----------------------------------------------------
 
 func Shuffle() {  replaced by rand.Shuffle
@@ -743,103 +675,96 @@ func Shuffle() {  replaced by rand.Shuffle
 		}
 	}
 } // Shuffle;
-
 */
+
 // -------------------------------------------------- PutTrack --------------------------------------------
 /*
-//func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
-//
-//	// indivTrackNum used to be incremented here.  I'll have it incremented in the caller now.
-//	// And the input param is now a pointer to the TrackType, and an array subscript of what was TrackArray in the Modula-2 version of the code.
-//
-//	// lineDelim is already set in main to be <CR><LF> for Windows and <LF> for everything else (Linux).
-//
-//	_, err := f.WriteRune(tabchar)
-//	check(err, " First WriteRune of tabchar in PutTrack and got ")
-//	f.WriteString("<track>")
-//	f.WriteString(lineDelim)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("<location>")
-//	f.WriteString(trk.location) // Remember that TrackSlice is a slice of pointers to a TrackType.
-//	f.WriteString("</location>")
-//	f.WriteString(lineDelim)
-//
-//	if len(trk.title) > 0 { // I don't know if I'm required to explicitly dereference this pointer.
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteString("<title>")
-//		f.WriteString(trk.title)
-//		f.WriteString("</title>")
-//		f.WriteString(lineDelim)
-//	}
-//
-//	if len(trk.creator) > 0 {
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteString("<creator>")
-//		f.WriteString(trk.creator)
-//		f.WriteString("</creator>")
-//		f.WriteString(lineDelim)
-//	}
-//
-//	if len(trk.image) > 0 {
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteRune(tabchar)
-//		f.WriteString("<image>")
-//		f.WriteString(trk.image)
-//		f.WriteString("</image>")
-//		f.WriteString(lineDelim)
-//	}
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("<duration>")
-//	f.WriteString(trk.duration)
-//	f.WriteString("</duration>")
-//	f.WriteString(lineDelim)
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("<")
-//	f.WriteString(trk.extension)
-//	f.WriteString(">")
-//	f.WriteString(lineDelim)
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("  <vlc:id>")
-//	nstr := strconv.Itoa(TrackNum)
-//	f.WriteString(nstr)
-//	f.WriteString("</vlc:id>")
-//	f.WriteString(lineDelim)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString(" </extension>")
-//	f.WriteString(lineDelim)
-//
-//	f.WriteRune(tabchar)
-//	f.WriteRune(tabchar)
-//	f.WriteString("</track>")
-//	_, err = f.WriteString(lineDelim)
-//	check(err, " Last write of lineDelim in PutTrack, and got ")
-//	return
-//} // PutTrack
-//
+func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
+
+	// indivTrackNum used to be incremented here.  I'll have it incremented in the caller now.
+	// And the input param is now a pointer to the TrackType, and an array subscript of what was TrackArray in the Modula-2 version of the code.
+
+	// lineDelim is already set in main to be <CR><LF> for Windows and <LF> for everything else (Linux).
+
+	_, err := f.WriteRune(tabchar)
+	check(err, " First WriteRune of tabchar in PutTrack and got ")
+	f.WriteString("<track>")
+	f.WriteString(lineDelim)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteString("<location>")
+	f.WriteString(trk.location) // Remember that TrackSlice is a slice of pointers to a TrackType.
+	f.WriteString("</location>")
+	f.WriteString(lineDelim)
+
+	if len(trk.title) > 0 { // I don't know if I'm required to explicitly dereference this pointer.
+		f.WriteRune(tabchar)
+		f.WriteRune(tabchar)
+		f.WriteRune(tabchar)
+		f.WriteString("<title>")
+		f.WriteString(trk.title)
+		f.WriteString("</title>")
+		f.WriteString(lineDelim)
+	}
+
+	if len(trk.creator) > 0 {
+		f.WriteRune(tabchar)
+		f.WriteRune(tabchar)
+		f.WriteRune(tabchar)
+		f.WriteString("<creator>")
+		f.WriteString(trk.creator)
+		f.WriteString("</creator>")
+		f.WriteString(lineDelim)
+	}
+
+	if len(trk.image) > 0 {
+		f.WriteRune(tabchar)
+		f.WriteRune(tabchar)
+		f.WriteRune(tabchar)
+		f.WriteString("<image>")
+		f.WriteString(trk.image)
+		f.WriteString("</image>")
+		f.WriteString(lineDelim)
+	}
+
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteString("<duration>")
+	f.WriteString(trk.duration)
+	f.WriteString("</duration>")
+	f.WriteString(lineDelim)
+
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteString("<")
+	f.WriteString(trk.extension)
+	f.WriteString(">")
+	f.WriteString(lineDelim)
+
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteString("  <vlc:id>")
+	nstr := strconv.Itoa(TrackNum)
+	f.WriteString(nstr)
+	f.WriteString("</vlc:id>")
+	f.WriteString(lineDelim)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteString(" </extension>")
+	f.WriteString(lineDelim)
+
+	f.WriteRune(tabchar)
+	f.WriteRune(tabchar)
+	f.WriteString("</track>")
+	_, err = f.WriteString(lineDelim)
+	check(err, " Last write of lineDelim in PutTrack, and got ")
+	return
+} // PutTrack
+
 */
-// -------------------------------------------- check ---------------------------------------------
-//func check(e error, msg string) {
-//	if e != nil {
-//		fmt.Printf("%s : ", msg)
-//		panic(e)
-//	}
-//}

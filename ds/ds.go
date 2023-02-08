@@ -120,9 +120,10 @@ Revision History
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 14 Jan 23 -- I wrote args to learn more about how arguments are handled.  I think I got it wrong in dsrtutil_linux.  I'm going to fix it.  Now that it works there
                I'll fix it here, too
+ 7 Feb 23 -- Corrected an oversight of not closing a file in dsutil_linux.go
 */
 
-const LastAltered = "14 Jan 2023"
+const LastAltered = "7 Feb 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
