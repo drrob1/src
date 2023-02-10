@@ -34,6 +34,7 @@ package main
    6 Feb 23 -- Added display of number of shufflings to output.  And changed getFilenames -> getShuffledFilenames.
    7 Feb 23 -- Combined output messages and removed dead code commented out earlier.  And Go 1.20 does not need or really want me to call Seed().  I removed that for Go 1.20+.
                  And I removed an errant call to rand.Seed() just before the shuffling loop in getShuffledFileNames.
+  10 Feb 23 -- Enhanced testing of the code that detects the version of Go.
 */
 
 import (
@@ -56,7 +57,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "8 Feb 2023"
+const LastCompiled = "10 Feb 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -119,6 +120,8 @@ func init() {
 		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
 			return
 		}
+	} else {
+		fmt.Printf(" ERROR from Atoi: %s\n", err)
 	}
 	rand.Seed(time.Now().UnixNano())
 }
