@@ -6,6 +6,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
+	"src/few"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -52,9 +53,10 @@ import (
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                     I added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
+  12 Feb 2023 -- Adding verify option (finally)
 */
 
-const LastAltered = "31 Jan 2023" //
+const LastAltered = "12 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -67,10 +69,11 @@ type cfType struct { // copy file type
 }
 
 type msgType struct {
-	s       string
-	e       error
-	color   ct.Color
-	success bool
+	s        string
+	e        error
+	color    ct.Color
+	success  bool
+	verified bool
 }
 
 var autoWidth, autoHeight int
@@ -83,6 +86,7 @@ var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
+var verifyFlag bool
 
 //var ErrByteCountMismatch error
 
@@ -141,6 +145,8 @@ func main() {
 
 	var globFlag bool
 	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
+
+	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
 
 	flag.Parse()
 
@@ -445,11 +451,49 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
+	if verifyFlag {
+		result, err := few.Feq32withNames(baseFile, outName)
+		if err != nil {
+			msg := msgType{
+				s:        "",
+				e:        err,
+				color:    ct.Red,
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+			return
+		}
+		if result {
+			msg := msgType{
+				s:        fmt.Sprintf("%s copied to %s and is VERIFIED", srcFile, destDir),
+				e:        nil,
+				color:    ct.Green,
+				success:  true,
+				verified: true,
+			}
+			msgChan <- msg
+			return
+		} else {
+			msg := msgType{
+				s:        fmt.Sprintf("%s copied to %s but NOT VERIFIED", srcFile, destDir),
+				e:        nil,
+				color:    ct.Red,
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+			return
+		}
+	}
+
 	msg := msgType{
-		s:       fmt.Sprintf("%s copied to %s", srcFile, destDir),
-		e:       nil,
-		color:   ct.Green,
-		success: true,
+		s:        fmt.Sprintf("%s copied to %s", srcFile, destDir),
+		e:        nil,
+		color:    ct.Green,
+		success:  true,
+		verified: verifyFlag, // I already know that this flag is false if get here.
 	}
 	msgChan <- msg
 	return
