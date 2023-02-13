@@ -61,9 +61,10 @@ import (
                    Added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now of type Duration.
    2 Feb 2023 -- Will now use the few file equal routines.
+  12 Feb 2023 -- Will make sync errors a different color, because I got today an error that said sync failed because host is down.
 */
 
-const LastAltered = "2 Feb 2023" //
+const LastAltered = "12 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -359,7 +360,7 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 	err = out.Sync()
 	if err != nil {
-		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
+		ctfmt.Printf(ct.Magenta, onWin, "%s\n", err)
 		return false
 	}
 	//if srcSize != n {
@@ -400,7 +401,7 @@ func copyAFile(srcFile, destDir string) bool {
 		//}
 
 		if result {
-			// ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)  This created too many output lines.
+			//                                  ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)  This created too many output lines.
 		} else {
 			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
 			return false

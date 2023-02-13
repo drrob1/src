@@ -53,7 +53,7 @@ import (
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                     I added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
-  12 Feb 2023 -- Adding verify option (finally)
+  12 Feb 2023 -- Adding verify option (finally).  In testing later in the day, I got a sync failed because host is down error.  I'm making sync errors a different color now.
 */
 
 const LastAltered = "12 Feb 2023" //
@@ -408,7 +408,7 @@ func CopyAFile(srcFile, destDir string) {
 		msg := msgType{
 			s:       "",
 			e:       err,
-			color:   ct.Red,
+			color:   ct.Magenta,
 			success: false,
 		}
 		msgChan <- msg
