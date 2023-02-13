@@ -54,9 +54,10 @@ import (
                     I added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
   12 Feb 2023 -- Adding verify option (finally).  In testing later in the day, I got a sync failed because host is down error.  I'm making sync errors a different color now.
+  13 Feb 2023 -- Adding timestamp on the exec binary.
 */
 
-const LastAltered = "12 Feb 2023" //
+const LastAltered = "13 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -94,7 +95,16 @@ func main() {
 	if fanOut < 1 {
 		fanOut = 1
 	}
-	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
+	execName, err := os.Executable()
+	if err != nil {
+		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
+	}
+	execFI, err := os.Lstat(execName)
+	if err != nil {
+		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
+	}
+	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+	fmt.Printf("%s is compiled w/ %s, last altered %s, exec binary timestamp is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		//autoDefaults = false
@@ -103,7 +113,7 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")

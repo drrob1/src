@@ -62,9 +62,10 @@ import (
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now of type Duration.
    2 Feb 2023 -- Will now use the few file equal routines.
   12 Feb 2023 -- Will make sync errors a different color, because I got today an error that said sync failed because host is down.
+  13 Feb 2023 -- Adding timestamp on the exec binary.
 */
 
-const LastAltered = "12 Feb 2023" //
+const LastAltered = "13 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -97,7 +98,16 @@ var totalSucceeded, totalFailed int64
 var verifyFlag bool
 
 func main() {
-	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
+	execName, err := os.Executable()
+	if err != nil {
+		fmt.Printf(" Error from os.Executable() is: %s, which will be ignored.\n", err)
+	}
+	execFI, err := os.Lstat(execName)
+	if err != nil {
+		fmt.Printf(" Error from os.Lstat(%s) is: %s, which will be ignored.\n", execName, err)
+	}
+	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+	fmt.Printf("%s is compiled w/ %s, last altered %s, and exec binary timpstamp is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {                                                // if output is redirected, for example.
 		autoHeight = defaultHeight
@@ -105,7 +115,7 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
