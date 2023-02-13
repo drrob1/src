@@ -57,9 +57,10 @@ import (
   27 Jan 23 -- Now called few.go, as it's much easier to type than feq.  It uses src/few routines and will allow command line params to select which and how many of the tests to run.
   30 Jan 23 -- Added a default case, saying invalid hash designator.
    2 Feb 23 -- Rewrote to use the new procedures in few.go, that take a filename.
+  13 Feb 23 -- Adding synonyms for some of the hash designators, and improved the help message.
 */
 
-const LastCompiled = "2 Feb 2023"
+const LastCompiled = "13 Feb 2023"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -76,6 +77,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " few, file equal tester, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line, followed by the tests to run.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " few file1 file2 [32 64 1 2 3 5 bbb], where 32 is default.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 		fmt.Fprintln(flag.CommandLine.Output())
@@ -128,19 +130,19 @@ func main() {
 			if err != nil {
 				ctfmt.Printf(ct.Red, onWin, "ERROR from feq1withName: %s\n", err)
 			}
-		} else if s == "2" {
+		} else if s == "2" || s == "256" {
 			methodName = "sha256"
 			result, err = few.Feq2withNames(filename1, filename2)
 			if err != nil {
 				ctfmt.Printf(ct.Red, onWin, "ERROR from feq2withName: %s\n", err)
 			}
-		} else if s == "3" {
+		} else if s == "3" || s == "384" {
 			methodName = "sha384"
 			result, err = few.Feq3withNames(filename1, filename2)
 			if err != nil {
 				ctfmt.Printf(ct.Red, onWin, "ERROR from feq3withName: %s\n", err)
 			}
-		} else if s == "5" {
+		} else if s == "5" || s == "512" {
 			methodName = "sha512"
 			result, err = few.Feq5withNames(filename1, filename2)
 			if err != nil {
