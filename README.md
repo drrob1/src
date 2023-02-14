@@ -30,7 +30,7 @@ All of my go code as of Feb 5, 2023.
 26. multack -- my stab at a concurrent case insensitive ack
 27. detox -- my stab at the linux detox utility intended for windows
 28. dirb -- by stab at porting the bashDirB script to windows in tcmd by jpsoft
-29. feq -- file equal pgms mostly comparing different hash functions
+29. feq, few -- file equal pgms mostly comparing different hash functions
 30. img, imga, img2 -- GUI pgm to show an image, and then switch easily
 31. freq -- letter counting and sorting, for use in wordle
 32. goclick, gofshowtime -- for work to keep a window active
