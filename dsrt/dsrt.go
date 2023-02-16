@@ -117,9 +117,10 @@ REVISION HISTORY
 14 Jan 23 -- I wrote args to learn more about how arguments are handled.  I think I got it wrong in dsrtutil_linux.  I'm going to fix it.
  6 Feb 23 -- Directory aliases still don't work perfectly.  I'm going to debug this a bit more.  Nevermind, the problem was a bad directory alias that mapped to the wrong drive letter.
  7 Feb 23 -- I found an area in dsrtutil_linux.go where I didn't close a file that needed to be closed.  I fixed that.
+15 Feb 23 -- Added showing the timestamp of the binary.  And then removed it when I saw that it's already there in the verbose output.  And I tweaked the beginning verbose output.
 */
 
-const LastAltered = "7 Feb 2023"
+const LastAltered = "15 Feb 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -158,12 +159,16 @@ func main() {
 	gid := 0
 	systemStr := ""
 
+	//execName, _ := os.Executable()
+	//ExecFI, _ := os.Stat(execName)
+	//LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+
 	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
 	dsrtEnviron := os.Getenv("dsrt")
 	dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
 	winflag := runtime.GOOS == "windows"          // this is needed because I use it in the color statements, so the colors are bolded only on windows.
-	ctfmt.Printf(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s", LastAltered,
-		runtime.Version())
+	ctfmt.Printf(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s",
+		LastAltered, runtime.Version())
 	if dsrtEnviron == "" {
 		ctfmt.Printf(ct.Magenta, winflag, "\n")
 	} else {
@@ -321,15 +326,14 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
-		if runtime.GOARCH == "amd64" {
+		if runtime.GOARCH == "amd64" && runtime.GOOS == "linux" {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
-			fmt.Printf(" dsrtparam numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
-				dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
-				dsrtParam.totalflag)
-			fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t. \n", autoHeight, autoWidth, excludeFlag)
-
 		}
+		fmt.Printf(" dsrtparam numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
+			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
+			dsrtParam.totalflag)
+		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t. \n", autoHeight, autoWidth, excludeFlag)
 	}
 
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag

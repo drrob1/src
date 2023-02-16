@@ -67,6 +67,7 @@ import (
                  I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
   15 Dec 22 -- I'm going to add a post counter that has to be atomically added and see how that affects the timings.
                  Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha, ~ 0.5%.  Interesting.
+  15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.
 */
 
 const LastCompiled = "15 Dec 2022"
@@ -191,8 +192,12 @@ func main() {
 	fmt.Println()
 
 	// starting the worker go routines before the result goroutine.  This is a fan out pattern.
-	hashChan = make(chan hashType, numOfWorkers)
-	resultChan = make(chan resultMatchType, numOfWorkers)
+	//hashChan = make(chan hashType, numOfWorkers)  Turns out that this is not faster than making an unbuffered channel, and may even be slower.  Interesting.
+	//resultChan = make(chan resultMatchType)  // This is slightly slower
+	//resultChan = make(chan resultMatchType, numOfWorkers)
+	//hashChan = make(chan hashType, 1)          // this may be slightly faster.
+	hashChan = make(chan hashType)             // Bill Kennedy says in the worker pool pattern, making this synchronous is recommended.  And it seems to be the fastest of all I tested today.
+	resultChan = make(chan resultMatchType, 1) // This is slightly faster than when the buffer is numOfWorkers
 	for w := 0; w < numOfWorkers; w++ {
 		go func() {
 			for h := range hashChan {
@@ -338,7 +343,7 @@ func main() {
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
 	fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
-	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg1.Done().
+	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg2.Done().
 	fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
 	close(resultChan) // all work is done, so I can close the resultChan.
 

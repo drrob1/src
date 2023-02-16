@@ -70,6 +70,7 @@ import (
                  faster than doing both in the same routine.  Go figure.  Wait, scratch that.  This routine also has a post counter that is incremented atomically.  This is not in
                  multiSha.  That could also account for the differences in speed.  So I'll say it's a tie.  The difference on win10 desktop is 6.1 sec here vs 6.07 sec from multiSha.
                  And this difference persists even after I added the atomic adds to multiSha.
+  15 Feb 23 -- Following Bill Kennedy's advice and making the channel either synchronous or maybe buffer of 1.  This is still slower than multisha, by ~0.04 sec here on Win10 desktop.
 */
 
 const LastCompiled = "14 Dec 2022"
@@ -178,9 +179,11 @@ func main() {
 	fmt.Println()
 
 	// starting the worker go routines before the result goroutine.  This is a fan out pattern.
-	hashChan = make(chan hashType, numOfWorkers)
-	onWin = runtime.GOOS == "windows"
+	//hashChan = make(chan hashType) // this is now synchronous, at recommendation of Bill Kennedy.
 	//resultChan = make(chan resultMatchType, numOfWorkers)
+	//hashChan = make(chan hashType, numOfWorkers) // this is probably the slowest.  But still slower than multisha.
+	hashChan = make(chan hashType, 1) // Now I can't tell if this is better.  I'm leaving this for now.
+	onWin = runtime.GOOS == "windows"
 
 	for w := 0; w < numOfWorkers; w++ {
 		go func() {
