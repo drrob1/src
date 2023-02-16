@@ -67,7 +67,7 @@ import (
                  I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
   15 Dec 22 -- I'm going to add a post counter that has to be atomically added and see how that affects the timings.
                  Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha, ~ 0.5%.  Interesting.
-  15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.
+  15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.  And making the numOfWorkers = runtime.NumCPU(), as Bill Kennedy seems to love.
 */
 
 const LastCompiled = "15 Dec 2022"
@@ -81,7 +81,8 @@ const (
 	sha512hash
 )
 
-const numOfWorkers = 25
+//const numOfWorkers = 25
+var numOfWorkers = runtime.NumCPU() // seems to be about the same.
 
 type hashType struct {
 	fName     string
