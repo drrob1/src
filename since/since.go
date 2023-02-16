@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 	// jwalk "github.com/MichaelTJones/walk"  It made no difference vs the std lib, once I figured out that I had to return SkipDir on any errors.
 	// "github.com/whosonfirst/walk"  Not designed for windows, and I doesn't do what I want, so I'll delete it.
@@ -33,11 +33,11 @@ import (
     2 Nov 2022 -- Time to clean out the crap that accumulated while I sorted out the code.  The GitHub repo was last modified 8 yrs ago, which is Go 1.3 or 1.4.  A lot has
                     changed in that time, now that Go 1.19 is current.  I did not find a difference btwn the std library walk vs Michael T Jones' code I called jwalk.
                     I'll remove that stuff now.
+   16 Feb 2023 -- I'll change to using WalkDir instead of Walk.  This essentially changes from a FileInfo to a DirEntry.  The docs say that WalkDir is slightly faster.
 */
 
-var LastAlteredDate = "Nov 1, 2022"
+var LastAlteredDate = "Feb 16, 2023"
 
-//var duration = flag.String("d", "", "find files modified within DURATION")
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
 var instant = flag.String("t", "", "find files modified since TIME")
@@ -46,7 +46,7 @@ var verbose = flag.Bool("v", false, "print summary statistics")
 var days = flag.Int("d", 0, "days duration")
 var weeks = flag.Int("w", 0, "weeks duration")
 
-//var wg sync.WaitGroup
+//var wg sync.WaitGroup  I'm using a channel to signal
 
 type devID uint64
 
@@ -112,10 +112,10 @@ func main() {
 		done <- true
 	}()
 
-	// walk to find recently-modified files
-	var lock sync.Mutex    // I'll leave this mutex pattern here as a reference, though I like the atomic add stuff better as I believe it to be cleaner w/ less code.
-	var tFiles, tBytes int // total files and bytes
-	var rFiles, rBytes int // recent files and bytes
+	// walkDir to find recently-modified files
+	//var lock sync.Mutex    // I took out this mutex pattern here as a reference; I like the atomic add stuff better as I believe it to be cleaner w/ less code.
+	var tFiles int64         // total files and bytes
+	var rFiles, rBytes int64 // recent files and bytes
 	var rootDeviceID devID
 	var dir string
 
@@ -134,58 +134,76 @@ func main() {
 	}
 	rootDeviceID = getDeviceID(fi)
 
-	sizeVisitor := func(path string, info os.FileInfo, err error) error { // I'm ignoring any tests on err, as I don't want to abort on trivial errors.
-		//wg.Add(1)
-		//defer wg.Done()
+	//sizeVisitor := func(path string, info os.FileInfo, err error) error {
+	walkDirFunc := func(path string, d os.DirEntry, err error) error {
+		if *verbose {
+			fmt.Printf(" Path = %s, err = %s, isdir = %t, d.name = %s, d.type = %v  \n ", path, err, d.IsDir(), d.Name(), d.Type())
+		}
+
+		var info os.FileInfo
 		if err != nil {
 			if *verbose {
 				fmt.Printf(" Trying to enter %s, got error %s.  Skipping it.\n", path, err)
 			}
 			return filepath.SkipDir
 		}
-		lock.Lock()
-		tFiles += 1
-		tBytes += int(info.Size())
-		lock.Unlock()
 
-		if info.IsDir() {
+		atomic.AddInt64(&tFiles, 1)
+		//lock.Lock()
+		//tFiles += 1
+		//tBytes += int(info.Size())
+		//lock.Unlock()
+
+		if d.IsDir() {
 			if filepath.Ext(path) == ".git" || strings.Contains(path, "vmware") || strings.Contains(path, ".cache") { // adding extra skipDir's saved from 13 min -> 9 sec runtime.
 				if *verbose {
 					fmt.Printf(" skipping %s.\n", path)
 				}
 				return filepath.SkipDir
-			} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.
+				//} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.  It doesn't follow symlinks, so I'm removing this.
+				//	if *verbose {
+				//		fmt.Printf(" skipping symlink %s\n", path)
+				//	}
+				//	return filepath.SkipDir
+			}
+
+			info, err = d.Info()
+			if err != nil {
+				return filepath.SkipDir
+			}
+
+			id := getDeviceID(info)
+			if rootDeviceID != id {
 				if *verbose {
-					fmt.Printf(" skipping symlink %s\n", path)
+					fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping %s.\n", rootDeviceID, dir, id, path, path)
 				}
 				return filepath.SkipDir
-			} else {
-				id := getDeviceID(info)
-				if rootDeviceID != id {
-					if *verbose {
-						fmt.Printf(" root device id is %d for %q, path device id is %d for %q.  Skipping %s.\n", rootDeviceID, dir, id, path, path)
-					}
-					return filepath.SkipDir
-				}
 			}
+			return nil // it's a directory.  Need to compare against files and not directories.  So leave.
+		}
+
+		info, err = d.Info()
+		if err != nil {
+			return filepath.SkipDir
 		}
 
 		if info.ModTime().After(when) {
-			lock.Lock()
-			rFiles += 1
-			rBytes += int(info.Size())
-			lock.Unlock()
+			atomic.AddInt64(&rFiles, 1)
+			atomic.AddInt64(&rBytes, info.Size())
+			//lock.Lock()
+			//rFiles += 1
+			//rBytes += info.Size()
+			//lock.Unlock()
 
 			if !*quiet {
-				// fmt.Printf("%s %s\n", info.ModTime(), path) // simple
 				results <- path // allows sorting into "normal" order
 			}
 		}
-		//}
 		return nil
 	}
 
-	err = filepath.Walk(dir, sizeVisitor)
+	//err = filepath.Walk(dir, sizeVisitor)
+	err = filepath.WalkDir(dir, walkDirFunc)
 
 	if err != nil {
 		log.Printf(" error from walk.Walk is %v\n", err)
@@ -195,27 +213,31 @@ func main() {
 	close(results) // no more results
 	<-done         // wait for final results and sorting
 	//wg.Wait()
-	𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by nn/s it converts to sec, and is reported that way below.
+	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by nn/s it converts to sec, and is reported that way below.
+	elapsed := time.Since(now)
 
 	for _, r := range result {
 		fmt.Printf("%s\n", r)
 	}
 
-	fmt.Printf(" since ran for %s\n", time.Since(now))
+	fmt.Printf(" since ran for %s\n", elapsed)
 
 	// print optional verbose summary report
 	if *verbose {
-		log.Printf("     total: %8d files (%7.2f%%), %13d bytes (%7.2f%%)\n",
-			tFiles, 100.0, tBytes, 100.0)
+		//log.Printf("     total: %8d files (%7.2f%%), %13d bytes (%7.2f%%)\n", tFiles, 100.0, tBytes, 100.0)
+		log.Printf("     total: %8d files (%7.2f%%)\n", tFiles, 100.0)
 
 		rfp := 100 * float64(rFiles) / float64(tFiles)
-		rbp := 100 * float64(rBytes) / float64(tBytes)
-		log.Printf("    recent: %8d files (%7.2f%%), %13d bytes (%7.2f%%) in %.4f seconds\n",
-			rFiles, rfp, rBytes, rbp, 𝛥t)
+		//rbp := 100 * float64(rBytes) / float64(tBytes)
+		//log.Printf("    recent: %8d files (%7.2f%%), %13d bytes (%7.2f%%) in %.4f seconds\n", rFiles, rfp, rBytes, rbp, 𝛥t)
+		log.Printf("    recent: %8d files (%7.2f%%), %13d bytes in %s \n", rFiles, rfp, rBytes, elapsed)
 	}
 }
 
+/* Not used as of Feb 16, 2023.
 func isSymlink(fm os.FileMode) bool {
 	intermed := fm & os.ModeSymlink
 	return intermed != 0
 }
+
+*/
