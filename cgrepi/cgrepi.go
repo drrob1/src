@@ -37,8 +37,8 @@
   20 Nov 22 -- static linter found an issue, so I commented it out.
   11 Dec 22 -- From the Go course I bought from ArdanLabs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.  So I'll include this limit in the code now.
   15 Feb 23 -- I'll play w/ lowering the number of workers.  I think the easiest way to do this is to make the multiplier = 1 and do measurements.  But for tomorrow.  It's too late now.
-                  Bill Kennedy said that the magic number is about the same as runtime.NumCPU().  Wow, it is faster.
-                  On Win10 Desktop, time went from 222 ms -> 192 ms, using cgrepi elapsed.  That's ~ 13.5% faster
+                  Bill Kennedy said that the magic number is about the same as runtime.NumCPU().  Wow, it IS faster.
+                  On Win10 Desktop, time went from 222 ms -> 192 ms, using "cgrepi elapsed".  That's ~ 13.5% faster
 */
 package main
 
