@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,15 +41,31 @@ REVISION HISTORY
 14 Nov 22 -- Will use fact that an empty regexp always matches everything.  Turned out to be a bad thing, because therefore the exclude expression excluded everything.
                I undid it.
 18 Jan 23 -- Adding smartCase
+16 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 */
 
-const lastModified = "Nov 14, 2022"
+const lastModified = "Feb 16, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
+
+func init() {
+	goVersion := runtime.Version()
+	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+	goVersionInt, err := strconv.Atoi(goVersion)
+	if err == nil {
+		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+			return
+		}
+	} else {
+		fmt.Printf(" ERROR from Atoi: %s\n", err)
+	}
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
@@ -141,7 +158,7 @@ func main() {
 	// Now to shuffle the file names slice.
 
 	now := time.Now()
-	rand.Seed(now.UnixNano())
+	//                  rand.Seed(now.UnixNano())  Now handled by the init() function that knows Go 1.20+ doesn't want Seed called.
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
