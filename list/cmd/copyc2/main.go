@@ -90,7 +90,7 @@ var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var fanOut = runtime.NumCPU() - 2
+var fanOut = runtime.NumCPU() - 2 // It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
 var cfChan chan cfType
 var wg sync.WaitGroup
 var totalSucceeded, totalFailed int64
