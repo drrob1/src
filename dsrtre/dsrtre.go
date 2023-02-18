@@ -17,6 +17,7 @@ dsrtre.go
   21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
   12 Nov 22 -- Adding device ID code, and error handling code I developed for since and multack.  And I think I need a sync mechanism like a wait group or done channel.
   14 Nov 22 -- Added processing for "~".
+  17 Feb 23 -- Based on what I learned by speeding up since.go, I'll port those optimizations here.
 */
 package main
 
@@ -27,14 +28,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const lastAltered = "14 Nov 2022"
+const lastAltered = "17 Feb 2023"
 
 type devID uint64
 
@@ -46,7 +46,7 @@ func main() {
 	var err error
 	var rootDeviceID devID
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	// runtime.GOMAXPROCS(runtime.NumCPU()) not needed anymore, this is done by start up code.
 
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
@@ -100,7 +100,7 @@ func main() {
 	}
 
 	t0 := time.Now()
-	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	tFinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 	rootFileInfo, err := os.Stat(startDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Exiting\n", startDir, err)
@@ -169,7 +169,7 @@ func main() {
 		er := filepath.Walk(startDirectory, filepathwalkfunction)
 	*/
 
-	filepathWalkDirEntry := func(fpath string, d os.DirEntry, err error) error {
+	filepathWalkDirEntry := func(fPath string, d os.DirEntry, err error) error {
 		if err != nil {
 			if *verboseFlag {
 				fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
@@ -177,34 +177,36 @@ func main() {
 			return filepath.SkipDir
 		}
 
-		info, e := d.Info()
-		if e != nil {
-			if *verboseFlag {
-				fmt.Fprintf(os.Stderr, " Error from %s is %s \n", fpath, e)
-			}
-			return filepath.SkipDir
-		}
-		pathDeviceID := getDeviceID(info)
-		if rootDeviceID != pathDeviceID {
-			if *verboseFlag {
-				fmt.Fprintf(os.Stderr, " %s is on a difference device from %s,  Skipping\n", fpath, startDir)
-			}
-			return filepath.SkipDir
-		}
-
 		if d.IsDir() { // if directory, either skip it or return, but don't process it.
-			if strings.Contains(fpath, ".git") {
+			if strings.Contains(fPath, ".git") || strings.Contains(fPath, "vmware") || strings.Contains(fPath, ".cache") {
 				return filepath.SkipDir
 			}
+
+			info, e := d.Info() // needed to feed into getDeviceID.
+			if e != nil {
+				if *verboseFlag {
+					fmt.Fprintf(os.Stderr, " Error from %s is %s \n", fPath, e)
+				}
+				return filepath.SkipDir
+			}
+
+			pathDeviceID := getDeviceID(info)
+			if rootDeviceID != pathDeviceID {
+				if *verboseFlag {
+					fmt.Fprintf(os.Stderr, " %s is on a difference device from %s,  Skipping\n", fPath, startDir)
+				}
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 
-		if isSymlink(d.Type()) {
-			if *verboseFlag {
-				fmt.Printf(" %s is a symlink, name is %s. \n", fpath, d.Name())
-			}
-			return nil
-		}
+		//if isSymlink(d.Type()) {  the walk functions don't follow symlinks, so this isn't needed.
+		//	if *verboseFlag {
+		//		fmt.Printf(" %s is a symlink, name is %s. \n", fpath, d.Name())
+		//	}
+		//	return nil
+		//}
 
 		// Must be a regular file
 		NAME := strings.ToLower(d.Name()) // Despite windows not being case-sensitive, filepath.Match is case-sensitive.  Who new?
@@ -219,12 +221,12 @@ func main() {
 			if fi.Size() > 100_000 {
 				sizeStr = AddCommas(sizeStr)
 			}
-			s := fmt.Sprintf("%15s : %s : %s", sizeStr, t, fpath)
+			s := fmt.Sprintf("%15s : %s : %s", sizeStr, t, fPath)
 			results <- s
 		}
 
 		now := time.Now()
-		if now.After(tfinal) {
+		if now.After(tFinal) {
 			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 		}
 
@@ -237,7 +239,7 @@ func main() {
 	}
 	close(results)
 
-	<-done
+	<-done // blocking until something is received from the done channel.  That something is then discarded.
 
 	for _, r := range result {
 		fmt.Printf(" %s\n", r)
@@ -272,6 +274,7 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
+/*
 // ------------------------------ isSymlink ---------------------------
 func isSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
@@ -279,7 +282,6 @@ func isSymlink(m os.FileMode) bool {
 	return result
 } // IsSymlink
 
-/*
 // ---------------------------- GetIDname -----------------------------------------------------------
 
 func GetIDname(uidStr string) string {

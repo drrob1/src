@@ -15,6 +15,7 @@ dsrtr.go
                  I did remove some dead comments, though.
    2 Feb 22 -- Refactoring -- removing the go routine pattern as it's not necessary.  And experimenting w/ Walk vs WalkDir
   21 Oct 22 -- Fixed a bad use of format verb on an error message.  Caught by golangci-lint
+  17 Feb 23 -- Refactoring based on what I've learned from since.go, cgrepi.go and multack.go
 */
 package main
 
@@ -23,16 +24,20 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const lastAltered = "21 Oct 2022"
+const lastAltered = "17 Feb 2023"
 
 func main() {
+	if runtime.GOOS != "windows" {
+		fmt.Printf(" dsrtr is only designed for running on Windows.  It does not check device ID so it's not suited to linux.  Use dsrtre.\n")
+		os.Exit(1)
+	}
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
@@ -112,17 +117,18 @@ func main() {
 		err = filepath.Walk(startDir, filepathWalkFunction)
 	*/
 
-	filepathWalkDirEntry := func(fpath string, d os.DirEntry, err error) error {
+	filepathWalkDirEntry := func(fPath string, d os.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
-			return nil
+			fmt.Fprintf(os.Stderr, " Error from walk is %s. \n ", err)
+			return filepath.SkipDir
 		}
 
-		if d.IsDir() && fpath == ".git" {
-			return filepath.SkipDir
-		} else if isSymlink(d.Type()) {
-			fmt.Printf(" %s is a symlink, name is %s, mode is %v\n", fpath, d.Name(), d.Type())
-			//return filepath.SkipDir
+		if d.IsDir() {
+			if strings.Contains(fPath, ".git") || strings.Contains(fPath, "vmware") || strings.Contains(fPath, ".cache") {
+				return filepath.SkipDir
+			}
+			// checking the device ID would go here if I were to do that.  It's here in dsrtre and since.go
+			return nil
 		}
 
 		// Must be a regular file
@@ -139,7 +145,7 @@ func main() {
 				sizeStr = AddCommas(sizeStr)
 			}
 
-			fmt.Printf("%15s %s %s\n", sizeStr, t, fpath)
+			fmt.Printf("%15s %s %s\n", sizeStr, t, fPath)
 		}
 
 		now := time.Now()
@@ -184,9 +190,10 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
-// ----------------------------                   GetIDname -----------------------------------------------------------
+// ---------------------------- GetIDname -----------------------------------------------------------
 
-func GetIDname(uidStr string) string {
+/*
+func GetIDname(uidStr string) string {  Used by dsrtutil routines mainly on linux.  That doesn't apply here so it's commented out.
 
 	if len(uidStr) == 0 {
 		return ""
@@ -207,3 +214,5 @@ func isSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
+
+*/

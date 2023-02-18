@@ -34,6 +34,9 @@ import (
                     changed in that time, now that Go 1.19 is current.  I did not find a difference btwn the std library walk vs Michael T Jones' code I called jwalk.
                     I'll remove that stuff now.
    16 Feb 2023 -- I'll change to using WalkDir instead of Walk.  This essentially changes from a FileInfo to a DirEntry.  The docs say that WalkDir is slightly faster.
+   17 Feb 2023 -- Timing info:  Here on Win10 desktop, the Nov 2022 version took 10.8 sec, and the latest version took 2.85 sec when running "since ~", which is 1/4 of orig time.
+                                On work win10 computer, the Nov 22 version took 4.7 sec, and the latest version took 1.4 sec to run "since ~", which is ~30% of orig time.
+                                This is a big drop.  Wow.
 */
 
 var LastAlteredDate = "Feb 16, 2023"
@@ -211,7 +214,7 @@ func main() {
 
 	// wait for traversal results and print
 	close(results) // no more results
-	<-done         // wait for final results and sorting
+	<-done         // blocking channel receive, to wait for final results and sorting
 	//wg.Wait()
 	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by nn/s it converts to sec, and is reported that way below.
 	elapsed := time.Since(now)
