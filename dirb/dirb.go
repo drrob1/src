@@ -30,9 +30,10 @@ const bookmarkfilename = "bookmarkfile.gob"
   21 Nov 2022 -- static linter found a few issues that I will fix.  It caught a bug in the processing of '~'.
   10 Dec 2022 -- Will add flag package; for now I'll just define -v flag.  And removed the old code I used to get homeDir using Getenv of either HOME or userprofile.
                    This will make the binary slightly larger, but I think that'll be fine.
+  18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 */
 
-const LastAltered = "Dec 10, 2022"
+const LastAltered = "Feb 18, 2023"
 
 func main() {
 	var bookmark map[string]string
@@ -48,9 +49,10 @@ func main() {
 		os.Exit(0)
 	}
 	sep := string(os.PathSeparator)
-	homeDir, err := os.UserHomeDir()
+	//homeDir, err := os.UserHomeDir()
+	homeDir, err := os.UserConfigDir()
 	if err != nil {
-		fmt.Printf(" os.UserHomeDir returned error of: %s.  Exiting...\n", err)
+		fmt.Printf(" os.UserConfigDir returned error of: %s.  Exiting...\n", err)
 		os.Exit(1)
 	}
 

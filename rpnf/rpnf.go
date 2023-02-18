@@ -54,9 +54,10 @@ import (
 16 May 22 -- Removed a superfluous select statement in Doit.  I understand concurrency better now.
 11 Aug 22 -- About command will give more info about the exe binary
 21 Oct 22 -- golangci-lint caught that I have an unneeded Sprintf call.  I removed both of them.  And added to show when the binary was last linked for the ABOUT cmd.
+18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 */
 
-const lastModified = "Nov 21, 2022"
+const lastModified = "Feb 18, 2023"
 
 const ( // output modes
 	outputfix = iota
@@ -122,9 +123,10 @@ func main() {
 	theFileExists := true
 	inbufChan = make(chan string, 10)
 
-	homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
+	//homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
+	homeDir, err = os.UserConfigDir() // this function became available as of Go 1.12
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error from os.UserHomeDir() is", err)
+		fmt.Fprintln(os.Stderr, "Error from os.UserConfigDir() is", err)
 		os.Exit(1)
 	}
 	windowsFlag = runtime.GOOS == "windows"

@@ -125,9 +125,10 @@ REVISION HISTORY
 31 Aug 22 -- Changing proccessing of commands to match rpnf and rpng.  IE, will respect commands like rcl+.  And removing the "!" command recall syntax.  I could
                not remember its syntax anyway, and I did not implement this in rpnf or rpng anyway.
                And I added verboseFlag, but I can't see what it's writing to the screen, so I'll write to a file in the current directory.
+18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 */
 
-const LastAltered = "1 Sep 2022"
+const LastAltered = "18 Feb 2023"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
@@ -292,9 +293,10 @@ func main() {
 	// StartCol := 0  and of course it's initialized to zero.
 	outputmode = outputfix
 
-	HomeDir, err = os.UserHomeDir()
+	//HomeDir, err = os.UserHomeDir()
+	HomeDir, err = os.UserConfigDir()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error from os.UserHomeDir() is", err)
+		fmt.Fprintln(os.Stderr, "Error from os.UserConfigDir() is", err)
 		os.Exit(1)
 	}
 	Divider = strings.Repeat("-", maxCol-startCol)

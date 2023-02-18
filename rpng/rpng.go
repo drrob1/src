@@ -120,9 +120,10 @@ REVISION HISTORY
  5 May 22 -- Changed hpcalc2 to use OS specific code.
 11 Aug 22 -- I changed the other rpn pgms so that about command will give more info about the exe binary.  This program already does that at startup.
 21 Nov 22 -- static linter objected to err that was not tested in a few places while using file writes.
+18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 */
 
-const lastAlteredDate = "Nov 21, 2022"
+const lastAlteredDate = "Feb 18, 2023"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -156,9 +157,10 @@ func main() {
 	P := fmt.Println // a cute trick I just learned, from gobyexample.com.
 	ClearScreen()
 
-	HomeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
+	//HomeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
+	HomeDir, err = os.UserConfigDir() // this function became available as of Go 1.12
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error from os.UserHomeDir() is", err)
+		fmt.Fprintln(os.Stderr, "Error from os.UserConfigDir() is", err)
 		os.Exit(1)
 	}
 	WindowsFlag = runtime.GOOS == "windows"

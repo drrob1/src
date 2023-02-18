@@ -35,9 +35,10 @@ REVISION HISTORY
 12 May 21 -- Remove the dash of an option, if I forget and use it anyway.  These are not options, as I'm not using the flag package.
 21 Nov 22 -- I'm here because of static linter.  And there's an issue w/ dirAliasesMap that doesn't need to be a param.
 10 Dec 22 -- I'm adding use of flag package, for now I'll just use -v and -h.
+18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 */
 
-const LastAltered = "Dec 10, 2022"
+const LastAltered = "Feb 18, 2023"
 
 const bookmarkFilename = "bookmarkfile.gob"
 
@@ -65,7 +66,8 @@ func main() {
 	}
 
 	sep := string(os.PathSeparator)
-	HomeDir, err := os.UserHomeDir() // this routine became available in Go 1.12
+	//HomeDir, err := os.UserHomeDir() // this routine became available in Go 1.12
+	HomeDir, err := os.UserConfigDir() // this routine became available in Go 1.14
 	if err != nil {
 		fmt.Println(err, "Exiting")
 		os.Exit(1)
