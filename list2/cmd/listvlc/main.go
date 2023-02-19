@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"runtime"
 	"src/list2"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -42,15 +43,31 @@ REVISION HISTORY
                I undid it.
 16 Jan 23 -- Now called listvlc.go in list2 tree.  It will use the list routines to make a list to shuffle and then include in the vlc call.
 18 Jan 23 -- Adding smartCase
+18 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 */
 
-const lastModified = "Jan 16, 2023"
+const lastModified = "Feb 18, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
+
+func init() {
+	goVersion := runtime.Version()
+	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+	goVersionInt, err := strconv.Atoi(goVersion)
+	if err == nil {
+		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+			return
+		}
+	} else {
+		fmt.Printf(" ERROR from Atoi: %s\n", err)
+	}
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 	fmt.Printf(" listvlc.go.  Last modified %s, compiled w/ %s\n\n", lastModified, runtime.Version())
@@ -74,7 +91,7 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
@@ -185,7 +202,7 @@ func main() {
 	// Now to shuffle the file names slice.
 
 	now := time.Now()
-	rand.Seed(now.UnixNano())
+	//rand.Seed(now.UnixNano())  Now handled in init()
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
