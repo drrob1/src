@@ -17,7 +17,9 @@ dsrtre.go
   21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
   12 Nov 22 -- Adding device ID code, and error handling code I developed for since and multack.  And I think I need a sync mechanism like a wait group or done channel.
   14 Nov 22 -- Added processing for "~".
-  17 Feb 23 -- Based on what I learned by speeding up since.go, I'll port those optimizations here.
+  17 Feb 23 -- Based on what I learned by speeding up since.go, I'll port those optimizations here.  These are:
+                    I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
+                    and if an ordinary directory return without checking Modtime().After(when).
 */
 package main
 
