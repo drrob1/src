@@ -82,7 +82,7 @@ type msgType struct {
 }
 
 type verifyType struct {
-	srcFile, destFile string
+	srcFile, destFile, destDir string
 }
 
 var autoWidth, autoHeight int
@@ -243,7 +243,7 @@ func main() {
 
 			if result {
 				msg := msgType{
-					s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destFile),
+					s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destDir),
 					e:        nil,
 					color:    ct.Green,
 					success:  true,
@@ -252,7 +252,7 @@ func main() {
 				msgChan <- msg
 			} else {
 				msg := msgType{
-					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destFile),
+					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
 					e:        nil,
 					color:    ct.Red,
 					success:  false,
@@ -502,6 +502,7 @@ func CopyAFile(srcFile, destDir string) {
 		vmsg := verifyType{
 			srcFile:  baseFile,
 			destFile: outName,
+			destDir:  destDir, // this is here so the messages can be shorter.
 		}
 		verifyChan <- vmsg
 		return
