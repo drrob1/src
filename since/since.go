@@ -35,7 +35,7 @@ import (
                     I'll remove that stuff now.
    16 Feb 2023 -- I'll change to using WalkDir instead of Walk.  This essentially changes from a FileInfo to a DirEntry.  The docs say that WalkDir is slightly faster.
                     And: I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
-                         and if an ordinary directory return without checking Modtime().After(when).
+                         an ordinary directory return without checking Modtime().After(when), and I changed the mutex lock to an atomic add.
    17 Feb 2023 -- Timing info:  Here on Win10 desktop, the Nov 2022 version took 10.8 sec, and the latest version took 2.85 sec when running "since ~", which is 1/4 of orig time.
                                 On work win10 computer, the Nov 22 version took 4.7 sec, and the latest version took 1.4 sec to run "since ~", which is ~30% of orig time.
                                 This is a big drop.  Wow.

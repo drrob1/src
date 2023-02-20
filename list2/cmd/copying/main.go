@@ -61,9 +61,10 @@ import (
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                     I added timeFudgeFactor
   31 Jan 2023 -- timeFudgeFactor is now a Duration.
+  20 Feb 2023 -- Minor edit in verification messages.
 */
 
-const LastAltered = "31 Jan 2023" //
+const LastAltered = "20 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -370,10 +371,10 @@ func CopyAFile(srcFile, destDir string) error {
 		if verifyFiles(in, out) {
 			//ctfmt.Printf(ct.Green, onWin, " %s and its copy are verified.      ", srcFile) // No newline here on purpose.
 		} else {
-			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
+			return fmt.Errorf("%s and %s FAILED the verification process by crc32 IEEE", srcFile, outName)
 		}
 		if verboseFlag {
-			ctfmt.Printf(ct.Green, onWin, "%s and %s pass the crc32 IEEE verification\n", srcFile, outName)
+			ctfmt.Printf(ct.Green, onWin, "%s and %s passed the crc32 IEEE verification\n", srcFile, outName)
 		}
 	}
 

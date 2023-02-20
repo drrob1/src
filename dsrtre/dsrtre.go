@@ -19,7 +19,7 @@ dsrtre.go
   14 Nov 22 -- Added processing for "~".
   17 Feb 23 -- Based on what I learned by speeding up since.go, I'll port those optimizations here.  These are:
                     I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
-                    and if an ordinary directory return without checking Modtime().After(when).
+                    and does an ordinary directory return without checking Modtime().After(when).
 */
 package main
 

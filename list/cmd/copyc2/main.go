@@ -1,4 +1,4 @@
-package main
+package main // copyc2
 
 import (
 	"flag"
@@ -63,9 +63,10 @@ import (
    2 Feb 2023 -- Will now use the few file equal routines.
   12 Feb 2023 -- Will make sync errors a different color, because I got today an error that said sync failed because host is down.
   13 Feb 2023 -- Adding timestamp on the exec binary.
+  20 Feb 2023 -- Modified the verification failed message.
 */
 
-const LastAltered = "13 Feb 2023" //
+const LastAltered = "20 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -413,7 +414,7 @@ func copyAFile(srcFile, destDir string) bool {
 		if result {
 			//                                  ctfmt.Printf(ct.Green, onWin, "%s and its copy are verified.       \n", srcFile)  This created too many output lines.
 		} else {
-			ctfmt.Printf(ct.Red, onWin, "%s and %s fail verification\n", srcFile, outName)
+			ctfmt.Printf(ct.Red, onWin, "%s and %s FAILED verification\n", srcFile, outName)
 			return false
 		}
 
@@ -424,7 +425,7 @@ func copyAFile(srcFile, destDir string) bool {
 	}
 
 	if verifyFlag {
-		ctfmt.Printf(ct.Green, onWin, "%s copied to %s, and then VERIFIED. \n", srcFile, destDir) // If get here, the verification succeeded.
+		ctfmt.Printf(ct.Green, onWin, "%s copied to %s, and is VERIFIED. \n", srcFile, destDir) // If get here, the verification succeeded.
 	} else {
 		ctfmt.Printf(ct.Green, onWin, "%s copied to %s\n", srcFile, destDir)
 	}

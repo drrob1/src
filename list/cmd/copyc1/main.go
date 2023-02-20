@@ -1,4 +1,4 @@
-package main // copyc
+package main // copyc1
 
 import (
 	"flag"
@@ -55,15 +55,17 @@ import (
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
   12 Feb 2023 -- Adding verify option (finally).  In testing later in the day, I got a sync failed because host is down error.  I'm making sync errors a different color now.
   13 Feb 2023 -- Adding timestamp on the exec binary.
-  20 Feb 2023 -- Modified the verification failed message.
+  20 Feb 2023 -- Based on copyc.go, now called copyc1.go.  I want to add the verify option to be its own go routine.  But I'm splitting this off as another pgm.
+                   So I need another type around which to base a channel for this new go routine to get it's work.
+                   And I made the timeFudgeFacter smaller, to 10 ms.
 */
 
-const LastAltered = "20 Feb 2023" //
+const LastAltered = "13 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 100 * time.Millisecond
+const timeFudgeFactor = 10 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
@@ -78,13 +80,18 @@ type msgType struct {
 	verified bool
 }
 
+type verifyType struct {
+	srcFile, destFile string
+}
+
 var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
+var pooling = runtime.NumCPU() - 2 // account for main and GC routines.  It's a worker pool pattern.
 var cfChan chan cfType
 var msgChan chan msgType
+var verifyChan chan verifyType
 var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
@@ -93,8 +100,8 @@ var verifyFlag bool
 //var ErrByteCountMismatch error
 
 func main() {
-	if fanOut < 1 {
-		fanOut = 1
+	if pooling < 1 {
+		pooling = 1
 	}
 	execName, err := os.Executable()
 	if err != nil {
@@ -209,8 +216,8 @@ func main() {
 	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	//}
 
-	cfChan = make(chan cfType, fanOut)
-	for i := 0; i < fanOut; i++ {
+	cfChan = make(chan cfType, pooling)
+	for i := 0; i < pooling; i++ {
 		go func() {
 			for c := range cfChan {
 				CopyAFile(c.srcFile, c.destDir)
@@ -218,7 +225,47 @@ func main() {
 		}()
 	}
 
-	msgChan = make(chan msgType, fanOut)
+	verifyChan = make(chan verifyType, pooling)
+	go func() {
+		for v := range verifyChan {
+			result, err := few.Feq32withNames(v.srcFile, v.destFile)
+			if err != nil {
+				msg := msgType{
+					s:        "",
+					e:        err,
+					color:    ct.Red,
+					success:  false,
+					verified: false,
+				}
+				msgChan <- msg
+				return
+			}
+
+			if result {
+				msg := msgType{
+					s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destFile),
+					e:        nil,
+					color:    ct.Green,
+					success:  true,
+					verified: true,
+				}
+				msgChan <- msg
+				return
+			} else {
+				msg := msgType{
+					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destFile),
+					e:        nil,
+					color:    ct.Red,
+					success:  false,
+					verified: false,
+				}
+				msgChan <- msg
+				return
+			}
+		}
+	}()
+
+	msgChan = make(chan msgType, pooling)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {
@@ -349,8 +396,6 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	//srcStat, _ := in.Stat()
-	//srcSize := srcStat.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -425,17 +470,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	//ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
-	//if srcSize != n {
-	//	msg := msgType{
-	//		s:       "",
-	//		e:       ErrByteCountMismatch,
-	//		color:   ct.Red,
-	//		success: false,
-	//	}
-	//	msgChan <- msg
-	//	return
-	//}
+
 	err = out.Close()
 	if err != nil {
 		msg := msgType{
@@ -464,39 +499,12 @@ func CopyAFile(srcFile, destDir string) {
 	}
 
 	if verifyFlag {
-		result, err := few.Feq32withNames(baseFile, outName)
-		if err != nil {
-			msg := msgType{
-				s:        "",
-				e:        err,
-				color:    ct.Red,
-				success:  false,
-				verified: false,
-			}
-			msgChan <- msg
-			return
+		vmsg := verifyType{
+			srcFile:  baseFile,
+			destFile: outName,
 		}
-		if result {
-			msg := msgType{
-				s:        fmt.Sprintf("%s copied to %s and is VERIFIED", srcFile, destDir),
-				e:        nil,
-				color:    ct.Green,
-				success:  true,
-				verified: true,
-			}
-			msgChan <- msg
-			return
-		} else {
-			msg := msgType{
-				s:        fmt.Sprintf("%s copied to %s but failed VERIFICATION", srcFile, destDir),
-				e:        nil,
-				color:    ct.Red,
-				success:  false,
-				verified: false,
-			}
-			msgChan <- msg
-			return
-		}
+		verifyChan <- vmsg
+		return
 	}
 
 	msg := msgType{
@@ -504,7 +512,7 @@ func CopyAFile(srcFile, destDir string) {
 		e:        nil,
 		color:    ct.Green,
 		success:  true,
-		verified: verifyFlag, // I already know that this flag is false if get here.
+		verified: verifyFlag, // this flag must be false by now.
 	}
 	msgChan <- msg
 	return
