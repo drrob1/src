@@ -58,9 +58,10 @@ import (
   20 Feb 2023 -- Based on copyc.go, now called copyc1.go.  I want to add the verify option to be its own go routine.  But I'm splitting this off as another pgm.
                    So I need another type around which to base a channel for this new go routine to get it's work.
                    And I made the timeFudgeFacter smaller, to 10 ms.
+                   I have to really, really, remember that channel receiving for loops do not have a return statement.
 */
 
-const LastAltered = "13 Feb 2023" //
+const LastAltered = "20 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -238,7 +239,6 @@ func main() {
 					verified: false,
 				}
 				msgChan <- msg
-				return
 			}
 
 			if result {
@@ -250,7 +250,6 @@ func main() {
 					verified: true,
 				}
 				msgChan <- msg
-				return
 			} else {
 				msg := msgType{
 					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destFile),
@@ -260,8 +259,11 @@ func main() {
 					verified: false,
 				}
 				msgChan <- msg
-				return
 			}
+			//fmt.Printf(" after msg sent to msgChan, and about to return")
+			// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.
+			// None of the message receiving go routines here have a return statement inside them.
+			// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
 		}
 	}()
 
@@ -369,10 +371,8 @@ func main() {
 	goRtns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
+	close(verifyChan)
 	close(msgChan)
-	//if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
-	//	time.Sleep(10 * time.Millisecond)
-	//}
 	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n",
 		succeeded, failed, time.Since(start), goRtns)
 } // end main
@@ -515,5 +515,5 @@ func CopyAFile(srcFile, destDir string) {
 		verified: verifyFlag, // this flag must be false by now.
 	}
 	msgChan <- msg
-	return
+	//return  this is implied.
 } // end CopyAFile
