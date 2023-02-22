@@ -1,4 +1,4 @@
-package main // listvlc.go
+package main // listVLC
 
 import (
 	"flag"

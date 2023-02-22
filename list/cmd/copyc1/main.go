@@ -89,7 +89,7 @@ var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var pooling = runtime.NumCPU() - 2 // account for main and GC routines.  It's a worker pool pattern.
+var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
 var cfChan chan cfType
 var msgChan chan msgType
 var verifyChan chan verifyType
@@ -211,11 +211,7 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-	} //else { // there is not excludeRegexPattern
-	//excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-	//  but now I test against nil, and it works
-	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
-	//}
+	}
 
 	cfChan = make(chan cfType, pooling)
 	for i := 0; i < pooling; i++ {

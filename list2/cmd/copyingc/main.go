@@ -1,4 +1,4 @@
-package main // copying
+package main // copyingC
 
 import (
 	"bufio"
@@ -8,7 +8,10 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"hash/crc32"
 	"io"
+	"src/few"
 	"src/list2"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	//ct "github.com/daviddengcn/go-colortext"
@@ -62,9 +65,10 @@ import (
                     I added timeFudgeFactor
   31 Jan 2023 -- timeFudgeFactor is now a Duration.
   20 Feb 2023 -- Minor edit in verification messages.
+  22 Feb 2023 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
 */
 
-const LastAltered = "20 Feb 2023" //
+const LastAltered = "22 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -72,6 +76,30 @@ const sepString = string(filepath.Separator)
 const timeFudgeFactor = 100 * time.Millisecond
 
 // const minHeight = 26  not used here, but used in FileSelection.
+
+type cfType struct { // copy file type
+	srcFile string
+	destDir string
+}
+
+type msgType struct {
+	s        string
+	e        error
+	color    ct.Color
+	success  bool
+	verified bool
+}
+
+type verifyType struct {
+	srcFile, destFile, destDir string
+}
+
+var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
+var cfChan chan cfType
+var msgChan chan msgType
+var verifyChan chan verifyType
+var wg sync.WaitGroup
+var succeeded, failed int64
 
 var autoWidth, autoHeight int
 
@@ -81,11 +109,20 @@ var rexStr, inputStr string
 var ErrNotNew error
 var verifyFlag bool
 
-//var ErrByteCountMismatch error
-
 func main() {
-	var err error
-	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
+	if pooling < 1 {
+		pooling = 1
+	}
+	execName, err := os.Executable()
+	if err != nil {
+		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
+	}
+	execFI, err := os.Lstat(execName)
+	if err != nil {
+		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
+	}
+	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+	fmt.Printf("%s is compiled w/ %s, last altered %s, binary timestamp is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		autoHeight = defaultHeight
@@ -93,7 +130,8 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and binary timestamp is %s.\n", os.Args[0],
+			LastAltered, runtime.Version(), execTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Needs i flag for input.  Command line params will all be output params.\n")
@@ -134,10 +172,10 @@ func main() {
 	}
 
 	if verboseFlag {
-		execName, _ := os.Executable()
-		ExecFI, _ := os.Stat(execName)
-		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
+		//execName, _ := os.Executable()
+		//ExecFI, _ := os.Stat(execName)
+		//ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Printf("%s timestamp is %s, full exec is %s\n", execFI.Name(), execTimeStamp, execName)
 		fmt.Println()
 	}
 
@@ -172,6 +210,8 @@ func main() {
 	list2.IncludeRex = rex
 
 	// Finished processing the input flags and assigned list2 variables.  Now can get the fileList.
+
+	onWin := runtime.GOOS == "windows"
 
 	fileList, err := list2.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
@@ -263,37 +303,257 @@ func main() {
 	}
 	fmt.Printf("\n\n")
 
-	// time to copy the files
+	// time to set up the channels for the concurrent parts.  I'm going to base this on copyC1 as I got that working the other day.
+
+	cfChan = make(chan cfType, pooling)
+	for i := 0; i < pooling; i++ {
+		go func() {
+			for c := range cfChan {
+				CopyAFile(c.srcFile, c.destDir)
+			}
+		}()
+	}
+
+	verifyChan = make(chan verifyType, pooling)
+	go func() {
+		for v := range verifyChan {
+			result, err := few.Feq32withNames(v.srcFile, v.destFile)
+			if err != nil {
+				msg := msgType{
+					s:        "",
+					e:        err,
+					color:    ct.Red,
+					success:  false,
+					verified: false,
+				}
+				msgChan <- msg
+			}
+
+			if result {
+				msg := msgType{
+					s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destDir),
+					e:        nil,
+					color:    ct.Green,
+					success:  true,
+					verified: true,
+				}
+				msgChan <- msg
+			} else {
+				msg := msgType{
+					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
+					e:        nil,
+					color:    ct.Red,
+					success:  false,
+					verified: false,
+				}
+				msgChan <- msg
+			}
+			//fmt.Printf(" after msg sent to msgChan, and about to return")
+			// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.
+			// None of the message receiving go routines here have a return statement inside them.
+			// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
+		}
+	}()
+
+	msgChan = make(chan msgType, pooling)
+	go func() {
+		for msg := range msgChan {
+			if msg.success {
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
+				atomic.AddInt64(&succeeded, 1)
+			} else {
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
+				atomic.AddInt64(&failed, 1)
+			}
+			wg.Done()
+		}
+	}()
+
+	// time to copy the files, now using concurrent code.
+
 	start := time.Now()
 
-	var success, fail int
-	onWin := runtime.GOOS == "windows"
 	for _, td := range targetDirs {
+		wg.Add(len(fileList))
 		for _, f := range fileList {
-			err = CopyAFile(f.RelPath, td)
-			if err == nil {
-				if verifyFlag {
-					ctfmt.Printf(ct.Green, onWin, " %s copied to %s, and then VERIFIED.\n", f.RelPath, td) // if got here, verification succeeded.
-				} else {
-					ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, td)
-				}
-				success++
-			} else {
-				ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
-				fail++
+			cf := cfType{
+				srcFile: f.RelPath,
+				destDir: td,
 			}
+			// wg.Add(1) // I may need to use this yet.
+			cfChan <- cf
+			//err = CopyAFile(f.RelPath, td)
+			//if err == nil {
+			//	if verifyFlag {
+			//		ctfmt.Printf(ct.Green, onWin, " %s copied to %s, and then VERIFIED.\n", f.RelPath, td) // if got here, verification succeeded.
+			//	} else {
+			//		ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, td)
+			//	}
+			//	success++
+			//} else {
+			//	ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
+			//	fail++
+			//}
 		}
 	}
 
-	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
-	ctfmt.Printf(ct.Green, onWin, "\n Successfully copied %d files,", success)
-	ctfmt.Printf(ct.Red, onWin, " and failed to copy %d files; ", fail)
-	ctfmt.Printf(ct.Yellow, onWin, "elapsed time is %s\n\n", time.Since(start))
+	goRtns := runtime.NumGoroutine()
+	close(cfChan)
+	wg.Wait()
+	close(verifyChan)
+	close(msgChan)
+	//ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n", succeeded, failed, time.Since(start), goRtns)
+	fmt.Printf("%s is compiled w/ %s, last altered %s, binary timestamp of %s, using %d go routines, taking %s to do the work.\n",
+		os.Args[0], runtime.Version(), LastAltered, execTimeStamp, goRtns, time.Since(start))
+	ctfmt.Printf(ct.Green, onWin, "\n Successfully copied %d files,", succeeded)
+	ctfmt.Printf(ct.Red, onWin, " and failed to copy %d files.\n\n ", failed)
+	//ctfmt.Printf(ct.Yellow, onWin, "elapsed time is %s\n\n", time.Since(start))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
 
-func CopyAFile(srcFile, destDir string) error {
+func CopyAFile(srcFile, destDir string) {
+	// This is the concurrent version of this routine, that I got from copyC1.
+	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
+	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
+
+	in, err := os.Open(srcFile)
+	defer in.Close()
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       fmt.Errorf("%s", err),
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+
+	destFI, err := os.Stat(destDir)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	if !destFI.IsDir() {
+		msg := msgType{
+			s:       "",
+			e:       fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+
+	baseFile := filepath.Base(srcFile)
+	outName := filepath.Join(destDir, baseFile)
+	inFI, _ := in.Stat()
+	outFI, err := os.Stat(outName)
+	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
+		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+			msg := msgType{
+				s:       "",
+				e:       ErrNotNew,
+				color:   ct.Red,
+				success: false,
+			}
+			msgChan <- msg
+			return
+		}
+	}
+	out, err := os.Create(outName)
+	defer out.Close()
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	_, err = io.Copy(out, in)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	err = out.Sync()
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Magenta,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+
+	err = out.Close()
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	t := inFI.ModTime()
+	if runtime.GOOS == "linux" {
+		t = t.Add(timeFudgeFactor)
+	}
+	err = os.Chtimes(outName, t, t)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+
+	if verifyFlag {
+		vmsg := verifyType{
+			srcFile:  baseFile,
+			destFile: outName,
+			destDir:  destDir, // this is here so the messages can be shorter.
+		}
+		verifyChan <- vmsg
+		return
+	}
+
+	msg := msgType{
+		s:        fmt.Sprintf("%s copied to %s", srcFile, destDir),
+		e:        nil,
+		color:    ct.Green,
+		success:  true,
+		verified: verifyFlag, // this flag must be false by now.
+	}
+	msgChan <- msg
+	//return  this is implied.
+} // end CopyAFile
+
+/*
+func CopyAFile(srcFile, destDir string) error {  This is the non-concurrent version of CopyAFile.
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
@@ -381,7 +641,7 @@ func CopyAFile(srcFile, destDir string) error {
 
 	return nil
 } // end CopyAFile
-
+*/
 // --------------------------------------------- validateTarget -----------------------------------------------------
 
 func validateTarget(dir string) (string, error) {
