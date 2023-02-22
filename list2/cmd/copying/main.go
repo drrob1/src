@@ -62,6 +62,7 @@ import (
                     I added timeFudgeFactor
   31 Jan 2023 -- timeFudgeFactor is now a Duration.
   20 Feb 2023 -- Minor edit in verification messages.
+  22 Feb 2023 -- timeFudgeFactor dropped to 10 ms, down from 100 ms.
 */
 
 const LastAltered = "20 Feb 2023" //
@@ -69,7 +70,7 @@ const LastAltered = "20 Feb 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 100 * time.Millisecond
+const timeFudgeFactor = 10 * time.Millisecond
 
 // const minHeight = 26  not used here, but used in FileSelection.
 

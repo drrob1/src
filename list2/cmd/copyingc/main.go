@@ -66,6 +66,7 @@ import (
   31 Jan 2023 -- timeFudgeFactor is now a Duration.
   20 Feb 2023 -- Minor edit in verification messages.
   22 Feb 2023 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
+                   And timeFudgeFactor is now 10 ms, down from 100 ms.
 */
 
 const LastAltered = "22 Feb 2023" //
@@ -73,7 +74,7 @@ const LastAltered = "22 Feb 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 100 * time.Millisecond
+const timeFudgeFactor = 10 * time.Millisecond
 
 // const minHeight = 26  not used here, but used in FileSelection.
 
@@ -307,7 +308,7 @@ func main() {
 
 	cfChan = make(chan cfType, pooling)
 	for i := 0; i < pooling; i++ {
-		go func() {
+		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
 			for c := range cfChan {
 				CopyAFile(c.srcFile, c.destDir)
 			}
@@ -315,7 +316,7 @@ func main() {
 	}
 
 	verifyChan = make(chan verifyType, pooling)
-	go func() {
+	go func() { // a single verify go routine.
 		for v := range verifyChan {
 			result, err := few.Feq32withNames(v.srcFile, v.destFile)
 			if err != nil {
@@ -381,7 +382,7 @@ func main() {
 				destDir: td,
 			}
 			// wg.Add(1) // I may need to use this yet.
-			cfChan <- cf
+			cfChan <- cf // this sends work into the worker pool.
 			//err = CopyAFile(f.RelPath, td)
 			//if err == nil {
 			//	if verifyFlag {
