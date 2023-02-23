@@ -67,9 +67,10 @@ import (
   20 Feb 2023 -- Minor edit in verification messages.
   22 Feb 2023 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
                    And timeFudgeFactor is now 10 ms, down from 100 ms.
+  23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
 */
 
-const LastAltered = "22 Feb 2023" //
+const LastAltered = "23 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -108,7 +109,7 @@ var verboseFlag, veryVerboseFlag bool
 var rex *regexp.Regexp
 var rexStr, inputStr string
 var ErrNotNew error
-var verifyFlag bool
+var verifyFlag, verFlag bool
 
 func main() {
 	if pooling < 1 {
@@ -165,6 +166,7 @@ func main() {
 	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
+	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -179,6 +181,8 @@ func main() {
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", execFI.Name(), execTimeStamp, execName)
 		fmt.Println()
 	}
+
+	verifyFlag = verifyFlag || verFlag
 
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
@@ -267,7 +271,7 @@ func main() {
 			td, err := validateTarget(target)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, " Error from validateTarget(%s) is %s\n", target, err)
-				targetDirs = append(targetDirs, "")
+				//targetDirs = append(targetDirs, "")  I don't remember why I put this here.  It's a mistake.
 				continue
 			}
 			targetDirs = append(targetDirs, td)

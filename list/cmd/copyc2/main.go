@@ -64,9 +64,10 @@ import (
   12 Feb 2023 -- Will make sync errors a different color, because I got today an error that said sync failed because host is down.
   13 Feb 2023 -- Adding timestamp on the exec binary.
   20 Feb 2023 -- Modified the verification failed message.
+  23 Feb 2023 -- Added verFlag
 */
 
-const LastAltered = "20 Feb 2023" //
+const LastAltered = "23 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -78,15 +79,6 @@ type cfType struct { // copy file type
 	destDir string
 }
 
-//type msgType struct {
-//	s     string
-//	e     error
-//	color ct.Color
-//}
-//var msgChan chan msgType
-//var ErrNotNew error
-//var ErrByteCountMismatch error
-
 var autoWidth, autoHeight int
 var err error
 
@@ -96,7 +88,7 @@ var cfChan chan cfType
 var wg sync.WaitGroup
 var totalSucceeded, totalFailed int64
 
-var verifyFlag bool
+var verifyFlag, verFlag bool
 
 func main() {
 	execName, err := os.Executable()
@@ -160,6 +152,7 @@ func main() {
 	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
+	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -167,6 +160,8 @@ func main() {
 		verboseFlag = true
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
+
+	verifyFlag = verifyFlag || verFlag
 
 	Reverse := revFlag
 

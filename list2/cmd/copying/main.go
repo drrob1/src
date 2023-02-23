@@ -63,9 +63,10 @@ import (
   31 Jan 2023 -- timeFudgeFactor is now a Duration.
   20 Feb 2023 -- Minor edit in verification messages.
   22 Feb 2023 -- timeFudgeFactor dropped to 10 ms, down from 100 ms.
+  23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag.
 */
 
-const LastAltered = "20 Feb 2023" //
+const LastAltered = "23 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -80,7 +81,7 @@ var verboseFlag, veryVerboseFlag bool
 var rex *regexp.Regexp
 var rexStr, inputStr string
 var ErrNotNew error
-var verifyFlag bool
+var verifyFlag, verFlag bool
 
 //var ErrByteCountMismatch error
 
@@ -127,6 +128,7 @@ func main() {
 	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
+	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -141,6 +143,8 @@ func main() {
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
 	}
+
+	verifyFlag = verifyFlag || verFlag
 
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
@@ -227,7 +231,7 @@ func main() {
 			td, err := validateTarget(target)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, " Error from validateTarget(%s) is %s\n", target, err)
-				targetDirs = append(targetDirs, "")
+				// targetDirs = append(targetDirs, "")  No idea why I did this.  It's an obvious error.
 				continue
 			}
 			targetDirs = append(targetDirs, td)

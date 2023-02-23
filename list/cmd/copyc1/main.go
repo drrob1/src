@@ -59,9 +59,10 @@ import (
                    So I need another type around which to base a channel for this new go routine to get it's work.
                    And I made the timeFudgeFacter smaller, to 10 ms.
                    I have to really, really, remember that channel receiving for loops do not have a return statement.
+  23 Feb 2023 -- Added verFlag.
 */
 
-const LastAltered = "20 Feb 2023" //
+const LastAltered = "23 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -96,7 +97,7 @@ var verifyChan chan verifyType
 var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
-var verifyFlag bool
+var verifyFlag, verFlag bool
 
 //var ErrByteCountMismatch error
 
@@ -166,6 +167,7 @@ func main() {
 	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
+	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -173,6 +175,8 @@ func main() {
 		verboseFlag = true
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
+
+	verifyFlag = verifyFlag || verFlag
 
 	Reverse := revFlag
 

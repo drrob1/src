@@ -56,9 +56,10 @@ import (
   12 Feb 2023 -- Adding verify option (finally).  In testing later in the day, I got a sync failed because host is down error.  I'm making sync errors a different color now.
   13 Feb 2023 -- Adding timestamp on the exec binary.
   20 Feb 2023 -- Modified the verification failed message.
+  23 Feb 2023 -- Added verFlag.
 */
 
-const LastAltered = "20 Feb 2023" //
+const LastAltered = "23 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -88,7 +89,7 @@ var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
-var verifyFlag bool
+var verifyFlag, verFlag bool
 
 //var ErrByteCountMismatch error
 
@@ -158,6 +159,7 @@ func main() {
 	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
+	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 
 	flag.Parse()
 
@@ -165,6 +167,8 @@ func main() {
 		verboseFlag = true
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
+
+	verifyFlag = verifyFlag || verFlag
 
 	Reverse := revFlag
 
