@@ -48,6 +48,7 @@
   14 Nov 22 -- Adding a usage message.  I never did that before.  And adding processing for '~' which only applies to Windows.
   21 Nov 22 -- static linter found an error w/ a format verb.  Now fixed.
   24 Feb 23 -- I'm changing the multiplier to = 1, based on what Bill Kennedy said, ie, that NumCPU() is sort of a sweet spot.  And Evan is 31 today, but that's not relevant here.
+  25 Feb 23 -- Optimizing walkDir as I did in since.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
 */
 package main
 
@@ -225,7 +226,7 @@ func main() {
 	matchChan = make(chan matchType, sliceSize)               // this is a buffered channel.
 	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
-	go func() {                                               // start the receiving operation before the sending starts
+	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
@@ -318,26 +319,27 @@ func main() {
 		err = filepath.Walk(startDirectory, filepathwalkfunction)
 	*/
 
-	walkDirFunction := func(fpath string, d os.DirEntry, err error) error {
+	walkDirFunction := func(fPath string, d os.DirEntry, err error) error { // this doesn't follow symlinks
 		if err != nil {
 			fmt.Printf(" Error from walkdirFunction is %v. \n ", err)
 			return filepath.SkipDir
 		}
 
-		// I don't want to follow links on linux to other devices like DSM or bigbkupG.
-		info, _ := d.Info()
-		deviceID := getDeviceID(info)
-		if startDeviceID != deviceID {
-			if verboseFlag {
-				fmt.Printf(" DeviceID for %s is %d which is different than %d for %s.  Skipping\n", startDirectory, startDeviceID, deviceID, fpath) // fixed a format verb here.
-			}
-			return filepath.SkipDir
-		}
-
 		if d.IsDir() {
-			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, ".config") || strings.Contains(fpath, ".local") {
+			if filepath.Ext(fPath) == ".git" || strings.Contains(fPath, ".config") || strings.Contains(fPath, ".local") ||
+				strings.Contains(fPath, "vmware") || strings.Contains(fPath, ".cache") {
 				return filepath.SkipDir
 			}
+
+			info, _ := d.Info()
+			deviceID := getDeviceID(info)
+			if startDeviceID != deviceID {
+				if verboseFlag {
+					fmt.Printf(" DeviceID for %s is %d which is different than %d for %s.  Skipping\n", startDirectory, startDeviceID, deviceID, fPath) // fixed a format verb here.
+				}
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 
@@ -360,7 +362,7 @@ func main() {
 		wg.Add(1)
 		grepChan <- grepType{ // send this to a worker go routine.
 			regex:    lineRegex,
-			filename: fpath,
+			filename: fPath,
 		}
 
 		now := time.Now()
