@@ -20,7 +20,7 @@
                  I'll use multiple processes for the grep work.  For the dir walking I'll just do that in main.
   30 Mar 20 -- Started work on extracting the extensions from a slice of input filenames.  And will assume .txt extension if none is provided.
    1 Apr 20 -- Moved the regexp compile line out of main loop.
-   7 Dec 21 -- All of the changes since Apr 2020 have been in multack.  I'm backporting a change to not track which dir have been entered, as the library will do that.
+   7 Dec 21 -- All changes since Apr 2020 have been in multack.  I'm backporting a change to not track which dir have been entered, as the library will do that.
                  And I redid the walk closure to remove test for regular file.  The walk does not follow symlinks so this is not needed, either.
                  Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
    8 Dec 21 -- Removing the test for .git.  It seems that the walk function knows not to enter .git.
@@ -28,6 +28,7 @@
   13 Dec 21 -- Adding a total number of files scanned, and number of matches found.
   13 Nov 22 -- Adding some code that I developed for since and is now in multack.  Removed extensions stuff.  Only multack has smart case.
   14 Nov 22 -- Adding a usage message, and processing for '~' that only applies to Windows.
+  25 Feb 23 -- Optimizing walkDir as I did in since and multack.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
 */
 package main
 
@@ -69,9 +70,9 @@ func main() {
 		log.Fatalln("a regexp to match must be specified")
 	}
 
-	startDirectory, errr := os.Getwd() // startDirectory is a string
-	if errr != nil {
-		fmt.Printf(" Error from os.Getwd() is %s\n", errr)
+	startDirectory, err := os.Getwd() // startDirectory is a string
+	if err != nil {
+		fmt.Printf(" Error from os.Getwd() is %s\n", err)
 		fmt.Printf(" Usage: anack regexp [start Directory]\n")
 		os.Exit(1)
 	}
@@ -88,7 +89,6 @@ func main() {
 	pattern := flag.Arg(0)
 	pattern = strings.ToLower(pattern)
 	var lineRegex *regexp.Regexp
-	var err error
 	if lineRegex, err = regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
@@ -119,7 +119,7 @@ func main() {
 	}
 
 	t0 := time.Now()
-	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	tFinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 	rootFileInfo, err := os.Stat(startDirectory)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Exiting\n", startDirectory, err)
@@ -193,7 +193,15 @@ func main() {
 		}
 
 		if d.IsDir() {
-			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, "vmware") {
+			if filepath.Ext(fpath) == ".git" || strings.Contains(fpath, "vmware") || strings.Contains(fpath, ".cache") {
+				return filepath.SkipDir
+			}
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			deviceID := getDeviceID(info)
+			if rootDeviceID != deviceID { // don't follow symlinks onto other devices like bigbkupG or DSM.
 				return filepath.SkipDir
 			}
 			return nil
@@ -206,17 +214,9 @@ func main() {
 			}
 		*/
 
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-		deviceID := getDeviceID(info)
-		if rootDeviceID != deviceID { // don't follow symlinks onto other devices like bigbkupG or DSM.
-			return filepath.SkipDir
-		}
 		grepFile(lineRegex, fpath)
 		now := time.Now()
-		if now.After(tfinal) {
+		if now.After(tFinal) {
 			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 		}
 		return nil
@@ -244,7 +244,13 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		line, er := reader.ReadString('\n')
-		// line = strings.TrimSpace(line)  I'm going to try without this.
+		if er != nil {
+			//                                                 if er != io.EOF {  This became messy, so I'm removing it.
+			//	               log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
+			//}
+			break // just exit when hit any error condition.
+		}
+		//                                                line = strings.TrimSpace(line)  I'm going to try without this.
 
 		if strings.ContainsRune(line, nullRune) { // skip binary files
 			return
@@ -256,12 +262,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		if lineRegex.MatchString(lineStrLower) {
 			fmt.Printf("%s:%d:%s", fpath, lino, line)
 			totMatchesFound++
-		}
-		if er != nil {
-			//if er != io.EOF {  This became messy, so I'm removing it.
-			//	log.Printf("error from reader.ReadString in grepfile %s line %d: %s\n", fpath, lino, err)
-			//}
-			break // just exit when hit any error condition.
 		}
 	}
 } // end grepFile
