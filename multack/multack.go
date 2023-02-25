@@ -70,7 +70,7 @@ import (
 	"time"
 )
 
-const lastAltered = "24 Feb 2023"
+const lastAltered = "25 Feb 2023"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -226,7 +226,7 @@ func main() {
 	matchChan = make(chan matchType, sliceSize)               // this is a buffered channel.
 	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
-	go func() { // start the receiving operation before the sending starts
+	go func() {                                               // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
