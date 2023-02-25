@@ -47,6 +47,7 @@
   13 Nov 22 -- Adding ability to optionally specify a start directory other than the current one.  Nevermind, it already has this.
   14 Nov 22 -- Adding a usage message.  I never did that before.  And adding processing for '~' which only applies to Windows.
   21 Nov 22 -- static linter found an error w/ a format verb.  Now fixed.
+  24 Feb 23 -- I'm changing the multiplier to = 1, based on what Bill Kennedy said, ie, that NumCPU() is sort of a sweet spot.  And Evan is 31 today, but that's not relevant here.
 */
 package main
 
@@ -68,14 +69,15 @@ import (
 	"time"
 )
 
-const lastAltered = "21 Nov 2022"
+const lastAltered = "24 Feb 2023"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
-const workerPoolMultiplier = 20
+//const workerPoolMultiplier = 20
+const workerPoolMultiplier = 1
 
 const sliceSize = 1000 // a magic number I plucked out of the air.
 
@@ -114,7 +116,10 @@ var wg sync.WaitGroup
 var verboseFlag, veryverboseFlag bool
 
 func main() {
-	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
+	workerPoolSize := runtime.NumCPU()*workerPoolMultiplier - 1 // account for main routine
+	if workerPoolSize < 1 {
+		workerPoolSize = 1
+	}
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
