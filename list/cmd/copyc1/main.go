@@ -61,6 +61,8 @@ import (
                    I have to really, really, remember that channel receiving for loops do not have a return statement.
   23 Feb 2023 -- Added verFlag.
   26 Feb 2023 -- I'm tracking down a bug here.  I'm getting %!s(<nil>) displayed, and I don't know why.  I changed a use of Stat to Open, since that's been an issue before on linux.
+                   This may be an issue because I was trying to copy a running program.  Windows may not allow me to get a lock on an open file.  Hence, the error is not accurate.
+                   The error says that it can't find the file, but this may be an inaccurate error message.
 */
 
 const LastAltered = "26 Feb 2023" //
