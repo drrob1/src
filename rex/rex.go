@@ -114,10 +114,11 @@ Revision History
 21 Oct 22 -- Removed unused variable as caught by golangci-lint, and incorrect use of format verb.
 11 Nov 22 -- Will show environment variables on startup message, if they're not blank.
 21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
-16 Jan 23 -- Adding smart case
+16 Jan 23 -- Added smart case
+26 Feb 23 -- Fixed bug that effects opening symlinked directories on linux.
 */
 
-const LastAltered = "Jan 16, 2023"
+const LastAltered = "Feb 26, 2023"
 
 type dirAliasMapType map[string]string
 
@@ -443,11 +444,23 @@ func main() {
 			} //else if strings.Contains(workingDir, "~") { // this can only contain a ~ on Windows.			}  // static linter said just use the Replace func.
 			workingDir = strings.Replace(workingDir, "~", HomeDirStr, 1)
 		}
-		fi, e := os.Lstat(workingDir)
-		if e != nil || !fi.Mode().IsDir() {
-			fmt.Println(workingDir, "is an invalid directory name.  Will use", startDir, "instead.")
+		f, err := os.Open(workingDir)
+		if err != nil {
+			ctfmt.Printf(ct.Red, winFlag, " Opening %s gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
 			workingDir = startDir
 		}
+		fi, err := f.Stat()
+		if err != nil {
+			ctfmt.Printf(ct.Red, winFlag, " Stat(%s) gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
+			workingDir = startDir
+		}
+
+		if !fi.Mode().IsDir() {
+			ctfmt.Printf(ct.Red, winFlag, " %s is not a directory.  Will use %s instead.\n", workingDir, startDir)
+			workingDir = startDir
+		}
+
+		f.Close()
 	}
 	if verboseFlag {
 		fmt.Println("inputRegEx=", inputRegExStr, ", and workingdir =", workingDir)

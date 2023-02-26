@@ -60,9 +60,10 @@ import (
                    And I made the timeFudgeFacter smaller, to 10 ms.
                    I have to really, really, remember that channel receiving for loops do not have a return statement.
   23 Feb 2023 -- Added verFlag.
+  26 Feb 2023 -- I'm tracking down a bug here.  I'm getting %!s(<nil>) displayed, and I don't know why.  I changed a use of Stat to Open, since that's been an issue before on linux.
 */
 
-const LastAltered = "23 Feb 2023" //
+const LastAltered = "26 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -239,6 +240,7 @@ func main() {
 					verified: false,
 				}
 				msgChan <- msg
+				continue
 			}
 
 			if result {
@@ -250,6 +252,7 @@ func main() {
 					verified: true,
 				}
 				msgChan <- msg
+				continue
 			} else {
 				msg := msgType{
 					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
@@ -384,6 +387,10 @@ func CopyAFile(srcFile, destDir string) {
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
 
+	if list.VerboseFlag {
+		fmt.Printf(" In CopyAFile.  srcFile is %s, destDir %s.\n", srcFile, destDir)
+	}
+
 	in, err := os.Open(srcFile)
 	defer in.Close()
 	if err != nil {
@@ -397,7 +404,19 @@ func CopyAFile(srcFile, destDir string) {
 		return
 	}
 
-	destFI, err := os.Stat(destDir)
+	destD, err := os.Open(destDir)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+
+	destFI, err := destD.Stat()
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -423,9 +442,9 @@ func CopyAFile(srcFile, destDir string) {
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
 	outFI, err := os.Stat(outName)
-	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
+	if err == nil { // this means that the file exists.  I have to handle a possible collision now.  I'm ignoring err != nil because that means that file's not already there.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+			ErrNotNew = fmt.Errorf(" Skipping %s as it'ss same or older than destination %s.", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
@@ -436,8 +455,21 @@ func CopyAFile(srcFile, destDir string) {
 			return
 		}
 	}
+
 	out, err := os.Create(outName)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+
 	defer out.Close()
+
 	if err != nil {
 		msg := msgType{
 			s:       "",
