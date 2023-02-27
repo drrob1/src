@@ -68,9 +68,10 @@ import (
   22 Feb 2023 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
                    And timeFudgeFactor is now 10 ms, down from 100 ms.
   23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
+  27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.
 */
 
-const LastAltered = "23 Feb 2023" //
+const LastAltered = "27 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -332,6 +333,7 @@ func main() {
 					verified: false,
 				}
 				msgChan <- msg
+				continue
 			}
 
 			if result {

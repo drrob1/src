@@ -63,6 +63,8 @@ import (
   26 Feb 2023 -- I'm tracking down a bug here.  I'm getting %!s(<nil>) displayed, and I don't know why.  I changed a use of Stat to Open, since that's been an issue before on linux.
                    This may be an issue because I was trying to copy a running program.  Windows may not allow me to get a lock on an open file.  Hence, the error is not accurate.
                    The error says that it can't find the file, but this may be an inaccurate error message.
+                   On further thought, the error is coming from the verify step.  A binary file in use can't be opened for the verify step.  But it does copy them.
+                   So I can copy but not verify a file in use.
 */
 
 const LastAltered = "26 Feb 2023" //
