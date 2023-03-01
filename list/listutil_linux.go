@@ -89,9 +89,11 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			return fileInfoX, nil
 		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return a variable of fileInfoExType fields.
 			fix := FileInfoExType{
-				FI:      fi,
-				Dir:     workingDir,
-				RelPath: filepath.Join(workingDir, loneFilename),
+				FI:       fi,
+				Dir:      workingDir,
+				RelPath:  filepath.Join(workingDir, loneFilename),
+				AbsPath:  filepath.Join(dirName, f),
+				FullPath: filepath.Join(dirName, f),
 			}
 			fileInfoX = append(fileInfoX, fix)
 			return fileInfoX, nil

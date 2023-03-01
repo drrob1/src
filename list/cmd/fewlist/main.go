@@ -44,7 +44,7 @@ import (
   28 Feb 2023 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
 */
 
-const LastAltered = "28 Feb 2023" //
+const LastAltered = "1 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -214,7 +214,7 @@ func main() {
 	}
 	if verboseFlag {
 		for i, f := range fileList {
-			fmt.Printf(" second fileList[%d] = %s\n", i, f.RelPath)
+			fmt.Printf(" second fileList[%d] = %s and also %s\n", i, f.RelPath, f.AbsPath)
 		}
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
@@ -248,6 +248,9 @@ func main() {
 		destF.Close()
 
 		targetName := filepath.Join(destDir, f.FI.Name())
+		if verboseFlag {
+			fmt.Printf("Just before Feq32withNames.  f.Dir=%s, f.RelPath=%s, f.AbsPath=%s, f.FullPath=%s, targetname=%s\n", f.Dir, f.RelPath, f.AbsPath, f.FullPath, targetName)
+		}
 		result, err := few.Feq32withNames(f.AbsPath, targetName)
 		if err != nil {
 			s := fmt.Sprintf(" ERROR from Feq32withNames(%s, %s) is: %s", f.AbsPath, targetName, err)
