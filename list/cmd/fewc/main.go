@@ -1,4 +1,4 @@
-package main // fewlist
+package main // fewc
 
 import (
 	"flag"
@@ -6,6 +6,8 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"src/few"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	//ct "github.com/daviddengcn/go-colortext"
@@ -42,9 +44,10 @@ import (
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
   31 Jan 2023 -- timeFudgeFactor is now a Duration.
   28 Feb 2023 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
+   1 Mar 2023 -- Now called fewc, based on fewlist, based on copylist.  I'm going to use a worker go routine pattern here.  And I'll use Bill Kennedy's more recent examples as reference.
 */
 
-const LastAltered = "28 Feb 2023" //
+const LastAltered = "1 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -56,6 +59,10 @@ const timeFudgeFactor = 100 * time.Millisecond
 var autoWidth, autoHeight int
 var err error
 var verifyFlag bool
+
+type workersType struct {
+	fName1, fName2 string
+}
 
 func main() {
 	execName, _ := os.Executable()
@@ -222,10 +229,39 @@ func main() {
 	fmt.Printf("\n\n")
 
 	// time to check the files
+	g := runtime.NumCPU()
+	num := min(g, len(fileList))
+	var success, fail int64
+	onWin := runtime.GOOS == "windows"
+	workCh := make(chan workersType, g)
+	var wg sync.WaitGroup
+
+	for i := 0; i < num; i++ { // start the lesser of NumCPU() or the number of files waiting to be processed.
+		go func() {
+			defer wg.Done()
+			for w := range workCh {
+				result, err := few.Feq32withNames(w.fName1, w.fName2)
+				if err != nil {
+					s := fmt.Sprintf(" ERROR from Feq32withNames(%s, %s) is: %s", w.fName1, w.fName2, err)
+					ctfmt.Printf(ct.Red, onWin, "%s\n", s)
+					atomic.AddInt64(&fail, 1)
+				}
+				if result {
+					s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.fName2)
+					ctfmt.Printf(ct.Green, onWin, " %s\n", s)
+					atomic.AddInt64(&success, 1)
+				} else {
+					s := fmt.Sprintf(" IEEE 32 failed for %s and in %s", w.fName1, w.fName2)
+					ctfmt.Printf(ct.Red, onWin, " %s\n", s)
+					atomic.AddInt64(&fail, 1)
+				}
+			}
+		}()
+	}
+
 	start := time.Now()
 
-	var success, fail int
-	onWin := runtime.GOOS == "windows"
+	wg.Add(len(fileList))
 	for _, f := range fileList {
 		destF, err := os.Open(destDir)
 		if err != nil {
@@ -248,22 +284,21 @@ func main() {
 		destF.Close()
 
 		targetName := filepath.Join(destDir, f.FI.Name())
-		result, err := few.Feq32withNames(f.AbsPath, targetName)
-		if err != nil {
-			s := fmt.Sprintf(" ERROR from Feq32withNames(%s, %s) is: %s", f.AbsPath, targetName, err)
-			ctfmt.Printf(ct.Red, onWin, "%s\n", s)
-			fail++
+		work := workersType{
+			fName1: f.AbsPath,
+			fName2: targetName,
 		}
-		if result {
-			s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", f.AbsPath, destDir)
-			ctfmt.Printf(ct.Green, onWin, " %s\n", s)
-			success++
-		} else {
-			s := fmt.Sprintf(" IEEE 32 failed for %s and in %s", f.AbsPath, destDir)
-			ctfmt.Printf(ct.Red, onWin, " %s\n", s)
-			fail++
-		}
+		workCh <- work
 	}
+	close(workCh)
+	wg.Wait()
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 	fmt.Printf("\n Successfully IEEE 32 matched %d files, and FAILED to match %d files; elapsed time is %s\n\n", success, fail, time.Since(start))
 } // end main
+
+func min (n1, n2 int) int {
+	if n1 < n2 {
+		return n1
+	}
+	return n2
+}
