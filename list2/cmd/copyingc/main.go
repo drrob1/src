@@ -68,7 +68,7 @@ import (
   22 Feb 2023 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
                    And timeFudgeFactor is now 10 ms, down from 100 ms.
   23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
-  27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.
+  27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
 */
 
 const LastAltered = "27 Feb 2023" //
@@ -540,7 +540,7 @@ func CopyAFile(srcFile, destDir string) {
 
 	if verifyFlag {
 		vmsg := verifyType{
-			srcFile:  baseFile,
+			srcFile:  srcFile,
 			destFile: outName,
 			destDir:  destDir, // this is here so the messages can be shorter.
 		}

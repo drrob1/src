@@ -65,9 +65,10 @@ import (
                    The error says that it can't find the file, but this may be an inaccurate error message.
                    On further thought, the error is coming from the verify step.  A binary file in use can't be opened for the verify step.  But it does copy them.
                    So I can copy but not verify a file in use.
+  27 Feb 2023 -- Fixed a bug in the verify logic.
 */
 
-const LastAltered = "26 Feb 2023" //
+const LastAltered = "27 Feb 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -536,7 +537,7 @@ func CopyAFile(srcFile, destDir string) {
 
 	if verifyFlag {
 		vmsg := verifyType{
-			srcFile:  baseFile,
+			srcFile:  srcFile,
 			destFile: outName,
 			destDir:  destDir, // this is here so the messages can be shorter.
 		}

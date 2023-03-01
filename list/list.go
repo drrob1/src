@@ -33,14 +33,17 @@ import (
    6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
   15 Jan 2023 -- Split off list2, which will have the code that takes an input regexp, etc, for copying.go.
    8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
+  28 Feb 2023 -- The field name called RelPath is a misnomer, as it's an absolute path.  I added a field name to reflect what it really is.  I'll leave the misnomer, for now.
 */
 
 type DirAliasMapType map[string]string
 
 type FileInfoExType struct {
-	FI      os.FileInfo
-	Dir     string
-	RelPath string
+	FI       os.FileInfo
+	Dir      string
+	RelPath  string
+	AbsPath  string
+	FullPath string // probably not needed, but I really do want to be complete.
 }
 
 var filterAmt int64 // not exported.  Only the FilterFlag is exported.
@@ -178,9 +181,11 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 		}
 		if includeThis(fi, excludeMe) {
 			fix := FileInfoExType{ // fix is a file info extended var
-				FI:      fi,
-				Dir:     dir,
-				RelPath: filepath.Join(dir, fi.Name()),
+				FI:       fi,
+				Dir:      dir,
+				RelPath:  filepath.Join(dir, fi.Name()), // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
+				AbsPath:  filepath.Join(dir, fi.Name()),
+				FullPath: filepath.Join(dir, fi.Name()),
 			}
 			fileInfoExs = append(fileInfoExs, fix)
 		}
