@@ -290,13 +290,16 @@ func main() {
 		}
 		workCh <- work
 	}
+	numGoRoutines := runtime.NumGoroutine()
 	close(workCh)
 	wg.Wait()
-	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
-	fmt.Printf("\n Successfully IEEE 32 matched %d files, and FAILED to match %d files; elapsed time is %s\n\n", success, fail, time.Since(start))
+	fmt.Printf("%s is compiled w/ %s, last altered %s, elapsed time is %s using %d go routines.\n", os.Args[0],
+		runtime.Version(), LastAltered, time.Since(start), numGoRoutines)
+	ctfmt.Printf(ct.Green, onWin, "\n Successfully IEEE 32 matched %d files, ", success)
+	ctfmt.Printf(ct.Red, onWin, "and FAILED to match %d files; elapsed time is %s\n\n", fail, time.Since(start))
 } // end main
 
-func min (n1, n2 int) int {
+func min(n1, n2 int) int {
 	if n1 < n2 {
 		return n1
 	}

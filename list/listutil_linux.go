@@ -92,8 +92,8 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 				FI:       fi,
 				Dir:      workingDir,
 				RelPath:  filepath.Join(workingDir, loneFilename),
-				AbsPath:  filepath.Join(dirName, f),
-				FullPath: filepath.Join(dirName, f),
+				AbsPath:  filepath.Join(workingDir, loneFilename),
+				FullPath: filepath.Join(workingDir, loneFilename),
 			}
 			fileInfoX = append(fileInfoX, fix)
 			return fileInfoX, nil
