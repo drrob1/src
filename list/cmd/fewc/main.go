@@ -24,30 +24,31 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.  And how am I going to handle collisions?
-  22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                   So I'm propagating that change thru.
-  25 Dec 2022 -- Moving the file selection stuff to list.go.
-  26 Dec 2022 -- Shortened the messages.  And added a timer.
-  29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
-   1 Jan 2023 -- Now uses list.New instead of list.NewList
-   5 Jan 2023 -- Adding stats to the output.
-   6 Jan 2023 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
-                   Added a stop code of zero.
-   7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag.
-  22 Jan 2023 -- Added Sync call.
-  23 Jan 2023 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
-  25 Jan 2023 -- Adding verify.
-  28 Jan 2023 -- Adding verify success message.
-  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
-  31 Jan 2023 -- timeFudgeFactor is now a Duration.
-  28 Feb 2023 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
-   1 Mar 2023 -- Now called fewc, based on fewlist, based on copylist.  I'm going to use a worker go routine pattern here.  And I'll use Bill Kennedy's more recent examples as reference.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.  And how am I going to handle collisions?
+  22 Dec 22 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
+                 So I'm propagating that change thru.
+  25 Dec 22 -- Moving the file selection stuff to list.go.
+  26 Dec 22 -- Shortened the messages.  And added a timer.
+  29 Dec 22 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
+   1 Jan 23 -- Now uses list.New instead of list.NewList
+   5 Jan 23 -- Adding stats to the output.
+   6 Jan 23 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
+                 Added a stop code of zero.
+   7 Jan 23 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag.
+  22 Jan 23 -- Added Sync call.
+  23 Jan 23 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
+  25 Jan 23 -- Adding verify.
+  28 Jan 23 -- Adding verify success message.
+  30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
+  31 Jan 23 -- timeFudgeFactor is now a Duration.
+  28 Feb 23 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
+   1 Mar 23 -- Now called fewc, based on fewlist, based on copylist.  I'm going to use a worker go routine pattern here.  And I'll use Bill Kennedy's more recent examples as reference.
+   2 Mar 23 -- Abbreviated the output, as I did for the copy routines.
 */
 
-const LastAltered = "1 Mar 2023" //
+const LastAltered = "2 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -61,7 +62,7 @@ var err error
 var verifyFlag bool
 
 type workersType struct {
-	fName1, fName2 string
+	fName1, fName2, destDir string
 }
 
 func main() {
@@ -247,7 +248,8 @@ func main() {
 					atomic.AddInt64(&fail, 1)
 				}
 				if result {
-					s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.fName2)
+					//s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.fName2)
+					s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.destDir)
 					ctfmt.Printf(ct.Green, onWin, " %s\n", s)
 					atomic.AddInt64(&success, 1)
 				} else {
@@ -285,8 +287,9 @@ func main() {
 
 		targetName := filepath.Join(destDir, f.FI.Name())
 		work := workersType{
-			fName1: f.AbsPath,
-			fName2: targetName,
+			fName1:  f.AbsPath,
+			fName2:  targetName,
+			destDir: destDir,
 		}
 		workCh <- work
 	}
