@@ -70,7 +70,7 @@ import (
   15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.  And making the numOfWorkers = runtime.NumCPU(), as Bill Kennedy seems to love.
 */
 
-const LastCompiled = "15 Dec 2022"
+const LastCompiled = "15 Feb 2023"
 
 const (
 	undetermined = iota
@@ -81,8 +81,7 @@ const (
 	sha512hash
 )
 
-//const numOfWorkers = 25
-var numOfWorkers = runtime.NumCPU() // seems to be about the same.
+var numOfWorkers = runtime.NumCPU()
 
 type hashType struct {
 	fName     string
@@ -172,7 +171,7 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 		}
 		resultChan <- result
 	}
-	// don't need a return statement, as I'm going to allow it to go out the bottom.
+	// don't need a return statement, as results are sent thru a channel.
 } // end matchOrNoMatch
 
 var hashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "sha512"}
@@ -192,7 +191,7 @@ func main() {
 	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
 
-	// starting the worker go routines before the result goroutine.  This is a fan out pattern.
+	// starting the worker go routines before the result goroutine.  This is not a fan out pattern, it's a worker pool pattern.
 	//hashChan = make(chan hashType, numOfWorkers)  Turns out that this is not faster than making an unbuffered channel, and may even be slower.  Interesting.
 	//resultChan = make(chan resultMatchType)  // This is slightly slower
 	//resultChan = make(chan resultMatchType, numOfWorkers)
