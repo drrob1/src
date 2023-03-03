@@ -239,21 +239,22 @@ func main() {
 
 	for i := 0; i < num; i++ { // start the lesser of NumCPU() or the number of files waiting to be processed.
 		go func() {
-			defer wg.Done()
+			defer wg.Done() // since this line is not in the for loop, I can't use wg.Add(len(fileList))
 			for w := range workCh {
 				result, err := few.Feq32withNames(w.fName1, w.fName2)
 				if err != nil {
 					s := fmt.Sprintf(" ERROR from Feq32withNames(%s, %s) is: %s", w.fName1, w.fName2, err)
 					ctfmt.Printf(ct.Red, onWin, "%s\n", s)
 					atomic.AddInt64(&fail, 1)
+					continue
 				}
 				if result {
 					//s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.fName2)
-					s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.destDir)
+					s := fmt.Sprintf(" IEEE32 match succeeded for %s and in %s", w.fName1, w.destDir)
 					ctfmt.Printf(ct.Green, onWin, " %s\n", s)
 					atomic.AddInt64(&success, 1)
 				} else {
-					s := fmt.Sprintf(" IEEE 32 failed for %s and in %s", w.fName1, w.fName2)
+					s := fmt.Sprintf(" IEEE32 failed for %s and in %s", w.fName1, w.fName2)
 					ctfmt.Printf(ct.Red, onWin, " %s\n", s)
 					atomic.AddInt64(&fail, 1)
 				}
@@ -263,7 +264,7 @@ func main() {
 
 	start := time.Now()
 
-	wg.Add(len(fileList))
+	wg.Add(num)
 	for _, f := range fileList {
 		destF, err := os.Open(destDir)
 		if err != nil {
@@ -298,7 +299,7 @@ func main() {
 	wg.Wait()
 	fmt.Printf("%s is compiled w/ %s, last altered %s, elapsed time is %s using %d go routines.\n", os.Args[0],
 		runtime.Version(), LastAltered, time.Since(start), numGoRoutines)
-	ctfmt.Printf(ct.Green, onWin, "\n Successfully IEEE 32 matched %d files, ", success)
+	ctfmt.Printf(ct.Green, onWin, "\n IEEE32 successfully matched %d files, ", success)
 	ctfmt.Printf(ct.Red, onWin, "and FAILED to match %d files; elapsed time is %s\n\n", fail, time.Since(start))
 } // end main
 
