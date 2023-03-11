@@ -38,9 +38,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/jonhadfield/findexec"
 	"io"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -751,8 +753,12 @@ func main() {
 	flag.BoolVar(&veryVerBoseFlag, "vv", false, " Very verbose mode.")
 	flag.Parse()
 
-	fmt.Printf(" %s is a Shuffling program for the tracks in a vlc file, last altered %s, compiled by %s.\n\n",
-		os.Args[0], LastCompiled, runtime.Version())
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+
+	fmt.Printf(" %s is a Shuffling program for the tracks in a vlc file, last altered %s, compiled by %s, and timestamp is %s.\n\n",
+		os.Args[0], LastCompiled, runtime.Version(), LastLinkedTimeStamp)
 
 	InExtDefault := ".xspf"
 	ans := ""
@@ -862,7 +868,45 @@ func main() {
 	os.Rename(tempFilename, temp)
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
+
+	var path, vlcPath, searchPath string
+	path = os.Getenv("PATH")
+	vPath, ok := os.LookupEnv("VLCPATH")
+	if ok {
+		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
+	}
+	if runtime.GOOS == "windows" {
+		searchPath = vlcPath + ";" + path
+	} else if runtime.GOOS == "linux" && ok {
+		searchPath = vlcPath + ":" + path
+	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
+		searchPath = path
+	}
+
+	var vlcStr string
+	if runtime.GOOS == "windows" {
+		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+	} else if runtime.GOOS == "linux" {
+		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
+	}
+
+	if vlcStr == "" {
+		fmt.Printf(" vlcStr is null.  Exiting ")
+		os.Exit(1)
+	}
+
+	execCmd := exec.Command(vlcStr, temp)
+
+	execCmd.Stdin = os.Stdin
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	err = execCmd.Run()
+	if err != nil {
+		fmt.Printf(" Error returned by running vlc %s is %s\n", temp, err)
+	}
+
 	// And now need to erase the temp file.
+	os.Remove(temp)
 
 } //  vlc main
 
