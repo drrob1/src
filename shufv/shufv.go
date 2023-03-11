@@ -858,6 +858,8 @@ func main() {
 	ProcessXMLfile(fileRdr, outfileBuf)
 	outfileBuf.Flush()
 	outputFile.Close()
+	temp := tempFilename + ".xspf"
+	os.Rename(tempFilename, temp)
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
 	// And now need to erase the temp file.
