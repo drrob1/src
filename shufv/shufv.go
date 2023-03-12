@@ -30,6 +30,8 @@ package main // shufv.go
   13 Feb 22 -- Converted to new API for filepicker.
    6 Feb 23 -- Fixed a comment and will now show number of shuffling iterations.
   10 Mar 23 -- Now called shufv, short for shufflevlc, based on vlcshuffle and xspf code.
+  12 Mar 23 -- Came home from Phoenix last night.  Found that waiting for me to close this instance of vlc to delete the temp xspf file will tie up the terminal.
+                 I'll change it so that I can delete them afterwards.  The pattern is vlc and a 10-digit number which I can delete myself.
 */
 
 import (
@@ -764,13 +766,14 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
-	err = execCmd.Run()
+	//err = execCmd.Run()
+	err = execCmd.Start()
 	if err != nil {
 		fmt.Printf(" Error returned by running vlc %s is %s\n", temp, err)
 	}
 
 	// And now need to erase the temp file.
-	os.Remove(temp)
+	//os.Remove(temp)  No, I won't do this so the terminal is freed up right after this pgm runs.
 
 } //  vlc main
 
