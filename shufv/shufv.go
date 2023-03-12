@@ -54,7 +54,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "Mar 11 2023"
+const LastCompiled = "Mar 12 2023"
 const MaxNumOfTracks = 2048
 const blankline = "                                                                             " // ~70 spaces
 const sepline = "-----------------------------------------------------------------------------"
@@ -106,6 +106,7 @@ var tabchar = '\t'
 
 var tokenStateNames = []string{"empty", "contents", "openingHTML", "closingHTML", "otherError"}
 var verboseFlag, veryVerBoseFlag bool
+var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 
 func init() {
 	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
@@ -272,143 +273,6 @@ MainForLoop:
 	}
 	return XMLtoken, nil
 } // GetXMLToken
-
-/*
-// ---------------------------------------------------------------- PeekChar -----------------------------
-// peeks at the next char without advancing fileptr.  The filepointer is advanced by ReadChar, below.
-
-func PeekChar(f *bufio.Reader) (ch CharType, EOF bool) {
-	b := make([]byte, 1)
-	b, err := f.Peek(1) // b is a byte slice with size of 1 byte.
-	if err == io.EOF {  // basically any error is returned as EOF, because of the n==0 condition.
-		return CharType{}, true
-	} else if err != nil { // These 2 conditions are not essentially different.  They may be in the future.
-		return CharType{}, true
-	}
-
-	ch.Ch = b[0]
-
-	if ch.Ch == '<' {
-		ch.State = OPENANGLE
-	} else if ch.Ch == '>' {
-		ch.State = CLOSEANGLE
-	} else if ch.Ch == '/' {
-		ch.State = SLASH
-	} else if ch.Ch <= 31 { // remember that 32 is a space.
-		ch.State = CTRL
-	} else {
-		ch.State = PLAIN
-	}
-	return ch, EOF
-
-	set filepointer back one byte from its current position.  This will have Read get this byte again.
-	    Nevermind, by using bufio instead of os, I found a peek function.
-	   NextFileOffset, err = f.Seek(-1,1);
-	   if err != nil { fmt.Errorf(" Error from PeekChar call to Seek: %v\n",err); }
-
-
-} // PeekChar
-
-	// ------------------------------------------------------------- NextChar ----------------------------
-// advances filepointer.  PeekChar does not advance fileptr.  This rtn will throw the character away, as
-// it assumes that PeekChar already got and processed the character.
-
-func NextChar(f *bufio.Reader) {
-	_, err := f.Discard(1) // Discard 1 byte.  Throw away the return saying how many bytes were actually discarded
-	check(err, "In DiscardChar and got err:")
-} // DiscardChar
-*/
-
-/*
-// -------------------------------------------------------------------------- GetXMLtoken --------------------------------------------
-
-
-func GetXMLtoken(f *bufio.Reader) (XMLtoken TokenType, EOFFLG bool) {
-
-	   This will use the bufio file operations as I want this as a character stream.
-	   The only delimiters are angle brackets.  This is the only routine where input characters are read and processed.
-	   And I rewrote it to just exist as an XML token getter.  I need peeking functionality, as in a few sections below I don't advance the file pointer after peeking at
-	   the next byte.
-
-
-	//  XMLtoken := TokenType{};  // nil literal not needed because Go automatically does this for params.
-
-	tokenbyteslice := make([]byte, 0, 256) // intermed type to make a string before returning.
-
-MainForLoop:
-	for {
-		ch, EOF := PeekChar(f)
-		if EOF {
-			return TokenType{}, true
-		} // if EOFFLG then return empty TokenType and true for EOF
-
-		switch XMLtoken.State {
-		case EMPTY:
-			switch ch.State {
-			case PLAIN, SLASH:
-				if ch.Ch != ' ' { // ignore leading blanks, but always go to NextChar.
-					XMLtoken.State = CONTENTS
-					tokenbyteslice = append(tokenbyteslice, ch.Ch) // build contents
-				}
-				NextChar(f)
-			case OPENANGLE:
-				XMLtoken.State = OPENINGHTML
-				NextChar(f) // discard byte, but change state to begin a tag
-			case CTRL:
-				NextChar(f)  discard these
-			case CLOSEANGLE:
-				fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
-				XMLtoken.State = OTHERERROR
-				return XMLtoken, false
-			} case ch.state when the token state is empty
-		case CONTENTS: // this case was STRING in the original Modula-2 code
-			switch ch.State {
-			case PLAIN, SLASH:
-				tokenbyteslice = append(tokenbyteslice, ch.Ch) // continue building the contents string
-				NextChar(f)
-			case CTRL:
-				NextChar(f) ignore control char
-			case OPENANGLE: openangle char is still avail for next loop iteration
-				break MainForLoop
-			case CLOSEANGLE:
-				fmt.Errorf(" In GetXMLToken.  String token got closeangle char")
-			} // case ch.state when the token state is STRING which is the value of the tag
-		case OPENINGHTML:
-			switch ch.State {
-			case PLAIN, OPENANGLE:
-				tokenbyteslice = append(tokenbyteslice, ch.Ch)
-				NextChar(f)
-			case SLASH:
-				NextChar(f)
-				if len(tokenbyteslice) == 0 {
-					XMLtoken.State = CLOSINGHTML // change state of this token from OPENING to CLOSING
-				} else {
-					tokenbyteslice = append(tokenbyteslice, ch.Ch)
-				} if length == 0
-			case CLOSEANGLE, CTRL:
-				NextChar(f)
-				break MainForLoop
-			} case chstate when the token state is OPENINGHTML
-		case CLOSINGHTML:
-			switch ch.State {
-			case PLAIN, SLASH, OPENANGLE:
-				tokenbyteslice = append(tokenbyteslice, ch.Ch)
-				NextChar(f)
-			case CLOSEANGLE, CTRL:
-				NextChar(f)
-				break MainForLoop
-			} case chstate
-		default:
-			fmt.Errorf(" In GetXMLtoken and tokenstate is in default clause of switch case.")
-			XMLtoken.State = OTHERERROR
-			return XMLtoken, false
-		} case XMLtoken.State
-	} // indefinite for loop
-
-	XMLtoken.Str = string(tokenbyteslice)
-	return XMLtoken, false
-} // GetXMLtoken
-*/
 
 // -------------------------------------------------- GetTrack --------------------------------------------
 
@@ -869,7 +733,7 @@ func main() {
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
 
-	var path, vlcPath, searchPath string
+	var path, searchPath string // vlcPath is defined as a global, above, that hard codes the directory for vlc on Windows.
 	path = os.Getenv("PATH")
 	vPath, ok := os.LookupEnv("VLCPATH")
 	if ok {
@@ -929,3 +793,139 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
+/*
+// ---------------------------------------------------------------- PeekChar -----------------------------
+// peeks at the next char without advancing fileptr.  The filepointer is advanced by ReadChar, below.
+
+func PeekChar(f *bufio.Reader) (ch CharType, EOF bool) {
+	b := make([]byte, 1)
+	b, err := f.Peek(1) // b is a byte slice with size of 1 byte.
+	if err == io.EOF {  // basically any error is returned as EOF, because of the n==0 condition.
+		return CharType{}, true
+	} else if err != nil { // These 2 conditions are not essentially different.  They may be in the future.
+		return CharType{}, true
+	}
+
+	ch.Ch = b[0]
+
+	if ch.Ch == '<' {
+		ch.State = OPENANGLE
+	} else if ch.Ch == '>' {
+		ch.State = CLOSEANGLE
+	} else if ch.Ch == '/' {
+		ch.State = SLASH
+	} else if ch.Ch <= 31 { // remember that 32 is a space.
+		ch.State = CTRL
+	} else {
+		ch.State = PLAIN
+	}
+	return ch, EOF
+
+	set filepointer back one byte from its current position.  This will have Read get this byte again.
+	    Nevermind, by using bufio instead of os, I found a peek function.
+	   NextFileOffset, err = f.Seek(-1,1);
+	   if err != nil { fmt.Errorf(" Error from PeekChar call to Seek: %v\n",err); }
+
+
+} // PeekChar
+
+	// ------------------------------------------------------------- NextChar ----------------------------
+// advances filepointer.  PeekChar does not advance fileptr.  This rtn will throw the character away, as
+// it assumes that PeekChar already got and processed the character.
+
+func NextChar(f *bufio.Reader) {
+	_, err := f.Discard(1) // Discard 1 byte.  Throw away the return saying how many bytes were actually discarded
+	check(err, "In DiscardChar and got err:")
+} // DiscardChar
+*/
+
+/*
+// -------------------------------------------------------------------------- GetXMLtoken --------------------------------------------
+
+
+func GetXMLtoken(f *bufio.Reader) (XMLtoken TokenType, EOFFLG bool) {
+
+	   This will use the bufio file operations as I want this as a character stream.
+	   The only delimiters are angle brackets.  This is the only routine where input characters are read and processed.
+	   And I rewrote it to just exist as an XML token getter.  I need peeking functionality, as in a few sections below I don't advance the file pointer after peeking at
+	   the next byte.
+
+
+	//  XMLtoken := TokenType{};  // nil literal not needed because Go automatically does this for params.
+
+	tokenbyteslice := make([]byte, 0, 256) // intermed type to make a string before returning.
+
+MainForLoop:
+	for {
+		ch, EOF := PeekChar(f)
+		if EOF {
+			return TokenType{}, true
+		} // if EOFFLG then return empty TokenType and true for EOF
+
+		switch XMLtoken.State {
+		case EMPTY:
+			switch ch.State {
+			case PLAIN, SLASH:
+				if ch.Ch != ' ' { // ignore leading blanks, but always go to NextChar.
+					XMLtoken.State = CONTENTS
+					tokenbyteslice = append(tokenbyteslice, ch.Ch) // build contents
+				}
+				NextChar(f)
+			case OPENANGLE:
+				XMLtoken.State = OPENINGHTML
+				NextChar(f) // discard byte, but change state to begin a tag
+			case CTRL:
+				NextChar(f)  discard these
+			case CLOSEANGLE:
+				fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
+				XMLtoken.State = OTHERERROR
+				return XMLtoken, false
+			} case ch.state when the token state is empty
+		case CONTENTS: // this case was STRING in the original Modula-2 code
+			switch ch.State {
+			case PLAIN, SLASH:
+				tokenbyteslice = append(tokenbyteslice, ch.Ch) // continue building the contents string
+				NextChar(f)
+			case CTRL:
+				NextChar(f) ignore control char
+			case OPENANGLE: openangle char is still avail for next loop iteration
+				break MainForLoop
+			case CLOSEANGLE:
+				fmt.Errorf(" In GetXMLToken.  String token got closeangle char")
+			} // case ch.state when the token state is STRING which is the value of the tag
+		case OPENINGHTML:
+			switch ch.State {
+			case PLAIN, OPENANGLE:
+				tokenbyteslice = append(tokenbyteslice, ch.Ch)
+				NextChar(f)
+			case SLASH:
+				NextChar(f)
+				if len(tokenbyteslice) == 0 {
+					XMLtoken.State = CLOSINGHTML // change state of this token from OPENING to CLOSING
+				} else {
+					tokenbyteslice = append(tokenbyteslice, ch.Ch)
+				} if length == 0
+			case CLOSEANGLE, CTRL:
+				NextChar(f)
+				break MainForLoop
+			} case chstate when the token state is OPENINGHTML
+		case CLOSINGHTML:
+			switch ch.State {
+			case PLAIN, SLASH, OPENANGLE:
+				tokenbyteslice = append(tokenbyteslice, ch.Ch)
+				NextChar(f)
+			case CLOSEANGLE, CTRL:
+				NextChar(f)
+				break MainForLoop
+			} case chstate
+		default:
+			fmt.Errorf(" In GetXMLtoken and tokenstate is in default clause of switch case.")
+			XMLtoken.State = OTHERERROR
+			return XMLtoken, false
+		} case XMLtoken.State
+	} // indefinite for loop
+
+	XMLtoken.Str = string(tokenbyteslice)
+	return XMLtoken, false
+} // GetXMLtoken
+*/
