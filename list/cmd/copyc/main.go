@@ -57,14 +57,15 @@ import (
   13 Feb 2023 -- Adding timestamp on the exec binary.
   20 Feb 2023 -- Modified the verification failed message.
   23 Feb 2023 -- Added verFlag.
+  13 Mar 2023 -- Will only create the lesser of number of files selected vs NumCPU() go routines for the copy operation.  And made the timeFudgeFactor = 10 ms.
 */
 
-const LastAltered = "23 Feb 2023" //
+const LastAltered = "13 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 100 * time.Millisecond
+const timeFudgeFactor = 10 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
@@ -128,12 +129,6 @@ func main() {
 
 	var revFlag bool
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
-
-	//var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
-	//var NLines int
-	//flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
-	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
@@ -207,34 +202,7 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-	} //else { // there is not excludeRegexPattern
-	//excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-	//  but now I test against nil, and it works
-	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
-	//}
-
-	cfChan = make(chan cfType, fanOut)
-	for i := 0; i < fanOut; i++ {
-		go func() {
-			for c := range cfChan {
-				CopyAFile(c.srcFile, c.destDir)
-			}
-		}()
 	}
-
-	msgChan = make(chan msgType, fanOut)
-	go func() {
-		for msg := range msgChan {
-			if msg.success {
-				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
-				atomic.AddInt64(&succeeded, 1)
-			} else {
-				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
-				atomic.AddInt64(&failed, 1)
-			}
-			wg.Done()
-		}
-	}()
 
 	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
@@ -311,6 +279,32 @@ func main() {
 	}
 	fmt.Printf("\n\n")
 
+	// Time to start the go routines.
+
+	num := min(fanOut, len(fileList))
+	cfChan = make(chan cfType, num)
+	for i := 0; i < num; i++ {
+		go func() {
+			for c := range cfChan {
+				CopyAFile(c.srcFile, c.destDir)
+			}
+		}()
+	}
+
+	msgChan = make(chan msgType, fanOut)
+	go func() {
+		for msg := range msgChan {
+			if msg.success {
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
+				atomic.AddInt64(&succeeded, 1)
+			} else {
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
+				atomic.AddInt64(&failed, 1)
+			}
+			wg.Done()
+		}
+	}()
+
 	// time to copy the files
 
 	start := time.Now()
@@ -320,16 +314,12 @@ func main() {
 			srcFile: f.RelPath,
 			destDir: destDir,
 		}
-		//                             wg.Add(1)
 		cfChan <- cf
 	}
 	goRtns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
-	//if time.Since(start) < 10*time.Millisecond { // I think I need this kludge to make sure that I see all the messages.
-	//	time.Sleep(10 * time.Millisecond)
-	//}
 	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n",
 		succeeded, failed, time.Since(start), goRtns)
 } // end main
@@ -429,17 +419,6 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	//ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
-	//if srcSize != n {
-	//	msg := msgType{
-	//		s:       "",
-	//		e:       ErrByteCountMismatch,
-	//		color:   ct.Red,
-	//		success: false,
-	//	}
-	//	msgChan <- msg
-	//	return
-	//}
 	err = out.Close()
 	if err != nil {
 		msg := msgType{
@@ -513,3 +492,22 @@ func CopyAFile(srcFile, destDir string) {
 	msgChan <- msg
 	return
 } // end CopyAFile
+
+func min(n1, n2 int) int {
+	if n1 < n2 {
+		return n1
+	}
+	return n2
+}
+
+//ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
+//if srcSize != n {
+//	msg := msgType{
+//		s:       "",
+//		e:       ErrByteCountMismatch,
+//		color:   ct.Red,
+//		success: false,
+//	}
+//	msgChan <- msg
+//	return
+//}
