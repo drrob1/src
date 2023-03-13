@@ -9,7 +9,7 @@ package main // shufv.go
                 have new pattern option also display some potential matches.
   18 Jan 14 -- Add procedure to make sure pattern ends in .xspf.
   21 Sep 16 -- Started conversion to Go.  This is going to take a while.  After experimenting with encoding/xml, I decided
-                not to use that package due to it's not ignoring garbage characters like <LF> <tab> <space> etc.
+                not to use that package due to its not ignoring garbage characters like <LF> <tab> <space> etc.
   26 Sep 16 -- Still converting.  It seems that peekXMLtoken is a misnomer.  I don't remember what I was thinking, but
                 I cannot find a code section in which I need a peek function.  I always use GetXMLtoken.  I'm going to
                 rewrite it so that there is no peek and next functions, just a get function (called a Getter in Go idioms).
@@ -56,7 +56,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "Mar 12 2023"
+const LastCompiled = "Mar 13 2023"
 const MaxNumOfTracks = 2048
 const blankline = "                                                                             " // ~70 spaces
 const sepline = "-----------------------------------------------------------------------------"
@@ -99,9 +99,6 @@ type TrackType struct {
 }
 
 var TrackSlice []*TrackType // Global variable.  But still needs to call make in func main.
-// var haveValidTkn bool;     Don't need this anymore.
-
-// var XMLtoken, peekXMLtoken TokenType;  Not sure that I want this here yet.
 
 var lineDelim string
 var tabchar = '\t'
@@ -125,45 +122,6 @@ func init() {
 	}
 	rand.Seed(time.Now().UnixNano())
 }
-
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
-
-func MakeDateStr() (datestr string) {
-
-	const DateSepChar = "-"
-
-	m, d, y := timlibg.TIME2MDY()
-	timenow := timlibg.GetDateTime()
-
-	MSTR := strconv.Itoa(m)
-	DSTR := strconv.Itoa(d)
-	YSTR := strconv.Itoa(y)
-	Hr := strconv.Itoa(timenow.Hours)
-	Min := strconv.Itoa(timenow.Minutes)
-	Sec := strconv.Itoa(timenow.Seconds)
-
-	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
-		Sec + "__" + timenow.DayOfWeekStr
-	return datestr
-} // MakeDateStr
-
-/* -------------------------------------------- Shuffle ----------------------------------------------------
-
-func Shuffle() {  replaced by rand.Shuffle
-	// Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
-
-	n := len(TrackSlice)
-
-	for c := 1; c < n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
-		for i := n - 1; i > 0; i-- {
-			// swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k can be
-			k := rand.Intn(i)
-			TrackSlice[i], TrackSlice[k] = TrackSlice[k], TrackSlice[i] // Go swap idiom, to swap pointers to a track that's held in TrackSlice
-		}
-	}
-} // Shuffle;
-
-*/
 
 // ---------------------------------------------------------------- getChar -----------------------------
 
@@ -489,16 +447,22 @@ func ProcessXMLfile(inputfile *bytes.Reader, outputfile *bufio.Writer) {
 	check(err, "Error when reading first line of input file.")
 	_, err = outputfile.WriteString(firstlineoffile)
 	check(err, "Error when writing first line of output file.")
+	_, err = outputfile.WriteString(lineDelim)
+	check(err, "Error when writing first lineDelim of output file.")
 
 	secondlineoffile, err := readLine(inputfile) // this is the playlist xmlns= line
 	check(err, "Error when reading second line of input file.")
 	_, err = outputfile.WriteString(secondlineoffile)
 	check(err, "Error when writing second line of output file.")
+	_, err = outputfile.WriteString(lineDelim)
+	check(err, "Error when writing 2nd lineDelim of output file.")
 
 	thirdlineoffile, err := readLine(inputfile) // this is the title line
 	check(err, "Error when reading third line of input file.")
 	_, err = outputfile.WriteString(thirdlineoffile)
 	check(err, "Error when writing third line of output file.")
+	_, err = outputfile.WriteString(lineDelim)
+	check(err, "Error when writing 3rd lineDelim of output file.")
 
 	for { // LOOP to ignoring white space until get the opening tracklist tag
 		XMLtoken, err := GetXMLToken(inputfile)
@@ -512,7 +476,7 @@ func ProcessXMLfile(inputfile *bytes.Reader, outputfile *bufio.Writer) {
 		}
 	} // loop until get opening tracklist tag
 
-	for { // ignoring white space until get the opening track tag.  I'm not sure I still need this as a loop.  But it works.
+	for { // ignoring white space until get the opening track tag.
 		XMLtoken, err := GetXMLToken(inputfile)
 		if err != nil {
 			fmt.Printf(" Trying to get opening track tag and got ERROR of %s.  Ending.\n", err)
@@ -695,7 +659,6 @@ func main() {
 
 	//defer infile.Close()
 	//inputfile := bufio.NewReader(infile)
-
 	//   Build outfilename not needed, and will be replaced by a temp file.
 	//BaseFilename := filepath.Base(Filename)
 	//ExtFilename := filepath.Ext(Filename)
@@ -931,4 +894,43 @@ MainForLoop:
 	XMLtoken.Str = string(tokenbyteslice)
 	return XMLtoken, false
 } // GetXMLtoken
+*/
+
+/* ------------------------------------------- MakeDateStr ---------------------------------------------------
+
+func MakeDateStr() (datestr string) {
+
+	const DateSepChar = "-"
+
+	m, d, y := timlibg.TIME2MDY()
+	timenow := timlibg.GetDateTime()
+
+	MSTR := strconv.Itoa(m)
+	DSTR := strconv.Itoa(d)
+	YSTR := strconv.Itoa(y)
+	Hr := strconv.Itoa(timenow.Hours)
+	Min := strconv.Itoa(timenow.Minutes)
+	Sec := strconv.Itoa(timenow.Seconds)
+
+	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
+		Sec + "__" + timenow.DayOfWeekStr
+	return datestr
+} // MakeDateStr
+
+-------------------------------------------- Shuffle ----------------------------------------------------
+
+func Shuffle() {  replaced by rand.Shuffle
+	// Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
+
+	n := len(TrackSlice)
+
+	for c := 1; c < n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
+		for i := n - 1; i > 0; i-- {
+			// swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k can be
+			k := rand.Intn(i)
+			TrackSlice[i], TrackSlice[k] = TrackSlice[k], TrackSlice[i] // Go swap idiom, to swap pointers to a track that's held in TrackSlice
+		}
+	}
+} // Shuffle;
+
 */
