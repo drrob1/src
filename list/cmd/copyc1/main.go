@@ -66,9 +66,10 @@ import (
                    On further thought, the error is coming from the verify step.  A binary file in use can't be opened for the verify step.  But it does copy them.
                    So I can copy but not verify a file in use.
   27 Feb 2023 -- Fixed a bug in the verify logic.
+  13 Mar 2023 -- Will limit the # of go routines started to match the # of selected files, if appropriate.
 */
 
-const LastAltered = "27 Feb 2023" //
+const LastAltered = "13 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -104,8 +105,6 @@ var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
 var verifyFlag, verFlag bool
-
-//var ErrByteCountMismatch error
 
 func main() {
 	if pooling < 1 {
@@ -223,14 +222,14 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
-	cfChan = make(chan cfType, pooling)
-	for i := 0; i < pooling; i++ {
-		go func() {
-			for c := range cfChan {
-				CopyAFile(c.srcFile, c.destDir)
-			}
-		}()
-	}
+	//cfChan = make(chan cfType, pooling)  moved to after the file selections are done.
+	//for i := 0; i < pooling; i++ {
+	//	go func() {
+	//		for c := range cfChan {
+	//			CopyAFile(c.srcFile, c.destDir)
+	//		}
+	//	}()
+	//}
 
 	verifyChan = make(chan verifyType, pooling)
 	go func() {
@@ -364,6 +363,16 @@ func main() {
 	}
 	fmt.Printf("\n\n")
 
+	num := min(pooling, len(fileList))
+	cfChan = make(chan cfType, num)
+	for i := 0; i < num; i++ {
+		go func() {
+			for c := range cfChan {
+				CopyAFile(c.srcFile, c.destDir)
+			}
+		}()
+	}
+
 	// time to copy the files
 
 	start := time.Now()
@@ -373,7 +382,6 @@ func main() {
 			srcFile: f.RelPath,
 			destDir: destDir,
 		}
-		//                             wg.Add(1)
 		cfChan <- cf
 	}
 	goRtns := runtime.NumGoroutine()
@@ -555,3 +563,10 @@ func CopyAFile(srcFile, destDir string) {
 	msgChan <- msg
 	//return  this is implied.
 } // end CopyAFile
+
+func min(n1, n2 int) int {
+	if n1 < n2 {
+		return n1
+	}
+	return n2
+}
