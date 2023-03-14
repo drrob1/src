@@ -58,6 +58,7 @@ import (
   20 Feb 2023 -- Modified the verification failed message.
   23 Feb 2023 -- Added verFlag.
   13 Mar 2023 -- Will only create the lesser of number of files selected vs NumCPU() go routines for the copy operation.  And made the timeFudgeFactor = 10 ms.
+                   And fixed a bug in how the verify operation works.
 */
 
 const LastAltered = "13 Mar 2023" //
@@ -343,8 +344,6 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	//srcStat, _ := in.Stat()
-	//srcSize := srcStat.Size()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -408,6 +407,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
 	err = out.Sync()
 	if err != nil {
 		msg := msgType{
@@ -419,6 +419,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
 	err = out.Close()
 	if err != nil {
 		msg := msgType{
@@ -434,6 +435,7 @@ func CopyAFile(srcFile, destDir string) {
 	if runtime.GOOS == "linux" {
 		t = t.Add(timeFudgeFactor)
 	}
+
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
 		msg := msgType{
@@ -447,7 +449,7 @@ func CopyAFile(srcFile, destDir string) {
 	}
 
 	if verifyFlag {
-		result, err := few.Feq32withNames(baseFile, outName)
+		result, err := few.Feq32withNames(srcFile, outName)
 		if err != nil {
 			msg := msgType{
 				s:        "",

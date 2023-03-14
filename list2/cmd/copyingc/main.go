@@ -6,7 +6,6 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"hash/crc32"
 	"io"
 	"src/few"
 	"src/list2"
@@ -69,6 +68,7 @@ import (
                    And timeFudgeFactor is now 10 ms, down from 100 ms.
   23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
   27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
+  14 Mar 2023 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
 */
 
 const LastAltered = "27 Feb 2023" //
@@ -77,8 +77,6 @@ const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
 const timeFudgeFactor = 10 * time.Millisecond
-
-// const minHeight = 26  not used here, but used in FileSelection.
 
 type cfType struct { // copy file type
 	srcFile string
@@ -311,7 +309,8 @@ func main() {
 
 	// time to set up the channels for the concurrent parts.  I'm going to base this on copyC1 as I got that working the other day.
 
-	cfChan = make(chan cfType, pooling)
+	num := min(pooling, len(fileList))
+	cfChan = make(chan cfType, num)
 	for i := 0; i < pooling; i++ {
 		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
 			for c := range cfChan {
@@ -320,7 +319,7 @@ func main() {
 		}()
 	}
 
-	verifyChan = make(chan verifyType, pooling)
+	verifyChan = make(chan verifyType, num)
 	go func() { // a single verify go routine.
 		for v := range verifyChan {
 			result, err := few.Feq32withNames(v.srcFile, v.destFile)
@@ -362,7 +361,7 @@ func main() {
 		}
 	}()
 
-	msgChan = make(chan msgType, pooling)
+	msgChan = make(chan msgType, num)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {
@@ -387,20 +386,8 @@ func main() {
 				srcFile: f.RelPath,
 				destDir: td,
 			}
-			// wg.Add(1) // I may need to use this yet.
+
 			cfChan <- cf // this sends work into the worker pool.
-			//err = CopyAFile(f.RelPath, td)
-			//if err == nil {
-			//	if verifyFlag {
-			//		ctfmt.Printf(ct.Green, onWin, " %s copied to %s, and then VERIFIED.\n", f.RelPath, td) // if got here, verification succeeded.
-			//	} else {
-			//		ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, td)
-			//	}
-			//	success++
-			//} else {
-			//	ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
-			//	fail++
-			//}
 		}
 	}
 
@@ -559,6 +546,73 @@ func CopyAFile(srcFile, destDir string) {
 	//return  this is implied.
 } // end CopyAFile
 
+// --------------------------------------------- validateTarget -----------------------------------------------------
+
+func validateTarget(dir string) (string, error) {
+	outDir := dir
+
+	if veryVerboseFlag {
+		fmt.Printf(" in validateTarget.  dir is %s   ", dir)
+	}
+
+	if strings.ContainsRune(dir, ':') {
+		outDir = list2.ProcessDirectoryAliases(dir)
+	} else if strings.Contains(dir, "~") { // this can only contain a ~ on Windows.
+		homeDirStr, _ := os.UserHomeDir()
+		outDir = strings.Replace(dir, "~", homeDirStr, 1)
+	}
+
+	if !strings.HasSuffix(outDir, sepString) {
+		outDir = outDir + sepString
+	}
+
+	if list2.VeryVerboseFlag {
+		fmt.Printf(" before call to os.Lstat(%s).  outDir is %s\n", dir, outDir)
+	}
+
+	fHandle, err := os.Open(outDir)
+	defer fHandle.Close()
+	if err != nil {
+		return "", err
+	}
+	fi, er := fHandle.Stat()
+	if er != nil {
+		return "", er
+	}
+	if !fi.IsDir() {
+		e := fmt.Errorf("os.Lstat(%s) is not a directory", outDir)
+		return "", e
+	}
+
+	if list2.VeryVerboseFlag {
+		fmt.Printf(" and exiting validateTarget.  outDir is %s\n", outDir)
+	}
+
+	return outDir, nil
+} // validateTarget
+
+func min(n1, n2 int) int {
+	if n1 < n2 {
+		return n1
+	}
+	return n2
+}
+
+/*
+// ----------------------------------------- verifyFiles ------------------------------------------------------
+
+func verifyFiles(r1, r2 io.Reader) bool {
+	return crc32IEEE(r1) == crc32IEEE(r2)
+}
+
+func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
+	crc32Hash := crc32.NewIEEE()
+	io.Copy(crc32Hash, r)
+	crc32Val := crc32Hash.Sum32()
+	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val)  it works.
+	return crc32Val
+}
+*/
 /*
 func CopyAFile(srcFile, destDir string) error {  This is the non-concurrent version of CopyAFile.
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
@@ -649,61 +703,3 @@ func CopyAFile(srcFile, destDir string) error {  This is the non-concurrent vers
 	return nil
 } // end CopyAFile
 */
-// --------------------------------------------- validateTarget -----------------------------------------------------
-
-func validateTarget(dir string) (string, error) {
-	outDir := dir
-
-	if veryVerboseFlag {
-		fmt.Printf(" in validateTarget.  dir is %s   ", dir)
-	}
-
-	if strings.ContainsRune(dir, ':') {
-		outDir = list2.ProcessDirectoryAliases(dir)
-	} else if strings.Contains(dir, "~") { // this can only contain a ~ on Windows.
-		homeDirStr, _ := os.UserHomeDir()
-		outDir = strings.Replace(dir, "~", homeDirStr, 1)
-	}
-
-	if !strings.HasSuffix(outDir, sepString) {
-		outDir = outDir + sepString
-	}
-
-	if list2.VeryVerboseFlag {
-		fmt.Printf(" before call to os.Lstat(%s).  outDir is %s\n", dir, outDir)
-	}
-
-	fHandle, err := os.Open(outDir)
-	defer fHandle.Close()
-	if err != nil {
-		return "", err
-	}
-	fi, er := fHandle.Stat()
-	if er != nil {
-		return "", er
-	}
-	if !fi.IsDir() {
-		e := fmt.Errorf("os.Lstat(%s) is not a directory", outDir)
-		return "", e
-	}
-
-	if list2.VeryVerboseFlag {
-		fmt.Printf(" and exiting validateTarget.  outDir is %s\n", outDir)
-	}
-
-	return outDir, nil
-} // validateTarget
-
-// ----------------------------------------- verifyFiles ------------------------------------------------------
-
-func verifyFiles(r1, r2 io.Reader) bool {
-	return crc32IEEE(r1) == crc32IEEE(r2)
-}
-
-func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
-	crc32Hash := crc32.NewIEEE()
-	io.Copy(crc32Hash, r)
-	crc32Val := crc32Hash.Sum32()
-	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val)  it works.
-	return crc32Val
-}
