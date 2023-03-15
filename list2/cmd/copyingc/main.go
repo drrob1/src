@@ -312,7 +312,7 @@ func main() {
 
 	num := min(pooling, len(fileList)*len(targetDirs))
 	cfChan = make(chan cfType, num)
-	for i := 0; i < pooling; i++ {
+	for i := 0; i < num; i++ {
 		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
 			for c := range cfChan {
 				CopyAFile(c.srcFile, c.destDir)
