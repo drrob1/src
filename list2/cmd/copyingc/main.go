@@ -69,9 +69,10 @@ import (
   23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
   27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
   14 Mar 2023 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
+  15 Mar 2023 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs)
 */
 
-const LastAltered = "27 Feb 2023" //
+const LastAltered = "15 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -309,7 +310,7 @@ func main() {
 
 	// time to set up the channels for the concurrent parts.  I'm going to base this on copyC1 as I got that working the other day.
 
-	num := min(pooling, len(fileList))
+	num := min(pooling, len(fileList)*len(targetDirs))
 	cfChan = make(chan cfType, num)
 	for i := 0; i < pooling; i++ {
 		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
