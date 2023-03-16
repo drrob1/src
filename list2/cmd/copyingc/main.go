@@ -69,7 +69,8 @@ import (
   23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
   27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
   14 Mar 2023 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
-  15 Mar 2023 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs)
+  15 Mar 2023 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs).
+                   Will only start the verify go routine if needed.
 */
 
 const LastAltered = "15 Mar 2023" //
@@ -320,47 +321,49 @@ func main() {
 		}()
 	}
 
-	verifyChan = make(chan verifyType, num)
-	go func() { // a single verify go routine.
-		for v := range verifyChan {
-			result, err := few.Feq32withNames(v.srcFile, v.destFile)
-			if err != nil {
-				msg := msgType{
-					s:        "",
-					e:        err,
-					color:    ct.Red,
-					success:  false,
-					verified: false,
+	if verifyFlag {
+		verifyChan = make(chan verifyType, num)
+		go func() { // a single verify go routine.
+			for v := range verifyChan {
+				result, err := few.Feq32withNames(v.srcFile, v.destFile)
+				if err != nil {
+					msg := msgType{
+						s:        "",
+						e:        err,
+						color:    ct.Red,
+						success:  false,
+						verified: false,
+					}
+					msgChan <- msg
+					continue
 				}
-				msgChan <- msg
-				continue
-			}
 
-			if result {
-				msg := msgType{
-					s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destDir),
-					e:        nil,
-					color:    ct.Green,
-					success:  true,
-					verified: true,
+				if result {
+					msg := msgType{
+						s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destDir),
+						e:        nil,
+						color:    ct.Green,
+						success:  true,
+						verified: true,
+					}
+					msgChan <- msg
+				} else {
+					msg := msgType{
+						s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
+						e:        nil,
+						color:    ct.Red,
+						success:  false,
+						verified: false,
+					}
+					msgChan <- msg
 				}
-				msgChan <- msg
-			} else {
-				msg := msgType{
-					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
-					e:        nil,
-					color:    ct.Red,
-					success:  false,
-					verified: false,
-				}
-				msgChan <- msg
+				//fmt.Printf(" after msg sent to msgChan, and about to return")
+				// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.  I need to use "continue" instead.
+				// None of the message receiving go routines here have a return statement inside them.
+				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
 			}
-			//fmt.Printf(" after msg sent to msgChan, and about to return")
-			// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.
-			// None of the message receiving go routines here have a return statement inside them.
-			// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
-		}
-	}()
+		}()
+	}
 
 	msgChan = make(chan msgType, num)
 	go func() {
