@@ -67,9 +67,10 @@ import (
                    So I can copy but not verify a file in use.
   27 Feb 2023 -- Fixed a bug in the verify logic.
   13 Mar 2023 -- Will limit the # of go routines started to match the # of selected files, if appropriate.
+  15 Mar 2023 -- Will only start the verify go routines if needed.
 */
 
-const LastAltered = "13 Mar 2023" //
+const LastAltered = "15 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -231,48 +232,50 @@ func main() {
 	//	}()
 	//}
 
-	verifyChan = make(chan verifyType, pooling)
-	go func() {
-		for v := range verifyChan {
-			result, err := few.Feq32withNames(v.srcFile, v.destFile)
-			if err != nil {
-				msg := msgType{
-					s:        "",
-					e:        err,
-					color:    ct.Red,
-					success:  false,
-					verified: false,
+	if verifyFlag {
+		verifyChan = make(chan verifyType, pooling)
+		go func() {
+			for v := range verifyChan {
+				result, err := few.Feq32withNames(v.srcFile, v.destFile)
+				if err != nil {
+					msg := msgType{
+						s:        "",
+						e:        err,
+						color:    ct.Red,
+						success:  false,
+						verified: false,
+					}
+					msgChan <- msg
+					continue
 				}
-				msgChan <- msg
-				continue
-			}
 
-			if result {
-				msg := msgType{
-					s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destDir),
-					e:        nil,
-					color:    ct.Green,
-					success:  true,
-					verified: true,
+				if result {
+					msg := msgType{
+						s:        fmt.Sprintf("%s copied to %s and is VERIFIED", v.srcFile, v.destDir),
+						e:        nil,
+						color:    ct.Green,
+						success:  true,
+						verified: true,
+					}
+					msgChan <- msg
+					continue
+				} else {
+					msg := msgType{
+						s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
+						e:        nil,
+						color:    ct.Red,
+						success:  false,
+						verified: false,
+					}
+					msgChan <- msg
 				}
-				msgChan <- msg
-				continue
-			} else {
-				msg := msgType{
-					s:        fmt.Sprintf("%s copied to %s but FAILED VERIFICATION", v.srcFile, v.destDir),
-					e:        nil,
-					color:    ct.Red,
-					success:  false,
-					verified: false,
-				}
-				msgChan <- msg
+				//fmt.Printf(" after msg sent to msgChan, and about to return")
+				// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.
+				// None of the message receiving go routines here have a return statement inside them.
+				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
 			}
-			//fmt.Printf(" after msg sent to msgChan, and about to return")
-			// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.
-			// None of the message receiving go routines here have a return statement inside them.
-			// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
-		}
-	}()
+		}()
+	}
 
 	msgChan = make(chan msgType, pooling)
 	go func() {
