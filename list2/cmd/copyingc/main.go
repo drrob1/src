@@ -71,9 +71,10 @@ import (
   14 Mar 2023 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
   15 Mar 2023 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs).
                    Will only start the verify go routine if needed.
+  17 Mar 2023 -- Changed error from verify operation
 */
 
-const LastAltered = "15 Mar 2023" //
+const LastAltered = "17 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -329,7 +330,7 @@ func main() {
 				if err != nil {
 					msg := msgType{
 						s:        "",
-						e:        err,
+						e:        fmt.Errorf("ERROR from verify operation is %s", err),
 						color:    ct.Red,
 						success:  false,
 						verified: false,
@@ -398,9 +399,11 @@ func main() {
 	goRtns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
-	close(verifyChan)
 	close(msgChan)
-	//ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n", succeeded, failed, time.Since(start), goRtns)
+	if verifyChan != nil {
+		close(verifyChan)
+	}
+
 	fmt.Printf("%s is compiled w/ %s, last altered %s, binary timestamp of %s, using %d go routines, taking %s to do the work.\n",
 		os.Args[0], runtime.Version(), LastAltered, execTimeStamp, goRtns, time.Since(start))
 	ctfmt.Printf(ct.Green, onWin, "\n Successfully copied %d files,", succeeded)

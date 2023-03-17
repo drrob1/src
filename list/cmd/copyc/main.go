@@ -59,9 +59,10 @@ import (
   23 Feb 2023 -- Added verFlag.
   13 Mar 2023 -- Will only create the lesser of number of files selected vs NumCPU() go routines for the copy operation.  And made the timeFudgeFactor = 10 ms.
                    And fixed a bug in how the verify operation works.
+  17 Mar 2023 -- Changed error message when verify returns an error.
 */
 
-const LastAltered = "13 Mar 2023" //
+const LastAltered = "17 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -453,7 +454,7 @@ func CopyAFile(srcFile, destDir string) {
 		if err != nil {
 			msg := msgType{
 				s:        "",
-				e:        err,
+				e:        fmt.Errorf("ERROR from verify operation is %s", err),
 				color:    ct.Red,
 				success:  false,
 				verified: false,

@@ -68,9 +68,10 @@ import (
   27 Feb 2023 -- Fixed a bug in the verify logic.
   13 Mar 2023 -- Will limit the # of go routines started to match the # of selected files, if appropriate.
   15 Mar 2023 -- Will only start the verify go routines if needed.
+  17 Mar 2023 -- Changed error from verify operation.
 */
 
-const LastAltered = "15 Mar 2023" //
+const LastAltered = "17 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -240,7 +241,7 @@ func main() {
 				if err != nil {
 					msg := msgType{
 						s:        "",
-						e:        err,
+						e:        fmt.Errorf("ERROR from verify operation is %s", err),
 						color:    ct.Red,
 						success:  false,
 						verified: false,
@@ -390,8 +391,10 @@ func main() {
 	goRtns := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
-	close(verifyChan)
 	close(msgChan)
+	if verifyChan != nil {
+		close(verifyChan)
+	}
 	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n",
 		succeeded, failed, time.Since(start), goRtns)
 } // end main
