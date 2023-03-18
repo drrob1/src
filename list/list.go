@@ -34,6 +34,7 @@ import (
   15 Jan 2023 -- Split off list2, which will have the code that takes an input regexp, etc, for copying.go.
    8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
   28 Feb 2023 -- The field name called RelPath is a misnomer, as it's an absolute path.  I added a field name to reflect what it really is.  I'll leave the misnomer, for now.
+  18 Mar 2023 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
 */
 
 type DirAliasMapType map[string]string
@@ -259,6 +260,9 @@ func GetDirectoryAliases() DirAliasMapType { // Env variable is diraliases.
 func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string {
 
 	idx := strings.IndexRune(cmdline, ':')
+	if VerboseFlag {
+		fmt.Printf("In ProcessDirectoryAliases.  colon idx=%d\n", idx)
+	}
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
@@ -270,7 +274,9 @@ func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string 
 	}
 	PathNFile := cmdline[idx+1:]
 	completeValue := aliasValue + PathNFile
-	//fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
+	if VerboseFlag {
+		fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
+	}
 	return completeValue
 } // ProcessDirectoryAliases
 
