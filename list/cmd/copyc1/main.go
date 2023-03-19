@@ -69,9 +69,10 @@ import (
   13 Mar 2023 -- Will limit the # of go routines started to match the # of selected files, if appropriate.
   15 Mar 2023 -- Will only start the verify go routines if needed.
   17 Mar 2023 -- Changed error from verify operation.
+  19 Mar 2023 -- Fiddled a bit w/ the number of go routines.
 */
 
-const LastAltered = "17 Mar 2023" //
+const LastAltered = "19 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -99,7 +100,7 @@ var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
+var pooling = runtime.NumCPU() - 2 // account for main, msgChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
 var cfChan chan cfType
 var msgChan chan msgType
 var verifyChan chan verifyType
@@ -234,6 +235,10 @@ func main() {
 	//}
 
 	if verifyFlag {
+		pooling-- // account for use of the verifyChan
+		if pooling < 1 {
+			pooling = 1
+		}
 		verifyChan = make(chan verifyType, pooling)
 		go func() {
 			for v := range verifyChan {
