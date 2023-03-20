@@ -56,7 +56,7 @@ import (
   23 Jan 2023 -- Changing time on destination file(s) to match the source file(s).  And fixed the date comparison for replacement copies.
   25 Jan 2023 -- Added verify.
   27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
-  28 Jan 2023 -- Adding verify success message, which was refined the next day.
+  28 Jan 2023 -- Adding verify success message, which was refined the next day.  Verify is checked in the copyAFile routine.
   30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                    Added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now of type Duration.
@@ -65,9 +65,10 @@ import (
   13 Feb 2023 -- Adding timestamp on the exec binary.
   20 Feb 2023 -- Modified the verification failed message.
   23 Feb 2023 -- Added verFlag
+  19 Mar 2023 -- Commented out var err error because it wasn't being used.
 */
 
-const LastAltered = "23 Feb 2023" //
+const LastAltered = "19 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -80,7 +81,8 @@ type cfType struct { // copy file type
 }
 
 var autoWidth, autoHeight int
-var err error
+
+//var err error  It wasn't used, so I commented it out.
 
 var onWin = runtime.GOOS == "windows"
 var fanOut = runtime.NumCPU() - 2 // It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.

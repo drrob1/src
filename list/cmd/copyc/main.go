@@ -54,6 +54,7 @@ import (
                     I added timeFudgeFactor.
   31 Jan 2023 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
   12 Feb 2023 -- Adding verify option (finally).  In testing later in the day, I got a sync failed because host is down error.  I'm making sync errors a different color now.
+                   Verify is checked in the copyAFile routine.
   13 Feb 2023 -- Adding timestamp on the exec binary.
   20 Feb 2023 -- Modified the verification failed message.
   23 Feb 2023 -- Added verFlag.

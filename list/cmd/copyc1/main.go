@@ -100,7 +100,7 @@ var autoWidth, autoHeight int
 var err error
 
 var onWin = runtime.GOOS == "windows"
-var pooling = runtime.NumCPU() - 2 // account for main, msgChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
+var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
 var cfChan chan cfType
 var msgChan chan msgType
 var verifyChan chan verifyType
@@ -235,10 +235,6 @@ func main() {
 	//}
 
 	if verifyFlag {
-		pooling-- // account for use of the verifyChan
-		if pooling < 1 {
-			pooling = 1
-		}
 		verifyChan = make(chan verifyType, pooling)
 		go func() {
 			for v := range verifyChan {
@@ -281,6 +277,8 @@ func main() {
 				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
 			}
 		}()
+	} else {
+		pooling++ // By doing this here, I don't have to check for pooling < 1.
 	}
 
 	msgChan = make(chan msgType, pooling)

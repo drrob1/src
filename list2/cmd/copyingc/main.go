@@ -72,9 +72,10 @@ import (
   15 Mar 2023 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs).
                    Will only start the verify go routine if needed.
   17 Mar 2023 -- Changed error from verify operation
+  19 Mar 2023 -- Will adjust pooling if verifyFlag is off.
 */
 
-const LastAltered = "17 Mar 2023" //
+const LastAltered = "19 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -312,18 +313,8 @@ func main() {
 
 	// time to set up the channels for the concurrent parts.  I'm going to base this on copyC1 as I got that working the other day.
 
-	num := min(pooling, len(fileList)*len(targetDirs))
-	cfChan = make(chan cfType, num)
-	for i := 0; i < num; i++ {
-		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
-			for c := range cfChan {
-				CopyAFile(c.srcFile, c.destDir)
-			}
-		}()
-	}
-
 	if verifyFlag {
-		verifyChan = make(chan verifyType, num)
+		verifyChan = make(chan verifyType, pooling)
 		go func() { // a single verify go routine.
 			for v := range verifyChan {
 				result, err := few.Feq32withNames(v.srcFile, v.destFile)
@@ -362,6 +353,18 @@ func main() {
 				// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.  I need to use "continue" instead.
 				// None of the message receiving go routines here have a return statement inside them.
 				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
+			}
+		}()
+	} else {
+		pooling++ // Doing this here means I don't have to check for pooling < 1.
+	}
+
+	num := min(pooling, len(fileList)*len(targetDirs))
+	cfChan = make(chan cfType, num)
+	for i := 0; i < num; i++ {
+		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
+			for c := range cfChan {
+				CopyAFile(c.srcFile, c.destDir)
 			}
 		}()
 	}
