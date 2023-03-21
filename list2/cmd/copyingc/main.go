@@ -26,56 +26,57 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
-                   And how am I going to handle collisions?
-  22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                   So I'm propagating that change through.
-  25 Dec 2022 -- Moving the file selection stuff to list.go
-  26 Dec 2022 -- Shortened the messages.  And added a timer.
-  29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
-   1 Jan 2023 -- Now uses list.New instead of list.NewList
-   5 Jan 2023 -- Adding stats to the output.
-   6 Jan 2023 -- Now that it clears the screen each time through the selection loop, I'll print the version message at the end also.
-                   Added a stop code of zero.
-   7 Jan 2023 -- Now called copiesfiles.go, and is intended to have multiple targets.  If there is a target on the command line, then there will be only 1 target.
-                   If this pgm prompts for a target, it will accept multiple targets.  It will have to validate each of them and will only send to the validated targets.
-  10 Jan 2023 -- I've settled into calling this pgm copying.  But I'll do that w/ aliases on Windows and symlinks on linux.
-  14 Jan 2023 -- Now really called copying (I had to remove the aliases and symlinks).  It will allow multiple input files and output directories.
-                   To do this, I'll need flags like 'i' and 'o'.  I'll have to work on this some more.  I may get more mileage out of a GitHub flags package rather than
-                   the std library one.  This will take a while, like maybe a week.
-                   Kingpin looks interesting, as does go-flags.
-  15 Jan 2023 -- I've decided that I only need 'i' flag for include regexp.  The command line will have 1 or more output destinations.  I don't need or want a flag for that.
-                   But I'm going to continue looking at go-flags more closely.
-                   I posted a message for help on golang-nuts as go get isn't working for this one.
-                   I'll use the std flag package for now.
-                   Now called list2.go, as the change to have 'i' inputDir is big enough that all routines need to be changed.
-  17 Jan 2023 -- Uses i and rex flags.  And today I'm adding a check for zero results from the fileSelection routine.
-  18 Jan 2023 -- Changing completion stats to be colorized.
-  21 Jan 2023 -- I need to build in a hash check for the source and destination files.  If the hashes don't match, delete the destination and copy until the hashes match.
-                   I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
-  22 Jan 2023 -- I named 2 of the errors, so I can test for them.  Based on tests w/ copyc and copyc2, I'm not sure the comparison of bytes works.  So I added a call to out.Sync()
-  23 Jan 2023 -- Will change time of destination file to time of source file.  Before this change, the destination has the time I ran the pgm.
-  25 Jan 2023 -- Adding a verify option that uses crc32 IEEE.
-  27 Jan 2023 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
-  28 Jan 2023 -- Added a verify success message.
-  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
-                    I added timeFudgeFactor
-  31 Jan 2023 -- timeFudgeFactor is now a Duration.
-  20 Feb 2023 -- Minor edit in verification messages.
-  22 Feb 2023 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
-                   And timeFudgeFactor is now 10 ms, down from 100 ms.
-  23 Feb 2023 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
-  27 Feb 2023 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
-  14 Mar 2023 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
-  15 Mar 2023 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs).
-                   Will only start the verify go routine if needed.
-  17 Mar 2023 -- Changed error from verify operation
-  19 Mar 2023 -- Will adjust pooling if verifyFlag is off.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                 And how am I going to handle collisions?
+  22 Dec 22 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
+                 So I'm propagating that change through.
+  25 Dec 22 -- Moving the file selection stuff to list.go
+  26 Dec 22 -- Shortened the messages.  And added a timer.
+  29 Dec 22 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
+   1 Jan 23 -- Now uses list.New instead of list.NewList
+   5 Jan 23 -- Adding stats to the output.
+   6 Jan 23 -- Now that it clears the screen each time through the selection loop, I'll print the version message at the end also.
+                 Added a stop code of zero.
+   7 Jan 23 -- Now called copiesfiles.go, and is intended to have multiple targets.  If there is a target on the command line, then there will be only 1 target.
+                 If this pgm prompts for a target, it will accept multiple targets.  It will have to validate each of them and will only send to the validated targets.
+  10 Jan 23 -- I've settled into calling this pgm copying.  But I'll do that w/ aliases on Windows and symlinks on linux.
+  14 Jan 23 -- Now really called copying (I had to remove the aliases and symlinks).  It will allow multiple input files and output directories.
+                 To do this, I'll need flags like 'i' and 'o'.  I'll have to work on this some more.  I may get more mileage out of a GitHub flags package rather than
+                 the std library one.  This will take a while, like maybe a week.
+                 Kingpin looks interesting, as does go-flags.
+  15 Jan 23 -- I've decided that I only need 'i' flag for include regexp.  The command line will have 1 or more output destinations.  I don't need or want a flag for that.
+                 But I'm going to continue looking at go-flags more closely.
+                 I posted a message for help on golang-nuts as go get isn't working for this one.
+                 I'll use the std flag package for now.
+                 Now called list2.go, as the change to have 'i' inputDir is big enough that all routines need to be changed.
+  17 Jan 23 -- Uses i and rex flags.  And today I'm adding a check for zero results from the fileSelection routine.
+  18 Jan 23 -- Changing completion stats to be colorized.
+  21 Jan 23 -- I need to build in a hash check for the source and destination files.  If the hashes don't match, delete the destination and copy until the hashes match.
+                 I'll use the crc32 hash.  Maybe not yet.  I'll compare the number of bytes copied w/ the size of the src file.  Let's see if that's useful enough.
+  22 Jan 23 -- I named 2 of the errors, so I can test for them.  Based on tests w/ copyc and copyc2, I'm not sure the comparison of bytes works.  So I added a call to out.Sync()
+  23 Jan 23 -- Will change time of destination file to time of source file.  Before this change, the destination has the time I ran the pgm.
+  25 Jan 23 -- Adding a verify option that uses crc32 IEEE.
+  27 Jan 23 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
+  28 Jan 23 -- Added a verify success message.
+  30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
+                  I added timeFudgeFactor
+  31 Jan 23 -- timeFudgeFactor is now a Duration.
+  20 Feb 23 -- Minor edit in verification messages.
+  22 Feb 23 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
+                 And timeFudgeFactor is now 10 ms, down from 100 ms.
+  23 Feb 23 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
+  27 Feb 23 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
+  14 Mar 23 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
+  15 Mar 23 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs).
+                 Will only start the verify go routine if needed.
+  17 Mar 23 -- Changed error from verify operation
+  19 Mar 23 -- Will adjust pooling if verifyFlag is off.
+  21 Mar 23 -- Completed the usage message.
 */
 
-const LastAltered = "19 Mar 2023" //
+const LastAltered = "21 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -137,7 +138,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and binary timestamp is %s.\n", os.Args[0],
 			LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] dest-dir ...\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Needs i flag for input.  Command line params will all be output params.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")

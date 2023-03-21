@@ -1,4 +1,4 @@
-package main // copyc1
+package main // copycv
 
 import (
 	"flag"
@@ -70,7 +70,7 @@ import (
   15 Mar 23 -- Will only start the verify go routines if needed.
   17 Mar 23 -- Changed error from verify operation.
   19 Mar 23 -- Fiddled a bit w/ the number of go routines.
-  21 Mar 23 -- Completed the usage message.
+  21 Mar 23 -- Now called copycv, so that it defaults of verify on.
 */
 
 const LastAltered = "21 Mar 2023" //
@@ -108,7 +108,7 @@ var verifyChan chan verifyType
 var wg sync.WaitGroup
 var succeeded, failed int64
 var ErrNotNew error
-var verifyFlag, verFlag bool
+var verifyFlag, verFlag, noVerifyFlag bool
 
 func main() {
 	if pooling < 1 {
@@ -133,11 +133,9 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-dir dest-dir \n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] source-directory destination-directory\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-		//	dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
 
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
@@ -145,12 +143,6 @@ func main() {
 
 	var revFlag bool
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
-
-	//var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
-	//var NLines int
-	//flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
-	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
@@ -175,8 +167,9 @@ func main() {
 	var globFlag bool
 	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
 
-	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
+	flag.BoolVar(&verifyFlag, "verify", true, "Verify that destination is same as source.")
 	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
+	flag.BoolVar(&noVerifyFlag, "no", false, "Turn off default of verify on.")
 
 	flag.Parse()
 
@@ -186,6 +179,12 @@ func main() {
 	}
 
 	verifyFlag = verifyFlag || verFlag
+	if noVerifyFlag {
+		verifyFlag = false
+	}
+	if verboseFlag {
+		fmt.Printf(" VerifylFlag = %t, verFlag = %t, and noVerifyFlag = %t", verifyFlag, verFlag, noVerifyFlag)
+	}
 
 	Reverse := revFlag
 
