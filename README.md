@@ -37,7 +37,7 @@ All of my go code as of Feb 5, 2023.
 33. hideme -- for work, intended for the Aidoc demon.
 34. launchv, lvr -- used to start vlc with a random list of files on its command line.
 35. copylist, dellist -- create a list on which copy or del is executed.
-36. copyc, copyc1 ,copyc2 -- use same list concept to use concurrency in the copying of selected files.
+36. copyc, copyc1, copyc2, copycv -- use same list concept to use concurrency in the copying of selected files.
 37. copying, copyingc -- same basic concept but implemented differently.  Command line params are list of output destinations.  Needs flags to specify inputs.
 
 
