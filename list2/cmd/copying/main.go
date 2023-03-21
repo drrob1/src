@@ -67,7 +67,7 @@ import (
   21 Mar 23 -- Completed the usage message.
 */
 
-const LastAltered = "23 Feb 2023" //
+const LastAltered = "21 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
