@@ -1,5 +1,5 @@
 ## gocode
-All of my go code as of Feb 5, 2023.
+All of my go code as of Mar 21, 2023.
 
 1. sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.  Multisha and consha do this w/ conconcurrency.
 2. rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
