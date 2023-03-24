@@ -73,7 +73,7 @@ import (
   21 Mar 23 -- Now called copycv, so that it defaults of verify on.
 */
 
-const LastAltered = "21 Mar 2023" //
+const LastAltered = "23 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -183,7 +183,7 @@ func main() {
 		verifyFlag = false
 	}
 	if verboseFlag {
-		fmt.Printf(" VerifylFlag = %t, verFlag = %t, and noVerifyFlag = %t", verifyFlag, verFlag, noVerifyFlag)
+		fmt.Printf(" VerifylFlag = %t, verFlag = %t, and noVerifyFlag = %t\n", verifyFlag, verFlag, noVerifyFlag)
 	}
 
 	Reverse := revFlag
