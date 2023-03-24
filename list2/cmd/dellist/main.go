@@ -5,47 +5,44 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
-	"src/list"
+	"src/list2"
 	"strings"
 )
 
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
-                   And how am I going to handle collisions?
-  22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                   So I'm propagating that change thru.
-  25 Dec 2022 -- Moving the file selection stuff to list.go
-                   Now called dellist.go
-  29 Dec 2022 -- Adding check for an empty list, and the list package code was enhanced to include '.' as a sentinel.
-   1 Jan 2023 -- Now uses list.New instead of list.NewList.
-   6 Jan 2023 -- list package functions now return an error.  This allows better error handling and a stop code.
-   7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
-  24 Jan 2023 -- And added list.ReverseFlag and list.SizeFlag.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                 And how am I going to handle collisions?
+  22 Dec 22 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
+                 So I'm propagating that change thru.
+  25 Dec 22 -- Moving the file selection stuff to list.go
+                 Now called dellist.go
+  29 Dec 22 -- Adding check for an empty list, and the list package code was enhanced to include '.' as a sentinel.
+   1 Jan 23 -- Now uses list.New instead of list.NewList.
+   6 Jan 23 -- list package functions now return an error.  This allows better error handling and a stop code.
+   7 Jan 23 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
+  24 Jan 23 -- And added list.ReverseFlag and list.SizeFlag.
+  23 Mar 23 -- Now based on list2, so I can use a regexp on the input files.
 */
 
-const LastAltered = "24 Jan 2023" //
+const LastAltered = "24 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
-const sepString = string(filepath.Separator)
 
-// const minHeight = 26  not used here, but used in FileSelection.
+//const sepString = string(filepath.Separator)
 
 var autoWidth, autoHeight int
 var err error
-
-//var fileInfos []os.FileInfo
+var rexStr, inputStr string
+var rex *regexp.Regexp
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -89,6 +86,8 @@ func main() {
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
+	flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
+	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
 
 	flag.Parse()
 
@@ -96,12 +95,20 @@ func main() {
 		verboseFlag = true
 	}
 
-	Reverse := revFlag
-
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.SizeFlag = sizeFlag
-	list.ReverseFlag = revFlag
+	if rexStr != "" {
+		rex, err = regexp.Compile(rexStr)
+		if err != nil {
+			fmt.Printf(" Input regular expression error is %s.  Ignoring\n", err)
+		}
+	}
+	list2.InputDir = inputStr
+	list2.FilterFlag = filterFlag
+	list2.VerboseFlag = verboseFlag
+	list2.VeryVerboseFlag = veryVerboseFlag
+	list2.ReverseFlag = revFlag
+	list2.SizeFlag = sizeFlag
+	list2.ExcludeRex = excludeRegex
+	list2.IncludeRex = rex
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -124,12 +131,9 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-	} // else { // there is not excludeRegexPattern, but this is now handled differently, so this needs to be removed for the code to work.
-	//excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
-	//}
+	}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list2.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)
@@ -148,7 +152,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList, err = list.FileSelection(fileList)
+	fileList, err = list2.FileSelection(fileList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
 		os.Exit(1)
