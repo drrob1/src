@@ -67,9 +67,10 @@ import (
   23 Feb 23 -- Added verFlag
   19 Mar 23 -- Commented out var err error because it wasn't being used.
   21 Mar 23 -- Completed the usage message.
+  24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
 */
 
-const LastAltered = "21 Mar 2023" //
+const LastAltered = "24 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -82,9 +83,6 @@ type cfType struct { // copy file type
 }
 
 var autoWidth, autoHeight int
-
-//var err error  It wasn't used, so I commented it out.
-
 var onWin = runtime.GOOS == "windows"
 var fanOut = runtime.NumCPU() - 2 // It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
 var cfChan chan cfType
@@ -112,12 +110,9 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-dir dest-dir\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-files dest-dir\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-		//	dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
-
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
@@ -166,6 +161,7 @@ func main() {
 	list.VeryVerboseFlag = veryVerboseFlag
 	list.ReverseFlag = revFlag
 	list.FilterFlag = filterFlag
+	list.GlobFlag = globFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -174,10 +170,6 @@ func main() {
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
 		list.VerboseFlag = true
-	}
-
-	if filterFlag {
-		list.FilterFlag = true
 	}
 
 	if len(excludeRegexPattern) > 0 {
@@ -193,14 +185,6 @@ func main() {
 		}
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
-	} //else { // there is not excludeRegexPattern
-	//excludeRegex, _ = regexp.Compile("") // this will be detected by includeThis as an empty expression and will be ignored.  But if I don't do this, referencing it will panic.
-	//  but now I test against nil, and it works
-	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
-	//}
-
-	if globFlag {
-		list.GlobFlag = true
 	}
 
 	cfChan = make(chan cfType, fanOut)
@@ -237,7 +221,7 @@ func main() {
 
 	// now have the fileList.  Need to check the destination directory.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
+	destDir := list.CheckDest()
 	if destDir == "" {
 		fmt.Print(" Destination directory ? ")
 		n, err := fmt.Scanln(&destDir)

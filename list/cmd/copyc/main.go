@@ -62,9 +62,10 @@ import (
                  And fixed a bug in how the verify operation works.
   17 Mar 23 -- Changed error message when verify returns an error.
   21 Mar 23 -- Completed the usage message, which was never completed.
+  24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
 */
 
-const LastAltered = "17 Mar 2023" //
+const LastAltered = "24 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -121,7 +122,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-dir dest-dir\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-files dest-dir\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
@@ -175,6 +176,7 @@ func main() {
 	list.VeryVerboseFlag = veryVerboseFlag
 	list.ReverseFlag = revFlag
 	list.FilterFlag = filterFlag
+	list.GlobFlag = globFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -182,15 +184,6 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
-		list.VerboseFlag = true
-	}
-
-	if filterFlag {
-		list.FilterFlag = true
-	}
-
-	if globFlag {
-		list.GlobFlag = true
 	}
 
 	if len(excludeRegexPattern) > 0 {
@@ -229,7 +222,7 @@ func main() {
 
 	// now have the fileList.  Need to check the destination directory.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
+	destDir := list.CheckDest()
 	if destDir == "" {
 		fmt.Print(" Destination directory ? ")
 		n, err := fmt.Scanln(&destDir)
