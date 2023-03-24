@@ -1,6 +1,7 @@
 package list
 
 import (
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -35,6 +36,7 @@ import (
    8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
   28 Feb 2023 -- The field name called RelPath is a misnomer, as it's an absolute path.  I added a field name to reflect what it really is.  I'll leave the misnomer, for now.
   18 Mar 2023 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
+  24 Mar 23 -- Added CheckDest after fixing issue in listutil_linux.go.  More details in listutil_linux.go
 */
 
 type DirAliasMapType map[string]string
@@ -438,4 +440,28 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 		color = ct.Green
 	}
 	return s1, color
+}
+
+// ------------------------------------------------ CheckDest ------------------------------------------------------
+
+func CheckDest() string {
+	if flag.NArg() == 1 {
+		return ""
+	}
+	d := flag.Arg(flag.NArg() - 1)
+	f, err := os.Open(d)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " ERROR from opening %s is %s\n", d, err)
+		return ""
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " ERROR from %s.Stat is %s\n", d, err)
+		return ""
+	}
+	if !fi.IsDir() {
+		fmt.Printf(" Last item on command line is %s which is not a directory.  Ignoring.\n", d)
+		return ""
+	}
+	return d
 }

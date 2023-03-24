@@ -71,9 +71,10 @@ import (
   17 Mar 23 -- Changed error from verify operation.
   19 Mar 23 -- Fiddled a bit w/ the number of go routines.
   21 Mar 23 -- Completed the usage message.
+  24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
 */
 
-const LastAltered = "21 Mar 2023" //
+const LastAltered = "24 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -126,31 +127,22 @@ func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s, exec binary timestamp is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
+		//autoDefaults = false
 	}
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-dir dest-dir \n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] src-files dest-dir \n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-		//	dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
-
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
 
 	var revFlag bool
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
-
-	//var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
-	//var NLines int
-	//flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
-	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
@@ -193,6 +185,7 @@ func main() {
 	list.VeryVerboseFlag = veryVerboseFlag
 	list.ReverseFlag = revFlag
 	list.FilterFlag = filterFlag
+	list.GlobFlag = true
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -200,15 +193,6 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
-		list.VerboseFlag = true
-	}
-
-	if filterFlag {
-		list.FilterFlag = true
-	}
-
-	if globFlag {
-		list.GlobFlag = true
 	}
 
 	if len(excludeRegexPattern) > 0 {
@@ -225,15 +209,6 @@ func main() {
 		excludeFlag = true
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
-
-	//cfChan = make(chan cfType, pooling)  moved to after the file selections are done.
-	//for i := 0; i < pooling; i++ {
-	//	go func() {
-	//		for c := range cfChan {
-	//			CopyAFile(c.srcFile, c.destDir)
-	//		}
-	//	}()
-	//}
 
 	if verifyFlag {
 		verifyChan = make(chan verifyType, pooling)
@@ -272,7 +247,6 @@ func main() {
 					}
 					msgChan <- msg
 				}
-				//fmt.Printf(" after msg sent to msgChan, and about to return")
 				// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.
 				// None of the message receiving go routines here have a return statement inside them.
 				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
@@ -317,7 +291,7 @@ func main() {
 
 	// now have the fileList.  Need to check the destination directory.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
+	destDir := list.CheckDest()
 	if destDir == "" {
 		fmt.Print(" Destination directory ? ")
 		n, err := fmt.Scanln(&destDir)
@@ -580,3 +554,29 @@ func min(n1, n2 int) int {
 	}
 	return n2
 }
+
+/*
+func checkDest() string {
+	if flag.NArg() == 1 {
+		return ""
+	}
+	d := flag.Arg(flag.NArg() - 1)
+	f, err := os.Open(d)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " ERROR from opening %s is %s\n", d, err)
+		return ""
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " ERROR from %s.Stat is %s\n", d, err)
+		return ""
+	}
+	if !fi.IsDir() {
+		fmt.Printf(" Last item on command line is %s which is not a directory.  Ignoring.\n", d)
+		return ""
+	}
+	return d
+}
+
+
+*/

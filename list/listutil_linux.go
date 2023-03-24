@@ -11,18 +11,19 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
-                   I decided to only copy files if the new one is newer than the old one.
-  22 Dec 2022 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
-                   And myReadDir creates the relPath field that I added to FileInfoExType.
-  22 Dec 2022 -- I'm writing and testing listutil_linux.go.  It's too late to test the code, so I'll do that tomorrow.
-  29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
-   6 Jan 2023 -- Improving error handling.  Routines now return an error.
-  14 Jan 2023 -- I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
-                   from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
-   1 Feb 2023 -- Fixing how command line arguments are opened when there are > 1 on the line, ie, a source dir and destination dir.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                 I decided to only copy files if the new one is newer than the old one.
+  22 Dec 22 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
+                 And myReadDir creates the relPath field that I added to FileInfoExType.
+  22 Dec 22 -- I'm writing and testing listutil_linux.go.  It's too late to test the code, so I'll do that tomorrow.
+  29 Dec 22 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
+   6 Jan 23 -- Improving error handling.  Routines now return an error.
+  14 Jan 23 -- I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
+                 from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
+   1 Feb 23 -- Fixing how command line arguments are opened when there are > 1 on the line, ie, a source dir and destination dir.
+  24 Mar 23 -- While in florida I figured out how to handle a glob pattern on the bash command line.  I have to use the length of os.Args or equivalent.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -52,7 +53,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
 		}
 
-	} else if flag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
+	} else if flag.NArg() == 1 || flag.NArg() == 2 { // First param should be a directory.  If there's a 2nd param, that would also have to be a directory, but that's not handled here.
 		const sep = string(filepath.Separator)
 		fileInfoX = make([]FileInfoExType, 0, 1)
 		loneFilename := flag.Arg(0)
@@ -99,19 +100,28 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			return fileInfoX, nil
 		}
 
-	} else { // must have source and destination directories on command line.  Will only process the first param and hope for the best.
+	} else { // bash must have populated sources on command line.  Will process all but the last, which would be a destination directory.
 		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
-		f := flag.Arg(0)
-		fHandle, err := os.Open(f)
-		if err != nil {
-			return nil, err
+		for i := 0; i < flag.NArg()-1; i++ { // don't process the last command line item, as that would be the destination directory.
+			fn := flag.Arg(i)
+			fHandle, err := os.Open(fn)
+			if err != nil {
+				return nil, err
+			}
+			stat, _ := fHandle.Stat()
+			if VerboseFlag {
+				fmt.Printf(" in command line loop: fn=%s, fHandle.Name=%s, IsDir=%t\n", fn, fHandle.Name(), stat.IsDir())
+			}
+			fHandle.Close()
+			fix := FileInfoExType{
+				FI:       stat,
+				Dir:      workingDir,
+				RelPath:  filepath.Join(workingDir, fn),
+				AbsPath:  filepath.Join(workingDir, fn),
+				FullPath: filepath.Join(workingDir, fn),
+			}
+			fileInfoX = append(fileInfoX, fix)
 		}
-		stat, _ := fHandle.Stat()
-		if VerboseFlag {
-			fmt.Printf(" in loop: fHandle.Name=%s, IsDir=%t\n", fHandle.Name(), stat.IsDir())
-		}
-		fHandle.Close()
-		fileInfoX, err = MyReadDir(f, nil)
 		return fileInfoX, nil
 	}
 	if VerboseFlag {
