@@ -73,9 +73,9 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s, timestamp on binary is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " %s Usage information: src-dir-or-glob dest-dir\n", os.Args[0])
-		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " %s Usage information: src-dir-or-glob dest-dir; only using IEEE32 algorithm.\n", os.Args[0])
+		//fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
+		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
