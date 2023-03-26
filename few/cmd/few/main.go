@@ -1,4 +1,4 @@
-package main // for feq1.go
+package main // for few.go
 
 import (
 	"flag"
