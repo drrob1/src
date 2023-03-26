@@ -46,9 +46,10 @@ import (
   28 Feb 23 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
    1 Mar 23 -- Now called fewc, based on fewlist, based on copylist.  I'm going to use a worker go routine pattern here.  And I'll use Bill Kennedy's more recent examples as reference.
    2 Mar 23 -- Abbreviated the output, as I did for the copy routines.
+  26 Mar 23 -- Completed the usage info.  And added list.CheckDest.
 */
 
-const LastAltered = "2 Mar 2023" //
+const LastAltered = "26 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -80,7 +81,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s, timestamp on binary is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Concurrent few list Usage information: src-dir-or-glob dest-dir \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
@@ -89,12 +90,6 @@ func main() {
 
 	var revFlag bool
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
-
-	//var nscreens = flag.Int("n", 1, "number of screens to display, ie, a multiplier") // Ptr
-	//var NLines int
-	//flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
-	//var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
-	//var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
@@ -173,9 +168,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// now have the fileList.  Need to check the destination directory.
+	// now have the initial fileList.  Need to check the destination directory.
 
-	destDir := flag.Arg(1) // this means the 2nd param on the command line, if present.
+	destDir := list.CheckDest()
 	if destDir == "" {
 		fmt.Print(" Destination directory ? ")
 		_, err = fmt.Scanln(&destDir)

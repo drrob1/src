@@ -58,9 +58,10 @@ import (
   30 Jan 23 -- Added a default case, saying invalid hash designator.
    2 Feb 23 -- Rewrote to use the new procedures in few.go, that take a filename.
   13 Feb 23 -- Adding synonyms for some of the hash designators, and improved the help message.
+  26 Mar 23 -- Clarified the usage message.
 */
 
-const LastCompiled = "13 Feb 2023"
+const LastCompiled = "26 Mar 2023"
 
 //* ************************* MAIN ***************************************************************
 func main() {
@@ -76,7 +77,7 @@ func main() {
 	// flag help message
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " few, file equal tester, last modified %s, compiled with %s.\n", LastCompiled, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Filenames to compare are given on the command line, followed by the tests to run.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Single pair of filenames to compare are given on the command line, followed by the tests to run.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " few file1 file2 [32 64 1 2 3 5 bbb], where 32 is default.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s.  Working directory is %s.  Full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)

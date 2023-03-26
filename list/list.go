@@ -18,24 +18,24 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
-                   I decided to only copy files if the new one is newer than the old one.
-  22 Dec 2022 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
-                   And myReadDir creates the relPath field that I added to FileInfoExType.
-  25 Dec 2022 -- Moved FileSection here.
-  26 Dec 2022 -- Changed test against the regexp to be nil instead of "".
-  29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
-  30 Dec 2022 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
-                   Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
-   1 Jan 2023 -- I changed the display colors for the list.  The line is not all the same color now.
-   4 Jan 2023 -- Adding screen clearing between screen displays.  Copied from rpng.
-   6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
-  15 Jan 2023 -- Split off list2, which will have the code that takes an input regexp, etc, for copying.go.
-   8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
-  28 Feb 2023 -- The field name called RelPath is a misnomer, as it's an absolute path.  I added a field name to reflect what it really is.  I'll leave the misnomer, for now.
-  18 Mar 2023 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                 I decided to only copy files if the new one is newer than the old one.
+  22 Dec 22 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
+                 And myReadDir creates the relPath field that I added to FileInfoExType.
+  25 Dec 22 -- Moved FileSection here.
+  26 Dec 22 -- Changed test against the regexp to be nil instead of "".
+  29 Dec 22 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
+  30 Dec 22 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
+                 Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
+   1 Jan 23 -- I changed the display colors for the list.  The line is not all the same color now.
+   4 Jan 23 -- Adding screen clearing between screen displays.  Copied from rpng.
+   6 Jan 23 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
+  15 Jan 23 -- Split off list2, which will have the code that takes an input regexp, etc, for copying.go.
+   8 Feb 23 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
+  28 Feb 23 -- The field name called RelPath is a misnomer, as it's an absolute path.  I added a field name to reflect what it really is.  I'll leave the misnomer, for now.
+  18 Mar 23 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
   24 Mar 23 -- Added CheckDest after fixing issue in listutil_linux.go.  More details in listutil_linux.go
 */
 
