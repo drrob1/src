@@ -72,8 +72,7 @@ func main() {
 			return
 		}
 		fmt.Println("\n", responseObject.Joke)
-
 	}
 	elapsed := time.Since(start)
-	fmt.Printf("Processes took %s", elapsed)
+	fmt.Printf("Processes took %s\n\n", elapsed)
 }

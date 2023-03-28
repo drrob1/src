@@ -65,9 +65,10 @@ import (
   22 Feb 23 -- timeFudgeFactor dropped to 10 ms, down from 100 ms.
   23 Feb 23 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag.
   21 Mar 23 -- Completed the usage message.
+  28 Mar 23 -- Added message of files to be copied.
 */
 
-const LastAltered = "21 Mar 2023" //
+const LastAltered = "28 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -266,6 +267,9 @@ func main() {
 	if len(fileList) == 0 {
 		fmt.Printf(" Length of the fileList after calling FileSelection is zero.  Aborting.\n")
 		os.Exit(1)
+	}
+	if len(fileList) > 10 {
+		fmt.Printf(" There are %d files to be copied to each of %d directories.", len(fileList), len(targetDirs))
 	}
 	fmt.Printf("\n\n")
 

@@ -274,7 +274,14 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
-	fmt.Printf(" There are %d files to copy.\n\n", len(fileList))
+	if len(fileList) == 0 {
+		fmt.Printf(" FileList is empty.  Exiting.\n\n")
+	}
+	if len(fileList) > 10 {
+		fmt.Printf(" There are %d files to copy.", len(fileList))
+
+	}
+	fmt.Printf("\n\n")
 
 	// time to copy the files
 
@@ -351,10 +358,7 @@ func copyAFile(srcFile, destDir string) bool {
 		ctfmt.Printf(ct.Magenta, onWin, "%s\n", err)
 		return false
 	}
-	//if srcSize != n {
-	//	ctfmt.Printf(ct.Red, onWin, "Sizes are different.  Src size=%d, dest size=%d\n", srcSize, n)
-	//	return false
-	//}
+
 	err = in.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)

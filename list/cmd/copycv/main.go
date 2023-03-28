@@ -352,7 +352,14 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
-	fmt.Printf(" There are %d files to be copied.\n\n", len(fileList))
+	if len(fileList) == 0 {
+		fmt.Printf(" FileList is empty.  Exiting.\n")
+		os.Exit(1)
+	}
+	if len(fileList) > 10 {
+		fmt.Printf(" There are %d files to be copied.", len(fileList))
+	}
+	fmt.Printf("\n\n")
 
 	num := min(pooling, len(fileList))
 	cfChan = make(chan cfType, num)
