@@ -74,9 +74,10 @@ import (
   17 Mar 23 -- Changed error from verify operation
   19 Mar 23 -- Will adjust pooling if verifyFlag is off.
   21 Mar 23 -- Completed the usage message.
+  28 Mar 23 -- Added message saying how many files will be copied.
 */
 
-const LastAltered = "21 Mar 2023" //
+const LastAltered = "28 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -310,7 +311,7 @@ func main() {
 		fmt.Printf(" Length of the fileList after calling FileSelection is zero.  Aborting.\n")
 		os.Exit(1)
 	}
-	fmt.Printf("\n\n")
+	fmt.Printf(" There are %d files to be copied to each of %d directories.\n\n", len(fileList), len(targetDirs))
 
 	// time to set up the channels for the concurrent parts.  I'm going to base this on copyC1 as I got that working the other day.
 

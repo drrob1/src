@@ -72,9 +72,10 @@ import (
   19 Mar 23 -- Fiddled a bit w/ the number of go routines.
   21 Mar 23 -- Completed the usage message.
   24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
+  28 Mar 23 -- Added message about how many files to be copied.
 */
 
-const LastAltered = "24 Mar 2023" //
+const LastAltered = "28 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -289,7 +290,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// now have the fileList.  Need to check the destination directory.
+	// Now have the initial fileList.  Need to check the destination directory.
 
 	destDir := list.CheckDest()
 	if destDir == "" {
@@ -343,7 +344,7 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
-	fmt.Printf("\n\n")
+	fmt.Printf(" There are %d files to copy.\n\n", len(fileList))
 
 	num := min(pooling, len(fileList))
 	cfChan = make(chan cfType, num)

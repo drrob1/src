@@ -63,9 +63,10 @@ import (
   17 Mar 23 -- Changed error message when verify returns an error.
   21 Mar 23 -- Completed the usage message, which was never completed.
   24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
+  28 Mar 23 -- Added message saying how many files to be copied.
 */
 
-const LastAltered = "24 Mar 2023" //
+const LastAltered = "28 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -274,7 +275,7 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" There are %d files in the file list.\n", len(fileList))
 	}
-	fmt.Printf("\n\n")
+	fmt.Printf(" There are %d files to be copied.\n\n", len(fileList))
 
 	// Time to start the go routines.
 
