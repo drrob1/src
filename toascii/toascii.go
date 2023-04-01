@@ -1,6 +1,8 @@
 //   (C) 1990-2017.  Robert W Solomon.  All rights reserved.
 // toascii.go, based on utf8toascii, based on nocr.go
 //   Note that this routine will preserve the line endings.  utf8toascii can change them.
+//  3 Oct 21 -- Previous time I was in the code.
+//  1 Apr 23 -- StaticCheck found some issues.
 
 package main
 
@@ -18,7 +20,7 @@ import (
 	//
 )
 
-const lastAltered = "3 Oct 2021"
+const lastAltered = "1 Apr 2023"
 
 const openQuoteRune = 8220
 const closeQuoteRune = 8221
@@ -209,7 +211,6 @@ func main() {
 		fmt.Println(" Elapsed time is", elapsedTime)
 	}
 
-
 	// Make the processed file the same name as the input file.  IE, swap in and
 	// out files, unless the norename flag was used on the command line.
 
@@ -226,9 +227,11 @@ func main() {
 	}
 
 	FI, err := os.Stat(inputfilename)
+	check(err)
 	InputFileSize := FI.Size()
 
 	FI, err = os.Stat(outputfilename)
+	check(err)
 	OutputFileSize := FI.Size()
 
 	fmt.Println(" UTF_8 File is ", inputfilename, " and size is ", InputFileSize)

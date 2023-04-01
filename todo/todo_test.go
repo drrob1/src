@@ -211,8 +211,8 @@ func TestString(t *testing.T) {
 		t.Errorf("Error from TestString.  Expecting %q, got %q\n", expected, l.String())
 	}
 
-	if fmt.Sprintf("%s", l) != expected {
-		t.Errorf("Error from TestString.  Expecting %q, got %q\n", expected, fmt.Sprintf("%s", l))
+	if l.String() != expected {
+		t.Errorf("Error from TestString.  Expecting %q, got %q\n", expected, l.String())
 	}
 }
 

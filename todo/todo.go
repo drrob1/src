@@ -19,6 +19,7 @@ REVISION HISTORY
                Then added the String() method using value receiver as fmt package requires that to work.
  8 Feb 22 -- Will show the created at field in the Stringer method.
 26 Feb 22 -- Added GetString to be able to list separately the completed vs the not completed tasks.
+ 1 Apr 23 -- StaticCheck found a few issues.
 */
 
 type item struct {
@@ -43,7 +44,7 @@ func (l *ListType) Add(task string) { // note that this is a pointer receiver
 func (l *ListType) Complete(i int) error { // Will use 1 origin reference so i = 1 is first item
 	ls := *l
 	if i <= 0 || i > len(ls) {
-		return fmt.Errorf("Item %d does not exist", i)
+		return fmt.Errorf("item %d does not exist", i)
 	}
 
 	ls[i-1].Done = true // remember i is a 1 origin list that has to be converted to a zero origin slice index
@@ -55,7 +56,7 @@ func (l *ListType) Complete(i int) error { // Will use 1 origin reference so i =
 func (l *ListType) Delete(i int) error {
 	ls := *l
 	if i <= 0 || i > len(ls) {
-		return fmt.Errorf("Item %d does not exist to be deleted.", i)
+		return fmt.Errorf("item %d does not exist to be deleted", i)
 	}
 
 	*l = append(ls[:i-1], ls[i:]...) // have to convert from 1 origin index.  And remember that item[i-1] is not part of this slice reference

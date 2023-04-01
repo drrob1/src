@@ -35,6 +35,7 @@ package main
    7 Feb 23 -- Combined output messages and removed dead code commented out earlier.  And Go 1.20 does not need or really want me to call Seed().  I removed that for Go 1.20+.
                  And I removed an errant call to rand.Seed() just before the shuffling loop in getShuffledFileNames.
   10 Feb 23 -- Enhanced testing of the code that detects the version of Go.
+   1 Apr 23 -- StaticCheck found some issues.
 */
 
 import (
@@ -57,7 +58,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "10 Feb 2023"
+const LastCompiled = "1 Mar 2023"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -186,8 +187,7 @@ MainForLoop:
 			case CLOSEANGLE:
 				XMLtoken.State = OTHERERROR
 				f.UnreadByte()
-				//e := fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
-				e := errors.New(" In peekXMLtoken and got an unexpected close angle.")
+				e := errors.New(" in peekXMLtoken and got an unexpected close angle")
 				return XMLtoken, e
 			} // case ch.state when the token state is empty
 		case CONTENTS: // this case was STRING in the original Modula-2 code
@@ -390,7 +390,7 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 			fmt.Printf("getFileNames looking for opening tracklist XMLtoken: %#v\n", XMLtoken)
 		}
 		if err != nil {
-			e := fmt.Errorf(" ProcessXMLfile and %s when trying to get <trackList>.  Ending.", err)
+			e := fmt.Errorf(" ProcessXMLfile and %s when trying to get <trackList>.  Ending", err)
 			return nil, e
 		}
 
@@ -429,7 +429,7 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 				fmt.Printf("In getFileNames and got EOF\n")
 				break
 			}
-			e := fmt.Errorf(" Trying to get another track tag and got %s.  Ending.", err)
+			e := fmt.Errorf(" Trying to get another track tag and got %s.  Ending", err)
 			return nil, e
 		}
 

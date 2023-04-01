@@ -29,7 +29,7 @@ import (
   1 Aug 20 -- Cleaning up some code.  I'm looking at this again because of adding gohum to solve.go --> gonumsolve.go
  13 Feb 22 -- Updated to modules
  21 Nov 22 -- static linter reported issues, so some of them are addressed, and others are ignored.
- 31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics.  I'll take it out.
+ 31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics when I needed pointer semantics on the return var.  I took it out as it wasn't idiomatic anyway.
 */
 
 const small = 1.0e-10
@@ -40,11 +40,9 @@ type Permutation []int
 
 type LongComplexSlice []complex128 //
 
-//func init() {
-//	rand.Seed(time.Now().UnixNano())
-//}
+//func init() { rand.Seed(time.Now().UnixNano())  Now that I'm using Go 1.20 by default, this code is wrong. }
 
-//   CREATING MATRICES
+//   Creating matrices
 
 func NewMatrix(R, C int) Matrix2D { // I think row, column makes more sense than N x M
 	// Creates an NxM matrix as a slice of slices.  So it's a pointer that gets passed around.
@@ -451,7 +449,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				pivot = temp
 				prow = j
 			} // END IF temp > pivot
-		}                            // END FOR j from i to N-1
+		} // END FOR j from i to N-1
 		if math.Abs(pivot) < small { // Coefficient matrix is singular.  Aborting,
 			return nil
 		} // END IF pivot < small
@@ -609,7 +607,7 @@ func Balance(A Matrix2D) Matrix2D {
 
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[row][j] *= g
-					}                  //END FOR j range A
+					} //END FOR j range A
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[j][row] *= f
 					} // END FOR j range A

@@ -32,6 +32,7 @@ package main // shufv.go
   10 Mar 23 -- Now called shufv, short for shufflevlc, based on vlcshuffle and xspf code.
   12 Mar 23 -- Came home from Phoenix last night.  Found that waiting for me to close this instance of vlc to delete the temp xspf file will tie up the terminal.
                  I'll change it so that I can delete them afterwards.  The pattern is vlc and a 10-digit number which I can delete myself.
+   1 Apr 23 -- StaticCheck found a few issues.
 */
 
 import (
@@ -56,10 +57,11 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "Mar 13 2023"
+const LastCompiled = "Apr 1 2023"
 const MaxNumOfTracks = 2048
-const blankline = "                                                                             " // ~70 spaces
-const sepline = "-----------------------------------------------------------------------------"
+
+// const blankline = "                                                                             " // ~70 spaces
+// const sepline = "-----------------------------------------------------------------------------"
 
 const (
 	EMPTY    = iota
@@ -181,8 +183,7 @@ MainForLoop:
 			case CLOSEANGLE:
 				XMLtoken.State = OTHERERROR
 				f.UnreadByte()
-				//e := fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
-				e := errors.New(" In peekXMLtoken and got an unexpected close angle.")
+				e := errors.New(" In peekXMLtoken and got an unexpected close angle")
 				return XMLtoken, e
 			} // case ch.state when the token state is empty
 		case CONTENTS: // this case was STRING in the original Modula-2 code
@@ -270,7 +271,7 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 		} else if (XMLToken.State == OPENINGHTML) && strings.EqualFold(XMLToken.Str, "title") {
 			XMLToken, err = GetXMLToken(f)
 			if err != nil {
-				e := fmt.Errorf(" Trying to get title XML tag and got ERROR of %s.", err)
+				e := fmt.Errorf(" Trying to get title XML tag and got ERROR of %s", err)
 				return nil, e
 			}
 			if XMLToken.State != CONTENTS {
@@ -283,7 +284,7 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 		} else if (XMLToken.State == OPENINGHTML) && strings.EqualFold(XMLToken.Str, "creator") {
 			XMLToken, err = GetXMLToken(f)
 			if err != nil {
-				e := fmt.Errorf(" Trying to get creator XML tag and got unexpected ERR of %s.", err)
+				e := fmt.Errorf(" Trying to get creator XML tag and got unexpected ERR of %s", err)
 				return nil, e
 			}
 			if XMLToken.State != CONTENTS {
@@ -436,7 +437,7 @@ func PutTrack(f *bufio.Writer, trk *TrackType, TrackNum int) {
 	f.WriteString("</track>")
 	_, err = f.WriteString(lineDelim)
 	check(err, " Last write of lineDelim in PutTrack, and got ")
-	return
+	// return  This was flagged as redundant by StaticCheck.
 } // PutTrack
 
 // ---------------------------------------------- ProcessXMLfile    ------------------------------------------
@@ -555,6 +556,7 @@ func ProcessXMLfile(inputfile *bytes.Reader, outputfile *bufio.Writer) {
 		}
 		check(err, " Reading final lines of the inputfile and got this error: ")
 		_, err = outputfile.WriteString(line)
+		check(err, " Writing final line of the output file and got this error: ")
 	} // final read and write loop
 
 } // ProcessXMLfile
@@ -562,7 +564,7 @@ func ProcessXMLfile(inputfile *bytes.Reader, outputfile *bufio.Writer) {
 // -------------------------------------------- check ---------------------------------------------
 func check(e error, msg string) {
 	if e != nil {
-		fmt.Errorf("%s : ", msg)
+		fmt.Printf("%s : ", msg)
 		panic(e)
 	}
 }

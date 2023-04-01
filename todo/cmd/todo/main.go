@@ -28,9 +28,10 @@ REVISION HISTORY
 26 Feb 22 -- I want the list operation to show all completed tasks first, then show all uncompleted tasks.  This does not require changing the stringer method
                which only returns the string for one task.  And added an about option.
  9 Jul 22 -- Help message now includes a call to runtime.Version().
+ 1 Apr 23 -- StaticCheck found a few issues.
 */
 
-const lastModified = "9 July 2022"
+const lastModified = "1 Apr 2023"
 
 var todoFilename = "todo.json" // now a var instead of a const so can use environment variable if set.
 var todoFileBin = "todo.gob"   // now a var instead of a const so can use environment variable if set.
@@ -40,7 +41,7 @@ var fullFilenameJson, fullFilenameBin string
 
 var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
 
-//                                                                                  var task = flag.String("task", "", "Task to be added to the ToDo list.")
+// var task = flag.String("task", "", "Task to be added to the ToDo list.")
 var add = flag.Bool("add", false, "Add task to the ToDo list.")
 var complete = flag.Int("complete", 0, "Item to be completed.") // here, 0 means NTD.  That's why we have to start at 1 for item numbers.
 var listFlag = flag.Bool("list", false, "List all tasks to the display.")
@@ -101,7 +102,7 @@ func main() {
 	}
 	_, err = os.Stat(fullFilenameBin)
 	if err != nil {
-		//fmt.Fprintf(os.Stderr, " %s got error from os.Stat of %v.\n", fullFilenameBin, err)
+		fmt.Fprintf(os.Stderr, " %s got error from os.Stat of %v.\n", fullFilenameBin, err)
 	}
 
 	l := todo.ListType{}
@@ -240,7 +241,7 @@ func getTask(r io.Reader, args ...string) (string, error) { // decides where to 
 	}
 
 	if len(scnr.Text()) == 0 {
-		return "", fmt.Errorf("Task to add cannot be blank.")
+		return "", fmt.Errorf("task to add cannot be blank")
 	}
 
 	return scnr.Text(), nil
