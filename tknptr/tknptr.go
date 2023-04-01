@@ -67,6 +67,7 @@ REVISION HISTORY
  6 Jun 21 -- Writing GetTokenSlice, meaning return a slice of all tokens on the line, using GetToken to fetch them.
                And added a check against an empty string being passed into the init functions.
 12 Jun 21 -- Writing TokenRealSlice, and renamed GetTokenSlice to TokenSlice, which is more idiomatic for Go.
+ 1 Apr 23 -- Added New function to not return a nil pointer if the entered string is empty.  So far, it seems to be working (tested by gonumsolve).
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
@@ -230,6 +231,22 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
 	return bs
 } // NewToken, copied from INITKN
+
+// ----------------------------------------- New ----------------------------------------
+
+func New(Str string) *BufferState { // constructor, initializer
+	// INITIALIZE TOKEN, using the Go idiom.
+
+	//if Str == "" {
+	//	return nil
+	//}
+	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
+	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
+	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
+	bs.lineByteSlice = []byte(Str)
+	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
+	return bs
+} // New, copied from NewToken
 
 //------------------------------ STOTKNPOSN -----------------------------------
 

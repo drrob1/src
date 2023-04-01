@@ -104,10 +104,11 @@ CountLinesLoop:
 			//}
 
 			// tokenize.INITKN(inputline)
-			tknP := tknptr.NewToken(inputLine)
-			if tknP == nil { // a blank line would return a nil ptr here.
-				continue
-			}
+			//tknP := tknptr.NewToken(inputLine)
+			tknP := tknptr.New(inputLine)
+			//if tknP == nil { // a blank line would return a nil ptr here.
+			//	continue
+			//}
 			col := 0
 			for { // read numbers into IM input matrix.
 				//                                                    token, EOL := tokenize.GETTKNREAL()
