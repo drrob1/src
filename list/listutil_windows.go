@@ -39,9 +39,9 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		if strings.ContainsRune(pattern, ':') {
 			directoryAliasesMap = GetDirectoryAliases()
 			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
-		} else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows.
-			pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
 		}
+
+		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern

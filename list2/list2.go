@@ -17,24 +17,25 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
-                   I decided to only copy files if the new one is newer than the old one.
-  22 Dec 2022 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
-                   And myReadDir creates the relPath field that I added to FileInfoExType.
-  25 Dec 2022 -- Moved FileSection here.
-  26 Dec 2022 -- Changed test against the regexp to be nil instead of "".
-  29 Dec 2022 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
-  30 Dec 2022 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
-                   Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
-   1 Jan 2023 -- I changed the display colors for the list.  The line is not all the same color now.
-   4 Jan 2023 -- Adding screen clearing between screen displays.  Copied from rpng.
-   6 Jan 2023 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
-  15 Jan 2023 -- Now called list2 which will use globals and will use InputRex, so I don't need platform specific code.  All command line params will be output directories,
-                   including symlinks.
-  18 Jan 2023 -- Adding SmartCaseFlag
-   8 Feb 2023 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
+                 I decided to only copy files if the new one is newer than the old one.
+  22 Dec 22 -- Now I want to colorize the output, so I have to return the os.FileInfo also.  So I changed MakeList and NewList to not return []string, but return []FileInfoExType.
+                 And myReadDir creates the relPath field that I added to FileInfoExType.
+  25 Dec 22 -- Moved FileSection here.
+  26 Dec 22 -- Changed test against the regexp to be nil instead of "".
+  29 Dec 22 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
+  30 Dec 22 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
+                 Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
+   1 Jan 23 -- I changed the display colors for the list.  The line is not all the same color now.
+   4 Jan 23 -- Adding screen clearing between screen displays.  Copied from rpng.
+   6 Jan 23 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
+  15 Jan 23 -- Now called list2 which will use globals and will use InputRex, so I don't need platform specific code.  All command line params will be output directories,
+                 including symlinks.
+  18 Jan 23 -- Adding SmartCaseFlag
+   8 Feb 23 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
+  31 Mar 23 -- StaticCheck found a minor issue, about byte values can't be < 0.
 */
 
 type DirAliasMapType map[string]string
@@ -288,7 +289,7 @@ func ExpandADash(in string) (string, error) {
 	c := endChar - 'a'
 	begPart := in[:idx-1]
 	endPart := in[idx+2:]
-	if c < 0 || c > 26 {
+	if c > 26 { // a byte value can't be < 0.
 		return in, fmt.Errorf("invalid index found, idx=%d, endChar=%c", idx, endChar)
 	}
 	var sb strings.Builder

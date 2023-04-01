@@ -69,9 +69,10 @@ import (
   21 Mar 23 -- Completed the usage message.
   24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
   28 Mar 23 -- Added message saying how many files are to be copied.
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
-const LastAltered = "28 Mar 2023" //
+const LastAltered = "31 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -314,13 +315,11 @@ func copyAFile(srcFile, destDir string) bool {
 	defer wg.Done()
 
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
-	//srcStat, _ := in.Stat()
-	//srcSize := srcStat.Size()
+	defer in.Close()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -342,13 +341,16 @@ func copyAFile(srcFile, destDir string) bool {
 			return false
 		}
 	}
+
 	out, err := os.Create(outName)
-	defer out.Close()
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false
 	}
+	defer out.Close()
+
 	_, err = io.Copy(out, in)
+
 	if err != nil {
 		ctfmt.Printf(ct.Red, onWin, "%s\n", err)
 		return false

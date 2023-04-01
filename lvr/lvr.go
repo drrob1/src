@@ -40,11 +40,12 @@ REVISION HISTORY
                Instead of shuffling the entire list and taking the first n of them, I could also use a random number generator to pluck out just those into a slice that I build
                up w/ appends.  I'll think about this.  I may try the first option to see how long that takes, before trying the 2nd option.  For the first option I can just
                use an empty regexp, I think.  Turns out that launchv can sort the entire directory in ~ 1/2 sec.  So I'll code this using the 2nd option.
+31 Mar 23 -- StaticCheck found an issue.
 */
 
-const lastModified = "Oct 23, 2022"
+const lastModified = "Mar 31, 2023"
 
-var includeRegex, excludeRegex *regexp.Regexp
+var includeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
@@ -125,7 +126,7 @@ func main() {
 	fileNames, er := getItAll(workingDir)
 	fullList := len(fileNames)
 	if er != nil {
-		fmt.Fprintf(os.Stderr, " Error from getItAll is %v.\n")
+		fmt.Fprintf(os.Stderr, " Error from getItAll is %v.\n", er)
 		if len(fileNames) == 0 {
 			os.Exit(1)
 		}

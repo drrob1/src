@@ -73,9 +73,10 @@ import (
                  I don't know why the code didn't panic w/ array index out of bounds; it merely didn't work.  It would be hard to pull out the non-working code now.
   7 Oct 22 -- Updated output message
  21 Nov 22 -- static linter found a minor issue, now fixed.
+ 31 Mar 23 -- StaticCheck found an issue where I forgot to do timeSort = append(timeSort, ts)
 */
 
-const LastAlteredDate = "Nov 21, 2022"
+const LastAlteredDate = "Mar 31, 2022"
 const tooBig = 170_000
 
 var intStack []int // for non-recursive quick sorts
@@ -481,7 +482,7 @@ func GoHeapSort(items []string) []string { // High Performance Go, by Bob Streca
 }
 */
 
-//------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 func qsort(a []string, L, R int) []string {
 	i := L
 	j := R
@@ -725,7 +726,7 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 } // 	END NonRecursiveQuickSortOberon
 
 // -----------------------------------------------------------
-//mergesort.go
+// mergesort.go
 func mergeSort(L []string) []string {
 	if len(L) < 2 {
 		return L
@@ -1296,6 +1297,7 @@ func main() {
 		fmt.Println()
 	}
 	ts = timesortType{s, NativeSortTime}
+	timeSort = append(timeSort, ts)
 
 	// sort.Strings
 	t10 := time.Now()
@@ -1407,6 +1409,7 @@ func main() {
 	s = fmt.Sprintf(" requestedwordcount= %d, numberofwords= %d, len(mastersliceofwords)= %d \n",
 		requestedwordcount, numberofwords, len(mastersliceofwords))
 	_, err = OutBufioWriter.WriteString(s)
+	check(err)
 	if len(mastersliceofwords) > 1000 {
 		fmt.Println(s)
 		//		fmt.Println(" Number of words to be sorted is", len(mastersliceofwords))
@@ -1419,7 +1422,7 @@ func main() {
 	OutputFile.Close()
 } // end main
 
-//===========================================================
+// ===========================================================
 func check(e error) {
 	if e != nil {
 		panic(e)

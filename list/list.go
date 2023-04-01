@@ -37,6 +37,7 @@ import (
   28 Feb 23 -- The field name called RelPath is a misnomer, as it's an absolute path.  I added a field name to reflect what it really is.  I'll leave the misnomer, for now.
   18 Mar 23 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
   24 Mar 23 -- Added CheckDest after fixing issue in listutil_linux.go.  More details in listutil_linux.go
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
 type DirAliasMapType map[string]string
@@ -300,7 +301,7 @@ func ExpandADash(in string) (string, error) {
 	c := endChar - 'a'
 	begPart := in[:idx-1]
 	endPart := in[idx+2:]
-	if c < 0 || c > 26 {
+	if c > 26 { // byte value can't be < 0
 		return in, fmt.Errorf("invalid index found, idx=%d, endChar=%c", idx, endChar)
 	}
 	var sb strings.Builder

@@ -75,9 +75,10 @@ import (
   19 Mar 23 -- Will adjust pooling if verifyFlag is off.
   21 Mar 23 -- Completed the usage message.
   28 Mar 23 -- Added message saying how many files will be copied.
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
-const LastAltered = "28 Mar 2023" //
+const LastAltered = "31 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -424,7 +425,6 @@ func CopyAFile(srcFile, destDir string) {
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
 
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -435,6 +435,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+	defer in.Close()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -476,7 +477,6 @@ func CopyAFile(srcFile, destDir string) {
 		}
 	}
 	out, err := os.Create(outName)
-	defer out.Close()
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -487,6 +487,8 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+	defer out.Close()
+
 	_, err = io.Copy(out, in)
 	if err != nil {
 		msg := msgType{
@@ -498,6 +500,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
 	err = out.Sync()
 	if err != nil {
 		msg := msgType{
@@ -583,10 +586,10 @@ func validateTarget(dir string) (string, error) {
 	}
 
 	fHandle, err := os.Open(outDir)
-	defer fHandle.Close()
 	if err != nil {
 		return "", err
 	}
+	defer fHandle.Close()
 	fi, er := fHandle.Stat()
 	if er != nil {
 		return "", er

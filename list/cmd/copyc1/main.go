@@ -73,10 +73,10 @@ import (
   21 Mar 23 -- Completed the usage message.
   24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
   28 Mar 23 -- Added message about how many files to be copied.
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
-const LastAltered = "28 Mar 2023" //
-
+const LastAltered = "31 Mar 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
@@ -100,8 +100,6 @@ type verifyType struct {
 }
 
 var autoWidth, autoHeight int
-var err error
-
 var onWin = runtime.GOOS == "windows"
 var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
 var cfChan chan cfType
@@ -397,7 +395,6 @@ func CopyAFile(srcFile, destDir string) {
 	}
 
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -408,6 +405,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+	defer in.Close()
 
 	destD, err := os.Open(destDir)
 	if err != nil {
@@ -449,7 +447,7 @@ func CopyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.  I'm ignoring err != nil because that means that file's not already there.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" Skipping %s as it's same or older than destination %s.", baseFile, destDir)
+			ErrNotNew = fmt.Errorf(" Skipping %s as it's same or older than destination %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,

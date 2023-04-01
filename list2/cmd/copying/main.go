@@ -66,9 +66,10 @@ import (
   23 Feb 23 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag.
   21 Mar 23 -- Completed the usage message.
   28 Mar 23 -- Added message of files to be copied.
+  31 Mar 23 -- StaticCheck found a few issued.
 */
 
-const LastAltered = "28 Mar 2023" //
+const LastAltered = "31 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -98,7 +99,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] dest-dir ...\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] dest-dir ...\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Needs i flag for input.  Command line params will all be output params.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
@@ -310,13 +311,14 @@ func CopyAFile(srcFile, destDir string) error {
 
 	onWin := runtime.GOOS == "windows"
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
-		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		return err
 	}
+	defer in.Close()
 	srcFI, err := in.Stat()
-	//srcSize := srcFI.Size()
+	if err != nil {
+		return err
+	}
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -417,10 +419,10 @@ func validateTarget(dir string) (string, error) {
 	}
 
 	fHandle, err := os.Open(outDir)
-	defer fHandle.Close()
 	if err != nil {
 		return "", err
 	}
+	defer fHandle.Close()
 	fi, er := fHandle.Stat()
 	if er != nil {
 		return "", er

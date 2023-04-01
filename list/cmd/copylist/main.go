@@ -23,28 +23,29 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 2022 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
-                   This is going to take a while.
-  20 Dec 2022 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.  And how am I going to handle collisions?
-  22 Dec 2022 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                   So I'm propagating that change thru.
-  25 Dec 2022 -- Moving the file selection stuff to list.go.
-  26 Dec 2022 -- Shortened the messages.  And added a timer.
-  29 Dec 2022 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
-   1 Jan 2023 -- Now uses list.New instead of list.NewList
-   5 Jan 2023 -- Adding stats to the output.
-   6 Jan 2023 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
-                   Added a stop code of zero.
-   7 Jan 2023 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag.
-  22 Jan 2023 -- Added Sync call.
-  23 Jan 2023 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
-  25 Jan 2023 -- Adding verify.
-  28 Jan 2023 -- Adding verify success message.
-  30 Jan 2023 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
-  31 Jan 2023 -- timeFudgeFactor is now a Duration.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+                 This is going to take a while.
+  20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.  And how am I going to handle collisions?
+  22 Dec 22 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
+                 So I'm propagating that change thru.
+  25 Dec 22 -- Moving the file selection stuff to list.go.
+  26 Dec 22 -- Shortened the messages.  And added a timer.
+  29 Dec 22 -- Added check for an empty filelist.  And list package code was enhanced to include a sentinel of '.'
+   1 Jan 23 -- Now uses list.New instead of list.NewList
+   5 Jan 23 -- Adding stats to the output.
+   6 Jan 23 -- Now that it clears the screen each time thru the selection loop, I'll print the version message at the end also.
+                 Added a stop code of zero.
+   7 Jan 23 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag.
+  22 Jan 23 -- Added Sync call.
+  23 Jan 23 -- Added changing destination file(s) timestamp to match the respective source file(s).  And fixed date comparison for replacement copies.
+  25 Jan 23 -- Adding verify.
+  28 Jan 23 -- Adding verify success message.
+  30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
+  31 Jan 23 -- timeFudgeFactor is now a Duration.
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
-const LastAltered = "31 Jan 2023" //
+const LastAltered = "31 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -256,11 +257,11 @@ func CopyAFile(srcFile, destDir string) error {
 
 	onWin := runtime.GOOS == "windows"
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
 		return err
 	}
+	defer in.Close()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -281,12 +282,14 @@ func CopyAFile(srcFile, destDir string) error {
 		}
 	}
 	out, err := os.Create(outName)
-	defer out.Close()
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err
 	}
+	defer out.Close()
+
 	_, err = io.Copy(out, in)
+
 	if err != nil {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
 		return err

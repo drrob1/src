@@ -8,9 +8,6 @@ import (
 	"src/few"
 	"time"
 
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -42,19 +39,14 @@ import (
   30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
   31 Jan 23 -- timeFudgeFactor is now a Duration.
   28 Feb 23 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
-  26 Mar 23 --
+  26 Mar 23 -- Completed the usage info.  And added list.CheckDest.
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
-const LastAltered = "26 Mar 2023" //
+const LastAltered = "31 Mar 2023" //
 
-const defaultHeight = 40
-const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 100 * time.Millisecond
 
-// const minHeight = 26  not used here, but used in FileSelection.
-
-var autoWidth, autoHeight int
 var err error
 var verifyFlag bool
 
@@ -64,12 +56,6 @@ func main() {
 	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 
 	fmt.Printf("%s is compiled w/ %s, last altered %s, timestamp on binary is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
-	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
-	if err != nil {
-		//autoDefaults = false
-		autoHeight = defaultHeight
-		autoWidth = minWidth
-	}
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s, timestamp on binary is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)

@@ -1,19 +1,26 @@
 package mat
 
+import (
+	"fmt"
+	"math"
+	"math/cmplx"
+	"math/rand"
+	"src/vec"
+	"strconv"
+)
+
+//               Matrix arithmetic
+
+//   Programmer:         P. Moylan
+//   Last edited:        15 August 1995
+//   Status:             OK
+
+//    Portability problem: I've had to use an XDS
+//    language extension (open arrays) here; I
+//    haven't yet figured out how to do the job
+//    in ISO standard Modula-2.
+
 /*
-                  Matrix arithmetic
-
-   Programmer:         P. Moylan
-   Last edited:        15 August 1995
-   Status:             OK
-                                                       *)
-       Portability problem: I've had to use an XDS
-       language extension (open arrays) here; I
-       haven't yet figured out how to do the job
-       in ISO standard Modula-2.
-
-
-
  REVISION HISTORY
  ================
  19 Dec 16 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
@@ -22,17 +29,8 @@ package mat
   1 Aug 20 -- Cleaning up some code.  I'm looking at this again because of adding gohum to solve.go --> gonumsolve.go
  13 Feb 22 -- Updated to modules
  21 Nov 22 -- static linter reported issues, so some of them are addressed, and others are ignored.
+ 31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics.  I'll take it out.
 */
-
-import (
-	"fmt"
-	"math"
-	"math/cmplx"
-	"math/rand"
-	"src/vec"
-	"strconv"
-	"time"
-)
 
 const small = 1.0e-10
 const SubscriptDim = 8192
@@ -42,9 +40,9 @@ type Permutation []int
 
 type LongComplexSlice []complex128 //
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+//func init() {
+//	rand.Seed(time.Now().UnixNano())
+//}
 
 //   CREATING MATRICES
 
@@ -108,8 +106,10 @@ func Random(matrix Matrix2D) Matrix2D {
 	return matrix
 }
 
-func Copy2(Src, Dest Matrix2D) {
+/*
+func Copy2(Src Matrix2D, Dest Matrix2D) {
 	// Copies an r x c matrix A to B, by doing an element by element copy.  I don't think just copying pointers is correct.
+	// But since it used value semantics so therefore it won't work, I'm commenting it out completely.
 
 	SrcRows := len(Src)
 	SrcCols := len(Src[0])
@@ -130,6 +130,7 @@ func Copy2(Src, Dest Matrix2D) {
 		//}
 	}
 }
+*/
 
 func Copy(Src Matrix2D) Matrix2D {
 	// Copies an r x c matrix A to B, by doing an element by element copy.  I don't think just copying pointers is correct.
@@ -419,12 +420,10 @@ func LUSolve(LU, B Matrix2D, perm Permutation) Matrix2D {
 
 func GaussJ(A, B Matrix2D) Matrix2D {
 
-	/*
-		Solves the equation AX = B by Gauss-Jordan elimination.  In the present version A must be square and nonsingular.
-		This approach to solving the equation is not the best available -- see below -- but is included here
-		anyway since it is popular.
-		Dimensions: A is NxN, B is NxM.
-	*/
+	// Solves the equation AX = B by Gauss-Jordan elimination.  In the present version A must be square and nonsingular.
+	// This approach to solving the equation is not the best available -- see below -- but is included here
+	// anyway since it is popular.
+	// Dimensions: A is NxN, B is NxM.
 
 	var pivot float64
 	var X Matrix2D
@@ -432,18 +431,16 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 	N := len(A)
 
 	W := NewMatrix(N, N)
-	Copy2(A, W) //        Copy (A, N, N, W^);
+	W = Copy(A) //        Copy (A, N, N, W^);
 	X = Copy(B) //        Copy (B, N, M, X);
 
-	/*
-	   Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
-	   bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
-	   We simply base our calculations on the assumption that those values have been stored.
+	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
+	// bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
+	// We simply base our calculations on the assumption that those values have been stored.
 
-	   Dimensions: A is N x N, B is N x M.
+	// Dimensions: A is N x N, B is N x M.
 
-	   Pass 1: by elementary row operations, make W into an upper triangular matrix.
-	*/
+	// Pass 1: by elementary row operations, make W into an upper triangular matrix.
 
 	prow := 0
 	for i := range W { // FOR i := 0 TO N-1 DO
@@ -454,7 +451,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				pivot = temp
 				prow = j
 			} // END IF temp > pivot
-		} // END FOR j from i to N-1
+		}                            // END FOR j from i to N-1
 		if math.Abs(pivot) < small { // Coefficient matrix is singular.  Aborting,
 			return nil
 		} // END IF pivot < small
@@ -523,7 +520,8 @@ func Solve(A, B Matrix2D) Matrix2D {
 	M := len(B[0])
 
 	LU := NewMatrix(N, N)
-	Copy2(A, LU)
+	//Copy2(A, LU)  I don't think using Copy2 is a good idea.  After all, StaticCheck found a legit failure.
+	LU = Copy(A)
 
 	//X = NewMatrix(N, M)  this line was flagged by static linter as this value of X is never used.
 	X := Copy(B)
@@ -611,7 +609,7 @@ func Balance(A Matrix2D) Matrix2D {
 
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[row][j] *= g
-					} //END FOR j range A
+					}                  //END FOR j range A
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[j][row] *= f
 					} // END FOR j range A
@@ -963,26 +961,24 @@ MainOuterLOOP:
 func Eigenvalues(A Matrix2D) LongComplexSlice {
 	// Finds all the eigenvalues of an NxN matrix.  This procedure does not modify A.
 
-	var Acopy Matrix2D //            VAR Acopy: ArrayPtr;
+	var aCopy Matrix2D //            VAR Acopy: ArrayPtr;
 	var W LongComplexSlice
 
 	N := len(A)
 	if N > 0 {
-		Acopy = NewMatrix(N, N)
-		Copy2(A, Acopy)           //           Copy (A, N, N, Acopy^);
-		Acopy = Balance(Acopy)    //           Balance (Acopy^, N);
-		Acopy = Hessenberg(Acopy) //           Hessenberg (Acopy^, N);
+		aCopy = NewMatrix(N, N)
+		aCopy = Copy(A)           //           Copy (A, N, N, Acopy^);
+		aCopy = Balance(aCopy)    //           Balance (Acopy^, N);
+		aCopy = Hessenberg(aCopy) //           Hessenberg (Acopy^, N);
 
 		W = make(LongComplexSlice, N)
-		W = QR(Acopy) //           QR (Acopy^, W, N);
+		W = QR(aCopy) //           QR (Acopy^, W, N);
 		// not needed in Go            DisposeArray (Acopy, N, N);
 	} // END IF
 	return W
 } // END Eigenvalues;
 
-/*
-   OUTPUT
-*/
+//   OUTPUT
 
 // ------------------------------------------------------------------------------ Write ----------------------------
 
@@ -999,24 +995,7 @@ func Write(M Matrix2D, places int) []string {
 		OutputStringSlice = append(OutputStringSlice, "\n")
 	} // END FOR i
 	OutputStringSlice = append(OutputStringSlice, "\n")
-	/*
-	   n := len(M);
-	   m := len(M[0]);
-	   fmt.Printf(" Matrix is %d x %d, rows x cols\n",n,m);
-	   for i := range M {
-	     for j := range M[0] {
-	       fmt.Print("    ",M[i][j]);
-	     }
-	     fmt.Println();
-	   }
-	   fmt.Println();
-	   fmt.Println();
-	   for _,s := range OutputStringSlice {
-	     fmt.Print(s);
-	   }
-	   fmt.Println(" end from mat.Write");
-	   fmt.Println();
-	*/
+
 	return OutputStringSlice
 } // END Write
 

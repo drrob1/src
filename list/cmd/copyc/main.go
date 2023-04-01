@@ -64,9 +64,10 @@ import (
   21 Mar 23 -- Completed the usage message, which was never completed.
   24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
   28 Mar 23 -- Added message saying how many files to be copied.
+  31 Mar 23 -- StaticCheck found a few issues.
 */
 
-const LastAltered = "28 Mar 2023" //
+const LastAltered = "31 Mar 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -87,8 +88,6 @@ type msgType struct {
 }
 
 var autoWidth, autoHeight int
-var err error
-
 var onWin = runtime.GOOS == "windows"
 var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
 var cfChan chan cfType
@@ -337,7 +336,6 @@ func CopyAFile(srcFile, destDir string) {
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
 
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -348,6 +346,7 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+	defer in.Close()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
@@ -389,7 +388,6 @@ func CopyAFile(srcFile, destDir string) {
 		}
 	}
 	out, err := os.Create(outName)
-	defer out.Close()
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -400,7 +398,10 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+	defer out.Close()
+
 	_, err = io.Copy(out, in)
+
 	if err != nil {
 		msg := msgType{
 			s:       "",
@@ -496,7 +497,7 @@ func CopyAFile(srcFile, destDir string) {
 		verified: verifyFlag, // I already know that this flag is false if get here.
 	}
 	msgChan <- msg
-	return
+	// return  this is redundant.
 } // end CopyAFile
 
 func min(n1, n2 int) int {
