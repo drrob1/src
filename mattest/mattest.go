@@ -168,6 +168,8 @@ func BasicTest() {
 	}
 	fmt.Println()
 
+	newPause()
+
 	ss = mat.Write(E, 4)
 	fmt.Println(" Matrix E is:")
 	for _, s := range ss {

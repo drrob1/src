@@ -162,6 +162,7 @@ func init() {
 
 // ------------------------------------ InitStateMap ------------------------------------------------
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
+
 func InitStateMap(bs *BufferState) {
 	bs.StateMap = make(map[byte]int, 128)
 	//	StateMap[NullChar] = DELIM
@@ -189,6 +190,7 @@ func InitStateMap(bs *BufferState) {
 } // InitStateMap
 
 // ----------------------------------------- INITKN -------------------------------------------
+
 func INITKN(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN.
 	// The purpose of the initialize token routine is to initialize the
@@ -214,6 +216,7 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 } // INITKN
 
 // ----------------------------------------- NewToken ----------------------------------------
+
 func NewToken(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
@@ -227,7 +230,9 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
 	return bs
 } // NewToken, copied from INITKN
+
 //------------------------------ STOTKNPOSN -----------------------------------
+
 func (bs *BufferState) STOTKNPOSN() {
 	// STORE TOKEN POSITION.
 	// This routine will store the value of the curposn into a hold variable for later recall by RCLTKNPOSN.
@@ -242,6 +247,7 @@ func (bs *BufferState) STOTKNPOSN() {
 } // STOTKNPOSN
 
 //------------------------------ RCLTKNPOSN ----------------------------------
+
 func (bs *BufferState) RCLTKNPOSN() {
 	/*
 	   RECALL TOKEN POSITION.
@@ -256,6 +262,7 @@ func (bs *BufferState) RCLTKNPOSN() {
 } // RCLTKNPOSN
 
 // ---------------------------- PeekChr -------------------------------------------
+
 func (bs *BufferState) PeekChr() (CharType, bool) {
 	/*
 	   -- This is the GET CHARACTER ROUTINE.  Its purpose is to get the next
@@ -279,11 +286,13 @@ func (bs *BufferState) PeekChr() (CharType, bool) {
 } // PeekCHR
 
 // ---------------------------- NextChr  -------------------------------------------
+
 func (bs *BufferState) NextChr() {
 	bs.CURPOSN++
 } // NextChr
 
 // --------------------------------- GetChr --------------------------------
+
 func (bs *BufferState) GETCHR() (CharType, bool) {
 	C, EOL := bs.PeekChr()
 	bs.NextChr()
@@ -291,6 +300,7 @@ func (bs *BufferState) GETCHR() (CharType, bool) {
 } // GETCHR
 
 // --------------------------------- UNGETCHR --------------------------------
+
 func (bs *BufferState) UNGETCHR() {
 	/*
 	   -- UNGETCHaracteR.
@@ -308,6 +318,7 @@ func (bs *BufferState) UNGETCHR() {
 
 // ------------------------------------- GetOpCode ---------------------------------------------
 // I am not coding this as a pointer receiver as it does not access its BufferState.
+
 func (bs *BufferState) GETOPCODE(Token TokenType) int {
 	/*
 	   -- GET OPCODE.
@@ -393,6 +404,7 @@ func (bs *BufferState) GETOPCODE(Token TokenType) int {
 } // GETOPCODE
 
 //       ---------------------------=== GetToken ===--------------------------------------
+
 func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var (
 		CHAR   CharType
@@ -572,18 +584,19 @@ ExitForLoop:
 } // GetToken
 
 //------------------------------*************************** GETTKN **************************************
+
 func (bs *BufferState) GETTKN() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetToken(true)
 	return TOKEN, EOL
 } // GETTKN
 
-//********************************** isdigit ***********************************************
+// ********************************** isdigit ***********************************************
 func isdigit(ch rune) bool {
 	isdgt := ch >= Dgt0 && ch <= Dgt9
 	return isdgt
 }
 
-//********************************** ishexdigit *************************************************
+// ********************************** ishexdigit *************************************************
 func ishexdigit(ch rune) bool {
 
 	ishex := isdigit(ch) || ((ch >= 'A') && (ch <= 'F'))
@@ -592,6 +605,7 @@ func ishexdigit(ch rune) bool {
 } // ishexdigit
 
 //*********************************** fromhex *************************************************
+
 func FromHex(s string) int {
 	result := 0
 	var dgtval int
@@ -609,6 +623,7 @@ func FromHex(s string) int {
 } // FromHex
 
 // ---------------------------------------- SetMapDelim -----------------------------------------
+
 func (bs *BufferState) SetMapDelim(char byte) {
 	bs.StateMap[char] = DELIM
 } // SetMapDelim
@@ -801,6 +816,7 @@ func (bs *BufferState) GETTKNSTR() (TOKEN TokenType, EOL bool) {
 }
 
 // **************************************** GetTokenEOL *******************************************
+
 func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	// GET ToKeN to EndOfLine.
 	// This will build a token that consists of every character left on the line.
@@ -837,12 +853,14 @@ func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 } // GetTokenEOL
 
 // ***************************************** GETTKNEOL ******************************************
+
 func (bs *BufferState) GETTKNEOL() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetTokenEOL(true)
 	return TOKEN, EOL
 } // GETTKNEOL
 
-//  UNGETTKN -- an internal function
+//  UNGETTKN is an internal function
+
 func (bs *BufferState) UNGETTKN() {
 	/*
 	   * UNGET TOKEN ROUTINE.
@@ -862,6 +880,7 @@ func (bs *BufferState) UNGETTKN() {
 }
 
 //                                        GetTokenSlice, now TokenSlice
+
 func TokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
@@ -880,6 +899,7 @@ func TokenSlice(str string) []TokenType {
 }
 
 //                                   RealTokenSlice
+
 func RealTokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil

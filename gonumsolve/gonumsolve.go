@@ -11,24 +11,27 @@ MODULE Solve;
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
   24 Dec 16 -- Converted to Go.  Ignores non-numeric entries to allow for comments.  First non-numeric entry skips rest of line.
   31 Jul 20 -- Added gonum.org/mat code, and now called gonumsolve.go.  I learned a few things about pointers.  More details below.
+   1 Apr 23 -- adding modules.  And I'm going to change from reading the file line by line to reading all at once.  And I'm swapping out tokenize for tknPtr.
 */
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
-	"getcommandline"
 	"gonum.org/v1/gonum/mat" // from memory.  This needs to be confirmed.
 	"io"
-	mymat "mat"
 	"math"
 	"os"
 	"path/filepath"
+	mymat "src/mat" // gonum is also imported as mat, so I have to use the mymat identifier.
+	"src/tknptr"
 	"strconv"
 	"strings"
-	"tokenize"
+	//"getcommandline"
 )
 
-const LastCompiled = "July 31, 2020"
+const LastCompiled = "Apr 1, 2023"
 const MaxN = 30
 const toleranceFactor = 1e-6
 
@@ -37,35 +40,37 @@ const toleranceFactor = 1e-6
 
 // type Matrix2D [][]float64;  not needed here.  It's internal to mymat package.
 
-func main() {
-	/* ------------------------------------------------------------------------
-	                           MAIN PROGRAM
-	------------------------------------------------------------------------*/
+// ------------------------------------------------------------------------
+//                           MAIN PROGRAM
+// ------------------------------------------------------------------------
 
-	fmt.Println(" Equation solver written in Go.  Last compiled ", LastCompiled)
+func main() {
+	fmt.Println(" Equation solver written in Go, using gonum.  Last compiled ", LastCompiled)
 	fmt.Println()
 
-	if len(os.Args) <= 1 {
+	if len(os.Args) == 0 {
 		fmt.Println(" Usage: solve <filename>")
 		fmt.Println(" Solves vector equation A * X = B; and A is a square coef matrix.")
 		fmt.Println(" N is determined by number of rows and B value is last on each line.")
 		os.Exit(0)
 	}
 
-	commandline := getcommandline.GetCommandLineString()
-	cleancommandline := filepath.Clean(commandline)
-	fmt.Println(" filename on command line is ", cleancommandline)
+	// commandline := getcommandline.GetCommandLineString()
+	commandline := strings.Join(os.Args[1:], "") // Item [0] is the program name.
+	cleanCommandline := filepath.Clean(commandline)
+	fmt.Println(" filename on command line is ", cleanCommandline)
 
 	//  cleancommandline = "xy1.txt";
 
-	infile, err := os.Open(cleancommandline)
+	//infile, err := os.Open(cleanCommandline)
+	infilebytes, err := os.ReadFile(cleanCommandline)
 	if err != nil {
-		fmt.Println(" Cannot open input file.  Does it exist?  Error is ", err)
+		fmt.Printf(" Cannot read from input file %s.  Does it exist?  Error is %s\n", cleanCommandline, err)
 		os.Exit(1)
 	}
-
-	defer infile.Close()
-	scanner := bufio.NewScanner(infile)
+	//defer infile.Close()
+	//scanner := bufio.NewScanner(infile)
+	buf := bytes.NewReader(infilebytes)
 
 	IM := mymat.NewMatrix(MaxN, MaxN+1) // IM is input matrix
 	IM = mymat.Zero(IM)
@@ -74,31 +79,43 @@ func main() {
 CountLinesLoop:
 	for { // read, count and process lines
 		for n := 0; n < MaxN; n++ {
-			readSuccess := scanner.Scan()
-			if readSuccess {
-				// Non-numeric tokens are comments, and lines not beginning with a number are comment lines.
-			} else {
-				break CountLinesLoop // break outer loop
-			} // if readSuccess
+			//readSuccess := scanner.Scan()
+			//if readSuccess {
+			//	// Non-numeric tokens are comments, and lines not beginning with a number are comment lines.
+			//} else {
+			//	break CountLinesLoop // break outer loop
+			//} // if readSuccess
 
-			inputline := scanner.Text()
-			if readErr := scanner.Err(); readErr != nil {
-				if readErr == io.EOF {
-					break CountLinesLoop // break outer loop
-				} else { // this may be redundant because of the readSuccess test
-					break CountLinesLoop // break outer loop
+			inputLine, err := readLine(buf)
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					fmt.Printf(" ERROR from readLine(buf) is %s\n", err)
 				}
+				break CountLinesLoop // break outer loop
 			}
+			fmt.Printf(" lines = %d, inputline is %q\n", lines, inputLine)
 
-			tokenize.INITKN(inputline)
+			//if readErr := scanner.Err(); readErr != nil {
+			//	if readErr == io.EOF {
+			//		break CountLinesLoop // break outer loop
+			//	} else { // this may be redundant because of the readSuccess test
+			//		break CountLinesLoop // break outer loop
+			//	}
+			//}
+
+			// tokenize.INITKN(inputline)
+			tknP := tknptr.NewToken(inputLine)
+			if tknP == nil { // a blank line would return a nil ptr here.
+				continue
+			}
 			col := 0
-			EOL := false
-			for (EOL == false) && (n <= MaxN) { // read numbers into IM input matrix.
-				token, EOL := tokenize.GETTKNREAL()
+			for { // read numbers into IM input matrix.
+				//                                                    token, EOL := tokenize.GETTKNREAL()
+				token, EOL := tknP.GETTKNREAL()
 				if EOL {
 					break
 				}
-				if token.State != tokenize.DGT {
+				if token.State != tknptr.DGT {
 					break
 				} // treat remainder of line as a comment
 				IM[lines][col] = token.Rsum // remember that IM is Input Matrix
@@ -123,14 +140,14 @@ CountLinesLoop:
 		B[row][0] = IM[row][N] // I have to keep remembering that [0,0] is the first row and col.
 	} // END FOR row
 
-	fmt.Println(" coef matrix A is:")
+	fmt.Println(" coef matrix A is (AX = B) :")
 	ss := mymat.Write(A, 5)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
 	fmt.Println()
 
-	fmt.Println(" Right hand side vector matrix B is:")
+	fmt.Println(" Right hand side vector matrix B is (AX = B) :")
 	ss = mymat.Write(B, 5)
 	for _, s := range ss {
 		fmt.Print(s)
@@ -182,8 +199,8 @@ CountLinesLoop:
 	pause()
 
 	// Now for gonum.org mat code
-	// Some of the routines take a pointer, some do not.  mat.NewDense makes a pointer.  var mat.Dense does not.  So some
-	// of the routines needed the & adrof operator, and in one case, I had to dereference the pointer for it to work.
+	// Some routines take a pointer, some do not.  mat.NewDense makes a pointer.  var mat.Dense does not.  So some
+	// routines needed the '&' operator, and in one case, I had to dereference the pointer for it to work.
 	// This IDE helped me to sort this out by suggesting fixes to these errors.
 
 	fmt.Println(" Using gonum.org Solve")
@@ -251,7 +268,7 @@ CountLinesLoop:
 	fmt.Println()
 
 	var inverseA mat.Dense
-	err = inverseA.Inverse(newA) // I think this method has a pointer receiver, but syntatic sugar does not require me to dereference inverseA
+	err = inverseA.Inverse(newA) // I think this method has a pointer receiver, but syntactic sugar does not require me to dereference inverseA
 	// It compiles fine if I declare var inverseA *matDense and then remove the adrof operator in the call to Mul.
 	if err != nil {
 		fmt.Println(" Error from inverseA.Inverse is", err)
@@ -391,3 +408,23 @@ func vectorWrite(M mat.VecDense, places int) []string {
 	OutputStringSlice = append(OutputStringSlice, "\n")
 	return OutputStringSlice
 } // END write
+
+// ----------------------------------------------------- readLine ------------------------------------------------------
+// Needed as a bytes reader does not have a readString method.
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+		if byte == '\n' {
+			return strings.TrimSpace(sb.String()), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+	}
+} // readLine

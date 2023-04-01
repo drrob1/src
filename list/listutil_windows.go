@@ -19,11 +19,14 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
-		HomeDirStr = ""
+		HomeDirStr = "."
 	}
 	HomeDirStr = HomeDirStr + string(filepath.Separator)
 
 	pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+	if VerboseFlag {
+		fmt.Printf(" file pattern is %s\n", pattern)
+	}
 	if flag.NArg() == 0 || pattern == "." {
 		workingDir, er := os.Getwd()
 		if er != nil {

@@ -38,6 +38,7 @@ import (
   18 Mar 23 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
   24 Mar 23 -- Added CheckDest after fixing issue in listutil_linux.go.  More details in listutil_linux.go
   31 Mar 23 -- StaticCheck found a few issues.
+   1 Apr 23 -- dellist not using the pattern on the commandline on Windows.  Investigating why.  Nevermind, I forgot that dellist is now under list2 and works differently.
 */
 
 type DirAliasMapType map[string]string

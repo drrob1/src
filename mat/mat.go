@@ -26,7 +26,7 @@ import (
  19 Dec 16 -- Started conversion to Go from old Modula-2 source.  We'll see how long this takes.
  24 Dec 16 -- Passed mattest.
  25 Dec 16 -- Changed the code to use the Go swapping idiom
-  1 Aug 20 -- Cleaning up some code.  I'm looking at this again because of adding gohum to solve.go --> gonumsolve.go
+  1 Aug 20 -- Cleaning up some code.  I'm looking at this again because of adding gonum to solve.go --> gonumsolve.go
  13 Feb 22 -- Updated to modules
  21 Nov 22 -- static linter reported issues, so some of them are addressed, and others are ignored.
  31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics when I needed pointer semantics on the return var.  I took it out as it wasn't idiomatic anyway.
