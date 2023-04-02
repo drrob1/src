@@ -31,7 +31,7 @@ import (
 	//"getcommandline"
 )
 
-const LastCompiled = "Apr 1, 2023"
+const LastCompiled = "Apr 2, 2023"
 const MaxN = 30
 const toleranceFactor = 1e-6
 
@@ -155,16 +155,16 @@ CountLinesLoop:
 	}
 	fmt.Println()
 
-	ans := mymat.NewMatrix(N, N)
-	ans = mymat.Solve(A, B) // Solve (ra1, ra2, ans, N, 1);
+	//ans := mymat.NewMatrix(N, N)  not needed.  Flagged by staticcheck
+	ans := mymat.Solve(A, B) // Solve (ra1, ra2, ans, N, 1);
 	fmt.Println("The solution X to AX = B using Solve is")
 	ss = mymat.Write(ans, 5)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
 
-	ans2 := mymat.NewMatrix(N, N)
-	ans2 = mymat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
+	//ans2 := mymat.NewMatrix(N, N)  not needed.  Flagged by staticcheck
+	ans2 := mymat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
 	fmt.Println("The solution X to AX = B using GaussJ is")
 	ss = mymat.Write(ans2, 5)
 	for _, s := range ss {
@@ -176,10 +176,10 @@ CountLinesLoop:
 
 	// Check that the solution looks right.
 
-	C := mymat.NewMatrix(N, 1)
-	D := mymat.NewMatrix(N, 1)
-	C = mymat.Mul(A, ans)
-	D = mymat.Sub(B, C)
+	//C := mymat.NewMatrix(N, 1)  Not needed.  Flagged by staticcheck
+	//D := mymat.NewMatrix(N, 1)  Not needed.  Flagged by staticcheck
+	C := mymat.Mul(A, ans)
+	D := mymat.Sub(B, C)
 
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	ss = mymat.Write(D, 5)
