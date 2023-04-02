@@ -428,9 +428,9 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 
 	N := len(A)
 
-	W := NewMatrix(N, N)
-	W = Copy(A) //        Copy (A, N, N, W^);
-	X = Copy(B) //        Copy (B, N, M, X);
+	//W := NewMatrix(N, N)  Not needed.
+	W := Copy(A) //        Copy (A, N, N, W^);
+	X = Copy(B)  //        Copy (B, N, M, X);
 
 	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
 	// bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
@@ -515,11 +515,11 @@ func Solve(A, B Matrix2D) Matrix2D {
 	//var X Matrix2D  not needed
 
 	N := len(A)
-	M := len(B[0])
+	//M := len(B[0])  This number of cols is not used.
 
-	LU := NewMatrix(N, N)
+	//LU := NewMatrix(N, N)  Not needed.
 	//Copy2(A, LU)  I don't think using Copy2 is a good idea.  After all, StaticCheck found a legit failure.
-	LU = Copy(A)
+	LU := Copy(A)
 
 	//X = NewMatrix(N, M)  this line was flagged by static linter as this value of X is never used.
 	X := Copy(B)
@@ -533,8 +533,8 @@ func Solve(A, B Matrix2D) Matrix2D {
 
 	if X != nil { // if the LUSolve failed, like because of a singular matrix, X is returned as nil
 		//ERROR := NewMatrix(N, M)  // flagged as not being used by static linter
-		product := NewMatrix(N, M)
-		product = Mul(A, X)
+		//product := NewMatrix(N, M)  Not needed
+		product := Mul(A, X)
 		ERROR := Sub(B, product)
 		ERROR = LUSolve(LU, ERROR, perm)
 		X = Add(X, ERROR)
@@ -964,12 +964,12 @@ func Eigenvalues(A Matrix2D) LongComplexSlice {
 
 	N := len(A)
 	if N > 0 {
-		aCopy = NewMatrix(N, N)
+		//aCopy = NewMatrix(N, N)  Not used
 		aCopy = Copy(A)           //           Copy (A, N, N, Acopy^);
 		aCopy = Balance(aCopy)    //           Balance (Acopy^, N);
 		aCopy = Hessenberg(aCopy) //           Hessenberg (Acopy^, N);
 
-		W = make(LongComplexSlice, N)
+		// W = make(LongComplexSlice, N)  This isn't used.  I don't know why it's here.  I can't debug this routine anyway, so I'll do what staticcheck says.
 		W = QR(aCopy) //           QR (Acopy^, W, N);
 		// not needed in Go            DisposeArray (Acopy, N, N);
 	} // END IF
