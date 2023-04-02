@@ -68,6 +68,7 @@ REVISION HISTORY
                And added a check against an empty string being passed into the init functions.
 12 Jun 21 -- Writing TokenRealSlice, and renamed GetTokenSlice to TokenSlice, which is more idiomatic for Go.
  1 Apr 23 -- Added New function to not return a nil pointer if the entered string is empty.  So far, it seems to be working (tested by gonumsolve).
+               I intend for this to be the preferred way to initialize a token pointer.
 */
 
 // type FSATYP int  I don't think I need or want this type definition.
