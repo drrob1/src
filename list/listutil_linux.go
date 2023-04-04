@@ -24,6 +24,7 @@ import (
                  from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
    1 Feb 23 -- Fixing how command line arguments are opened when there are > 1 on the line, ie, a source dir and destination dir.
   24 Mar 23 -- While in florida I figured out how to handle a glob pattern on the bash command line.  I have to use the length of os.Args or equivalent.
+   4 Apr 23 -- Added use of list.DelListFlag
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -112,6 +113,23 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			if VerboseFlag {
 				fmt.Printf(" in command line loop: fn=%s, fHandle.Name=%s, IsDir=%t\n", fn, fHandle.Name(), stat.IsDir())
 			}
+			fHandle.Close()
+			fix := FileInfoExType{
+				FI:       stat,
+				Dir:      workingDir,
+				RelPath:  filepath.Join(workingDir, fn),
+				AbsPath:  filepath.Join(workingDir, fn),
+				FullPath: filepath.Join(workingDir, fn),
+			}
+			fileInfoX = append(fileInfoX, fix)
+		}
+		if DelListFlag { // If this is dellist, don't forget about the last item on the list, which is intentionally not included in the for loop above.
+			fn := flag.Arg(flag.NFlag() - 1) // last item
+			fHandle, err := os.Open(fn)
+			if err != nil {
+				return nil, err
+			}
+			stat, _ := fHandle.Stat()
 			fHandle.Close()
 			fix := FileInfoExType{
 				FI:       stat,

@@ -39,6 +39,8 @@ import (
   24 Mar 23 -- Added CheckDest after fixing issue in listutil_linux.go.  More details in listutil_linux.go
   31 Mar 23 -- StaticCheck found a few issues.
    1 Apr 23 -- dellist not using the pattern on the commandline on Windows.  Investigating why.  Nevermind, I forgot that dellist is now under list2 and works differently.
+   4 Apr 23 -- dellist moved back here under list.go.  I added a flag, DelListFlag, so the last item on the linux command line will be included.
+                 And I added FileSelectionString, which returns a string instead of the FileInfoExType.
 */
 
 type DirAliasMapType map[string]string
@@ -64,6 +66,7 @@ var ExcludeRex *regexp.Regexp
 var IncludeRex *regexp.Regexp
 var InputDir string
 var SizeFlag bool
+var DelListFlag bool
 
 const defaultHeight = 40
 const minWidth = 90
@@ -406,6 +409,81 @@ outerLoop:
 
 	return outList, nil
 } // end FileSelection
+
+// -------------------------------------------- FileSelectionString -------------------------------------------------------
+
+func FileSelectionString(inList []FileInfoExType) ([]string, error) {
+	outStrList := make([]string, 0, len(inList))
+	numOfLines := min(autoHeight, minHeight)
+	numOfLines = min(numOfLines, len(inList))
+	var beg, end int
+	lenList := len(inList)
+	var ans string
+	onWin := runtime.GOOS == "windows"
+
+outerLoop:
+	for {
+		if lenList-beg >= numOfLines {
+			end = beg + numOfLines
+		} else {
+			end = lenList
+		}
+
+		fList := inList[beg:end]
+
+		for i, f := range fList {
+			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
+			s, colr := GetMagnitudeString(f.FI.Size())
+			//ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
+			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			clr := ct.White
+			if clr == colr { // don't use same color as rest of the displayed string.
+				clr = ct.Yellow
+			}
+			ctfmt.Printf(clr, onWin, " -- %s", t)
+			ctfmt.Printf(ct.Cyan, onWin, " %s\n", s)
+		}
+
+		fmt.Print(" Enter selections: ")
+		n, err := fmt.Scanln(&ans)
+		if n == 0 || err != nil {
+			ans = "" // it seems that if I don't do this, the prev contents are not changed when I just hit <enter>
+		}
+
+		// Check for the stop code anywhere in the input.
+		if strings.Contains(ans, stopCode) {
+			e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
+			return nil, e
+		}
+
+		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
+		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
+		processedAns, err := ExpandAllDashes(ans)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
+			return nil, err
+		}
+		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
+			idx := int(c - 'a')
+			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
+				break outerLoop
+			}
+			f := fList[c-'a']
+			outStrList = append(outStrList, f.AbsPath)
+		}
+		if end >= lenList {
+			break
+		}
+		beg = end
+
+		clearFunc := clear[runtime.GOOS]
+		clearFunc()
+	}
+
+	return outStrList, nil
+} // end FileSelectionString
+
+// ---------------------------------- min ----------------------------------
 
 func min(i, j int) int {
 	if i < j {
