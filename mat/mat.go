@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"src/vec"
 	"strconv"
+	"strings"
 )
 
 //               Matrix arithmetic
@@ -30,9 +31,10 @@ import (
  13 Feb 22 -- Updated to modules
  21 Nov 22 -- static linter reported issues, so some of them are addressed, and others are ignored.
  31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics when I needed pointer semantics on the return var.  I took it out as it wasn't idiomatic anyway.
+  3 Apr 23 -- Exporting Small.  And writing WriteZero, WriteZeroPair, and SolveInversion.
 */
 
-const small = 1.0e-10
+const Small = 1.0e-10
 const SubscriptDim = 8192
 
 type Matrix2D [][]float64
@@ -58,8 +60,6 @@ func NewMatrix(R, C int) Matrix2D { // I think row, column makes more sense than
 	return matrix
 }
 
-// PROCEDURE DisposeArray (VAR (*INOUT*) V: ArrayPtr;  N, M: CARDINAL);  Deallocating an NxM matrix is not needed, because of the garbage collection.  It just did DISPOSE (V);
-
 //  ASSIGNMENTS
 
 func Zero(matrix Matrix2D) Matrix2D {
@@ -76,7 +76,7 @@ func Zero(matrix Matrix2D) Matrix2D {
 func BelowSmallMakeZero(matrix Matrix2D) Matrix2D {
 	for r := range matrix {
 		for c := range matrix[r] {
-			if math.Abs(matrix[r][c]) < small {
+			if math.Abs(matrix[r][c]) < Small {
 				matrix[r][c] = 0
 			}
 		}
@@ -357,8 +357,6 @@ func LUFactor(A Matrix2D, perm Permutation) (Matrix2D, bool) { // A is an InOut 
 	return A, oddswaps
 } // END LUFactor
 
-// ------------------------------------------------------------------------------------------------------
-
 // ------------------------------------------------------- LUSolve ---------------------------------------
 
 func LUSolve(LU, B Matrix2D, perm Permutation) Matrix2D {
@@ -450,7 +448,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				prow = j
 			} // END IF temp > pivot
 		} // END FOR j from i to N-1
-		if math.Abs(pivot) < small { // Coefficient matrix is singular.  Aborting,
+		if math.Abs(pivot) < Small { // Coefficient matrix is singular.  Aborting,
 			return nil
 		} // END IF pivot < small
 
@@ -509,19 +507,11 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 
 func Solve(A, B Matrix2D) Matrix2D {
 
-	// Solves the equation AX = B.  In the present version A must be square and nonsingular.
-	// Dimensions: A is N x N, B is N x M.
-
-	//var X Matrix2D  not needed
+	// Solves the equation A * X = B.  In the present version A must be square and nonsingular.
+	// Dimensions: A is N x N, B is N x M, where M usually = 1.
 
 	N := len(A)
-	//M := len(B[0])  This number of cols is not used.
-
-	//LU := NewMatrix(N, N)  Not needed.
-	//Copy2(A, LU)  I don't think using Copy2 is a good idea.  After all, StaticCheck found a legit failure.
 	LU := Copy(A)
-
-	//X = NewMatrix(N, M)  this line was flagged by static linter as this value of X is never used.
 	X := Copy(B)
 
 	perm := make(Permutation, N*4)
@@ -532,8 +522,6 @@ func Solve(A, B Matrix2D) Matrix2D {
 	//  but they might even make things worse, because we're still stuck with the rounding errors in LUFactor.
 
 	if X != nil { // if the LUSolve failed, like because of a singular matrix, X is returned as nil
-		//ERROR := NewMatrix(N, M)  // flagged as not being used by static linter
-		//product := NewMatrix(N, M)  Not needed
 		product := Mul(A, X)
 		ERROR := Sub(B, product)
 		ERROR = LUSolve(LU, ERROR, perm)
@@ -545,23 +533,22 @@ func Solve(A, B Matrix2D) Matrix2D {
 // ------------------------------- Invert -------------------------
 
 func Invert(A Matrix2D) Matrix2D {
-
-	//var X Matrix2D
-	// VAR I: ArrayPtr;
-
 	N := len(A)
 	I := NewMatrix(N, N)
 	I = Unit(I)
-
-	// X = NewMatrix(N, N)  flagged as not used.
 	X := Solve(A, I) // Solve (A, I^, X, N, N);
-	// DisposeArray (I, N, N);
 	return X
 } // END Invert;
 
-/*
-   EIGENPROBLEMS
-*/
+// ---------------------------------- SolveInvert ------------------------------
+
+func SolveInvert(a, b Matrix2D) Matrix2D {
+	I := Invert(a)
+	x := Mul(I, b)
+	return x
+}
+
+//   EIGENPROBLEMS
 
 func Balance(A Matrix2D) Matrix2D {
 	/*
@@ -666,7 +653,7 @@ func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 			} // END IF temp > pivot
 		}
 
-		if math.Abs(pivot) < small {
+		if math.Abs(pivot) < Small {
 
 			/*
 				The pivot is essentially zero, so we already have
@@ -959,12 +946,11 @@ MainOuterLOOP:
 func Eigenvalues(A Matrix2D) LongComplexSlice {
 	// Finds all the eigenvalues of an NxN matrix.  This procedure does not modify A.
 
-	var aCopy Matrix2D //            VAR Acopy: ArrayPtr;
+	var aCopy Matrix2D
 	var W LongComplexSlice
 
 	N := len(A)
 	if N > 0 {
-		//aCopy = NewMatrix(N, N)  Not used
 		aCopy = Copy(A)           //           Copy (A, N, N, Acopy^);
 		aCopy = Balance(aCopy)    //           Balance (Acopy^, N);
 		aCopy = Hessenberg(aCopy) //           Hessenberg (Acopy^, N);
@@ -981,14 +967,13 @@ func Eigenvalues(A Matrix2D) LongComplexSlice {
 // ------------------------------------------------------------------------------ Write ----------------------------
 
 func Write(M Matrix2D, places int) []string {
-	// Writes the r x c matrix M to a string slice (formerly the screen), where each column occupies a field "places" characters wide.
+	// Writes the r x c matrix M to a string slice, where each column occupies a field "places" characters wide.
 
 	OutputStringSlice := make([]string, 0, 500)
-	for i := range M { // FOR i := 0 TO r-1 DO
-		for j := range M[i] { //   FOR j := 0 TO c-1 DO
+	for i := range M {
+		for j := range M[i] {
 			ss := strconv.FormatFloat(M[i][j], 'G', places, 64)
 			OutputStringSlice = append(OutputStringSlice, fmt.Sprintf("%10s", ss))
-			//WriteLongReal (M[i,j], places);
 		} // END FOR j
 		OutputStringSlice = append(OutputStringSlice, "\n")
 	} // END FOR i
@@ -996,5 +981,91 @@ func Write(M Matrix2D, places int) []string {
 
 	return OutputStringSlice
 } // END Write
+
+func WriteZero(M Matrix2D, places int) []string {
+	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
+
+	OutputStringSlice := make([]string, 0, 500)
+	for i := range M {
+		for j := range M[i] {
+			v := M[i][j]
+			if math.Abs(v) < Small {
+				v = 0
+			}
+			ss := strconv.FormatFloat(v, 'G', places, 64)
+			OutputStringSlice = append(OutputStringSlice, fmt.Sprintf("%10s", ss))
+		} // END FOR j
+		OutputStringSlice = append(OutputStringSlice, "\n")
+	} // END FOR i
+	OutputStringSlice = append(OutputStringSlice, "\n")
+
+	return OutputStringSlice
+} // END WriteZero
+
+func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
+	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
+	const padding = "               |"
+
+	OutputStringSlice := make([]string, 0, 500)
+	OutputStringSlice1 := make([]string, 0, 500)
+	OutputStringSlice2 := make([]string, 0, 500)
+
+	for i := range m1 {
+		var line []string
+		for j := range m1[i] {
+			v := m1[i][j]
+			if math.Abs(v) < Small {
+				v = 0
+			}
+			ss := strconv.FormatFloat(v, 'G', places, 64)
+
+			line = append(line, fmt.Sprintf("%10s", ss))
+		} // END FOR j
+		s := strings.Join(line, "")
+		OutputStringSlice1 = append(OutputStringSlice1, s)
+		OutputStringSlice1 = append(OutputStringSlice1, "\n")
+	} // END FOR i
+	OutputStringSlice1 = append(OutputStringSlice1, "\n")
+
+	//fmt.Printf(" output string slice 1:\n")
+	//for _, s := range OutputStringSlice1 {
+	//	fmt.Print(s)
+	//}
+	//fmt.Println("--------------------- stringslice1")
+
+	for i := range m2 {
+		var line []string
+		for j := range m2[i] {
+			v := m2[i][j]
+			if math.Abs(v) < Small {
+				v = 0
+			}
+			ss := strconv.FormatFloat(v, 'G', places, 64)
+
+			line = append(line, fmt.Sprintf("%10s", ss))
+			//WriteLongReal (M[i,j], places);
+		} // END FOR j
+		s := strings.Join(line, "")
+		OutputStringSlice2 = append(OutputStringSlice2, s)
+		OutputStringSlice2 = append(OutputStringSlice2, "\n")
+	} // END FOR i
+	OutputStringSlice2 = append(OutputStringSlice2, "\n")
+
+	//fmt.Printf(" output string slice 2:\n")
+	//for _, s := range OutputStringSlice2 {
+	//	fmt.Print(s)
+	//}
+	//fmt.Println("-------------------------- stringslice2")
+
+	for i := range OutputStringSlice1 {
+		ss := OutputStringSlice1[i]
+		if ss != "\n" {
+			ss = ss + padding + OutputStringSlice2[i]
+		}
+		OutputStringSlice = append(OutputStringSlice, ss)
+	}
+
+	return OutputStringSlice
+} // END WriteZeroPair
 
 // END Mat.

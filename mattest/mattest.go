@@ -88,7 +88,7 @@ func BasicTest() {
 	//      Try an addition (it will fail).
 	C = mat.Add(A, B)
 	if C == nil {
-		fmt.Println("We can't compute A+B, which would be correct because the dimensions don't match.")
+		fmt.Println("We can't compute A+B because the dimensions don't match, as expected.")
 	} else {
 		fmt.Println(" Trying to add A+B, which should have failed.  It seems to have worked.  C is:")
 		ss = mat.Write(C, 5)
@@ -130,7 +130,7 @@ func BasicTest() {
 
 	// My new test code
 	F = mat.Add(D, E)
-	fmt.Println(" F = D + E should succeed.")
+	fmt.Println(" F = D + E should succeed, which is same as F = D + A + D.")
 	if F != nil {
 		ss = mat.Write(F, 5)
 		for _, s := range ss {
@@ -143,7 +143,7 @@ func BasicTest() {
 	}
 
 	G = mat.Sub(F, E) //   should fail
-	fmt.Println(" G = F - E failed because the dimensions don't match.")
+	fmt.Println(" G = F - E failed because the dimensions don't match, as expected.")
 	if G != nil {
 		ss = mat.Write(G, 5)
 		for _, s := range ss {
@@ -151,7 +151,7 @@ func BasicTest() {
 		}
 		fmt.Println()
 	} else {
-		fmt.Print(" E - F failed because the dimensions don't match.")
+		fmt.Print(" E - F should have failed because the dimensions don't match, but it succeeded for some reason.")
 		G = mat.Random(G)
 		ss = mat.Write(G, 4)
 		fmt.Println(" Random G after E - F failed.")
@@ -161,8 +161,8 @@ func BasicTest() {
 		fmt.Println()
 	}
 
-	ss = mat.Write(D, 4)
-	fmt.Println(" Matrix D is:")
+	fmt.Println(" Matrix D is                     Matrix E:")
+	ss = mat.WriteZeroPair(D, E, 4)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
@@ -273,21 +273,24 @@ func SolveTest() {
 		fmt.Print(s)
 	}
 
-	// Solve the equation AX = B.
+	// Solve the equation A * X = B.
 
 	X = mat.Solve(A, B)
 	Y := mat.GaussJ(A, B)
+	z := mat.SolveInvert(A, B)
 
 	// Write the solution.
 
-	fmt.Println("Using mat.Solve, the solution X to AX = B is: X")
-	ss = mat.Write(X, 4)
+	fmt.Println("Using mat.Solve, the solution X to A * X = B is         Using mat.GaussJ:")
+	//ss = mat.Write(X, 4)
+	ss = mat.WriteZeroPair(X, Y, 5)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
 
-	fmt.Println("Using mat.GaussJ, the solution X to AX = B is: Y")
-	ss = mat.Write(Y, 4)
+	fmt.Println("Using mat.GaussJ, the solution X to A * X = B is:          Using mat.SolveInvert")
+	//ss = mat.Write(Y, 4)
+	ss = mat.WriteZeroPair(Y, z, 4)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
@@ -296,27 +299,29 @@ func SolveTest() {
 
 	C = mat.Mul(A, X)
 	D = mat.Sub(B, C)
-	fmt.Println("As a check, AX-B evaluates to zero from mat.Solve.")
-	ss = mat.Write(D, 4) // Write (D, Brows, Bcols, 4);
+	d := mat.BelowSmallMakeZero(D)
+	fmt.Println("As a check, A * X - B evaluates to zero from mat.Solve, before and after mat.BelowSmallMakeZero")
+	ss = mat.WriteZeroPair(D, d, 4) // Write (D, Brows, Bcols, 4);
 	for _, s := range ss {
 		fmt.Print(s)
 	}
-	fmt.Println()
-	D = mat.BelowSmallMakeZero(D)
-	fmt.Println("As a check, AX-B evaluates to zero after running mat.BelowSmallMakeZero")
-	ss = mat.Write(D, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//fmt.Println()
+	//fmt.Println("As a check, AX-B evaluates to zero after running mat.BelowSmallMakeZero")
+	//ss = mat.Write(D, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	// Check that the solution looks right from mat.GaussJ.
 
 	C = mat.Mul(A, Y)
 	D = mat.Sub(B, C)
-	D = mat.BelowSmallMakeZero(D)
-	fmt.Println("As a check, AX-B evaluates to zero from mat.GaussJ after running mat.BelowSmallMakeZero.")
-	ss = mat.Write(D, 4)
+	d = mat.Mul(A, z)
+	e := mat.Sub(B, d)
+	ss = mat.WriteZeroPair(D, e, 5)
+	fmt.Println("As a check, AX-B evaluates to zero from mat.GaussJ      and mat.SolveInvertafter.")
+	//ss = mat.WriteZeroPair(D, d, 4)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
@@ -334,9 +339,6 @@ func SingularTest() {
 	const bRows = 2
 	const bCols = 1
 
-	//    VAR A: ARRAY [1..Arows],[1..Acols] OF LONGREAL;
-	//        B, X: ARRAY [1..Brows],[1..Bcols] OF LONGREAL;
-
 	A := mat.NewMatrix(aRows, aCols)
 	B := mat.NewMatrix(bRows, bCols)
 	X := mat.NewMatrix(bRows, bCols)
@@ -346,7 +348,7 @@ func SingularTest() {
 		return
 	}
 
-	fmt.Println("A singular problem, which can't be solved.")
+	fmt.Println("A singularity problem, which can't be solved.")
 
 	// Give a value to the A matrix.
 
@@ -354,7 +356,7 @@ func SingularTest() {
 	A[0][1] = 2.0
 	A[1][0] = 2.0
 	A[1][1] = 4.0
-	fmt.Println("Matrix A is not random:")
+	fmt.Println("Matrix A is not random; it is singular :")
 	ss := mat.Write(A, 4)
 	for _, s := range ss {
 		fmt.Print(s)
@@ -428,9 +430,9 @@ func InversionTest() {
 	}
 	fmt.Println()
 	fmt.Println()
-	fmt.Println("As a check, the product evaluates to the identity matrix after running mat.BelowSmallMakeZero.")
-	B = mat.BelowSmallMakeZero(B)
-	ss = mat.Write(B, 4)
+	fmt.Println("As a check, the product evaluates to the identity matrix after using mat.WriteZero.")
+	//B = mat.BelowSmallMakeZero(B)
+	ss = mat.WriteZero(B, 4)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
@@ -473,8 +475,8 @@ func main() {
 	pause()
 	SolveTest()
 	newPause()
-	SingularTest()
-	newPause()
+	//SingularTest()
+	//newPause()
 	InversionTest()
 }
 
