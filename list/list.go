@@ -41,6 +41,7 @@ import (
    1 Apr 23 -- dellist not using the pattern on the commandline on Windows.  Investigating why.  Nevermind, I forgot that dellist is now under list2 and works differently.
    4 Apr 23 -- dellist moved back here under list.go.  I added a flag, DelListFlag, so the last item on the linux command line will be included.
                  And I added FileSelectionString, which returns a string instead of the FileInfoExType.
+   5 Apr 23 -- Fixed CheckDest(), ProcessDirectoryAliases and an issue in listutil_windows found by staticCheck.
 */
 
 type DirAliasMapType map[string]string
@@ -59,7 +60,6 @@ var VeryVerboseFlag bool
 var FilterFlag bool
 var ReverseFlag bool
 var GlobFlag bool
-var directoryAliasesMap DirAliasMapType
 var fileInfoX []FileInfoExType
 var clear map[string]func()
 var ExcludeRex *regexp.Regexp
@@ -68,10 +68,13 @@ var InputDir string
 var SizeFlag bool
 var DelListFlag bool
 
+//var directoryAliasesMap DirAliasMapType  Not needed anymore.
+
 const defaultHeight = 40
 const minWidth = 90
 const minHeight = 26
 const stopCode = "0"
+const sepString = string(filepath.Separator)
 
 var autoWidth, autoHeight int
 
@@ -264,7 +267,9 @@ func GetDirectoryAliases() DirAliasMapType { // Env variable is diraliases.
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string {
+//func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string {  I took out the aliasesMap param.  It doesn't belong as a param.  Flagged by StaticCheck.
+
+func ProcessDirectoryAliases(cmdline string) string {
 
 	idx := strings.IndexRune(cmdline, ':')
 	if VerboseFlag {
@@ -273,7 +278,7 @@ func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string 
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = GetDirectoryAliases()
+	aliasesMap := GetDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {
@@ -529,11 +534,26 @@ func CheckDest() string {
 		return ""
 	}
 	d := flag.Arg(flag.NArg() - 1)
+	if runtime.GOOS == "windows" {
+		if strings.ContainsRune(d, ':') {
+			//directoryAliasesMap := GetDirectoryAliases()  Doesn't belong here.  It's initialized in ProcessDirectoryAliases where it belongs.
+			d = ProcessDirectoryAliases(d)
+		} else if strings.Contains(d, "~") { // this can only contain a ~ on Windows.
+			homeDirStr, _ := os.UserHomeDir()
+			d = strings.Replace(d, "~", homeDirStr, 1)
+		}
+	}
+
+	if !strings.HasSuffix(d, sepString) {
+		d = d + sepString
+	}
+
 	f, err := os.Open(d)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " ERROR from opening %s is %s\n", d, err)
 		return ""
 	}
+	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " ERROR from %s.Stat is %s\n", d, err)

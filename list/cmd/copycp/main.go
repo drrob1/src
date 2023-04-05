@@ -58,9 +58,10 @@ import (
   28 Mar 23 -- Added message saying how many files to be copied.
   31 Mar 23 -- StaticCheck found a few issues.
    4 Apr 23 -- Now called copyCP, which will pass the variadic list of files to either tcc copy or cp.  copyC and listVLC were used to write this routine.
+   5 Apr 23 -- Fixed list.CheckDest.
 */
 
-const LastAltered = "4 Apr 2023" //
+const LastAltered = "5 Apr 2023" //
 
 const sepString = string(filepath.Separator)
 
@@ -180,19 +181,8 @@ func main() {
 			destDir = "." + sepString
 		}
 		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-			homeDirStr, _ := os.UserHomeDir()
-			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-		}
-		if !strings.HasSuffix(destDir, sepString) {
-			destDir = destDir + sepString
-		}
-	} else {
-		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+			//directoryAliasesMap := list.GetDirectoryAliases()
+			destDir = list.ProcessDirectoryAliases(destDir)
 		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
 			homeDirStr, _ := os.UserHomeDir()
 			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
@@ -201,6 +191,18 @@ func main() {
 			destDir = destDir + sepString
 		}
 	}
+	//else {  This code belongs in list.CheckDest, and now is where it belongs.
+	//	if strings.ContainsRune(destDir, ':') {
+	//		directoryAliasesMap := list.GetDirectoryAliases()
+	//		destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+	//	} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
+	//		homeDirStr, _ := os.UserHomeDir()
+	//		destDir = strings.Replace(destDir, "~", homeDirStr, 1)
+	//	}
+	//	if !strings.HasSuffix(destDir, sepString) {
+	//		destDir = destDir + sepString
+	//	}
+	//}
 	fmt.Printf("\n destDir = %#v\n", destDir)
 	fi, err := os.Lstat(destDir)
 	if err != nil {

@@ -43,6 +43,7 @@ import (
   30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
   31 Jan 23 -- timeFudgeFactor is now a Duration.
   31 Mar 23 -- StaticCheck found a few issues.
+   5 Apr 23 -- Refactored list.ProcessDirectoryAliases
 */
 
 const LastAltered = "31 Mar 2023" //
@@ -179,19 +180,8 @@ func main() {
 			destDir = "." + sepString
 		}
 		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-			homeDirStr, _ := os.UserHomeDir()
-			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-		}
-		if !strings.HasSuffix(destDir, sepString) {
-			destDir = destDir + sepString
-		}
-	} else {
-		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+			//directoryAliasesMap := list.GetDirectoryAliases()
+			destDir = list.ProcessDirectoryAliases(destDir)
 		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
 			homeDirStr, _ := os.UserHomeDir()
 			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
@@ -200,6 +190,18 @@ func main() {
 			destDir = destDir + sepString
 		}
 	}
+	//else {
+	//	if strings.ContainsRune(destDir, ':') {
+	//		//directoryAliasesMap := list.GetDirectoryAliases()
+	//		destDir = list.ProcessDirectoryAliases(destDir)
+	//	} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
+	//		homeDirStr, _ := os.UserHomeDir()
+	//		destDir = strings.Replace(destDir, "~", homeDirStr, 1)
+	//	}
+	//	if !strings.HasSuffix(destDir, sepString) {
+	//		destDir = destDir + sepString
+	//	}
+	//}
 	fmt.Printf("\n destDir = %#v\n", destDir)
 	fi, err := os.Lstat(destDir)
 	if err != nil {

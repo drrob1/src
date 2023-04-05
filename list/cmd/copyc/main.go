@@ -65,9 +65,10 @@ import (
   24 Mar 23 -- listutil_linux fixed case of when bash populates multiple files on command line.  And cleaned up the code.
   28 Mar 23 -- Added message saying how many files to be copied.
   31 Mar 23 -- StaticCheck found a few issues.
+   5 Apr 23 -- Fixed list.CheckDest.
 */
 
-const LastAltered = "31 Mar 2023" //
+const LastAltered = "5 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -230,19 +231,8 @@ func main() {
 			destDir = "." + sepString
 		}
 		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-			homeDirStr, _ := os.UserHomeDir()
-			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-		}
-		if !strings.HasSuffix(destDir, sepString) {
-			destDir = destDir + sepString
-		}
-	} else {
-		if strings.ContainsRune(destDir, ':') {
-			directoryAliasesMap := list.GetDirectoryAliases()
-			destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+			//directoryAliasesMap := list.GetDirectoryAliases()
+			destDir = list.ProcessDirectoryAliases(destDir)
 		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
 			homeDirStr, _ := os.UserHomeDir()
 			destDir = strings.Replace(destDir, "~", homeDirStr, 1)
@@ -251,6 +241,18 @@ func main() {
 			destDir = destDir + sepString
 		}
 	}
+	//else {  This code belonged in list.CheckDest.  Now it's where it belongs.
+	//	if strings.ContainsRune(destDir, ':') {
+	//		directoryAliasesMap := list.GetDirectoryAliases()
+	//		destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
+	//	} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
+	//		homeDirStr, _ := os.UserHomeDir()
+	//		destDir = strings.Replace(destDir, "~", homeDirStr, 1)
+	//	}
+	//	if !strings.HasSuffix(destDir, sepString) {
+	//		destDir = destDir + sepString
+	//	}
+	//}
 	fmt.Printf("\n destDir = %#v\n", destDir)
 	fi, err := os.Lstat(destDir)
 	if err != nil {

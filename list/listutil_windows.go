@@ -40,8 +40,8 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		}
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		if strings.ContainsRune(pattern, ':') {
-			directoryAliasesMap = GetDirectoryAliases()
-			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
+			//directoryAliasesMap = GetDirectoryAliases()
+			pattern = ProcessDirectoryAliases(pattern)
 		}
 
 		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
@@ -86,9 +86,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 				fileInfoX, err = MyReadDir(dirName, excludeMe)
-				if err != nil {
-					return nil, err
-				}
+				return fileInfoX, err
 			}
 		}
 
