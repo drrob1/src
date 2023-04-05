@@ -31,19 +31,19 @@ import (
   24 Jan 23 -- And added list.ReverseFlag and list.SizeFlag.
   23 Mar 23 -- Now based on list2, so I can use a regexp on the input files.
    4 Apr 23 -- Now back to list, as I think I've sorted out my issues on the bash command line.  So compiling this will replace the older version based on list2 in GoBin.
+   5 Apr 23 -- Updated the usage message.
 */
 
-const LastAltered = "4 Apr 2023" //
+const LastAltered = "5 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
 
-//const sepString = string(filepath.Separator)
-
 var autoWidth, autoHeight int
 var err error
-var rexStr, inputStr string
-var rex *regexp.Regexp
+
+//var rexStr, inputStr string
+//var rex *regexp.Regexp
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
@@ -55,12 +55,9 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [glob pattern]\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-		//	dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
-
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
@@ -87,8 +84,8 @@ func main() {
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
-	flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
-	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
+	//flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
+	//flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
 
 	flag.Parse()
 
@@ -96,20 +93,20 @@ func main() {
 		verboseFlag = true
 	}
 
-	if rexStr != "" {
-		rex, err = regexp.Compile(rexStr)
-		if err != nil {
-			fmt.Printf(" Input regular expression error is %s.  Ignoring\n", err)
-		}
-	}
-	list.InputDir = inputStr
+	//if rexStr != "" {
+	//	rex, err = regexp.Compile(rexStr)
+	//	if err != nil {
+	//		fmt.Printf(" Input regular expression error is %s.  Ignoring\n", err)
+	//	}
+	//}
+	//list.InputDir = inputStr
+	//list.IncludeRex = rex
 	list.FilterFlag = filterFlag
 	list.VerboseFlag = verboseFlag
 	list.VeryVerboseFlag = veryVerboseFlag
 	list.ReverseFlag = revFlag
 	list.SizeFlag = sizeFlag
 	list.ExcludeRex = excludeRegex
-	list.IncludeRex = rex
 	list.DelListFlag = true
 
 	if verboseFlag {
