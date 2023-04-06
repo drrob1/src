@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"src/list"
 	"strings"
+	"time"
 )
 
 /*
@@ -59,9 +60,10 @@ import (
   31 Mar 23 -- StaticCheck found a few issues.
    4 Apr 23 -- Now called copyCP, which will pass the variadic list of files to either tcc copy or cp.  copyC and listVLC were used to write this routine.
    5 Apr 23 -- Fixed list.CheckDest.
+   6 Apr 23 -- Will wait for the shell to finish, so I can time it and be clearer when this routine is finished.
 */
 
-const LastAltered = "5 Apr 2023" //
+const LastAltered = "6 Apr 2023" //
 
 const sepString = string(filepath.Separator)
 
@@ -265,10 +267,13 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
-	err = execCmd.Start() // this does not wait for it to finish.  I can't time it this way.  If I were to use .Run(), then I could time it.  I'll see what I do.
+
+	t0 := time.Now()
+	//err = execCmd.Start() // this does not wait for it to finish, so I can't time it this way.
+	err = execCmd.Run() // this does wait for it to finish, so I'll time it.
 	if err != nil {
 		fmt.Printf(" Error returned by running %s %s is %v\n", shellStr, variadicParam, err)
 	}
 
-	ctfmt.Printf(ct.Cyan, onWin, " Sent %d files to %s.\n", len(fileListStr), shellStr)
+	ctfmt.Printf(ct.Cyan, onWin, " Sent %d files to %s, which took %s.\n", len(fileListStr), shellStr, time.Since(t0))
 } // end main
