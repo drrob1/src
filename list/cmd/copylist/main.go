@@ -44,9 +44,10 @@ import (
   31 Jan 23 -- timeFudgeFactor is now a Duration.
   31 Mar 23 -- StaticCheck found a few issues.
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
+   8 Apr 23 -- Changed list.New signature.
 */
 
-const LastAltered = "31 Mar 2023" //
+const LastAltered = "8 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -117,12 +118,7 @@ func main() {
 		verboseFlag = true
 	}
 
-	Reverse := revFlag
-
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.FilterFlag = filterFlag
-	list.ReverseFlag = revFlag
+	//Reverse := revFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -151,7 +147,15 @@ func main() {
 	//fmt.Printf(" excludeRegex.String = %q\n", excludeRegex.String())
 	//}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
+	list.FilterFlag = filterFlag
+	list.ReverseFlag = revFlag
+	list.ExcludeRex = excludeRegex
+	list.SizeFlag = sizeFlag
+
+	//fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)

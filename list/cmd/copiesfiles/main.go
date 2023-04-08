@@ -41,9 +41,10 @@ import (
   10 Jan 2023 -- I've settled into calling this pgm copying.  But I'll do that w/ aliases on Windows and symlinks on linux.
   15 Jan 2023 -- Added assigning filterflag to list variable.
    6 Apr 2023 -- I don't use this anymore, as I shifted it's functionality to copying.  But I do want it to compile, so I'm making a few changes.
+   8 Apr 23 -- Changed list.New signature.
 */
 
-const LastAltered = "6 Apr 2023" //
+const LastAltered = "8 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -104,11 +105,7 @@ func main() {
 		verboseFlag = true
 	}
 
-	Reverse := revFlag
-
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.FilterFlag = filterFlag
+	//Reverse := revFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -133,7 +130,15 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
+	list.FilterFlag = filterFlag
+	list.ReverseFlag = revFlag
+	list.SizeFlag = sizeFlag
+	list.ExcludeRex = excludeRegex
+
+	//fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)

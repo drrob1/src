@@ -42,9 +42,10 @@ import (
   26 Mar 23 -- Completed the usage info.  And added list.CheckDest.
   31 Mar 23 -- StaticCheck found a few issues.
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
+   8 Apr 23 -- Changed list.New signature.
 */
 
-const LastAltered = "5 Apr 2023" //
+const LastAltered = "8 Apr 2023" //
 
 const sepString = string(filepath.Separator)
 
@@ -98,12 +99,7 @@ func main() {
 		verboseFlag = true
 	}
 
-	Reverse := revFlag
-
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.FilterFlag = filterFlag
-	list.ReverseFlag = revFlag
+	//Reverse := revFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -128,7 +124,15 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
+	list.FilterFlag = filterFlag
+	list.ReverseFlag = revFlag
+	list.ExcludeRex = excludeRegex
+	list.SizeFlag = sizeFlag
+
+	//fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)

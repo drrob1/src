@@ -61,9 +61,10 @@ import (
    4 Apr 23 -- Now called copyCP, which will pass the variadic list of files to either tcc copy or cp.  copyC and listVLC were used to write this routine.
    5 Apr 23 -- Fixed list.CheckDest.
    6 Apr 23 -- Will wait for the shell to finish, so I can time it and be clearer when this routine is finished.
+   8 Apr 23 -- Changed list.New signature.
 */
 
-const LastAltered = "6 Apr 2023" //
+const LastAltered = "8 Apr 2023" //
 
 const sepString = string(filepath.Separator)
 
@@ -123,13 +124,7 @@ func main() {
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
 
-	Reverse := revFlag
-
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.ReverseFlag = revFlag
-	list.FilterFlag = filterFlag
-	list.GlobFlag = globFlag
+	//Reverse := revFlag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -154,7 +149,16 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
+	list.ReverseFlag = revFlag
+	list.FilterFlag = filterFlag
+	list.GlobFlag = globFlag
+	list.ExcludeRex = excludeRegex
+	list.SizeFlag = sizeFlag
+
+	//fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)

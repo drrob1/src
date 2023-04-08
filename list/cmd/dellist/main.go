@@ -32,9 +32,10 @@ import (
   23 Mar 23 -- Now based on list2, so I can use a regexp on the input files.
    4 Apr 23 -- Now back to list, as I think I've sorted out my issues on the bash command line.  So compiling this will replace the older version based on list2 in GoBin.
    5 Apr 23 -- Updated the usage message.
+   8 Apr 23 -- Changed list.New signature.
 */
 
-const LastAltered = "5 Apr 2023" //
+const LastAltered = "8 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -101,14 +102,6 @@ func main() {
 	//}
 	//list.InputDir = inputStr
 	//list.IncludeRex = rex
-	list.FilterFlag = filterFlag
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.ReverseFlag = revFlag
-	list.SizeFlag = sizeFlag
-	list.ExcludeRex = excludeRegex
-	list.DelListFlag = true
-
 	if verboseFlag {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
@@ -132,7 +125,16 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
-	fileList, err := list.New(excludeRegex, sizeFlag, revFlag) // fileList used to be []string, but now it's []FileInfoExType.
+	list.FilterFlag = filterFlag
+	list.VerboseFlag = verboseFlag
+	list.VeryVerboseFlag = veryVerboseFlag
+	list.ReverseFlag = revFlag
+	list.SizeFlag = sizeFlag
+	list.ExcludeRex = excludeRegex
+	list.DelListFlag = true
+
+	//fileList, err := list.New(excludeRegex, sizeFlag, revFlag) // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)
