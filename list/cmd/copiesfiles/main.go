@@ -40,9 +40,10 @@ import (
                    If this pgm prompts for a target, it will accept multiple targets.  It will have to validate each of them and will only send to the validated targets.
   10 Jan 2023 -- I've settled into calling this pgm copying.  But I'll do that w/ aliases on Windows and symlinks on linux.
   15 Jan 2023 -- Added assigning filterflag to list variable.
+   6 Apr 2023 -- I don't use this anymore, as I shifted it's functionality to copying.  But I do want it to compile, so I'm making a few changes.
 */
 
-const LastAltered = "15 Jan 2023" //
+const LastAltered = "6 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -291,8 +292,8 @@ func validateTarget(dir string) (string, error) {
 	}
 
 	if strings.ContainsRune(dir, ':') {
-		directoryAliasesMap := list.GetDirectoryAliases()
-		outDir = list.ProcessDirectoryAliases(directoryAliasesMap, dir)
+		//directoryAliasesMap := list.GetDirectoryAliases()
+		outDir = list.ProcessDirectoryAliases(dir)
 	} else if strings.Contains(dir, "~") { // this can only contain a ~ on Windows.
 		homeDirStr, _ := os.UserHomeDir()
 		outDir = strings.Replace(dir, "~", homeDirStr, 1)

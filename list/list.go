@@ -42,6 +42,7 @@ import (
    4 Apr 23 -- dellist moved back here under list.go.  I added a flag, DelListFlag, so the last item on the linux command line will be included.
                  And I added FileSelectionString, which returns a string instead of the FileInfoExType.
    5 Apr 23 -- Fixed CheckDest(), ProcessDirectoryAliases and an issue in listutil_windows found by staticCheck.
+   8 Apr 23 -- New now does not need params.  NewList will be the format that needs params.
 */
 
 type DirAliasMapType map[string]string
@@ -106,16 +107,19 @@ func init() {
 
 }
 
-func New(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
+// NewList is the format that needs these params: (excludeMe *regexp.Regexp, sizeSort, reverse bool)
+func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
 	lst, err := MakeList(excludeMe, sizeSort, reverse)
 	return lst, err
 }
 
-//func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) []FileInfoExType {
-//	return MakeList(excludeMe, sizeSort, reverse)
-//}
+// New does not need params, so its signature is New().
+func New() ([]FileInfoExType, error) {
+	lst, err := MakeList(ExcludeRex, SizeFlag, ReverseFlag)
+	return lst, err
+}
 
-// MakeList will return a slice of strings that contain a full filename including dir
+// MakeList will return a slice of strings that contain a full filename including dir, and it needs params for excludeRegex, sizeSort and reverse.
 func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
 	var err error
 
