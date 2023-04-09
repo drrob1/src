@@ -1,7 +1,7 @@
-package main
+package main // bj2.go
 
 /*
-  BlackJack Simulator.
+  BlackJack Simulator 2.
   Approximately translated from Modula-2 that I wrote ca 95, and then converted to Windows in 2005.  I changed much of the logic, and decided to use recursion for the
   handling of split hands.  This is my first use of recursion in my own code.
 
@@ -109,6 +109,8 @@ import (
   23 Apr 22 -- Changed how split hands are constructed, which is now more idiomatic for Go.
   21 Oct 22 -- Fixed a bug in an error message, detected by golangci-lint
   20 Nov 22 -- Static linter reported more issues, one of which I'll fix and the others not yet.
+   7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
+                 I'm not going to fix it now.  Maybe another time.
 */
 
 const lastAltered = "Nov 20, 2022"
@@ -176,14 +178,14 @@ var dealerHand handType
 var numOfPlayers, currentCard, numOfShuffles int
 var deck []int
 
-//var prevResult []int
+// var prevResult []int
 var runsWon, runsLost []int
 var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
 var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 
-//var winsInARow, lossesInARow int
+// var winsInARow, lossesInARow int
 var score float64
 var clearscreen map[string]func()
 

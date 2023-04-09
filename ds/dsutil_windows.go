@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,7 +27,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
-		HomeDirStr = ""
+		//HomeDirStr = ""  This would be empty if err != nil anyway.
 	}
 	HomeDirStr = HomeDirStr + string(filepath.Separator)
 
@@ -42,10 +43,10 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 
 		if strings.ContainsRune(pattern, ':') {
 			directoryAliasesMap = getDirectoryAliases()
-			pattern = ProcessDirectoryAliases(directoryAliasesMap, pattern)
-		} else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows.
-			pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
+			pattern = ProcessDirectoryAliases(pattern)
 		}
+
+		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
 		dirName, fileName := filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
@@ -72,6 +73,10 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
 			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
 			filenames, err = filepath.Glob(pattern)
+			if err != nil {
+				ctfmt.Printf(ct.Red, false, "ERROR from filepath.Glob(%s) is %s\n", pattern, err)
+				os.Exit(1)
+			}
 			if verboseFlag {
 				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 			}
@@ -88,7 +93,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 				fileInfos = myReadDir(dirName)
 			}
-
+			return fileInfos
 		}
 
 		fileInfos = make([]os.FileInfo, 0, len(filenames))

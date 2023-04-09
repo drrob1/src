@@ -1,4 +1,4 @@
-package main
+package main // consha.go
 
 import (
 	"bytes"
@@ -71,6 +71,7 @@ import (
                  multiSha.  That could also account for the differences in speed.  So I'll say it's a tie.  The difference on win10 desktop is 6.1 sec here vs 6.07 sec from multiSha.
                  And this difference persists even after I added the atomic adds to multiSha.
   15 Feb 23 -- Following Bill Kennedy's advice and making the channel either synchronous or maybe buffer of 1.  This is still slower than multisha, by ~0.04 sec here on Win10 desktop.
+   7 Apr 23 -- StaticCheck reports that resultMatchType is unused.  So I commented it out.  And another error in matchOrNoMatch, which I fixed.
 */
 
 const LastCompiled = "14 Dec 2022"
@@ -91,16 +92,16 @@ type hashType struct {
 	hashValIn string
 }
 
-type resultMatchType struct {
-	fname   string
-	hashNum int
-	match   bool
-	err     error
-}
+//type resultMatchType struct {
+//	fname   string
+//	hashNum int
+//	match   bool
+//	err     error
+//}
 
 var hashChan chan hashType
 
-//var resultChan chan resultMatchType
+// var resultChan chan resultMatchType
 var postCounter int64
 var wg1 sync.WaitGroup
 
@@ -109,10 +110,8 @@ var onWin bool
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 	TargetFile, err := os.Open(hashIn.fName)
-	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.
 	defer wg1.Done()
 	defer atomic.AddInt64(&postCounter, 1)
-
 	if err != nil {
 		if err == os.ErrNotExist {
 			ctfmt.Printf(ct.Red, onWin, " %s not found, skipping. \n", hashIn.fName)
@@ -121,6 +120,7 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 		}
 		return
 	}
+	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.  StaticCheck said to have this after err check.  So I moved it to here.  TargetFile will be nil if err != nil.
 
 	hashLength := len(hashIn.hashValIn)
 	var hashFunc hash.Hash

@@ -1,4 +1,4 @@
-package tokenize
+package tokenize // tokenize.go
 
 import (
 	"log"
@@ -65,6 +65,7 @@ import (
   26 Jan 18 -- Turns out that SetMapDelim doesn't work on GetTokenString, so I have to be more selective
                  when I remap the characters.
   23 Oct 20 -- Adjusted GetOpcode code so that UNGETCHR is used for long tokens.  Code copied from tknptr.go.
+   9 Apr 23 -- Fixed a var not used error flagged by StaticCheck.
 */
 
 type FSATYP int
@@ -116,7 +117,7 @@ const PERCNT = '%'
 
 var CURPOSN, HOLDCURPOSN, PREVPOSN int
 
-var linebuf, lineByteSlice, HoldLineBS []byte
+var lineByteSlice, HoldLineBS []byte
 
 func Cap(c rune) rune {
 	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
@@ -204,7 +205,7 @@ func INITKN(Str string) {
 	*/
 } // INITKN
 
-//****************************** STOTKNPOSN ***********************************
+// ****************************** STOTKNPOSN ***********************************
 func STOTKNPOSN() {
 	/*
 	   STORE TOKEN POSITION.
@@ -221,7 +222,7 @@ func STOTKNPOSN() {
 	copy(HoldLineBS, lineByteSlice) // Need to use copy rtn to copy values, else just copy a pointer so there is no 2nd copy.
 } // STOTKNPOSN
 
-//****************************** RCLTKNPOSN **********************************
+// ****************************** RCLTKNPOSN **********************************
 func RCLTKNPOSN() {
 	/*
 	   RECALL TOKEN POSITION.
@@ -373,7 +374,7 @@ func GETOPCODE(Token TokenType) int {
 	return OpCode
 } // GETOPCODE
 
-//       ***************************=== GetToken ===**************************************
+// ***************************=== GetToken ===**************************************
 func GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var (
 		CHAR   CharType
@@ -552,19 +553,19 @@ ExitForLoop:
 	return TOKEN, EOL
 } // GetToken
 
-//------------------------------*************************** GETTKN **************************************
+// ------------------------------*************************** GETTKN **************************************
 func GETTKN() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = GetToken(true)
 	return TOKEN, EOL
 } // GETTKN
 
-//********************************** isdigit ***********************************************
+// ********************************** isdigit ***********************************************
 func isdigit(ch rune) bool {
 	isdgt := ch >= Dgt0 && ch <= Dgt9
 	return isdgt
 }
 
-//********************************** ishexdigit *************************************************
+// ********************************** ishexdigit *************************************************
 func ishexdigit(ch rune) bool {
 
 	ishex := isdigit(ch) || ((ch >= 'A') && (ch <= 'F'))
@@ -572,7 +573,7 @@ func ishexdigit(ch rune) bool {
 
 } // ishexdigit
 
-//*********************************** fromhex *************************************************
+// *********************************** fromhex *************************************************
 func FromHex(s string) int {
 	result := 0
 	var dgtval int
@@ -825,7 +826,7 @@ func GETTKNEOL() (TOKEN TokenType, EOL bool) {
 	return TOKEN, EOL
 } // GETTKNEOL
 
-//************************************** UNGETTKN *****************************
+// ************************************** UNGETTKN *****************************
 func UNGETTKN() {
 	/*
 	   * UNGET TOKEN ROUTINE.

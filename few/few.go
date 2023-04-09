@@ -61,21 +61,22 @@ import (
                  will take the hashes to run as params.  The API will use io.Readers.  The hash types are []byte, which cannot be directly compared.  So I convert the hashes
                  to strings, which can be directly compared.
    1 Feb 23 -- Adding API that takes filenames, not io.Reader's.
+   9 Apr 23 -- StaticCheck complained about when I did defer.  So I fixed them.
 */
 
-const LastCompiled = "1 Feb 2023"
+const LastCompiled = "9 Apr 2023"
 
 func Feq1withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 	buf1 := bufio.NewReader(fHandle1)
 	buf2 := bufio.NewReader(fHandle2)
 
@@ -98,15 +99,15 @@ func Feq1(r1, r2 io.Reader) bool { // sha1
 
 func Feq2withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 
 	buf1 := bufio.NewReader(fHandle1)
 	buf2 := bufio.NewReader(fHandle2)
@@ -130,15 +131,15 @@ func Feq2(r1, r2 io.Reader) bool { // sha256
 
 func Feq32withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 
 	buf1 := bufio.NewReader(fHandle1)
 	buf2 := bufio.NewReader(fHandle2)
@@ -160,15 +161,15 @@ func Feq32(r1, r2 io.Reader) bool { // crc32 IEEE
 
 func Feq3withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 
 	buf1 := bufio.NewReader(fHandle1)
 	buf2 := bufio.NewReader(fHandle2)
@@ -192,15 +193,15 @@ func Feq3(r1, r2 io.Reader) bool { // sha384
 
 func Feq5withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 
 	buf1 := bufio.NewReader(fHandle1)
 	buf2 := bufio.NewReader(fHandle2)
@@ -224,15 +225,15 @@ func Feq5(r1, r2 io.Reader) bool { // sha512
 
 func Feq64withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 
 	buf1 := bufio.NewReader(fHandle1)
 	buf2 := bufio.NewReader(fHandle2)
@@ -256,15 +257,15 @@ func Feq64(r1, r2 io.Reader) bool { // crc64
 
 func FeqbbbwithNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
+	if err != nil {
+		return false, err
+	}
 	defer fHandle1.Close()
-	if err != nil {
-		return false, err
-	}
 	fHandle2, err := os.Open(fn2)
-	defer fHandle2.Close()
 	if err != nil {
 		return false, err
 	}
+	defer fHandle2.Close()
 
 	BOOL, err := Feqbbb(fHandle1, fHandle2)
 	return BOOL, err

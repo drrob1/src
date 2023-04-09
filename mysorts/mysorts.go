@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "27 Aug 2021"
-
 /*
   REVISION HISTORY
   ----------------
@@ -55,7 +53,10 @@ const LastAlteredDate = "27 Aug 2021"
   27 Aug 21 -- Converted to modules and Go 1.16 libraries by removing ioutil.  And using other routines from the sort standard library.
                Again, fixing some comments, and commenting out modifiedHeapsort which doesn't work.
                This code has been supplanted by heapsorter.go.  I'll not do anything else here.
+   9 Apr 23 -- Error flagged by StaticCheck fixed.
 */
+
+const LastAlteredDate = "9 Apr 2023"
 
 var intStack []int
 
@@ -378,8 +379,8 @@ func NRheapsort(items []string) []string { // copied from Numerical Recipes 3rd 
 	}
 	return items
 } // END NRheapsort;
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 func qsort(a []string, L, R int) []string {
 	i := L
 	j := R
@@ -603,7 +604,7 @@ func NonRecursiveQuickSortOberon(a []string) []string {
 } // 	END NonRecursiveQuickSortOberon
 
 // -----------------------------------------------------------
-//mergesort.go
+// mergesort.go
 func mergeSort(L []string) []string {
 	if len(L) < 2 {
 		return L
@@ -714,7 +715,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteSlice := make([]byte, 0, filesize+5) // add 5 just in case
+	//byteSlice := make([]byte, 0, filesize+5) // add 5 just in case  Flagged by StaticCheck as never used.
 	byteSlice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
@@ -1282,7 +1283,7 @@ func main() {
 	OutputFile.Close()
 } // end main
 
-//===========================================================
+// ===========================================================
 func check(e error) {
 	if e != nil {
 		panic(e)

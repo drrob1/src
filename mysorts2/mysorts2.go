@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const LastAlteredDate = "27 Aug 2021"
-
 /*
   REVISION HISTORY
   ----------------
@@ -30,7 +28,10 @@ const LastAlteredDate = "27 Aug 2021"
   22 May 20 -- Adding ModifiedQuickSort to see if it's faster to insertionsort when < 12 items.
   24 May 20 -- ModifiedQuickSort slightly slower than QuickSort.
   27 Aug 21 -- Supplanted by heapsorter.go.  But I removed ioutils and getcommandline.
+   9 Apr 23 -- Fixed an error flagged by StaticCheck.
 */
+
+const LastAlteredDate = "9 Apr 2023"
 
 func StraightInsertion(input []string) []string {
 	n := len(input)
@@ -283,7 +284,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	byteslice := make([]byte, 0, filesize+5) // add 5 just in case
+	//byteslice := make([]byte, 0, filesize+5) // add 5 just in case   Flagged by StaticCheck as never used.
 	byteslice, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Error from os.ReadFile when reading ", Filename, ".  Exiting.")
@@ -597,7 +598,7 @@ func main() {
 
 } // end main
 
-//===========================================================
+// ===========================================================
 func check(e error) {
 	if e != nil {
 		panic(e)

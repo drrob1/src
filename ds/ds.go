@@ -10,7 +10,6 @@ import (
 	"golang.org/x/term"
 	"os"
 	"os/user"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -119,11 +118,12 @@ Revision History
                Turned out that the linter was wrong, sort of.  I don't use it on linux, but I need it on Windows.  So I had to put it back for Windows.
 11 Nov 22 -- Will output environ var settings on header.  They're easy to forget :-)
 14 Jan 23 -- I wrote args to learn more about how arguments are handled.  I think I got it wrong in dsrtutil_linux.  I'm going to fix it.  Now that it works there
-               I'll fix it here, too
+               I'll fix it here, too.
  7 Feb 23 -- Corrected an oversight of not closing a file in dsutil_linux.go
+ 9 Apr 23 -- StaticCheck reported several unused variables (numLines, grandTotalCount, sizeTotal, grandTotal) and not using a value of HomeDirStr here.
 */
 
-const LastAltered = "7 Feb 2023"
+const LastAltered = "9 Apr 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -167,7 +167,7 @@ func main() {
 	var fileInfos []os.FileInfo
 	var err error
 	var SizeTotal, GrandTotal int64
-	var GrandTotalCount int
+	//var GrandTotalCount int
 	var excludeRegexPattern string
 	var numOfCols int
 
@@ -198,14 +198,14 @@ func main() {
 	}
 	fmt.Println()
 
-	sepString := string(filepath.Separator)
-	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of Go 1.12
-	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
-		HomeDirStr = ""
-	}
-	HomeDirStr = HomeDirStr + sepString
+	//sepString := string(filepath.Separator)
+	//HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of Go 1.12.  Not used here, only in dsutil_windows.go
+	//if err != nil {
+	//	fmt.Fprint(os.Stderr, err)
+	//	fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
+	//	//HomeDirStr = ""  when err != nil, HomeDirStr would be blank anyway.
+	//}
+	//HomeDirStr = HomeDirStr + sepString
 
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
@@ -476,7 +476,7 @@ func main() {
 		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
 	}
 
-	fileInfos = getFileInfosFromCommandLine()
+	fileInfos = getFileInfosFromCommandLine() // this rtn is in dsutil_windows.go and dsutil_linux.go.  So go vet gets this wrong.
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn)
 	}
@@ -520,7 +520,7 @@ func main() {
 	fmt.Print(" File Size total = ", s)
 	if ShowGrandTotal {
 		s1, color := getMagnitudeString(GrandTotal)
-		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
+		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
 	} else {
 		fmt.Println(".")
 	}
@@ -622,7 +622,7 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 	return dsrtparam
 } // end ProcessEnvironString
 
-//------------------------------ GetDirectoryAliases ----------------------------------------
+// ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 	s, ok := os.LookupEnv("diraliases")
@@ -667,13 +667,13 @@ func MakeSubst(instr string, r1, r2 rune) string {
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
 
-func ProcessDirectoryAliases(aliasesMap dirAliasMapType, cmdline string) string {
+func ProcessDirectoryAliases(cmdline string) string {
 
 	idx := strings.IndexRune(cmdline, ':')
 	if idx < 2 { // note that if rune is not found, function returns -1.
 		return cmdline
 	}
-	aliasesMap = getDirectoryAliases()
+	aliasesMap := getDirectoryAliases()
 	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {

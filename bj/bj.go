@@ -1,4 +1,4 @@
-package main
+package main // bj.go
 
 /*
   BlackJack Simulator.
@@ -89,6 +89,8 @@ import (
   20 Apr 22 -- Backporting the bytes.Reader code from bj2, that allows comments and such in the strategy file.  Nevermind, it's already there.
   23 Apr 22 -- Will use idiomatic Go in Split a hand.
   20 Nov 22 -- Ran a static linter and will make recommended changes
+   7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
+                 I'm not going to fix it now.  Maybe another time.
 */
 
 const lastAltered = "Nov 20, 2022"
@@ -138,7 +140,7 @@ const loopDivisor = 100 // used for the new progressbar functions.
 
 // 100 million, for now.  Should be about 20 sec on leox, but the new Ryzen 9 5950X computers are ~half that, 20 sec for 300 million, 30 sec for 500 million and 1 min for 1 billion.
 // I set 1 billion hands as the max.
-//const maxNumOfHands = 100_000_000
+// const maxNumOfHands = 100_000_000
 const maxNumOfHands = 1_000_000
 const NumOfCards = 52 * numOfDecks
 
@@ -157,14 +159,14 @@ var dealerHand handType
 var numOfPlayers, currentCard int
 var deck []int
 
-//var prevResult []int
+// var prevResult []int
 var runsWon, runsLost []int
 var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
 var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 
-//var winsInARow, lossesInARow int
+// var winsInARow, lossesInARow int
 var score float64
 var clearscreen map[string]func()
 
@@ -534,7 +536,7 @@ func hitDealer() {
 					return
 				}
 			} // until busted or stand
-		}                                                                       // if soft hand or not.
+		} // if soft hand or not.
 		if dealerHand.softflag && !dealerHitsSoft17 && dealerHand.total >= 17 { // this could probably be == 17 and still work.
 			return
 		} else if dealerHand.total >= 17 {
@@ -1755,7 +1757,7 @@ func readLine(r *bytes.Reader) (string, error) {
 					fmt.Printf(" %c %v ", byt, err)
 					pause()
 				}
-		*///if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
+		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
 		//	return strings.TrimSpace(sb.String()), nil
 		//} else
 		if err != nil {
@@ -1779,7 +1781,7 @@ func readLine(r *bytes.Reader) (string, error) {
 } // readLine
 // ----------------------------------------------------------------------
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
