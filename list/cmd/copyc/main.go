@@ -67,9 +67,11 @@ import (
   31 Mar 23 -- StaticCheck found a few issues.
    5 Apr 23 -- Fixed list.CheckDest.
    8 Apr 23 -- Changed list.New signature.
+  10 Apr 23 -- Moved copyAFile to its own separate file.  This will make maintenance easier.  Scratch that.  I forgot that the copyAFile routines are not all identical.
+                 I'm moving it back to be here now.
 */
 
-const LastAltered = "8 Apr 2023" //
+const LastAltered = "10 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -245,18 +247,6 @@ func main() {
 			destDir = destDir + sepString
 		}
 	}
-	//else {  This code belonged in list.CheckDest.  Now it's where it belongs.
-	//	if strings.ContainsRune(destDir, ':') {
-	//		directoryAliasesMap := list.GetDirectoryAliases()
-	//		destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-	//	} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-	//		homeDirStr, _ := os.UserHomeDir()
-	//		destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-	//	}
-	//	if !strings.HasSuffix(destDir, sepString) {
-	//		destDir = destDir + sepString
-	//	}
-	//}
 	fmt.Printf("\n destDir = %#v\n", destDir)
 	fi, err := os.Lstat(destDir)
 	if err != nil {
@@ -334,8 +324,16 @@ func main() {
 		succeeded, failed, time.Since(start), goRtns)
 } // end main
 
-// ------------------------------------ Copy ----------------------------------------------
+// min(int1, int2) int  -- this returns the smaller of 2 int
+func min(n1, n2 int) int {
+	if n1 < n2 {
+		return n1
+	}
+	return n2
+}
 
+// CopyAFile                    ------------------------------------ Copy ----------------------------------------------
+// CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
 func CopyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
@@ -416,6 +414,26 @@ func CopyAFile(srcFile, destDir string) {
 			success: false,
 		}
 		msgChan <- msg
+		er := os.Remove(outName)
+		if er == nil {
+			msg = msgType{
+				s:        "",
+				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  There was no error", err, outName),
+				color:    ct.Yellow,
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		} else {
+			msg = msgType{
+				s:        "",
+				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  The error from os.Remove was %s", err, outName, er),
+				color:    ct.Yellow,
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		}
 		return
 	}
 
@@ -428,6 +446,27 @@ func CopyAFile(srcFile, destDir string) {
 			success: false,
 		}
 		msgChan <- msg
+
+		er := os.Remove(outName)
+		if er == nil {
+			msg = msgType{
+				s:        "",
+				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  There was no error", err, outName),
+				color:    ct.Yellow,
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		} else {
+			msg = msgType{
+				s:        "",
+				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  The error from os.Remove was %s", err, outName, er),
+				color:    ct.Yellow,
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		}
 		return
 	}
 
@@ -505,22 +544,3 @@ func CopyAFile(srcFile, destDir string) {
 	msgChan <- msg
 	// return  this is redundant.
 } // end CopyAFile
-
-func min(n1, n2 int) int {
-	if n1 < n2 {
-		return n1
-	}
-	return n2
-}
-
-//ErrByteCountMismatch = fmt.Errorf("Sizes are different.  Src size=%d, dest size=%d", srcSize, n)
-//if srcSize != n {
-//	msg := msgType{
-//		s:       "",
-//		e:       ErrByteCountMismatch,
-//		color:   ct.Red,
-//		success: false,
-//	}
-//	msgChan <- msg
-//	return
-//}
