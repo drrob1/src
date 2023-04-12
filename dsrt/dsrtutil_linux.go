@@ -12,8 +12,9 @@ import (
 	"syscall"
 )
 
-func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
+//  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
 
+func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
 		return "", ""
 	}
@@ -21,8 +22,8 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	uidStr := strconv.Itoa(sysUID)
 	sysGID := int(fi.Sys().(*syscall.Stat_t).Gid) // Stat_t is a uint32
 	gidStr := strconv.Itoa(sysGID)
-	usernameStr = GetIDname(uidStr)
-	groupnameStr = GetIDname(gidStr)
+	usernameStr = idName(uidStr)
+	groupnameStr = idName(gidStr)
 	return usernameStr, groupnameStr
 } // end GetUserGroupStr
 

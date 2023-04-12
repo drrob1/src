@@ -18,6 +18,7 @@ REVISION HISTORY
                I got an error from Lstat in that it tried to Lstat z:\z:filename.TXT.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag.  Finally.
 24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
+12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.  But that is not called here in Windows code, so nevermind.
 */
 
 /* Not used here.
@@ -142,7 +143,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 
 } // end getFileInfosFromCommandLine
 
-//displayFileInfos only has to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
+// displayFileInfos only has to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
 func displayFileInfos(fiSlice []os.FileInfo) {
 	var lnCount int
 	for _, f := range fiSlice {

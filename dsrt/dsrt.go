@@ -118,9 +118,10 @@ REVISION HISTORY
  6 Feb 23 -- Directory aliases still don't work perfectly.  I'm going to debug this a bit more.  Nevermind, the problem was a bad directory alias that mapped to the wrong drive letter.
  7 Feb 23 -- I found an area in dsrtutil_linux.go where I didn't close a file that needed to be closed.  I fixed that.
 15 Feb 23 -- Added showing the timestamp of the binary.  And then removed it when I saw that it's already there in the verbose output.  And I tweaked the beginning verbose output.
+12 Apr 23 -- Fixing a panic when run in a docker image.  Issue is in GetIDName.  I'll fix the bug and change this name to be more idiomatic in Go, ie, idName.
 */
 
-const LastAltered = "15 Feb 2023"
+const LastAltered = "12 Apr 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -516,18 +517,17 @@ func IsSymlink(m os.FileMode) bool {
 
 // ---------------------------- GetIDname -----------------------------------------------------------
 
-func GetIDname(uidStr string) string {
+func idName(uidStr string) string {
 	if len(uidStr) == 0 {
 		return ""
 	}
 	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		return ""    // this line fixes the bug if user.LookupId failed, as it does in a docker image.
 	}
-
-	idname := ptrToUser.Username
-	return idname
-} // GetIDname
+	return ptrToUser.Username
+} // idName, formerly GetIDname
 
 /*
 // ------------------------------- GetEnviron ------------------------------------------------
