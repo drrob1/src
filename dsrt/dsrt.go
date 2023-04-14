@@ -119,9 +119,10 @@ REVISION HISTORY
  7 Feb 23 -- I found an area in dsrtutil_linux.go where I didn't close a file that needed to be closed.  I fixed that.
 15 Feb 23 -- Added showing the timestamp of the binary.  And then removed it when I saw that it's already there in the verbose output.  And I tweaked the beginning verbose output.
 12 Apr 23 -- Fixing a panic when run in a docker image.  Issue is in GetIDName.  I'll fix the bug and change this name to be more idiomatic in Go, ie, idName.
+14 Apr 23 -- Tweaked output of the error in idName, formerly GetIDName.
 */
 
-const LastAltered = "12 Apr 2023"
+const LastAltered = "14 Apr 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -523,8 +524,8 @@ func idName(uidStr string) string {
 	}
 	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return ""    // this line fixes the bug if user.LookupId failed, as it does in a docker image.
+		fmt.Fprintf(os.Stderr, "%s:  ", err)
+		return "" // this line fixes the bug if user.LookupId failed, as it does in a docker image.
 	}
 	return ptrToUser.Username
 } // idName, formerly GetIDname
