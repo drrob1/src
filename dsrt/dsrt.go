@@ -619,7 +619,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 	return string(inRune)
 } // makesubst
 
-//------------------------------ GetDirectoryAliases ----------------------------------------
+// ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 	s, ok := os.LookupEnv("diraliases")
 	if !ok {
