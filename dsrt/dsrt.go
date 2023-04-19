@@ -123,7 +123,7 @@ REVISION HISTORY
 18 Apr 23 -- Removed the error message in idName
 */
 
-const LastAltered = "18 Apr 2023"
+const LastAltered = "19 Apr 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -526,7 +526,7 @@ func idName(uidStr string) string {
 	ptrToUser, err := user.LookupId(uidStr)
 	if err != nil {
 		//fmt.Fprintf(os.Stderr, "%s:  ", err)  too noisy in a docker container.
-		return "" // this line fixes the bug if user.LookupId failed, as it does in a docker image.
+		return "---" // this line fixes the bug if user.LookupId failed, as it does in a docker image.
 	}
 	return ptrToUser.Username
 } // idName, formerly GetIDname
