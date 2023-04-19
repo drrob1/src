@@ -183,51 +183,6 @@ func main() {
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
-	/*
-		if !autoDefaults {
-			if winflag {
-				comspec, ok := os.LookupEnv("ComSpec")
-				if ok {
-					//bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
-					bytesbuf := bytes.NewBuffer(make([]byte, 0, 200))
-					tcc := exec.Command(comspec, "-C", "echo", "%_columns")
-					tcc.Stdout = bytesbuf
-					tcc.Run()
-					colstr := bytesbuf.String()
-					lines := strings.Split(colstr, "\n")
-					trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
-					autoWidth, err = strconv.Atoi(trimmedLine)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
-					}
-
-					bytesbuf.Reset()
-					tcc = exec.Command(comspec, "-C", "echo", "%_rows")
-					tcc.Stdout = bytesbuf
-					tcc.Run()
-					rowstr := bytesbuf.String()
-					lines = strings.Split(rowstr, "\n")
-					trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
-					autoHeight, err = strconv.Atoi(trimmedLine)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
-					}
-				} else {
-					fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
-				}
-			} else {
-				fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
-			}
-		}
-	*/
-
-	//HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  dsutil_windows.go has it's own HomeDirStr, so I'll remove this one.
-	//if err != nil {
-	//	fmt.Fprint(os.Stderr, err)
-	//	fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
-	//	HomeDirStr = ""
-	//}
-	//HomeDirStr = HomeDirStr + string(filepath.Separator)
 
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
