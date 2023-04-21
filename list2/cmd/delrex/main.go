@@ -1,4 +1,4 @@
-package main // dellist
+package main // delrex from dellist
 
 import (
 	"flag"
@@ -30,9 +30,10 @@ import (
    7 Jan 23 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   24 Jan 23 -- And added list.ReverseFlag and list.SizeFlag.
   23 Mar 23 -- Now based on list2, so I can use a regexp on the input files.
+  21 Apr 23 -- Now called delrex, to distinguish it from dellist which uses list.go.
 */
 
-const LastAltered = "24 Mar 2023" //
+const LastAltered = "21 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
