@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"runtime"
 	"src/list2"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -44,30 +43,31 @@ REVISION HISTORY
 16 Jan 23 -- Now called listvlc.go in list2 tree.  It will use the list routines to make a list to shuffle and then include in the vlc call.
 18 Jan 23 -- Adding smartCase
 18 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
+21 Apr 23 -- Making spell checker happy, and removing dead code.
 */
 
-const lastModified = "Feb 18, 2023"
+const lastModified = "Apr 21, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, veryverboseFlag, notccFlag, ok bool
+var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
-func init() {
-	goVersion := runtime.Version()
-	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-	goVersionInt, err := strconv.Atoi(goVersion)
-	if err == nil {
-		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-			return
-		}
-	} else {
-		fmt.Printf(" ERROR from Atoi: %s\n", err)
-	}
-	rand.Seed(time.Now().UnixNano())
-}
+//func init() {  Default version of Go is now 1.20.2, so this isn't needed.  StaticCheck complains about the call to rand.Seed on the last line of this func, so I'll remove it.
+//	goVersion := runtime.Version()
+//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+//	goVersionInt, err := strconv.Atoi(goVersion)
+//	if err == nil {
+//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+//			return
+//		}
+//	} else {
+//		fmt.Printf(" ERROR from Atoi: %s\n", err)
+//	}
+//	rand.Seed(time.Now().UnixNano())
+//}
 
 func main() {
 	fmt.Printf(" listvlc.go.  Last modified %s, compiled w/ %s\n\n", lastModified, runtime.Version())
@@ -101,22 +101,16 @@ func main() {
 	}
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
-	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
+	flag.BoolVar(&veryVerboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
 	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.")
-	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
+	flag.BoolVar(&noTccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 
 	var revFlag bool
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var sizeFlag bool
 	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
-
-	//var excludeFlag bool
-	//var excludeRegexPattern string
-	//var excludeRegex *regexp.Regexp  declared globally above
-	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
-	//flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
@@ -125,8 +119,7 @@ func main() {
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
 	flag.Parse()
-	//numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.  Not needed anymore.
-	if veryverboseFlag { // very verbose also turns on verbose flag.
+	if veryVerboseFlag { // very verbose also turns on verbose flag.
 		verboseFlag = true
 	}
 
@@ -161,7 +154,7 @@ func main() {
 	}
 
 	list2.VerboseFlag = verboseFlag
-	list2.VeryVerboseFlag = veryverboseFlag
+	list2.VeryVerboseFlag = veryVerboseFlag
 	list2.ReverseFlag = revFlag
 	list2.SizeFlag = sizeFlag
 	list2.ExcludeRex = excludeRegex
@@ -238,7 +231,7 @@ func main() {
 	var execCmd *exec.Cmd
 
 	variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
-	if notccFlag {
+	if noTccFlag {
 		variadicParam = []string{}
 	}
 	variadicParam = append(variadicParam, fileNames...)
@@ -251,7 +244,7 @@ func main() {
 	// I got this answer from stack overflow.
 
 	if runtime.GOOS == "windows" {
-		if notccFlag {
+		if noTccFlag {
 			execCmd = exec.Command(vlcStr, variadicParam...)
 		} else { // this isn't needed anymore.  I'll leave it here because it does work, in case I ever need to do this again.
 			execCmd = exec.Command(shellStr, variadicParam...)
@@ -260,7 +253,7 @@ func main() {
 		execCmd = exec.Command(vlcStr, fileNames...)
 	}
 
-	if veryverboseFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" vlcStr = %s, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
 	}
 
@@ -272,67 +265,6 @@ func main() {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
 	}
 } // end main()
-
-// ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
-
-func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
-
-	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
-
-	if veryverboseFlag {
-		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
-	}
-
-	return fileNames
-}
-
-// ------------------------------- myReadDir -----------------------------------
-
-func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
-
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-
-	fileNames := make([]string, 0, len(dirEntries))
-	for _, d := range dirEntries {
-		lower := strings.ToLower(d.Name())
-		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
-			continue
-		}
-		if d.IsDir() { // skip directories
-			continue
-		}
-
-		//quotedString := fmt.Sprintf("%q", d.Name())
-		//fullPath, e := filepath.Abs(d.Name())
-		//if e != nil {
-		//	fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
-		//}
-		//fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
-		if excludeRegex == nil {
-			fileNames = append(fileNames, d.Name())
-		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
-			fileNames = append(fileNames, d.Name())
-		}
-	}
-	return fileNames
-} // myReadDir
-
-// ------------------------------ pause -----------------------------------------
-/*
-func pause() bool {
-	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
-	var ans string
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
-		return true
-	}
-	return false
-}
-*/
 
 // ------------------------------- minInt ----------------------------------------
 
@@ -372,4 +304,69 @@ func MakeDateStr() string {
 	dateStr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar + Sec + "__" + timeNow.DayOfWeekStr
 	return dateStr
 } // MakeDateStr
+*/
+
+// ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
+/*
+func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
+
+	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
+
+	if veryVerboseFlag {
+		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
+	}
+
+	return fileNames
+}
+
+*/
+
+// ------------------------------- myReadDir -----------------------------------
+/*
+func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
+
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	fileNames := make([]string, 0, len(dirEntries))
+	for _, d := range dirEntries {
+		lower := strings.ToLower(d.Name())
+		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
+			continue
+		}
+		if d.IsDir() { // skip directories
+			continue
+		}
+
+		//quotedString := fmt.Sprintf("%q", d.Name())
+		//fullPath, e := filepath.Abs(d.Name())
+		//if e != nil {
+		//	fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
+		//}
+		//fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
+		if excludeRegex == nil {
+			fileNames = append(fileNames, d.Name())
+		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
+			fileNames = append(fileNames, d.Name())
+		}
+	}
+	return fileNames
+} // myReadDir
+
+*/
+
+// ------------------------------ pause -----------------------------------------
+/*
+func pause() bool {
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+		return true
+	}
+	return false
+}
 */
