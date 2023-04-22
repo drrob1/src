@@ -132,6 +132,7 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 
 	fileInfoX, err = getFileInfoXFromCommandLine(excludeRegex)
 	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromCommandLine is %s.\n", err)
 		return nil, err
 	}
 	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))

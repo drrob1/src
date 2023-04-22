@@ -3,6 +3,8 @@ package list
 import (
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,6 +27,7 @@ import (
    1 Feb 23 -- Fixing how command line arguments are opened when there are > 1 on the line, ie, a source dir and destination dir.
   24 Mar 23 -- While in florida I figured out how to handle a glob pattern on the bash command line.  I have to use the length of os.Args or equivalent.
    4 Apr 23 -- Added use of list.DelListFlag
+  22 Apr 23 -- Found bug.  I again used flag.NFlag where I meant to use flag.NArg.  I HATE WHEN THAT HAPPENS.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -107,11 +110,12 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fn := flag.Arg(i)
 			fHandle, err := os.Open(fn)
 			if err != nil {
+				ctfmt.Printf(ct.Red, false, " Error from os.Open(%s) is %s\n", fn, err)
 				return nil, err
 			}
 			stat, _ := fHandle.Stat()
 			if VerboseFlag {
-				fmt.Printf(" in command line loop: fn=%s, fHandle.Name=%s, IsDir=%t\n", fn, fHandle.Name(), stat.IsDir())
+				fmt.Printf(" listutil_linux.go command line loop: fn=%s, fHandle.Name=%s, IsDir=%t\n", fn, fHandle.Name(), stat.IsDir())
 			}
 			fHandle.Close()
 			fix := FileInfoExType{
@@ -124,9 +128,13 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fileInfoX = append(fileInfoX, fix)
 		}
 		if DelListFlag { // If this is dellist, don't forget about the last item on the list, which is intentionally not included in the for loop above.
-			fn := flag.Arg(flag.NFlag() - 1) // last item
+			if VerboseFlag {
+				fmt.Printf("In DelListFlag section before processing last item.  len(fileInfoX) = %d\n", len(fileInfoX))
+			}
+			fn := flag.Arg(flag.NArg() - 1) // last item
 			fHandle, err := os.Open(fn)
 			if err != nil {
+				ctfmt.Printf(ct.Red, false, " Error from os.Open(%s) is %s\n", fn, err)
 				return nil, err
 			}
 			stat, _ := fHandle.Stat()
@@ -139,6 +147,9 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 				FullPath: filepath.Join(workingDir, fn),
 			}
 			fileInfoX = append(fileInfoX, fix)
+		}
+		if VerboseFlag {
+			fmt.Printf("Length of fileInfoX slice after processing last item is %d\n", len(fileInfoX))
 		}
 		return fileInfoX, nil
 	}
