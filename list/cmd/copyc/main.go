@@ -69,9 +69,10 @@ import (
    8 Apr 23 -- Changed list.New signature.
   10 Apr 23 -- Moved copyAFile to its own separate file.  This will make maintenance easier.  Scratch that.  I forgot that the copyAFile routines are not all identical.
                  I'm moving it back to be here now.
+  23 Apr 23 -- Seems to not have worked, the deletion of the copy when there's an error.  The case I saw was an error from Sync() did not erase the copy.  I'm adding a printf statement.
 */
 
-const LastAltered = "10 Apr 2023" //
+const LastAltered = "23 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -337,7 +338,6 @@ func min(n1, n2 int) int {
 func CopyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
-	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
 
 	in, err := os.Open(srcFile)
 	if err != nil {
@@ -414,6 +414,8 @@ func CopyAFile(srcFile, destDir string) {
 			success: false,
 		}
 		msgChan <- msg
+		ctfmt.Printf(ct.Yellow, true, " ERROR from io.Copy is %s.  Will now attempt to delete the copy of %s.\n",
+			err, outName)
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
@@ -447,6 +449,8 @@ func CopyAFile(srcFile, destDir string) {
 		}
 		msgChan <- msg
 
+		ctfmt.Printf(ct.Yellow, true, " ERROR from Sync() is %s.  Will try to delete the copy of %s.\n",
+			err, outName)
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
