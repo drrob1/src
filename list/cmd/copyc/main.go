@@ -70,6 +70,8 @@ import (
   10 Apr 23 -- Moved copyAFile to its own separate file.  This will make maintenance easier.  Scratch that.  I forgot that the copyAFile routines are not all identical.
                  I'm moving it back to be here now.
   23 Apr 23 -- Seems to not have worked, the deletion of the copy when there's an error.  The case I saw was an error from Sync() did not erase the copy.  I'm adding a printf statement.
+                 I think I found the problem.  I have to not return the message, as when the message is returned, the wait group is decremented so the main pgm exits
+                 before the os.Erase is called.  I can only return 1 message per call to CopyAFile.
 */
 
 const LastAltered = "23 Apr 2023" //
@@ -287,7 +289,7 @@ func main() {
 	for i := 0; i < num; i++ {
 		go func() {
 			for c := range cfChan {
-				CopyAFile(c.srcFile, c.destDir)
+				copyAFile(c.srcFile, c.destDir)
 			}
 		}()
 	}
@@ -335,7 +337,7 @@ func min(n1, n2 int) int {
 
 // CopyAFile                    ------------------------------------ Copy ----------------------------------------------
 // CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
-func CopyAFile(srcFile, destDir string) {
+func copyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 
@@ -407,20 +409,20 @@ func CopyAFile(srcFile, destDir string) {
 	_, err = io.Copy(out, in)
 
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Red,
-			success: false,
-		}
-		msgChan <- msg
-		ctfmt.Printf(ct.Yellow, true, " ERROR from io.Copy is %s.  Will now attempt to delete the copy of %s.\n",
-			err, outName)
+		var msg msgType
+		//msg := msgType{
+		//	s:       "",
+		//	e:       err,
+		//	color:   ct.Red,
+		//	success: false,
+		//}
+		// msgChan <- msg  Too soon, it's making the wait group decrement.
+
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  There was no error", err, outName),
+				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  There was no error returned from os.Remove(%s)", err, outName, outName),
 				color:    ct.Yellow,
 				success:  false,
 				verified: false,
@@ -429,7 +431,7 @@ func CopyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  The error from os.Remove was %s", err, outName, er),
+				e:        fmt.Errorf("ERROR from io.Copy was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
 				color:    ct.Yellow,
 				success:  false,
 				verified: false,
@@ -441,22 +443,21 @@ func CopyAFile(srcFile, destDir string) {
 
 	err = out.Sync()
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Magenta,
-			success: false,
-		}
-		msgChan <- msg
+		var msg msgType
+		//msg := msgType{
+		//	s:       "",
+		//	e:       err,
+		//	color:   ct.Magenta,
+		//	success: false,
+		//}
+		//msgChan <- msg  too soon, it's making the wait group decrement.
 
-		ctfmt.Printf(ct.Yellow, true, " ERROR from Sync() is %s.  Will try to delete the copy of %s.\n",
-			err, outName)
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  There was no error", err, outName),
-				color:    ct.Yellow,
+				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  There was no error from os.Remove(%s)", err, outName, outName),
+				color:    ct.Yellow, // yellow to make sure I see it.
 				success:  false,
 				verified: false,
 			}
@@ -464,8 +465,8 @@ func CopyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  The error from os.Remove was %s", err, outName, er),
-				color:    ct.Yellow,
+				e:        fmt.Errorf("ERROR from Sync() was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				color:    ct.Yellow, // yellow to make sure I see it.
 				success:  false,
 				verified: false,
 			}
