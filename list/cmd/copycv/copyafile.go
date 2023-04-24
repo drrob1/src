@@ -13,14 +13,12 @@ import (
 /*
   10 Apr 23 -- CopyAFile is now separate, and will delete a file if there's an error from the io.copy or Sync()
                 I haven't yet seen any errors from Close(), so I'll wait to see what those errors may be to determine what I will then do in the future.
+  24 Apr 23 -- I found a bug in copyC that I also have to fix here.  This routine can only return 1 message, because that 1 message decrements the wait group and the main pgm exits.
 */
 
 // CopyAFile                    ------------------------------------ Copy ----------------------------------------------
 // CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
 func CopyAFile(srcFile, destDir string) {
-	// I'm surprised that there is no os.Copy.
-	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
-
 	if list.VerboseFlag {
 		fmt.Printf(" In CopyAFile.  srcFile is %s, destDir %s.\n", srcFile, destDir)
 	}
@@ -106,20 +104,21 @@ func CopyAFile(srcFile, destDir string) {
 
 	_, err = io.Copy(out, in)
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Red,
-			success: false,
-		}
-		msgChan <- msg
+		//msg := msgType{
+		//	s:       "",
+		//	e:       err,
+		//	color:   ct.Red,
+		//	success: false,
+		//}
+		//msgChan <- msg  too soon.  Don't return a message yet.
+		var msg msgType
 
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  There was no error", err, outName),
-				color:    ct.Yellow,
+				e:        fmt.Errorf("ERROR from io.Copy was %s, so os.Remove(%s) was called.  There was no error", err, outName),
+				color:    ct.Yellow, // to make sure I see the message.
 				success:  false,
 				verified: false,
 			}
@@ -127,8 +126,8 @@ func CopyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  The error from os.Remove was %s", err, outName, er),
-				color:    ct.Yellow,
+				e:        fmt.Errorf("ERROR from io.Copy was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				color:    ct.Yellow, // to make sure I see the message
 				success:  false,
 				verified: false,
 			}
@@ -139,20 +138,22 @@ func CopyAFile(srcFile, destDir string) {
 
 	err = out.Sync()
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Magenta,
-			success: false,
-		}
-		msgChan <- msg
+		//msg := msgType{
+		//	s:       "",
+		//	e:       err,
+		//	color:   ct.Magenta,
+		//	success: false,
+		//}
+		//msgChan <- msg  Too soon to return a message.
+
+		var msg msgType
 
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  There was no error", err, outName),
-				color:    ct.Yellow,
+				e:        fmt.Errorf("ERROR from Sync() was %s, so os.Remove(%s) was called.  There was no error", err, outName),
+				color:    ct.Yellow, // to make sure I see this message.
 				success:  false,
 				verified: false,
 			}
@@ -160,8 +161,8 @@ func CopyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  The error from os.Remove was %s", err, outName, er),
-				color:    ct.Yellow,
+				e:        fmt.Errorf("ERROR from Sync() was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				color:    ct.Yellow, // to make sure I see this message.
 				success:  false,
 				verified: false,
 			}
