@@ -68,9 +68,10 @@ import (
   15 Dec 22 -- I'm going to add a post counter that has to be atomically added and see how that affects the timings.
                  Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha, ~ 0.5%.  Interesting.
   15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.  And making the numOfWorkers = runtime.NumCPU(), as Bill Kennedy seems to love.
+  25 Apr 23 -- Adding some enhancements I first developed w/ the copyc family
 */
 
-const LastCompiled = "15 Feb 2023"
+const LastCompiled = "25 Apr 2023"
 
 const (
 	undetermined = iota
@@ -81,7 +82,7 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU()
+var numOfWorkers = runtime.NumCPU() - 2 // subtracting for resultChan and the hashChan.  I could also subt for the main routine, but I won't.
 
 type hashType struct {
 	fName     string
@@ -100,13 +101,11 @@ var resultChan chan resultMatchType
 var wg1, wg2 sync.WaitGroup
 var preCounter, postCounter int64 // atomic add requires int64, not int.  I might as well make both of them int64.
 
-//func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error.  This was it's testing signature that was sequential, before adding the concurrent code.
+//func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error.  This was it's signature that was sequential, before adding the concurrent code.
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
-	TargetFile, err := os.Open(hashIn.fName)
-	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.
-	defer wg1.Done()
-
+	targetFile, err := os.Open(hashIn.fName)
+	defer wg1.Done() // this has to be here to make sure that wg1.Done() is called, even if there's an error.
 	if err != nil {
 		result := resultMatchType{
 			fname: hashIn.fName,
@@ -115,6 +114,8 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 		resultChan <- result
 		return
 	}
+
+	defer targetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  Turned out that StaticCheck wants this line after if err != nil because TargetFile would be nil then.
 
 	hashLength := len(hashIn.hashValIn)
 	var hashFunc hash.Hash
@@ -144,11 +145,11 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 		return
 	}
 
-	_, er := io.Copy(hashFunc, TargetFile)
-	if er != nil {
+	_, err = io.Copy(hashFunc, targetFile)
+	if err != nil {
 		result := resultMatchType{
 			fname: hashIn.fName,
-			err:   er,
+			err:   err,
 		}
 		resultChan <- result
 		return
@@ -182,6 +183,10 @@ func main() {
 	var TargetFilename, HashValueReadFromFile string
 	var h hashType
 	//var counter int
+
+	if numOfWorkers < 1 {
+		numOfWorkers = 1
+	}
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -269,22 +274,24 @@ func main() {
 		ctfmt.Println(ct.Red, false, os.Stderr, err)
 		os.Exit(1)
 	}
-	bytesBuffer := bytes.NewBuffer(fileByteSlice)
+	//bytesBuffer := bytes.NewBuffer(fileByteSlice)
+	bytesReader := bytes.NewReader(fileByteSlice)
 
 	onWin := runtime.GOOS == "windows" // for color output
 	t0 := time.Now()
 
 	for { // to read multiple lines
-		inputLine, er := bytesBuffer.ReadString('\n')
-		inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.
-		//fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-		if er == io.EOF { // reached EOF condition, there are no more lines to read, and no line
+		//                                                      inputLine, er := bytesBuffer.ReadString('\n')
+		inputLine, err := readLine(bytesReader)
+		//                                                      inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.  Yeah, it works.
+		//                                                      fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
+		if err == io.EOF { // reached EOF condition, there are no more lines to read, and no line
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if er != nil {
+		} else if err != nil {
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
@@ -359,11 +366,22 @@ func min(a, b int) int {
 	}
 }
 
-// ------------------------------------------------------- check -------------------------------
-/*
-func check(e error, msg string) {
-	if e != nil {
-		fmt.Fprintln(os.Stderr, msg)
+// ----------------------------------------------------- readLine ------------------------------------------------------
+// Needed as a bytes reader does not have a readString method.
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+		if byte == '\n' {
+			return strings.TrimSpace(sb.String()), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
 	}
-}
-*/
+} // readLine
