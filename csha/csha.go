@@ -74,7 +74,7 @@ import (
    7 Apr 23 -- StaticCheck reports that resultMatchType is unused.  So I commented it out.  And another error in matchOrNoMatch, which I fixed.
   26 Apr 23 -- I'm going to use some of the enhancements I developed for the copyc family of routines here.
                  Now called csha, and I'll change to putting the hashes in a slice so I know how many there are, and then only start those go routines.
-                 On win10 desktop, this sha file took 10.1 sec, but on leox it took 2 min.  And now csha took 7.17 sec on win10 desktop.
+                 On win10 desktop, this sha file took 10.1 sec, but on leox it took 2 min 2.9 sec.  And now csha took 7.17 sec on win10 desktop, and 1 min 51.7 sec on leox.
                  Win10_22H2_English_x64.iso	F41BA37AA02DCB552DC61CEF5C644E55B5D35A8EBDFAC346E70F80321343B506
                  Win10_22H2_English_x32.iso	7CB5E0E18B0066396A48235D6E56D48475225E027C17C0702EA53E05B7409807
 */
