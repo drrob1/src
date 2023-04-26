@@ -86,20 +86,12 @@ const (
 	sha512hash
 )
 
-//  const numOfWorkers = 25
-var numOfWorkers = runtime.NumCPU() - 2 // account for the hashChan and main routines.
+var numOfWorkers = runtime.NumCPU() - 1 // account for the hashChan routine.
 
 type hashType struct {
 	fName     string
 	hashValIn string
 }
-
-//type resultMatchType struct {
-//	fname   string
-//	hashNum int
-//	match   bool
-//	err     error
-//}
 
 var hashChan chan hashType
 
