@@ -1,4 +1,4 @@
-package main // consha.go
+package main // csha.go from consha.go
 
 import (
 	"bytes"
@@ -73,7 +73,8 @@ import (
   15 Feb 23 -- Following Bill Kennedy's advice and making the channel either synchronous or maybe buffer of 1.  This is still slower than multisha, by ~0.04 sec here on Win10 desktop.
    7 Apr 23 -- StaticCheck reports that resultMatchType is unused.  So I commented it out.  And another error in matchOrNoMatch, which I fixed.
   26 Apr 23 -- I'm going to use some of the enhancements I developed for the copyc family of routines here.
-                 Now this is slightly faster than multisha.  On win10 desktop, this sha file took 10.1 sec, but on leox it took 2 min.  And now csha took 7.2 sec on win10 desktop.
+                 Now called csha, and I'll change to putting the hashes in a slice so I know how many there are, and then only start those go routines.
+                 On win10 desktop, this sha file took 10.1 sec, but on leox it took 2 min.  And now csha took 7.17 sec on win10 desktop.
                  Win10_22H2_English_x64.iso	F41BA37AA02DCB552DC61CEF5C644E55B5D35A8EBDFAC346E70F80321343B506
                  Win10_22H2_English_x32.iso	7CB5E0E18B0066396A48235D6E56D48475225E027C17C0702EA53E05B7409807
 */
@@ -178,38 +179,7 @@ func main() {
 	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
 
-	// starting the worker go routines before the result goroutine.  This is a fan out pattern.
-	//hashChan = make(chan hashType) // this is now synchronous, at recommendation of Bill Kennedy.
-	//resultChan = make(chan resultMatchType, numOfWorkers)
-	//hashChan = make(chan hashType, numOfWorkers) // this is probably the slowest.  But still slower than multisha.
-	hashChan = make(chan hashType, 1) // Now I can't tell if this is better.  I'm leaving this for now.
 	onWin = runtime.GOOS == "windows"
-
-	for w := 0; w < numOfWorkers; w++ {
-		go func() {
-			for h := range hashChan {
-				matchOrNoMatch(h)
-			}
-		}()
-	}
-
-	// Start the results go routine.  There is only 1 of these, but this isn't needed now that matchOrNoMatch prints.
-	//go func() {
-	//	onWin := runtime.GOOS == "windows"
-	//	for result := range resultChan {
-	//		if result.err != nil {
-	//			ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", result.err)
-	//			wg2.Done()
-	//			continue // Using return was bad here; it's working using continue.
-	//		}
-	//		if result.match {
-	//			ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", result.fname, hashName[result.hashNum])
-	//		} else {
-	//			ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
-	//		}
-	//		wg2.Done()
-	//	}
-	//}()
 
 	// filepicker stuff.
 
@@ -256,14 +226,11 @@ func main() {
 	}
 	bytesReader := bytes.NewReader(fileByteSlice)
 
-	onWin := runtime.GOOS == "windows" // for color output
 	t0 := time.Now()
 
+	hashSlice := make([]hashType, 0, 10)
 	for { // to read multiple lines
-		// inputLine, er := bytesBuffer.ReadString('\n')
 		inputLine, err := readLine(bytesReader)
-		//                                inputLine = strings.TrimSpace(inputLine) // It works, but it's not needed now.
-		//                                fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
 		if err == io.EOF { // reached EOF condition, there are no more lines to read, and no line
 			break
 		} else if len(inputLine) == 0 {
@@ -318,6 +285,19 @@ func main() {
 		}
 		wg1.Add(1)
 		preCounter++
+		hashSlice = append(hashSlice, h)
+	}
+	hashChan = make(chan hashType, 1)
+	num := min(numOfWorkers, len(hashSlice))
+	for w := 0; w < num; w++ {
+		go func() {
+			for h := range hashChan {
+				matchOrNoMatch(h)
+			}
+		}()
+	}
+
+	for i := 0; i < len(hashSlice); i++ {
 		hashChan <- h
 	}
 
