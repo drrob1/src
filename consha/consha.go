@@ -72,9 +72,10 @@ import (
                  And this difference persists even after I added the atomic adds to multiSha.
   15 Feb 23 -- Following Bill Kennedy's advice and making the channel either synchronous or maybe buffer of 1.  This is still slower than multisha, by ~0.04 sec here on Win10 desktop.
    7 Apr 23 -- StaticCheck reports that resultMatchType is unused.  So I commented it out.  And another error in matchOrNoMatch, which I fixed.
+  26 Apr 23 -- I'm going to use some of the enhancements I developed for the copyc family of routines here.
 */
 
-const LastCompiled = "14 Dec 2022"
+const LastCompiled = "26 Apr 2023"
 
 const (
 	undetermined = iota
@@ -85,7 +86,8 @@ const (
 	sha512hash
 )
 
-const numOfWorkers = 25
+//  const numOfWorkers = 25
+var numOfWorkers = runtime.NumCPU() - 2 // account for the hashChan and main routines.
 
 type hashType struct {
 	fName     string
@@ -170,6 +172,9 @@ func main() {
 	var h hashType
 	var preCounter int
 
+	if numOfWorkers < 1 {
+		numOfWorkers = 1
+	}
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
@@ -254,22 +259,23 @@ func main() {
 		ctfmt.Println(ct.Red, false, os.Stderr, err)
 		os.Exit(1)
 	}
-	bytesBuffer := bytes.NewBuffer(fileByteSlice)
+	bytesReader := bytes.NewReader(fileByteSlice)
 
 	onWin := runtime.GOOS == "windows" // for color output
 	t0 := time.Now()
 
 	for { // to read multiple lines
-		inputLine, er := bytesBuffer.ReadString('\n')
-		inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.
-		//fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-		if er == io.EOF { // reached EOF condition, there are no more lines to read, and no line
+		// inputLine, er := bytesBuffer.ReadString('\n')
+		inputLine, err := readLine(bytesReader)
+		//                                inputLine = strings.TrimSpace(inputLine) // It works, but it's not needed now.
+		//                                fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
+		if err == io.EOF { // reached EOF condition, there are no more lines to read, and no line
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if er != nil {
+		} else if err != nil {
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
@@ -342,11 +348,22 @@ func min(a, b int) int {
 	}
 }
 
-// ------------------------------------------------------- check -------------------------------
-/*
-func check(e error, msg string) {
-	if e != nil {
-		fmt.Fprintln(os.Stderr, msg)
+// ----------------------------------------------------- readLine ------------------------------------------------------
+// Needed as a bytes reader does not have a readString method.
+
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+		if byte == '\n' {
+			return strings.TrimSpace(sb.String()), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
 	}
-}
-*/
+} // readLine
