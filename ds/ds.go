@@ -121,9 +121,11 @@ Revision History
                I'll fix it here, too.
  7 Feb 23 -- Corrected an oversight of not closing a file in dsutil_linux.go
  9 Apr 23 -- StaticCheck reported several unused variables (numLines, grandTotalCount, sizeTotal, grandTotal) and not using a value of HomeDirStr here.
+26 Apr 23 -- I noticed that this routine doesn't work when a command line pattern is given only on Windows.  Time to fix that now.  Turned out to be an errant "return fileInfos" at or near line 107 _windows
+               And I added back -g for globFlag.  That got lost somehow.
 */
 
-const LastAltered = "9 Apr 2023"
+const LastAltered = "26 Apr 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -198,15 +200,6 @@ func main() {
 	}
 	fmt.Println()
 
-	//sepString := string(filepath.Separator)
-	//HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of Go 1.12.  Not used here, only in dsutil_windows.go
-	//if err != nil {
-	//	fmt.Fprint(os.Stderr, err)
-	//	fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
-	//	//HomeDirStr = ""  when err != nil, HomeDirStr would be blank anyway.
-	//}
-	//HomeDirStr = HomeDirStr + sepString
-
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
 		gid = os.Getgid() // int
@@ -272,6 +265,8 @@ func main() {
 
 	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
 	flag.BoolVar(&halfFlag, "1", false, "display 1/2 of the screen.")
+
+	flag.BoolVar(&globFlag, "g", false, "globbing flag, which on windows uses filepath.Glob.")
 
 	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
 	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
@@ -343,13 +338,13 @@ func main() {
 			fmt.Printf(" excludeRegexPattern is longer than 0 runes.  It is %d runes. \n", len(excludeRegexPattern))
 		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeFlag = true
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
 			excludeFlag = false
 		}
-		excludeFlag = true
 	} else if excludeFlag {
 		ctfmt.Print(ct.Yellow, winFlag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
@@ -437,14 +432,14 @@ func main() {
 		//ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		//fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
 		//fmt.Println()
-		if runtime.GOARCH == "amd64" {
+		if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
 			fmt.Printf(" uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s.\n",
 				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
-			fmt.Printf(" Autoheight=%d, autowidth=%d, w=%d, numOfLines=%d, numOfCols=%d. \n", autoHeight, autoWidth, w, numOfLines, numOfCols)
-			fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
-				dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
-				dsrtParam.totalflag)
 		}
+		fmt.Printf(" Autoheight=%d, autowidth=%d, w=%d, numOfLines=%d, numOfCols=%d. \n", autoHeight, autoWidth, w, numOfLines, numOfCols)
+		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
+			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
+			dsrtParam.totalflag)
 	}
 
 	// If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
@@ -473,10 +468,13 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt)
+		fmt.Println(" FilterFlag =", filterFlag, ", filterStr =", filterStr, ", filterAmt =", filterAmt, ", globFlag =", globFlag)
 	}
 
 	fileInfos = getFileInfosFromCommandLine() // this rtn is in dsutil_windows.go and dsutil_linux.go.  So go vet gets this wrong.
+	if verboseFlag {
+		fmt.Printf(" in main, after getFileInfosFromCommandLine(): Length(fileInfos) = %d\n", len(fileInfos))
+	}
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn)
 	}
@@ -556,23 +554,6 @@ func IsSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
-
-// ---------------------------- GetIDname -----------------------------------------------------------
-
-func GetIDname(uidStr string) string {
-
-	if len(uidStr) == 0 {
-		return ""
-	}
-	ptrToUser, err := user.LookupId(uidStr)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-	}
-
-	idname := ptrToUser.Username
-	return idname
-
-} // GetIDname
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
@@ -711,38 +692,6 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 	return fileInfos
 } // myReadDir
 
-/*
-func myReadDir(dir string) []os.FileInfo {
-	dirname, err := os.Open(dir)
-	//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
-	if err != nil {
-		return nil
-	}
-	defer dirname.Close()
-
-	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
-	if err != nil {
-		return nil
-	}
-
-	fileInfs := make([]os.FileInfo, 0, len(names))
-	for _, s := range names {
-		fi, err := os.Lstat(s)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
-			continue
-		}
-		if includeThis(fi) {
-			fileInfs = append(fileInfs, fi)
-		}
-		if fi.Mode().IsRegular() && showGrandTotal {
-			grandTotal += fi.Size()
-			grandTotalCount++
-		}
-	}
-	return fileInfs
-} // myReadDir
-*/
 // ----------------------------- getMagnitudeString -------------------------------
 
 func getMagnitudeString(j int64) (string, ct.Color) {
@@ -808,7 +757,7 @@ func includeThis(fi os.FileInfo) bool {
 			return false
 		}
 	}
-	if excludeFlag {
+	if excludeRegex != nil {
 		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
 		}

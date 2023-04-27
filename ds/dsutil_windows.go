@@ -11,13 +11,7 @@ import (
 	"strings"
 )
 
-/*
-func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
-	return "", ""
-}
-*/
-
-// processCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
+// getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfosFromCommandLine() []os.FileInfo {
@@ -41,14 +35,28 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
+		if verboseFlag {
+			fmt.Printf(" In getFileInfosFromCommandLine.  Before any processing, pattern = %s\n", pattern)
+		}
+
 		if strings.ContainsRune(pattern, ':') {
 			directoryAliasesMap = getDirectoryAliases()
 			pattern = ProcessDirectoryAliases(pattern)
 		}
 
 		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
+
+		if verboseFlag {
+			fmt.Printf(" In getFileInfosFromCommandLine.  After any processing, pattern = %s\n", pattern)
+		}
+
 		dirName, fileName := filepath.Split(pattern)
-		fileName = strings.ToLower(fileName)
+		fileNamePatternLowered := strings.ToLower(fileName)
+
+		if verboseFlag {
+			fmt.Printf(" In getFileInfosFromCommandLine.  After any filepath.Split(%s), dirName = %q, fileName = %q\n", pattern, dirName, fileName)
+		}
+
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
 			fileInfos = myReadDir(dirName)
 			return fileInfos
@@ -58,9 +66,6 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 		if fileName == "" { // need this to not be blank because of the call to Match below.
 			fileName = "*"
-		}
-		if verboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
 		if verboseFlag {
@@ -84,16 +89,22 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		} else {
 			d, err := os.Open(dirName)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
+				fmt.Fprintf(os.Stderr, " Error from Windows getFileInfosFromCommandLine os.Open is %v\n", err)
 				os.Exit(1)
 			}
 			defer d.Close()
+			if verboseFlag {
+				fmt.Printf(" In getFileInfosFromCommandLine after os.Open(%s), which succeeded\n", dirName)
+			}
 			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
 			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 				fileInfos = myReadDir(dirName)
 			}
-			return fileInfos
+			if verboseFlag {
+				fmt.Printf(" In getFileInfosFromCommandLine after %s.Readdirnames: len(filenames) = %d\n", dirName, len(filenames))
+			}
+			//return fileInfos  could this have been the bug all along?  Commenting this out fixed it???  Yep, that was it.  Oh shit!
 		}
 
 		fileInfos = make([]os.FileInfo, 0, len(filenames))
@@ -112,13 +123,16 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 				continue
 			}
 
-			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
-			if er != nil {
-				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
+			match, err := filepath.Match(fileNamePatternLowered, strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, err)
 				continue
 			}
+			if veryVerboseFlag {
+				fmt.Printf(" in getFileInfosFromCommandLine after filepath.Match(%s, %s) = %t\n", fileNamePatternLowered, f, match)
+			}
 
-			if includeThis(fi) && match { // has to match pattern, size criteria and not match an exclude pattern.
+			if includeThis(fi) && match { // has to match size criteria and not match an exclude pattern.
 				fileInfos = append(fileInfos, fi)
 			}
 			if fi.Mode().IsRegular() && showGrandTotal {
