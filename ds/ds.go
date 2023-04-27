@@ -159,7 +159,8 @@ var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
-var directoryAliasesMap dirAliasMapType
+
+var directoryAliasesMap dirAliasMapType //unused according to StaticCheck, and GoLand, too, in fact.  Both are wrong.  It's used dsutil_windows.go:43
 
 var autoWidth, autoHeight int
 

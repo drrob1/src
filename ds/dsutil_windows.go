@@ -100,6 +100,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 				fileInfos = myReadDir(dirName)
+				return fileInfos // I think the errant return fileInfos needed to be here all along.
 			}
 			if verboseFlag {
 				fmt.Printf(" In getFileInfosFromCommandLine after %s.Readdirnames: len(filenames) = %d\n", dirName, len(filenames))
