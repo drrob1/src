@@ -72,9 +72,11 @@ import (
   23 Apr 23 -- Seems to not have worked, the deletion of the copy when there's an error.  The case I saw was an error from Sync() did not erase the copy.  I'm adding a printf statement.
                  I think I found the problem.  I have to not return the message, as when the message is returned, the wait group is decremented so the main pgm exits
                  before the os.Erase is called.  I can only return 1 message per call to CopyAFile.
+  27 Apr 23 -- At work I got an error that O: was full, and when this pgm tried to delete whatever did copy, I saw the error that the file is in use by another process.  So I'll try
+                 closing the output file before calling os.Remove and see if that will work.
 */
 
-const LastAltered = "23 Apr 2023" //
+const LastAltered = "27 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -418,6 +420,7 @@ func copyAFile(srcFile, destDir string) {
 		//}
 		// msgChan <- msg  Too soon, it's making the wait group decrement.
 
+		out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
@@ -452,6 +455,7 @@ func copyAFile(srcFile, destDir string) {
 		//}
 		//msgChan <- msg  too soon, it's making the wait group decrement.
 
+		out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{

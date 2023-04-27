@@ -166,7 +166,7 @@ var autoWidth, autoHeight int
 
 func main() {
 	var dsrtParam DsrtParamType
-	var userptr *user.User // from os/user
+	var userPtr *user.User // from os/user
 	var fileInfos []os.FileInfo
 	var err error
 	var SizeTotal, GrandTotal int64
@@ -204,7 +204,7 @@ func main() {
 	if runtime.GOARCH == "amd64" {
 		uid = os.Getuid() // int
 		gid = os.Getgid() // int
-		userptr, err = user.Current()
+		userPtr, err = user.Current()
 		if err != nil {
 			fmt.Println(" user.Current error is ", err, "Exiting.")
 			os.Exit(1)
@@ -435,7 +435,7 @@ func main() {
 		//fmt.Println()
 		if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
 			fmt.Printf(" uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s.\n",
-				uid, gid, systemStr, userptr.Uid, userptr.Gid, userptr.Username, userptr.Name, userptr.HomeDir)
+				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
 		fmt.Printf(" Autoheight=%d, autowidth=%d, w=%d, numOfLines=%d, numOfCols=%d. \n", autoHeight, autoWidth, w, numOfLines, numOfCols)
 		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",

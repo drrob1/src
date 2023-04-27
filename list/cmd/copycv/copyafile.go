@@ -14,6 +14,8 @@ import (
   10 Apr 23 -- CopyAFile is now separate, and will delete a file if there's an error from the io.copy or Sync()
                 I haven't yet seen any errors from Close(), so I'll wait to see what those errors may be to determine what I will then do in the future.
   24 Apr 23 -- I found a bug in copyC that I also have to fix here.  This routine can only return 1 message, because that 1 message decrements the wait group and the main pgm exits.
+  27 Apr 23 -- At work I got an error that O-drive was full when I used copyc, and when this pgm tried to delete whatever did copy, I saw the error that the file is in use by another process.
+               So I'll try closing the output file before calling os.Remove and see if that will work.
 */
 
 // CopyAFile                    ------------------------------------ Copy ----------------------------------------------
@@ -113,6 +115,7 @@ func CopyAFile(srcFile, destDir string) {
 		//msgChan <- msg  too soon.  Don't return a message yet.
 		var msg msgType
 
+		out.Close() // try to prevent the error message saying that the file is being controlled by a different process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
@@ -148,6 +151,7 @@ func CopyAFile(srcFile, destDir string) {
 
 		var msg msgType
 
+		out.Close() // try to prevent the error message saying that the file is being controlled by a different process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
