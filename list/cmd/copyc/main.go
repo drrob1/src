@@ -76,7 +76,7 @@ import (
                  closing the output file before calling os.Remove and see if that will work.
 */
 
-const LastAltered = "27 Apr 2023" //
+const LastAltered = "28 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -420,12 +420,13 @@ func copyAFile(srcFile, destDir string) {
 		//}
 		// msgChan <- msg  Too soon, it's making the wait group decrement.
 
-		out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so %s was deleted.  There was no error returned from os.Remove(%s)", err, outName, outName),
+				s: "",
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
+					err, e, outName, outName),
 				color:    ct.Yellow,
 				success:  false,
 				verified: false,
@@ -433,8 +434,9 @@ func copyAFile(srcFile, destDir string) {
 			msgChan <- msg
 		} else {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				s: "",
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
 				color:    ct.Yellow,
 				success:  false,
 				verified: false,
@@ -455,12 +457,13 @@ func copyAFile(srcFile, destDir string) {
 		//}
 		//msgChan <- msg  too soon, it's making the wait group decrement.
 
-		out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so %s was deleted.  There was no error from os.Remove(%s)", err, outName, outName),
+				s: "",
+				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
+					err, e, outName, outName),
 				color:    ct.Yellow, // yellow to make sure I see it.
 				success:  false,
 				verified: false,
@@ -468,8 +471,9 @@ func copyAFile(srcFile, destDir string) {
 			msgChan <- msg
 		} else {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				s: "",
+				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
 				color:    ct.Yellow, // yellow to make sure I see it.
 				success:  false,
 				verified: false,

@@ -76,9 +76,10 @@ import (
    5 Apr 23 -- list.ProcessdirectoryAliases was refactored, so I had to refactor here, too.
    8 Apr 23 -- Changed list.New signature.
   10 Apr 23 -- Moved copyAFile to its own separate file.  This will make maintenance easier.
+  28 Apr 23 -- It didn't make maintenance easier.  I made a change there to see if I can delete a copied file that threw an error.
 */
 
-const LastAltered = "10 Apr 2023" //
+const LastAltered = "28 Apr 2023" //
 
 const defaultHeight = 40
 const minWidth = 90

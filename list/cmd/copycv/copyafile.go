@@ -115,12 +115,13 @@ func CopyAFile(srcFile, destDir string) {
 		//msgChan <- msg  too soon.  Don't return a message yet.
 		var msg msgType
 
-		out.Close() // try to prevent the error message saying that the file is being controlled by a different process.
+		e := out.Close() // try to prevent the error message saying that the file is being controlled by a different process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so os.Remove(%s) was called.  There was no error", err, outName),
+				s: "",
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error %v, and os.Remove(%s) was called.  There was no error",
+					err, e, outName),
 				color:    ct.Yellow, // to make sure I see the message.
 				success:  false,
 				verified: false,
@@ -128,8 +129,9 @@ func CopyAFile(srcFile, destDir string) {
 			msgChan <- msg
 		} else {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from io.Copy was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				s: "",
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
 				color:    ct.Yellow, // to make sure I see the message
 				success:  false,
 				verified: false,
@@ -151,12 +153,13 @@ func CopyAFile(srcFile, destDir string) {
 
 		var msg msgType
 
-		out.Close() // try to prevent the error message saying that the file is being controlled by a different process.
+		e := out.Close() // try to prevent the error message saying that the file is being controlled by a different process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so os.Remove(%s) was called.  There was no error", err, outName),
+				s: "",
+				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error %v, and os.Remove(%s) was called.  There was no error",
+					err, e, outName),
 				color:    ct.Yellow, // to make sure I see this message.
 				success:  false,
 				verified: false,
@@ -164,8 +167,9 @@ func CopyAFile(srcFile, destDir string) {
 			msgChan <- msg
 		} else {
 			msg = msgType{
-				s:        "",
-				e:        fmt.Errorf("ERROR from Sync() was %s, so os.Remove(%s) was called.  The error from os.Remove was %s", err, outName, er),
+				s: "",
+				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
 				color:    ct.Yellow, // to make sure I see this message.
 				success:  false,
 				verified: false,
