@@ -20,7 +20,7 @@ import (
   28 Apr 23 -- I want to only have one '.' char in the filename.  So I'll replace all but the last one w/ a '-'.
 */
 
-const lastModified = "22 Sep 20"
+const lastModified = "29 Apr 23"
 
 func main() {
 	//var e error
@@ -136,6 +136,9 @@ func detoxFilenameNewWay(fname string) (string, bool) {
 
 // tooManyDots(fName string) string -------------------------------------------------------------------
 func tooManyDots(fName string) (string, bool) { // this has 2 different ways to achieve the same goal.  I know I'm playing around.
+	const replacementRune = '-'
+	const replacementStr = string(replacementRune)
+
 	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
 	//fmt.Printf(" in tooManyDots: fName is %q, targetNumOfDots is %d\n", fName, targetNumOfDots)
 	if targetNumOfDots < 1 {
@@ -146,7 +149,7 @@ func tooManyDots(fName string) (string, bool) { // this has 2 different ways to 
 	var counter int
 	for _, r := range fName {
 		if r == '.' && counter < targetNumOfDots {
-			r = '_'
+			r = replacementRune
 			counter++
 		}
 		sb.WriteRune(r)
@@ -156,8 +159,8 @@ func tooManyDots(fName string) (string, bool) { // this has 2 different ways to 
 
 	splitStr := strings.Split(fName, ".") // this does not include dot
 	//fmt.Printf(" in tooManyDots: fName is %q, s1 is %q, targetNumOfDots = %d, splitStr = %#v\n", fName, s1, targetNumOfDots, splitStr)
-	j1 := strings.Join(splitStr[:len(splitStr)-1], "_") // this line uses a subrange, so after the ':' so len-1 really means len-2
-	j2 := j1 + "." + splitStr[len(splitStr)-1]          // is using the expr as a subscript index, so len-1 means len-1.
+	j1 := strings.Join(splitStr[:len(splitStr)-1], replacementStr) // this line uses a subrange, so after the ':' so len-1 really means len-2
+	j2 := j1 + "." + splitStr[len(splitStr)-1]                     // is using the expr as a subscript index, so len-1 means len-1.
 	if s1 != j2 {
 		fmt.Printf(" s1 = %q, j2 = %q and these are not the same.  This needs more work\n", s1, j2)
 	}
