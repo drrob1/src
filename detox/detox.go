@@ -2,16 +2,13 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
-
-const lastModified = "22 Sep 20"
 
 /*
   REVISION HISTORY
@@ -20,7 +17,10 @@ const lastModified = "22 Sep 20"
   16 Sep 20 -- Fixed when it changed '-' to '_'.  And I added IsPunct so it would change comma and other punctuations.
   18 Sep 20 -- I had it ignore '~' and not change it, as it was included as a punctuation mark by IsPunct.
   22 Sep 20 -- Fixed case issue by converting pattern to all lower case also.  I forgot that before.  And I will allow no pattern to be entered.
+  28 Apr 23 -- I want to only have one '.' char in the filename.  So I'll replace all but the last one w/ a '-'.
 */
+
+const lastModified = "22 Sep 20"
 
 func main() {
 	//var e error
@@ -44,7 +44,7 @@ func main() {
 	for _, fn := range files {
 		name := strings.ToLower(fn)
 		if BOOL, _ := filepath.Match(globPattern, name); BOOL {
-			detoxedName, toxic := detoxFilename(fn)
+			detoxedName, toxic := detoxFilenameNewWay(fn)
 			if toxic {
 				err := os.Rename(fn, detoxedName)
 				if err != nil {
@@ -65,8 +65,9 @@ func main() {
 	}
 } // end main
 
-//---------------------------------------------------------------------------------------------------
-func detoxFilename(fname string) (string, bool) {
+// ---------------------------------------------------------------------------------------------------
+/*
+func detoxFilenameOldWay(fname string) (string, bool) {
 	var toxic bool
 
 	buf := bytes.NewBufferString(fname)
@@ -100,7 +101,69 @@ func detoxFilename(fname string) (string, bool) {
 			byteslice = append(byteslice, byte(r))
 		}
 	}
+} // end detoxFilenameOldWay
+
+*/
+
+func detoxFilenameNewWay(fname string) (string, bool) {
+	var toxic bool
+	var sb strings.Builder
+
+	for _, r := range fname {
+		size := utf8.RuneLen(r)
+		if size > 1 {
+			toxic = true
+			sb.WriteRune('_')
+		} else if unicode.IsSpace(r) {
+			toxic = true
+			sb.WriteRune('_')
+		} else if unicode.IsControl(r) {
+			toxic = true
+			sb.WriteRune('_')
+		} else if r == '.' || r == '_' || r == '-' || r == '~' {
+			sb.WriteRune(r)
+		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
+			toxic = true
+			sb.WriteRune('_')
+		} else {
+			sb.WriteRune(r)
+		}
+	}
+	f := sb.String()
+	f, changed := tooManyDots(f)
+	return f, toxic || changed
 } // end detoxFilename
+
+// tooManyDots(fName string) string -------------------------------------------------------------------
+func tooManyDots(fName string) (string, bool) { // this has 2 different ways to achieve the same goal.  I know I'm playing around.
+	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
+	//fmt.Printf(" in tooManyDots: fName is %q, targetNumOfDots is %d\n", fName, targetNumOfDots)
+	if targetNumOfDots < 1 {
+		return fName, false
+	}
+
+	var sb strings.Builder
+	var counter int
+	for _, r := range fName {
+		if r == '.' && counter < targetNumOfDots {
+			r = '_'
+			counter++
+		}
+		sb.WriteRune(r)
+	}
+
+	s1 := sb.String()
+
+	splitStr := strings.Split(fName, ".") // this does not include dot
+	//fmt.Printf(" in tooManyDots: fName is %q, s1 is %q, targetNumOfDots = %d, splitStr = %#v\n", fName, s1, targetNumOfDots, splitStr)
+	j1 := strings.Join(splitStr[:len(splitStr)-1], "_") // this line uses a subrange, so after the ':' so len-1 really means len-2
+	j2 := j1 + "." + splitStr[len(splitStr)-1]          // is using the expr as a subscript index, so len-1 means len-1.
+	if s1 != j2 {
+		fmt.Printf(" s1 = %q, j2 = %q and these are not the same.  This needs more work\n", s1, j2)
+	}
+
+	return s1, true
+}
 
 // ------------------------------- myReadDirNames -----------------------------------
 func myReadDirNames(dir string) []string { // based on the code from dsrt and descendents

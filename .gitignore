@@ -40,3 +40,5 @@ go.mod
 go.sum
 vendor/
 few/testdata/
+detox/testdata/
+

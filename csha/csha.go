@@ -78,6 +78,7 @@ import (
                  Win10_22H2_English_x64.iso	F41BA37AA02DCB552DC61CEF5C644E55B5D35A8EBDFAC346E70F80321343B506
                  Win10_22H2_English_x32.iso	7CB5E0E18B0066396A48235D6E56D48475225E027C17C0702EA53E05B7409807
   28 Apr 23 -- At work, I tested again, and this routine was slower than either multisha or consha.  Consha was slightly faster than multisha at work.  I'm increasing the size of the channel.
+                 This has only 1 channel, for passing hashing work to matchOrNoMatch.  There is no message channel here.
 */
 
 const LastCompiled = "28 Apr 2023"
