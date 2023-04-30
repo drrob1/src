@@ -66,46 +66,6 @@ func main() {
 	}
 } // end main
 
-// ---------------------------------------------------------------------------------------------------
-/*
-func detoxFilenameOldWay(fname string) (string, bool) {
-	var toxic bool
-
-	buf := bytes.NewBufferString(fname)
-
-	byteslice := make([]byte, 0, 100)
-
-	for {
-		r, size, err := buf.ReadRune()
-		if err == io.EOF { // only valid exit from this loop
-			name := string(byteslice)
-			return name, toxic
-		} else if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return "", false // returning toxic as false to not do anything with this name as it got an error of some type.
-		}
-		if size > 1 {
-			toxic = true
-			byteslice = append(byteslice, '_')
-		} else if unicode.IsSpace(r) {
-			toxic = true
-			byteslice = append(byteslice, '_')
-		} else if unicode.IsControl(r) {
-			toxic = true
-			byteslice = append(byteslice, '_')
-		} else if r == '.' || r == '_' || r == '-' || r == '~' {
-			byteslice = append(byteslice, byte(r))
-		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
-			toxic = true
-			byteslice = append(byteslice, '_')
-		} else {
-			byteslice = append(byteslice, byte(r))
-		}
-	}
-} // end detoxFilenameOldWay
-
-*/
-
 func detoxFilenameNewWay(fName string) (string, bool) {
 	const dotReplacementRune = '-'
 
@@ -198,5 +158,44 @@ func tooManyDots(fName string) (string, bool) { // this has 2 different ways to 
 
 	return s1, true
 }
+
+*/
+// ---------------------------------------------------------------------------------------------------
+/*
+func detoxFilenameOldWay(fname string) (string, bool) {
+	var toxic bool
+
+	buf := bytes.NewBufferString(fname)
+
+	byteslice := make([]byte, 0, 100)
+
+	for {
+		r, size, err := buf.ReadRune()
+		if err == io.EOF { // only valid exit from this loop
+			name := string(byteslice)
+			return name, toxic
+		} else if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return "", false // returning toxic as false to not do anything with this name as it got an error of some type.
+		}
+		if size > 1 {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else if unicode.IsSpace(r) {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else if unicode.IsControl(r) {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else if r == '.' || r == '_' || r == '-' || r == '~' {
+			byteslice = append(byteslice, byte(r))
+		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
+			toxic = true
+			byteslice = append(byteslice, '_')
+		} else {
+			byteslice = append(byteslice, byte(r))
+		}
+	}
+} // end detoxFilenameOldWay
 
 */
