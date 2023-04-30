@@ -18,9 +18,10 @@ import (
   18 Sep 20 -- I had it ignore '~' and not change it, as it was included as a punctuation mark by IsPunct.
   22 Sep 20 -- Fixed case issue by converting pattern to all lower case also.  I forgot that before.  And I will allow no pattern to be entered.
   28 Apr 23 -- I want to only have one '.' char in the filename.  So I'll replace all but the last one w/ a '-'.
+  30 Apr 23 -- I added !IsGraphic to the tests, which may be redundant, but I'll try it and see.  And I'm combining the dot substitutions into detoxFilenameNewWay
 */
 
-const lastModified = "29 Apr 23"
+const lastModified = "30 Apr 23"
 
 func main() {
 	//var e error
@@ -105,37 +106,67 @@ func detoxFilenameOldWay(fname string) (string, bool) {
 
 */
 
-func detoxFilenameNewWay(fname string) (string, bool) {
-	var toxic bool
-	var sb strings.Builder
+func detoxFilenameNewWay(fName string) (string, bool) {
+	const dotReplacementRune = '-'
 
-	for _, r := range fname {
+	var changed bool
+	var sb strings.Builder
+	var counter int
+
+	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
+
+	for _, r := range fName {
 		size := utf8.RuneLen(r)
 		if size > 1 {
-			toxic = true
+			changed = true
 			sb.WriteRune('_')
+		} else if r == '.' && counter < targetNumOfDots {
+			sb.WriteRune(dotReplacementRune)
+			counter++
+			changed = true
 		} else if unicode.IsSpace(r) {
-			toxic = true
+			changed = true
 			sb.WriteRune('_')
 		} else if unicode.IsControl(r) {
-			toxic = true
+			changed = true
 			sb.WriteRune('_')
 		} else if r == '.' || r == '_' || r == '-' || r == '~' {
 			sb.WriteRune(r)
-		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) {
-			toxic = true
+		} else if unicode.IsSymbol(r) || unicode.IsPunct(r) || !unicode.IsGraphic(r) {
+			changed = true
 			sb.WriteRune('_')
 		} else {
 			sb.WriteRune(r)
 		}
 	}
 	f := sb.String()
-	f, changed := tooManyDots(f)
-	return f, toxic || changed
-} // end detoxFilename
+	//f, changed := tooManyDots(f)
+	return f, changed
+} // end detoxFilenameNewWay
 
+// ------------------------------- myReadDirNames -----------------------------------
+func myReadDirNames(dir string) []string { // based on the code from dsrt and descendents
+
+	dirname, err := os.Open(dir)
+	if err != nil {
+		return nil
+	}
+	defer dirname.Close()
+
+	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
+	if err != nil {
+		return nil
+	}
+	dirname.Close()
+	return names
+} // myReadDirNames
+
+// END detox.go
+
+/*
 // tooManyDots(fName string) string -------------------------------------------------------------------
-func tooManyDots(fName string) (string, bool) { // this has 2 different ways to achieve the same goal.  I know I'm playing around.
+func tooManyDots(fName string) (string, bool) { // this has 2 different ways to achieve the same goal.  I know I'm playing around.  Now that it works, I'm including the
+	//                                             dot logic in the detoxFilenameNewWay routine.  The string split stuff works, but I don't need it.
 	const replacementRune = '-'
 	const replacementStr = string(replacementRune)
 
@@ -168,21 +199,4 @@ func tooManyDots(fName string) (string, bool) { // this has 2 different ways to 
 	return s1, true
 }
 
-// ------------------------------- myReadDirNames -----------------------------------
-func myReadDirNames(dir string) []string { // based on the code from dsrt and descendents
-
-	dirname, err := os.Open(dir)
-	if err != nil {
-		return nil
-	}
-	defer dirname.Close()
-
-	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
-	if err != nil {
-		return nil
-	}
-	dirname.Close()
-	return names
-} // myReadDirNames
-
-// END detox.go
+*/
