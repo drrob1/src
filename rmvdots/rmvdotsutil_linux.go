@@ -3,154 +3,44 @@ package main
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"syscall"
 )
 
+//  14 Jan 23 -- I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
+//               from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
 //  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
+//   1 May 23 -- Now called rmvdotsutil_linux.go, based on dsrtutil_linux.go
 
-func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
-	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
-		return "", ""
-	}
-	sysUID := int(fi.Sys().(*syscall.Stat_t).Uid) // Stat_t is a uint32
-	uidStr := strconv.Itoa(sysUID)
-	sysGID := int(fi.Sys().(*syscall.Stat_t).Gid) // Stat_t is a uint32
-	gidStr := strconv.Itoa(sysGID)
-	usernameStr = idName(uidStr)
-	groupnameStr = idName(gidStr)
-	return usernameStr, groupnameStr
-} // end GetUserGroupStr
+// It handles if there are no files populated by bash or file not found by bash.
 
-// getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
-// It handles if there are no files populated by bash or file not found by bash, but the sorting will be done in main, as passing the sort fcn was a problem.
-// The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
+func getFileNamesFromCommandLine() []string {
 
-// on Jan 14, 2023 I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
-// from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
-
-func getFileInfosFromCommandLine() []os.FileInfo {
-	var fileInfos []os.FileInfo
-	if verboseFlag {
-		fmt.Printf(" Entering getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
-	}
-
-	workingDir, er := os.Getwd()
-	if er != nil {
-		fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
-		os.Exit(1)
+	workingDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf(" ERROR from os.Getwd() is %S\n", err)
+		fileNames := myReadDirNames(workingDir)
+		return fileNames
 	}
 
 	if flag.NArg() == 0 {
-		if verboseFlag {
-			fmt.Printf(" workingDir=%s\n", workingDir)
-		}
-
-		fileInfos = myReadDir(workingDir) // excluding by regex, filesize or having an ext is done by MyReadDir.
-		if verboseFlag {
-			fmt.Printf(" after call to myreaddir.  Len(fileInfos)=%d\n", len(fileInfos))
-		}
-		return fileInfos
-
-	} else if flag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
-		const sep = string(filepath.Separator)
-		fileInfos = make([]os.FileInfo, 0, 1)
-		//firstChar := rune(flag.Arg(0)[0])  I'm changing this 1/14/23
-
-		loneFilename := flag.Arg(0)
-		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
+		fileNames := myReadDirNames(workingDir)
+		return fileNames
+	} else if flag.NArg() == 1 {
+		pattern := flag.Arg(0)
+		fHandle, err := os.Open(pattern) // just try to open it, as it may be a symlink.
 		if err == nil {
 			stat, _ := fHandle.Stat()
 			if stat.IsDir() { // either a direct or symlinked directory name
-				fHandle.Close()
-				fileInfos = myReadDir(loneFilename)
-				return fileInfos
-			}
-
-		} else { // err must not be nil after attempting to open loneFilename.
-			fHandle.Close()
-			loneFilename = workingDir + sep + loneFilename
-			loneFilename = filepath.Clean(loneFilename)
-		}
-
-		fHandle, err = os.Open(loneFilename)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Println()
-			os.Exit(1)
-		}
-
-		fi, _ := fHandle.Stat()
-
-		if fi.IsDir() {
-			fHandle.Close()
-			fileInfos = myReadDir(loneFilename)
-			return fileInfos
-		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return its fileInfo.
-			fileInfos = append(fileInfos, fi)
-			return fileInfos
-		}
-	} else { // must have more than one filename on the command line, populated by bash.
-		fileInfos = make([]os.FileInfo, 0, flag.NArg())
-		for _, f := range flag.Args() {
-			fi, err := os.Lstat(f)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				continue
-			}
-			if verboseFlag {
-				fmt.Printf(" in loop: fi.Name=%s, fi.Size=%d, fi.IsDir=%t\n", fi.Name(), fi.Size(), fi.IsDir())
-			}
-			if includeThis(fi) {
-				fileInfos = append(fileInfos, fi)
-			}
-			if fi.Mode().IsRegular() && showGrandTotal {
-				grandTotal += fi.Size()
-				grandTotalCount++
-			}
-		}
-	}
-	if verboseFlag {
-		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
-	}
-	return fileInfos
-}
-
-func displayFileInfos(fiSlice []os.FileInfo) {
-	var lnCount int
-	for _, f := range fiSlice {
-		s := f.ModTime().Format("Jan-02-2006_15:04:05")
-		sizestr := ""
-		usernameStr, groupnameStr := GetUserGroupStr(f)
-		if filenameToBeListedFlag && f.Mode().IsRegular() {
-			sizeTotal += f.Size()
-			if longFileSizeListFlag {
-				sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
-				if f.Size() > 100000 {
-					sizestr = AddCommas(sizestr)
+				fileNames, err := fHandle.Readdirnames(0)
+				if err != nil {
+					fmt.Printf(" ERROR: fHandle opened %s,  err from Readdirnames is %s.  Will use myReadDirNames(%s).\n", fHandle.Name(), err, pattern)
+					return myReadDirNames(pattern)
 				}
-				ctfmt.Printf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			} else {
-				var color ct.Color
-				sizestr, color = getMagnitudeString(f.Size())
-				ctfmt.Printf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				fHandle.Close()
+				return fileNames
 			}
-			lnCount++
-
-		} else if IsSymlink(f.Mode()) {
-			fmt.Printf("%10v %s:%s %16s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			lnCount++
-		} else if dirList && f.IsDir() {
-			fmt.Printf("%10v %s:%s %16s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
-			lnCount++
-		}
-		if lnCount >= numOfLines {
-			break
 		}
 	}
+
+	return flag.Args()
 }
