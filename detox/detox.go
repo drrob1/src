@@ -19,9 +19,10 @@ import (
   22 Sep 20 -- Fixed case issue by converting pattern to all lower case also.  I forgot that before.  And I will allow no pattern to be entered.
   28 Apr 23 -- I want to only have one '.' char in the filename.  So I'll replace all but the last one w/ a '-'.
   30 Apr 23 -- I added !IsGraphic to the tests, which may be redundant, but I'll try it and see.  And I'm combining the dot substitutions into detoxFilenameNewWay
+   2 May 23 -- Will limit removing dots to not do so when extensions are .gpg, .gz, .xz
 */
 
-const lastModified = "30 Apr 23"
+const lastModified = "2 May 23"
 
 func main() {
 	//var e error
@@ -74,6 +75,10 @@ func detoxFilenameNewWay(fName string) (string, bool) {
 	var counter int
 
 	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
+	ext := filepath.Ext(fName)
+	if ext == ".gpg" || ext == ".gz" || ext == ".xz" {
+		targetNumOfDots++
+	}
 
 	for _, r := range fName {
 		size := utf8.RuneLen(r)

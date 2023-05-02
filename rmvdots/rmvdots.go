@@ -20,9 +20,10 @@ import (
   28 Apr 23 -- I want to only have one '.' char in the filename.  So I'll replace all but the last one w/ a '-'.
   30 Apr 23 -- I added !IsGraphic to the tests, which may be redundant, but I'll try it and see.  And I'm combining the dot substitutions into detoxFilenameNewWay
    1 May 23 -- Now called rmvdots.go.  And will only, well, remove excess dots.  But for .gpg files, it keeps the last 2 dots.
+   2 May 23 -- And for ".gz" and ".xz" it will also keep the last 2 dots.
 */
 
-const lastModified = "1 May 23"
+const lastModified = "2 May 23"
 
 type dirAliasMapType map[string]string
 
@@ -92,7 +93,8 @@ func tooManyDots(fName string) (string, bool) { // this has 2 different ways to 
 		return fName, false
 	}
 
-	if filepath.Ext(fName) == ".gpg" {
+	ext := filepath.Ext(fName)
+	if ext == ".gpg" || ext == ".gz" || ext == ".xz" {
 		targetNumOfDots++ // so don't change the last 2 dots, ie, .docx.gpg remains that.
 	}
 
