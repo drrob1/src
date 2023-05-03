@@ -82,20 +82,17 @@ func myReadDirNames(dir string) []string { // based on the code from dsrt and de
 
 // tooManyDots(fName string) string -------------------------------------------------------------------
 
-func tooManyDots(fName string) (string, bool) { // this has 2 different ways to achieve the same goal.  I know I'm playing around.  Now that it works, I'm including the
-	//                                             dot logic in the detoxFilenameNewWay routine.  The string split stuff works, but I don't need it.
+func tooManyDots(fName string) (string, bool) { // this no longer has 2 different ways to achieve the same goal, because it could not accommodate special ext's like .gpg
 	const replacementRune = '-'
-	const replacementStr = string(replacementRune)
 
 	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
 	//fmt.Printf(" in tooManyDots: fName is %q, targetNumOfDots is %d\n", fName, targetNumOfDots)
-	if targetNumOfDots < 1 {
-		return fName, false
-	}
-
 	ext := filepath.Ext(fName)
 	if ext == ".gpg" || ext == ".gz" || ext == ".xz" {
-		targetNumOfDots++ // so don't change the last 2 dots, ie, .docx.gpg remains that.
+		targetNumOfDots-- // so don't change the last 2 dots, ie, .docx.gpg remains that.
+	}
+	if targetNumOfDots < 1 {
+		return fName, false
 	}
 
 	var sb strings.Builder
@@ -108,17 +105,7 @@ func tooManyDots(fName string) (string, bool) { // this has 2 different ways to 
 		sb.WriteRune(r)
 	}
 
-	s1 := sb.String()
-
-	splitStr := strings.Split(fName, ".") // this does not include dot
-	//fmt.Printf(" in tooManyDots: fName is %q, s1 is %q, targetNumOfDots = %d, splitStr = %#v\n", fName, s1, targetNumOfDots, splitStr)
-	j1 := strings.Join(splitStr[:len(splitStr)-1], replacementStr) // this line uses a subrange, so after the ':' so len-1 really means len-2
-	j2 := j1 + "." + splitStr[len(splitStr)-1]                     // is using the expr as a subscript index, so len-1 means len-1.
-	if s1 != j2 {
-		fmt.Printf(" s1 = %q, j2 = %q and these are not the same.  This needs more work\n", s1, j2)
-	}
-
-	return s1, true
+	return sb.String(), true
 }
 
 // ------------------------------ GetDirectoryAliases ----------------------------------------
@@ -258,5 +245,48 @@ func detoxFilenameNewWay(fName string) (string, bool) {
 	//f, changed := tooManyDots(f)
 	return f, changed
 } // end detoxFilenameNewWay
+
+*/
+
+/*
+
+func tooManyDots(fName string) (string, bool) { // this has 2 different ways to achieve the same goal.  I know I'm playing around.  Now that it works, I'm including the
+	//                                             dot logic in the detoxFilenameNewWay routine.  The string split stuff works, but I don't need it.
+	const replacementRune = '-'
+	const replacementStr = string(replacementRune)
+
+	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
+	//fmt.Printf(" in tooManyDots: fName is %q, targetNumOfDots is %d\n", fName, targetNumOfDots)
+	if targetNumOfDots < 1 {
+		return fName, false
+	}
+
+	ext := filepath.Ext(fName)
+	if ext == ".gpg" || ext == ".gz" || ext == ".xz" {
+		targetNumOfDots-- // so don't change the last 2 dots, ie, .docx.gpg remains that.
+	}
+
+	var sb strings.Builder
+	var counter int
+	for _, r := range fName {
+		if r == '.' && counter < targetNumOfDots {
+			r = replacementRune
+			counter++
+		}
+		sb.WriteRune(r)
+	}
+
+	s1 := sb.String()
+
+	splitStr := strings.Split(fName, ".") // this does not include dot
+	//fmt.Printf(" in tooManyDots: fName is %q, s1 is %q, targetNumOfDots = %d, splitStr = %#v\n", fName, s1, targetNumOfDots, splitStr)
+	j1 := strings.Join(splitStr[:len(splitStr)-1], replacementStr) // this line uses a subrange, so after the ':' so len-1 really means len-2
+	j2 := j1 + "." + splitStr[len(splitStr)-1]                     // is using the expr as a subscript index, so len-1 means len-1.
+	if s1 != j2 {
+		fmt.Printf(" s1 = %q, j2 = %q and these are not the same.  This needs more work\n", s1, j2)
+	}
+
+	return s1, true
+}
 
 */

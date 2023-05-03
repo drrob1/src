@@ -77,7 +77,7 @@ func detoxFilenameNewWay(fName string) (string, bool) {
 	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
 	ext := filepath.Ext(fName)
 	if ext == ".gpg" || ext == ".gz" || ext == ".xz" {
-		targetNumOfDots++
+		targetNumOfDots--
 	}
 
 	for _, r := range fName {
