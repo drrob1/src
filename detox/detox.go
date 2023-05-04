@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,17 +21,21 @@ import (
   28 Apr 23 -- I want to only have one '.' char in the filename.  So I'll replace all but the last one w/ a '-'.
   30 Apr 23 -- I added !IsGraphic to the tests, which may be redundant, but I'll try it and see.  And I'm combining the dot substitutions into detoxFilenameNewWay
    2 May 23 -- Will limit removing dots to not do so when extensions are .gpg, .gz, .xz
+   4 May 23 -- Decided to add a flag to enable removing the dots.  This will be off by default.  I would always want to remove difficult characters, but not always remove dots.
 */
 
-const lastModified = "2 May 23"
+const lastModified = "4 May 23"
+
+var noDotsFlag bool
 
 func main() {
-	//var e error
 	var globPattern string
+	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
+	flag.Parse()
 
 	fmt.Println()
 
-	if len(os.Args) <= 1 { // this means no arguments on line, as the program name is always first argument passed in os.Args
+	if flag.NArg() <= 1 { // this means no arguments on line, as the program name is always first argument passed in os.Args
 		globPattern = "*"
 	} else {
 		globPattern = strings.ToLower(os.Args[1])
@@ -72,12 +77,14 @@ func detoxFilenameNewWay(fName string) (string, bool) {
 
 	var changed bool
 	var sb strings.Builder
-	var counter int
+	var counter, targetNumOfDots int
 
-	targetNumOfDots := strings.Count(fName, ".") - 1 // because I want to keep the last dot.
-	ext := filepath.Ext(fName)
-	if ext == ".gpg" || ext == ".gz" || ext == ".xz" {
-		targetNumOfDots--
+	if noDotsFlag {
+		targetNumOfDots = strings.Count(fName, ".") - 1 // because I want to keep the last dot.
+		ext := filepath.Ext(fName)
+		if ext == ".gpg" || ext == ".gz" || ext == ".xz" { // keep the last 2 dots.
+			targetNumOfDots--
+		}
 	}
 
 	for _, r := range fName {
