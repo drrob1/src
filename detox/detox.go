@@ -22,15 +22,21 @@ import (
   30 Apr 23 -- I added !IsGraphic to the tests, which may be redundant, but I'll try it and see.  And I'm combining the dot substitutions into detoxFilenameNewWay
    2 May 23 -- Will limit removing dots to not do so when extensions are .gpg, .gz, .xz
    4 May 23 -- Decided to add a flag to enable removing the dots.  This will be off by default.  I would always want to remove difficult characters, but not always remove dots.
+                 go test isn't working by me passing -dots to it.  I'm going to try what happens when I use noDotsFlagPtr.  Nope, no difference.
+   6 May 23 -- I posted on golang-nuts@googlegroups.com for help on how to use the go test system.  I finally got it working.
 */
 
-const lastModified = "4 May 23"
+const lastModified = "6 May 23"
 
 var noDotsFlag bool
 
+func init() {
+	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
+}
+
 func main() {
 	var globPattern string
-	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
+	//flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
 	flag.Parse()
 
 	fmt.Println()
@@ -43,7 +49,8 @@ func main() {
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s. \n", lastModified, globPattern, startDirectory)
+	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s.  noDotsFlag=%t. \n",
+		lastModified, globPattern, startDirectory, noDotsFlag)
 	fmt.Println()
 
 	files := myReadDirNames(startDirectory)
@@ -72,6 +79,7 @@ func main() {
 	}
 } // end main
 
+// detoxFilenameNewWay ------------------------------------------------------------------------------------------------
 func detoxFilenameNewWay(fName string) (string, bool) {
 	const dotReplacementRune = '-'
 

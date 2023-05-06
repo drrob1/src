@@ -4,7 +4,11 @@ package main
    2 May 23 -- I'm going to try and code table based testing function
 */
 
-import "testing"
+import (
+	"flag"
+	"os"
+	"testing"
+)
 
 var testStrings = []struct {
 	initFilename string
@@ -27,6 +31,11 @@ var testStrings = []struct {
 	{".xz", ".xz", false},
 }
 
+func TestMain(m *testing.M) { // this example is in the docs of the testing package, that I was referred to by the golang nuts google group.
+	flag.Parse()
+	os.Exit(m.Run())
+}
+
 func TestDetoxFilenameNewWay(t *testing.T) {
 	for _, f := range testStrings {
 		newFN, changed := detoxFilenameNewWay(f.initFilename)
@@ -35,7 +44,7 @@ func TestDetoxFilenameNewWay(t *testing.T) {
 				f.initFilename, f.newFilename, newFN)
 		}
 		if changed != f.changed {
-			t.Errorf(" Expected value of changed was %t, but got %t instead.\n", f.changed, changed)
+			t.Errorf(" Expected value of changed was %t for %s, but got %t instead.\n", f.changed, f.initFilename, changed)
 		}
 	}
 }
