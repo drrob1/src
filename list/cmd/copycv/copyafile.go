@@ -16,6 +16,8 @@ import (
   24 Apr 23 -- I found a bug in copyC that I also have to fix here.  This routine can only return 1 message, because that 1 message decrements the wait group and the main pgm exits.
   27 Apr 23 -- At work I got an error that O-drive was full when I used copyc, and when this pgm tried to delete whatever did copy, I saw the error that the file is in use by another process.
                So I'll try closing the output file before calling os.Remove and see if that will work.
+   6 May 23 -- Finally was able to test the error handling code on leox in copyc.go.  The Sync() step there failed for 2 files.  Both were successfully deleted automatically.  Then I
+                 ran the pgm again, and these were copied in the 2nd try.  Hooray!
 */
 
 // CopyAFile                    ------------------------------------ Copy ----------------------------------------------
