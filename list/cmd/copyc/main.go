@@ -74,6 +74,8 @@ import (
                  before the os.Erase is called.  I can only return 1 message per call to CopyAFile.
   27 Apr 23 -- At work I got an error that O: was full, and when this pgm tried to delete whatever did copy, I saw the error that the file is in use by another process.  So I'll try
                  closing the output file before calling os.Remove and see if that will work.
+   6 May 23 -- Finally was able to test the error handling code here, on leox.  The Sync() step failed for 2 files.  Both were successfully deleted automatically.  Then I
+                 ran the pgm again, and these were copied in the 2nd try.  Hooray!
 */
 
 const LastAltered = "28 Apr 2023" //
