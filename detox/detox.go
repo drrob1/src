@@ -24,9 +24,10 @@ import (
    4 May 23 -- Decided to add a flag to enable removing the dots.  This will be off by default.  I would always want to remove difficult characters, but not always remove dots.
                  go test isn't working by me passing -dots to it.  I'm going to try what happens when I use noDotsFlagPtr.  Nope, no difference.
    6 May 23 -- I posted on golang-nuts@googlegroups.com for help on how to use the go test system.  I finally got it working.
+  11 May 23 -- Fixing bug in use of flag.NArg().
 */
 
-const lastModified = "6 May 23"
+const lastModified = "11 May 23"
 
 var noDotsFlag bool
 
@@ -41,10 +42,10 @@ func main() {
 
 	fmt.Println()
 
-	if flag.NArg() <= 1 { // this means no arguments on line, as the program name is always first argument passed in os.Args
+	if flag.NArg() == 0 {
 		globPattern = "*"
 	} else {
-		globPattern = strings.ToLower(os.Args[1])
+		globPattern = strings.ToLower(flag.Arg(0)) // first argument on command line.
 	}
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
