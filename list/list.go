@@ -212,7 +212,7 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 
 // ---------------------------------------------------- includeThis ----------------------------------------
 
-func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool {
+func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool { // this already has matched the include expression
 	if VeryVerboseFlag {
 		fmt.Printf(" includeThis.  FI=%#v, FilterFlag=%t\n", fi, FilterFlag)
 	}

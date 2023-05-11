@@ -221,10 +221,11 @@ func TestExpandAllDashes(t *testing.T) {
 func TestIncludeThis(t *testing.T) {
 	fi, err := os.Stat("./testdata/file.txt")
 	if err != nil {
-		t.Fatalf(" ERROR: from first call to os.Stat is %#v\n", err)
+		t.Errorf(" ERROR: from call to os.Stat(testdata/file.txt is %#v\n", err)
+		return
 	}
 	var excludeMe *regexp.Regexp
-	excludeMe, _ = regexp.Compile("")
+	//excludeMe, _ = regexp.Compile("")  keep excludeMe nil.  An empty regexp matches everything.
 	includeMe := includeThis(fi, excludeMe)
 	if includeMe {
 		fmt.Printf(" for %s, includeMe is %t, which is correct.\n", fi.Name(), includeMe)
@@ -233,6 +234,10 @@ func TestIncludeThis(t *testing.T) {
 	}
 
 	fi, err = os.Stat("./testdata/notme.txt")
+	if err != nil {
+		t.Errorf(" ERROR: from call to os.Stat(testdata/notme.txt and err = %s\n", err)
+		return
+	}
 	excludeMe, err = regexp.Compile("not")
 	if err != nil {
 		t.Fatalf(" ERROR from regexp.Compile is %s\n", err)
@@ -245,6 +250,10 @@ func TestIncludeThis(t *testing.T) {
 	}
 
 	fi, err = os.Stat("./testdata/menot.txt")
+	if err != nil {
+		t.Errorf(" ERROR: from call to os.Stat(testdata/menot.txt and err = %s\n", err)
+		return
+	}
 	excludeMe, err = regexp.Compile("not")
 	if err != nil {
 		t.Fatalf(" ERROR from regexp.Compile is %s\n", err)

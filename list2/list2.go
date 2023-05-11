@@ -36,6 +36,7 @@ import (
   18 Jan 23 -- Adding SmartCaseFlag
    8 Feb 23 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
   31 Mar 23 -- StaticCheck found a minor issue, about byte values can't be < 0.
+  11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
 */
 
 type DirAliasMapType map[string]string
@@ -368,7 +369,8 @@ outerLoop:
 		}
 
 		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
-		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
+		// Upper case letter will mean something, not sure what yet.
+		ans = ReplaceDigits(ans)
 		processedAns, err := ExpandAllDashes(ans)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
@@ -470,3 +472,17 @@ func getFileInfoXWithGlobals() ([]FileInfoExType, error) {
 	}
 	return fileInfoX, nil
 } // end getFileInfoXWithGlobals
+
+// ----------------------------- ReplaceDigits -------------------------------------
+
+func ReplaceDigits(in string) string {
+	const fudgefactor = 'a' - '1'
+	var sb strings.Builder
+	for _, ch := range in {
+		if ch >= '1' && ch <= '9' {
+			ch = ch + fudgefactor
+		}
+		sb.WriteRune(ch)
+	}
+	return sb.String()
+}
