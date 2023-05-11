@@ -43,6 +43,7 @@ import (
                  And I added FileSelectionString, which returns a string instead of the FileInfoExType.
    5 Apr 23 -- Fixed CheckDest(), ProcessDirectoryAliases and an issue in listutil_windows found by staticCheck.
    8 Apr 23 -- New now does not need params.  NewList will be the format that needs params.
+  11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
 */
 
 type DirAliasMapType map[string]string
@@ -297,6 +298,20 @@ func ProcessDirectoryAliases(cmdline string) string {
 	return completeValue
 } // ProcessDirectoryAliases
 
+// ----------------------------- ReplaceDigits -------------------------------------
+
+func ReplaceDigits(in string) string {
+	const fudgefactor = 'a' - '1'
+	var sb strings.Builder
+	for _, ch := range in {
+		if ch >= '1' && ch <= '9' {
+			ch = ch + fudgefactor
+		}
+		sb.WriteRune(ch)
+	}
+	return sb.String()
+}
+
 // ----------------------------- ExpandADash ---------------------------------------
 
 func ExpandADash(in string) (string, error) {
@@ -388,13 +403,15 @@ outerLoop:
 		}
 
 		// Check for the stop code anywhere in the input.
-		if strings.Contains(ans, stopCode) {
+		if strings.Contains(ans, stopCode) { // this is a "0" at time of writing this comment.
 			e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
 			return nil, e
 		}
 
-		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
-		// ans = strings.ToLower(ans)  Upper case letter will mean something, not sure what yet.
+		// Here is where I can scan the ans string first replacing digits 1..9, and then looking for a-z and replace that with all the letters so indicated before
+		// passing it onto the processing loop.
+		// Upper case letter will mean something, not sure what yet.
+		ans = ReplaceDigits(ans)
 		processedAns, err := ExpandAllDashes(ans)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)

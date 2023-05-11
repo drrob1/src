@@ -256,3 +256,14 @@ func TestIncludeThis(t *testing.T) {
 		fmt.Printf(" includeMe for %s is false, which is correct\n", fi.Name())
 	}
 }
+
+func TestReplaceDigits(t *testing.T) { // go test -run Replace -v   -> to just run this test.
+	in := "123456789"
+	out := "abcdefghi"
+	result := ReplaceDigits(in)
+	if result != out {
+		fmt.Errorf(" ReplaceDigits should be abcdefghi, but it is %s instead\n", result)
+	} else {
+		fmt.Printf(" ReplaceDigits passed its test function.\n")
+	}
+}
