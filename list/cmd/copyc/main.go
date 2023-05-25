@@ -328,7 +328,7 @@ func main() {
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
-	ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
+	ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d, ", succeeded)
 	ctfmt.Printf(ct.Red, onWin, " total files NOT copied is %d, ", failed)
 	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
 } // end main
