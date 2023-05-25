@@ -76,9 +76,10 @@ import (
                  closing the output file before calling os.Remove and see if that will work.
    6 May 23 -- Finally was able to test the error handling code here, on leox.  The Sync() step failed for 2 files.  Both were successfully deleted automatically.  Then I
                  ran the pgm again, and these were copied in the 2nd try.  Hooray!
+  25 May 23 -- Changed the final message to be multicolored.
 */
 
-const LastAltered = "28 Apr 2023" //
+const LastAltered = "25 May 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -327,8 +328,9 @@ func main() {
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
-	ctfmt.Printf(ct.Cyan, onWin, " Total files copied is %d, total files NOT copied is %d, elapsed time is %s using %d go routines.\n",
-		succeeded, failed, time.Since(start), goRtns)
+	ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
+	ctfmt.Printf(ct.Red, onWin, " total files NOT copied is %d, ", failed)
+	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
 } // end main
 
 // min(int1, int2) int  -- this returns the smaller of 2 int
