@@ -211,13 +211,12 @@ func main() {
 	if cmdStr == "" {
 		if runtime.GOOS == "linux" {
 			cmdPath = "/bin/bash"
-			variadicParam = append(variadicParam, fileNameStr...)
 		} else { // must be on Windows.
 			cmdPath = os.Getenv("COMSPEC")
 			variadicParam = append(variadicParam, "-C")
-			variadicParam = append(variadicParam, fileNameStr...)
 		}
 	}
+	variadicParam = append(variadicParam, fileNameStr...)
 	execCmd = exec.Command(cmdPath, variadicParam...)
 
 	if verboseFlag {

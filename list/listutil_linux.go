@@ -28,12 +28,15 @@ import (
   24 Mar 23 -- While in florida I figured out how to handle a glob pattern on the bash command line.  I have to use the length of os.Args or equivalent.
    4 Apr 23 -- Added use of list.DelListFlag
   22 Apr 23 -- Found bug.  I again used flag.NFlag where I meant to use flag.NArg.  I HATE WHEN THAT HAPPENS.
+  27 May 23 -- Added getFileInfoXSkipFirstOnCommandLine, for use of runlist.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, but does not sort the slice before returning it, due to difficulty in passing the sort function.
 // The returned slice of FileInfoExType will then be passed to the display rtn to colorize only the needed number of file infos.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
+
+const sep = string(filepath.Separator)
 
 func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
@@ -58,7 +61,6 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		}
 
 	} else if flag.NArg() == 1 || flag.NArg() == 2 { // First param should be a directory.  If there's a 2nd param, that would also have to be a directory, but that's not handled here.
-		const sep = string(filepath.Separator)
 		fileInfoX = make([]FileInfoExType, 0, 1)
 		loneFilename := flag.Arg(0)
 
