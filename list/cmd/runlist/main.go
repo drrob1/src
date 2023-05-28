@@ -39,7 +39,7 @@ import (
   31 Mar 23 -- StaticCheck found a few issues.
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
    8 Apr 23 -- Changed list.New signature.
-  26 May 23 -- Now called runlist, based on copylist.  It will pass the list to the command given as it's last param.  I intend this to be like executable extensions on Windows.
+  26 May 23 -- Now called runlist, based on copylist.  I intend this to be like executable extensions on Windows.  The command is the first param, and the list follows.
 
 type FileInfoExType struct {
 	FI       os.FileInfo
@@ -74,8 +74,6 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-		//	dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
 
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
@@ -146,7 +144,7 @@ func main() {
 	list.SizeFlag = sizeFlag
 	list.GlobFlag = globFlag
 
-	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.SkipFirstNewList()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
 		os.Exit(1)
@@ -188,7 +186,7 @@ func main() {
 
 	// now have the fileListStr.  Need to get the cmdStr.
 
-	cmdStr := flag.Arg(flag.NArg() - 1) // this means the last param on the command line, if present.
+	cmdStr := flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
 	if cmdStr == "." {
 		cmdStr = "" // this is for windows and executable extensions.
 	}
@@ -196,15 +194,6 @@ func main() {
 	if verboseFlag {
 		fmt.Printf("\n cmdStr = %q\n", cmdStr)
 	}
-
-	// Get the path
-	//path := os.Getenv("PATH")  I don't think I need this.
-
-	// time to exec the cmdStr
-
-	//if cmdStr != "" {
-	//	cmdPath = findexec.Find(cmdStr, "") // empty path searches the system PATH
-	//}
 
 	// Time to run the cmd.
 
@@ -223,7 +212,7 @@ func main() {
 		if runtime.GOOS == "linux" {
 			cmdPath = "/bin/bash"
 			variadicParam = append(variadicParam, fileNameStr...)
-		} else {
+		} else { // must be on Windows.
 			cmdPath = os.Getenv("COMSPEC")
 			variadicParam = append(variadicParam, "-C")
 			variadicParam = append(variadicParam, fileNameStr...)

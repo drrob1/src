@@ -181,6 +181,70 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 	return fileInfoX, nil
 } // end MakeList
 
+// SkipFirstNewList ...  will return a slice of strings that contain a full filename including dir, and it needs params for excludeRegex, sizeSort and reverse.
+func SkipFirstNewList() ([]FileInfoExType, error) {
+	var err error
+
+	sizeSort := SizeFlag   // passed globally
+	reverse := ReverseFlag // passed globally
+
+	if FilterFlag {
+		filterAmt = 1_000_000
+	}
+	if VeryVerboseFlag {
+		VerboseFlag = true
+	}
+
+	fileInfoX, err = getFileInfoXSkipFirstOnCommandLine() // this needs ExcludeRex, passed globally.
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromCommandLine is %s.\n", err)
+		return nil, err
+	}
+	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
+
+	// set which sort function will be in the sortfcn var
+	forward := !(reverse || ReverseFlag)
+	dateSort := !sizeSort
+	sortFcn := func(i, j int) bool { return false }
+	if sizeSort && forward { // set the value of sortFcn so only a single line is needed to execute the sort.
+		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+			return fileInfoX[i].FI.Size() > fileInfoX[j].FI.Size() // I want a largest first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = largest size.")
+		}
+	} else if dateSort && forward {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
+			return fileInfoX[i].FI.ModTime().After(fileInfoX[j].FI.ModTime()) // I want a newest-first sort.
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = newest date.")
+		}
+	} else if sizeSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			return fileInfoX[i].FI.Size() < fileInfoX[j].FI.Size() // I want a smallest-first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = smallest size.")
+		}
+	} else if dateSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
+			return fileInfoX[i].FI.ModTime().Before(fileInfoX[j].FI.ModTime()) // I want an oldest-first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = oldest date.")
+		}
+	}
+
+	if len(fileInfoX) > 1 {
+		sort.Slice(fileInfoX, sortFcn) // sort functions became available as of Go 1.8
+	}
+
+	return fileInfoX, nil
+} // end SkipFirstNewList
+
 // ------------------------------- MyReadDir -----------------------------------
 
 func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Who knew?

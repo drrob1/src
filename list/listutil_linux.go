@@ -158,3 +158,107 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 	}
 	return fileInfoX, nil
 }
+
+func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) {
+	var fileInfoX []FileInfoExType
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %#v\n", err)
+		os.Exit(1)
+	}
+
+	if flag.NArg() < 2 { // First param is the command to be run.  This condition when TRUE there are no files on the command line.
+		if VerboseFlag {
+			fmt.Printf(" workingDir=%s\n", workingDir)
+		}
+
+		fileInfoX, err = MyReadDir(workingDir, ExcludeRex) // excluding by regex, filesize or having an ext is done by MyReadDir.
+		if err != nil {
+			return nil, err
+		}
+		if VerboseFlag {
+			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
+		}
+
+	} else if flag.NArg() == 2 { // First param would be the cmd to run.
+		fileInfoX = make([]FileInfoExType, 0, 1)
+		loneFilename := flag.Arg(1)
+
+		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink or a directory.
+		if err == nil {
+			stat, _ := fHandle.Stat()
+			if stat.IsDir() { // either a direct or symlinked directory name
+				fHandle.Close()
+				fileInfoX, err = MyReadDir(loneFilename, nil) // nil exclude regex
+				return fileInfoX, err
+			}
+
+		} else { // err must not be nil after attempting to open loneFilename.
+			loneFilename = workingDir + sep + loneFilename
+			loneFilename = filepath.Clean(loneFilename)
+			// getting ready for another attempt of opening loneFilename.
+		}
+
+		fHandle, err = os.Open(loneFilename)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println()
+			os.Exit(1)
+		}
+
+		fi, _ := fHandle.Stat()
+
+		if fi.IsDir() {
+			fHandle.Close()
+			fileInfoX, err = MyReadDir(loneFilename, nil) // ExcludeMe regex is nil
+			if err != nil {
+				return nil, err
+			}
+			return fileInfoX, nil
+		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return a variable of fileInfoExType fields.
+			fix := FileInfoExType{
+				FI:       fi,
+				Dir:      workingDir,
+				RelPath:  filepath.Join(workingDir, loneFilename),
+				AbsPath:  filepath.Join(workingDir, loneFilename),
+				FullPath: filepath.Join(workingDir, loneFilename),
+			}
+			fileInfoX = append(fileInfoX, fix)
+			return fileInfoX, nil
+		}
+
+	} else { // bash must have populated sources on command line.  Will process all but the last, which would be a destination directory.
+		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
+		for i := 1; i < flag.NArg(); i++ { // don't process the first command line item, as that would be the command to be run.
+			fn := flag.Arg(i)
+			fHandle, err := os.Open(fn)
+			if err != nil {
+				ctfmt.Printf(ct.Red, false, " Error from os.Open(%s) is %s\n", fn, err)
+				return nil, err
+			}
+			stat, _ := fHandle.Stat()
+			if VerboseFlag {
+				fmt.Printf(" listutil_linux.go command line loop: fn=%s, fHandle.Name=%s, IsDir=%t\n", fn, fHandle.Name(), stat.IsDir())
+			}
+			fHandle.Close()
+			fix := FileInfoExType{
+				FI:       stat,
+				Dir:      workingDir,
+				RelPath:  filepath.Join(workingDir, fn),
+				AbsPath:  filepath.Join(workingDir, fn),
+				FullPath: filepath.Join(workingDir, fn),
+			}
+			fileInfoX = append(fileInfoX, fix)
+		}
+		if VerboseFlag {
+			fmt.Printf("Length of fileInfoX slice after processing last item is %d\n", len(fileInfoX))
+		}
+		return fileInfoX, nil
+	}
+	if VerboseFlag {
+		fmt.Printf(" Leaving getFileInfoXSkipFirstOnCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n",
+			flag.NArg(), len(flag.Args()), len(fileInfoX))
+	}
+	return fileInfoX, nil
+}
