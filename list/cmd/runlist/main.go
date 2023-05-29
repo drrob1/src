@@ -40,6 +40,8 @@ import (
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
    8 Apr 23 -- Changed list.New signature.
   26 May 23 -- Now called runlist, based on copylist.  I intend this to be like executable extensions on Windows.  The command is the first param, and the list follows.
+  29 May 23 -- Changed behavior on Windows.  Now I look to see if tcc or cmd is running; tcc uses the -C flag and uses .Start(), while cmd does not use the -C flag and uses .Run()
+                 And will look for "xl" to change to "excel", and "w" to "winword".  I don't think I need to map "a" to msaccess or "p" to powerpnt.
 
 type FileInfoExType struct {
 	FI       os.FileInfo
@@ -51,7 +53,7 @@ type FileInfoExType struct {
 
 */
 
-const LastAltered = "27 May 2023" //
+const LastAltered = "29 May 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -184,11 +186,15 @@ func main() {
 		fileNameStr = append(fileNameStr, f.FI.Name())
 	}
 
-	// now have the fileListStr.  Need to get the cmdStr.
+	// now have the fileListStr.  Need to get the cmdStr.  cmd.exe behaves differently than tcc.exe
 
 	cmdStr := flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
 	if cmdStr == "." {
 		cmdStr = "" // this is for windows and executable extensions.
+	} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
+		cmdStr = "excel"
+	} else if strings.ToLower(cmdStr) == "w" {
+		cmdStr = "winword"
 	}
 
 	if verboseFlag {
@@ -199,6 +205,7 @@ func main() {
 
 	var cmdPath string
 	var execCmd *exec.Cmd
+	var cmd bool
 	variadicParam := make([]string, 0, len(fileNameStr))
 
 	//variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
@@ -213,7 +220,11 @@ func main() {
 			cmdPath = "/bin/bash"
 		} else { // must be on Windows.
 			cmdPath = os.Getenv("COMSPEC")
-			variadicParam = append(variadicParam, "-C")
+			if strings.Contains(cmdPath, "tcc") {
+				variadicParam = append(variadicParam, "-C")
+			} else { // running cmd.exe, and likely at work.
+				cmd = true // and variadicParam won't have the -C flag
+			}
 		}
 	}
 	variadicParam = append(variadicParam, fileNameStr...)
@@ -228,8 +239,12 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
-	e := execCmd.Start()
-	if e != nil {
-		fmt.Printf(" Error returned by running %s %s is %v\n", cmdStr, fileNameStr, e)
+	if cmd {
+		err = execCmd.Run() // will see if this works better when running cmd.exe, likely at work.
+	} else {
+		err = execCmd.Start()
+	}
+	if err != nil {
+		fmt.Printf(" Error returned by running %s %s is %v\n", cmdStr, fileNameStr, err)
 	}
 } // end main
