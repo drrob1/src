@@ -3,6 +3,9 @@ package main // runlist
 import (
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/jonhadfield/findexec"
 	"os/exec"
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -61,6 +64,7 @@ const minWidth = 90
 var autoWidth, autoHeight int
 var err error
 var verifyFlag bool
+var officePath = "c:/Program Files/Microsoft Office/root/Office16;"
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s.\n", os.Args[0], runtime.Version(), LastAltered)
@@ -186,7 +190,7 @@ func main() {
 		fileNameStr = append(fileNameStr, f.FI.Name())
 	}
 
-	// now have the fileListStr.  Need to get the cmdStr.  cmd.exe behaves differently than tcc.exe
+	// now have the fileNameStr.  Need to get the cmdStr.  cmd.exe behaves differently than tcc.exe
 
 	cmdStr := flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
 	if cmdStr == "." {
@@ -215,7 +219,7 @@ func main() {
 	// I got this answer from stack overflow.
 
 	cmdPath = cmdStr
-	if cmdStr == "" {
+	if cmdPath == "" {
 		if runtime.GOOS == "linux" {
 			cmdPath = "/bin/bash"
 		} else { // must be on Windows.
@@ -228,6 +232,17 @@ func main() {
 		}
 	}
 	variadicParam = append(variadicParam, fileNameStr...)
+
+	if cmdStr == "excel" || cmdStr == "winword" {
+		searchPath := officePath + os.Getenv("PATH")
+		execStr := findexec.Find(cmdStr, searchPath)
+		if execStr == "" {
+			ctfmt.Printf(ct.Red, true, " execStr is blank because could not find %s.  \nsearchPath = %s \n Exiting.\n", cmdStr, searchPath)
+			os.Exit(1)
+		}
+		cmdPath = execStr
+	}
+
 	execCmd = exec.Command(cmdPath, variadicParam...)
 
 	if verboseFlag {
