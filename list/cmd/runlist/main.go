@@ -45,6 +45,7 @@ import (
   26 May 23 -- Now called runlist, based on copylist.  I intend this to be like executable extensions on Windows.  The command is the first param, and the list follows.
   29 May 23 -- Changed behavior on Windows.  Now I look to see if tcc or cmd is running; tcc uses the -C flag and uses .Start(), while cmd does not use the -C flag and uses .Run()
                  And will look for "xl" to change to "excel", and "w" to "winword".  I don't think I need to map "a" to msaccess or "p" to powerpnt.
+  31 May 23 -- Expanding substitutions to p = powerpnt, a = msaccess, and l = libreoffice.  And I'm thinking about how to implement my own executable extensions.  But not for now.
 
 type FileInfoExType struct {
 	FI       os.FileInfo
@@ -199,6 +200,12 @@ func main() {
 		cmdStr = "excel"
 	} else if strings.ToLower(cmdStr) == "w" {
 		cmdStr = "winword"
+	} else if strings.ToLower(cmdStr) == "p" {
+		cmdStr = "powerpnt"
+	} else if strings.ToLower(cmdStr) == "a" {
+		cmdStr = "msaccess"
+	} else if strings.ToLower(cmdStr) == "l" {
+		cmdStr = "libreoffice"
 	}
 
 	if verboseFlag {
@@ -233,7 +240,7 @@ func main() {
 	}
 	variadicParam = append(variadicParam, fileNameStr...)
 
-	if cmdStr == "excel" || cmdStr == "winword" {
+	if cmdStr == "excel" || cmdStr == "winword" || cmdStr == "powerpnt" || cmdStr == "msaccess" {
 		searchPath := officePath + os.Getenv("PATH")
 		execStr := findexec.Find(cmdStr, searchPath)
 		if execStr == "" {
