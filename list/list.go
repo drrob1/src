@@ -44,6 +44,7 @@ import (
    5 Apr 23 -- Fixed CheckDest(), ProcessDirectoryAliases and an issue in listutil_windows found by staticCheck.
    8 Apr 23 -- New now does not need params.  NewList will be the format that needs params.
   11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
+   1 Jun 23 -- Added getFileInfoXFromGlob, which behaves the same on Windows and linux.
 */
 
 type DirAliasMapType map[string]string
@@ -244,6 +245,69 @@ func SkipFirstNewList() ([]FileInfoExType, error) {
 
 	return fileInfoX, nil
 } // end SkipFirstNewList
+
+func NewFromGlob(globExpr string) ([]FileInfoExType, error) {
+	var err error
+
+	sizeSort := SizeFlag   // passed globally
+	reverse := ReverseFlag // passed globally
+
+	if FilterFlag {
+		filterAmt = 1_000_000
+	}
+	if VeryVerboseFlag {
+		VerboseFlag = true
+	}
+
+	fileInfoX, err = FileInfoXFromGlob(globExpr)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromCommandLine is %s.\n", err)
+		return nil, err
+	}
+	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
+
+	// set which sort function will be in the sortfcn var
+	forward := !(reverse || ReverseFlag)
+	dateSort := !sizeSort
+	sortFcn := func(i, j int) bool { return false }
+	if sizeSort && forward { // set the value of sortFcn so only a single line is needed to execute the sort.
+		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+			return fileInfoX[i].FI.Size() > fileInfoX[j].FI.Size() // I want a largest first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = largest size.")
+		}
+	} else if dateSort && forward {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
+			return fileInfoX[i].FI.ModTime().After(fileInfoX[j].FI.ModTime()) // I want a newest-first sort.
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = newest date.")
+		}
+	} else if sizeSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			return fileInfoX[i].FI.Size() < fileInfoX[j].FI.Size() // I want a smallest-first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = smallest size.")
+		}
+	} else if dateSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
+			return fileInfoX[i].FI.ModTime().Before(fileInfoX[j].FI.ModTime()) // I want an oldest-first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = oldest date.")
+		}
+	}
+
+	if len(fileInfoX) > 1 {
+		sort.Slice(fileInfoX, sortFcn) // sort functions became available as of Go 1.8
+	}
+
+	return fileInfoX, nil
+} // end NewFromGlob
 
 // ------------------------------- MyReadDir -----------------------------------
 
@@ -651,3 +715,120 @@ func CheckDest() string {
 	}
 	return d
 }
+
+// FileInfoXFromGlob behaves the same on linux and Windows, so it's here and not in platform specific code file.
+func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.ExcludeRex
+	var fileInfoX []FileInfoExType
+	excludeMe := ExcludeRex
+
+	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
+		HomeDirStr = "."
+	}
+	HomeDirStr = HomeDirStr + sepStr
+
+	pattern := globStr
+	if VerboseFlag {
+		fmt.Printf(" file pattern is %s\n", pattern)
+	}
+	if pattern == "" {
+		workingDir, er := os.Getwd()
+		if er != nil {
+			return nil, er
+			//fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
+			//os.Exit(1)
+		}
+		fileInfoX, err = MyReadDir(workingDir, excludeMe)
+		if err != nil {
+			return nil, err
+		}
+	} else { // pattern is not blank
+		if strings.ContainsRune(pattern, ':') {
+			pattern = ProcessDirectoryAliases(pattern)
+		}
+
+		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
+		dirName, fileName := filepath.Split(pattern)
+		fileName = strings.ToLower(fileName)
+		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
+			fileInfoX, err = MyReadDir(dirName, excludeMe)
+			return fileInfoX, err
+		}
+		if dirName == "" {
+			dirName = "."
+		}
+		if fileName == "" { // need this to not be blank because of the call to Match below.
+			fileName = "*"
+		}
+
+		if VerboseFlag {
+			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+		}
+
+		var filenames []string
+		if GlobFlag {
+			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
+			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
+			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
+			filenames, err = filepath.Glob(pattern)
+			if VerboseFlag {
+				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+			}
+			if err != nil {
+				return nil, err
+			}
+
+		} else {
+			d, err := os.Open(dirName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
+				os.Exit(1)
+			}
+			defer d.Close()
+			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
+			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+				fileInfoX, err = MyReadDir(dirName, excludeMe)
+				return fileInfoX, err
+			}
+		}
+
+		fileInfoX = make([]FileInfoExType, 0, len(filenames))
+		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
+			var path string
+			if strings.Contains(f, sepStr) {
+				path = f
+			} else {
+				path = filepath.Join(dirName, f)
+			}
+
+			fi, err := os.Lstat(path)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
+				continue
+			}
+
+			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, and glob is always used in this routine.
+			if er != nil {
+				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
+				continue
+			}
+
+			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
+				fix := FileInfoExType{
+					FI:       fi,
+					Dir:      dirName,
+					RelPath:  filepath.Join(dirName, f),
+					AbsPath:  filepath.Join(dirName, f),
+					FullPath: filepath.Join(dirName, f),
+				}
+				fileInfoX = append(fileInfoX, fix)
+			}
+		} // for f ranges over filenames
+	} // if flag.NArgs()
+
+	return fileInfoX, nil
+
+} // end FileInfoXFromGlob

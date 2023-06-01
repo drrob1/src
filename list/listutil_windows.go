@@ -133,7 +133,7 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 
 } // end getFileInfoXFromCommandLine
 
-func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) { // Needs list.ExcludeRex
+func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) { // Uses list.ExcludeRex
 	var fileInfoX []FileInfoExType
 	excludeMe := ExcludeRex
 

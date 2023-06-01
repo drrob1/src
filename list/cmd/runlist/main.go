@@ -45,19 +45,16 @@ import (
   26 May 23 -- Now called runlist, based on copylist.  I intend this to be like executable extensions on Windows.  The command is the first param, and the list follows.
   29 May 23 -- Changed behavior on Windows.  Now I look to see if tcc or cmd is running; tcc uses the -C flag and uses .Start(), while cmd does not use the -C flag and uses .Run()
                  And will look for "xl" to change to "excel", and "w" to "winword".  I don't think I need to map "a" to msaccess or "p" to powerpnt.
-  31 May 23 -- Expanding substitutions to p = powerpnt, a = msaccess, and l = libreoffice.  And I'm thinking about how to implement my own executable extensions.  But not for now.
-
-type FileInfoExType struct {
-	FI       os.FileInfo
-	Dir      string
-	RelPath  string
-	AbsPath  string
-	FullPath string // probably not needed, but I really do want to be complete.
-}
-
+  31 May 23 -- Expanding substitutions to p = powerpnt, a = msaccess, and l = libreoffice.  And I'm thinking about how to implement my own executable extensions.
+                 That works.  Now I want to be able to enter the code for the office pgm, and it will just show me files that will open in that pgm.  But I still have to allow
+                 executable extensions, like for pdf or txt files on Windows.
+                 runlist
+                 runlist p|l|a|x|w
+                 runlist . glob -- behaves differently on linux and Windows.
+   1 Jun 23 -- Uses the new list.FileInfoXFromGlob and list.NewFromGlob.
 */
 
-const LastAltered = "29 May 2023" //
+const LastAltered = "1 June 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -78,11 +75,10 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ] [glob pattern]\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-
-		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
+		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
+		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
 
@@ -151,14 +147,71 @@ func main() {
 	list.SizeFlag = sizeFlag
 	list.GlobFlag = globFlag
 
-	fileList, err := list.SkipFirstNewList()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
-		os.Exit(1)
+	// Need to get the cmdStr.  cmd.exe behaves differently than tcc.exe
+
+	var cmdStr, globStr string
+	var fileList []list.FileInfoExType
+	var err error
+	if flag.NArg() == 0 {
+		cmdStr = ""
+		fileList, err = list.NewFromGlob("*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
+			os.Exit(1)
+		}
+	} else if flag.NArg() == 1 { // use default glob string
+		cmdStr = flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
+		if cmdStr == "." {
+			cmdStr = "" // this is for windows and executable extensions.
+			globStr = "*"
+		} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
+			cmdStr = "excel"
+			globStr = "*.xls*"
+		} else if strings.ToLower(cmdStr) == "w" {
+			cmdStr = "winword"
+			globStr = "*.doc*"
+		} else if strings.ToLower(cmdStr) == "p" {
+			cmdStr = "powerpnt"
+			globStr = "*.ppt*"
+		} else if strings.ToLower(cmdStr) == "a" {
+			cmdStr = "msaccess"
+			globStr = "*.mdb"
+		} else if strings.ToLower(cmdStr) == "l" {
+			cmdStr = "libreoffice"
+			globStr = "*"
+		}
+		fmt.Printf(" About to call NewFromGlob.  globStr = %q\n", globStr)
+		fileList, err = list.NewFromGlob(globStr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
+			os.Exit(1)
+		}
+	} else {
+		cmdStr = flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
+		if cmdStr == "." {
+			cmdStr = "" // this is for windows and executable extensions.
+		} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
+			cmdStr = "excel"
+		} else if strings.ToLower(cmdStr) == "w" {
+			cmdStr = "winword"
+		} else if strings.ToLower(cmdStr) == "p" {
+			cmdStr = "powerpnt"
+		} else if strings.ToLower(cmdStr) == "a" {
+			cmdStr = "msaccess"
+		} else if strings.ToLower(cmdStr) == "l" {
+			cmdStr = "libreoffice"
+		}
+		fileList, err = list.SkipFirstNewList()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
+			os.Exit(1)
+		}
 	}
+
 	if verboseFlag {
-		fmt.Printf(" len(fileList) = %d\n", len(fileList))
+		fmt.Printf("\n cmdStr = %q, globStr = %q, len(fileList) = %d\n", cmdStr, globStr, len(fileList))
 	}
+
 	if veryVerboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" first fileList[%d] = %#v\n", i, f)
@@ -191,27 +244,6 @@ func main() {
 		fileNameStr = append(fileNameStr, f.FI.Name())
 	}
 
-	// now have the fileNameStr.  Need to get the cmdStr.  cmd.exe behaves differently than tcc.exe
-
-	cmdStr := flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
-	if cmdStr == "." {
-		cmdStr = "" // this is for windows and executable extensions.
-	} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
-		cmdStr = "excel"
-	} else if strings.ToLower(cmdStr) == "w" {
-		cmdStr = "winword"
-	} else if strings.ToLower(cmdStr) == "p" {
-		cmdStr = "powerpnt"
-	} else if strings.ToLower(cmdStr) == "a" {
-		cmdStr = "msaccess"
-	} else if strings.ToLower(cmdStr) == "l" {
-		cmdStr = "libreoffice"
-	}
-
-	if verboseFlag {
-		fmt.Printf("\n cmdStr = %q\n", cmdStr)
-	}
-
 	// Time to run the cmd.
 
 	var cmdPath string
@@ -220,17 +252,17 @@ func main() {
 	variadicParam := make([]string, 0, len(fileNameStr))
 
 	//variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
-	//variadicParam = append(variadicParam, fileNameStr...)
 
 	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.
 	// I got this answer from stack overflow.
 
 	cmdPath = cmdStr
+	fmt.Printf(" cmdStr = %q, cmdPath = %q\n", cmdStr, cmdPath)
 	if cmdPath == "" {
 		if runtime.GOOS == "linux" {
 			cmdPath = "/bin/bash"
 		} else { // must be on Windows.
-			cmdPath = os.Getenv("COMSPEC")
+			cmdPath = strings.ToLower(os.Getenv("COMSPEC"))
 			if strings.Contains(cmdPath, "tcc") {
 				variadicParam = append(variadicParam, "-C")
 			} else { // running cmd.exe, and likely at work.
