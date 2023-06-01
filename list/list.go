@@ -727,7 +727,7 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 		fmt.Fprintln(os.Stderr, ".  Ignoring HomeDirStr")
 		HomeDirStr = "."
 	}
-	HomeDirStr = HomeDirStr + sepStr
+	HomeDirStr = HomeDirStr + sepString
 
 	pattern := globStr
 	if VerboseFlag {
@@ -798,7 +798,7 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 		fileInfoX = make([]FileInfoExType, 0, len(filenames))
 		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
 			var path string
-			if strings.Contains(f, sepStr) {
+			if strings.Contains(f, sepString) {
 				path = f
 			} else {
 				path = filepath.Join(dirName, f)
