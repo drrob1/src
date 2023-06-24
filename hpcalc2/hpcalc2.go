@@ -14,7 +14,7 @@ import (
 	"src/tknptr"
 )
 
-/* (C) 1990.  Robert W Solomon.  All rights reserved.
+/* (C) 1990-2023.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
 ----------------
  1 Dec 89 -- Added the help command.
@@ -116,10 +116,10 @@ REVISION HISTORY
  8 Apr 21 -- Converting to src module residing at ~/go/src.  What a coincidence!
 14 Jun 21 -- Split off Result from GetResult
 16 Jun 21 -- Adding os.UserHomeDir(), which became available as of Go 1.12.
-17 Jun 21 -- Added "defer MapClose()" to the init function, to see it this works.  It doesn't, so I removed it.
-               Deferred code will be run at the end of the containing function.  But I can call defer MapClose() at the top of a client pgm.
-               And fixed help message regarding MapClose, which is not automatic but needs to be deferred as I just wrote.
-19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call MapClose directly anymore.
+17 Jun 21 -- Added "defer mapWriteAndClose()" to the init function, to see it this works.  It doesn't, so I removed it.
+               Deferred code will be run at the end of the containing function.  But I can call defer mapWriteAndClose() at the top of a client pgm.
+               And fixed help message regarding mapWriteAndClose, which is not automatic but needs to be deferred as I just wrote.
+19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call mapWriteAndClose directly anymore.
 16 Sep 21 -- I increased the number of digits for the %g verb when output is dump'd.
  2 Nov 21 -- Adjusted dumpedfixed so that very large or very small numbers are output in general format to not mess up the display
  4 May 22 -- PIOVER6 never coded, so that's now added.  And I decided to use platform specific code for toclip/fromclip, contained in clippy.go.
@@ -129,9 +129,12 @@ REVISION HISTORY
  7 Sep 22 -- Changed the pivot for the JUL command from the current year to a const of 30
 21 Oct 22 -- golangci-lint says I have an unnecessary Sprintf call.  It's right.
 21 Nov 22 -- static linter found a few more issues.
+24 Jun 23 -- Will only close the map reg file when needed, ie, when I open it.  This is to not have rpnt and rpnf clobber each other.
+               I'm not exporting the map close function, and I renamed it to mapWriteAndClose.  By not exporting it, I'm making sure that the client programs can't close this file and clobber one another.
+               I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
 */
 
-const LastAlteredDate = "21 Nov 2022"
+const LastAlteredDate = "24 Jun 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -154,7 +157,7 @@ const Bottom = X
 
 var StackRegNamesString []string = []string{" X", " Y", " Z", "T5", "T4", "T3", "T2", "T1"}
 
-//var FSATypeString []string = []string{"DELIM", "OP", "DGT", "AllElse"}  I am getting an unused variable, as the debugging statements are likely commented out.
+// var FSATypeString []string = []string{"DELIM", "OP", "DGT", "AllElse"}  I am getting an unused variable, as the debugging statements are likely commented out.
 var cmdMap map[string]int
 
 type StackType [StackSize]float64
@@ -169,6 +172,7 @@ type mappedRegStructType struct { // so the mapsho items can be sorted.
 var mappedReg map[string]float64
 var Stack StackType
 var StackUndoMatrix [StackSize]StackType
+var fullMappedRegFilename = homedir + string(os.PathSeparator) + mappedRegFilename
 
 const PI = math.Pi // 3.141592653589793;
 var LastX, MemReg float64
@@ -184,7 +188,7 @@ const mi2km = 1.609344
 const veryLargeNumber = 1e10
 const verySmallNumber = 1e-10
 
-//-----------------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------------
 func init() {
 	var err error
 	cmdMap = make(map[string]int, 100)
@@ -295,46 +299,45 @@ func init() {
 		os.Exit(1)
 	}
 
-	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
-	//fmt.Println(" init code: fullmappedRegFilename is", fullmappedRegFilename)
+	fullMappedRegFilename = homedir + string(os.PathSeparator) + mappedRegFilename
 
-	mappedRegFile, er := os.Open(fullmappedRegFilename) // open for reading
+	mappedReg = make(map[string]float64, 100)
+	mappedRegFile, er := os.Open(fullMappedRegFilename) // open for reading
 	if os.IsNotExist(er) {
 		mappedRegExists = false
 	} else if er != nil {
 		mappedRegExists = false
 	} else {
 		mappedRegExists = true
+		mappedRegFile.Close()
 	}
 
-	mappedReg = make(map[string]float64, 100)
-	if mappedRegExists {
-		defer mappedRegFile.Close()
-		decoder := gob.NewDecoder(mappedRegFile) // decoder reads the file.
-		err = decoder.Decode(&mappedReg)         // decoder reads the file.
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
+	//if mappedRegExists {
+	//	defer mappedRegFile.Close()
+	//	decoder := gob.NewDecoder(mappedRegFile) // decoder reads the file.
+	//	err = decoder.Decode(&mappedReg)         // decoder reads the file.
+	//	if err != nil {
+	//		fmt.Fprintln(os.Stderr, err)
+	//	}
+	//}
+} // init
 
-		//		mappedRegFile.Close()  This is not needed because the rules for defer is that the deferred code is executed at end of containing func.
-	}
-}
+// -----------------------------------------------------mapWriteAndClose --------------------------------------------------------------------
 
-// -----------------------------------------------------MapClose --------------------------------------------------------------------
-
-func MapClose() {
-	fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename
-	mappedRegFile, err := os.Create(fullmappedRegFilename) // open for writing
+func mapWriteAndClose() {
+	//fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename  this is global as of 6/23/23
+	//mappedRegFile, err := os.OpenFile(fullMappedRegFilename, os.O_CREATE | os.O_APPEND, 0666)
+	mappedRegFile, err := os.Create(fullMappedRegFilename) // open for writing.  6/24/23: I'm truncating the file each time I write it, but since I write the map from memory, this works.
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "from os.Create", err)
 	}
 	defer mappedRegFile.Close()
-	encoder := gob.NewEncoder(mappedRegFile)
+	encoder := gob.NewEncoder(mappedRegFile) // encoder writes the file
 	err = encoder.Encode(&mappedReg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "from gob encoder", err)
 	}
-} // end MapClose
+} // end mapWriteAndClose
 
 //------------------------------------------------------ ROUND ----------------------------------------------------------------------
 
@@ -908,7 +911,7 @@ outerloop:
 			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 			ss = append(ss, " substitutions: = for +, ; for *.")
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
-			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  MapClose needs to be deferred after")
+			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  mapWriteAndClose needs to be deferred after")
 			ss = append(ss, "                                   first use of PushMatrixStacks.  !`~ become spaces in the name.")
 			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n", LastAlteredDate))
 		case 130: // STO
@@ -1336,7 +1339,26 @@ outerloop:
 			LastX = Stack[X]
 			PUSHX(cdeg)
 
-		case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc
+		case 640: // map.   Now to deal w/ subcommands mapsto, maprcl, mapdel and mapsho, etc.
+			// Will read a fresh copy of the map reg file because I want it to not be stale.
+			mappedRegFile, err := os.Open(fullMappedRegFilename) // open for reading
+			if os.IsNotExist(err) {
+				mappedRegExists = false
+			} else if err != nil {
+				mappedRegExists = false
+				fmt.Printf(" Error from opening %s is %s\n", fullMappedRegFilename, err)
+			} else {
+				mappedRegExists = true
+			}
+
+			if mappedRegExists {
+				decoder := gob.NewDecoder(mappedRegFile) // decoder reads the file.
+				err := decoder.Decode(&mappedReg)        // decoder reads the file.
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+				}
+				mappedRegFile.Close() // I need to close this file now, and not defer the close.  Else it may interfere when I write the file, since I now do a read and write in the same block.
+			}
 			subcmd := tkn.Str[3:] // slice off first three characters, which are map
 			if strings.HasPrefix(subcmd, "STO") {
 				regname := getMapRegName(subcmd)
@@ -1347,11 +1369,11 @@ outerloop:
 				}
 				mappedReg[regname] = READX()
 				_, stringresult := GetResult("mapsho")
-				//for _, str := range stringresult {  verbose.  Static linter fixed it for me.
-				//	ss = append(ss, str)
-				//}
+				//                          for _, str := range stringresult {  verbose.  Static linter fixed it for me.
+				//                         		ss = append(ss, str)
+				//							}
 				ss = append(ss, stringresult...)
-				MapClose() // added 6/19/21
+				mapWriteAndClose() // added 6/19/21
 
 			} else if strings.HasPrefix(subcmd, "RCL") {
 				regname := getMapRegName(subcmd)
@@ -1374,29 +1396,28 @@ outerloop:
 					PUSHX(r)
 				}
 
-			} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") ||
-				strings.HasPrefix(subcmd, "LIST") {
+			} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") || strings.HasPrefix(subcmd, "LIST") {
 				// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
 				s0 := fmt.Sprint("Map length is ", len(mappedReg))
 				ss = append(ss, s0)
 				sliceregvar := mappedRegSortedNames()
 
 				for _, reg := range sliceregvar {
-					fmtvalu := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
-					s := fmt.Sprintf("reg[%s] = %s", reg.key, fmtvalu)
+					fmtValue := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
+					s := fmt.Sprintf("reg[%s] = %s", reg.key, fmtValue)
 					ss = append(ss, s)
 				}
 
 			} else if strings.HasPrefix(subcmd, "DEL") {
-				regname := getMapRegName(subcmd)
-				if regname == "" {
+				regName := getMapRegName(subcmd)
+				if regName == "" {
 					ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
 					break outerloop
 				}
-				delete(mappedReg, regname) // if key is not in the map, this does nothing but does not panic.
-				s := fmt.Sprint("deleted ", regname)
+				delete(mappedReg, regName) // if key is not in the map, this does nothing but does not panic.
+				s := fmt.Sprint("deleted ", regName)
 				ss = append(ss, s)
-				MapClose() // added 6/19/21
+				mapWriteAndClose() // added 6/19/21
 			}
 
 		case 999: // do nothing, ignore me but don't generate an error message.

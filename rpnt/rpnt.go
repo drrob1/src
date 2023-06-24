@@ -1,4 +1,4 @@
-// (C) 1990-2016.  Robert W.  Solomon.  All rights reserved.
+// (C) 1990-2023.  Robert W.  Solomon.  All rights reserved.
 // rpnt.go
 package main
 
@@ -126,9 +126,10 @@ REVISION HISTORY
                not remember its syntax anyway, and I did not implement this in rpnf or rpng anyway.
                And I added verboseFlag, but I can't see what it's writing to the screen, so I'll write to a file in the current directory.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
+24 Jun 23 -- Changed hpcalc2, so I have to recompile.  And I changed some comments.
 */
 
-const LastAltered = "18 Feb 2023"
+const LastAltered = "24 June 2023"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
@@ -369,7 +370,7 @@ func main() {
 	scrn.Show()
 
 	hpcalc.PushMatrixStacks()
-	defer hpcalc.MapClose()
+	//defer hpcalc.mapWriteAndClose()  Part of the edits to hpcalc2 was to not have 1 calculator pgm clobber the map file of another.  Commented this out 6/24/23.
 
 	if *verboseFlag {
 		verboseFile, err = os.OpenFile(verboseFileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -658,7 +659,7 @@ func main() {
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
 
-	// hpcalc.MapClose()  This is now handled by the defer above, as of 6/17/21.
+	// hpcalc.mapWriteAndClose()  This is now handled by the defer above, as of 6/17/21.
 } // main in rpntcell.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */

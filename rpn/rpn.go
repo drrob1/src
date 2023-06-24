@@ -1,4 +1,4 @@
-// (C) 1990-2016.  Robert W Solomon.  All rights reserved.
+// (C) 1990-2023.  Robert W Solomon.  All rights reserved.
 // rpn.go
 package main
 
@@ -58,14 +58,16 @@ REVISION HISTORY
  8 Nov 20 -- Now will use hpcalc2.  I'm adding toclip, fromclip (based on code from "Go Standard Library Cookbook") to hpcalc2.
 	                And finally removed code that was commented out long ago.
 13 Jun 21 -- Converted code to use modules
-19 Jun 21 -- Now uses the new MAP code written in hpcalc2 that does not require calling MapClose, which was never done here anyway.
+19 Jun 21 -- Now uses the new MAP code written in hpcalc2 that does not require calling mapWriteAndClose (formerly MapClose), which was never done here anyway.
 21 Jun 21 -- As the ioutil package is depracated, I'm replacing it with the os package calls.
 22 Jun 21 -- I'm rewriting the file reading code.  I wrote that 5 yrs ago.  It looks painful to me now.
 10 Aug 22 -- "about" will now display info about the executable file.
 29 Nov 22 -- Starting the addition of banner text.  But I leave for Aruba in 2 days so this may take a while.
+24 Jun 23 -- Won't close the map file from here.  Can only be closed from hpcalc2 and will only be closed after the file is changed in some way.
+               I've changed comments here.  And I changed hpcalc2, so I have to recompile.
 */
 
-const LastCompiled = "30 Nov 2022"
+const LastCompiled = "24 June 2023"
 
 var suppressDump map[string]bool
 

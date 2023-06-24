@@ -62,12 +62,14 @@ REVISION HISTORY
 16 Jun 21 -- Will use strings.ReplaceAll instead of my makesubst to test that '=' now adds from hpcalc2.
                And ioutil package is depracated as of Go 1.16, so I removed it.
 17 Jun 21 -- Testing to see if the defer I put there works.  It does.
-19 Jun 21 -- Changed hpcalc2 MAP commands so that the STO and DEL call MapClose, so I don't have to do that explicitly.
+19 Jun 21 -- Changed hpcalc2 MAP commands so that the STO and DEL call mapWriteAndClose (formerly MapClose), so I don't have to do that explicitly.
 21 Jun 21 -- Changing the awkward looking code that reads in the stack from the stackfile.
 10 Aug 22 -- "about" will print info about the exe file.
+24 Jun 23 -- Checking to make sure that the code is correct after I stopped exporting MapClose and changed its name to mapWriteAndClose.
+               It's fine, as I made that change 2 years ago.  I changed some comments here, and I have to recompile because I changed hpcalc2.
 */
 
-const LastCompiled = "August 10, 2022"
+const LastCompiled = "June 24, 2023"
 
 var suppressDump map[string]bool
 
@@ -125,7 +127,6 @@ func main() {
 	} // stackfileexists
 
 	hpcalc2.PushMatrixStacks()
-	//defer hpcalc2.MapClose()  // I want to see if this works being placed here.  It does.  Imagine that.
 
 	fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ", LastCompiled, "using", runtime.Version())
 	fmt.Println()
@@ -224,5 +225,4 @@ func main() {
 	if err != nil {
 		fmt.Printf(" os.WriteFile failed with error %v \n", err)
 	}
-	// hpcalc2.MapClose()  // No longer needed here or anywhere.
 } // main in rpn2.go

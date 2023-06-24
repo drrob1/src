@@ -411,7 +411,7 @@ func main() {
 	INBUF = strings.ToUpper(INBUF)
 
 	hpcalc.PushMatrixStacks()
-	defer hpcalc.MapClose()
+	defer hpcalc.mapWriteAndClose()
 
 	for len(INBUF) > 0 { // Main processing loop
 		// check for new use history command patterned after bash, ie, using ! to start it.
@@ -671,7 +671,7 @@ func main() {
 	err = DisplayTapeFile.Close()
 	checkmsg(err, "after DisplayTapeFile close")
 
-	// hpcalc.MapClose()  This is now handled by the defer above, as of 6/17/21.
+	// hpcalc.mapWriteAndClose()  This is now handled by the defer above, as of 6/17/21.
 } // main in rpntcell.go
 
 /* ------------------------------------------------------------ GetRegIdx --------- */

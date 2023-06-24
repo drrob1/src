@@ -10,21 +10,20 @@ import (
 	"os"
 	"os/exec" // for the clear screen functions.
 	"runtime"
+	"src/timlibg"
 	"strconv"
 	"strings"
 	"time"
-	"timlibg"
 
 	//	"github.com/nsf/termbox-go"
 	//
-	"getcommandline"
-	"hpcalc"
-	"tokenize"
+	"src/getcommandline"
+	hpcalc "src/hpcalc2"
+	"src/tokenize"
 
 	"github.com/nsf/termbox-go"
 )
 
-const LastAltered = "Jan 18, 2020"
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
 type Register struct {
@@ -130,7 +129,10 @@ REVISION HISTORY
                And fixed the condition that used to be INBUF != "CLEAR" || INBUF != "CLS", as that needed to be && there.  Picked up by go vet.
 30 Dec 19 -- Generalizing outputfix, outputfloat, and outputgen
 18 Jan 20 -- Changed naming storage registers to not force upper case.
+24 Jun 23 -- Added modules to the code so it could compile.  But I'm not using it so I won't compile it.
 */
+
+const LastAltered = "June 24, 2023"
 
 func main() {
 	var INBUF, HomeDir string
@@ -653,7 +655,7 @@ func Print_tb(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-//----------------------------------------------------- Printf_tb ---------------------------------
+// ----------------------------------------------------- Printf_tb ---------------------------------
 func Printf_tb(x, y int, fg, bg termbox.Attribute, format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	Print_tb(x, y, fg, bg, s)
@@ -783,7 +785,7 @@ func WriteStack(x, y int) {
 	// }}}
 } // end WriteStack
 
-//--------------------------------------------- WriteHelp -------------------------------------------
+// --------------------------------------------- WriteHelp -------------------------------------------
 func WriteHelp(x, y int) { // essentially moved to hpcalc module quite a while ago, but I didn't log when.
 	var HelpFile *bufio.Writer
 

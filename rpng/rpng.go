@@ -1,4 +1,4 @@
-// (C) 1990-2021.  Robert W.  Solomon.  All rights reserved.
+// (C) 1990-2023.  Robert W.  Solomon.  All rights reserved.
 // rpng.go
 package main
 
@@ -115,15 +115,16 @@ REVISION HISTORY
 14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
 15 Jun 21 -- Added runtime.Version() to output of about cmd.
 16 Jun 21 -- Added os.UserHomeDir(), which became avail as of Go 1.12
-18 Jun 21 -- Now using defer hpcalc2.MapClose(), since I never liked having to include that at the bottom, for fear of forgetting.
+18 Jun 21 -- Now using defer hpcalc2.mapWriteAndClose(), since I never liked having to include that at the bottom, for fear of forgetting.
 23 Jun 21 -- Cleaning up some code, esp w/ file processing.
  5 May 22 -- Changed hpcalc2 to use OS specific code.
 11 Aug 22 -- I changed the other rpn pgms so that about command will give more info about the exe binary.  This program already does that at startup.
 21 Nov 22 -- static linter objected to err that was not tested in a few places while using file writes.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
+24 Jun 23 -- hpcalc2 changed, so I have to recompile.  And I'm editing comments.  I stopped calling the map close fcn here 2 yrs ago.
 */
 
-const lastAlteredDate = "Feb 18, 2023"
+const lastAlteredDate = "June 24, 2023"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -264,7 +265,6 @@ func main() {
 	ManualDump := true
 
 	hpcalc.PushMatrixStacks()
-	//defer hpcalc.MapClose()  Not needed since I changed hpcalc2 to write the file after every change.
 
 	for len(INBUF) > 0 { // Main processing loop
 		INBUF = makesubst.MakeSubst(INBUF)
