@@ -521,7 +521,7 @@ func DumpStackFloat() []string {
 
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -1361,13 +1361,13 @@ outerloop:
 			}
 			subcmd := tkn.Str[3:] // slice off first three characters, which are map
 			if strings.HasPrefix(subcmd, "STO") {
-				regname := getMapRegName(subcmd)
+				regName := getMapRegName(subcmd)
 				//                                             fmt.Println(" in mapsto section.  regname=", regname)
-				if regname == "" {
+				if regName == "" {
 					ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
 					break outerloop
 				}
-				mappedReg[regname] = READX()
+				mappedReg[regName] = READX()
 				_, stringresult := GetResult("mapsho")
 				//                          for _, str := range stringresult {  verbose.  Static linter fixed it for me.
 				//                         		ss = append(ss, str)
@@ -1376,19 +1376,23 @@ outerloop:
 				mapWriteAndClose() // added 6/19/21
 
 			} else if strings.HasPrefix(subcmd, "RCL") {
-				regname := getMapRegName(subcmd)
+				if !mappedRegExists {
+					ss = append(ss, "No Mapped Registers file exists.")
+					break outerloop
+				}
+				regName := getMapRegName(subcmd)
 				//                                             fmt.Println(" in maprcl section.  regname=", regname)
-				if regname == "" {
+				if regName == "" {
 					ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
 					break outerloop
 				}
-				r, ok := mappedReg[regname]
+				r, ok := mappedReg[regName]
 				if ok {
 					PUSHX(r)
 				} else { // call the abbreviation processing routine, that I have yet to write.
-					name := getFullMatchingName(regname)
+					name := getFullMatchingName(regName)
 					if name == "" {
-						s := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regname)
+						s := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regName)
 						ss = append(ss, s)
 						break outerloop
 					}
@@ -1397,18 +1401,26 @@ outerloop:
 				}
 
 			} else if strings.HasPrefix(subcmd, "SHO") || strings.HasPrefix(subcmd, "LS") || strings.HasPrefix(subcmd, "LIST") {
+				if !mappedRegExists {
+					ss = append(ss, "No Mapped Registers file exists.")
+					break outerloop
+				}
 				// maybe sort this list in a later version of this code.  And maybe allow option to only show mappedReg specified in this subcmd.
 				s0 := fmt.Sprint("Map length is ", len(mappedReg))
 				ss = append(ss, s0)
-				sliceregvar := mappedRegSortedNames()
+				sliceRegVar := mappedRegSortedNames()
 
-				for _, reg := range sliceregvar {
+				for _, reg := range sliceRegVar {
 					fmtValue := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
 					s := fmt.Sprintf("reg[%s] = %s", reg.key, fmtValue)
 					ss = append(ss, s)
 				}
 
 			} else if strings.HasPrefix(subcmd, "DEL") {
+				if !mappedRegExists {
+					ss = append(ss, "No Mapped Registers file exists.")
+					break outerloop
+				}
 				regName := getMapRegName(subcmd)
 				if regName == "" {
 					ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
