@@ -1428,6 +1428,9 @@ outerloop:
 				s := fmt.Sprint("deleted ", regName)
 				ss = append(ss, s)
 				mapWriteAndClose() // added 6/19/21
+				_, stringresult := GetResult("mapsho")
+				ss = append(ss, stringresult...)
+
 			}
 
 		case 999: // do nothing, ignore me but don't generate an error message.
