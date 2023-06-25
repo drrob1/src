@@ -134,7 +134,7 @@ REVISION HISTORY
                I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
 */
 
-const LastAlteredDate = "24 Jun 2023"
+const LastAlteredDate = "25 Jun 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -1352,6 +1352,7 @@ outerloop:
 			}
 
 			if mappedRegExists {
+				mappedReg = nil
 				decoder := gob.NewDecoder(mappedRegFile) // decoder reads the file.
 				err := decoder.Decode(&mappedReg)        // decoder reads the file.
 				if err != nil {
