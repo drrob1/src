@@ -521,7 +521,7 @@ func DumpStackFloat() []string {
 
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -1369,12 +1369,9 @@ outerloop:
 					break outerloop
 				}
 				mappedReg[regName] = READX()
-				_, stringresult := GetResult("mapsho")
-				//                          for _, str := range stringresult {  verbose.  Static linter fixed it for me.
-				//                         		ss = append(ss, str)
-				//							}
-				ss = append(ss, stringresult...)
 				mapWriteAndClose() // added 6/19/21
+				_, stringresult := GetResult("mapsho")
+				ss = append(ss, stringresult...)
 
 			} else if strings.HasPrefix(subcmd, "RCL") {
 				if !mappedRegExists {
