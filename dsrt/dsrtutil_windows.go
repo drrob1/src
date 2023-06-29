@@ -143,7 +143,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 
 } // end getFileInfosFromCommandLine
 
-// displayFileInfos only has to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine
+// displayFileInfos only has to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine.  This is platform specific because of lack of uid:gid on Windows.
 func displayFileInfos(fiSlice []os.FileInfo) {
 	var lnCount int
 	for _, f := range fiSlice {

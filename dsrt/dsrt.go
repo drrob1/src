@@ -121,6 +121,11 @@ REVISION HISTORY
 12 Apr 23 -- Fixing a panic when run in a docker image.  Issue is in GetIDName.  I'll fix the bug and change this name to be more idiomatic in Go, ie, idName.
 14 Apr 23 -- Tweaked output of the error in idName, formerly GetIDName.
 18 Apr 23 -- Removed the error message in idName
+28 Jun 23 -- Starting to think about a scroll switch, which will allow screen by screen output until I stop it, probably by hitting <ESC> or 'q'.
+                I would need some way to tracking lines to be displayed, possibly using a slice like I do in the list based routines.  Or adding a beg, end value to show.
+                Or just a beginning value.
+                Right now, I can use the scroll back buffer to achieve the same thing when I use a large value of n (number of screens).
+                The more I think about this, using the scroll back buffer is probably best because this affects ds and rex, and maybe others I can't think of right now.
 */
 
 const LastAltered = "19 Apr 2023"
