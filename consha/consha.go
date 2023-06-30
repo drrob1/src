@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -80,6 +81,8 @@ import (
                  I have to revisit this.  I'll just filter it out in the readLine routine.  Nope, that's wrong.
                  I just figured out the problem.  It's because there's no \n in the DIGEST file I downloaded.  So reading the line returns an error, which then exits the pgm.
                  I think I'll add a sentinel new line character.
+                 No, I didn't do that.
+                 I added logic to readLine that will only return EOF if there's nothing to return.
 */
 
 const LastCompiled = "30 June 2023"
@@ -147,7 +150,7 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 		return
 	}
 
-	fmt.Printf(" In match or no match.  hashint = %d, and hash name is %s\n", hashInt, hashName[hashInt])
+	//             fmt.Printf(" In match or no match.  hashint = %d, and hash name is %s\n", hashInt, hashName[hashInt])
 
 	onWin := runtime.GOOS == "windows"
 	_, er := io.Copy(hashFunc, TargetFile)
@@ -199,24 +202,6 @@ func main() {
 		}()
 	}
 
-	// Start the results go routine.  There is only 1 of these, but this isn't needed now that matchOrNoMatch prints.
-	//go func() {
-	//	onWin := runtime.GOOS == "windows"
-	//	for result := range resultChan {
-	//		if result.err != nil {
-	//			ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", result.err)
-	//			wg2.Done()
-	//			continue // Using return was bad here; it's working using continue.
-	//		}
-	//		if result.match {
-	//			ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", result.fname, hashName[result.hashNum])
-	//		} else {
-	//			ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
-	//		}
-	//		wg2.Done()
-	//	}
-	//}()
-
 	// filepicker stuff.
 
 	if len(os.Args) <= 1 {
@@ -260,25 +245,25 @@ func main() {
 		ctfmt.Println(ct.Red, false, os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Printf(" fileByteSlice: %v\n", fileByteSlice)
+	//                                                                 fmt.Printf(" fileByteSlice: %v\n", fileByteSlice)
 	bytesReader := bytes.NewReader(fileByteSlice)
 
 	onWin := runtime.GOOS == "windows" // for color output
 	t0 := time.Now()
 
 	for { // to read multiple lines
-		// inputLine, er := bytesBuffer.ReadString('\n')
-		inputLine, err := readLine(bytesReader)
-		fmt.Printf(" inputline: %q, err = %s\n", inputLine, err)
+		//                                                                 inputLine, er := bytesBuffer.ReadString('\n')
 		//                                inputLine = strings.TrimSpace(inputLine) // It works, but it's not needed now.
-		//                                fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-		if err == io.EOF && inputLine == "" { // reached EOF condition.  But only exit if there's no inputLine to process.  If there's an inputline, ignore the error this time thru the loop.
+		//                                                 fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
+		//                                                      fmt.Printf(" inputline: %q, err = %s\n", inputLine, err)
+		inputLine, err := readLine(bytesReader)
+		if errors.Is(err, io.EOF) {
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if err != nil && inputLine == "" { // I finally figured out that the bug here is if there's no newline in the file, as is the case for downloaded DIGEST files.
+		} else if err != nil {
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
@@ -290,7 +275,7 @@ func main() {
 			ctfmt.Println(ct.Red, false, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
-		fmt.Printf(" FirstToken is %q\n", FirstToken.Str)
+		//                                                             fmt.Printf(" FirstToken is %q\n", FirstToken.Str)
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
 			strings.ContainsRune(FirstToken.Str, '_') { // have filename first on line
@@ -309,7 +294,7 @@ func main() {
 				ctfmt.Println(ct.Red, false, " EOL while gatting TargetFilename token in the hashing file.  Skipping")
 				continue
 			}
-			fmt.Printf(" 2nd Token is %q\n", SecondToken.Str)
+			//                                                         fmt.Printf(" 2nd Token is %q\n", SecondToken.Str)
 
 			if strings.HasPrefix(SecondToken.Str, "*") { // If it contains a *, it will be the first position.
 				SecondToken.Str = SecondToken.Str[1:]
@@ -326,7 +311,7 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
-		fmt.Printf(" Just before sending h down the hashChan.  h= %+v\n", h)
+		//                                          fmt.Printf(" Just before sending h down the hashChan.  h= %+v\n", h)
 		wg1.Add(1)
 		preCounter++
 		hashChan <- h
@@ -334,13 +319,12 @@ func main() {
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
-	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
-		runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
+
+	//ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
 
-	ctfmt.Printf(ct.Green, true, " After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
-		runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
+	//ctfmt.Printf(ct.Green, true, " After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
 
 	ctfmt.Printf(ct.Yellow, onWin, " After wg1.Wait().  Elapsed time for everything was %s.\n\n\n", time.Since(t0))
 } // Main for sha.go.
@@ -362,6 +346,30 @@ func readLine(r *bytes.Reader) (string, error) {
 	for {
 		byte, err := r.ReadByte()
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				if sb.Len() > 0 {
+					return sb.String(), nil
+				}
+				// Error here is not EOF.
+				return strings.TrimSpace(sb.String()), err
+			}
+		}
+		if byte == '\n' {
+			return strings.TrimSpace(sb.String()), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+	}
+} // readLine
+/*
+Old code
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}
 		if byte == '\n' {
@@ -376,3 +384,4 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
+*/

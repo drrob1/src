@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -287,13 +288,13 @@ func main() {
 		//                                                      inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.  Yeah, it works.
 		//                                                      fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
 
-		if err == io.EOF && inputLine == "" { // reached EOF condition, there are no more lines to read, and no line.  If there is a line, process it and error out the next time thru.
+		if err == io.EOF /* && inputLine == "" */ { // reached EOF condition, there are no more lines to read, and no line.  If there is a line, process it and error out the next time thru.
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if err != nil && inputLine == "" {
+		} else if err != nil /* && inputLine == "" */ {
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
@@ -347,16 +348,15 @@ func main() {
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
-	ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n",
-		runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
+	//ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
-	fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
+	//fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
 	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg2.Done().
-	fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
+	//fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
 	close(resultChan) // all work is done, so I can close the resultChan.
 
-	ctfmt.Printf(ct.Yellow, onWin, " Elapsed time for everything was %s.\n\n\n", time.Since(t0))
+	ctfmt.Printf(ct.Yellow, onWin, "\n Elapsed time for everything was %s.\n\n\n", time.Since(t0))
 } // Main for sha.go.
 
 // ------------------------------------------------------- min ---------------------------------
@@ -376,6 +376,30 @@ func readLine(r *bytes.Reader) (string, error) {
 	for {
 		byte, err := r.ReadByte()
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				if sb.Len() > 0 {
+					return sb.String(), nil
+				}
+				// Error here is not EOF.
+				return strings.TrimSpace(sb.String()), err
+			}
+		}
+		if byte == '\n' {
+			return strings.TrimSpace(sb.String()), nil
+		}
+		err = sb.WriteByte(byte)
+		if err != nil {
+			return strings.TrimSpace(sb.String()), err
+		}
+	}
+} // readLine
+
+/*
+func readLine(r *bytes.Reader) (string, error) {
+	var sb strings.Builder
+	for {
+		byte, err := r.ReadByte()
+		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}
 		if byte == '\n' {
@@ -387,3 +411,6 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
+
+
+*/
