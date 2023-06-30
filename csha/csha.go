@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -20,6 +19,7 @@ import (
 
 	"runtime"
 	"src/filepicker"
+	"src/misc"
 	"src/tknptr"
 	"strconv"
 	"strings"
@@ -81,6 +81,7 @@ import (
   28 Apr 23 -- At work, I tested again, and this routine was slower than either multisha or consha.  Consha was slightly faster than multisha at work.  I'm increasing the size of the channel.
                  This has only 1 channel, for passing hashing work to matchOrNoMatch.  There is no message channel here.
   30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
+                 And now moved the improved ReadLine code to the new package misc, which started life as makesubst.
 */
 
 const LastCompiled = "30 June 2023"
@@ -234,7 +235,7 @@ func main() {
 
 	hashSlice := make([]hashType, 0, 10)
 	for { // to read multiple lines
-		inputLine, err := readLine(bytesReader)
+		inputLine, err := misc.ReadLine(bytesReader)
 		if err == io.EOF /* && inputLine == "" */ { // reached EOF condition, there are no more lines to read, and no line.  If there is a line to process, error out on the next time thru.
 			break
 		} else if len(inputLine) == 0 {
@@ -327,48 +328,3 @@ func min(a, b int) int {
 		return b
 	}
 }
-
-// ----------------------------------------------------- readLine ------------------------------------------------------
-// Needed as a bytes reader does not have a readString method.
-
-func readLine(r *bytes.Reader) (string, error) {
-	var sb strings.Builder
-	for {
-		byte, err := r.ReadByte()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				if sb.Len() > 0 {
-					return sb.String(), nil
-				}
-				// Error here is not EOF.
-				return strings.TrimSpace(sb.String()), err
-			}
-		}
-		if byte == '\n' {
-			return strings.TrimSpace(sb.String()), nil
-		}
-		err = sb.WriteByte(byte)
-		if err != nil {
-			return strings.TrimSpace(sb.String()), err
-		}
-	}
-} // readLine
-
-/*
-func readLine(r *bytes.Reader) (string, error) {
-	var sb strings.Builder
-	for {
-		byte, err := r.ReadByte()
-		if err != nil {
-			return strings.TrimSpace(sb.String()), err
-		}
-		if byte == '\n' {
-			return strings.TrimSpace(sb.String()), nil
-		}
-		err = sb.WriteByte(byte)
-		if err != nil {
-			return strings.TrimSpace(sb.String()), err
-		}
-	}
-} // readLine
-*/

@@ -126,9 +126,10 @@ REVISION HISTORY
                 Or just a beginning value.
                 Right now, I can use the scroll back buffer to achieve the same thing when I use a large value of n (number of screens).
                 The more I think about this, using the scroll back buffer is probably best because this affects ds and rex, and maybe others I can't think of right now.
+30 Jun 23 -- I'm adding -a flag, to mean all.  It will be equivalent to 100 screens, or setting n to 100.
 */
 
-const LastAltered = "19 Apr 2023"
+const LastAltered = "30 June 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -152,6 +153,9 @@ var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
+
+// this is to be equivalent to 100 screens.
+var allFlag bool
 
 //var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
@@ -255,6 +259,8 @@ func main() {
 	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
 	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
 
+	flag.BoolVar(&allFlag, "a", false, "Equivalent to 100 screens.  Intended to be used w/ the scroll back buffer.")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
@@ -273,6 +279,9 @@ func main() {
 		numOfLines = defaultHeight
 	}
 
+	if allFlag {
+		*nscreens = 100
+	}
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
 
 	if halfFlag {
