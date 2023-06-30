@@ -69,9 +69,10 @@ import (
                  Doesn't seem to have increased the timings.  This rtn is still slightly faster (6.07 vs 6.1 sec) than conSha, ~ 0.5%.  Interesting.
   15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.  And making the numOfWorkers = runtime.NumCPU(), as Bill Kennedy seems to love.
   25 Apr 23 -- Adding some enhancements I first developed w/ the copyc family
+  30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
 */
 
-const LastCompiled = "25 Apr 2023"
+const LastCompiled = "30 June 2023"
 
 const (
 	undetermined = iota
@@ -285,13 +286,14 @@ func main() {
 		inputLine, err := readLine(bytesReader)
 		//                                                      inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.  Yeah, it works.
 		//                                                      fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-		if err == io.EOF { // reached EOF condition, there are no more lines to read, and no line
+
+		if err == io.EOF && inputLine == "" { // reached EOF condition, there are no more lines to read, and no line.  If there is a line, process it and error out the next time thru.
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if err != nil {
+		} else if err != nil && inputLine == "" {
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}

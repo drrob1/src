@@ -79,9 +79,10 @@ import (
                  Win10_22H2_English_x32.iso	7CB5E0E18B0066396A48235D6E56D48475225E027C17C0702EA53E05B7409807
   28 Apr 23 -- At work, I tested again, and this routine was slower than either multisha or consha.  Consha was slightly faster than multisha at work.  I'm increasing the size of the channel.
                  This has only 1 channel, for passing hashing work to matchOrNoMatch.  There is no message channel here.
+  30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
 */
 
-const LastCompiled = "28 Apr 2023"
+const LastCompiled = "30 June 2023"
 
 const (
 	undetermined = iota
@@ -233,13 +234,13 @@ func main() {
 	hashSlice := make([]hashType, 0, 10)
 	for { // to read multiple lines
 		inputLine, err := readLine(bytesReader)
-		if err == io.EOF { // reached EOF condition, there are no more lines to read, and no line
+		if err == io.EOF && inputLine == "" { // reached EOF condition, there are no more lines to read, and no line.  If there is a line to process, error out on the next time thru.
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if err != nil {
+		} else if err != nil && inputLine == "" { // if there is a line to process, error out on the next time thru.
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}

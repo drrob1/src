@@ -76,9 +76,13 @@ import (
                  Now this is slightly faster than multisha.  On win10 desktop, this sha file took 10.1 sec, but on leox it took 2 min 2.9 sec.  And now csha took 7.2 sec on win10 desktop.
                  Win10_22H2_English_x64.iso	F41BA37AA02DCB552DC61CEF5C644E55B5D35A8EBDFAC346E70F80321343B506
                  Win10_22H2_English_x32.iso	7CB5E0E18B0066396A48235D6E56D48475225E027C17C0702EA53E05B7409807
+  30 Jun 23 -- Found a bug in that downloaded digest files use '*' to begin the filename as the 2nd param.  I thought I removed that in 2017 by editing tknptr package.
+                 I have to revisit this.  I'll just filter it out in the readLine routine.  Nope, that's wrong.
+                 I just figured out the problem.  It's because there's no \n in the DIGEST file I downloaded.  So reading the line returns an error, which then exits the pgm.
+                 I think I'll add a sentinel new line character.
 */
 
-const LastCompiled = "26 Apr 2023"
+const LastCompiled = "30 June 2023"
 
 const (
 	undetermined = iota
@@ -142,6 +146,8 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 		ctfmt.Printf(ct.Red, onWin, " unknown hash type for %s\n", hashIn.fName)
 		return
 	}
+
+	fmt.Printf(" In match or no match.  hashint = %d, and hash name is %s\n", hashInt, hashName[hashInt])
 
 	onWin := runtime.GOOS == "windows"
 	_, er := io.Copy(hashFunc, TargetFile)
@@ -254,6 +260,7 @@ func main() {
 		ctfmt.Println(ct.Red, false, os.Stderr, err)
 		os.Exit(1)
 	}
+	fmt.Printf(" fileByteSlice: %v\n", fileByteSlice)
 	bytesReader := bytes.NewReader(fileByteSlice)
 
 	onWin := runtime.GOOS == "windows" // for color output
@@ -262,15 +269,16 @@ func main() {
 	for { // to read multiple lines
 		// inputLine, er := bytesBuffer.ReadString('\n')
 		inputLine, err := readLine(bytesReader)
+		fmt.Printf(" inputline: %q, err = %s\n", inputLine, err)
 		//                                inputLine = strings.TrimSpace(inputLine) // It works, but it's not needed now.
 		//                                fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-		if err == io.EOF { // reached EOF condition, there are no more lines to read, and no line
+		if err == io.EOF && inputLine == "" { // reached EOF condition.  But only exit if there's no inputLine to process.  If there's an inputline, ignore the error this time thru the loop.
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if err != nil {
+		} else if err != nil && inputLine == "" { // I finally figured out that the bug here is if there's no newline in the file, as is the case for downloaded DIGEST files.
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
@@ -282,6 +290,7 @@ func main() {
 			ctfmt.Println(ct.Red, false, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
+		fmt.Printf(" FirstToken is %q\n", FirstToken.Str)
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
 			strings.ContainsRune(FirstToken.Str, '_') { // have filename first on line
@@ -300,6 +309,7 @@ func main() {
 				ctfmt.Println(ct.Red, false, " EOL while gatting TargetFilename token in the hashing file.  Skipping")
 				continue
 			}
+			fmt.Printf(" 2nd Token is %q\n", SecondToken.Str)
 
 			if strings.HasPrefix(SecondToken.Str, "*") { // If it contains a *, it will be the first position.
 				SecondToken.Str = SecondToken.Str[1:]
@@ -316,6 +326,7 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
+		fmt.Printf(" Just before sending h down the hashChan.  h= %+v\n", h)
 		wg1.Add(1)
 		preCounter++
 		hashChan <- h
@@ -356,6 +367,9 @@ func readLine(r *bytes.Reader) (string, error) {
 		if byte == '\n' {
 			return strings.TrimSpace(sb.String()), nil
 		}
+		//if byte == '*' { // ignore this character.  I still need . - _ as these are often used in filenames.  Nevermind, this isn't the problem.
+		//	continue
+		//}
 		err = sb.WriteByte(byte)
 		if err != nil {
 			return strings.TrimSpace(sb.String()), err
