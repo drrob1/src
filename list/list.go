@@ -45,6 +45,7 @@ import (
    8 Apr 23 -- New now does not need params.  NewList will be the format that needs params.
   11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
    1 Jun 23 -- Added getFileInfoXFromGlob, which behaves the same on Windows and linux.
+   2 Jul 23 -- Made the FileSelection routines use "newlines" between iterations.  This way, I can use the scroll back buffer if I want to.
 */
 
 type DirAliasMapType map[string]string
@@ -558,7 +559,8 @@ outerLoop:
 		}
 		beg = end
 
-		clearFunc := clear[runtime.GOOS]
+		//clearFunc := clear[runtime.GOOS]
+		clearFunc := clear["newlines"]
 		clearFunc()
 	}
 
@@ -631,7 +633,8 @@ outerLoop:
 		}
 		beg = end
 
-		clearFunc := clear[runtime.GOOS]
+		//clearFunc := clear[runtime.GOOS]
+		clearFunc := clear["newlines"]
 		clearFunc()
 	}
 
