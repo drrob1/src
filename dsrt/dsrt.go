@@ -126,10 +126,14 @@ REVISION HISTORY
                 Or just a beginning value.
                 Right now, I can use the scroll back buffer to achieve the same thing when I use a large value of n (number of screens).
                 The more I think about this, using the scroll back buffer is probably best because this affects ds and rex, and maybe others I can't think of right now.
-30 Jun 23 -- I'm adding -a flag, to mean all.  It will be equivalent to 100 screens, or setting n to 100.
+30 Jun 23 -- I'm adding -a flag, to mean all.  It will be equivalent to 100 screens, or setting nscreen to 100.  For now.  Changed to default of 50 a few days later.
+ 2 Jul 23 -- I'm going to change the environ var number to mean number of screens when the all flag is used.  Not today, it's too late.  I'll start this tomorrow.
+                I'll leave -N to mean lines/screen, as there's no point in having a command line switch to change that;  I could just use the nscreen option directly.
+                I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var along the lines of allScreens, defaulting to 50 or so.
+ 3 Jul 23 -- Added environment var h to mean halfFlag.
 */
 
-const LastAltered = "30 June 2023"
+const LastAltered = "3 July 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -140,9 +144,14 @@ const LastAltered = "30 June 2023"
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numlines                                                                    int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag bool
+	numscreens                                                                            int // set by dsrt environ var.
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
 }
+
+//type DsrtParamType struct {
+//	numlines                                                                    int
+//	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag bool
+//}
 
 const defaultHeight = 40
 const minWidth = 90
@@ -156,6 +165,9 @@ var excludeRegex *regexp.Regexp
 
 // this is to be equivalent to 100 screens.
 var allFlag bool
+
+// allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
+var allScreens = 50
 
 //var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
@@ -209,8 +221,8 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
+		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
+			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
 
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
@@ -271,20 +283,23 @@ func main() {
 
 	if NLines > 0 { // priority
 		numOfLines = NLines
-	} else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
-		numOfLines = dsrtParam.numlines
+		//                       } else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
+		//                 	         numOfLines = dsrtParam.numlines  These lines removed when I added allFlag and dsrtparam.numScreens
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like of the output is being redirected.
 		numOfLines = defaultHeight
 	}
 
-	if allFlag {
-		*nscreens = 100
+	if dsrtParam.numscreens > 0 {
+		allScreens = dsrtParam.numscreens
+	}
+	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+		*nscreens = allScreens
 	}
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
 
-	if halfFlag {
+	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
 	}
 
@@ -302,9 +317,9 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
-		fmt.Printf(" dsrtparam numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
-			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
-			dsrtParam.totalflag)
+		fmt.Printf(" dsrtparam numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
+			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
+			dsrtParam.totalflag, dsrtParam.halfFlag)
 		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t. \n", autoHeight, autoWidth, excludeFlag)
 	}
 
@@ -324,8 +339,8 @@ func main() {
 	   	}
 	*/
 	if verboseFlag {
-		fmt.Printf(" dsrtParam.numlines=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
-			dsrtParam.numlines, NLines, autoHeight, defaultHeight, numOfLines)
+		fmt.Printf(" dsrtParam.numscreens=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
+			dsrtParam.numscreens, NLines, autoHeight, defaultHeight, numOfLines)
 	}
 	noExtensionFlag = *extensionflag || *extflag
 
@@ -503,10 +518,10 @@ func idName(uidStr string) string {
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
 func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
-	var dsrtparam DsrtParamType
+	var dsrtParam DsrtParamType
 
 	if envStr == "" {
-		return dsrtparam
+		return dsrtParam
 	} // empty dsrtparam is returned
 
 	indiv := strings.Split(envStr, "")
@@ -514,26 +529,28 @@ func ProcessEnvironString(envStr string) DsrtParamType { // use system utils whe
 	for j, str := range indiv {
 		s := str[0]
 		if s == 'r' || s == 'R' {
-			dsrtparam.reverseflag = true
+			dsrtParam.reverseflag = true
 		} else if s == 's' || s == 'S' {
-			dsrtparam.sizeflag = true
+			dsrtParam.sizeflag = true
 		} else if s == 'd' {
-			dsrtparam.dirlistflag = true
+			dsrtParam.dirlistflag = true
 		} else if s == 'D' {
-			dsrtparam.filenamelistflag = true
+			dsrtParam.filenamelistflag = true
 		} else if s == 't' { // added 09/12/2018 12:26:01 PM
-			dsrtparam.totalflag = true // for the grand total operation
+			dsrtParam.totalflag = true // for the grand total operation
 		} else if s == 'f' {
-			dsrtparam.filterflag = true
+			dsrtParam.filterflag = true
+		} else if s == 'h' {
+			dsrtParam.halfFlag = true
 		} else if unicode.IsDigit(rune(s)) {
-			dsrtparam.numlines = int(s) - int('0')
+			dsrtParam.numscreens = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-				dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
+				dsrtParam.numscreens = 10*dsrtParam.numscreens + int(indiv[j+1][0]) - int('0')
 				break // if have a 2 digit number, it ends processing of the indiv string
 			}
 		}
 	}
-	return dsrtparam
+	return dsrtParam
 }
 
 // --------------------------- MakeSubst -------------------------------------------
