@@ -131,9 +131,10 @@ REVISION HISTORY
                 I'll leave -N to mean lines/screen, as there's no point in having a command line switch to change that;  I could just use the nscreen option directly.
                 I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var along the lines of allScreens, defaulting to 50 or so.
  3 Jul 23 -- Added environment var h to mean halfFlag.
+ 4 Jul 23 -- Improved ProcessEnvironString
 */
 
-const LastAltered = "3 July 2023"
+const LastAltered = "4 July 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -163,11 +164,11 @@ var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
 
-// this is to be equivalent to 100 screens.
-var allFlag bool
-
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
 var allScreens = 50
+
+// this is to be equivalent to allScreens screens, by default same as n=50.
+var allFlag bool
 
 //var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
@@ -271,7 +272,7 @@ func main() {
 	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
 	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
 
-	flag.BoolVar(&allFlag, "a", false, "Equivalent to 100 screens.  Intended to be used w/ the scroll back buffer.")
+	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
 
 	flag.Parse()
 
@@ -329,15 +330,6 @@ func main() {
 	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
-	/*
-	       if NLines > 0 && numOfLines == 0 { // then the -N option flag.  dsrtParam is tested above.
-	   		numOfLines = NLines
-	   	} else if autoHeight > 0 && numOfLines == 0 { // then autoheight
-	   		numOfLines = autoHeight - 7
-	   	} else { // finally the default height
-	   		numOfLines = defaultHeight
-	   	}
-	*/
 	if verboseFlag {
 		fmt.Printf(" dsrtParam.numscreens=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
 			dsrtParam.numscreens, NLines, autoHeight, defaultHeight, numOfLines)
@@ -518,16 +510,19 @@ func idName(uidStr string) string {
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
 func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
+	// 4 Jul 23 -- the use of strings.Split is redundant.  I removed it here.  When I wrote that code, I probably forgot
+	//             that I can iterate over a string and will get out individual runes.
+	//             I may have done that so I can look at the next digit.  Not needed now.
+
 	var dsrtParam DsrtParamType
 
 	if envStr == "" {
 		return dsrtParam
 	} // empty dsrtparam is returned
 
-	indiv := strings.Split(envStr, "")
+	// The strings.Split creates slices of individual character strings.  But it's redundant now that I look at it 7/4/23.
 
-	for j, str := range indiv {
-		s := str[0]
+	for _, s := range envStr {
 		if s == 'r' || s == 'R' {
 			dsrtParam.reverseflag = true
 		} else if s == 's' || s == 'S' {
@@ -542,12 +537,9 @@ func ProcessEnvironString(envStr string) DsrtParamType { // use system utils whe
 			dsrtParam.filterflag = true
 		} else if s == 'h' {
 			dsrtParam.halfFlag = true
-		} else if unicode.IsDigit(rune(s)) {
-			dsrtParam.numscreens = int(s) - int('0')
-			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-				dsrtParam.numscreens = 10*dsrtParam.numscreens + int(indiv[j+1][0]) - int('0')
-				break // if have a 2 digit number, it ends processing of the indiv string
-			}
+		} else if unicode.IsDigit(s) {
+			d := s - '0'
+			dsrtParam.numscreens = 10*dsrtParam.numscreens + int(d)
 		}
 	}
 	return dsrtParam

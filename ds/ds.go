@@ -123,9 +123,11 @@ Revision History
  9 Apr 23 -- StaticCheck reported several unused variables (numLines, grandTotalCount, sizeTotal, grandTotal) and not using a value of HomeDirStr here.
 26 Apr 23 -- I noticed that this routine doesn't work when a command line pattern is given only on Windows.  Time to fix that now.  Turned out to be an errant "return fileInfos" at or near line 107 _windows
                And I added back -g for globFlag.  That got lost somehow.
+ 4 Jul 23 -- I'm back porting code from dsrt to here.  I added the -a flag here, changed the environ number to mean number of screens for the all option, and added environ var h to mean halfFlag.
+               Then I improved ProcessEnvironString, as long as I was here.
 */
 
-const LastAltered = "26 Apr 2023"
+const LastAltered = "4 July 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -138,8 +140,8 @@ const LastAltered = "26 Apr 2023"
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numlines, w                                                                 int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag bool
+	numscreens, w                                                                         int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
 }
 
 type colorizedStr struct {
@@ -155,14 +157,21 @@ const min3Width = 170
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
-var filterAmt, numLines, numOfLines, grandTotalCount int
+var filterAmt, numOfLines, grandTotalCount int
+
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
 
-var directoryAliasesMap dirAliasMapType //unused according to StaticCheck, and GoLand, too, in fact.  Both are wrong.  It's used dsutil_windows.go:43
+//var directoryAliasesMap dirAliasMapType //unused according to StaticCheck, and GoLand, too, in fact.  It was used dsutil_windows.go:43, but that's redundant so I took that out, also.
 
 var autoWidth, autoHeight int
+
+// allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
+var allScreens = 50
+
+// this is to be equivalent to 100 screens.
+var allFlag bool
 
 func main() {
 	var dsrtParam DsrtParamType
@@ -170,7 +179,6 @@ func main() {
 	var fileInfos []os.FileInfo
 	var err error
 	var SizeTotal, GrandTotal int64
-	//var GrandTotalCount int
 	var excludeRegexPattern string
 	var numOfCols int
 
@@ -218,8 +226,8 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
+		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
+			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
 
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
@@ -274,6 +282,8 @@ func main() {
 
 	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
+	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
@@ -290,17 +300,23 @@ func main() {
 
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
-	} else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
-		numOfLines = dsrtParam.numlines
+		//                                       } else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
+		//	                                         numOfLines = dsrtParam.numlines
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like if the display is redirected
 		numOfLines = defaultHeight
 	}
 
+	if dsrtParam.numscreens > 0 {
+		allScreens = dsrtParam.numscreens
+	}
+	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+		*nscreens = allScreens
+	}
 	numOfLines *= *nscreens
 
-	if halfFlag {
+	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
 	}
 
@@ -438,8 +454,8 @@ func main() {
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
 		fmt.Printf(" Autoheight=%d, autowidth=%d, w=%d, numOfLines=%d, numOfCols=%d. \n", autoHeight, autoWidth, w, numOfLines, numOfCols)
-		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
-			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
+		fmt.Printf(" dsrtparam numscreens=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
+			dsrtParam.numscreens, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag)
 	}
 
@@ -559,49 +575,49 @@ func IsSymlink(m os.FileMode) bool {
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
 func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system utils when can because they tend to be faster
-	var dsrtparam DsrtParamType
+	// 4 Jul 23 -- the use of strings.Split is redundant.  I removed it here.
+
+	var dsrtParam DsrtParamType
 
 	if dswEnv == "" {
-		dsrtparam.w = 0 // this si redundant because it's initialized to zero.
-	} else { // not ok, ie, dsw variable not found in environment
+		dsrtParam.w = 0 // this is redundant because it's initialized to zero.
+	} else {
 		n, err := strconv.Atoi(dswEnv)
 		if err == nil {
-			dsrtparam.w = n
+			dsrtParam.w = n
 		} else {
 			fmt.Fprintf(os.Stderr, " dsw environment variable not a valid number.  dswStr = %q, %v.  Ignored.", dswEnv, err)
-			dsrtparam.w = 0
+			dsrtParam.w = 0
 		}
 	}
 
 	if dsrtEnv == "" {
-		return dsrtparam
+		return dsrtParam
 	}
 
-	indiv := strings.Split(dsrtEnv, "") // this splits into individual characters
+	// The strings.Split creates slices of individual character strings.  But it's redundant now that I look at it 7/4/23.
 
-	for j, str := range indiv {
-		envChar := str[0]
+	for _, envChar := range dsrtEnv {
 		if envChar == 'r' || envChar == 'R' {
-			dsrtparam.reverseflag = true
+			dsrtParam.reverseflag = true
 		} else if envChar == 's' || envChar == 'S' {
-			dsrtparam.sizeflag = true
+			dsrtParam.sizeflag = true
 		} else if envChar == 'd' {
-			dsrtparam.dirlistflag = true
+			dsrtParam.dirlistflag = true
 		} else if envChar == 'D' {
-			dsrtparam.filenamelistflag = true
+			dsrtParam.filenamelistflag = true
 		} else if envChar == 't' { // added 09/12/2018 12:26:01 PM
-			dsrtparam.totalflag = true // for the grand total operation
+			dsrtParam.totalflag = true // for the grand total operation
 		} else if envChar == 'f' {
-			dsrtparam.filterflag = true
+			dsrtParam.filterflag = true
+		} else if envChar == 'h' {
+			dsrtParam.halfFlag = true
 		} else if unicode.IsDigit(rune(envChar)) {
-			dsrtparam.numlines = int(envChar) - int('0')
-			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-				dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
-				break // if have a 2 digit number, it ends processing of the indiv string
-			}
+			d := envChar - '0'
+			dsrtParam.numscreens = 10*dsrtParam.numscreens + int(d)
 		}
 	}
-	return dsrtparam
+	return dsrtParam
 } // end ProcessEnvironString
 
 // ------------------------------ GetDirectoryAliases ----------------------------------------
