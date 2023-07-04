@@ -7,13 +7,13 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"hash"
 	"io"
 	"os"
+	"src/misc"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -71,9 +71,11 @@ import (
   15 Feb 23 -- Seeing if changing the buffering of the channels makes a different.  And making the numOfWorkers = runtime.NumCPU(), as Bill Kennedy seems to love.
   25 Apr 23 -- Adding some enhancements I first developed w/ the copyc family
   30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
+   4 Jul 23 -- The other day I created the misc package that has the code from makesubst, and I added the fixed readLine(*bytes.Reader) to it.  There should only be 1 version
+                 of the code that I have to maintain.
 */
 
-const LastCompiled = "30 June 2023"
+const LastCompiled = "4 July 2023"
 
 const (
 	undetermined = iota
@@ -284,7 +286,7 @@ func main() {
 
 	for { // to read multiple lines
 		//                                                      inputLine, er := bytesBuffer.ReadString('\n')
-		inputLine, err := readLine(bytesReader)
+		inputLine, err := misc.ReadLine(bytesReader)
 		//                                                      inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.  Yeah, it works.
 		//                                                      fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
 
@@ -348,12 +350,12 @@ func main() {
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
-	//ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
+	//                                                               ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
-	//fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
+	//                                                               fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
 	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg2.Done().
-	//fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
+	//                                                               fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
 	close(resultChan) // all work is done, so I can close the resultChan.
 
 	ctfmt.Printf(ct.Yellow, onWin, "\n Elapsed time for everything was %s.\n\n\n", time.Since(t0))
@@ -371,6 +373,7 @@ func min(a, b int) int {
 // ----------------------------------------------------- readLine ------------------------------------------------------
 // Needed as a bytes reader does not have a readString method.
 
+/*
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
@@ -394,7 +397,6 @@ func readLine(r *bytes.Reader) (string, error) {
 	}
 } // readLine
 
-/*
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
@@ -411,6 +413,4 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
-
-
 */

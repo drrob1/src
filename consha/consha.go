@@ -14,6 +14,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"src/misc"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -83,9 +84,11 @@ import (
                  I think I'll add a sentinel new line character.
                  No, I didn't do that.
                  I added logic to readLine that will only return EOF if there's nothing to return.
+   4 Jul 23 -- The other day I created the misc package that has the code from makesubst, and I added the fixed readLine(*bytes.Reader) to it.  There should only be 1 version
+                 of the code that I have to maintain.
 */
 
-const LastCompiled = "30 June 2023"
+const LastCompiled = "4 July 2023"
 
 const (
 	undetermined = iota
@@ -256,7 +259,7 @@ func main() {
 		//                                inputLine = strings.TrimSpace(inputLine) // It works, but it's not needed now.
 		//                                                 fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
 		//                                                      fmt.Printf(" inputline: %q, err = %s\n", inputLine, err)
-		inputLine, err := readLine(bytesReader)
+		inputLine, err := misc.ReadLine(bytesReader)
 		if errors.Is(err, io.EOF) {
 			break
 		} else if len(inputLine) == 0 {
@@ -341,6 +344,8 @@ func min(a, b int) int {
 // ----------------------------------------------------- readLine ------------------------------------------------------
 // Needed as a bytes reader does not have a readString method.
 
+/*
+New Code, but now in the misc package.
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
@@ -363,7 +368,7 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
-/*
+
 Old code
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
