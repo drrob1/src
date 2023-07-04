@@ -40,7 +40,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 
 		if strings.ContainsRune(pattern, ':') {
-			directoryAliasesMap = getDirectoryAliases()
+			//directoryAliasesMap = getDirectoryAliases()
 			pattern = ProcessDirectoryAliases(pattern)
 		}
 
