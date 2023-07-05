@@ -1,11 +1,13 @@
 package tknptr
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 /*
@@ -431,8 +433,7 @@ func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	QUOCHR = NullChar
 	bs.PREVPOSN = bs.CURPOSN
 	TOKEN = TokenType{} // This will zero out all the fields by using a nil struct literal.
-	NEGATV := false
-	QUOFLG := false
+	var NEGATV, QUOFLG, hexFlag bool
 
 	tokenByteSlice := make([]byte, 0, 200) // to build up the TOKEN.Str field
 
@@ -539,8 +540,15 @@ ExitForLoop:
 				break ExitForLoop //goto ExitLoop;
 			case DGT: // DGT -> DGT so we have another digit.
 				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
-				TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0
+				if unicode.IsDigit(rune(CHAR.Ch)) {
+					TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0 // this total will not be correct when floating point chars, like dot and 'E' or 'e', are input.
+				}
 			case ALLELSE: // DGT -> AllElse
+				if rune(CHAR.Ch) == 'x' || rune(CHAR.Ch) == 'X' || rune(CHAR.Ch) == 'h' || rune(CHAR.Ch) == 'H' { // this logic isn't really correct, as it will allow 0h and termiating x to mean hex.
+					hexFlag = true
+					continue
+				}
+
 				bs.UNGETCHR()
 				break ExitForLoop //goto ExitLoop;
 			} // Char.State
@@ -598,6 +606,9 @@ ExitForLoop:
 		TOKEN.Isum = bs.GETOPCODE(TOKEN)
 	}
 	TOKEN.Rsum = float64(TOKEN.Isum)
+	if hexFlag {
+		TOKEN.Isum = FromHex(TOKEN.Str) // the real value would be set in TokenReal.
+	}
 	return TOKEN, EOL
 } // GetToken
 
@@ -645,6 +656,36 @@ func FromHex(s string) int {
 func (bs *BufferState) SetMapDelim(char byte) {
 	bs.StateMap[char] = DELIM
 } // SetMapDelim
+
+//-------------------------------------------- TokenReal ---------------------------------------
+// Allows "0x" as hex prefix, as well as "H' as hex suffix.
+
+func (bs *BufferState) TokenReal() (TokenType, bool) {
+	var token TokenType
+	var EOL bool
+	var err error
+
+	bs.StateMap['.'] = DGT // \   I'm hoping to make this routine much less complex
+	bs.StateMap['E'] = DGT //  \  by making these characters all of DGT type so this rtn can more easily return a real token.
+	bs.StateMap['e'] = DGT // /   IE, float64 token.
+
+	token, EOL = bs.GETTKN()
+	if EOL && token.State != DELIM {
+		EOL = false
+	}
+	if EOL {
+		return token, EOL
+	}
+
+	if token.State == DGT {
+		token.Rsum, err = strconv.ParseFloat(token.Str, 64)
+		if err != nil {
+			fmt.Printf(" in TokenReal.  entry is %q, err = %s\n", token.Str, err)
+		}
+	}
+	return token, EOL
+
+} // TokenReal
 
 //-------------------------------------------- GETTKNREAL ---------------------------------------
 // I am copying the working code from TKNRTNS here.  See the comments in tknrtnsa.adb for reason why.
