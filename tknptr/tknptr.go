@@ -11,7 +11,7 @@ import (
 )
 
 /*
- Copyright (C) 1987-2017  Robert Solomon MD.  All rights reserved.
+ Copyright (C) 1987-2023  Robert Solomon MD.  All rights reserved.
  These routines collectively implement a very good facility to fetch, manipulate, and interpret tokens.
 
 REVISION HISTORY
@@ -71,9 +71,13 @@ REVISION HISTORY
 12 Jun 21 -- Writing TokenRealSlice, and renamed GetTokenSlice to TokenSlice, which is more idiomatic for Go.
  1 Apr 23 -- Added New function to not return a nil pointer if the entered string is empty.  So far, it seems to be working (tested by gonumsolve).
                I intend for this to be the preferred way to initialize a token pointer.
+ 4 Jul 23 -- I'm adding a much simpler way to get a real token, TokenReal.  This is going to take a while because I'm also listening to Derek Parker's 8 days of debugging.
+              And I added '_' following 'E' or 'e' is replaced by '-' before conversion to float.
 */
 
-// type FSATYP int  I don't think I need or want this type definition.
+const LastAltered = "7 July 2023"
+
+// type FSATYP int  I don't think I need or want this type definition.  It made sense in the Modula-2 version of this code, but not anymore.
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -84,11 +88,13 @@ const (
 
 type TokenType struct {
 	Str        string
+	FullString string // includes minus sign character, if present.
 	State      int
 	DelimCH    byte
 	DelimState int
 	Isum       int
 	Rsum       float64
+	RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.
 } // TokenType record
 
 type CharType struct {
@@ -426,15 +432,13 @@ func (bs *BufferState) GETOPCODE(Token TokenType) int {
 //       ---------------------------=== GetToken ===--------------------------------------
 
 func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
-	var (
-		CHAR   CharType
-		QUOCHR rune // Holds the active quote char
-	)
-	QUOCHR = NullChar
-	bs.PREVPOSN = bs.CURPOSN
-	TOKEN = TokenType{} // This will zero out all the fields by using a nil struct literal.
-	var NEGATV, QUOFLG, hexFlag bool
 
+	var CHAR CharType
+	var QUOCHR rune // Holds the active quote char
+
+	bs.PREVPOSN = bs.CURPOSN
+	var NEGATV, QUOFLG, hexFlag bool
+	TOKEN = TokenType{}                    // This will zero out all the fields by using a nil struct literal.  It's the default; I put it here so I remember.
 	tokenByteSlice := make([]byte, 0, 200) // to build up the TOKEN.Str field
 
 ExitForLoop:
@@ -534,21 +538,36 @@ ExitForLoop:
 		case DGT: // tokenstate
 			switch CHAR.State {
 			case DELIM:
-				break ExitForLoop //goto ExitLoop;
+				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
+				break ExitForLoop          //goto ExitLoop;
 			case OP: // DGT -> OP
 				bs.UNGETCHR()
-				break ExitForLoop //goto ExitLoop;
+				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
+				break ExitForLoop          //goto ExitLoop;
 			case DGT: // DGT -> DGT so we have another digit.
 				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
-				if unicode.IsDigit(rune(CHAR.Ch)) {
-					TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0 // this total will not be correct when floating point chars, like dot and 'E' or 'e', are input.
+				if TOKEN.RealFlag { // Isum only will contain the int part of a float.
+					continue
 				}
+				if !unicode.IsDigit(rune(CHAR.Ch)) {
+					TOKEN.RealFlag = true
+					if CAP(CHAR.Ch) == 'E' {
+						bs.StateMap['_'] = DGT // make the underscore to be of DGT type so it will be allowed in the number
+						bs.StateMap['-'] = DGT // make the minus sign to be of DGT type so it will be allowed in the number
+					}
+					continue
+				}
+				TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0 // this total will not be correct when floating point chars, like dot and 'E' or 'e', are input.
 			case ALLELSE: // DGT -> AllElse
-				if rune(CHAR.Ch) == 'x' || rune(CHAR.Ch) == 'X' || rune(CHAR.Ch) == 'h' || rune(CHAR.Ch) == 'H' { // this logic isn't really correct, as it will allow 0h and termiating x to mean hex.
+				if rune(CHAR.Ch) == 'x' || rune(CHAR.Ch) == 'X' || rune(CHAR.Ch) == 'h' || rune(CHAR.Ch) == 'H' { // this logic isn't really correct, as it will allow 0h and terminating x to mean hex.
 					hexFlag = true
 					continue
 				}
 
+				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
 				bs.UNGETCHR()
 				break ExitForLoop //goto ExitLoop;
 			} // Char.State
@@ -573,7 +592,7 @@ ExitForLoop:
 					QUOFLG = false
 					CHAR.State = DELIM // So that DELIMSTATE will = delim
 					break ExitForLoop
-					//                                                                               goto ExitLoop;
+
 				} else {
 					if len(tokenByteSlice) > TKNMAXSIZ {
 						log.SetFlags(log.Llongfile)
@@ -586,46 +605,48 @@ ExitForLoop:
 		} // Token.State
 	} //LOOP to process characters
 
-	//  ExitLoop:
-	//  TOKEN.Str = string(tokenByteSlice);  // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
-
 	if UpperCase {
 		TOKEN.Str = strings.ToUpper(string(tokenByteSlice))
-		//                                                                          TOKEN.Str = strings.ToUpper(TOKEN.Str);
 	} else {
 		TOKEN.Str = string(tokenByteSlice) // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
 	}
 	TOKEN.DelimCH = CHAR.Ch
 	TOKEN.DelimState = CHAR.State
-	if (TOKEN.State == DGT) && NEGATV {
-		TOKEN.Isum = -TOKEN.Isum
+	if TOKEN.State == DGT {
+		bs.StateMap['_'] = ALLELSE              // make sure the underscore is back to the type it's supposed to be.
+		bs.StateMap['-'] = ALLELSE              // make sure the minus sign is back to the type it's supposed to be.
+		strings.ReplaceAll(TOKEN.Str, "_", "-") // Note that '_' could mean '-' after an exponent is changed here.
+		TOKEN.FullString = TOKEN.Str
+		if NEGATV {
+			TOKEN.Isum = -TOKEN.Isum
+			TOKEN.FullString = "-" + TOKEN.Str
+		} else if hexFlag {
+			TOKEN.Isum = FromHex(TOKEN.Str) // the real value would be set in TokenReal, but not GETTKNREAL.
+		}
+		return TOKEN, false
 	}
 
 	//  For OP tokens, must return the opcode as the sum value.  Do this by calling GETOPCODE.
 	if TOKEN.State == OP {
 		TOKEN.Isum = bs.GETOPCODE(TOKEN)
 	}
-	TOKEN.Rsum = float64(TOKEN.Isum)
-	if hexFlag {
-		TOKEN.Isum = FromHex(TOKEN.Str) // the real value would be set in TokenReal.
-	}
 	return TOKEN, EOL
 } // GetToken
 
-//------------------------------*************************** GETTKN **************************************
+//--------------------------------------------------------- GETTKN --------------------------------------
 
 func (bs *BufferState) GETTKN() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetToken(true)
 	return TOKEN, EOL
 } // GETTKN
 
-// ********************************** isdigit ***********************************************
+// ---------------------------------- isdigit -----------------------------------------------
 func isdigit(ch rune) bool {
 	isdgt := ch >= Dgt0 && ch <= Dgt9
 	return isdgt
 }
 
-// ********************************** ishexdigit *************************************************
+// ---------------------------------- ishexdigit -------------------------------------------------
 func ishexdigit(ch rune) bool {
 
 	ishex := isdigit(ch) || ((ch >= 'A') && (ch <= 'F'))
@@ -633,7 +654,7 @@ func ishexdigit(ch rune) bool {
 
 } // ishexdigit
 
-//*********************************** fromhex *************************************************
+//----------------------------------- fromhex -------------------------------------------------
 
 func FromHex(s string) int {
 	result := 0
@@ -658,7 +679,7 @@ func (bs *BufferState) SetMapDelim(char byte) {
 } // SetMapDelim
 
 //-------------------------------------------- TokenReal ---------------------------------------
-// Allows "0x" as hex prefix, as well as "H' as hex suffix.
+// Allows "0x" as hex prefix, as well as "H" as hex suffix.  And idiomatic Go does not have a function begin with Get.
 
 func (bs *BufferState) TokenReal() (TokenType, bool) {
 	var token TokenType
@@ -678,11 +699,17 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 	}
 
 	if token.State == DGT {
-		token.Rsum, err = strconv.ParseFloat(token.Str, 64)
-		if err != nil {
-			fmt.Printf(" in TokenReal.  entry is %q, err = %s\n", token.Str, err)
+		if math.IsNaN(token.Rsum) { // only set the float value if there isn't one already there.  Negative integer or hex number set Rsum field in GETTKN() rtn.
+			token.Rsum, err = strconv.ParseFloat(token.FullString, 64) // FullString field now includes the sign character, if given.
+			if err != nil {
+				fmt.Printf(" in TokenReal.  entry is %q, err = %s\n", token.Str, err)
+			}
 		}
 	}
+	bs.StateMap['.'] = ALLELSE
+	bs.StateMap['E'] = ALLELSE
+	bs.StateMap['e'] = ALLELSE
+
 	return token, EOL
 
 } // TokenReal
@@ -791,7 +818,7 @@ ExitLoop:
 	return TOKEN, EOL
 } // GETTKNREAL
 
-// *************************************** GetTokenString ***************************************
+// --------------------------------------- GetTokenString ---------------------------------------
 
 func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var Char CharType
@@ -867,14 +894,14 @@ func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool
 	return TOKEN, EOL
 } // GetTokenString
 
-// *************************************** GETTKNSTR ***************************************
+// --------------------------------------- GETTKNSTR ---------------------------------------
 
 func (bs *BufferState) GETTKNSTR() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetTokenString(true)
 	return TOKEN, EOL
 }
 
-// **************************************** GetTokenEOL *******************************************
+// ---------------------------------------- GetTokenEOL -------------------------------------------
 
 func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	// GET ToKeN to EndOfLine.
@@ -911,7 +938,7 @@ func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	return TOKEN, EOL
 } // GetTokenEOL
 
-// ***************************************** GETTKNEOL ******************************************
+// ----------------------------------------- GETTKNEOL ------------------------------------------
 
 func (bs *BufferState) GETTKNEOL() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetTokenEOL(true)

@@ -26,6 +26,7 @@ REVISION HISTORY
 28 Sep 20 -- Testing new use code of tknptr, in which the StateMap is part of the pointer structure that is passed around.
  6 Jun 21 -- Testing GetTokenSlice
 12 Jun 21 -- Testing TokenSlice and TokenRealSlice
+ 7 Jul 23 -- Testing TokenReal, and making sure I didn't break anything.  But I may not finish this today.
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
@@ -50,8 +51,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// testingstate = 0: gettkn, 1: gettknreal, 2: gettknstr, 3: gettkneol, 4: string lower case,
-	//                5: token lower case
+	// testingstate = 0: gettkn, 1: gettknreal, 2: gettknstr, 3: gettkneol, 4: string lower case, 5: token lower case
 	testingstate := 0
 	if *floatflag {
 		testingstate = 1
