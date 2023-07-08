@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+/*
+   8 Jul 23 -- I changed how the first param is tested for being a directory.
+*/
+
 const sepStr = string(os.PathSeparator)
 
 // getFileInfoXFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
@@ -54,6 +58,8 @@ func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		}
 		if dirName == "" {
 			dirName = "."
+		} else if !strings.HasSuffix(dirName, sepStr) { // I was sometimes getting errors if a pathname didn't end w/ a slash or backslash.
+			dirName = dirName + sepStr
 		}
 		if fileName == "" { // need this to not be blank because of the call to Match below.
 			fileName = "*"

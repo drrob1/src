@@ -46,6 +46,7 @@ import (
   11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
    1 Jun 23 -- Added getFileInfoXFromGlob, which behaves the same on Windows and linux.
    2 Jul 23 -- Made the FileSelection routines use "newlines" between iterations.  This way, I can use the scroll back buffer if I want to.
+   8 Jul 23 -- In _windows part, I changed how the first param is tested for being a directory.
 */
 
 type DirAliasMapType map[string]string

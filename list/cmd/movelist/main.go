@@ -63,6 +63,7 @@ import (
    6 Apr 23 -- Will wait for the shell to finish, so I can time it and be clearer when this routine is finished.
    8 Apr 23 -- Changed list.New signature.
    8 Jul 23 -- Now called movelist, and it's based on copycp.  I intend to use the shell move commands.
+                 And I fixed part where dest dir is tested.
 */
 
 const LastAltered = "8 Apr 2023" //
@@ -199,13 +200,19 @@ func main() {
 		}
 	}
 	fmt.Printf("\n destDir = %#v\n", destDir)
-	fi, err := os.Lstat(destDir)
+	//fi, err := os.Lstat(destDir) // this doesn't always work, esp if there is no trailing separator slash or backslash.
+	d, err := os.Open(destDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but os.Lstat(%s) = %#v.  Exiting\n", destDir, destDir, err)
+		fmt.Fprintf(os.Stderr, " os.Open(%s) failed w/ error %s.  Exiting\n", destDir, err)
+		os.Exit(1)
+	}
+	fi, err := d.Stat()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " %s.Stat() failed w/ error %s.  Exiting\n", d.Name(), err)
 		os.Exit(1)
 	}
 	if !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the distination directory, but os.Lstat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
+		fmt.Fprintf(os.Stderr, " %s is supposed to be the distination directory, but stat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
 		os.Exit(1)
 	}
 
