@@ -1,4 +1,4 @@
-package main // copyc
+package main // movelist, based on copycp
 
 import (
 	"flag"
@@ -62,6 +62,7 @@ import (
    5 Apr 23 -- Fixed list.CheckDest.
    6 Apr 23 -- Will wait for the shell to finish, so I can time it and be clearer when this routine is finished.
    8 Apr 23 -- Changed list.New signature.
+   8 Jul 23 -- Now called movelist, and it's based on copycp.  I intend to use the shell move commands.
 */
 
 const LastAltered = "8 Apr 2023" //
@@ -197,18 +198,6 @@ func main() {
 			destDir = destDir + sepString
 		}
 	}
-	//else {  This code belongs in list.CheckDest, and now is where it belongs.
-	//	if strings.ContainsRune(destDir, ':') {
-	//		directoryAliasesMap := list.GetDirectoryAliases()
-	//		destDir = list.ProcessDirectoryAliases(directoryAliasesMap, destDir)
-	//	} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
-	//		homeDirStr, _ := os.UserHomeDir()
-	//		destDir = strings.Replace(destDir, "~", homeDirStr, 1)
-	//	}
-	//	if !strings.HasSuffix(destDir, sepString) {
-	//		destDir = destDir + sepString
-	//	}
-	//}
 	fmt.Printf("\n destDir = %#v\n", destDir)
 	fi, err := os.Lstat(destDir)
 	if err != nil {
@@ -241,7 +230,7 @@ func main() {
 	}
 	fmt.Printf("\n\n")
 
-	// Time to find the shell copy or cp.
+	// Time to find the shell move or mv.
 
 	var shellStr string
 	var ok bool
@@ -254,10 +243,10 @@ func main() {
 			fmt.Printf(" After os.LookupEnv(ComSpec), got a return of not ok.  ShellStr = %s\n", shellStr)
 			os.Exit(1)
 		}
-		variadicParam = []string{"/C", "*copy", "/u"}         // start the variadic param w/ these required params, the first one has tcc only run 1 cmd and then exit.
+		variadicParam = []string{"/C", "move", "/u"}          // start the variadic param w/ these required params, the first one has tcc only run 1 cmd and then exit.
 		variadicParam = append(variadicParam, fileListStr...) // now append all the files to be copied.
 	} else if runtime.GOOS == "linux" { // just in case this ever gets attempted using macOS.
-		shellStr = "cp"
+		shellStr = "mv"
 		variadicParam = []string{"-u", "-v"}                  // start the variadic param w/ these required params
 		variadicParam = append(variadicParam, fileListStr...) // now append all the files to be copied.
 	}
@@ -273,7 +262,6 @@ func main() {
 	execCmd.Stderr = os.Stderr
 
 	t0 := time.Now()
-	//err = execCmd.Start() // this does not wait for it to finish, so I can't time it this way.
 	err = execCmd.Run() // this does wait for it to finish, so I'll time it.
 	if err != nil {
 		fmt.Printf(" Error returned by running %s %s is %v\n", shellStr, variadicParam, err)
