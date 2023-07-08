@@ -548,15 +548,15 @@ ExitForLoop:
 				break ExitForLoop          //goto ExitLoop;
 			case DGT: // DGT -> DGT so we have another digit.
 				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+				if CAP(CHAR.Ch) == 'E' {
+					bs.StateMap['_'] = DGT // make the underscore to be of DGT type so it will be allowed in the number
+					bs.StateMap['-'] = DGT // make the minus sign to be of DGT type so it will be allowed in the number
+				}
 				if TOKEN.RealFlag { // Isum only will contain the int part of a float.
 					continue
 				}
 				if !unicode.IsDigit(rune(CHAR.Ch)) {
 					TOKEN.RealFlag = true
-					if CAP(CHAR.Ch) == 'E' {
-						bs.StateMap['_'] = DGT // make the underscore to be of DGT type so it will be allowed in the number
-						bs.StateMap['-'] = DGT // make the minus sign to be of DGT type so it will be allowed in the number
-					}
 					continue
 				}
 				TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0 // this total will not be correct when floating point chars, like dot and 'E' or 'e', are input.
@@ -566,8 +566,6 @@ ExitForLoop:
 					continue
 				}
 
-				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
 				bs.UNGETCHR()
 				break ExitForLoop //goto ExitLoop;
 			} // Char.State
@@ -612,10 +610,13 @@ ExitForLoop:
 	}
 	TOKEN.DelimCH = CHAR.Ch
 	TOKEN.DelimState = CHAR.State
+	TOKEN.FullString = TOKEN.Str
+	if TOKEN.RealFlag {
+		TOKEN.Str = strings.ReplaceAll(TOKEN.Str, "_", "-") // Note that '_' could mean '-' for exponents.
+	}
 	if TOKEN.State == DGT {
-		bs.StateMap['_'] = ALLELSE              // make sure the underscore is back to the type it's supposed to be.
-		bs.StateMap['-'] = ALLELSE              // make sure the minus sign is back to the type it's supposed to be.
-		strings.ReplaceAll(TOKEN.Str, "_", "-") // Note that '_' could mean '-' after an exponent is changed here.
+		bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+		bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
 		TOKEN.FullString = TOKEN.Str
 		if NEGATV {
 			TOKEN.Isum = -TOKEN.Isum
@@ -689,6 +690,7 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 	bs.StateMap['.'] = DGT // \   I'm hoping to make this routine much less complex
 	bs.StateMap['E'] = DGT //  \  by making these characters all of DGT type so this rtn can more easily return a real token.
 	bs.StateMap['e'] = DGT // /   IE, float64 token.
+	bs.StateMap['_'] = DGT
 
 	token, EOL = bs.GETTKN()
 	if EOL && token.State != DELIM {
@@ -699,16 +701,16 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 	}
 
 	if token.State == DGT {
-		if math.IsNaN(token.Rsum) { // only set the float value if there isn't one already there.  Negative integer or hex number set Rsum field in GETTKN() rtn.
-			token.Rsum, err = strconv.ParseFloat(token.FullString, 64) // FullString field now includes the sign character, if given.
-			if err != nil {
-				fmt.Printf(" in TokenReal.  entry is %q, err = %s\n", token.Str, err)
-			}
+		token.Rsum, err = strconv.ParseFloat(token.FullString, 64) // FullString field now includes the sign character, if given.
+		if err != nil {
+			fmt.Printf(" in TokenReal.  entry is %q, err = %s\n", token.Str, err)
 		}
 	}
 	bs.StateMap['.'] = ALLELSE
 	bs.StateMap['E'] = ALLELSE
 	bs.StateMap['e'] = ALLELSE
+	bs.StateMap['_'] = ALLELSE
+	bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
 
 	return token, EOL
 

@@ -122,24 +122,34 @@ var testRealStrings = []struct {
 		RealFlag:   true,
 	}},
 	{"8.623e-1", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
-		Str:        "8.623e-1",
-		FullString: "",
-		State:      0,
+		Str:        "8.623E-1",
+		FullString: "8.623E-1",
+		State:      DGT,
 		DelimCH:    0,
-		DelimState: 0,
+		DelimState: DELIM,
 		Isum:       0,
-		Rsum:       0,
-		RealFlag:   false,
+		Rsum:       .8623,
+		RealFlag:   true,
 	}},
 	{"-23.456e-2", TokenType{
-		Str:        "",
-		FullString: "",
-		State:      0,
+		Str:        "23.456E-2",
+		FullString: "-23.456E-2",
+		State:      DGT,
 		DelimCH:    0,
-		DelimState: 0,
+		DelimState: ALLELSE,
 		Isum:       0,
-		Rsum:       0,
-		RealFlag:   false,
+		Rsum:       -.23456,
+		RealFlag:   true,
+	}},
+	{"-23.456e_2", TokenType{
+		Str:        "23.456E-2",
+		FullString: "-23.456E-2",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: ALLELSE,
+		Isum:       0,
+		Rsum:       -.23456,
+		RealFlag:   true,
 	}},
 }
 
@@ -157,16 +167,9 @@ func TestTokenReal(t *testing.T) { // test ALLELSE FIX keyword, OP of +, and the
 		}
 
 		fmt.Printf(" InputString = %q, token is %+v\n", tkn.inputString, token)
-		if tkn.outputToken.State == ALLELSE && token.Str != tkn.outputToken.Str {
-			t.Errorf(" inputString is %q, token.Str is %q which was not expected.  token.FullString = %q, Isum = %d, Rsum=%g\n", tkn.inputString, token.Str, token.FullString,
+		if tkn.outputToken.State != token.State || token.Str != tkn.outputToken.Str || tkn.outputToken.FullString != token.FullString || tkn.outputToken.RealFlag != token.RealFlag {
+			t.Errorf(" Error: inputString is %q, token.Str is %q, token.FullString = %q, Isum = %d, Rsum=%g\n", tkn.inputString, token.Str, token.FullString,
 				token.Isum, token.Rsum)
-		}
-		if tkn.outputToken.State == OP && token.Str != tkn.outputToken.Str {
-			t.Errorf(" inputstring=%q, token.Str=%q which was not expected.  Token=%+v\n", tkn.inputString, token.Str, token)
-		}
-
-		if tkn.outputToken.State == DGT && token.FullString != tkn.outputToken.FullString {
-			t.Errorf(" inputstring=%q, token.FullString=%q which was not expected.  Token=%+v\n", tkn.inputString, token.FullString, token)
 		}
 	}
 }
