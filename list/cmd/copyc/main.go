@@ -77,9 +77,10 @@ import (
    6 May 23 -- Finally was able to test the error handling code here, on leox.  The Sync() step failed for 2 files.  Both were successfully deleted automatically.  Then I
                  ran the pgm again, and these were copied in the 2nd try.  Hooray!
   25 May 23 -- Changed the final message to be multicolored.
+   8 Jul 23 -- I fixed part where dest dir is tested.
 */
 
-const LastAltered = "25 May 2023" //
+const LastAltered = "8 July 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -256,15 +257,22 @@ func main() {
 		}
 	}
 	fmt.Printf("\n destDir = %#v\n", destDir)
-	fi, err := os.Lstat(destDir)
+	//fi, err := os.Lstat(destDir)  this was giving errors sometimes.
+	d, err := os.Open(destDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but os.Lstat(%s) = %#v.  Exiting\n", destDir, destDir, err)
+		fmt.Fprintf(os.Stderr, " os.Open(%s) failed w/ error %s.  Exiting\n", destDir, err)
+		os.Exit(1)
+	}
+	fi, err := d.Stat()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " %s.Stat() failed w/ error %s.  Exiting\n", d.Name(), err)
 		os.Exit(1)
 	}
 	if !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the distination directory, but os.Lstat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
+		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but stat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
 		os.Exit(1)
 	}
+	d.Close()
 
 	fileList, err = list.FileSelection(fileList)
 	if err != nil {

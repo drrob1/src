@@ -66,7 +66,7 @@ import (
                  And I fixed part where dest dir is tested.
 */
 
-const LastAltered = "8 Apr 2023" //
+const LastAltered = "8 July 2023" //
 
 const sepString = string(filepath.Separator)
 
@@ -212,9 +212,10 @@ func main() {
 		os.Exit(1)
 	}
 	if !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the distination directory, but stat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
+		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but stat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
 		os.Exit(1)
 	}
+	d.Close()
 
 	fileListStr, err := list.FileSelectionString(fileList)
 	if err != nil {
