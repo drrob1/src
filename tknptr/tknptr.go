@@ -75,16 +75,14 @@ REVISION HISTORY
               And I added '_' following 'E' or 'e' is replaced by '-' before conversion to float.
 */
 
-const LastAltered = "7 July 2023"
-
-// type FSATYP int  I don't think I need or want this type definition.  It made sense in the Modula-2 version of this code, but not anymore.
+const LastAltered = "8 July 2023"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
 	OP
 	DGT
 	ALLELSE
-) // FSATYP enum is really int, but will call it FSATYP to indicate intent.
+)
 
 type TokenType struct {
 	Str        string

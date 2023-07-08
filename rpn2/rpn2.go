@@ -67,9 +67,10 @@ REVISION HISTORY
 10 Aug 22 -- "about" will print info about the exe file.
 24 Jun 23 -- Checking to make sure that the code is correct after I stopped exporting MapClose and changed its name to mapWriteAndClose.
                It's fine, as I made that change 2 years ago.  I changed some comments here, and I have to recompile because I changed hpcalc2.
+ 8 Jul 23 -- I coded a simpler TokenReal(), to replace GETTKNREAL().  I'm testing it here in production.  The rtn already passed in tknptr_test.go.
 */
 
-const LastCompiled = "June 24, 2023"
+const LastCompiled = "July 8, 2023"
 
 var suppressDump map[string]bool
 

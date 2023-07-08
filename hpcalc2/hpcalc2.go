@@ -132,9 +132,10 @@ REVISION HISTORY
 24 Jun 23 -- Will only close the map reg file when needed, ie, when I open it.  This is to not have rpnt and rpnf clobber each other.
                I'm not exporting the map close function, and I renamed it to mapWriteAndClose.  By not exporting it, I'm making sure that the client programs can't close this file and clobber one another.
                I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
+ 8 Jul 23 -- I'm testing the new TokenReal(), here in production.  Looks to be working.  I won't recompile the others just yet.  I'll try to shift into using rpn2 for a while.
 */
 
-const LastAlteredDate = "25 Jun 2023"
+const LastAlteredDate = "8 July 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -769,7 +770,8 @@ func GetResult(s string) (float64, []string) {
 
 	tokenPointer := tknptr.NewToken(s) // Using the Go idiom, instead of INITKN(s)
 	for {
-		token, EOL = tokenPointer.GETTKNREAL()
+		//token, EOL = tokenPointer.GETTKNREAL()
+		token, EOL = tokenPointer.TokenReal() // here goes nothing
 		if EOL {
 			break
 		}

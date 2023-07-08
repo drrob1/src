@@ -151,6 +151,26 @@ var testRealStrings = []struct {
 		Rsum:       -.23456,
 		RealFlag:   true,
 	}},
+	{"8.623e-10", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
+		Str:        "8.623E-10",
+		FullString: "8.623E-10",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       0,
+		Rsum:       8.623e-10,
+		RealFlag:   true,
+	}},
+	{"8.623e-01", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
+		Str:        "8.623E-01",
+		FullString: "8.623E-01",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       0,
+		Rsum:       .8623,
+		RealFlag:   true,
+	}},
 }
 
 func TestMain(m *testing.M) { // this example is in the docs of the testing package, that I was referred to by the golang nuts google group.
@@ -170,6 +190,11 @@ func TestTokenReal(t *testing.T) { // test ALLELSE FIX keyword, OP of +, and the
 		if tkn.outputToken.State != token.State || token.Str != tkn.outputToken.Str || tkn.outputToken.FullString != token.FullString || tkn.outputToken.RealFlag != token.RealFlag {
 			t.Errorf(" Error: inputString is %q, token.Str is %q, token.FullString = %q, Isum = %d, Rsum=%g\n", tkn.inputString, token.Str, token.FullString,
 				token.Isum, token.Rsum)
+		}
+
+		token, EOL = bs.TokenReal()
+		if !EOL {
+			t.Errorf(" EOL should be true.  It's not.  Look into this.  TestString=%q\n", tkn.inputString)
 		}
 	}
 }
