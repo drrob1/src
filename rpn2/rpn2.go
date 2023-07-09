@@ -11,6 +11,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"runtime"
+	"src/tknptr"
 	"strconv"
 	"strings"
 	//
@@ -68,9 +69,10 @@ REVISION HISTORY
 24 Jun 23 -- Checking to make sure that the code is correct after I stopped exporting MapClose and changed its name to mapWriteAndClose.
                It's fine, as I made that change 2 years ago.  I changed some comments here, and I have to recompile because I changed hpcalc2.
  8 Jul 23 -- I coded a simpler TokenReal(), to replace GETTKNREAL().  I'm testing it here in production.  The rtn already passed in tknptr_test.go.
+ 9 Jul 23 -- Added modification of tknptr to the about cmd.
 */
 
-const LastCompiled = "July 8, 2023"
+const LastCompiled = "July 9, 2023"
 
 var suppressDump map[string]bool
 
@@ -171,7 +173,8 @@ func main() {
 		}
 
 		if strings.ToLower(INBUF) == "about" {
-			ctfmt.Println(ct.Cyan, windowsFlag, " Last changed rpn.go ", LastCompiled)
+			ctfmt.Printf(ct.Cyan, windowsFlag, " tknptr last altered %s\n", tknptr.LastAltered)
+			ctfmt.Println(ct.Cyan, windowsFlag, " Last changed rpn2.go ", LastCompiled)
 			ctfmt.Printf(ct.Cyan, windowsFlag, " %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execname)
 			allowDumpFlag = false
 		}
