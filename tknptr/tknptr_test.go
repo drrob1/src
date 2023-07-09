@@ -14,22 +14,23 @@ import (
 /*
 const (DELIM, OP, DGT, ALLELSE)
 
-	type TokenType struct {
-		Str        string
-		FullString string // includes minus sign character, if present.
-		State      int
-		DelimCH    byte
-		DelimState int
-		Isum       int
-		Rsum       float64
-		RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.
-	}
+		type TokenType struct {
+			Str        string
+			FullString string // includes minus sign character, if present.
+			State      int
+			DelimCH    byte
+			DelimState int
+			Isum       int
+			Rsum       float64
+			RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.
+	        HexFlag    bool  added 7/9/23
+		}
 */
 var testRealStrings = []struct {
 	inputString string
 	outputToken TokenType
 }{
-	{"fix", TokenType{"FIX", "FIX", ALLELSE, '0', DELIM, 0, 0, false}},
+	{"fix", TokenType{"FIX", "FIX", ALLELSE, '0', DELIM, 0, 0, false, false}},
 	{"+", TokenType{
 		Str:        "+",
 		FullString: "+",
@@ -80,7 +81,7 @@ var testRealStrings = []struct {
 		Rsum:       0,
 		RealFlag:   false,
 	}},
-	{"7.6", TokenType{"7.6", "7.6", DGT, 0, DELIM, 7, 7.6, true}},
+	{"7.6", TokenType{"7.6", "7.6", DGT, 0, DELIM, 7, 7.6, true, false}},
 	{"-3.14159", TokenType{
 		Str:        "3.14159",
 		FullString: "-3.14159",
@@ -170,6 +171,26 @@ var testRealStrings = []struct {
 		Isum:       0,
 		Rsum:       .8623,
 		RealFlag:   true,
+	}},
+	{"10h", TokenType{
+		Str:        "10",
+		FullString: "10",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       16,
+		Rsum:       16,
+		RealFlag:   false,
+	}},
+	{"0x10", TokenType{
+		Str:        "010",
+		FullString: "010",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       16,
+		Rsum:       16,
+		RealFlag:   false,
 	}},
 }
 

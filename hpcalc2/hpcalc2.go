@@ -133,9 +133,10 @@ REVISION HISTORY
                I'm not exporting the map close function, and I renamed it to mapWriteAndClose.  By not exporting it, I'm making sure that the client programs can't close this file and clobber one another.
                I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
  8 Jul 23 -- I'm testing the new TokenReal(), here in production.  Looks to be working.  I won't recompile the others just yet.  I'll try to shift into using rpn2 for a while.
+ 9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
 */
 
-const LastAlteredDate = "8 July 2023"
+const LastAlteredDate = "9 July 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "

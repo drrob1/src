@@ -73,9 +73,10 @@ REVISION HISTORY
                I intend for this to be the preferred way to initialize a token pointer.
  4 Jul 23 -- I'm adding a much simpler way to get a real token, TokenReal.  This is going to take a while because I'm also listening to Derek Parker's 8 days of debugging.
               And I added '_' following 'E' or 'e' is replaced by '-' before conversion to float.
+ 9 Jul 23 -- Now to fix hex input, by adding a field to TokenType.
 */
 
-const LastAltered = "8 July 2023"
+const LastAltered = "9 July 2023"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -93,6 +94,7 @@ type TokenType struct {
 	Isum       int
 	Rsum       float64
 	RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.
+	HexFlag    bool // only way I know of to signal that the input string is a hex format.
 } // TokenType record
 
 type CharType struct {
@@ -244,11 +246,9 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 func New(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
-	//if Str == "" {
-	//	return nil
-	//}
 	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
-	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
+	//bs = &BufferState{}
+	InitStateMap(bs) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
@@ -435,7 +435,7 @@ func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var QUOCHR rune // Holds the active quote char
 
 	bs.PREVPOSN = bs.CURPOSN
-	var NEGATV, QUOFLG, hexFlag bool
+	var NEGATV, QUOFLG bool
 	TOKEN = TokenType{}                    // This will zero out all the fields by using a nil struct literal.  It's the default; I put it here so I remember.
 	tokenByteSlice := make([]byte, 0, 200) // to build up the TOKEN.Str field
 
@@ -560,7 +560,7 @@ ExitForLoop:
 				TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0 // this total will not be correct when floating point chars, like dot and 'E' or 'e', are input.
 			case ALLELSE: // DGT -> AllElse
 				if rune(CHAR.Ch) == 'x' || rune(CHAR.Ch) == 'X' || rune(CHAR.Ch) == 'h' || rune(CHAR.Ch) == 'H' { // this logic isn't really correct, as it will allow 0h and terminating x to mean hex.
-					hexFlag = true
+					TOKEN.HexFlag = true
 					continue
 				}
 
@@ -619,7 +619,8 @@ ExitForLoop:
 		if NEGATV {
 			TOKEN.Isum = -TOKEN.Isum
 			TOKEN.FullString = "-" + TOKEN.Str
-		} else if hexFlag {
+		}
+		if TOKEN.HexFlag {
 			TOKEN.Isum = FromHex(TOKEN.Str) // the real value would be set in TokenReal, but not GETTKNREAL.
 		}
 		return TOKEN, false
@@ -702,6 +703,9 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 		token.Rsum, err = strconv.ParseFloat(token.FullString, 64) // FullString field now includes the sign character, if given.
 		if err != nil {
 			fmt.Printf(" in TokenReal.  entry is %q, err = %s\n", token.Str, err)
+		}
+		if token.HexFlag {
+			token.Rsum = float64(token.Isum)
 		}
 	}
 	bs.StateMap['.'] = ALLELSE
