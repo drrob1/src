@@ -52,9 +52,10 @@ import (
                  runlist p|l|a|x|w
                  runlist . glob -- behaves differently on linux and Windows.
    1 Jun 23 -- Uses the new list.FileInfoXFromGlob and list.NewFromGlob.
+  12 Jul 23 -- Globbing doesn't work.  Nevermind.  I forgot that 1st param has to be a dot if I want to glob.  I added a check against an empty fileList.
 */
 
-const LastAltered = "1 June 2023" //
+const LastAltered = "12 July 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -226,6 +227,11 @@ func main() {
 	fileList, err = list.FileSelection(fileList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error from list.FileSelection is %s\n", err)
+		os.Exit(1)
+	}
+
+	if len(fileList) == 0 {
+		fmt.Printf(" Length of the filelist is zero.  Aborting\n")
 		os.Exit(1)
 	}
 

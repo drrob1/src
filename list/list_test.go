@@ -244,7 +244,7 @@ func TestIncludeThis(t *testing.T) {
 	}
 	includeMe = includeThis(fi, excludeMe)
 	if includeMe {
-		fmt.Errorf(" includeMe for %s should be false, but it is %t\n", fi.Name(), includeMe)
+		fmt.Printf(" includeMe for %s should be false, but it is %t\n", fi.Name(), includeMe)
 	} else {
 		fmt.Printf(" includeMe for %s is false, which is correct\n", fi.Name())
 	}
@@ -260,7 +260,7 @@ func TestIncludeThis(t *testing.T) {
 	}
 	includeMe = includeThis(fi, excludeMe)
 	if includeMe {
-		fmt.Errorf(" includeMe for %s should be false, but it is %t\n", fi.Name(), includeMe)
+		fmt.Printf(" includeMe for %s should be false, but it is %t\n", fi.Name(), includeMe)
 	} else {
 		fmt.Printf(" includeMe for %s is false, which is correct\n", fi.Name())
 	}
@@ -271,7 +271,7 @@ func TestReplaceDigits(t *testing.T) { // go test -run Replace -v   -> to just r
 	out := "abcdefghi"
 	result := ReplaceDigits(in)
 	if result != out {
-		fmt.Errorf(" ReplaceDigits should be abcdefghi, but it is %s instead\n", result)
+		fmt.Printf(" ReplaceDigits should be abcdefghi, but it is %s instead\n", result)
 	} else {
 		fmt.Printf(" ReplaceDigits passed its test function.\n")
 	}

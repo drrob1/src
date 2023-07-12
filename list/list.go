@@ -47,6 +47,7 @@ import (
    1 Jun 23 -- Added getFileInfoXFromGlob, which behaves the same on Windows and linux.
    2 Jul 23 -- Made the FileSelection routines use "newlines" between iterations.  This way, I can use the scroll back buffer if I want to.
    8 Jul 23 -- In _windows part, I changed how the first param is tested for being a directory.
+  12 Jul 23 -- Globbing isn't working.  Nevermind, I forgot about first param must be a dot if I'm going to use globbing.
 */
 
 type DirAliasMapType map[string]string
