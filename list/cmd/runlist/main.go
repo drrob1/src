@@ -205,6 +205,9 @@ func main() {
 			cmdStr = "msaccess"
 		} else if strings.ToLower(cmdStr) == "l" {
 			cmdStr = "libreoffice"
+		} else {
+			fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
+			os.Exit(1)
 		}
 		fileList, err = list.SkipFirstNewList()
 		if err != nil {
