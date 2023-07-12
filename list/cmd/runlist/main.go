@@ -53,6 +53,7 @@ import (
                  runlist . glob -- behaves differently on linux and Windows.
    1 Jun 23 -- Uses the new list.FileInfoXFromGlob and list.NewFromGlob.
   12 Jul 23 -- Globbing doesn't work.  Nevermind.  I forgot that 1st param has to be a dot if I want to glob.  I added a check against an empty fileList.
+                 I'm going to add a check to remind me if I forget again.
 */
 
 const LastAltered = "12 July 2023" //
@@ -160,7 +161,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
 			os.Exit(1)
 		}
-	} else if flag.NArg() == 1 { // use default glob string
+	} else if flag.NArg() == 1 { // use default glob string.  Or, I forgot to enter the first param letter.  I'll check.
 		cmdStr = flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
 		if cmdStr == "." {
 			cmdStr = "" // this is for windows and executable extensions.
@@ -180,6 +181,9 @@ func main() {
 		} else if strings.ToLower(cmdStr) == "l" {
 			cmdStr = "libreoffice"
 			globStr = "*"
+		} else {
+			fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
+			os.Exit(1)
 		}
 		fmt.Printf(" About to call NewFromGlob.  globStr = %q\n", globStr)
 		fileList, err = list.NewFromGlob(globStr)
