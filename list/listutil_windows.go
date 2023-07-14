@@ -18,7 +18,8 @@ const sepStr = string(os.PathSeparator)
 // getFileInfoXFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
+
+func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.

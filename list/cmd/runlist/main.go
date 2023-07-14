@@ -54,9 +54,10 @@ import (
    1 Jun 23 -- Uses the new list.FileInfoXFromGlob and list.NewFromGlob.
   12 Jul 23 -- Globbing doesn't work.  Nevermind.  I forgot that 1st param has to be a dot if I want to glob.  I added a check against an empty fileList.
                  I'm going to add a check to remind me if I forget again.
+  14 Jul 23 -- I made the first param as a dot optional.
 */
 
-const LastAltered = "12 July 2023" //
+const LastAltered = "14 July 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -182,13 +183,18 @@ func main() {
 			cmdStr = "libreoffice"
 			globStr = "*"
 		} else {
-			fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
-			os.Exit(1)
+			cmdStr = ""
+			list.DelListFlag = true
+			//fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
+			//os.Exit(1)
 		}
-		fmt.Printf(" About to call NewFromGlob.  globStr = %q\n", globStr)
-		fileList, err = list.NewFromGlob(globStr)
+		if list.DelListFlag {
+			fileList, err = list.GetFileInfoXFromCommandLine(excludeRegex)
+		} else {
+			fileList, err = list.SkipFirstNewList() // only call this one if there's a command entered as first param.
+		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
+			fmt.Fprintf(os.Stderr, " Error from list.GetFileInfoXFromCommandLine or SkipFirstNewList is %s\n", err)
 			os.Exit(1)
 		}
 	} else {
@@ -206,12 +212,20 @@ func main() {
 		} else if strings.ToLower(cmdStr) == "l" {
 			cmdStr = "libreoffice"
 		} else {
-			fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
-			os.Exit(1)
+			cmdStr = ""
+			list.DelListFlag = true
+			//fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
+			//os.Exit(1) // here would be a good place to call getInfoXFromCommandLine.  I'm thinking about this more to see if it would work on linux, too.
+			// On linux, I could set the DelListFlag so it collects all filenames populated by bash.
+			// Maybe the DelListFlag could work as a flag to mean either call getInfoXFromCommandLine or SkipFirstNewList.  Or do I need another flag?  I'm thinking.
 		}
-		fileList, err = list.SkipFirstNewList()
+		if list.DelListFlag {
+			fileList, err = list.GetFileInfoXFromCommandLine(excludeRegex)
+		} else {
+			fileList, err = list.SkipFirstNewList() // only call this one if there's a command entered as first param.
+		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
+			fmt.Fprintf(os.Stderr, " Error from either SkipFirstNewList or GetFileInfoXFromCommandLine is %s\n", err)
 			os.Exit(1)
 		}
 	}

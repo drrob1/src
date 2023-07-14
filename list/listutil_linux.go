@@ -38,7 +38,7 @@ import (
 
 const sep = string(filepath.Separator)
 
-func getFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
+func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
 
 	workingDir, err := os.Getwd()
