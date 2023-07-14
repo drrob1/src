@@ -217,7 +217,12 @@ func main() {
 		} else if strings.ToLower(cmdStr) == "l" {
 			cmdStr = "libreoffice"
 		} else {
-			cmdStr = ""
+			if runtime.GOOS == "windows" {
+				cmdStr = ""
+			} else {
+				cmdStr = "libreoffice"
+				globStr = "*"
+			}
 			list.DelListFlag = true
 			//fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
 			//os.Exit(1) // here would be a good place to call getInfoXFromCommandLine.  I'm thinking about this more to see if it would work on linux, too.
