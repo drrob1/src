@@ -59,6 +59,7 @@ import (
                  Else, use the one provided.  Or, have the glob string a flag.  That is probably much easier to implement.  I'll make globStr global, and allow it to be set
                  as a param.  If it's not, use the default.  I already have a globFlag.  For this to work the same on Windows and linux, I have to have a separate glob string
                  as a param.  I'll do that.  So this will not use the globFlag.
+                 On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
 */
 
 const LastAltered = "15 July 2023" //
@@ -161,8 +162,13 @@ func main() {
 	var cmdStr, globStr string
 	var fileList []list.FileInfoExType
 	var err error
+
 	if flag.NArg() == 0 {
-		cmdStr = ""
+		if runtime.GOOS == "windows" {
+			cmdStr = ""
+		} else {
+			cmdStr = "libreoffice"
+		}
 		fileList, err = list.NewFromGlob("*")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
@@ -200,7 +206,7 @@ func main() {
 			if globString != "" {
 				globStr = globString
 			}
-		} else if strings.ToLower(cmdStr) == "l" {
+		} else if strings.ToLower(cmdStr) == "l" || runtime.GOOS == "linux" {
 			cmdStr = "libreoffice"
 			globStr = "*"
 			if globString != "" {
