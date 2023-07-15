@@ -55,9 +55,13 @@ import (
   12 Jul 23 -- Globbing doesn't work.  Nevermind.  I forgot that 1st param has to be a dot if I want to glob.  I added a check against an empty fileList.
                  I'm going to add a check to remind me if I forget again.
   14 Jul 23 -- I made the first param as a dot optional.
+  15 Jul 23 -- I fucked up the automatic globbing by appropriate extension.  I have to put that back.  If there is no glob string on command line, use the default glob string.
+                 Else, use the one provided.  Or, have the glob string a flag.  That is probably much easier to implement.  I'll make globStr global, and allow it to be set
+                 as a param.  If it's not, use the default.  I already have a globFlag.  For this to work the same on Windows and linux, I have to have a separate glob string
+                 as a param.  I'll do that.  So this will not use the globFlag.
 */
 
-const LastAltered = "14 July 2023" //
+const LastAltered = "15 July 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -66,6 +70,7 @@ var autoWidth, autoHeight int
 var err error
 var verifyFlag bool
 var officePath = "c:/Program Files/Microsoft Office/root/Office16;"
+var globString string
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s.\n", os.Args[0], runtime.Version(), LastAltered)
@@ -78,7 +83,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ] [glob pattern]\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ].  Glob pattern is now set by the -g flag.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
@@ -86,10 +91,10 @@ func main() {
 	}
 
 	var revFlag bool
-	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
+	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first.") // Value
 
 	var sizeFlag bool
-	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
+	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date.")
 
 	var verboseFlag, veryVerboseFlag bool
 
@@ -108,10 +113,11 @@ func main() {
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
-	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
+	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation.")
 
 	var globFlag bool
-	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
+	flag.BoolVar(&globFlag, "G", false, "glob flag to use globbing on file matching.") // essentially ignored.
+	flag.StringVar(&globString, "g", "", "Use this glob string pattern instead of the defaults.")
 
 	flag.Parse()
 
@@ -167,81 +173,55 @@ func main() {
 		if cmdStr == "." {
 			cmdStr = "" // this is for windows and executable extensions.
 			globStr = "*"
+			if globString != "" {
+				globStr = globString
+			}
 		} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
 			cmdStr = "excel"
 			globStr = "*.xls*"
+			if globString != "" {
+				globStr = globString
+			}
 		} else if strings.ToLower(cmdStr) == "w" {
 			cmdStr = "winword"
 			globStr = "*.doc*"
+			if globString != "" {
+				globStr = globString
+			}
 		} else if strings.ToLower(cmdStr) == "p" {
 			cmdStr = "powerpnt"
 			globStr = "*.ppt*"
+			if globString != "" {
+				globStr = globString
+			}
 		} else if strings.ToLower(cmdStr) == "a" {
 			cmdStr = "msaccess"
 			globStr = "*.mdb"
+			if globString != "" {
+				globStr = globString
+			}
 		} else if strings.ToLower(cmdStr) == "l" {
 			cmdStr = "libreoffice"
 			globStr = "*"
-		} else {
-			if runtime.GOOS == "windows" {
-				cmdStr = ""
-			} else {
-				cmdStr = "libreoffice"
-				globStr = "*"
+			if globString != "" {
+				globStr = globString
 			}
-			list.DelListFlag = true
-			//fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
-			//os.Exit(1)
-		}
-		if list.DelListFlag {
-			fileList, err = list.GetFileInfoXFromCommandLine(excludeRegex)
 		} else {
-			fileList, err = list.SkipFirstNewList() // only call this one if there's a command entered as first param.
+			fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag.  Try again.\n")
+			os.Exit(1)
 		}
+		fileList, err = list.NewFromGlob(globStr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from list.GetFileInfoXFromCommandLine or SkipFirstNewList is %s\n", err)
 			os.Exit(1)
 		}
-	} else {
-		cmdStr = flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
-		if cmdStr == "." {
-			cmdStr = "" // this is for windows and executable extensions.
-		} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
-			cmdStr = "excel"
-		} else if strings.ToLower(cmdStr) == "w" {
-			cmdStr = "winword"
-		} else if strings.ToLower(cmdStr) == "p" {
-			cmdStr = "powerpnt"
-		} else if strings.ToLower(cmdStr) == "a" {
-			cmdStr = "msaccess"
-		} else if strings.ToLower(cmdStr) == "l" {
-			cmdStr = "libreoffice"
-		} else {
-			if runtime.GOOS == "windows" {
-				cmdStr = ""
-			} else {
-				cmdStr = "libreoffice"
-				globStr = "*"
-			}
-			list.DelListFlag = true
-			//fmt.Printf(" First param is not .|xl|x|w|p|a|l, so looks like you forgot it.  Try again.\n")
-			//os.Exit(1) // here would be a good place to call getInfoXFromCommandLine.  I'm thinking about this more to see if it would work on linux, too.
-			// On linux, I could set the DelListFlag so it collects all filenames populated by bash.
-			// Maybe the DelListFlag could work as a flag to mean either call getInfoXFromCommandLine or SkipFirstNewList.  Or do I need another flag?  I'm thinking.
-		}
-		if list.DelListFlag {
-			fileList, err = list.GetFileInfoXFromCommandLine(excludeRegex)
-		} else {
-			fileList, err = list.SkipFirstNewList() // only call this one if there's a command entered as first param.
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from either SkipFirstNewList or GetFileInfoXFromCommandLine is %s\n", err)
-			os.Exit(1)
-		}
+	} else { // Since I'm not allowing globbing on the command line, bash won't screw me up.  This is why I'm not allowing globbing on the command line.
+		fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag.  Try again.\n")
+		os.Exit(1)
 	}
 
 	if verboseFlag {
-		fmt.Printf("\n cmdStr = %q, globStr = %q, len(fileList) = %d\n", cmdStr, globStr, len(fileList))
+		fmt.Printf("\n cmdStr=%q, globStr=%q, globString=%q, len(fileList) = %d\n", cmdStr, globStr, globString, len(fileList))
 	}
 
 	if veryVerboseFlag {
