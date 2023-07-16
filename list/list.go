@@ -49,6 +49,7 @@ import (
    8 Jul 23 -- In _windows part, I changed how the first param is tested for being a directory.
   12 Jul 23 -- Globbing isn't working.  Nevermind, I forgot about first param must be a dot if I'm going to use globbing.
   14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine.
+  16 Jul 23 -- I'm thinking about adding GetFileInfoXFromRegexp.  And I'll need the corresponding rex flag for it.  And I'll need NewFromRex.
 */
 
 type DirAliasMapType map[string]string
@@ -312,6 +313,69 @@ func NewFromGlob(globExpr string) ([]FileInfoExType, error) {
 
 	return fileInfoX, nil
 } // end NewFromGlob
+
+func NewFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // remember that the caller must call regexp.Compile
+	var err error
+
+	sizeSort := SizeFlag   // passed globally
+	reverse := ReverseFlag // passed globally
+
+	if FilterFlag {
+		filterAmt = 1_000_000
+	}
+	if VeryVerboseFlag {
+		VerboseFlag = true
+	}
+
+	fileInfoX, err = FileInfoXFromRegexp(rex)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromCommandLine is %s.\n", err)
+		return nil, err
+	}
+	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
+
+	// set which sort function will be in the sortfcn var
+	forward := !(reverse || ReverseFlag)
+	dateSort := !sizeSort
+	sortFcn := func(i, j int) bool { return false }
+	if sizeSort && forward { // set the value of sortFcn so only a single line is needed to execute the sort.
+		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+			return fileInfoX[i].FI.Size() > fileInfoX[j].FI.Size() // I want a largest first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = largest size.")
+		}
+	} else if dateSort && forward {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//       return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
+			return fileInfoX[i].FI.ModTime().After(fileInfoX[j].FI.ModTime()) // I want a newest-first sort.
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = newest date.")
+		}
+	} else if sizeSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			return fileInfoX[i].FI.Size() < fileInfoX[j].FI.Size() // I want a smallest-first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = smallest size.")
+		}
+	} else if dateSort && reverse {
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
+			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
+			return fileInfoX[i].FI.ModTime().Before(fileInfoX[j].FI.ModTime()) // I want an oldest-first sort
+		}
+		if VerboseFlag {
+			fmt.Println("sortfcn = oldest date.")
+		}
+	}
+
+	if len(fileInfoX) > 1 {
+		sort.Slice(fileInfoX, sortFcn) // sort functions became available as of Go 1.8
+	}
+
+	return fileInfoX, nil
+} // end NewFromRex
 
 // ------------------------------- MyReadDir -----------------------------------
 
@@ -722,6 +786,8 @@ func CheckDest() string {
 	return d
 }
 
+// ----------------------------------------------------------------------------------------------------
+
 // FileInfoXFromGlob behaves the same on linux and Windows, so it's here and not in platform specific code file.
 func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.ExcludeRex
 	var fileInfoX []FileInfoExType
@@ -838,3 +904,43 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 	return fileInfoX, nil
 
 } // end FileInfoXFromGlob
+
+func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses list.ExcludeRex, and can only be used on the current directory.
+	var fileInfoX []FileInfoExType
+	excludeMe := ExcludeRex
+
+	if VerboseFlag {
+		if rex != nil {
+			fmt.Printf(" file regex is %s\n", rex.String())
+		} else {
+			fmt.Printf(" regexp is nil.\n")
+		}
+	}
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	fileInfoX, err = MyReadDir(workingDir, excludeMe)
+	if err != nil {
+		return nil, err
+	}
+
+	if rex == nil {
+		return fileInfoX, nil
+	}
+
+	fileInfoX2 := make([]FileInfoExType, 0, len(fileInfoX))
+	for _, f := range fileInfoX { // The exclude expression has already been processed.  Now I have to process the include regexp.
+
+		lower := strings.ToLower(f.RelPath)
+		match := rex.MatchString(lower)
+
+		if includeThis(f.FI, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
+			fileInfoX2 = append(fileInfoX2, f)
+		}
+	} // for f ranges over filenames
+
+	return fileInfoX2, nil
+
+} // end FileInfoXFromRegexp
