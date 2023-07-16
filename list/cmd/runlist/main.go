@@ -62,7 +62,7 @@ import (
                  On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
 */
 
-const LastAltered = "15 July 2023" //
+const LastAltered = "16 July 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -169,7 +169,11 @@ func main() {
 		} else {
 			cmdStr = "libreoffice"
 		}
-		fileList, err = list.NewFromGlob("*")
+		globStr = "*"
+		if globString != "" {
+			globStr = globString
+		}
+		fileList, err = list.NewFromGlob(globStr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
 			os.Exit(1)
