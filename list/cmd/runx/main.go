@@ -256,7 +256,7 @@ func main() {
 		if regex == nil {
 			fmt.Printf(" regex is nil.\n")
 		} else {
-			fmt.Printf(" regex is %s.\n", regex.String())
+			fmt.Printf(" regex is %s.\n\n", regex.String())
 		}
 	}
 
