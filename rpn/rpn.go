@@ -7,8 +7,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/dimiro1/banner"
 	"github.com/mattn/go-colorable"
+	"src/tknptr"
 
 	//	"io/ioutil"
 	"os"
@@ -65,9 +68,11 @@ REVISION HISTORY
 29 Nov 22 -- Starting the addition of banner text.  But I leave for Aruba in 2 days so this may take a while.
 24 Jun 23 -- Won't close the map file from here.  Can only be closed from hpcalc2 and will only be closed after the file is changed in some way.
                I've changed comments here.  And I changed hpcalc2, so I have to recompile.
+ 8 Jul 23 -- I coded a simpler TokenReal(), to replace GETTKNREAL().  I'm testing it here in production.  The rtn already passed in tknptr_test.go, and is already in rpn2.
+16 Jul 23 -- Added modification of tknptr to the about cmd.
 */
 
-const LastCompiled = "24 June 2023"
+const LastCompiled = "July 16, 2023"
 
 var suppressDump map[string]bool
 
@@ -149,6 +154,7 @@ func main() {
 
 	bannerIsEnabled := true
 	bannerIsColorEnabled := true
+	windowsFlag := runtime.GOOS == "windows"
 	for len(INBUF) > 0 { // main reading loop
 		R, stringslice = hpcalc.GetResult(INBUF)
 		ans = strconv.FormatFloat(R, 'g', -1, 64)
@@ -164,8 +170,10 @@ func main() {
 		}
 
 		if strings.ToLower(INBUF) == "about" {
-			fmt.Println(" Last compiled rpn.go ", LastCompiled)
-			fmt.Printf(" %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execName)
+			ctfmt.Printf(ct.Cyan, windowsFlag, " tknptr last altered %s\n", tknptr.LastAltered)
+			ctfmt.Println(ct.Cyan, windowsFlag, " Last changed rpn.go ", LastCompiled)
+			ctfmt.Printf(ct.Cyan, windowsFlag, " %s timestamp is %s.  Full exec name is %s.\n", ExecFI.Name(), ExecTimeStamp, execName)
+			//fmt.Println(" Last compiled rpn.go ", LastCompiled)
 			allowDumpFlag = false
 		}
 
