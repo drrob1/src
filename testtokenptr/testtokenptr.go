@@ -12,7 +12,7 @@ import (
 	"src/tknptr" // converted to their module system June 6, 2021.
 )
 
-const LastAltered = "12 Jun 2021"
+const LastAltered = "19 July 2023"
 
 /*
 REVISION HISTORY
@@ -27,6 +27,8 @@ REVISION HISTORY
  6 Jun 21 -- Testing GetTokenSlice
 12 Jun 21 -- Testing TokenSlice and TokenRealSlice
  7 Jul 23 -- Testing TokenReal, and making sure I didn't break anything.  But I may not finish this today.
+19 Jul 23 -- Didn't do it until today.  I debugged the TokenReal() routine using unit table driven testing.  It's not working here correctly w/ neg numbers. To be continued.
+               The unit table based tests worked.  And the code is working in rpn and rpn2.  So something is wrong here.
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
@@ -35,6 +37,7 @@ func main() {
 	//	commandline := getcommandline.GetCommandLineString()
 	//	commandline = strings.ToUpper(commandline)
 	var floatflag = flag.Bool("f", false, "call GetTknReal")  // pointer syntax
+	var realFlag = flag.Bool("r", false, "call TokenReal")    // pointer syntax
 	var noopflag = flag.Bool("noop", false, "Set No OpCodes") // pointer syntax
 	var strflag = flag.Bool("s", false, "Call GetTknStr")     // pointer syntax
 	var Strflag bool
@@ -51,10 +54,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	// testingstate = 0: gettkn, 1: gettknreal, 2: gettknstr, 3: gettkneol, 4: string lower case, 5: token lower case
+	// testingstate = 0: gettkn, 1: gettknreal, 2: gettknstr, 3: gettkneol, 4: string lower case, 5: token lower case, 6: tokenreal
 	testingstate := 0
 	if *floatflag {
 		testingstate = 1
+	} else if *realFlag {
+		testingstate = 6
 	} else if *lowerflag && (*strflag || Strflag) {
 		testingstate = 4
 	} else if *strflag || Strflag {
@@ -68,6 +73,8 @@ func main() {
 	fmt.Print(" Test Token Ptr last altered ", LastAltered)
 	fmt.Print(",  floatflag is ", *floatflag, ", testingstate is ", testingstate, ", mapflag is ", *mapflag)
 	fmt.Println()
+	// var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
+	fmt.Printf(" FSAnameType = [...]string{DELIM, OP, DGT, ALLELSE}\n")
 
 	scanner := bufio.NewScanner(os.Stdin)
 	inputline := ""
@@ -90,7 +97,7 @@ func main() {
 			log.Println(" Test Token finished.")
 			os.Exit(0)
 		}
-		tokenbuffer := tknptr.NewToken(inputline)
+		tokenbuffer := tknptr.New(inputline)
 		if *mapflag || *noopflag {
 			tokenbuffer.SetMapDelim('#')
 			tokenbuffer.SetMapDelim('*')
@@ -104,15 +111,28 @@ func main() {
 			tokenbuffer.SetMapDelim('^')
 			*mapflag = false
 		}
+		//fmt.Printf(" After tokenbuffer is initialized.")
 
 		tknslice := tknptr.TokenSlice(inputline)
-		fmt.Println(" token slice is", tknslice)
+		fmt.Printf(" Length of token slice is %d, tknslice=%+v\n", len(tknslice), tknslice)
 		fmt.Println()
 
 		realtknslice := tknptr.RealTokenSlice(inputline)
-		fmt.Println(" real token slice is", realtknslice)
+		fmt.Printf(" old real token slice length=%d, slice itself is: %+v\n", len(realtknslice), realtknslice)
+		for _, t := range realtknslice {
+			fmt.Printf(" tknreal str=%q, fullstr=%q, state=%s, delimCH=%q, delimState=%q, iSum=%d, rSum=%g, realFlag=%t, hexflag=%t\n",
+				t.Str, t.FullString, FSAname(t.State), t.DelimCH, FSAname(t.DelimState), t.Isum, t.Rsum, t.RealFlag, t.HexFlag)
+		}
+		fmt.Println()
+		tknrealslice := tknptr.TokenRealSlice(inputline)
+		fmt.Printf(" Now testing the new TokenReal, len=%d, and the slice is: %+v\n", len(tknrealslice), tknrealslice)
+		for _, t := range tknrealslice {
+			fmt.Printf(" tknreal str=%q, fullstr=%q, state=%s, delimCH=%q, delimState=%q, iSum=%d, rSum=%g, realFlag=%t, hexflag=%t\n",
+				t.Str, t.FullString, FSAname(t.State), t.DelimCH, FSAname(t.DelimState), t.Isum, t.Rsum, t.RealFlag, t.HexFlag)
+		}
 		fmt.Println()
 		fmt.Println()
+		// There's a bug here when multiple tokens are on the same line.  This is not the case so far w/ rpn tests.  The letter 'e' is not changed back to ALLELSE as it needs to be.
 
 		EOL := false
 		token := tknptr.TokenType{}
@@ -127,6 +147,8 @@ func main() {
 				token, EOL = tokenbuffer.GetTokenString(false)
 			} else if testingstate == 5 {
 				token, EOL = tokenbuffer.GetToken(false)
+			} else if testingstate == 6 {
+				token, EOL = tokenbuffer.TokenReal()
 			} else { // testingstate .EQ. 0
 				token, EOL = tokenbuffer.GETTKN()
 			}
@@ -155,6 +177,12 @@ func main() {
 		log.Println(" Finished processing the inputline.")
 		fmt.Println()
 	}
+}
+
+func FSAname(i int) string {
+
+	var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
+	return fsaNameType[i]
 }
 
 /*  from the web documentation at golang.org

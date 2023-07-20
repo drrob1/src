@@ -74,9 +74,10 @@ REVISION HISTORY
  4 Jul 23 -- I'm adding a much simpler way to get a real token, TokenReal.  This is going to take a while because I'm also listening to Derek Parker's 8 days of debugging.
               And I added '_' following 'E' or 'e' is replaced by '-' before conversion to float.
  9 Jul 23 -- Now to fix hex input, by adding a field to TokenType.
+19 Jul 23 -- Added TokenRealSlice, which uses the new TokenReal(), instead of the old GETTKNREAL()
 */
 
-const LastAltered = "9 July 2023"
+const LastAltered = "19 July 2023"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -988,7 +989,7 @@ func TokenSlice(str string) []TokenType {
 	return tknslice
 }
 
-//                                   RealTokenSlice
+//                                 Old RealTokenSlice
 
 func RealTokenSlice(str string) []TokenType {
 	if str == "" {
@@ -999,6 +1000,25 @@ func RealTokenSlice(str string) []TokenType {
 
 	for {
 		tknreal, eol := bufstate.GETTKNREAL()
+		if eol {
+			break
+		}
+		realtknslice = append(realtknslice, tknreal)
+	}
+	return realtknslice
+}
+
+// -------------------------- TokenRealSlice ------------------------------
+
+func TokenRealSlice(str string) []TokenType { // This uses the new TokenReal instead of the old GETTKNREAL.
+	if str == "" {
+		return nil
+	}
+	bufstate := NewToken(str)
+	realtknslice := make([]TokenType, 0, 10)
+
+	for {
+		tknreal, eol := bufstate.TokenReal()
 		if eol {
 			break
 		}
