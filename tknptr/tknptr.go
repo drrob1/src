@@ -77,7 +77,7 @@ REVISION HISTORY
 19 Jul 23 -- Added TokenRealSlice, which uses the new TokenReal(), instead of the old GETTKNREAL()
 */
 
-const LastAltered = "19 July 2023"
+const LastAltered = "20 July 2023"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -130,6 +130,8 @@ const DQUOTE = '"'    // 34
 const NullChar = 0
 const EXPSIGN = '^'
 const PERCNT = '%'
+
+var allowReal bool // used by TokenReal
 
 // These variables are declared here to make the variable global so to maintain their values btwn calls.
 
@@ -228,6 +230,7 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 
 // ----------------------------------------- NewToken ----------------------------------------
 
+/*
 func NewToken(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
@@ -241,7 +244,7 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
 	return bs
 } // NewToken, copied from INITKN
-
+*/
 // ----------------------------------------- New ----------------------------------------
 
 func New(Str string) *BufferState { // constructor, initializer
@@ -302,7 +305,7 @@ func (bs *BufferState) PeekChr() (CharType, bool) {
 	EOL = false
 	if bs.CURPOSN >= len(bs.lineByteSlice) {
 		EOL = true
-		C = CharType{} // This zeros the CharType C by assigning an empty CharType constant literal.
+		//C = CharType{} // This zeros the CharType C by assigning an empty CharType constant literal.  Not necessary, as the var declaration does the same thing.
 		return C, EOL
 	}
 	C.Ch = bs.lineByteSlice[bs.CURPOSN] //  no longer use the Cap function here.
@@ -481,6 +484,10 @@ ExitForLoop:
 				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
 				TOKEN.State = DGT
 				TOKEN.Isum = int(CHAR.Ch) - Dgt0
+				if allowReal {
+					bs.StateMap['E'] = DGT
+					bs.StateMap['e'] = DGT
+				}
 			case ALLELSE: // Delim -> AllElse means this is first char of this alphanumeric token.
 				TOKEN.State = ALLELSE
 				QUOFLG = (CHAR.Ch == SQUOTE) || (CHAR.Ch == DQUOTE)
@@ -615,7 +622,14 @@ ExitForLoop:
 	}
 	if TOKEN.State == DGT {
 		bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-		bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
+		bs.StateMap['-'] = OP      // make sure the minus sign is back to the type it's supposed to be.
+		bs.StateMap['H'] = ALLELSE
+		bs.StateMap['E'] = ALLELSE
+		bs.StateMap['X'] = ALLELSE
+		bs.StateMap['h'] = ALLELSE
+		bs.StateMap['e'] = ALLELSE
+		bs.StateMap['x'] = ALLELSE
+		bs.StateMap['.'] = ALLELSE
 		TOKEN.FullString = TOKEN.Str
 		if NEGATV {
 			TOKEN.Isum = -TOKEN.Isum
@@ -687,10 +701,10 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 	var EOL bool
 	var err error
 
-	bs.StateMap['.'] = DGT // \   I'm hoping to make this routine much less complex
-	bs.StateMap['E'] = DGT //  \  by making these characters all of DGT type so this rtn can more easily return a real token.
-	bs.StateMap['e'] = DGT // /   IE, float64 token.
+	// I'm hoping to make this routine much less complex, by changing the state of a few characters.
+	bs.StateMap['.'] = DGT
 	bs.StateMap['_'] = DGT
+	allowReal = true
 
 	token, EOL = bs.GETTKN()
 	if EOL && token.State != DELIM {
@@ -709,12 +723,15 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 			token.Rsum = float64(token.Isum)
 		}
 	}
-	bs.StateMap['.'] = ALLELSE
+	bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+	bs.StateMap['-'] = OP      // make sure the minus sign is back to the type it's supposed to be.
+	bs.StateMap['H'] = ALLELSE
 	bs.StateMap['E'] = ALLELSE
+	bs.StateMap['X'] = ALLELSE
+	bs.StateMap['h'] = ALLELSE
 	bs.StateMap['e'] = ALLELSE
-	bs.StateMap['_'] = ALLELSE
-	bs.StateMap['-'] = ALLELSE // make sure the minus sign is back to the type it's supposed to be.
-
+	bs.StateMap['x'] = ALLELSE
+	bs.StateMap['.'] = ALLELSE
 	return token, EOL
 
 } // TokenReal
@@ -976,7 +993,7 @@ func TokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
 	}
-	bs := NewToken(str)                   // bs is a buffer state
+	bs := New(str)                        // bs is a buffer state
 	tknslice := make([]TokenType, 0, 100) // arbitrary limit, ie, a magic number as per Rob Pike.
 
 	for {
@@ -995,7 +1012,7 @@ func RealTokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
 	}
-	bufstate := NewToken(str)
+	bufstate := New(str)
 	realtknslice := make([]TokenType, 0, 100)
 
 	for {
@@ -1014,17 +1031,17 @@ func TokenRealSlice(str string) []TokenType { // This uses the new TokenReal ins
 	if str == "" {
 		return nil
 	}
-	bufstate := NewToken(str)
-	realtknslice := make([]TokenType, 0, 10)
+	bufState := New(str)
+	realTknSlice := make([]TokenType, 0, 10)
 
 	for {
-		tknreal, eol := bufstate.TokenReal()
+		tknreal, eol := bufState.TokenReal()
 		if eol {
 			break
 		}
-		realtknslice = append(realtknslice, tknreal)
+		realTknSlice = append(realTknSlice, tknreal)
 	}
-	return realtknslice
+	return realTknSlice
 }
 
 // end tknptr

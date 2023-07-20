@@ -769,7 +769,7 @@ func GetResult(s string) (float64, []string) {
 	var R float64
 	var stringslice []string
 
-	tokenPointer := tknptr.NewToken(s) // Using the Go idiom, instead of INITKN(s)
+	tokenPointer := tknptr.New(s) // Using the Go idiom, instead of INITKN(s)
 	for {
 		//token, EOL = tokenPointer.GETTKNREAL()
 		token, EOL = tokenPointer.TokenReal() // here goes nothing
