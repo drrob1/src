@@ -9,6 +9,7 @@ import (
 
 /*
    7 July 23 -- I'm going to try and code another set of table based testing functions
+  20 July 23 -- Adjusted the test cases in the table because I changed the logic.  I want to keep '-' as an operator.  To enter neg exponent need '_'.
 */
 
 /*
@@ -122,7 +123,7 @@ var testRealStrings = []struct {
 		Rsum:       -314,
 		RealFlag:   true,
 	}},
-	{"8.623e-1", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
+	{"8.623e_1", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
 		Str:        "8.623E-1",
 		FullString: "8.623E-1",
 		State:      DGT,
@@ -132,7 +133,7 @@ var testRealStrings = []struct {
 		Rsum:       .8623,
 		RealFlag:   true,
 	}},
-	{"-23.456e-2", TokenType{
+	{"-23.456e_2", TokenType{
 		Str:        "23.456E-2",
 		FullString: "-23.456E-2",
 		State:      DGT,
@@ -152,7 +153,7 @@ var testRealStrings = []struct {
 		Rsum:       -.23456,
 		RealFlag:   true,
 	}},
-	{"8.623e-10", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
+	{"8.623e_10", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
 		Str:        "8.623E-10",
 		FullString: "8.623E-10",
 		State:      DGT,
@@ -162,7 +163,7 @@ var testRealStrings = []struct {
 		Rsum:       8.623e-10,
 		RealFlag:   true,
 	}},
-	{"8.623e-01", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
+	{"8.623e_01", TokenType{ // neg exponent is an issue.  Fixed by allowing '-' to follow 'E' or 'e', and also '_' substituted for '-' before conversion to float64.
 		Str:        "8.623E-01",
 		FullString: "8.623E-01",
 		State:      DGT,

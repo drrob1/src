@@ -134,9 +134,10 @@ REVISION HISTORY
                I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
  8 Jul 23 -- I'm testing the new TokenReal(), here in production.  Looks to be working.  I won't recompile the others just yet.  I'll try to shift into using rpn2 for a while.
  9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
+20 Jul 23 -- Ammended help text to show that to enter a negative exponent, must use '_' char.
 */
 
-const LastAlteredDate = "9 July 2023"
+const LastAlteredDate = "20 July 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -879,6 +880,7 @@ outerloop:
 			STACKDN()
 			STACKDN()
 		case 120: // HELP, H or ?
+			ss = append(ss, " To enter a negative exponent, only '_' is allowed, which will be substituted for '-' before conversion to float64.")
 			ss = append(ss, " SQRT,SQR -- X = sqrt(X) or sqr(X) register.")
 			ss = append(ss, " CURT,CBRT -- X = cuberoot(X).")
 			ss = append(ss, " RECIP -- X = 1/X.")
