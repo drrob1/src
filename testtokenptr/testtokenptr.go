@@ -30,6 +30,7 @@ REVISION HISTORY
 19 Jul 23 -- Didn't do it until today.  I debugged the TokenReal() routine using unit table driven testing.  It's not working here correctly w/ neg numbers. To be continued.
                The unit table based tests worked.  And the code is working in rpn and rpn2.  So something is wrong here.
 20 Jul 23 -- All seems to be working now.  I changed how negative exponents are entered.  I almost never do this so it doesn't really matter much.
+               Of note, entering negative exponents is different btwn TokenReal() and GETTKNREAL().  The old GETTKNREAL() doesn't treat '_' as a negation operator.
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
