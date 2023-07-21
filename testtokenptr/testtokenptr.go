@@ -135,8 +135,8 @@ func main() {
 		fmt.Println()
 		// There's a bug here when multiple tokens are on the same line.  This is not the case so far w/ rpn tests.  The letter 'e' is not changed back to ALLELSE as it needs to be.gg
 
-		EOL := false
-		token := tknptr.TokenType{}
+		var EOL bool
+		var token tknptr.TokenType
 		for !EOL {
 			if *floatflag || testingstate == 1 {
 				token, EOL = tokenbuffer.GETTKNREAL()
