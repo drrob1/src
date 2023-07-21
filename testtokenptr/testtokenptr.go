@@ -29,13 +29,14 @@ REVISION HISTORY
  7 Jul 23 -- Testing TokenReal, and making sure I didn't break anything.  But I may not finish this today.
 19 Jul 23 -- Didn't do it until today.  I debugged the TokenReal() routine using unit table driven testing.  It's not working here correctly w/ neg numbers. To be continued.
                The unit table based tests worked.  And the code is working in rpn and rpn2.  So something is wrong here.
+20 Jul 23 -- All seems to be working now.  I changed how negative exponents are entered.  I almost never do this so it doesn't really matter much.
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
 
 func main() {
-	//	commandline := getcommandline.GetCommandLineString()
-	//	commandline = strings.ToUpper(commandline)
+	//	                                                            commandline := getcommandline.GetCommandLineString()
+	// 																commandline = strings.ToUpper(commandline)
 	var floatflag = flag.Bool("f", false, "call GetTknReal")  // pointer syntax
 	var realFlag = flag.Bool("r", false, "call TokenReal")    // pointer syntax
 	var noopflag = flag.Bool("noop", false, "Set No OpCodes") // pointer syntax
@@ -132,7 +133,7 @@ func main() {
 		}
 		fmt.Println()
 		fmt.Println()
-		// There's a bug here when multiple tokens are on the same line.  This is not the case so far w/ rpn tests.  The letter 'e' is not changed back to ALLELSE as it needs to be.
+		// There's a bug here when multiple tokens are on the same line.  This is not the case so far w/ rpn tests.  The letter 'e' is not changed back to ALLELSE as it needs to be.gg
 
 		EOL := false
 		token := tknptr.TokenType{}
