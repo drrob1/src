@@ -95,7 +95,7 @@ type TokenType struct {
 	DelimState int
 	Isum       int
 	Rsum       float64
-	RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.  And to use strconv.ParseFloat for the conversion.
+	RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.
 	HexFlag    bool // only way I know of to signal that the input string is a hex format.
 } // TokenType record
 
