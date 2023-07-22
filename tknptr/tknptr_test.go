@@ -42,6 +42,16 @@ var testRealStrings = []struct {
 		Rsum:       0,
 		RealFlag:   false,
 	}},
+	{"-", TokenType{
+		Str:        "-",
+		FullString: "-",
+		State:      OP,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       8,
+		Rsum:       0,
+		RealFlag:   false,
+	}},
 	{"567", TokenType{
 		Str:        "567",
 		FullString: "567",
@@ -193,6 +203,51 @@ var testRealStrings = []struct {
 		Rsum:       16,
 		RealFlag:   false,
 	}},
+	{".5", TokenType{
+		Str:        ".5",
+		FullString: ".5",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       0,
+		Rsum:       0.5,
+		RealFlag:   true,
+	}},
+	{"-.5", TokenType{
+		Str:        ".5",
+		FullString: "-.5",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       0,
+		Rsum:       -0.5,
+		RealFlag:   true,
+	}},
+	{"0.5", TokenType{
+		Str:        "0.5",
+		FullString: "0.5",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       0,
+		Rsum:       0.5,
+		RealFlag:   true,
+	}},
+	{"-0.5", TokenType{
+		Str:        "0.5",
+		FullString: "-0.5",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       0,
+		Rsum:       -0.5,
+		RealFlag:   true,
+	}},
+}
+
+func FSAname(i int) string {
+	var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
+	return fsaNameType[i]
 }
 
 func TestMain(m *testing.M) { // this example is in the docs of the testing package, that I was referred to by the golang nuts google group.
@@ -210,8 +265,8 @@ func TestTokenReal(t *testing.T) { // test ALLELSE FIX keyword, OP of +, and the
 
 		fmt.Printf(" InputString = %q, token is %+v\n", tkn.inputString, token)
 		if tkn.outputToken.State != token.State || token.Str != tkn.outputToken.Str || tkn.outputToken.FullString != token.FullString || tkn.outputToken.RealFlag != token.RealFlag {
-			t.Errorf(" Error: inputString is %q, token.Str is %q, token.FullString = %q, Isum = %d, Rsum=%g\n", tkn.inputString, token.Str, token.FullString,
-				token.Isum, token.Rsum)
+			t.Errorf(" Error: inputString is %q, token.Str is %q, token.FullString = %q, token.State = %s, Rsum=%g\n", tkn.inputString, token.Str, token.FullString,
+				FSAname(token.State), token.Rsum)
 		}
 
 		token, EOL = bs.TokenReal()

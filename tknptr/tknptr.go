@@ -78,7 +78,7 @@ REVISION HISTORY
                so I want to preserve the use of '-' as an operator.  Underscore, '_', is replaced w/ '-' just before call to strconv.ParseFloat().
 */
 
-const LastAltered = "20 July 2023"
+const LastAltered = "22 July 2023"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -230,7 +230,6 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 } // INITKN
 
 // ----------------------------------------- NewToken ----------------------------------------
-
 /*
 func NewToken(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
@@ -246,6 +245,7 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 	return bs
 } // NewToken, copied from INITKN
 */
+
 // ----------------------------------------- New ----------------------------------------
 
 func New(Str string) *BufferState { // constructor, initializer
@@ -484,7 +484,6 @@ ExitForLoop:
 			case DGT: // Delim -> DGT means this is the 1st dgt for the entered number.
 				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
 				TOKEN.State = DGT
-				TOKEN.Isum = int(CHAR.Ch) - Dgt0
 				//bs.StateMap['X'] = DGT
 				//bs.StateMap['x'] = DGT
 				//bs.StateMap['H'] = DGT
@@ -493,6 +492,11 @@ ExitForLoop:
 					bs.StateMap['E'] = DGT
 					bs.StateMap['e'] = DGT
 				}
+				if !unicode.IsDigit(rune(CHAR.Ch)) {
+					TOKEN.RealFlag = true
+					continue
+				}
+				TOKEN.Isum = int(CHAR.Ch) - Dgt0
 			case ALLELSE: // Delim -> AllElse means this is first char of this alphanumeric token.
 				TOKEN.State = ALLELSE
 				QUOFLG = (CHAR.Ch == SQUOTE) || (CHAR.Ch == DQUOTE)
@@ -532,6 +536,10 @@ ExitForLoop:
 						if wantReal {
 							bs.StateMap['E'] = DGT
 							bs.StateMap['e'] = DGT
+						}
+						if !unicode.IsDigit(rune(CHAR.Ch)) {
+							TOKEN.RealFlag = true
+							continue
 						}
 						TOKEN.Isum = int(CHAR.Ch) - Dgt0
 					} else { // TOKEN length > 1 so must first return valid OP
