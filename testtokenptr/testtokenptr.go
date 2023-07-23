@@ -31,6 +31,11 @@ REVISION HISTORY
                The unit table based tests worked.  And the code is working in rpn and rpn2.  So something is wrong here.
 20 Jul 23 -- All seems to be working now.  I changed how negative exponents are entered.  I almost never do this so it doesn't really matter much.
                Of note, entering negative exponents is different btwn TokenReal() and GETTKNREAL().  The old GETTKNREAL() doesn't treat '_' as a negation operator.
+23 Jul 23 -- The code in tknptr.go is now working as designed, as tested w/ tknptr_test.go and testtokenptr.go.
+               The old GETTKNREAL works by using GetToken() to determine the state of the next token.  If it's not a number, that result is returned.  If it's a number, ungettoken is called
+               and a real number token is parsed from scratch.  That repeats much of the finite state logic.
+               The new TokenReal() works by changing the StateMap for some characters and then using a slightly modified GetToken to get a real number (float64).  This makes the code
+               much simpler; the only use of the finite state automaton is in GetToken().
 */
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};

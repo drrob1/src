@@ -245,7 +245,7 @@ var testRealStrings = []struct {
 	}},
 }
 
-func FSAname(i int) string {
+func FSAname(i int) string { // no param checking is done.  This code will panic if the int param is out of bounds, ie, not in the correct range of 0..3
 	var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
 	return fsaNameType[i]
 }

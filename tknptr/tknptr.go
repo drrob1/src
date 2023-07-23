@@ -76,6 +76,12 @@ REVISION HISTORY
  9 Jul 23 -- Now to fix hex input, by adding a field to TokenType.
 19 Jul 23 -- Added TokenRealSlice, which uses the new TokenReal(), instead of the old GETTKNREAL().  And I decided to not allow '-' for negative exponents.  I very rarely use E notation
                so I want to preserve the use of '-' as an operator.  Underscore, '_', is replaced w/ '-' just before call to strconv.ParseFloat().
+23 Jul 23 -- The code is now working as designed, as tested w/ tknptr_test.go and testtokenptr.go.
+               The old GETTKNREAL works by using GetToken() to determine the state of the next token.  If it's not a number, that result is returned.  If it's a number, ungettoken is called
+               and a real number token is parsed from scratch.  That repeats much of the finite state logic.
+               The new TokenReal() works by changing the StateMap for some characters and then using a slightly modified GetToken to get a real number (float64).  This makes the code
+               much simpler; the only use of the finite state automaton is in GetToken().
+               And I also added 2 fields to TokenType, and added a signalling flag, wantReal.
 */
 
 const LastAltered = "22 July 2023"
