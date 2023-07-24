@@ -28,6 +28,7 @@ const (DELIM, OP, DGT, ALLELSE)
 	        HexFlag    bool  added 7/9/23
 		}
 */
+var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
 var testRealStrings = []struct {
 	inputString string
 	outputToken TokenType
@@ -245,10 +246,43 @@ var testRealStrings = []struct {
 		RealFlag:   true, // this flag affects how Isum is calculated, which is fine.
 		HexFlag:    true,
 	}},
+	{"0xA", TokenType{
+		Str:        "0A",
+		FullString: "0A",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       10,
+		Rsum:       10,
+		RealFlag:   true, // this flag affects how Isum is calculated, which is fine.
+		HexFlag:    true,
+	}},
+	{"0XA", TokenType{
+		Str:        "0A",
+		FullString: "0A",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       10,
+		Rsum:       10,
+		RealFlag:   true, // this flag affects how Isum is calculated, which is fine.
+		HexFlag:    true,
+	}},
+	{"0xf", TokenType{
+		Str:        "0F",
+		FullString: "0F",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       15,
+		Rsum:       15,
+		RealFlag:   true, // this flag affects how Isum is calculated, which is fine.
+		HexFlag:    true,
+	}},
 }
 
 func FSAname(i int) string { // no param checking is done.  This code will panic if the int param is out of bounds, ie, not in the correct range of 0..3
-	var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
+	//var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}  now made global
 	return fsaNameType[i]
 }
 
@@ -258,6 +292,9 @@ func TestMain(m *testing.M) { // this example is in the docs of the testing pack
 }
 
 func TestTokenReal(t *testing.T) { // test ALLELSE FIX keyword, OP of +, and then test the numbers.  DelimCH not important, DelimState not important
+
+	fmt.Printf(" FSA Names are %+v\n", fsaNameType)
+
 	for _, tkn := range testRealStrings {
 		bs := New(tkn.inputString)
 		token, EOL := bs.TokenReal()
