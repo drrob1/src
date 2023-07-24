@@ -301,14 +301,14 @@ func (bs *BufferState) RCLTKNPOSN() {
 // ---------------------------- PeekChr -------------------------------------------
 
 func (bs *BufferState) PeekChr() (CharType, bool) {
-	/*
-	   -- This is the GET CHARACTER ROUTINE.  Its purpose is to get the next
-	   -- character from inbuf, determine its fsatyp (finite state automata type),
-	   -- and return the upper case value of char.
-	   -- NOTE: the curposn pointer is used before it's incremented, unlike most of the
-	   -- other pointers in this program.
-	      As of 21 Sep 16, the CAP function was removed from here, and conditionally placed into GetToken.
-	*/
+
+	//-- This is the GET CHARACTER ROUTINE.  Its purpose is to get the next
+	//-- character from inbuf, determine its fsatyp (finite state automata type),
+	//-- and return the upper case value of char.
+	//-- NOTE: the curposn pointer is used before it's incremented, unlike most of the
+	//-- other pointers in this program.
+	//   As of 21 Sep 16, the CAP function was removed from here, and conditionally placed into GetToken.
+
 	var C CharType
 	var EOL bool
 	EOL = false
@@ -357,24 +357,24 @@ func (bs *BufferState) UNGETCHR() {
 // I am not coding this as a pointer receiver as it does not access its BufferState.
 
 func (bs *BufferState) GETOPCODE(Token TokenType) int {
-	/*
-	   -- GET OPCODE.
-	   -- This routine receives a token of FSATYP op (meaning it is an operator)
-	   -- and analyzes it to determine an opcode, which is a nUMBER from 1..22.
-	   -- This is done after the necessary validity check of the input token.
-	   -- The opcode assignments for the op tokens are:
-	   --  < is 1                  <= is 2
-	   --  > is 3                  >= is 4
-	   --  = is 5   == is 5        <> is 6    # is 7
-	   --  + is 8                  += is 9
-	   --  - is 10                 -= is 11
-	   --  * is 12                 *= is 13
-	   --  / is 14                 /= is 15
-	   --  ^ is 16                 ^= is 17
-	   -- ** is 18                **= is too long to be allowed
-	   -- >< is 20
-	   --  % is 22
-	*/
+
+	//-- GET OPCODE.
+	//-- This routine receives a token of FSATYP op (meaning it is an operator)
+	//-- and analyzes it to determine an opcode, which is a nUMBER from 1..22.
+	//-- This is done after the necessary validity check of the input token.
+	//-- The opcode assignments for the op tokens are:
+	//--  < is 1                  <= is 2
+	//--  > is 3                  >= is 4
+	//--  = is 5   == is 5        <> is 6    # is 7
+	//--  + is 8                  += is 9
+	//--  - is 10                 -= is 11
+	//--  * is 12                 *= is 13
+	//--  / is 14                 /= is 15
+	//--  ^ is 16                 ^= is 17
+	//-- ** is 18                **= is too long to be allowed
+	//-- >< is 20
+	//--  % is 22
+
 	var CH1, CH2 byte
 	OpCode := 0
 
@@ -667,8 +667,8 @@ ExitForLoop:
 		TOKEN.Str = strings.ReplaceAll(TOKEN.Str, "_", "-") // Note that '_' could mean '-' for exponents.
 	}
 	if TOKEN.State == DGT {
+		//bs.StateMap['-'] = OP      // make sure the minus sign is back to the type it's supposed to be.
 		bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-		bs.StateMap['-'] = OP      // make sure the minus sign is back to the type it's supposed to be.
 		bs.StateMap['E'] = ALLELSE
 		bs.StateMap['e'] = ALLELSE
 		bs.StateMap['.'] = ALLELSE
@@ -938,11 +938,9 @@ func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool
 		return // TOKEN,EOL;
 	}
 
-	/*
-	   Now must do special function of this proc.
-	   Continue building the string as left off from GetToken call.
-	   As of 6/95 this should always return a tknstate of allelse, so return.
-	*/
+	// Now must do special function of this proc.
+	// Continue building the string as left off from GetToken call.
+	// As of 6/95 this should always return a tknstate of allelse, so return.
 
 	tokenByteSlice := make([]byte, 0, 200)
 	copy(tokenByteSlice, TOKEN.Str)
