@@ -81,7 +81,7 @@ REVISION HISTORY
                and a real number token is parsed from scratch.  That repeats much of the finite state logic.
                The new TokenReal() works by changing the StateMap for some characters and then using a slightly modified GetToken to get a real number (float64).  This makes the code
                much simpler; the only use of the finite state automaton is in GetToken().
-               And I also added 2 fields to TokenType (FullString and RealFlag), and added a signaling flag, wantReal that TokenReal() uses to signal into GetToken().
+               And I also added 3 fields to TokenType (FullString, RealFlag and HexFlag), and added a signaling flag, wantReal that TokenReal() uses to signal into GetToken().
 */
 
 const LastAltered = "22 July 2023"
