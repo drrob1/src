@@ -10,6 +10,7 @@ import (
 /*
    7 July 23 -- I'm going to try and code another set of table based testing functions
   20 July 23 -- Adjusted the test cases in the table because I changed the logic.  I want to keep '-' as an operator.  To enter neg exponent need '_'.
+  24 July 23 -- Added test for hex input.
 */
 
 /*
@@ -183,16 +184,6 @@ var testRealStrings = []struct {
 		Rsum:       .8623,
 		RealFlag:   true,
 	}},
-	{"10h", TokenType{
-		Str:        "10",
-		FullString: "10",
-		State:      DGT,
-		DelimCH:    0,
-		DelimState: DELIM,
-		Isum:       16,
-		Rsum:       16,
-		RealFlag:   false,
-	}},
 	{"0x10", TokenType{
 		Str:        "010",
 		FullString: "010",
@@ -242,6 +233,17 @@ var testRealStrings = []struct {
 		Isum:       0,
 		Rsum:       -0.5,
 		RealFlag:   true,
+	}},
+	{"0xa", TokenType{
+		Str:        "0A",
+		FullString: "0A",
+		State:      DGT,
+		DelimCH:    0,
+		DelimState: DELIM,
+		Isum:       10,
+		Rsum:       10,
+		RealFlag:   true, // this flag affects how Isum is calculated, which is fine.
+		HexFlag:    true,
 	}},
 }
 

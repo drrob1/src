@@ -82,9 +82,10 @@ REVISION HISTORY
                The new TokenReal() works by changing the StateMap for some characters and then using a slightly modified GetToken to get a real number (float64).  This makes the code
                much simpler; the only use of the finite state automaton is in GetToken().
                And I also added 3 fields to TokenType (FullString, RealFlag and HexFlag), and added a signaling flag, wantReal that TokenReal() uses to signal into GetToken().
+24 Jul 23 -- Spoke too soon.  Hex input isn't working correctly.  Gotta fix that now.  And I removed 'h' to indicate hex.  Now only 0x will work, as used in C-ish.
 */
 
-const LastAltered = "22 July 2023"
+const LastAltered = "24 July 2023"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -210,7 +211,7 @@ func InitStateMap(bs *BufferState) {
 } // InitStateMap
 
 // ----------------------------------------- INITKN -------------------------------------------
-
+/*
 func INITKN(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN.
 	// The purpose of the initialize token routine is to initialize the
@@ -226,14 +227,15 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
 	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied, not just a pointer.
-	/*
-	   fmt.Println(" In IniTkn and Str is:",Str,", len of Str is: ",len(Str));
-	   fmt.Print(" In IniTkn and linebyteslice is '",bs.lineByteSlice);
-	   fmt.Println("', length of lineByteSlice is ",len(bs.lineByteSlice));
-	   fmt.Println(" In IniTkn and Str is '",Str,"', length= ",len(Str));
-	*/
+
+	   //fmt.Println(" In IniTkn and Str is:",Str,", len of Str is: ",len(Str));
+	   //fmt.Print(" In IniTkn and linebyteslice is '",bs.lineByteSlice);
+	   //fmt.Println("', length of lineByteSlice is ",len(bs.lineByteSlice));
+	   //fmt.Println(" In IniTkn and Str is '",Str,"', length= ",len(Str));
+
 	return bs
 } // INITKN
+*/
 
 // ----------------------------------------- NewToken ----------------------------------------
 /*
@@ -257,12 +259,12 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 func New(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
+	//bs := &BufferState{}
 	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
-	//bs = &BufferState{}
-	InitStateMap(bs) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
+	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
 	bs.lineByteSlice = []byte(Str)
-	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
+	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that the values are copied.
 	return bs
 } // New, copied from NewToken
 
@@ -567,14 +569,14 @@ ExitForLoop:
 		case DGT: // tokenstate
 			switch CHAR.State {
 			case DELIM:
-				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['.'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['H'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['E'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['X'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['h'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['e'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				bs.StateMap['x'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.  Redundant.
+				//bs.StateMap['.'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['H'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['E'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['X'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['h'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['e'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
+				//bs.StateMap['x'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 				break ExitForLoop
 			case OP: // DGT -> OP
 				bs.UNGETCHR()
@@ -599,8 +601,20 @@ ExitForLoop:
 				}
 				TOKEN.Isum = 10*TOKEN.Isum + int(CHAR.Ch) - Dgt0 // this total will not be correct when floating point chars, like dot and 'E' or 'e', are input.
 			case ALLELSE: // DGT -> AllElse
-				if rune(CHAR.Ch) == 'x' || rune(CHAR.Ch) == 'X' || rune(CHAR.Ch) == 'h' || rune(CHAR.Ch) == 'H' { // this logic isn't really correct, as it will allow 0h and terminating x to mean hex.
+				if rune(CHAR.Ch) == 'x' || rune(CHAR.Ch) == 'X' {
 					TOKEN.HexFlag = true
+					bs.StateMap['a'] = DGT
+					bs.StateMap['b'] = DGT
+					bs.StateMap['c'] = DGT
+					bs.StateMap['d'] = DGT
+					bs.StateMap['e'] = DGT
+					bs.StateMap['f'] = DGT
+					bs.StateMap['A'] = DGT
+					bs.StateMap['B'] = DGT
+					bs.StateMap['C'] = DGT
+					bs.StateMap['D'] = DGT
+					bs.StateMap['E'] = DGT
+					bs.StateMap['F'] = DGT
 					continue
 				}
 
@@ -618,12 +632,12 @@ ExitForLoop:
 			case DGT: // AllElse -> DGT means have alphanumeric token.
 				if len(tokenByteSlice) > TKNMAXSIZ {
 					log.SetFlags(log.Llongfile)
-					log.Println(" token too long in GetTkn AllElse to Digit branch.")
+					log.Println(" token too long in GetTkn AllELSE to Digit branch.")
 					os.Exit(1)
 				} // if token too long
 				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
 				TOKEN.Isum += int(CHAR.Ch)
-			case ALLELSE: // AllElse -> AllElse
+			case ALLELSE: // AllElse -> AllELSE
 				if rune(CHAR.Ch) == QUOCHR {
 					QUOFLG = false
 					CHAR.State = DELIM // So that DELIMSTATE will = delim
@@ -655,16 +669,24 @@ ExitForLoop:
 	if TOKEN.State == DGT {
 		bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 		bs.StateMap['-'] = OP      // make sure the minus sign is back to the type it's supposed to be.
-		bs.StateMap['H'] = ALLELSE
 		bs.StateMap['E'] = ALLELSE
-		bs.StateMap['X'] = ALLELSE
-		bs.StateMap['h'] = ALLELSE
 		bs.StateMap['e'] = ALLELSE
-		bs.StateMap['x'] = ALLELSE
 		bs.StateMap['.'] = ALLELSE
 		TOKEN.FullString = TOKEN.Str
 		if TOKEN.HexFlag {
 			TOKEN.Isum = FromHex(TOKEN.Str)
+			bs.StateMap['a'] = ALLELSE
+			bs.StateMap['b'] = ALLELSE
+			bs.StateMap['c'] = ALLELSE
+			bs.StateMap['d'] = ALLELSE
+			bs.StateMap['e'] = ALLELSE
+			bs.StateMap['f'] = ALLELSE
+			bs.StateMap['A'] = ALLELSE
+			bs.StateMap['B'] = ALLELSE
+			bs.StateMap['C'] = ALLELSE
+			bs.StateMap['D'] = ALLELSE
+			bs.StateMap['E'] = ALLELSE
+			bs.StateMap['F'] = ALLELSE
 		}
 		if NEGATV {
 			TOKEN.Isum = -TOKEN.Isum
@@ -734,8 +756,8 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 	var err error
 
 	// I'm hoping to make this routine much less complex, by changing the state of a few characters.
-	bs.StateMap['.'] = DGT
 	bs.StateMap['_'] = DGT
+	bs.StateMap['.'] = DGT
 	wantReal = true
 
 	token, EOL = bs.GETTKN()
@@ -748,23 +770,19 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 
 	if token.State == DGT {
 		token.FullString = strings.ReplaceAll(token.FullString, "_", "-")
-		token.Rsum, err = strconv.ParseFloat(token.FullString, 64) // FullString field now includes the sign character, if given.
+		if token.HexFlag {
+			token.Rsum = float64(token.Isum)
+		} else {
+			token.Rsum, err = strconv.ParseFloat(token.FullString, 64) // FullString field now includes the sign character, if given.
+		}
 		if err != nil {
 			fmt.Printf(" in TokenReal after call to strconv.ParseFloat(%s, 64).  err = %s\n", token.Str, err)
 		}
-		if token.HexFlag {
-			token.Rsum = float64(token.Isum)
-		}
 	}
 	bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-	bs.StateMap['H'] = ALLELSE
-	bs.StateMap['E'] = ALLELSE
-	bs.StateMap['X'] = ALLELSE
-	bs.StateMap['h'] = ALLELSE
-	bs.StateMap['e'] = ALLELSE
-	bs.StateMap['x'] = ALLELSE
 	bs.StateMap['.'] = ALLELSE
-	//bs.StateMap['-'] = OP      // make sure the minus sign is back to the type it's supposed to be.
+	bs.StateMap['E'] = ALLELSE
+	bs.StateMap['e'] = ALLELSE
 	wantReal = false
 	return token, EOL
 
