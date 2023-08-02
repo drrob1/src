@@ -53,9 +53,11 @@ import (
   13 Jun 22 -- Cleaning up some comments, from Boston's SIR 2022.  And removed unused code.  And finally removed depracated ioutil.
   21 Oct 22 -- Now using strings.EqualFold as recommended by golangci-lint.
   12 Dec 22 -- Added a timer
+   2 Aug 23 -- Since I recently changed tknptr, I had to change a line here.  I removed tknptr.NewToken, leaving tknptr.New as the interface.
+                 This is more idiomatic for Go, anyway.
 */
 
-const LastCompiled = "12 Dec 2022"
+const LastCompiled = "2 Aug 2023"
 
 // --------------------------------------- MAIN ----------------------------------------------------
 func main() {
@@ -155,7 +157,7 @@ func main() {
 			continue
 		} // allow comments and essentially blank lines
 
-		tokenPtr := tknptr.NewToken(inputline)
+		tokenPtr := tknptr.New(inputline)
 		tokenPtr.SetMapDelim('*')
 		FirstToken, EOL := tokenPtr.GetTokenString(false)
 		if EOL {
