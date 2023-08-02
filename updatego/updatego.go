@@ -17,6 +17,7 @@ import (
    1 Aug 23 -- Conceived of this routine to update go after the latest file is already downloaded and checked w/ a sha routine.
                 Since Windows does itself upon installation, I intend this for linux.  It has to nuke the current Go installation
                 and unTar the new one correctly.  I'm going to shell out to a command line for both of these operations.
+   2 Aug 23 -- Turned out that for the shelling out to the tar cmd, I had to use a fully qualified path name.  When I didn't do that, I got a file not found error.
 */
 
 const lastUpdated = "Aug 2, 2023"
@@ -46,7 +47,7 @@ func main() {
 		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
-		fmt.Print(" Enter filename choice : ")
+		fmt.Print(" Enter filename choice (stop code is 999) : ")
 		n, err := fmt.Scanln(&ans)
 		if n == 0 || err != nil {
 			ans = "0"
@@ -75,6 +76,8 @@ func main() {
 	}
 	fmt.Printf(" Filename is %s\n\n", fn)
 
+	ans = "" // blank out the above answer.  I got confused about this.  Turns out that when there's no input, the var, ans, is not altered.
+
 	// Now have the filename, need to nuke the old Go installation
 
 	err := os.Chdir("/usr/local")
@@ -82,8 +85,6 @@ func main() {
 		fmt.Printf(" Error from os.Chdir(/usr/local) is %s.  Exiting.\n", err)
 		os.Exit(1)
 	}
-
-	// Define buf, w1, buf2 and w2 here in case the code jumps over the nukeCmd section
 
 	buf := make([]byte, 0, 500_000)
 	w1 := bytes.NewBuffer(buf)
@@ -97,14 +98,14 @@ func main() {
 		skipNuke = true
 	}
 
-	fmt.Printf(" Ok to nuke /usr/local/go? (y/N) ")
-	n, err := fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	fmt.Printf(" Answer is %q about stopping nuking old Go tree, n = %d, and err: %s.\n", ans, n, err)
-	if ans != "y" {
-		fmt.Printf("\n Not nuking /usr/local/go.\n")
-		skipNuke = true
-	}
+	//fmt.Printf(" Ok to nuke /usr/local/go? (y/N) ")
+	//n, err := fmt.Scanln(&ans)
+	//ans = strings.ToLower(ans)
+	//fmt.Printf(" Answer is %q about stopping nuking old Go tree, n = %d, and err: %s.\n", ans, n, err)
+	//if ans != "y" {
+	//	fmt.Printf("\n Not nuking /usr/local/go.\n")
+	//	os.Exit(1)
+	//}
 
 	if !skipNuke {
 		nukeCmd := exec.Command("doas", "rm", "-rfv", "go/") // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
@@ -123,46 +124,47 @@ func main() {
 		s2 := strings.ReplaceAll(str2, "\n", "")
 		s2 = strings.ReplaceAll(s2, "\r", "")
 		s2 = strings.ReplaceAll(s2, ",", "")
-		fmt.Printf(" %q was returned in Stderr from the nuke /usr/local/go command\n", w2.String())
+		fmt.Printf(" %q was returned in Stderr from the nuke /usr/local/go command\n\n", w2.String())
 	}
 
 	// Now have deleted /usr/local/go if it existed, and have the filename to install.  Time to execute tar
 
-	fmt.Printf("\n Untar %s? (y/N) ", fn)
-	n, err = fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	fmt.Printf(" Answer is %q about untar %s, n = %d, err = %s.\n", ans, fn, n, err)
-	if ans == "n" || n == 0 || err != nil {
-		fmt.Printf("\n Not continuing.\n")
-		os.Exit(0)
-	}
-
-	fmt.Printf(" About to call os.Stat(%s)\n", fn)
-	_, err = os.Stat(fn)
-	if err != nil {
-		fmt.Printf(" Err from os.Stat(%s) is %s\n", fn, err)
-	}
+	//fmt.Printf("\n Untar %s? (y/N) ", fn)
+	//n, err = fmt.Scanln(&ans)
+	//ans = strings.ToLower(ans)
+	//fmt.Printf(" Answer is %q about untar %s, n = %d, err = %s.\n", ans, fn, n, err)
+	//if ans == "n" || n == 0 || err != nil {
+	//	fmt.Printf("\n Not continuing.\n")
+	//	os.Exit(0)
+	//}
+	//
+	//fmt.Printf(" About to call os.Stat(%s)\n", fn)
+	//_, err = os.Stat(fn)
+	//if err != nil {
+	//	fmt.Printf(" Err from os.Stat(%s) is %s\n", fn, err)
+	//}
 
 	fullFileName := workingDir + string(filepath.Separator) + fn
-	fmt.Printf(" About to call os.Stat(%s)\n", fullFileName)
-	_, err = os.Stat(fullFileName)
-	if err != nil {
-		fmt.Printf(" Err from os.Stat(%s) is %s\n", fullFileName, err)
-	} else {
-		fmt.Printf(" Looks like os.Stat(%s) worked.\n", fullFileName)
-	}
+
+	//fmt.Printf(" About to call os.Stat(%s)\n", fullFileName)
+	//_, err = os.Stat(fullFileName)
+	//if err != nil {
+	//	fmt.Printf(" Err from os.Stat(%s) is %s\n", fullFileName, err)
+	//} else {
+	//	fmt.Printf(" Looks like os.Stat(%s) worked.\n", fullFileName)
+	//}
 
 	tarArg := []string{"tar", "-C", "/usr/local/", "-xzf"}
 	tarArg = append(tarArg, fullFileName)
-	fmt.Printf(" tarArg = %+v\n", tarArg)
+	//                                                                             fmt.Printf(" tarArg = %+v\n", tarArg)
 
-	fmt.Printf(" Should I actually call tar %s: (y/N) ", fn)
-	n, err = fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if ans == "n" || n == 0 || err != nil {
-		fmt.Printf(" Bye-Bye.\n")
-		os.Exit(1)
-	}
+	//fmt.Printf(" Should I actually call tar %s: (y/N) ", fn)
+	//n, err = fmt.Scanln(&ans)
+	//ans = strings.ToLower(ans)
+	//if ans == "n" || n == 0 || err != nil {
+	//	fmt.Printf(" Bye-Bye.\n")
+	//	os.Exit(1)
+	//}
 
 	tarCmd := exec.Command("doas", tarArg...) // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
 
@@ -173,10 +175,22 @@ func main() {
 	tarCmd.Stdout = w1
 	tarCmd.Stderr = w2
 	tarCmd.Run()
-	fmt.Printf(" %q\n was returned in Stdout from the untar %s command \n", w1.String(), fn)
 
-	fmt.Printf(" %s\n was returned in Stderr from the untar %s command \n", w2.String(), fn)
+	if w1.Len() == 0 {
+		fmt.Printf(" There was no output sent to Stdout from the untar %s command\n", fullFileName)
+	} else {
+		fmt.Printf(" %q\n was returned in Stdout from the untar %s command \n", w1.String(), fullFileName)
+	}
+	if w2.Len() == 0 {
+		fmt.Printf(" There was no output sent to Stderr from the untar %s command\n", fullFileName)
+	} else {
+		fmt.Printf(" %q\n was returned in Stderr from the untar %s command \n", w2.String(), fullFileName)
+	}
+
+	fmt.Printf("\n Bye-Bye.  Hope it worked.\n\n")
 }
+
+// ------------------------------------------- min -------------------------------------------------------------------------
 
 func min(x, y int) int {
 	if x < y {
