@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"src/filepicker"
 	"strconv"
 	"strings"
@@ -24,8 +25,13 @@ func main() {
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+	workingDir, e := os.Getwd()
+	if e != nil {
+		fmt.Printf(" os.Getwd() error is %s\n", e)
+		os.Exit(1)
+	}
 
-	fmt.Printf(" %s is last altered %s, and has time stamp of %s\n ", os.Args[0], lastUpdated, ExecTimeStamp)
+	fmt.Printf(" %s is last altered %s, and has time stamp of %s \n", os.Args[0], lastUpdated, ExecTimeStamp)
 
 	// filepicker stuff.
 
@@ -92,12 +98,12 @@ func main() {
 	}
 
 	fmt.Printf(" Ok to nuke /usr/local/go? (y/N) ")
-	fmt.Scanln(&ans)
+	n, err := fmt.Scanln(&ans)
 	ans = strings.ToLower(ans)
-	fmt.Printf(" Answer is %q about stopping nuking old Go tree.\n", ans)
-	if ans == "n" || ans == "" {
-		fmt.Printf("\n Not continuing.\n")
-		os.Exit(0)
+	fmt.Printf(" Answer is %q about stopping nuking old Go tree, n = %d, and err: %s.\n", ans, n, err)
+	if ans != "y" {
+		fmt.Printf("\n Not nuking /usr/local/go.\n")
+		skipNuke = true
 	}
 
 	if !skipNuke {
@@ -107,38 +113,58 @@ func main() {
 		nukeCmd.Stderr = w2
 		nukeCmd.Run()
 		if w1.Len() < 1000 {
-			str := w1.String()
-			s := strings.ReplaceAll(str, "\n", "")
-			s = strings.ReplaceAll(s, "\r", "")
-			s = strings.ReplaceAll(s, ",", "")
-			fmt.Printf(" Output from nuke /usr/local/go is %s\n", s)
+			fmt.Printf(" Output from nuke /usr/local/go is %s\n", w1.String())
 		} else {
 			fmt.Printf(" Output frum nuke /usr/local/go is %d characters long, which is long enough for me to say it was successful.\n", w1.Len())
+			fmt.Printf(" Beginning of output is:\n %s\n", w1.String()[:500])
 		}
 
 		str2 := w2.String()
 		s2 := strings.ReplaceAll(str2, "\n", "")
 		s2 = strings.ReplaceAll(s2, "\r", "")
 		s2 = strings.ReplaceAll(s2, ",", "")
-		fmt.Printf(" %q was returned in Stderr from the nuke /usr/local/go command, which was processed to %q\n", str2, s2)
+		fmt.Printf(" %q was returned in Stderr from the nuke /usr/local/go command\n", w2.String())
 	}
 
 	// Now have deleted /usr/local/go if it existed, and have the filename to install.  Time to execute tar
 
-	fmt.Printf("\n Stop untar %s? (y/N) ", fn)
-	fmt.Scanln(&ans)
+	fmt.Printf("\n Untar %s? (y/N) ", fn)
+	n, err = fmt.Scanln(&ans)
 	ans = strings.ToLower(ans)
-	fmt.Printf(" Answer is %q about untar %s.\n", ans, fn)
-	if ans == "" {
-		fmt.Printf("\n Not continuing.\n")
-		os.Exit(0)
-	}
-	if ans == "y" {
+	fmt.Printf(" Answer is %q about untar %s, n = %d, err = %s.\n", ans, fn, n, err)
+	if ans == "n" || n == 0 || err != nil {
 		fmt.Printf("\n Not continuing.\n")
 		os.Exit(0)
 	}
 
-	tarCmd := exec.Command("doas", "tar", "-C", "/usr/local", "-xzf", fn) // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
+	fmt.Printf(" About to call os.Stat(%s)\n", fn)
+	_, err = os.Stat(fn)
+	if err != nil {
+		fmt.Printf(" Err from os.Stat(%s) is %s\n", fn, err)
+	}
+
+	fullFileName := workingDir + string(filepath.Separator) + fn
+	fmt.Printf(" About to call os.Stat(%s)\n", fullFileName)
+	_, err = os.Stat(fullFileName)
+	if err != nil {
+		fmt.Printf(" Err from os.Stat(%s) is %s\n", fullFileName, err)
+	} else {
+		fmt.Printf(" Looks like os.Stat(%s) worked.\n", fullFileName)
+	}
+
+	tarArg := []string{"tar", "-C", "/usr/local/", "-xzf"}
+	tarArg = append(tarArg, fullFileName)
+	fmt.Printf(" tarArg = %+v\n", tarArg)
+
+	fmt.Printf(" Should I actually call tar %s: (y/N) ", fn)
+	n, err = fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if ans == "n" || n == 0 || err != nil {
+		fmt.Printf(" Bye-Bye.\n")
+		os.Exit(1)
+	}
+
+	tarCmd := exec.Command("doas", tarArg...) // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
 
 	w1.Reset()
 	w2.Reset()
@@ -147,17 +173,9 @@ func main() {
 	tarCmd.Stdout = w1
 	tarCmd.Stderr = w2
 	tarCmd.Run()
-	str := w1.String()
-	s := strings.ReplaceAll(str, "\n", "")
-	s = strings.ReplaceAll(s, "\r", "")
-	s = strings.ReplaceAll(s, ",", "")
-	fmt.Printf(" %q\n was returned in Stdout from the nuke /usr/local/go command, which was processed to \n %q\n", str, s)
+	fmt.Printf(" %q\n was returned in Stdout from the untar %s command \n", w1.String(), fn)
 
-	str2 := w2.String()
-	s2 := strings.ReplaceAll(str2, "\n", "")
-	s2 = strings.ReplaceAll(s2, "\r", "")
-	s2 = strings.ReplaceAll(s2, ",", "")
-	fmt.Printf(" %q was returned in Stderr from the nuke /usr/local/go command, which was processed to %q\n", str2, s2)
+	fmt.Printf(" %s\n was returned in Stderr from the untar %s command \n", w2.String(), fn)
 }
 
 func min(x, y int) int {
