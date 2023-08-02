@@ -63,6 +63,10 @@ func main() {
 		fn = os.Args[1]
 	}
 
+	if fn == "" {
+		fmt.Printf(" Filename is empty.  Exiting.\n")
+		os.Exit(1)
+	}
 	fmt.Printf(" Filename is %s\n\n", fn)
 
 	// Now have the filename, need to nuke the old Go installation
