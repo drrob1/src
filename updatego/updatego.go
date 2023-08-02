@@ -79,7 +79,7 @@ func main() {
 
 	// Define buf, w1, buf2 and w2 here in case the code jumps over the nukeCmd section
 
-	buf := make([]byte, 0, 1000)
+	buf := make([]byte, 0, 10000)
 	w1 := bytes.NewBuffer(buf)
 	buf2 := make([]byte, 0, 1000)
 	w2 := bytes.NewBuffer(buf2)
@@ -87,8 +87,20 @@ func main() {
 	var skipNuke bool
 	_, err = os.Stat("go/")
 	if err != nil {
-		fmt.Printf(" There is no old go/ directory in /usr/local, so this step will be skipped.")
+		fmt.Printf(" There is no old go/ directory in /usr/local, so this step will be skipped.\n")
 		skipNuke = true
+	}
+
+	fmt.Printf(" OK to nuke /usr/local/go? (y/N) ")
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if ans == "" {
+		fmt.Printf("\n Not continuing.\n")
+		os.Exit(0)
+	}
+	if ans[0] == 'n' {
+		fmt.Printf("\n Not continuing.\n")
+		os.Exit(0)
 	}
 
 	if !skipNuke {
@@ -97,11 +109,15 @@ func main() {
 		nukeCmd.Stdout = w1
 		nukeCmd.Stderr = w2
 		nukeCmd.Run()
-		str := w1.String()
-		s := strings.ReplaceAll(str, "\n", "")
-		s = strings.ReplaceAll(s, "\r", "")
-		s = strings.ReplaceAll(s, ",", "")
-		fmt.Printf(" %q was returned in Stdout from the nuke /usr/local/go command, which was processed to %s\n", str, s)
+		if w1.Len() < 1000 {
+			str := w1.String()
+			s := strings.ReplaceAll(str, "\n", "")
+			s = strings.ReplaceAll(s, "\r", "")
+			s = strings.ReplaceAll(s, ",", "")
+			fmt.Printf(" Output from nuke /usr/local/go is %s\n", s)
+		} else {
+			fmt.Printf(" Output frum nuke /usr/local/go is %d characters long, which is long enough for me to say it was successful.\n", w1.Len())
+		}
 
 		str2 := w2.String()
 		s2 := strings.ReplaceAll(str2, "\n", "")
@@ -112,7 +128,19 @@ func main() {
 
 	// Now have deleted /usr/local/go if it existed, and have the filename to install.  Time to execute tar
 
-	tarCmd := exec.Command("tar", "-C", "/usr/local", "-xzf", "fn") // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
+	fmt.Printf("\n OK to untar %s? (y/N) ", fn)
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if ans == "" {
+		fmt.Printf("\n Not continuing.\n")
+		os.Exit(0)
+	}
+	if ans[0] == 'n' {
+		fmt.Printf("\n Not continuing.\n")
+		os.Exit(0)
+	}
+
+	tarCmd := exec.Command("doas", "tar", "-C", "/usr/local", "-xzf", "fn") // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
 
 	w1.Reset()
 	w2.Reset()
@@ -125,7 +153,7 @@ func main() {
 	s := strings.ReplaceAll(str, "\n", "")
 	s = strings.ReplaceAll(s, "\r", "")
 	s = strings.ReplaceAll(s, ",", "")
-	fmt.Printf(" %q was returned in Stdout from the nuke /usr/local/go command, which was processed to %s\n", str, s)
+	fmt.Printf(" %q\n was returned in Stdout from the nuke /usr/local/go command, which was processed to \n %s\n", str, s)
 
 	str2 := w2.String()
 	s2 := strings.ReplaceAll(str2, "\n", "")
