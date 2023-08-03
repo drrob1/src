@@ -18,6 +18,7 @@ import (
                 Since Windows does itself upon installation, I intend this for linux.  It has to nuke the current Go installation
                 and unTar the new one correctly.  I'm going to shell out to a command line for both of these operations.
    2 Aug 23 -- Turned out that for the shelling out to the tar cmd, I had to use a fully qualified path name.  When I didn't do that, I got a file not found error.
+                I finally figured out why, because I changed dir to /usr/local and forgot to change back.  Anyway, the code's working so I'll leave it alone.
 */
 
 const lastUpdated = "Aug 2, 2023"
@@ -80,7 +81,7 @@ func main() {
 
 	// Now have the filename, need to nuke the old Go installation
 
-	err := os.Chdir("/usr/local")
+	err := os.Chdir("/usr/local") // I forgot to change dir back to where the go1 tarball is.  I probably don't need the -C flag to the tar command.  But this code works, so I'll leave it alone.
 	if err != nil {
 		fmt.Printf(" Error from os.Chdir(/usr/local) is %s.  Exiting.\n", err)
 		os.Exit(1)
