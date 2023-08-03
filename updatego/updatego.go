@@ -117,14 +117,14 @@ func main() {
 			fmt.Printf(" Output from nuke /usr/local/go is %s\n", w1.String())
 		} else {
 			fmt.Printf(" Output frum nuke /usr/local/go is %d characters long, which is long enough for me to say it was successful.\n", w1.Len())
-			fmt.Printf(" Beginning of output is:\n %s\n", w1.String()[:500])
+			fmt.Printf(" Beginning of output is:\n%s\n", w1.String()[:500])
 		}
 
-		str2 := w2.String()
-		s2 := strings.ReplaceAll(str2, "\n", "")
-		s2 = strings.ReplaceAll(s2, "\r", "")
-		s2 = strings.ReplaceAll(s2, ",", "")
-		fmt.Printf(" %q was returned in Stderr from the nuke /usr/local/go command\n\n", w2.String())
+		if w2.Len() == 0 {
+			fmt.Printf(" There were no errors from doas nuke go/\n")
+		} else {
+			fmt.Printf(" nuke go Stderr: %s \n\n", w2.String())
+		}
 	}
 
 	// Now have deleted /usr/local/go if it existed, and have the filename to install.  Time to execute tar
