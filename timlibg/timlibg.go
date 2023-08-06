@@ -22,6 +22,7 @@ import (
      9 Jul 16 -- Fixed bug in Gregorian in which there is an infinite loop if juldate is too small.
      6 Aug 16 -- Started converting to Go.
     13 Apr 17 -- golint complained, so I added some comments
+     6 Aug 23 -- The julian date number is of type int.  This is a reminder comment.
 */
 
 /*
