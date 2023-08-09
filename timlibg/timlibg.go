@@ -71,7 +71,8 @@ var ( // I tried declaring these as const but this would not compile.
 //  The variable name is an acronym of Accumulated Days In Previous Months.
 
 // TIME2MDY System Time To Month, Day, and Year Conversion.
-//                                     *********************************** TIME2MDY *************************
+//
+//	*********************************** TIME2MDY *************************
 func TIME2MDY() (MM, DD, YY int) {
 
 	var DateTime DateTimeType

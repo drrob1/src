@@ -86,9 +86,10 @@ import (
                  I added logic to readLine that will only return EOF if there's nothing to return.
    4 Jul 23 -- The other day I created the misc package that has the code from makesubst, and I added the fixed readLine(*bytes.Reader) to it.  There should only be 1 version
                  of the code that I have to maintain.
+   8 Aug 23 -- Since I changed tknptr and removed NewToken, I had make the change here, so NewToken becomes New.  This is more idiomatic for Go, anyway.
 */
 
-const LastCompiled = "4 July 2023"
+const LastCompiled = "8 Aug 2023"
 
 const (
 	undetermined = iota
@@ -271,7 +272,7 @@ func main() {
 			continue
 		}
 
-		tokenPtr := tknptr.NewToken(inputLine)
+		tokenPtr := tknptr.New(inputLine)
 		tokenPtr.SetMapDelim('*')
 		FirstToken, EOL := tokenPtr.GetTokenString(false)
 		if EOL {

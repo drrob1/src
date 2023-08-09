@@ -73,9 +73,10 @@ import (
   30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
    4 Jul 23 -- The other day I created the misc package that has the code from makesubst, and I added the fixed readLine(*bytes.Reader) to it.  There should only be 1 version
                  of the code that I have to maintain.
+   8 Aug 23 -- tknptr.NewToken -> tknptr.New
 */
 
-const LastCompiled = "4 July 2023"
+const LastCompiled = "8 Aug 2023"
 
 const (
 	undetermined = iota
@@ -103,9 +104,8 @@ type resultMatchType struct {
 var hashChan chan hashType
 var resultChan chan resultMatchType
 var wg1, wg2 sync.WaitGroup
-var preCounter, postCounter int64 // atomic add requires int64, not int.  I might as well make both of them int64.
 
-//func matchOrNoMatch(hashIn hashType) (resultMatchType, error) { // returning filename, hash number, matched, error.  This was it's signature that was sequential, before adding the concurrent code.
+var preCounter, postCounter int64 // atomic add requires int64, not int.  I might as well make both of them int64.  And staticcheck wrongly says preCounter is unused.
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 	targetFile, err := os.Open(hashIn.fName)
@@ -301,7 +301,7 @@ func main() {
 			continue
 		}
 
-		tokenPtr := tknptr.NewToken(inputLine)
+		tokenPtr := tknptr.New(inputLine)
 		tokenPtr.SetMapDelim('*')
 		FirstToken, EOL := tokenPtr.GetTokenString(false)
 		if EOL {

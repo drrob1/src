@@ -82,9 +82,10 @@ import (
                  This has only 1 channel, for passing hashing work to matchOrNoMatch.  There is no message channel here.
   30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
                  And now moved the improved ReadLine code to the new package misc, which started life as makesubst.
+   8 Aug 23 -- Since I changed tknptr and removed NewToken, I had make the change here, so NewToken becomes New.  This is more idiomatic for Go, anyway.
 */
 
-const LastCompiled = "30 June 2023"
+const LastCompiled = "8 Aug 2023"
 
 const (
 	undetermined = iota
@@ -247,7 +248,7 @@ func main() {
 			continue
 		}
 
-		tokenPtr := tknptr.NewToken(inputLine)
+		tokenPtr := tknptr.New(inputLine)
 		tokenPtr.SetMapDelim('*')
 		FirstToken, EOL := tokenPtr.GetTokenString(false)
 		if EOL {
