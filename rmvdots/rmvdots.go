@@ -21,9 +21,10 @@ import (
   30 Apr 23 -- I added !IsGraphic to the tests, which may be redundant, but I'll try it and see.  And I'm combining the dot substitutions into detoxFilenameNewWay
    1 May 23 -- Now called rmvdots.go.  And will only, well, remove excess dots.  But for .gpg files, it keeps the last 2 dots.
    2 May 23 -- And for ".gz" and ".xz" it will also keep the last 2 dots.
+  20 Aug 23 -- Stopped using ToLower on filename string.
 */
 
-const lastModified = "2 May 23"
+const lastModified = "20 Aug 23"
 
 type dirAliasMapType map[string]string
 
@@ -43,8 +44,8 @@ func main() {
 	for _, fn := range files {
 		//ext := filepath.Ext(fn)
 		//fmt.Printf(" Filename of %s has ext of %s\n", fn, ext)
-		name := strings.ToLower(fn)
-		newName, changed := tooManyDots(name)
+		//name := strings.ToLower(fn)
+		newName, changed := tooManyDots(fn)
 		if changed {
 			err := os.Rename(fn, newName)
 			if err != nil {
