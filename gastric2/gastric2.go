@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 	//
-	"filepicker"
-	"getcommandline"
-	"tknptr"
+	"src/filepicker"
+	"src/getcommandline"
+	"src/tknptr"
 )
 
 /*

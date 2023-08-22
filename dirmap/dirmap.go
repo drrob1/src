@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
-	"timlibg"
+	"src/timlibg"
 )
 
 const LastAltered = "22 Oct 2018"

@@ -27,7 +27,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gogrep"
+	"src/gogrep"
 	"log"
 	"strings"
 )

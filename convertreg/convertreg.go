@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"hpcalc"
-	"tokenize"
+	"src/hpcalc"
+	"src/tokenize"
 )
 
 const LastAltered = "2 Dec 2018"

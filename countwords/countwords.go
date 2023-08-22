@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"poetry"
+	"src/poetry"
 )
 
 func main() {

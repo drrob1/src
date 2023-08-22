@@ -5,8 +5,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"getcommandline"
-	"makesubst"
+	"src/getcommandline"
+	"src/makesubst"
 	"os"
 	"strconv"
 )

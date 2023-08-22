@@ -14,9 +14,9 @@ import (
 	"log"
 	"os"
 	"strings"
-	"tokenize"
+	"src/tokenize"
 	//        "getcommandline"
-	"holidaycalc"
+	"src/holidaycalc"
 )
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};

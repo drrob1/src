@@ -57,8 +57,8 @@ import (
 
 	//
 	//"getcommandline"
-	"holidaycalc"
-	"timlibg"
+	"src/holidaycalc"
+	"src/timlibg"
 	//"tokenize"
 )
 

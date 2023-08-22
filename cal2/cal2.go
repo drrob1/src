@@ -31,9 +31,9 @@ import (
 	"strconv"
 	"strings"
 	//
-	"getcommandline"
-	"timlibg"
-	"tokenize"
+	"src/getcommandline"
+	"src/timlibg"
+	"src/tokenize"
 )
 
 const LastCompiled = "12 Nov 16"

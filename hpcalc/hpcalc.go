@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 	//
-	"holidaycalc"
-	"timlibg"
+	"src/holidaycalc"
+	"src/timlibg"
 	//	"tokenize"
-	"tknptr"
+	"src/tknptr"
 )
 
 const LastAlteredDate = "3 July 2020"

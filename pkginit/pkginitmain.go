@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 	//	"math/rand"
-	"shuffler"
+	"src/shuffler"
 )
 
 type intSlice []int

@@ -4,17 +4,17 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
-	"filepicker"
+	"src/filepicker"
 	"fmt"
-	"getcommandline"
+	"src/getcommandline"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"tknptr"
-	"tokenize"
+	"src/tknptr"
+	"src/tokenize"
 )
 
 const lastModified = "6 Jan 2018"

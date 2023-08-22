@@ -22,6 +22,7 @@ REVISION HISTORY
 26 Mar 22 -- Handles correctly when dir is not current dir; I did not need to port the code from img.go as it always worked here.
                It works because the sort is alphabetical, not by date, so I don't need to call Lstat.
 21 Nov 22 -- Fixed some issues flagged by static linter.
+21 Aug 23 -- Made the -sticky flag default to on.  And added a ScaleFactor value to the display window's title.
 */
 
 package main
@@ -52,7 +53,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Nov 21, 2022"
+const LastModified = "Aug 21, 2023"
 const maxWidth = 1800
 const maxHeight = 900
 const keyCmdChanSize = 20
@@ -72,7 +73,7 @@ var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
-var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // default changed to true 8/21/23
 var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
@@ -101,7 +102,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
+	str := fmt.Sprintf("Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {
 		fmt.Println(str) // this works as intended
 	}
@@ -275,7 +276,7 @@ func loadTheImage() {
 	}
 	defer imgRead.Close() // moved as recommended by static linter
 
-	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
+	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format type, ie jpeg, png, webm used during format registration by the init function.
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
 		os.Exit(1)
@@ -285,7 +286,7 @@ func loadTheImage() {
 	imgWidth := bounds.Max.X
 
 	//              title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)
+	title := fmt.Sprintf("%s, %d x %d, SF=%2f; %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title, "and cwd=", cwd)
 	}

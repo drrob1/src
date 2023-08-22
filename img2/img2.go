@@ -26,6 +26,7 @@ REVISION HISTORY
 26 Mar 22 -- Expanding to work when display directory is not current directory
 21 Oct 22 -- Fixed bad use of format verb caught by golangci-lint.
 21 Nov 22 -- Fixed some issues caught by static linter.
+21 Aug 23 -- Made the -sticky flag default to on.  And added scaleFactor to the window title.
 */
 
 package main
@@ -59,7 +60,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Nov 21, 2022"
+const LastModified = "Aug 21, 2023"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const textboxheight = 20
@@ -180,7 +181,7 @@ var globalW fyne.Window
 var GUI fyne.CanvasObject
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
-var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // default of true from 8/21/23
 var sticky bool
 
 var scaleFactor float64 = 1
@@ -192,7 +193,7 @@ var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
 var gray = color.Gray{Y: 100}
 var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
 
-//  isNotImageStr ----------------------------------------
+// isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
 	ismage := isImage(name)
 	return !ismage
@@ -206,7 +207,7 @@ func isImage(file string) bool {
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
 }
 
-//  main --------------------------------------------------
+// main --------------------------------------------------
 func main() {
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
@@ -215,7 +216,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	str := fmt.Sprintf("Single Image Viewer2 last modified %s, compiled using %s", LastModified, runtime.Version())
+	str := fmt.Sprintf("Image Viewer2 last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {
 		fmt.Println(str) // this works as intended
 	}
@@ -360,7 +361,7 @@ func main() {
 
 } // end main
 
-//  loadTheImage ------------------------------
+// loadTheImage ------------------------------
 func loadTheImage() {
 	imgname := imageInfo[index].Name()
 	fullfilename := cwd + string(filepath.Separator) + imgname
@@ -382,7 +383,7 @@ func loadTheImage() {
 	imgWidth := bounds.Max.X
 
 	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s width=%d, height=%d and type=%s", imgname, imgWidth, imgHeight, imgFmtName)
+	title := fmt.Sprintf("%s %d x %d, SF=%.2f; %s", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -444,7 +445,7 @@ func loadTheImage() {
 	// return  redundant
 } // end loadTheImage
 
-//  filenameIndex --------------------------------------
+// filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	for i, fi := range fileinfos {
 		if fi.Name() == name {
@@ -499,7 +500,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	// return  redundant
 } // MyReadDirForImages
 
-//  isSorted -----------------------------------------------
+// isSorted -----------------------------------------------
 func isSorted(slice []os.FileInfo) bool {
 	for i := 0; i < len(slice)-1; i++ {
 		if slice[i].ModTime().Before(slice[i+1].ModTime()) {
@@ -532,19 +533,19 @@ func prevImage() {
 	// return redundant
 } // end prevImage
 
-//  firstImage -----------------------------------------------------
+// firstImage -----------------------------------------------------
 func firstImage() {
 	index = 0
 	loadTheImage()
 }
 
-//  lastImage ---------------------------------------------------------
+// lastImage ---------------------------------------------------------
 func lastImage() {
 	index = len(imageInfo) - 1
 	loadTheImage()
 }
 
-//  keyTyped ------------------------------
+// keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
 	case fyne.KeyUp:

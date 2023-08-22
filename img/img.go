@@ -31,6 +31,10 @@ REVISION HISTORY
 16 Mar 22 -- Only writing using fmt.Print calls if verbose or flags are set.
 26 Mar 22 -- Expanding to allow a directory other than the current one.
 21 Nov 22 -- Made changes recommended by static linter.
+21 Aug 23 -- Made the -sticky flag default to on/true.  And I changed the displayed title string.
+               Now I want to refactor the code so it doesn't need a filename as an arg.  If no filename is given, it will default to the first one in its slice.
+               Here that would be the most recent image file.
+
 */
 
 package main
@@ -40,10 +44,6 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2/app"
 	"math"
-	//"fyne.io/fyne/v2/internal/widget"
-	//"fyne.io/fyne/v2/layout"
-	//"fyne.io/fyne/v2/container"
-	//"image/color"
 
 	_ "golang.org/x/image/webp"
 	"image"
@@ -63,9 +63,15 @@ import (
 	"fyne.io/fyne/v2/storage"
 
 	"github.com/nfnt/resize"
+	//ct "github.com/daviddengcn/go-colortext"
+	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	//"fyne.io/fyne/v2/internal/widget"
+	//"fyne.io/fyne/v2/layout"
+	//"fyne.io/fyne/v2/container"
+	//"image/color"
 )
 
-const LastModified = "Nov 21, 2022"
+const LastModified = "Aug 21, 2023"
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
@@ -77,7 +83,7 @@ const (
 	lastImgCmd
 )
 
-var index int
+// var index int
 var loadedimg *canvas.Image
 var cwd string
 var imageInfo []os.FileInfo
@@ -85,7 +91,7 @@ var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag.")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot.")
-var stickyFlag = flag.Bool("sticky", false, "sticky flag for keeping zoom factor among images.")
+var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // defaults to on as of 8/21/23
 var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
@@ -104,6 +110,7 @@ func isImage(file string) bool {
 
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
+	var index int
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
 	if flag.NArg() < 1 {
@@ -111,13 +118,53 @@ func main() {
 		os.Exit(1)
 	}
 
-	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
+	// Set up the slice of imgFileInfo, which is []os.FileInfo, sorted w/ newest first.  This slice is set up as a go routine and the result is passed back here in a channel.
+	// And define the 3 channels to be used here.  One is a key stroke channel, another is the imgFileInfo channel, and the 3rd is a image # channel.
+
+	//cwd = filepath.Dir(fullFilename)  I already know that this works, so now I'll stop using it.
+	workingDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf(" os.Getwd failed w/ error of %s\n", err)
+		os.Exit(1)
+	}
+	//if cwd != workingDir {
+	//	ctfmt.Printf(ct.Red, false, " cwd=%q, should equal workingDir=%q.  Don't know why these are not equal.  Will ignore workingDir.\n")
+	//}
+	cwd = workingDir
+	keyCmdChan = make(chan int, keyCmdChanSize)
+	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
+	indexChan := make(chan int, 1)                 // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
+	go MyReadDirForImages(cwd, imgFileInfoChan)    // this go routine is started here, and in a few lines the channel read is assigned to the global imageInfo.
+
+	str := fmt.Sprintf("Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {
 		fmt.Println(str)
 	}
 
+	globalA = app.New() // this line must appear before any other uses of fyne.
+	globalW = globalA.NewWindow(str)
+	globalW.Canvas().SetOnTypedKey(keyTyped)
+
+	// This is how I initialize the imageInfo slice of FileInfos
+	imageInfo = <-imgFileInfoChan // reading from a channel is a unary use of the channel operator.  It's being read into a global slice, imageInfo.
+
+	if *verboseFlag {
+		if isSorted(imageInfo) {
+			fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
+		} else {
+			fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
+		}
+		fmt.Println()
+	}
+
+	// I'm going to stop now
+	// I have code here to read an image, show it's params, but not use that info after it's written to the screen.  I'll change this so all populating the main display window is done from
+	// the loadTheImage routine.  I used do do it here first before going into the keystroke loop.  I don't need that anymore.  It's much more flexible if I don't do that, so then I can
+	// define a default image number if no filename is given.  That file name would have to be searched against the imageInfo slice as a linear sequential search.  Can't do a binary search
+	// as the sort function is not alphabetical.
+
 	imgfilename := flag.Arg(0)
-	_, err := os.Stat(imgfilename)
+	_, err = os.Stat(imgfilename)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgfilename, ") is", err)
 		os.Exit(1)
@@ -128,7 +175,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	keyCmdChan = make(chan int, keyCmdChanSize)
 	basefilename := filepath.Base(imgfilename)
 	fullFilename, err := filepath.Abs(imgfilename)
 
@@ -174,14 +220,6 @@ func main() {
 		fmt.Println()
 	}
 
-	cwd = filepath.Dir(fullFilename)
-	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
-	go MyReadDirForImages(cwd, imgFileInfoChan)
-
-	globalA = app.New() // this line must appear before any other uses of fyne.
-	globalW = globalA.NewWindow(str)
-	globalW.Canvas().SetOnTypedKey(keyTyped)
-
 	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
@@ -221,26 +259,13 @@ func main() {
 	globalW.SetContent(loadedimg)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 
-	// this syntax works and was blocking until I made the channel buffered.
-	imageInfo = <-imgFileInfoChan // reading from a channel is a unary use of the channel operator.
-
-	if *verboseFlag {
-		if isSorted(imageInfo) {
-			fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
-		} else {
-			fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
-		}
-		fmt.Println()
-	}
-
-	indexchan := make(chan int, 1) // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
 	t0 := time.Now()
 
-	go filenameIndex(imageInfo, basefilename, indexchan)
+	go filenameIndex(imageInfo, basefilename, indexChan)
 
 	globalW.CenterOnScreen()
 
-	index = <-indexchan // syntax to read from a channel, using the channel operator as a unary operator.
+	index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
 	elapsedtime := time.Since(t0)
 
 	if *verboseFlag {
@@ -276,8 +301,9 @@ func processKeys() {
 }
 
 // --------------------------------------------------- loadTheImage ------------------------------
-func loadTheImage() {
-	imgname := imageInfo[index].Name()
+func loadTheImage(idx int) {
+	//imgname := imageInfo[index].Name()
+	imgname := imageInfo[idx].Name()
 	fullfilename := cwd + string(filepath.Separator) + imgname
 	imageURI := storage.NewFileURI(fullfilename)
 	imgRead, err := storage.Reader(imageURI)
@@ -297,7 +323,7 @@ func loadTheImage() {
 	imgWidth := bounds.Max.X
 
 	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)
+	title := fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -328,7 +354,7 @@ func loadTheImage() {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-		title = fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	}
 
 	if *verboseFlag {
@@ -421,7 +447,7 @@ func isSorted(slice []os.FileInfo) bool {
 }
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
-//func nextImage(indx int) *canvas.Image {
+// func nextImage(indx int) *canvas.Image {
 func nextImage() {
 	index++
 	if index >= len(imageInfo) {
@@ -432,7 +458,7 @@ func nextImage() {
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
-//func prevImage(indx int) *canvas.Image {
+// func prevImage(indx int) *canvas.Image {
 func prevImage() {
 	index--
 	if index < 0 {

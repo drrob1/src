@@ -15,12 +15,12 @@ import (
 	//"path"
 	//"path/filepath"
 	//
-	"getcommandline"
-	"holidaycalc"
-	"hpcalc"
-	"makesubst"
-	"timlibg"
-	"tokenize"
+	"src/getcommandline"
+	"src/holidaycalc"
+	"src/hpcalc"
+	"src/makesubst"
+	"src/timlibg"
+	"src/tokenize"
 	//                                                                                                      "timlibg"
 )
 

@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"getcommandline"
+	"src/getcommandline"
 	"log"
 	"os"
 	"strconv"
