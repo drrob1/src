@@ -569,8 +569,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 		nextImage()
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
-		globalW.Close() // quit's the app if this is the last window, which it is.
-		//		(*globalA).Quit()
+		globalW.Close() // quits the app if this is the last window, which it is.
 	case fyne.KeyHome:
 		if !sticky {
 			scaleFactor = 1
