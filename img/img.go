@@ -72,8 +72,6 @@ import (
 )
 
 const LastModified = "Aug 22, 2023"
-const maxWidth = 1800 // actual resolution is 1920 x 1080
-const maxHeight = 900 // actual resolution is 1920 x 1080
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -83,7 +81,10 @@ const (
 	lastImgCmd
 )
 
-// var index int
+// const maxWidth = 1800 // actual resolution is 1920 x 1080   \ unused
+// const maxHeight = 900 // actual resolution is 1920 x 1080   /
+
+var index int
 var loadedimg *canvas.Image
 var cwd string
 var imageInfo []os.FileInfo
@@ -110,22 +111,19 @@ func isImage(file string) bool {
 
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
-	var index int
+	var err error
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
-	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
-		os.Exit(1)
-	}
 
 	// Set up the slice of imgFileInfo, which is []os.FileInfo, sorted w/ newest first.  This slice is set up as a go routine and the result is passed back here in a channel.
 	// And define the 3 channels to be used here.  One is a keystroke channel, another is the imgFileInfo channel, and the 3rd is a image # channel.
 
-	cwd, err := os.Getwd()
+	cwd, err = os.Getwd()
 	if err != nil {
 		fmt.Printf(" os.Getwd failed w/ error of %s\n", err)
 		os.Exit(1)
 	}
+
 	keyCmdChan = make(chan int, keyCmdChanSize)
 	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
 	indexChan := make(chan int, 1)                 // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
@@ -152,118 +150,39 @@ func main() {
 		fmt.Println()
 	}
 
-	// I'm going to stop now
 	// I have code here to read an image, show it's params, but not use that info after it's written to the screen.  I'll change this so all populating the main display window is done from
 	// the loadTheImage routine.  I used to do it here first before going into the keystroke loop.  I don't need that anymore.  It's much more flexible if I don't do that, so then I can
 	// define a default image number if no filename is given.  That file name would have to be searched against the imageInfo slice as a linear sequential search.  Can't do a binary search
 	// as the sort function is not alphabetical.
 	// If there is no argument, then default to the first image in the imageInfo slice.
 
-	imgfilename := flag.Arg(0)
-	if imgfilename != "" {
-		_, err = os.Stat(imgfilename)
+	imgFilename := flag.Arg(0)
+	baseFilename := filepath.Base(imgFilename)
+
+	if imgFilename == "" {
+		// index = 0  I don't need to set it to zero as that's its default.
+	} else {
+		go filenameIndex(imageInfo, baseFilename, indexChan)
+		_, err = os.Stat(imgFilename)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgfilename, ") is", err)
+			fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgFilename, ") is", err)
 			os.Exit(1)
 		}
 
-		if isNotImageStr(imgfilename) {
-			fmt.Fprintln(os.Stderr, imgfilename, "does not have an image extension.")
+		if isNotImageStr(imgFilename) {
+			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.")
 			os.Exit(1)
 		}
 
-		basefilename := filepath.Base(imgfilename)
-		fullFilename, err := filepath.Abs(imgfilename)
-
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from filepath.Abs on", imgfilename, "is", err)
-			os.Exit(1)
-		}
-
-		imgFileHandle, err := os.Open(fullFilename)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from opening", fullFilename, "is", err)
-			os.Exit(1)
-		}
-
-		imgConfig, _, err := image.DecodeConfig(imgFileHandle) // img is of type image.Config
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from decode config on", fullFilename, "is", err)
-			os.Exit(1)
-		}
-		imgFileHandle.Close()
-
-		var width = float32(imgConfig.Width)
-		var height = float32(imgConfig.Height)
-		var aspectRatio = width / height
-		if aspectRatio > 1 {
-			aspectRatio = 1 / aspectRatio
-		}
-
-		if *verboseFlag {
-			fmt.Printf(" image.Config %s, %s, %s \n width=%g, height=%g, and aspect ratio=%.4g.  Sticky=%t \n",
-				imgfilename, fullFilename, basefilename, width, height, aspectRatio, sticky)
-		}
-
-		if width > maxWidth || height > maxHeight {
-			width = maxWidth * aspectRatio
-			height = maxHeight * aspectRatio
-		}
-
-		if *verboseFlag {
-			fmt.Println()
-			//fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
-			fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
-			fmt.Println()
-		}
-
-		imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
-		imgRead, err := storage.Reader(imageURI)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
-			os.Exit(1)
-		}
-		defer imgRead.Close()
-		img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
-		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-			os.Exit(1)
-		}
-		bounds := img.Bounds()
-		imgHeight := bounds.Max.Y
-		imgWidth := bounds.Max.X
-		if *verboseFlag {
-			fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd, ".  Min x =", bounds.Min.X,
-				"and min y =", bounds.Min.Y)
-			fmt.Println()
-		}
+		index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
 	}
-
-	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.ScaleMode = canvas.ImageScaleFastest
-	if !*zoomFlag {
-		loadedimg.FillMode = canvas.ImageFillContain
-	}
-
-	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
-	globalW.SetTitle(imgtitle)
-	globalW.SetContent(loadedimg)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-
-	t0 := time.Now()
-
-	go filenameIndex(imageInfo, basefilename, indexChan)
 
 	globalW.CenterOnScreen()
 
-	index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
-	elapsedtime := time.Since(t0)
-
-	if *verboseFlag {
-		fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
-		fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
-		fmt.Println()
+	if index < 0 {
+		index = 0
 	}
+	loadTheImage(index)
 
 	go processKeys()
 
@@ -284,7 +203,7 @@ func processKeys() {
 		case nextImgCmd:
 			nextImage()
 		case loadImgCmd:
-			loadTheImage()
+			loadTheImage(index)
 		case lastImgCmd:
 			lastImage()
 		}
@@ -293,13 +212,17 @@ func processKeys() {
 
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage(idx int) {
-	//imgname := imageInfo[index].Name()
-	imgname := imageInfo[idx].Name()
-	fullfilename := cwd + string(filepath.Separator) + imgname
-	imageURI := storage.NewFileURI(fullfilename)
+	//                                          imgname := imageInfo[index].Name()  where index was a global.  I changed taking input from a global.
+	imgName := imageInfo[idx].Name()
+	fullFilename, err := filepath.Abs(imgName)
+	if err != nil {
+		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
+	}
+
+	imageURI := storage.NewFileURI(fullFilename)
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
+		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
 		os.Exit(1)
 	}
 	defer imgRead.Close() // moved to here, after checking err, as recommended by static linter.
@@ -314,7 +237,7 @@ func loadTheImage(idx int) {
 	imgWidth := bounds.Max.X
 
 	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
+	title := fmt.Sprintf(" %s %s, %d x %d, SF=%.2f \n", imgFmtName, imgName, imgWidth, imgHeight, scaleFactor)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -345,7 +268,7 @@ func loadTheImage(idx int) {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	}
 
 	if *verboseFlag {
@@ -353,6 +276,7 @@ func loadTheImage(idx int) {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
 		fmt.Println()
 	}
 
@@ -366,9 +290,8 @@ func loadTheImage(idx int) {
 	globalW.SetContent(loadedimg)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
-
 	globalW.Show()
-	// return  This is flagged as redundant, so I'm removing it.
+
 } // end loadTheImage
 
 // ------------------------------- filenameIndex --------------------------------------
@@ -444,7 +367,7 @@ func nextImage() {
 	if index >= len(imageInfo) {
 		index--
 	}
-	loadTheImage()
+	loadTheImage(index)
 	// return  also redundant
 } // end nextImage
 
@@ -455,20 +378,20 @@ func prevImage() {
 	if index < 0 {
 		index++
 	}
-	loadTheImage()
+	loadTheImage(index)
 	// return  also redundant
 } // end prevImage
 
 // ------------------------------------------ firstImage -----------------------------------------------------
 func firstImage() {
 	index = 0
-	loadTheImage()
+	loadTheImage(index)
 }
 
 // ------------------------------------------ lastImage ---------------------------------------------------------
 func lastImage() {
 	index = len(imageInfo) - 1
-	loadTheImage()
+	loadTheImage(index)
 }
 
 // ------------------------------------------------------------ keyTyped ------------------------------
