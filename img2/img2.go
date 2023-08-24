@@ -27,6 +27,7 @@ REVISION HISTORY
 21 Oct 22 -- Fixed bad use of format verb caught by golangci-lint.
 21 Nov 22 -- Fixed some issues caught by static linter.
 21 Aug 23 -- Made the -sticky flag default to on.  And added scaleFactor to the window title.
+24 Aug 23 -- Will add the new code I wrote for img to here.
 */
 
 package main
@@ -36,6 +37,8 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"image/color"
 	"math"
 
@@ -60,10 +63,11 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Aug 21, 2023"
-const maxWidth = 1800 // actual resolution is 1920 x 1080
-const maxHeight = 900 // actual resolution is 1920 x 1080
+const LastModified = "Aug 24, 2023"
 const textboxheight = 20
+
+// const maxWidth = 1800 // actual resolution is 1920 x 1080
+// const maxHeight = 900 // actual resolution is 1920 x 1080
 
 type ImageWidget struct {
 	widget.BaseWidget
@@ -209,153 +213,70 @@ func isImage(file string) bool {
 
 // main --------------------------------------------------
 func main() {
+	var err error
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " z = zoom and also toggles sticky.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " v = verbose.\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
-	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: img2 <image file name>")
-		os.Exit(1)
-	}
 
 	str := fmt.Sprintf("Image Viewer2 last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {
 		fmt.Println(str) // this works as intended
 	}
 
-	imgfilename := flag.Arg(0)
-	_, err := os.Stat(imgfilename)
+	cwd, err = os.Getwd()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgfilename, ") is", err)
+		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	if isNotImageStr(imgfilename) {
-		fmt.Fprintln(os.Stderr, imgfilename, "does not have an image extension.")
-		os.Exit(1)
-	}
-
-	basefilename := filepath.Base(imgfilename)
-	fullFilename, err := filepath.Abs(imgfilename)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from filepath.Abs on", imgfilename, "is", err)
-		os.Exit(1)
-	}
-
-	imgFileHandle, err := os.Open(fullFilename)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from opening", fullFilename, "is", err)
-		os.Exit(1)
-	}
-
-	imgConfig, _, err := image.DecodeConfig(imgFileHandle) // img is of type image.Config
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from decode config on", fullFilename, "is", err)
-		os.Exit(1)
-	}
-	imgFileHandle.Close()
-
-	var width = float32(imgConfig.Width)
-	var height = float32(imgConfig.Height)
-	var aspectRatio = width / height
-	if aspectRatio > 1 {
-		aspectRatio = 1 / aspectRatio
-	}
-
-	if *verboseFlag {
-		fmt.Printf(" image.Config %s, %s, %s \n width=%g, height=%g, and aspect ratio=%.4g \n",
-			imgfilename, fullFilename, basefilename, width, height, aspectRatio)
-	}
-
-	if width > maxWidth || height > maxHeight {
-		width = maxWidth * aspectRatio
-		height = maxHeight * aspectRatio
-	}
-
-	if *verboseFlag {
-		fmt.Println()
-		//                                               fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
-		fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
-		fmt.Println()
-	}
-
-	cwd = filepath.Dir(fullFilename)
+	indexChan := make(chan int, 1)
 	imgFileInfoChan := make(chan []os.FileInfo, 1) // buffered channel
+
 	go MyReadDirForImages(cwd, imgFileInfoChan)
 
+	if *verboseFlag {
+		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
+	}
 	globalA = app.New() // this line must appear before any other uses of fyne.
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
-	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
-	imgRead, err := storage.Reader(imageURI)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
-		os.Exit(1)
-	}
-	defer imgRead.Close()
-	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format type (jpeg, png, etc) used during format registration by the init function.
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-		os.Exit(1)
-	}
-	bounds := img.Bounds()
-	imgHeight := bounds.Max.Y
-	imgWidth := bounds.Max.X
-	if *verboseFlag {
-		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd)
-		fmt.Println()
-	}
-	/*  Andy commented that this code is not needed, as it's done automatically.
-	if imgWidth > maxWidth {
-		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-	} else if imgHeight > maxHeight {
-		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-	}
-	*/
-
-	// Time to make the GUI
-
-	imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
-	label := canvas.NewText(imgtitle, green)
-	label.TextStyle.Bold = true
-	label.Alignment = fyne.TextAlignCenter
-
-	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.ScaleMode = canvas.ImageScaleFastest
-	if !*zoomFlag {
-		loadedimg.FillMode = canvas.ImageFillContain
-	}
-	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
-
-	globalW.SetTitle(imgtitle)
-	//                                                                                    globalW.SetContent(loadedimg)
-	globalW.SetContent(GUI)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
-
 	imageInfo = <-imgFileInfoChan // unary channel operator reads from the channel.
-
 	if *verboseFlag {
-		if isSorted(imageInfo) {
-			fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
-		} else {
-			fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
-		}
-		fmt.Println()
+		ctfmt.Printf(ct.Red, true, " after imageInfo channel read.  Len = %d, cap = %d\n", len(imageInfo), cap(imageInfo))
 	}
 
-	indexchan := make(chan int, 1)
-	t0 := time.Now()
+	imgFilename := flag.Arg(0)
+	baseFilename := filepath.Base(imgFilename)
+	//ctfmt.Printf(ct.Red, true, " imgFilename = %s, baseFilename = %s\n", imgFilename, baseFilename)
 
-	go filenameIndex(imageInfo, basefilename, indexchan)
+	if flag.NArg() >= 1 {
+		go filenameIndex(imageInfo, baseFilename, indexChan)
+		_, err = os.Stat(imgFilename)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Skipped.", imgFilename, err)
+		}
 
-	globalW.CenterOnScreen()
+		if isNotImageStr(imgFilename) {
+			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.  Skipped.")
+		}
 
-	index = <-indexchan // syntax to read from a channel.
+		index = <-indexChan // syntax to read from a channel.
+	}
 
-	elapsedtime := time.Since(t0)
+	if index < 0 {
+		index = 0
+	}
 
-	fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
-	fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
-	fmt.Println()
+	loadTheImage()
 
 	globalW.ShowAndRun()
 
@@ -363,34 +284,41 @@ func main() {
 
 // loadTheImage ------------------------------
 func loadTheImage() {
-	imgname := imageInfo[index].Name()
-	fullfilename := cwd + string(filepath.Separator) + imgname
-	imageURI := storage.NewFileURI(fullfilename)
+	imgName := imageInfo[index].Name()
+	//                                       fullfilename := cwd + string(filepath.Separator) + imgname
+	fullFilename, err := filepath.Abs(imgName)
+	if err != nil {
+		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", index, err, imgName, fullFilename)
+
+	}
+	imageURI := storage.NewFileURI(fullFilename)
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullfilename, "is", err)
-		os.Exit(1)
+		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
+		return
 	}
 	defer imgRead.Close() // moved based on static linter
 
 	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, " Error from image.Decode is %s.  Skipped.\n", err)
+		return
 	}
-	bounds := img.Bounds()
-	imgHeight := bounds.Max.Y
-	imgWidth := bounds.Max.X
+	imgHeight := img.Bounds().Max.Y
+	imgWidth := img.Bounds().Max.X
+	//bounds := img.Bounds()
+	//imgHeight := bounds.Max.Y
+	//imgWidth := bounds.Max.X
 
 	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s %d x %d, SF=%.2f; %s", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
+	title := fmt.Sprintf("%s: %s %d x %d, SF=%.2f ", imgFmtName, imgName, imgWidth, imgHeight, scaleFactor)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
 
-	bounds = img.Bounds()
-	imgHeight = bounds.Max.Y
-	imgWidth = bounds.Max.X
+	//bounds = img.Bounds()   This seems to be redundant.  I don't know why it's here.
+	//imgHeight = bounds.Max.Y
+	//imgWidth = bounds.Max.X
 
 	/*  Andy said that this code is not needed.
 	if imgWidth > maxWidth {
@@ -412,20 +340,18 @@ func loadTheImage() {
 			intWidth := uint(math.Round(scaledWidth))
 			img = resize.Resize(intWidth, 0, img, resize.Lanczos3)
 		}
-		bounds = img.Bounds()
-		imgHeight = bounds.Max.Y
-		imgWidth = bounds.Max.X
+		imgHeight = img.Bounds().Max.Y
+		imgWidth = img.Bounds().Max.X
 	}
 
 	if *verboseFlag {
-		bounds = img.Bounds()
-		imgHeight = bounds.Max.Y
-		imgWidth = bounds.Max.X
+		imgHeight = img.Bounds().Max.Y
+		imgWidth = img.Bounds().Max.X
 		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
 		fmt.Println()
 	}
 
-	labelStr := fmt.Sprintf("%s; width=%d, height=%d", imgname, imgWidth, imgHeight)
+	labelStr := fmt.Sprintf("%s %s; %dw x %dh", imgFmtName, imgName, imgWidth, imgHeight)
 	label := canvas.NewText(labelStr, green)
 	label.TextStyle.Bold = true
 	label.Alignment = fyne.TextAlignCenter
@@ -442,7 +368,6 @@ func loadTheImage() {
 	globalW.SetTitle(title)
 
 	globalW.Show()
-	// return  redundant
 } // end loadTheImage
 
 // filenameIndex --------------------------------------

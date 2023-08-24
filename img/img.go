@@ -173,13 +173,11 @@ func main() {
 		go filenameIndex(imageInfo, baseFilename, indexChan)
 		_, err = os.Stat(imgFilename)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgFilename, ") is", err)
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Skipped.\n", imgFilename, err)
 		}
 
 		if isNotImageStr(imgFilename) {
-			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.")
-			os.Exit(1)
+			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.  Skipped.")
 		}
 
 		index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
@@ -230,15 +228,15 @@ func loadTheImage(idx int) {
 	imageURI := storage.NewFileURI(fullFilename)
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
+		return
 	}
 	defer imgRead.Close() // moved to here, after checking err, as recommended by static linter.
 
 	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
 	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, " Error from image.Decode is %s.  Skipped\n", err)
+		return
 	}
 	bounds := img.Bounds()
 	imgHeight := bounds.Max.Y
