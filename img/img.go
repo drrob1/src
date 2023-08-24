@@ -34,7 +34,7 @@ REVISION HISTORY
 21 Aug 23 -- Made the -sticky flag default to on/true.  And I changed the displayed title string.
                Now I want to refactor the code so it doesn't need a filename as an arg.  If no filename is given, it will default to the first one in its slice.
                Here that would be the most recent image file.
-
+24 Aug 23 -- Removed the old version of main(), and edited some comments.  And added help output.
 */
 
 package main
@@ -71,7 +71,7 @@ import (
 	//"image/color"
 )
 
-const LastModified = "Aug 22, 2023"
+const LastModified = "Aug 24, 2023"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -112,6 +112,14 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " z = zoom and also toggles sticky.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " v = verbose.\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
 
@@ -177,7 +185,7 @@ func main() {
 		index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
 	}
 
-	globalW.CenterOnScreen()
+	//globalW.CenterOnScreen()
 
 	if index < 0 {
 		index = 0
@@ -422,8 +430,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		//nextImage()
 		keyCmdChan <- nextImgCmd
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
-		globalW.Close() // quit's the app if this is the last window, which it is.
-		//		(*globalA).Quit()
+		globalW.Close() // quits the app if this is the last window, which it is.
+		//		globalA.Quit()
 	case fyne.KeyHome:
 		if !sticky {
 			scaleFactor = 1
@@ -505,166 +513,3 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 	}
 } // end keyTyped
-
-/*
-I'm putting the working original version here, in case I need to refer to it again.
-func main() {
-	flag.Parse()
-	sticky = *zoomFlag || *stickyFlag
-	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, " Usage: img <image file name>")
-		os.Exit(1)
-	}
-
-	str := fmt.Sprintf("Single Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
-	if *verboseFlag {
-		fmt.Println(str)
-	}
-
-	imgfilename := flag.Arg(0)
-	_, err := os.Stat(imgfilename)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from os.Stat(", imgfilename, ") is", err)
-		os.Exit(1)
-	}
-
-	if isNotImageStr(imgfilename) {
-		fmt.Fprintln(os.Stderr, imgfilename, "does not have an image extension.")
-		os.Exit(1)
-	}
-
-	keyCmdChan = make(chan int, keyCmdChanSize)
-	basefilename := filepath.Base(imgfilename)
-	fullFilename, err := filepath.Abs(imgfilename)
-
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from filepath.Abs on", imgfilename, "is", err)
-		os.Exit(1)
-	}
-
-	imgFileHandle, err := os.Open(fullFilename)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from opening", fullFilename, "is", err)
-		os.Exit(1)
-	}
-
-	imgConfig, _, err := image.DecodeConfig(imgFileHandle) // img is of type image.Config
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from decode config on", fullFilename, "is", err)
-		os.Exit(1)
-	}
-	imgFileHandle.Close()
-
-	var width = float32(imgConfig.Width)
-	var height = float32(imgConfig.Height)
-	var aspectRatio = width / height
-	if aspectRatio > 1 {
-		aspectRatio = 1 / aspectRatio
-	}
-
-	if *verboseFlag {
-		fmt.Printf(" image.Config %s, %s, %s \n width=%g, height=%g, and aspect ratio=%.4g.  Sticky=%t \n",
-			imgfilename, fullFilename, basefilename, width, height, aspectRatio, sticky)
-	}
-
-	if width > maxWidth || height > maxHeight {
-		width = maxWidth * aspectRatio
-		height = maxHeight * aspectRatio
-	}
-
-	if *verboseFlag {
-		fmt.Println()
-		//fmt.Printf(" Type for DecodeConfig is %T \n", imgConfig) // answer is image.Config
-		fmt.Println(" adjusted image.Config width =", width, ", height =", height, " but these values are not used to show the image.")
-		fmt.Println()
-	}
-
-	cwd = filepath.Dir(fullFilename)
-	workingDir, err := os.Getwd()
-	if err != nil {
-		fmt.Printf(" os.Getwd failed w/ error of %s\n", err)
-		os.Exit(1)
-	}
-	if cwd != workingDir {
-		ctfmt.Printf(ct.Red, false, " cwd=%q, should equal workingDir=%q.  Don't know why these are not equal.  Will ignore workingDir.\n")
-	}
-	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
-	go MyReadDirForImages(cwd, imgFileInfoChan)
-
-	globalA = app.New() // this line must appear before any other uses of fyne.
-	globalW = globalA.NewWindow(str)
-	globalW.Canvas().SetOnTypedKey(keyTyped)
-
-	imageURI := storage.NewFileURI(fullFilename) // needs to be a type = fyne.CanvasObject
-	imgRead, err := storage.Reader(imageURI)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
-		os.Exit(1)
-	}
-	defer imgRead.Close()
-	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
-	if err != nil {
-		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
-		os.Exit(1)
-	}
-	bounds := img.Bounds()
-	imgHeight := bounds.Max.Y
-	imgWidth := bounds.Max.X
-	if *verboseFlag {
-		fmt.Println(" image.Decode, width=", imgWidth, "and height=", imgHeight, ", imgFmtName=", imgFmtName, "and cwd=", cwd, ".  Min x =", bounds.Min.X,
-			"and min y =", bounds.Min.Y)
-		fmt.Println()
-	}
-	// Unnecessary according to Andy
-	//if imgWidth > maxWidth {
-	//	img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-	//} else if imgHeight > maxHeight {
-	//	img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-	//}
-
-loadedimg = canvas.NewImageFromImage(img)
-loadedimg.ScaleMode = canvas.ImageScaleFastest
-if !*zoomFlag {
-loadedimg.FillMode = canvas.ImageFillContain
-}
-
-imgtitle := fmt.Sprintf("%s, %d x %d", imgfilename, imgWidth, imgHeight)
-globalW.SetTitle(imgtitle)
-globalW.SetContent(loadedimg)
-globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-
-// this syntax works and was blocking until I made the channel buffered.
-imageInfo = <-imgFileInfoChan // reading from a channel is a unary use of the channel operator.
-
-if *verboseFlag {
-if isSorted(imageInfo) {
-fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
-} else {
-fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
-}
-fmt.Println()
-}
-
-indexchan := make(chan int, 1) // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
-t0 := time.Now()
-
-go filenameIndex(imageInfo, basefilename, indexchan)
-
-globalW.CenterOnScreen()
-
-index = <-indexchan // syntax to read from a channel, using the channel operator as a unary operator.
-elapsedtime := time.Since(t0)
-
-if *verboseFlag {
-fmt.Printf(" %s index is %d in the fileinfo slice of len %d; linear sequential search took %s.\n", basefilename, index, len(imageInfo), elapsedtime)
-fmt.Printf(" As a check, imageInfo[%d] = %s.\n", index, imageInfo[index].Name())
-fmt.Println()
-}
-
-go processKeys()
-
-globalW.ShowAndRun()
-
-} // end main
-
-*/
