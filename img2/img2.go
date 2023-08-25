@@ -28,6 +28,7 @@ REVISION HISTORY
 21 Nov 22 -- Fixed some issues caught by static linter.
 21 Aug 23 -- Made the -sticky flag default to on.  And added scaleFactor to the window title.
 24 Aug 23 -- Will add the new code I wrote for img to here.
+25 Aug 23 -- Will time how long it takes to create the slice of fileInfos, and then sort them.
 */
 
 package main
@@ -63,7 +64,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Aug 24, 2023"
+const LastModified = "Aug 25, 2023"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -396,6 +397,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 		return
 	}
 
+	t0 := time.Now()
 	fi := make([]os.FileInfo, 0, len(names))
 	for _, name := range names {
 		if isImage(name) {
@@ -408,7 +410,6 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 		}
 	}
 
-	t0 := time.Now()
 	sortfcn := func(i, j int) bool {
 		return fi[i].ModTime().After(fi[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
 	}
@@ -417,7 +418,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	elapsedtime := time.Since(t0)
 
 	if *verboseFlag {
-		fmt.Printf(" Length of the image fileinfo slice is %d, and sorted in %s\n", len(fi), elapsedtime.String())
+		fmt.Printf(" Length of the image fileinfo slice is %d; created and sorted in %s\n", len(fi), elapsedtime.String())
 		fmt.Println()
 	}
 

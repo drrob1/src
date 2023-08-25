@@ -23,6 +23,7 @@ REVISION HISTORY
                It works because the sort is alphabetical, not by date, so I don't need to call Lstat.
 21 Nov 22 -- Fixed some issues flagged by static linter.
 21 Aug 23 -- Made the -sticky flag default to on.  And added a ScaleFactor value to the display window's title.
+25 Aug 23 -- Will time how long it take to create the slice of filenames in MyReadDir
 */
 
 package main
@@ -53,7 +54,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Aug 21, 2023"
+const LastModified = "Aug 25, 2023"
 const maxWidth = 1800
 const maxHeight = 900
 const keyCmdChanSize = 20
@@ -383,20 +384,19 @@ func MyReadDirForImagesAlphabetically(dir string, imageInfoChan chan []string) {
 		return
 	}
 
+	t0 := time.Now()
 	fi := make([]string, 0, len(names))
 	for _, name := range names {
 		if isImage(name) {
-			fi = append(fi, name)
+			fi = append(fi, name) // note that this does not call Lstat for the files, so it's much faster than in img.go and img2.go
 		}
 	}
-
-	t0 := time.Now()
 
 	sort.Strings(fi)
 	elapsedtime := time.Since(t0)
 
 	if *verboseFlag {
-		fmt.Printf(" Length of the image fileinfo slice is %d, and sorted in %s\n", len(fi), elapsedtime.String())
+		fmt.Printf(" Length of the image fileinfo slice is %d; created and sorted in %s\n", len(fi), elapsedtime.String())
 		fmt.Println()
 	}
 
