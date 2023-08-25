@@ -173,11 +173,11 @@ func main() {
 		go filenameIndex(imageInfo, baseFilename, indexChan)
 		_, err = os.Stat(imgFilename)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Skipped.\n", imgFilename, err)
+			fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  \n", imgFilename, err)
 		}
 
 		if isNotImageStr(imgFilename) {
-			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.  Skipped.")
+			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.  ")
 		}
 
 		index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
