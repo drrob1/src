@@ -388,7 +388,7 @@ func MyReadDirForImagesAlphabetically(dir string, imageInfoChan chan []string) {
 	fi := make([]string, 0, len(names))
 	for _, name := range names {
 		if isImage(name) {
-			fi = append(fi, name) // note that this does not call Lstat for the files, so it's much faster than in img.go and img2.go
+			fi = append(fi, name) // note that this does not call Lstat for the files, so it's much faster than in img.go and img2.go.  Dir of 23K images take 3 ms here, but ~280 ms in img2.go.
 		}
 	}
 
