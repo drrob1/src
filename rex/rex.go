@@ -116,9 +116,12 @@ Revision History
 21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
 16 Jan 23 -- Added smart case
 26 Feb 23 -- Fixed bug that effects opening symlinked directories on linux.
+28 Aug 23 -- I want to make the -t switch report how many total matches there are to the RegExp.  Instead of how many total files and bytes in the directory.
+               I don't need to know how many total bytes there are in the matches to the RegExp.  So I have to capture the len of the slice of matches.
+               I may just always show that, as it seems it would be easy and only 1 line.  I'll place that line at the bottom.
 */
 
-const LastAltered = "Feb 26, 2023"
+const LastAltered = "Aug 28, 2023"
 
 type dirAliasMapType map[string]string
 
@@ -142,7 +145,7 @@ const min3Width = 170
 
 var excludeRegex *regexp.Regexp
 
-//var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
+// var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
 var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
 var maxDimFlag bool
 var sizeTotal, grandTotal int64
@@ -532,6 +535,7 @@ func main() {
 
 	fileInfos = getFileInfos(workingDir, inputRegEx)
 	sort.Slice(fileInfos, sortfcn)
+	totalMatches := len(fileInfos) // this is before the fileInfos is truncated to only what's to be output.
 	cs := getColorizedStrings(fileInfos, numOfCols)
 
 	// Output the colorized string slice
@@ -566,7 +570,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Print(" File Size total = ", s)
+	fmt.Printf(" Total Matches = %d, displayed file Size total = %s", totalMatches, s)
 	if ShowGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, winFlag, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
@@ -672,7 +676,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 	return string(inRune)
 } // makesubst
 
-//------------------------------ GetDirectoryAliases ----------------------------------------
+// ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 	s, ok := os.LookupEnv("diraliases")
