@@ -116,18 +116,19 @@ Revision History
 21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
 16 Jan 23 -- Added smart case
 26 Feb 23 -- Fixed bug that effects opening symlinked directories on linux.
-28 Aug 23 -- I want to make the -t switch report how many total matches there are to the RegExp.  Instead of how many total files and bytes in the directory.
+27 Aug 23 -- I want to make the -t switch report how many total matches there are to the RegExp.  Instead of how many total files and bytes in the directory.
                I don't need to know how many total bytes there are in the matches to the RegExp.  So I have to capture the len of the slice of matches.
                I may just always show that, as it seems it would be easy and only 1 line.  I'll place that line at the bottom.
+               I removed the -t ShowGrandTotal flag as I removed the code that calculated it quite a while ago.
 */
 
-const LastAltered = "Aug 28, 2023"
+const LastAltered = "Aug 27, 2023"
 
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numlines, w                                                     int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag bool
+	numlines, w                                          int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag bool
 }
 
 type colorizedStr struct {
@@ -156,10 +157,9 @@ func main() {
 	var dsrtParam DsrtParamType
 	var fileInfos []os.FileInfo
 	var err error
-	var GrandTotalCount, autoHeight, autoWidth int
+	var autoHeight, autoWidth int
 	var excludeRegexPattern string
 	var numOfCols int
-	//var directoryAliasesMap dirAliasMapType
 
 	// environment variable processing.  If present, these will be the defaults.
 	dsrtEnviron := os.Getenv("dsrt")
@@ -255,7 +255,7 @@ func main() {
 	var FilenameListFlag bool
 	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
-	var TotalFlag = flag.Bool("t", false, "include grand total of directory")
+	//var TotalFlag = flag.Bool("t", false, "include grand total of directory")  Removed 8/27/23
 
 	flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")
 	flag.BoolVar(&verboseFlag, "v", false, "enter a verbose (testing) mode to println more variables")
@@ -328,8 +328,8 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Printf(" dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t \n",
-			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag)
+		fmt.Printf(" dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
+			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
 		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
@@ -389,9 +389,9 @@ func main() {
 
 	dirListFlag = dirListFlag || FilenameListFlag || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // for rex, this flag is doing double duty, meaning -d was entered or any dir to be listed.
 	filenameList = !(FilenameListFlag || dsrtParam.filenamelistflag)                                     // need to reverse the flag because D means suppress the output of filenames.
-	ShowGrandTotal := *TotalFlag || dsrtParam.totalflag                                                  // added 09/12/2018 12:32:23 PM
 	longFileSizeListFlag = *longflag
-	//showGrandTotal = *TotalFlag || dsrtParam.totalflag
+
+	//ShowGrandTotal := *TotalFlag || dsrtParam.totalflag                                             // added 09/12/2018 12:32:23 PM, and removed 8/27/23.
 
 	inputRegExStr := ""
 	workingDir, er := os.Getwd()
@@ -522,9 +522,8 @@ func main() {
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
 		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, numOfLines)
-		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t\n",
-			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
-			dsrtParam.totalflag)
+		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t",
+			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Printf(" Dirname is %s, smartCase = %t\n", workingDir, smartCase)
 		fmt.Println()
 	}
@@ -570,13 +569,13 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Printf(" Total Matches = %d, displayed file Size total = %s", totalMatches, s)
-	if ShowGrandTotal {
-		s1, color := getMagnitudeString(grandTotal)
-		ctfmt.Println(color, winFlag, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
-	} else {
-		fmt.Println(".")
-	}
+	fmt.Printf(" Total Matches = %d, displayed file Size total = %s.", totalMatches, s)
+	//if ShowGrandTotal {
+	//	s1, color := getMagnitudeString(grandTotal)
+	//	ctfmt.Println(color, winFlag, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
+	//} else {
+	//	fmt.Println(".")
+	//}
 	fmt.Println()
 } // end main rex
 
@@ -645,8 +644,6 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 			dsrtparam.dirlistflag = true
 		} else if s == 'D' {
 			dsrtparam.filenamelistflag = true
-		} else if s == 't' { // added 09/12/2018 12:26:01 PM
-			dsrtparam.totalflag = true // for the grand total operation
 		} else if unicode.IsDigit(rune(s)) {
 			dsrtparam.numlines = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
