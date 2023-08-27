@@ -78,9 +78,10 @@ import (
                  ran the pgm again, and these were copied in the 2nd try.  Hooray!
   25 May 23 -- Changed the final message to be multicolored.
    8 Jul 23 -- I fixed part where dest dir is tested.
+  26 Aug 23 -- I'm going to change the final message to suppress when zero files were copied or not copied.
 */
 
-const LastAltered = "8 July 2023" //
+const LastAltered = "27 Aug 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -336,12 +337,18 @@ func main() {
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
-	ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d, ", succeeded)
-	ctfmt.Printf(ct.Red, onWin, " total files NOT copied is %d, ", failed)
+	if succeeded > 0 {
+		ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d. ", succeeded)
+	}
+	if failed > 0 {
+		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
+	}
 	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
 } // end main
 
-// min(int1, int2) int  -- this returns the smaller of 2 int
+// ------------------------------------------------------------- min ---------------------------------------------------
+
+// min(int1, int2) int  -- this returns the smaller of 2 int.  As of Go 1.21, this is a built-in fcn.  Removing this forces compilation to Go 1.21+
 func min(n1, n2 int) int {
 	if n1 < n2 {
 		return n1

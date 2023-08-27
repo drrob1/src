@@ -35,6 +35,7 @@ REVISION HISTORY
                Now I want to refactor the code so it doesn't need a filename as an arg.  If no filename is given, it will default to the first one in its slice.
                Here that would be the most recent image file.
 24 Aug 23 -- Removed the old version of main(), and edited some comments.  And added help output.
+26 Aug 23 -- Added call to SetFullScreen(), then removed it because it made most images look terrible.
 */
 
 package main
@@ -71,7 +72,7 @@ import (
 	//"image/color"
 )
 
-const LastModified = "Aug 24, 2023"
+const LastModified = "Aug 26, 2023"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -189,6 +190,8 @@ func main() {
 		index = 0
 	}
 	loadTheImage(index)
+	//globalW.SetFullScreen(true)
+	//globalW.SetFullScreen(false)
 
 	go processKeys()
 
