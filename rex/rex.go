@@ -120,15 +120,16 @@ Revision History
                I don't need to know how many total bytes there are in the matches to the RegExp.  So I have to capture the len of the slice of matches.
                I may just always show that, as it seems it would be easy and only 1 line.  I'll place that line at the bottom.
                I removed the -t ShowGrandTotal flag as I removed the code that calculated it quite a while ago.
+28 Aug 23 -- Added the all flag, currently equivalent to indicating 50 screens.  Mostly copied the code from dsrt.go.
 */
 
-const LastAltered = "Aug 27, 2023"
+const LastAltered = "Aug 28, 2023"
 
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numlines, w                                          int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag bool
+	numscreens, w                                                  int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, halfFlag bool
 }
 
 type colorizedStr struct {
@@ -149,9 +150,15 @@ var excludeRegex *regexp.Regexp
 // var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
 var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
 var maxDimFlag bool
-var sizeTotal, grandTotal int64
+var sizeTotal int64
 var numOfLines int
 var smartCase bool
+
+// allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
+var allScreens = 50
+
+// this is to be equivalent to allScreens screens, by default same as n=50.
+var allFlag bool
 
 func main() {
 	var dsrtParam DsrtParamType
@@ -216,9 +223,7 @@ func main() {
 		}
 	}
 
-	if dsrtParam.numlines > 0 { // setting this on command line take priority over defaults
-		numOfLines = dsrtParam.numlines
-	} else if autoHeight > 0 {
+	if autoHeight > 0 {
 		numOfLines = autoHeight - 7
 	} else {
 		numOfLines = defaultHeight
@@ -281,6 +286,9 @@ func main() {
 
 	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
+
+	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting very verbose will also set verbose.
@@ -328,8 +336,8 @@ func main() {
 		fmt.Println()
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Printf(" dsrt environ values are: numlines=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
-			dsrtParam.numlines, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
+		fmt.Printf(" dsrt environ values are: numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
+			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
 		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
@@ -352,17 +360,24 @@ func main() {
 
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
-	} else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
-		numOfLines = dsrtParam.numlines
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like if the display is redirected
 		numOfLines = defaultHeight
 	}
 
+	if dsrtParam.numscreens > 0 {
+		allScreens = dsrtParam.numscreens
+	}
+
+	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+		*nscreens = allScreens
+	}
+	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
+
 	numOfLines *= *nscreens
 
-	if halfFlag {
+	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
 	}
 
@@ -522,8 +537,8 @@ func main() {
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
 		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, numOfLines)
-		fmt.Printf(" dsrtparam numlines=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t",
-			dsrtParam.numlines, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
+		fmt.Printf(" dsrtparam numscreens=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t",
+			dsrtParam.numscreens, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Printf(" Dirname is %s, smartCase = %t\n", workingDir, smartCase)
 		fmt.Println()
 	}
@@ -565,17 +580,8 @@ func main() {
 	if sizeTotal > 100000 {
 		s = AddCommas(s)
 	}
-	s0 := fmt.Sprintf("%d", grandTotal)
-	if grandTotal > 100000 {
-		s0 = AddCommas(s0)
-	}
+
 	fmt.Printf(" Total Matches = %d, displayed file Size total = %s.", totalMatches, s)
-	//if ShowGrandTotal {
-	//	s1, color := getMagnitudeString(grandTotal)
-	//	ctfmt.Println(color, winFlag, ", Directory grand total is", s0, "or approx", s1, "in", GrandTotalCount, "files.")
-	//} else {
-	//	fmt.Println(".")
-	//}
 	fmt.Println()
 } // end main rex
 
@@ -644,10 +650,12 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 			dsrtparam.dirlistflag = true
 		} else if s == 'D' {
 			dsrtparam.filenamelistflag = true
+		} else if s == 'h' {
+			dsrtparam.halfFlag = true
 		} else if unicode.IsDigit(rune(s)) {
-			dsrtparam.numlines = int(s) - int('0')
+			dsrtparam.numscreens = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-				dsrtparam.numlines = 10*dsrtparam.numlines + int(indiv[j+1][0]) - int('0')
+				dsrtparam.numscreens = 10*dsrtparam.numscreens + int(indiv[j+1][0]) - int('0')
 				break // if have a 2-digit number, it ends processing of the indiv string
 			}
 		}
