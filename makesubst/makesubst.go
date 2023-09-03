@@ -32,7 +32,7 @@ func MakeSubst(instr string) string {
 } // makesubst
 /*
   The first version of this routine used a ByteSlice.  Then I read an example in Go in 21st Century that uses a
-slice of runes, which maked more sense to me.  So I changed from inByteSlice that I called BS, to inRune
+slice of runes, which makes more sense to me.  So I changed from inByteSlice that I called BS, to inRune
 which is a slice of runes.  That works with no conversion to byte needed, as s is a rune and single quoted
 characters are runes.
 */
