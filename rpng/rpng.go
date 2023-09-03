@@ -122,6 +122,7 @@ REVISION HISTORY
 21 Nov 22 -- static linter objected to err that was not tested in a few places while using file writes.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 24 Jun 23 -- hpcalc2 changed, so I have to recompile.  And I'm editing comments.  I stopped calling the map close fcn here 2 yrs ago.
+ 3 Sep 23 -- I added a substitution, tilde for backtick, to makesubst.  So I have to recompile.
 */
 
 const lastAlteredDate = "June 24, 2023"
@@ -329,7 +330,8 @@ func main() {
 
 			//  These commands are processed thru GetResult() first, then these are processed here.
 			if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
-				ctfmt.Println(ct.Cyan, WindowsFlag, " Last altered the source of rpng.go", lastAlteredDate, "compiled w/", runtime.Version())
+				ctfmt.Printf(ct.Cyan, WindowsFlag, " Last altered the source of rpng.go %s, compiled w/ %s, binary timestamp is %s\n",
+					lastAlteredDate, runtime.Version(), execTimeStamp)
 				AllowDumpFlag = false
 			} else if strings.HasPrefix(rtkn.Str, "DUMP") {
 				AllowDumpFlag = false

@@ -9,6 +9,7 @@ REVISION HISTORY
 ----------------
 26 Aug 16 -- First version, in Go before possibly backported to the earlier versions.
  1 Oct 21 -- I just noticed that strings package has a replacer type, that does this.  I'm going to try using that.
+ 3 Sep 23 -- Added a substitution so that I can more easily enter a tilde, ie, substituting tilde for a backtick.
 */
 
 func MakeSubst(instr string) string {
@@ -22,6 +23,8 @@ func MakeSubst(instr string) string {
 			s = '+'
 		case ';':
 			s = '*'
+		case '`':
+			s = '~'
 		}
 		inRune[i] = s // was byte(s) before I made this a slice of runes.
 	}
@@ -35,6 +38,6 @@ characters are runes.
 */
 
 func MakeReplaced(instr string) string {
-	rplcd := strings.NewReplacer("=", "+", ";", "*")
+	rplcd := strings.NewReplacer("=", "+", ";", "*", "`", "~")
 	return rplcd.Replace(instr)
 }
