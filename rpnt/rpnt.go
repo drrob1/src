@@ -127,9 +127,10 @@ REVISION HISTORY
                And I added verboseFlag, but I can't see what it's writing to the screen, so I'll write to a file in the current directory.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 24 Jun 23 -- Changed hpcalc2, so I have to recompile.  And I changed some comments.
+ 3 Sep 23 -- I noticed that entering a stack command discards whatever characters were already entered.  I fixed that, and I added subst tilde for backtick.
 */
 
-const LastAltered = "24 June 2023"
+const LastAltered = "3 Sep 2023"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
@@ -524,6 +525,7 @@ func main() {
 				today := time.Now()
 				datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 				_, err = XstringWriter.WriteString("------------------------------------------------------\n")
+				check(err)
 				_, err = XstringWriter.WriteString(datestring)
 				_, err = XstringWriter.WriteRune('\n')
 				_, err = XstringWriter.WriteString(xstring)
@@ -611,12 +613,12 @@ func main() {
 		// Rotate StorageFileNames and write
 		err = os.Rename(Storage2FullFilename, Storage3FullFilename)
 		if err != nil && !*noFileFlag {
-			_ = fmt.Errorf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
+			fmt.Printf(" Rename of storage 2 to storage 3 failed with error %v \n", err)
 		}
 
 		err = os.Rename(StorageFullFilename, Storage2FullFilename)
 		if err != nil && !*noFileFlag {
-			_ = fmt.Errorf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
+			fmt.Printf(" Rename of storage 1 to storage 2 failed with error %v \n", err)
 		}
 
 		thefile, err = os.Create(StorageFullFilename)        // for writing
@@ -643,6 +645,7 @@ func main() {
 	today := time.Now()
 	datestring := today.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 	_, err = DisplayTapeWriter.WriteString("------------------------------------------------------\n")
+	check(err)
 	_, err = DisplayTapeWriter.WriteString(datestring)
 	_, err = DisplayTapeWriter.WriteRune('\n')
 	for _, s := range DisplayTape {
@@ -762,7 +765,7 @@ func check(err error) {
 // ------------------------------------------------------- checkmsg -------------------------------
 func checkmsg(err error, msg string) {
 	if err != nil {
-		_ = fmt.Errorf("%s %v \n", msg, err) // writes to stderr instead of stdout.
+		fmt.Printf("%s %s \n", msg, err)
 		panic(err)
 	}
 }
@@ -781,18 +784,18 @@ func GetInputString(x, y int) string {
 	deleol(x, y)
 	scrn.ShowCursor(x, y)
 	scrn.Show()
-	donechan := make(chan bool)
-	keychannl := make(chan rune)
-	helpchan := make(chan bool)
-	delchan := make(chan bool)
-	upchan := make(chan bool)
-	downchan := make(chan bool)
-	pgupchan := make(chan bool)
-	pgdnchan := make(chan bool)
-	homechan := make(chan bool)
-	endchan := make(chan bool)
-	leftchan := make(chan bool)
-	rightchan := make(chan bool)
+	donechan := make(chan bool, 1)
+	keychannl := make(chan rune, 1)
+	helpchan := make(chan bool, 1)
+	delchan := make(chan bool, 1)
+	upchan := make(chan bool, 1)
+	downchan := make(chan bool, 1)
+	pgupchan := make(chan bool, 1)
+	pgdnchan := make(chan bool, 1)
+	homechan := make(chan bool, 1)
+	endchan := make(chan bool, 1)
+	leftchan := make(chan bool, 1)
+	rightchan := make(chan bool, 1)
 
 	pollevent := func() {
 		for {
@@ -869,6 +872,9 @@ func GetInputString(x, y int) string {
 
 		case <-helpchan:
 			putfln("help message received.  %s", "enter key is delimiter")
+			if len(bs) > 0 {
+				return string(bs) + " help"
+			}
 			return "help"
 
 		case <-delchan:
@@ -880,27 +886,51 @@ func GetInputString(x, y int) string {
 			scrn.Show()
 
 		case <-upchan:
+			if len(bs) > 0 {
+				return string(bs) + " up"
+			}
 			return "up"
 
 		case <-downchan:
+			if len(bs) > 0 {
+				return string(bs) + " dn"
+			}
 			return "dn"
 
 		case <-pgupchan:
+			if len(bs) > 0 {
+				return string(bs) + " pgup"
+			}
 			return "pgup"
 
 		case <-pgdnchan:
+			if len(bs) > 0 {
+				return string(bs) + " pgdn"
+			}
 			return "pgdn"
 
 		case <-homechan:
+			if len(bs) > 0 {
+				return string(bs) + " pgup"
+			}
 			return "pgup" // "home key"
 
 		case <-endchan:
+			if len(bs) > 0 {
+				return string(bs) + " pgdn"
+			}
 			return "pgdn" //"end key"
 
 		case <-rightchan:
+			if len(bs) > 0 {
+				return string(bs) + " ~"
+			}
 			return "~"
 
 		case <-leftchan:
+			if len(bs) > 0 {
+				return string(bs) + " ~"
+			}
 			return "~"
 
 		case key := <-keychannl:
@@ -915,6 +945,8 @@ func GetInputString(x, y int) string {
 				key = '+'
 			} else if key == ';' {
 				key = '*'
+			} else if key == '`' {
+				key = '~'
 			}
 			bs = append(bs, byte(key))
 			puts(scrn, style, x, y, string(bs))
