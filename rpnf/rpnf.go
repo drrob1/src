@@ -27,7 +27,8 @@ import (
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-/* From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
+/*
+ From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
  5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
  8 Sep 21 -- Working as expected.  By george I think I've done it!
  9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
@@ -55,9 +56,10 @@ import (
 11 Aug 22 -- About command will give more info about the exe binary
 21 Oct 22 -- golangci-lint caught that I have an unneeded Sprintf call.  I removed both of them.  And added to show when the binary was last linked for the ABOUT cmd.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
+ 3 Sep 23 -- When entering an arrow key for stack manipulation, the entry is lost.  Time to fix that by send the input string, if it exists, down the chan before sending the arrow key.
 */
 
-const lastModified = "Feb 18, 2023"
+const lastModified = "Sep 3, 2023"
 
 const ( // output modes
 	outputfix = iota
@@ -81,7 +83,7 @@ var gray = color.Gray{Y: 100}
 var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
 var lightcyan = color.NRGBA{R: 224, G: 255, B: 255, A: 255}
 
-//var homeDir, INBUF, resultToOutput string
+// var homeDir, INBUF, resultToOutput string
 var homeDir, resultToOutput string
 var windowsFlag bool
 
@@ -249,9 +251,8 @@ func Doit() {
 			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 			// These commands are not run thru hpcalc as they are processed before calling it.
 			realtknslice := tknptr.RealTokenSlice(INBUF)
-			INBUF = "" // do this to stop endless processing of INBUF in a concurrent model.
+			INBUF = "" // do this to stop endless processing of the same value of INBUF in a concurrent model.
 			stringslice = nil
-			//fmt.Println(" after setting stringslice to nil.  len =", len(stringslice), " and cap =", cap(stringslice))  output is 0 and 0
 
 			for _, rtkn := range realtknslice {
 				if rtkn.Str == "HELP" || rtkn.Str == "?" || rtkn.Str == "H" { // append more help lines to output from HPCALC2
@@ -445,22 +446,34 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 */
 
 // ---------------------------------------------------------- keyTyped --------------------------------------------
-func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.
+func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.  inbufChan is the string chan that is used to return these strings to be processed.
 	switch e.Name {
 	case fyne.KeyUp: // stack up
+		if len(input.Text) > 0 {
+			inbufChan <- input.Text
+		}
 		inbufChan <- ","
 		return
 	case fyne.KeyDown: // stack down
+		if len(input.Text) > 0 {
+			inbufChan <- input.Text
+		}
 		inbufChan <- "POP" // I'm sending a command thru instead of calling PopX so that UNDO will work correctly.
 		return
 	case fyne.KeyLeft: // swap X, Y
+		if len(input.Text) > 0 {
+			inbufChan <- input.Text
+		}
 		inbufChan <- "~"
 		return
 	case fyne.KeyRight: // swap X, Y
+		if len(input.Text) > 0 {
+			inbufChan <- input.Text
+		}
 		inbufChan <- "~"
 		return
 	case fyne.KeyEscape, fyne.KeyQ:
-		globalW.Close() // quit's the app if this is the last window.
+		globalW.Close() // quits the app if this is the last window.
 		//                                                                                               globalA.Quit()
 		//	                                                                                          (*globalA).Quit()
 	case fyne.KeyX:
@@ -496,6 +509,9 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 	case fyne.KeySemicolon:
 		input.TypedRune('*')
 	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
+		if len(input.Text) > 0 {
+			inbufChan <- input.Text
+		}
 		inbufChan <- "H"
 		//                                                                             input.TypedRune('H') // for help
 		//                                                                                      inbufChan <- input.Text
@@ -534,8 +550,11 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 			} else if e.Name == fyne.Key1 {
 				input.TypedRune('!')
 			} else if e.Name == fyne.KeyBackTick {
+				if len(input.Text) > 0 {
+					inbufChan <- input.Text
+				}
 				inbufChan <- "~"
-				//input.TypedRune('~')
+				//                                                                                  input.TypedRune('~')
 				return
 			}
 			// globalW.Canvas().Focus(input)  Not changing focus into the entry widget.  This is the line that changes focus.
@@ -544,7 +563,6 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 			//globalW.Canvas().Focus(input)
 		}
 
-		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
 	}
 	// globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.  Undone.
 } // end keyTyped
