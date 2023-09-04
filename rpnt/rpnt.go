@@ -128,6 +128,8 @@ REVISION HISTORY
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 24 Jun 23 -- Changed hpcalc2, so I have to recompile.  And I changed some comments.
  3 Sep 23 -- I noticed that entering a stack command discards whatever characters were already entered.  I fixed that, and I added subst tilde for backtick.
+              And I added a buffer of 1 to the channels in InputString.  Before, these were unbuffered channels so they could block when I didn't expect it.
+              This may have affected behavior.
 */
 
 const LastAltered = "3 Sep 2023"
