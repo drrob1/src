@@ -76,9 +76,10 @@ import (
   21 Mar 23 -- Completed the usage message.
   28 Mar 23 -- Added message saying how many files will be copied.
   31 Mar 23 -- StaticCheck found a few issues.
+   6 Sep 23 -- Changed the final message.
 */
 
-const LastAltered = "31 Mar 2023" //
+const LastAltered = "Sep 6, 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -410,11 +411,15 @@ func main() {
 		close(verifyChan)
 	}
 
-	fmt.Printf("%s is compiled w/ %s, last altered %s, binary timestamp of %s, using %d go routines, taking %s to do the work.\n",
-		os.Args[0], runtime.Version(), LastAltered, execTimeStamp, goRtns, time.Since(start))
-	ctfmt.Printf(ct.Green, onWin, "\n Successfully copied %d files,", succeeded)
-	ctfmt.Printf(ct.Red, onWin, " and failed to copy %d files.\n\n ", failed)
-	//ctfmt.Printf(ct.Yellow, onWin, "elapsed time is %s\n\n", time.Since(start))
+	fmt.Printf("%s is compiled w/ %s, last altered %s, binary timestamp of %s, using %d go routines.\n",
+		os.Args[0], runtime.Version(), LastAltered, execTimeStamp, goRtns)
+	if succeeded > 0 {
+		ctfmt.Printf(ct.Green, onWin, "\n Successfully copied %d files.", succeeded)
+	}
+	if failed > 0 {
+		ctfmt.Printf(ct.Red, onWin, "  Failed to copy %d files.", failed)
+	}
+	ctfmt.Printf(ct.Yellow, onWin, "  Elapsed time is %s.\n\n", time.Since(start))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
