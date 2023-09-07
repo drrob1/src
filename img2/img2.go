@@ -29,6 +29,7 @@ REVISION HISTORY
 21 Aug 23 -- Made the -sticky flag default to on.  And added scaleFactor to the window title.
 24 Aug 23 -- Will add the new code I wrote for img to here.
 25 Aug 23 -- Will time how long it takes to create the slice of fileInfos, and then sort them.
+ 7 Sep 23 -- I want to add a reverse sort flag, so the first image is the oldest, and I want to allow the use of the scroll wheel.  This may take a bit.
 */
 
 package main
@@ -64,7 +65,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Aug 25, 2023"
+const LastModified = "Sep 7, 2023"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -187,6 +188,7 @@ var GUI fyne.CanvasObject
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
 var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // default of true from 8/21/23
+var reverseFlag = flag.Bool("r", false, "reverse sort flag, ie, oldest image is first.")
 var sticky bool
 
 var scaleFactor float64 = 1
@@ -412,6 +414,12 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 
 	sortfcn := func(i, j int) bool {
 		return fi[i].ModTime().After(fi[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+	}
+
+	if *reverseFlag {
+		sortfcn = func(i, j int) bool {
+			return fi[i].ModTime().Before(fi[j].ModTime()) // I want a oldest-first sort.  Added 9/7/23.
+		}
 	}
 
 	sort.Slice(fi, sortfcn)

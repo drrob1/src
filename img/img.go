@@ -1,3 +1,37 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"fyne.io/fyne/v2/app"
+	"math"
+
+	_ "golang.org/x/image/webp"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/storage"
+
+	"github.com/nfnt/resize"
+	//ct "github.com/daviddengcn/go-colortext"
+	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	//"fyne.io/fyne/v2/internal/widget"
+	//"fyne.io/fyne/v2/layout"
+	//"fyne.io/fyne/v2/container"
+	//"image/color"
+)
+
 // Based on Go GUI with Fyne, Chap 4.
 /*
 
@@ -36,43 +70,10 @@ REVISION HISTORY
                Here that would be the most recent image file.
 24 Aug 23 -- Removed the old version of main(), and edited some comments.  And added help output.
 26 Aug 23 -- Added call to SetFullScreen(), then removed it because it made most images look terrible.
+ 7 Sep 23 -- Added reverse sort flag, that would make the oldest first.
 */
 
-package main
-
-import (
-	"flag"
-	"fmt"
-	"fyne.io/fyne/v2/app"
-	"math"
-
-	_ "golang.org/x/image/webp"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
-
-	"os"
-	"path/filepath"
-	"runtime"
-	"sort"
-	"strings"
-	"time"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/storage"
-
-	"github.com/nfnt/resize"
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	//"fyne.io/fyne/v2/internal/widget"
-	//"fyne.io/fyne/v2/layout"
-	//"fyne.io/fyne/v2/container"
-	//"image/color"
-)
-
-const LastModified = "Aug 26, 2023"
+const LastModified = "Sep 7, 2023"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -94,6 +95,7 @@ var globalW fyne.Window
 var verboseFlag = flag.Bool("v", false, "verbose flag.")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot.")
 var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // defaults to on as of 8/21/23
+var reverseFlag = flag.Bool("r", false, "reverse sort flag, ie, oldest first.")
 var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
@@ -344,6 +346,12 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	t0 := time.Now()
 	sortfcn := func(i, j int) bool {
 		return fi[i].ModTime().After(fi[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
+	}
+
+	if *reverseFlag {
+		sortfcn = func(i, j int) bool {
+			return fi[i].ModTime().Before(fi[j].ModTime()) // I want a oldest-first sort.  Added 9/7/23.
+		}
 	}
 
 	sort.Slice(fi, sortfcn)
