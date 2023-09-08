@@ -73,6 +73,7 @@ const textboxheight = 20
 
 type ImageWidget struct {
 	widget.BaseWidget
+	widget.Icon
 	img      *canvas.Image // flagged as unused, but I'm not changing it.
 	x, y     int
 	click    func(event *fyne.PointEvent)
@@ -89,34 +90,43 @@ func (iw *ImageWidget) Clicked(e *fyne.PointEvent) {
 }
 
 func (iw *ImageWidget) Scrolled(e *fyne.ScrollEvent) {
-	if iw.scrolled == nil {
-		return
+	if *verboseFlag {
+		fmt.Printf(" scroll event found.  X= %.4f, dX=%.4f; Y=%.4f, dY=%.4f, for %s\n", e.Position.X, e.Scrolled.DX, e.Position.Y, e.Scrolled.DY,
+			iw.Resource.Name())
 	}
 
-	iw.scrolled(e)
+	if e.Scrolled.DY < 0 || e.Scrolled.DX < 0 {
+		nextImage()
+		return
+	}
+	prevImage()
 }
 
 type imageRender struct {
-	imgWdgt *ImageWidget
+	//imgWdgt *ImageWidget
+	*ImageWidget // making this an embedded type fixed an issue w/ MinSize.
 }
 
 func (ir *imageRender) MinSize() fyne.Size { // This func is needed to define a renderer
-	return fyne.NewSize(float32(ir.imgWdgt.x), float32(ir.imgWdgt.y))
+	return fyne.NewSize(float32(ir.x), float32(ir.y))
 }
 func (ir *imageRender) Layout(_ fyne.Size) { // This func is needed to define a renderer
-	ir.imgWdgt.Resize(ir.MinSize())
+	ir.Resize(ir.MinSize())
 }
 func (ir *imageRender) Destroy() { // This func is needed to define a renderer, but it can be empty
 }
-func (ir *imageRender) Refresh() { // This func is needed to define a renderer
-	ir.imgWdgt.Refresh()
-}
+
+// func (ir *imageRender) Refresh() { // This func is needed to define a renderer
+//		ir.Refresh()
+// }
+
 func (ir *imageRender) Objects() []fyne.CanvasObject { // This func is needed to define a renderer
-	return []fyne.CanvasObject{ir.imgWdgt}
+	return []fyne.CanvasObject{ir}
 }
 
 func (iw *ImageWidget) CreateRenderer() fyne.WidgetRenderer {
-	rndrr := imageRender{imgWdgt: iw}
+	//rndrr := imageRender{imgWdgt: iw}
+	rndrr := imageRender{iw}
 	return &rndrr
 }
 
@@ -434,16 +444,16 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	// return  redundant
 } // MyReadDirForImages
 
-// isSorted -----------------------------------------------
-func isSorted(slice []os.FileInfo) bool {
-	for i := 0; i < len(slice)-1; i++ {
-		if slice[i].ModTime().Before(slice[i+1].ModTime()) {
-			fmt.Println(" debugging: i=", i, "Name[i]=", slice[i].Name(), " and Name[i+1]=", slice[i+1].Name())
-			return false
-		}
-	}
-	return true
-}
+// isSorted ----------------------------------------------- is unused
+//func isSorted(slice []os.FileInfo) bool {
+//	for i := 0; i < len(slice)-1; i++ {
+//		if slice[i].ModTime().Before(slice[i+1].ModTime()) {
+//			fmt.Println(" debugging: i=", i, "Name[i]=", slice[i].Name(), " and Name[i+1]=", slice[i+1].Name())
+//			return false
+//		}
+//	}
+//	return true
+//}
 
 //  nextImage -----------------------------------------------------
 
@@ -571,14 +581,13 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	}
 }
 
-// mouseClicked
-func mouseClicked(e *fyne.PointEvent) {
-	fmt.Println(" received clicked event.  X =", e.Position.X, " and Y =", e.Position.Y, "on image.")
-}
+// mouseClicked unused
+//func mouseClicked(e *fyne.PointEvent) {
+//	fmt.Println(" received clicked event.  X =", e.Position.X, " and Y =", e.Position.Y, "on image.")
+//}
 
-// mouseScrolled
-func mouseScrolled(e *fyne.ScrollEvent) {
-	fmt.Println(" received scroll event.  scrolled delta X =", e.Scrolled.DX, " and scrolled delta Y =", e.Scrolled.DY, "at point X =",
-		e.Position.X, "and point Y =", e.Position.Y)
-
-}
+// mouseScrolled unused
+//func mouseScrolled(e *fyne.ScrollEvent) {
+//	fmt.Println(" received scroll event.  scrolled delta X =", e.Scrolled.DX, " and scrolled delta Y =", e.Scrolled.DY, "at point X =",
+//		e.Position.X, "and point Y =", e.Position.Y)
+//}
