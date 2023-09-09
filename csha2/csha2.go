@@ -1,4 +1,4 @@
-package main // csha.go from consha.go
+package main // csha2.go from  csha.go from consha.go
 
 import (
 	"bytes"
@@ -88,9 +88,12 @@ import (
    8 Sep 23 -- There's a bug here in the processing of the errors, ie, when one file is found and another is not found.  I found the error, it was using a var that was not assigned.
                  I tried removing the hashSlice, but the code ran slightly slower on Win11 desktop.  ~35 ms without the slice, vs ~33 ms w/ the slice.  Go figure.
                  I used git to restore the prev code.
+   9 Sep 23 -- Now called csha2.go.  I'm going to remove hashSlice and get more timing data.  If this turns out to be truly slightly slower, it may be because I'm spinning up the max
+                 number of go routines here in all cases; when I first put the hash items into a slice, I only spin up the number of go routines that I need, up to the max.
+                 So here on Win11 desktop, the max is 30 worker goroutines.  When I only need 2, that's a big difference.
 */
 
-const LastCompiled = "8 Sep 2023"
+const LastCompiled = "9 Sep 2023"
 
 const (
 	undetermined = iota
@@ -101,7 +104,7 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU() - 1 // account for the hashChan routine.
+var numOfWorkers = runtime.NumCPU() - 1 // account for the main routine.
 
 type hashType struct {
 	fName     string
@@ -169,7 +172,6 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	} else {
 		ctfmt.Printf(ct.Red, onWin, "                                       %s did not match using %s hash\n", hashIn.fName, hashName[hashInt])
 	}
-	// don't need a return statement, as I'm going to allow it to go out the bottom.
 } // end matchOrNoMatch
 
 // --------------------------------------- MAIN ----------------------------------------------------
@@ -242,7 +244,17 @@ func main() {
 
 	t0 := time.Now()
 
-	hashSlice := make([]hashType, 0, 10)
+	// Spin up the worker routines.
+
+	hashChan = make(chan hashType, numOfWorkers)
+	for w := 0; w < numOfWorkers; w++ {
+		go func() {
+			for h := range hashChan {
+				matchOrNoMatch(h)
+			}
+		}()
+	}
+
 	for { // to read multiple lines
 		inputLine, err := misc.ReadLine(bytesReader)
 		if errors.Is(err, io.EOF) { // reached EOF condition, there are no more lines to read, and no line here to be processed, as that condition is established by misc.ReadLine().
@@ -296,55 +308,37 @@ func main() {
 			fmt.Printf(" TargetFilename = %s, hash value read from file = %s\n", TargetFilename, HashValueReadFromFile)
 		}
 
-		// Create Hash Section and send to matchOrNoMatch
+		// Create Hash to send to matchOrNoMatch
 		h = hashType{
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
 		wg1.Add(1)
 		preCounter++
-		hashSlice = append(hashSlice, h)
-	}
-	if verboseFlag {
-		for i, h := range hashSlice {
-			fmt.Printf(" HashSlice %d: fName = %s, hashValIn = %s\n", i, h.fName, h.hashValIn)
+		hashChan <- h
+		if verboseFlag {
+			fmt.Printf(" Hash item: fName = %s, hashValIn = %s\n", h.fName, h.hashValIn)
 		}
 	}
 
-	// Have constructed the hashSlice.  Now need to send the work to the worker rtn's using the hashChan.
+	runningGoRtns := runtime.NumGoroutine()
 
-	num := min(numOfWorkers, len(hashSlice))
-	hashChan = make(chan hashType, num)
-	for w := 0; w < num; w++ {
-		go func() {
-			for h := range hashChan {
-				matchOrNoMatch(h)
-			}
-		}()
-	}
-
-	for _, h := range hashSlice {
-		hashChan <- h
-	}
-
-	runningGoRoutines := runtime.NumGoroutine()
-
-	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
+	// Sent all work into the matchOrNoMatch, so I'll close the hashChan.  I have to close the channel for the pgm to stop.
 	close(hashChan)
 
 	if verboseFlag {
 		ctfmt.Printf(ct.Cyan, true, " Just closed the hashChan, before wg1.Wait().  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
-			runningGoRoutines, preCounter, postCounter) // counter = 25 is correct.
+			runningGoRtns, preCounter, postCounter) // counter = 25 is correct.
 	}
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
 
 	if verboseFlag {
-		ctfmt.Printf(ct.Cyan, true, "\n After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
+		ctfmt.Printf(ct.Cyan, true, "\n After wg1.Wait().  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
 			runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
 	}
 
-	ctfmt.Printf(ct.Yellow, onWin, "\n\n Elapsed time for everything was %s using %d goroutines.\n\n", time.Since(t0), runningGoRoutines)
+	ctfmt.Printf(ct.Yellow, onWin, "\n\n Elapsed time for everything was %s using %d goroutines.\n\n", time.Since(t0), runningGoRtns)
 } // Main for sha.go.
 
 // ------------------------------------------------------- min ---------------------------------
