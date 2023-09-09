@@ -7,6 +7,8 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -83,9 +85,10 @@ import (
   30 Jun 23 -- Fixed the bug when there's no newline character to end the last (or only) line, that line's not processed because err != nil.
                  And now moved the improved ReadLine code to the new package misc, which started life as makesubst.
    8 Aug 23 -- Since I changed tknptr and removed NewToken, I had make the change here, so NewToken becomes New.  This is more idiomatic for Go, anyway.
+   8 Sep 23 -- There's a bug here in the processing of the errors, ie, when one file is found and another is not found.  I found the error, it was using a var that was not assigned.
 */
 
-const LastCompiled = "8 Aug 2023"
+const LastCompiled = "8 Sep 2023"
 
 const (
 	undetermined = iota
@@ -117,14 +120,14 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	defer wg1.Done()
 	defer atomic.AddInt64(&postCounter, 1)
 	if err != nil {
-		if err == os.ErrNotExist {
-			ctfmt.Printf(ct.Red, onWin, " %s not found, skipping. \n", hashIn.fName)
+		if errors.Is(err, os.ErrNotExist) {
+			ctfmt.Printf(ct.Red, onWin, " ERROR from matchOrNoMatch: %s not found, skipping. \n", hashIn.fName)
 		} else {
 			ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", err)
 		}
 		return
 	}
-	defer TargetFile.Close() // I could do this w/ one defer func() as is done in cgrepi.  I'm going to do this here for variety.  StaticCheck said to have this after err check.  So I moved it to here.  TargetFile will be nil if err != nil.
+	defer TargetFile.Close()
 
 	hashLength := len(hashIn.hashValIn)
 	var hashFunc hash.Hash
@@ -160,9 +163,9 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	computedHashValStr := hex.EncodeToString(hashFunc.Sum(nil))
 
 	if strings.EqualFold(computedHashValStr, hashIn.hashValIn) { // golangci-lint found this optimization.
-		ctfmt.Printf(ct.Green, onWin, " %s matched using %s hash\n", hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Green, onWin, "                                       %s matched using %s hash\n", hashIn.fName, hashName[hashInt])
 	} else {
-		ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Red, onWin, "                                       %s did not match using %s hash\n", hashIn.fName, hashName[hashInt])
 	}
 	// don't need a return statement, as I'm going to allow it to go out the bottom.
 } // end matchOrNoMatch
@@ -173,6 +176,7 @@ func main() {
 	var TargetFilename, HashValueReadFromFile string
 	var h hashType
 	var preCounter int
+	var verboseFlag bool
 
 	if numOfWorkers < 1 {
 		numOfWorkers = 1
@@ -184,12 +188,14 @@ func main() {
 	fmt.Printf(" %s is last altered %s, compiled with %s, and timestamp is %s\n", os.Args[0], LastCompiled, runtime.Version(), LastLinkedTimeStamp)
 	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
+	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, mostly for debugging.")
+	flag.Parse()
 
 	onWin = runtime.GOOS == "windows"
 
 	// filepicker stuff.
 
-	if len(os.Args) <= 1 {
+	if flag.NArg() == 0 {
 		filenames, err := filepicker.GetFilenames("*.sha*")
 		if err != nil {
 			ctfmt.Printf(ct.Red, false, " Error from filepicker is %v.  Exiting \n", err)
@@ -237,13 +243,13 @@ func main() {
 	hashSlice := make([]hashType, 0, 10)
 	for { // to read multiple lines
 		inputLine, err := misc.ReadLine(bytesReader)
-		if err == io.EOF /* && inputLine == "" */ { // reached EOF condition, there are no more lines to read, and no line.  If there is a line to process, error out on the next time thru.
+		if errors.Is(err, io.EOF) { // reached EOF condition, there are no more lines to read, and no line here to be processed, as that condition is established by misc.ReadLine().
 			break
 		} else if len(inputLine) == 0 {
 			continue
 		} else if len(inputLine) < 10 || strings.HasPrefix(inputLine, ";") || strings.HasPrefix(inputLine, "#") {
 			continue
-		} else if err != nil /* && inputLine == "" */ { // if there is a line to process, error out on the next time thru.
+		} else if err != nil {
 			ctfmt.Println(ct.Red, false, "While reading from the HashesFile:", err)
 			continue
 		}
@@ -284,6 +290,10 @@ func main() {
 			TargetFilename = SecondToken.Str
 		} // endif have filename first or hash value first
 
+		if verboseFlag {
+			fmt.Printf(" TargetFilename = %s, hash value read from file = %s\n", TargetFilename, HashValueReadFromFile)
+		}
+
 		// Create Hash Section and send to matchOrNoMatch
 		h = hashType{
 			fName:     TargetFilename,
@@ -293,6 +303,14 @@ func main() {
 		preCounter++
 		hashSlice = append(hashSlice, h)
 	}
+	if verboseFlag {
+		for i, h := range hashSlice {
+			fmt.Printf(" HashSlice %d: fName = %s, hashValIn = %s\n", i, h.fName, h.hashValIn)
+		}
+	}
+
+	// Have constructed the hashSlice.  Now need to send the work to the worker rtn's using the hashChan.
+
 	num := min(numOfWorkers, len(hashSlice))
 	hashChan = make(chan hashType, num)
 	for w := 0; w < num; w++ {
@@ -303,22 +321,26 @@ func main() {
 		}()
 	}
 
-	for i := 0; i < len(hashSlice); i++ {
+	for _, h := range hashSlice {
 		hashChan <- h
 	}
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
 
-	ctfmt.Printf(ct.Cyan, true, "                                    Just closed the hashChan.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
-		runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
+	if verboseFlag {
+		ctfmt.Printf(ct.Cyan, true, " Just closed the hashChan, before wg1.Wait().  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
+			runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
+	}
 
 	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
 
-	ctfmt.Printf(ct.Cyan, true, "\n                                    After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
-		runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
+	if verboseFlag {
+		ctfmt.Printf(ct.Cyan, true, "\n After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
+			runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
+	}
 
-	ctfmt.Printf(ct.Yellow, onWin, " After wg1.Wait().  Elapsed time for everything was %s.\n\n\n", time.Since(t0))
+	ctfmt.Printf(ct.Yellow, onWin, "\n\n Elapsed time for everything was %s.\n\n", time.Since(t0))
 } // Main for sha.go.
 
 // ------------------------------------------------------- min ---------------------------------
