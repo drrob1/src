@@ -116,23 +116,22 @@ func (ir *imageRender) Layout(_ fyne.Size) { // This func is needed to define a 
 func (ir *imageRender) Destroy() { // This func is needed to define a renderer, but it can be empty
 }
 
-// func (ir *imageRender) Refresh() { // This func is needed to define a renderer
-//		ir.Refresh()
-// }
+func (ir *imageRender) Refresh() { // This func is needed to define a renderer
+	ir.Refresh()
+}
 
 func (ir *imageRender) Objects() []fyne.CanvasObject { // This func is needed to define a renderer
 	return []fyne.CanvasObject{ir}
 }
 
-func (iw *ImageWidget) CreateRenderer() fyne.WidgetRenderer {
+func (iw *ImageWidget) CreateRenderer() *fyne.WidgetRenderer {
 	//rndrr := imageRender{imgWdgt: iw}
 	rndrr := imageRender{iw}
+
 	return &rndrr
 }
 
-/*
 func newImageWidget(fn string, clk func(e *fyne.PointEvent), scrl func(e *fyne.ScrollEvent)) *ImageWidget {
-	e := ImageWidget{click: clk, scrolled: scrl}
 	imgURI := storage.NewFileURI(fn)
 	imgRead, err := storage.Reader(imgURI)
 	if err != nil {
@@ -144,17 +143,21 @@ func newImageWidget(fn string, clk func(e *fyne.PointEvent), scrl func(e *fyne.S
 	if err != nil {
 		panic(err)
 	}
-
 	bounds := imag.Bounds()
-	e.y = bounds.Max.Y - bounds.Min.Y
-	e.x = bounds.Max.X - bounds.Min.X
 
-	e.img = canvas.NewImageFromImage(imag)
+	iw := ImageWidget{
+		click:    clk,
+		scrolled: scrl,
+		x:        bounds.Max.X - bounds.Min.X,
+		y:        bounds.Max.Y - bounds.Min.Y,
+		img:      canvas.NewImageFromImage(imag),
+		filename: fn,
+	}
 
-	e.ExtendBaseWidget(&e)
-	return &e
+	iw.ExtendBaseWidget(iw)
+	return &iw
 }
-*/
+
 /*
 //type ImageCanvas struct {
 //	widget.BaseWidget
