@@ -64,7 +64,7 @@ func main() {
 		}
 		i, err := strconv.Atoi(ans)
 		if err == nil {
-			if i > numNames {
+			if i < 0 || i >= numNames {
 				fmt.Printf(" You entered %d which is out of bounds.  Max is %d.  Exiting. \n", i, numNames)
 				os.Exit(1)
 			}
@@ -74,7 +74,7 @@ func main() {
 			s = strings.TrimSpace(s)
 			s0 := s[0]
 			i = int(s0 - 'A')
-			if i < 0 || i > numNames {
+			if i < 0 || i >= numNames {
 				fmt.Printf(" Answer of %s is out of bounds.  Number of filenames ranges from 0 to %d.  Exiting.\n", ans, numNames-1)
 				os.Exit(1)
 			}
