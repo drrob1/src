@@ -21,6 +21,7 @@ import (
                 I finally figured out why, because I changed dir to /usr/local and forgot to change back.  Anyway, the code's working so I'll leave it alone.
   11 Sep 23 -- Now called upgradego, and I will add the filepicker stuff.  Hmmm, what do you know, it's already there.  IE, I coded that in updatego and I forgot I did that.
                 It must be because of today's date.  :=)
+                I'll check to make sure the answer is in bounds
 */
 
 const lastUpdated = "Sep 11, 2023"
@@ -47,7 +48,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, " Error from filepicker is %v.  Exiting \n", err)
 			os.Exit(1)
 		}
-		for i := 0; i < min(len(filenames), 26); i++ {
+		numNames := min(len(filenames), 26)
+		if numNames == 0 {
+			fmt.Printf(" No Go1.xxx.yyy.linux-amd64.tar.gz files found.  Exiting\n")
+			os.Exit(1)
+		}
+		for i := 0; i < numNames; i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice (stop code is 999) : ")
@@ -66,6 +72,10 @@ func main() {
 			s = strings.TrimSpace(s)
 			s0 := s[0]
 			i = int(s0 - 'A')
+			if i < 0 || i > numNames {
+				fmt.Printf(" Answer of %s is out of bounds.  Number of filenames ranges from 0 to %d.  Exiting.\n", ans, numNames-1)
+				os.Exit(1)
+			}
 			fn = filenames[i]
 		}
 	} else { // will use filename entered on commandline
