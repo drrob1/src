@@ -19,9 +19,10 @@ import (
                 and unTar the new one correctly.  I'm going to shell out to a command line for both of these operations.
    2 Aug 23 -- Turned out that for the shelling out to the tar cmd, I had to use a fully qualified path name.  When I didn't do that, I got a file not found error.
                 I finally figured out why, because I changed dir to /usr/local and forgot to change back.  Anyway, the code's working so I'll leave it alone.
+  11 Sep 23 -- I'm going to trap answers that are out of bounds.
 */
 
-const lastUpdated = "Aug 2, 2023"
+const lastUpdated = "Sep 11, 2023"
 
 func main() {
 	execName, _ := os.Executable()
@@ -45,7 +46,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, " Error from filepicker is %v.  Exiting \n", err)
 			os.Exit(1)
 		}
-		for i := 0; i < min(len(filenames), 26); i++ {
+		numNames := min(len(filenames), 26)
+		if numNames == 0 {
+			fmt.Printf(" No Go1.xxx.yyy.linux-amd64.tar.gz files found.  Exiting\n")
+			os.Exit(1)
+		}
+		for i := 0; i < numNames; i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice (stop code is 999) : ")
@@ -64,6 +70,10 @@ func main() {
 			s = strings.TrimSpace(s)
 			s0 := s[0]
 			i = int(s0 - 'A')
+			if i < 0 || i > numNames {
+				fmt.Printf(" Answer of %s is out of bounds.  Number of filenames ranges from 0 to %d.  Exiting.\n", ans, numNames-1)
+				os.Exit(1)
+			}
 			fn = filenames[i]
 		}
 	} else { // will use filename entered on commandline
