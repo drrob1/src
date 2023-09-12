@@ -24,7 +24,7 @@ import (
                 I'll check to make sure the answer is in bounds
 */
 
-const lastUpdated = "Sep 11, 2023"
+const lastUpdated = "Sep 12, 2023"
 
 func main() {
 	execName, _ := os.Executable()
@@ -66,6 +66,10 @@ func main() {
 		}
 		i, err := strconv.Atoi(ans)
 		if err == nil {
+			if i > numNames {
+				fmt.Printf(" You entered %d which is out of bounds.  Max is %d.  Exiting. \n", i, numNames)
+				os.Exit(1)
+			}
 			fn = filenames[i]
 		} else {
 			s := strings.ToUpper(ans)
