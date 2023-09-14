@@ -5,7 +5,8 @@ import (
 	"math/rand"
 )
 
-// bubblesort code for Manning's live project.  First part is to write makeRandomSlice
+// bubblesort code for Manning's live project.
+// At first, I was confused that I don't have to return []int in bubbleSort.  Then I realized that slices use pointer semantics, so the result is automatically returned.
 
 func makeRandomSlice(numItems, max int) []int {
 	randomSlice := make([]int, numItems)
