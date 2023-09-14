@@ -38,7 +38,7 @@ import (
                   stack operations push and pop.  I was not able to write a routine based on code in Sedgewick.
   25 May  20 -- Thoughts on mysorts.go and mysorts2.go.
         Over the last 2 weeks I've been able to get the bad code working.  I now have 3 versions of ShellSort, and 2 versions of nonrecursive quick sort.
-        I got ShellSort working by noticing a non idiomatic for loop, and Rob Pike in his book says the advantages of using idioms is that they help avoid bugs.
+        I got ShellSort working by noticing a non-idiomatic for loop, and Rob Pike in his book says the advantages of using idioms is that they help avoid bugs.
         The idiom is a pattern known to work.  Look closely at non-idiomatic code for the source of bugs.  I did and that's where I found the bug in ShellSort.
         The non-recursive quick sort routines depend on creating a stack themselves instead of relying on recursion to use the system's stack.
         When I switched to idiomatic stack code using push and pop, the code started working.  One reason for this is that I made the stack much
