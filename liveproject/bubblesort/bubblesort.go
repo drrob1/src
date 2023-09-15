@@ -5,7 +5,7 @@ import (
 	"math/rand"
 )
 
-// bubblesort code for Manning's live project.
+// bubbleSort code for Manning's live project.
 // At first, I was confused that I don't have to return []int in bubbleSort.  Then I realized that slices use pointer semantics, so the result is automatically returned.
 
 func makeRandomSlice(numItems, max int) []int {
@@ -42,7 +42,7 @@ func checkSorted(slice []int) {
 	fmt.Printf("The slice is sorted.\n")
 }
 
-/* from wikipedia entry on buble sort.  This is pseudocode.
+/* from wikipedia entry on bubble sort.  This is pseudocode.
 procedure bubbleSort(A : list of sortable items)
     n := length(A)
     repeat
