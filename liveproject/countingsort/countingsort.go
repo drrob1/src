@@ -1,8 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"math/rand"
+	"runtime"
 	"strconv"
 )
 
@@ -19,33 +23,55 @@ type Customer struct {
 	numPurchases int
 }
 
+var verboseFlag = flag.Bool("v", false, "Verbose mode for debugging.")
+
+const onWin = runtime.GOOS == "windows"
+
 func countingSort(slice []Customer, max int) []Customer {
 	sortedCust := make([]Customer, len(slice))
 	tally := make([]int, max)
 
 	// create the individual tallies
 	for i := range slice {
-		tally[i]++
+		tally[slice[i].numPurchases]++
 	}
 
-	// modify tallies so that each element contains the number of elements less than it
+	if *verboseFlag {
+		fmt.Printf("After creating individual tally: %+v\n", tally)
+	}
+
+	// modify tallies so that each element includes the tallies below it
+	// This step is fucked!
 	for i := range slice {
 		for j := 0; j < i; j++ {
 			tally[i] += tally[j]
 		}
 	}
 
+	if *verboseFlag {
+		fmt.Printf("After creating cumulative tallies: %+v\n", tally)
+	}
+
+	// Populate output slice starting from the end
+	for j := len(sortedCust) - 1; j < 0; j-- {
+		tally[slice[j].numPurchases]--                      // this is a step to minimize collisions
+		sortedCust[tally[slice[j].numPurchases]] = slice[j] // intentionally accessing tally-1 because this is a zero origin array.
+	}
+
 	return sortedCust
 }
 
 func main() {
+	flag.Parse()
 
 	// Get the number of items and maximum item value.
 	var numItems, max int
-	fmt.Printf("# Items: ")
-	fmt.Scanln(&numItems)
-	fmt.Printf("Max: ")
-	fmt.Scanln(&max)
+	//fmt.Printf("# Items: ")
+	//fmt.Scanln(&numItems)
+	//fmt.Printf("Max: ")
+	//fmt.Scanln(&max)
+	numItems = 30
+	max = 30
 
 	// Make and display the unsorted slice.
 	slice := makeRandomSlice(numItems, max)
@@ -80,8 +106,13 @@ func makeRandomSlice(numItems, max int) []Customer {
 func printSlice(slice []Customer, numItems int) {
 	mi := minInt(len(slice), numItems)
 	pSlice := slice[:mi]
-	for _, val := range pSlice {
-		fmt.Printf("%s:%2d ", val.id, val.numPurchases)
+	for i, val := range pSlice {
+		ctfmt.Printf(ct.Green, onWin, "%s", val.id)
+		ctfmt.Printf(ct.Blue, onWin, ":")
+		ctfmt.Printf(ct.Yellow, onWin, " %02d. ", val.numPurchases)
+		if i%20 == 0 && i > 0 {
+			ctfmt.Printf(ct.Green, onWin, " \n")
+		}
 	}
 	fmt.Println()
 }
