@@ -18,6 +18,8 @@ import (
 // time of O(n) when the length of the input list is not much smaller than the largest key value, k, in the list.
 // Counting sort can be used as a subroutine for other, more powerful, sorting algorithms such as radix sort.
 
+// I needed help for this one.  I copied from the author's solution.
+
 type Customer struct {
 	id           string
 	numPurchases int
@@ -41,11 +43,9 @@ func countingSort(slice []Customer, max int) []Customer {
 	}
 
 	// modify tallies so that each element includes the tallies below it
-	// This step is fucked!
-	for i := range slice {
-		for j := 0; j < i; j++ {
-			tally[i] += tally[j]
-		}
+	// This step is fucked!  I needed the solution to get this right.  I really am not understanding this one.
+	for i := 1; i < max; i++ { // can't use range tally syntax here because I need to start at i=1 so the i-1 phrase doesn't fail.
+		tally[i] += tally[i-1]
 	}
 
 	if *verboseFlag {
@@ -53,9 +53,9 @@ func countingSort(slice []Customer, max int) []Customer {
 	}
 
 	// Populate output slice starting from the end
-	for j := len(sortedCust) - 1; j < 0; j-- {
-		tally[slice[j].numPurchases]--                      // this is a step to minimize collisions
-		sortedCust[tally[slice[j].numPurchases]] = slice[j] // intentionally accessing tally-1 because this is a zero origin array.
+	for j := len(sortedCust) - 1; j >= 0; j-- {
+		sortedCust[tally[slice[j].numPurchases]-1] = slice[j] // intentionally accessing tally-1 because this is a zero origin array.
+		tally[slice[j].numPurchases]--                        // this is a step to minimize collisions
 	}
 
 	return sortedCust
@@ -66,12 +66,12 @@ func main() {
 
 	// Get the number of items and maximum item value.
 	var numItems, max int
-	//fmt.Printf("# Items: ")
-	//fmt.Scanln(&numItems)
-	//fmt.Printf("Max: ")
-	//fmt.Scanln(&max)
-	numItems = 30
-	max = 30
+	fmt.Printf("# Items: ")
+	fmt.Scanln(&numItems)
+	fmt.Printf("Max: ")
+	fmt.Scanln(&max)
+	//numItems = 30
+	//max = 30
 
 	// Make and display the unsorted slice.
 	slice := makeRandomSlice(numItems, max)
