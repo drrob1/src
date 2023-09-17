@@ -12,7 +12,7 @@ func binarySearch(slice []int, target int) (int, int) {
 	var numTries int
 	left := 0
 	right := len(slice) - 1
-	
+
 	for left <= right {
 		current := (left + right) / 2
 		numTries++
@@ -61,7 +61,7 @@ func main() {
 		if index >= 0 {
 			fmt.Printf(" Found target of %d at position %d, using %d tests.\n", target, index, numTests)
 		} else {
-			fmt.Printf(" Target of %d not found.\n", target)
+			fmt.Printf(" Target of %d not found after %d tries.\n", target, numTests)
 		}
 		fmt.Println()
 	}
