@@ -18,10 +18,12 @@ type linkedList struct {
 	sentinel *Cell
 }
 
-func makeLinkedList() *Cell {
-	// This is a factory function to create a new linked list, init it's sentinal pointer to a new cell, and return the linked list.
-	sentinel := Cell{}
-	return &sentinel
+func makeLinkedList() linkedList {
+	// This is a factory function to create a new linked list, init it's sentinel pointer to a new cell, and return the linked list.
+	list := linkedList{}
+	list.sentinel = &Cell{"SENTINAL", nil}
+	//fmt.Printf(" in makeLinkedList.  List: %+v\n", list)
+	return list
 }
 
 func (me *Cell) addAfter(after *Cell) {
@@ -29,16 +31,18 @@ func (me *Cell) addAfter(after *Cell) {
 	// Eg: aCell := Cell{"apple", nil}
 	//     bCell := Cell{data: "banana"}
 	//     (&aCell).addAfter(&bCell)   or  aCell.addAfter(&bCell)  this uses the syntatic sugar of Go.
+	//fmt.Printf(" before assignment: me = %+v, after = %+v\n", me, after)
 	after.next = me.next // so the next field of "after" now points to wherever "me" was pointing to, ie, the next element.  So this inserts "after" between "me" and the next linked cell.
 	me.next = after
+	//fmt.Printf(" after assignment: me = %+v, after = %+v\n", me, after)
 }
 
 func (me *Cell) deleteAfter() *Cell { // need to return the deleted cell.  If there is no cell after "me", panic.
 	deletedCell := me.next
 	if deletedCell == nil {
-		panic(" no cell to after me to delete.")
+		panic(" no cell after me to delete.")
 	}
-	me.next = deletedCell.next
+	me.next = nil
 	return deletedCell
 }
 
@@ -46,12 +50,14 @@ func (list *linkedList) addRange(values []string) {
 	// add the strings as cells to the end of the linked list, ie, append the new strings
 	// First, find the end of the linked list
 	var lastCell *Cell
+	//fmt.Printf(" entering addRange: list = %+v\n", list)
 
-	cell := list.sentinel.next
-	lastCell = cell // there may not be any cells after the sentinel.
-	for ; cell != nil; cell = cell.next {
-		lastCell = cell.next
+	lastCell = list.sentinel
+	//fmt.Printf(" before search: addRange.lastCell = %+v\n", lastCell)
+	for lastCell.next != nil {
+		lastCell = lastCell.next
 	}
+	//fmt.Printf(" after search: addRange.lastCell = %+v\n", lastCell)
 
 	for _, s := range values {
 		anotherCell := Cell{data: s}
@@ -64,7 +70,7 @@ func (list *linkedList) toString(separator string) string {
 
 	sentinel := list.sentinel
 	if sentinel.next == nil {
-		return "" // the empty string is different than a nil string.
+		return "" // the empty string is different from a nil string.
 	}
 
 	for cell := sentinel.next; cell != nil; cell = cell.next {
@@ -78,7 +84,7 @@ func (list *linkedList) toString(separator string) string {
 	}
 
 	if separator == "" {
-		return separator
+		return finalStr
 	}
 	return finalStr[:len(finalStr)-1] // don't return the final separator
 }
@@ -103,7 +109,7 @@ func (list *linkedList) length() int {
 		return 0
 	}
 
-	var counter int
+	var counter int // this starts as zero, so I don't intend to count the sentinel element.
 	for cell := list.sentinel.next; cell != nil; cell = cell.next {
 		counter++
 	}
@@ -116,12 +122,9 @@ func (list *linkedList) isEmpty() bool {
 }
 
 func (list *linkedList) push(s string) {
-	var lastCell *Cell
-
-	cell := list.sentinel.next
-	lastCell = cell // there may not be any cells after the sentinel.
-	for ; cell != nil; cell = cell.next {
-		lastCell = cell.next
+	lastCell := list.sentinel
+	for lastCell != nil {
+		lastCell = lastCell.next
 	}
 
 	anotherCell := Cell{data: s}
@@ -129,7 +132,17 @@ func (list *linkedList) push(s string) {
 }
 
 func (list *linkedList) pop() string {
+	if list.sentinel.next == nil {
+		return ""
+	}
 
+	n := list.length()
+	cell := list.sentinel.next
+	for i := 0; i < n-1; i++ {
+		cell = cell.next // I'm hoping this stops at the next to last element
+	}
+	str := cell.deleteAfter()
+	return str.data
 }
 
 func main() {
