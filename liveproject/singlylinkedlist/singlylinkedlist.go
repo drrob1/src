@@ -62,6 +62,7 @@ func (list *linkedList) addRange(values []string) {
 	for _, s := range values {
 		anotherCell := Cell{data: s}
 		lastCell.addAfter(&anotherCell)
+		lastCell = lastCell.next
 	}
 }
 
@@ -74,9 +75,11 @@ func (list *linkedList) toString(separator string) string {
 	}
 
 	for cell := sentinel.next; cell != nil; cell = cell.next {
+		//fmt.Printf("cell data %s, ", cell.data)
 		sb.WriteString(cell.data)
 		sb.WriteString(separator)
 	}
+	//fmt.Println()
 
 	finalStr := sb.String()
 	if finalStr == "" {
@@ -86,7 +89,7 @@ func (list *linkedList) toString(separator string) string {
 	if separator == "" {
 		return finalStr
 	}
-	return finalStr[:len(finalStr)-1] // don't return the final separator
+	return finalStr[:len(finalStr)-len(separator)] // don't return the final separator
 }
 
 func (list *linkedList) toSlice() []string {
@@ -154,7 +157,7 @@ func main() {
 	// Now to add a sentinel.  The purpose of a sentinel is to make it easy to add an item to the beginning of a linked list.  The sentinel itself never contains data,
 	// just is a pointer to the next element.
 
-	sentinel := Cell{next: top}
+	sentinel := Cell{data: "SENTINEL", next: top}
 	top = &sentinel
 
 	var counter int
