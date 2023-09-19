@@ -1,5 +1,6 @@
 /*
   17 Sep 23 -- Singly linked list for the live project.
+  19 Sep 23 -- Added hasLoop and toStringMax for the next part of this project.
 */
 
 package main
@@ -167,6 +168,60 @@ func (list *linkedList) pop() string {
 //	}
 //}
 
+func (list *linkedList) hasLoop() bool {
+	// This uses a fast and slow pointer to Cell.  Fast moves two elements for each one that slow moves.  The loop terminates if a nil is found, or fast = slow.
+	// Must move fast first, check for match w/ slow, and then move slow.
+	var fast, slow *Cell
+
+	fast = list.sentinel
+	slow = list.sentinel
+
+	for {
+		fast = fast.next
+		if fast.next == nil {
+			return false
+		}
+		if fast.data == slow.data && fast.next == slow.next {
+			return true
+		}
+		fast = fast.next
+		if fast.next == nil {
+			return false
+		}
+		if fast.data == slow.data && fast.next == slow.next {
+			return true
+		}
+		slow = slow.next
+		if fast.data == slow.data && fast.next == slow.next {
+			return true
+		}
+	}
+}
+
+func (list *linkedList) toStringMax(sep string, maxx int) string { // check maxx number of cells.  This is make sure it will stop if there's a loop.
+	var sb strings.Builder
+	var counter int
+
+	sentinel := list.sentinel
+	if sentinel.next == nil {
+		return "" // the empty string is different from a nil string.
+	}
+
+	for cell := sentinel.next; cell != nil; cell = cell.next {
+		//fmt.Printf("cell data %s, ", cell.data)
+		sb.WriteString(cell.data)
+		if cell.next != nil { // I got this solution from the course hint.
+			sb.WriteString(sep)
+		}
+		counter++
+		if counter >= maxx {
+			break
+		}
+	}
+	//fmt.Println()
+	return sb.String()
+}
+
 func main() {
 	// smallListTest()
 
@@ -174,40 +229,61 @@ func main() {
 	greekLetters := []string{
 		"α", "β", "γ", "δ", "ε",
 	}
-	list := makeLinkedList()
-	//if list.isEmpty() {
-	//	fmt.Printf(" greek letters list is empty.\n")
-	//}
-	list.addRange(greekLetters)
-	fmt.Println(list.toString(" "))
+	list1 := makeLinkedList()
+	list1.addRange(greekLetters)
+	fmt.Println(list1.toString(" "))
 	fmt.Println()
 
 	// Demonstrate a stack.
 	fmt.Printf(" Stack operations\n")
 	stack := makeLinkedList()
-	//fmt.Printf(" after call to make linked list for stack.  len = %d\n", stack.length())
-	//if stack.isEmpty() {
-	//	fmt.Printf(" stack is empty\n")
-	//}
 	stack.push("Apple")
-	//fmt.Printf(" after push Apple.  len = %d\n", stack.length())
-	//if stack.isEmpty() {
-	//	fmt.Printf(" stack is empty but should contain Apple.\n")
-	//} else {
-	//	fmt.Printf(" Stack is not empty, which is correct.\n")
-	//}
 
 	stack.push("Banana")
-	//fmt.Printf(" after push Banana.  len = %d\n", stack.length())
 	stack.push("Coconut")
-	//fmt.Printf(" after push Coconut.  len = %d\n", stack.length())
 	stack.push("Date")
-	//fmt.Printf(" after push Date.  len = %d\n", stack.length())
-	//fmt.Printf(" Before calling pop.  Stack is %s\n", stack.toString(" "))
 	for !stack.isEmpty() {
 		fmt.Printf("Popped: %-7s   Remaining %d: %s\n",
 			stack.pop(),
 			stack.length(),
 			stack.toString(" "))
+	}
+
+	fmt.Printf("\n Now to test the looping stuff.\n\n")
+
+	// Make a list from an array of values.
+	values := []string{
+		"0", "1", "2", "3", "4", "5",
+	}
+	list := makeLinkedList()
+	list.addRange(values)
+
+	fmt.Println(list.toString(" "))
+	if list.hasLoop() {
+		fmt.Println("Has loop")
+	} else {
+		fmt.Println("No loop")
+	}
+	fmt.Println()
+
+	// Make cell 5 point to cell 2.
+	list.sentinel.next.next.next.next.next.next = list.sentinel.next.next
+
+	fmt.Println(list.toStringMax(" ", 10))
+	if list.hasLoop() {
+		fmt.Println("Has loop")
+	} else {
+		fmt.Println("No loop")
+	}
+	fmt.Println()
+
+	// Make cell 4 point to cell 2.
+	list.sentinel.next.next.next.next.next = list.sentinel.next.next
+
+	fmt.Println(list.toStringMax(" ", 10))
+	if list.hasLoop() {
+		fmt.Println("Has loop")
+	} else {
+		fmt.Println("No loop")
 	}
 }
