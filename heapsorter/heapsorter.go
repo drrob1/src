@@ -74,10 +74,12 @@ import (
   7 Oct 22 -- Updated output message
  21 Nov 22 -- static linter found a minor issue, now fixed.
  31 Mar 23 -- StaticCheck found an issue where I forgot to do timeSort = append(timeSort, ts)
+ 19 Sep 23 -- added const stackSize
 */
 
-const LastAlteredDate = "Mar 31, 2022"
+const LastAlteredDate = "Sep 19, 2023"
 const tooBig = 170_000
+const stackSize = 50
 
 var intStack []int // for non-recursive quick sorts
 
@@ -606,7 +608,8 @@ func NonRecursiveQuickSort(a []string) []string {
 	var k hiloIndexType
 	t0 := time.Now()
 	n := len(a) - 1
-	hiloInit(n / 2)
+	//hiloInit(n / 2)
+	hiloInit(stackSize)
 
 	k.lo = 0
 	k.hi = n
@@ -679,7 +682,8 @@ func NonRecursiveQuickSort(a []string) []string {
 
 func NonRecursiveQuickSortOberon(a []string) []string {
 	n := len(a)
-	intStackInit(n / 2)
+	//intStackInit(n / 2)
+	intStackInit(stackSize)
 	intStackPush(0)
 	intStackPush(n - 1)
 	for intStackLen() > 0 { // REPEAT (*take top request from stack*)
