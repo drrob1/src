@@ -38,10 +38,8 @@ func (me *Cell) addAfter(after *Cell) {
 }
 
 func (me *Cell) deleteAfter() *Cell { // need to return the deleted cell.  If there is no cell after "me", panic.
+	//fmt.Printf(" in deleteAfter.  me.data = %q\n", me.data)
 	deletedCell := me.next
-	if deletedCell == nil {
-		panic(" no cell after me to delete.")
-	}
 	me.next = nil
 	return deletedCell
 }
@@ -77,19 +75,22 @@ func (list *linkedList) toString(separator string) string {
 	for cell := sentinel.next; cell != nil; cell = cell.next {
 		//fmt.Printf("cell data %s, ", cell.data)
 		sb.WriteString(cell.data)
-		sb.WriteString(separator)
+		if cell.next != nil { // I got this solution from the course hint.
+			sb.WriteString(separator)
+		}
 	}
 	//fmt.Println()
+	return sb.String()
 
-	finalStr := sb.String()
-	if finalStr == "" {
-		return finalStr
-	}
-
-	if separator == "" {
-		return finalStr
-	}
-	return finalStr[:len(finalStr)-len(separator)] // don't return the final separator
+	//finalStr := sb.String()
+	//if finalStr == "" {
+	//	return finalStr
+	//}
+	//
+	//if separator == "" {
+	//	return finalStr
+	//}
+	//return finalStr[:len(finalStr)-len(separator)] // don't return the final separator
 }
 
 func (list *linkedList) toSlice() []string {
@@ -126,7 +127,7 @@ func (list *linkedList) isEmpty() bool {
 
 func (list *linkedList) push(s string) {
 	lastCell := list.sentinel
-	for lastCell != nil {
+	for lastCell.next != nil {
 		lastCell = lastCell.next
 	}
 
@@ -135,34 +136,78 @@ func (list *linkedList) push(s string) {
 }
 
 func (list *linkedList) pop() string {
-	if list.sentinel.next == nil {
-		return ""
-	}
-
+	cell := list.sentinel
+	//fmt.Printf(" in pop: Cell = %q\n", cell.data)
 	n := list.length()
-	cell := list.sentinel.next
-	for i := 0; i < n-1; i++ {
-		cell = cell.next // I'm hoping this stops at the next to last element
+	if n > 0 {
+		for i := 0; i < n-1; i++ {
+			cell = cell.next
+		}
 	}
 	str := cell.deleteAfter()
 	return str.data
 }
 
+//func main() {
+//	aCell := Cell{data: "Apple", next: nil}
+//	bCell := Cell{data: "Banana"}
+//	aCell.next = &bCell
+//	top := &aCell
+//
+//	// Now to add a sentinel.  The purpose of a sentinel is to make it easy to add an item to the beginning of a linked list.  The sentinel itself never contains data,
+//	// just is a pointer to the next element.
+//
+//	sentinel := Cell{data: "SENTINEL", next: top}
+//	top = &sentinel
+//
+//	var counter int
+//	for cel := top; cel != nil; cel = cel.next {
+//		counter++
+//		fmt.Printf(" Cell.Data[%d]: %q  Next: %p\n", counter, cel.data, cel.next)
+//	}
+//}
+
 func main() {
-	aCell := Cell{data: "Apple", next: nil}
-	bCell := Cell{data: "Banana"}
-	aCell.next = &bCell
-	top := &aCell
+	// smallListTest()
 
-	// Now to add a sentinel.  The purpose of a sentinel is to make it easy to add an item to the beginning of a linked list.  The sentinel itself never contains data,
-	// just is a pointer to the next element.
+	// Make a list from an array of values.
+	greekLetters := []string{
+		"α", "β", "γ", "δ", "ε",
+	}
+	list := makeLinkedList()
+	//if list.isEmpty() {
+	//	fmt.Printf(" greek letters list is empty.\n")
+	//}
+	list.addRange(greekLetters)
+	fmt.Println(list.toString(" "))
+	fmt.Println()
 
-	sentinel := Cell{data: "SENTINEL", next: top}
-	top = &sentinel
+	// Demonstrate a stack.
+	fmt.Printf(" Stack operations\n")
+	stack := makeLinkedList()
+	//fmt.Printf(" after call to make linked list for stack.  len = %d\n", stack.length())
+	//if stack.isEmpty() {
+	//	fmt.Printf(" stack is empty\n")
+	//}
+	stack.push("Apple")
+	//fmt.Printf(" after push Apple.  len = %d\n", stack.length())
+	//if stack.isEmpty() {
+	//	fmt.Printf(" stack is empty but should contain Apple.\n")
+	//} else {
+	//	fmt.Printf(" Stack is not empty, which is correct.\n")
+	//}
 
-	var counter int
-	for cel := top; cel != nil; cel = cel.next {
-		counter++
-		fmt.Printf(" Cell.Data[%d]: %q  Next: %p\n", counter, cel.data, cel.next)
+	stack.push("Banana")
+	//fmt.Printf(" after push Banana.  len = %d\n", stack.length())
+	stack.push("Coconut")
+	//fmt.Printf(" after push Coconut.  len = %d\n", stack.length())
+	stack.push("Date")
+	//fmt.Printf(" after push Date.  len = %d\n", stack.length())
+	//fmt.Printf(" Before calling pop.  Stack is %s\n", stack.toString(" "))
+	for !stack.isEmpty() {
+		fmt.Printf("Popped: %-7s   Remaining %d: %s\n",
+			stack.pop(),
+			stack.length(),
+			stack.toString(" "))
 	}
 }
