@@ -75,9 +75,10 @@ import (
  21 Nov 22 -- static linter found a minor issue, now fixed.
  31 Mar 23 -- StaticCheck found an issue where I forgot to do timeSort = append(timeSort, ts)
  19 Sep 23 -- added const stackSize
+ 20 Sep 23 -- Tweaked output from container/heap to match the others.
 */
 
-const LastAlteredDate = "Sep 19, 2023"
+const LastAlteredDate = "Sep 20, 2023"
 const tooBig = 170_000
 const stackSize = 50
 
@@ -1375,7 +1376,7 @@ func main() {
 		sortedheapofwords = append(sortedheapofwords, str)
 	}
 	sortedheapofwordsTime := time.Since(t13)
-	s = fmt.Sprintf(" after container/heap: time=%s \n", sortedheapofwordsTime.String())
+	s = fmt.Sprintf(" after container/heap: %s \n", sortedheapofwordsTime.String())
 	_, err = OutBufioWriter.WriteString(s)
 	check(err)
 	fmt.Print(s)
