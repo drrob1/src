@@ -29,164 +29,122 @@ func makeDoublyLinkedList() doublyLinkedList {
 	bcell.prev = &fcell
 	list.topSentinel = &fcell
 	list.bottomSentinel = &bcell
-	fmt.Printf(" in makeLinkedList.  List: %+v\n", list)
+	// fmt.Printf(" in makeLinkedList.  List: %+v\n", list)
 	return list
 }
 
-func (me *Cell) addAfter(newCell *Cell) {
-	newCell.next = me.next // so the next field of "newCell" now points to wherever "me" was pointing to, ie, the next element.  So this inserts "newCell" between "me" and the next linked cell.
-	me.next = newCell
-	fmt.Printf(" after assignment: me = %+v, newCell = %+v\n", me, newCell)
+func (left *Cell) addAfter(btwn *Cell) {
+	right := left.next
+	btwn.next = right // so the next field of "newCell" now points to wherever "me" was pointing to, ie, the next element.  So this inserts "newCell" between "me" and the next linked cell.
+	btwn.prev = left
+	left.next = btwn
+	right.prev = btwn
+	// no change to me.prev and right.next
+	// fmt.Printf(" after assignment: me = %+v, btwnCell = %+v, right = %+v\n", btwn, btwn, right)
 }
 
-func (me *Cell) deleteAfter() *Cell { // need to return the deleted cell.  If there is no cell after "me", panic.
-	//fmt.Printf(" in deleteAfter.  me.data = %q\n", me.data)
-	deletedCell := me.next
-	me.next = nil
-	return deletedCell
+func (right *Cell) addBefore(btwn *Cell) {
+	left := right.prev
+	left.addAfter(btwn)
 }
 
-func (list *linkedList) addRange(values []string) {
+func (me *Cell) delete() { // need to return the deleted cell.  If there is no cell after "me", panic.
+	//fmt.Printf(" in delete.  me.data = %q\n", me.data)
+	left := me.prev
+	right := me.next
+	left.next = right
+	right.prev = left
+}
+
+func (list *doublyLinkedList) addRange(values []string) {
 	// add the strings as cells to the end of the linked list, ie, append the new strings
-	// First, find the end of the linked list
-	var lastCell *Cell
-	//fmt.Printf(" entering addRange: list = %+v\n", list)
-
-	lastCell = list.sentinel
-	//fmt.Printf(" before search: addRange.lastCell = %+v\n", lastCell)
-	for lastCell.next != nil {
-		lastCell = lastCell.next
-	}
-	//fmt.Printf(" after search: addRange.lastCell = %+v\n", lastCell)
 
 	for _, s := range values {
-		anotherCell := Cell{data: s}
-		lastCell.addAfter(&anotherCell)
-		lastCell = lastCell.next
+		addMe := Cell{data: s}
+		list.bottomSentinel.addBefore(&addMe)
 	}
 }
 
-func (list *linkedList) toString(separator string) string {
+func (list *doublyLinkedList) toString(separator string) string {
 	var sb strings.Builder
 
-	sentinel := list.sentinel
-	if sentinel.next == nil {
-		return "" // the empty string is different from a nil string.
+	if list.isEmpty() {
+		return ""
 	}
 
-	for cell := sentinel.next; cell != nil; cell = cell.next {
+	for cell := list.topSentinel.next; cell != list.bottomSentinel; cell = cell.next {
 		//fmt.Printf("cell data %s, ", cell.data)
 		sb.WriteString(cell.data)
-		if cell.next != nil { // I got this solution from the course hint.
+		if cell.next != list.bottomSentinel { // I got this solution from the course hint.
 			sb.WriteString(separator)
 		}
 	}
 	//fmt.Println()
 	return sb.String()
-
-	//finalStr := sb.String()
-	//if finalStr == "" {
-	//	return finalStr
-	//}
-	//
-	//if separator == "" {
-	//	return finalStr
-	//}
-	//return finalStr[:len(finalStr)-len(separator)] // don't return the final separator
 }
 
-func (list *linkedList) toSlice() []string {
+func (list *doublyLinkedList) toSlice() []string {
 	var stringSlice []string
 
-	sentinel := list.sentinel
-	if sentinel.next == nil {
-		return nil
+	if list.isEmpty() {
+		return []string{}
 	}
 
-	for cell := sentinel.next; cell != nil; cell = cell.next {
+	for cell := list.topSentinel.next; cell != list.bottomSentinel; cell = cell.next {
 		stringSlice = append(stringSlice, cell.data)
 	}
 
 	return stringSlice
 }
 
-func (list *linkedList) length() int {
-	if list.sentinel.next == nil {
+func (list *doublyLinkedList) length() int {
+	if list.topSentinel.next == list.bottomSentinel {
 		return 0
 	}
 
-	var counter int // this starts as zero, so I don't intend to count the sentinel element.
-	for cell := list.sentinel.next; cell != nil; cell = cell.next {
+	var counter int // this starts as zero, so I don't intend to count the sentinel elements.
+	for cell := list.topSentinel.next; cell != list.bottomSentinel; cell = cell.next {
 		counter++
 	}
 
 	return counter
 }
 
-func (list *linkedList) isEmpty() bool {
-	return list.sentinel.next == nil
+func (list *doublyLinkedList) isEmpty() bool {
+	return list.topSentinel.next == list.bottomSentinel
 }
 
-func (list *linkedList) push(s string) {
-	lastCell := list.sentinel
-	for lastCell.next != nil {
-		lastCell = lastCell.next
-	}
-
+func (list *doublyLinkedList) push(s string) { // I'm going to change this so push and pop occur at the top of the list
 	anotherCell := Cell{data: s}
-	lastCell.addAfter(&anotherCell)
+
+	list.topSentinel.addAfter(&anotherCell)
 }
 
-func (list *linkedList) pop() string {
-	cell := list.sentinel
+func (list *doublyLinkedList) pop() string { // I'm going to change this so push and pop occur at the top of the list
+	cell := list.topSentinel.next
 	//fmt.Printf(" in pop: Cell = %q\n", cell.data)
-	n := list.length()
-	if n > 0 {
-		for i := 0; i < n-1; i++ {
-			cell = cell.next
-		}
-	}
-	str := cell.deleteAfter()
-	return str.data
+	cell.delete()
+	return cell.data
 }
 
-//func main() {
-//	aCell := Cell{data: "Apple", next: nil}
-//	bCell := Cell{data: "Banana"}
-//	aCell.next = &bCell
-//	top := &aCell
-//
-//	// Now to add a sentinel.  The purpose of a sentinel is to make it easy to add an item to the beginning of a linked list.  The sentinel itself never contains data,
-//	// just is a pointer to the next element.
-//
-//	sentinel := Cell{data: "SENTINEL", next: top}
-//	top = &sentinel
-//
-//	var counter int
-//	for cel := top; cel != nil; cel = cel.next {
-//		counter++
-//		fmt.Printf(" Cell.Data[%d]: %q  Next: %p\n", counter, cel.data, cel.next)
-//	}
-//}
-
-func (list *linkedList) hasLoop() bool {
+func (list *doublyLinkedList) hasLoop() bool {
 	// This uses a fast and slow pointer to Cell.  Fast moves two elements for each one that slow moves.  The loop terminates if a nil is found, or fast = slow.
 	// Must move fast first, check for match w/ slow, and then move slow.
 	var fast, slow *Cell
 
-	fast = list.sentinel
-	slow = list.sentinel
+	fast = list.topSentinel
+	slow = fast
 
 	for {
 		fast = fast.next
-		if fast.next == nil {
+		if fast.next == list.bottomSentinel {
 			return false
 		}
 		if fast.data == slow.data && fast.next == slow.next {
 			return true
 		}
 		fast = fast.next
-		if fast.next == nil {
+		if fast.next == list.bottomSentinel {
 			return false
 		}
 		if fast.data == slow.data && fast.next == slow.next {
@@ -199,19 +157,18 @@ func (list *linkedList) hasLoop() bool {
 	}
 }
 
-func (list *linkedList) toStringMax(sep string, maxx int) string { // check maxx number of cells.  This is make sure it will stop if there's a loop.
+func (list *doublyLinkedList) toStringMax(sep string, maxx int) string { // check maxx number of cells.  This is make sure it will stop if there's a loop.
 	var sb strings.Builder
 	var counter int
 
-	sentinel := list.sentinel
-	if sentinel.next == nil {
-		return "" // the empty string is different from a nil string.
+	if list.topSentinel.next == list.bottomSentinel {
+		return ""
 	}
 
-	for cell := sentinel.next; cell != nil; cell = cell.next {
+	for cell := list.topSentinel.next; cell != list.bottomSentinel; cell = cell.next {
 		//fmt.Printf("cell data %s, ", cell.data)
 		sb.WriteString(cell.data)
-		if cell.next != nil { // I got this solution from the course hint.
+		if cell.next != list.bottomSentinel { // I got this solution from the course hint.
 			sb.WriteString(sep)
 		}
 		counter++
@@ -223,21 +180,50 @@ func (list *linkedList) toStringMax(sep string, maxx int) string { // check maxx
 	return sb.String()
 }
 
-func main() {
+func (queue *doublyLinkedList) enqueue(value string) {
+	queue.push(value)
+}
+
+func (queue *doublyLinkedList) dequeue() string {
+	cell := queue.bottomSentinel.prev
+	//fmt.Printf(" in pop: Cell = %q\n", cell.data)
+	cell.delete()
+	return cell.data
+}
+
+func (deque *doublyLinkedList) pushBottom(value string) {
+	anotherCell := Cell{data: value}
+
+	deque.bottomSentinel.addBefore(&anotherCell)
+}
+
+func (deque *doublyLinkedList) pushTop(value string) {
+	deque.push(value)
+}
+
+func (deque *doublyLinkedList) popTop() string {
+	return deque.pop()
+}
+
+func (deque *doublyLinkedList) popBottom() string {
+	return deque.dequeue()
+}
+
+func oldmain() {
 	// smallListTest()
 
 	// Make a list from an array of values.
 	greekLetters := []string{
 		"α", "β", "γ", "δ", "ε",
 	}
-	list1 := makeLinkedList()
+	list1 := makeDoublyLinkedList()
 	list1.addRange(greekLetters)
 	fmt.Println(list1.toString(" "))
 	fmt.Println()
 
 	// Demonstrate a stack.
 	fmt.Printf(" Stack operations\n")
-	stack := makeLinkedList()
+	stack := makeDoublyLinkedList()
 	stack.push("Apple")
 
 	stack.push("Banana")
@@ -256,7 +242,7 @@ func main() {
 	values := []string{
 		"0", "1", "2", "3", "4", "5",
 	}
-	list := makeLinkedList()
+	list := makeDoublyLinkedList()
 	list.addRange(values)
 
 	fmt.Println(list.toString(" "))
@@ -268,7 +254,7 @@ func main() {
 	fmt.Println()
 
 	// Make cell 5 point to cell 2.
-	list.sentinel.next.next.next.next.next.next = list.sentinel.next.next
+	list.topSentinel.next.next.next.next.next.next = list.topSentinel.next.next
 
 	fmt.Println(list.toStringMax(" ", 10))
 	if list.hasLoop() {
@@ -279,7 +265,7 @@ func main() {
 	fmt.Println()
 
 	// Make cell 4 point to cell 2.
-	list.sentinel.next.next.next.next.next = list.sentinel.next.next
+	list.topSentinel.next.next.next.next.next = list.topSentinel.next.next
 
 	fmt.Println(list.toStringMax(" ", 10))
 	if list.hasLoop() {
@@ -287,4 +273,43 @@ func main() {
 	} else {
 		fmt.Println("No loop")
 	}
+
+	fmt.Printf("\n\n\n")
+}
+
+func main() {
+	oldmain()
+
+	// Test queue functions.
+	fmt.Printf("*** Queue Functions ***\n")
+	queue := makeDoublyLinkedList()
+	queue.enqueue("Agate")
+	queue.enqueue("Beryl")
+	fmt.Printf("%s ", queue.dequeue())
+	queue.enqueue("Citrine")
+	fmt.Printf("%s ", queue.dequeue())
+	fmt.Printf("%s ", queue.dequeue())
+	queue.enqueue("Diamond")
+	queue.enqueue("Emerald")
+	for !queue.isEmpty() {
+		fmt.Printf("%s ", queue.dequeue())
+	}
+	fmt.Printf("\n\n")
+
+	// Test deque functions. Names starting
+	// with F have a fast pass.
+	fmt.Printf("*** Deque Functions ***\n")
+	deque := makeDoublyLinkedList()
+	deque.pushTop("Ann")
+	deque.pushTop("Ben")
+	fmt.Printf("%s ", deque.popBottom())
+	deque.pushBottom("F-Cat")
+	fmt.Printf("%s ", deque.popBottom())
+	fmt.Printf("%s ", deque.popBottom())
+	deque.pushBottom("F-Dan")
+	deque.pushTop("Eva")
+	for !deque.isEmpty() {
+		fmt.Printf("%s ", deque.popBottom())
+	}
+	fmt.Printf("\n")
 }

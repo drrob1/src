@@ -6,7 +6,7 @@ import (
 )
 
 func TestLength(t *testing.T) {
-	lnkdLst := makeLinkedList()
+	lnkdLst := makeDoublyLinkedList()
 	//fmt.Printf(" in TestLength: lnkdList = %+v\n", lnkdLst)
 	//aCell := Cell{"apple", nil}
 	//bCell := Cell{data: "banana"}
@@ -22,7 +22,7 @@ func TestLength(t *testing.T) {
 		t.Errorf(" Length of a,b cell should be 1, but is %d instead.\n", n)
 	}
 
-	lnklst := makeLinkedList()
+	lnklst := makeDoublyLinkedList()
 	lnklst.addRange([]string{"one", "two", "three"})
 	n = lnklst.length()
 	if n != 3 {
@@ -32,7 +32,7 @@ func TestLength(t *testing.T) {
 }
 
 func TestToString(t *testing.T) {
-	lnkdLst := makeLinkedList()
+	lnkdLst := makeDoublyLinkedList()
 	//lnkdLst.addRange([]string{"apple"})
 	lnkdLst.addRange([]string{"apple", "banana", "pear", "peach"})
 	s := lnkdLst.toString(", ")
@@ -49,7 +49,7 @@ func TestToString(t *testing.T) {
 }
 
 func TestToSlice(t *testing.T) {
-	lnkdLst := makeLinkedList()
+	lnkdLst := makeDoublyLinkedList()
 	lnkdLst.addRange([]string{"apple", "banana", "pear", "peach"})
 	slice := lnkdLst.toSlice()
 	if slice[0] != "apple" || slice[1] != "banana" || slice[2] != "pear" || slice[3] != "peach" {
