@@ -2,6 +2,10 @@
   17 Sep 23 -- Singly linked list for the live project.
   19 Sep 23 -- Added hasLoop and toStringMax for the next part of this project.
   19 Sep 23 -- Now called doublylinkedlist.
+                 It was hard for me to write addAfter.  I decided to write what I have and then what I need, and then it was easy for me to figure out how to get from input to output.
+                 Input: me.next points to right.  Right.prev points to me.  I renamed me to left.  right is old left.next.  I don't change left.prev or right.next.  I only have to change left.next and right.prev.
+                 Output: btwn.next is initial left.next, btwn.prev = left, left.next = btwn, right.prev = btwn.
+               A double linked list is a linear thing.  A tree is non-linear.
 */
 
 package main
@@ -34,8 +38,8 @@ func makeDoublyLinkedList() doublyLinkedList {
 }
 
 func (left *Cell) addAfter(btwn *Cell) {
-	right := left.next
-	btwn.next = right // so the next field of "newCell" now points to wherever "me" was pointing to, ie, the next element.  So this inserts "newCell" between "me" and the next linked cell.
+	right := left.next // right now is a pointer to the initial right hand cell, so btwn can be inserted in btwn left and right cells.
+	btwn.next = right  // so the next field of "btwn" now points to wherever "left" was pointing to, ie, the element after btwn that I'm calling "right".  So this inserts "btwn" between "left" and "right".
 	btwn.prev = left
 	left.next = btwn
 	right.prev = btwn
