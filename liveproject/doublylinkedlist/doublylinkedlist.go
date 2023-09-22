@@ -3,8 +3,8 @@
   19 Sep 23 -- Added hasLoop and toStringMax for the next part of this project.
   19 Sep 23 -- Now called doublylinkedlist.
                  It was hard for me to write addAfter.  I decided to write what I have and then what I need, and then it was easy for me to figure out how to get from input to output.
-                 Input: me.next points to right.  Right.prev points to me.  I renamed me to left.  right is old left.next.  I don't change left.prev or right.next.  I only have to change left.next and right.prev.
-                 Output: btwn.next is initial left.next, btwn.prev = left, left.next = btwn, right.prev = btwn.
+                 Input: me.next points to right.  Right.prev points to me.  I renamed me to left.  I get the right cell from initial left.next.  I don't change left.prev or right.next.  I only have to change left.next and right.prev.
+                 Output: btwn.next becomes initial left.next, btwn.prev = left, left.next = btwn, right.prev = btwn.
                A double linked list is a linear thing.  A tree is non-linear.
 */
 
