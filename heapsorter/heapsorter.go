@@ -64,7 +64,7 @@ import (
   27 Aug 20 -- Added timing comments from txt file that has just over 1 million words.
    2 Jan 21 -- Removed 3 redundant type conversions, as flagged by GoLand.
    4 Jan 21 -- Adding ModifiedQuickSort, and will sort output times.  And will not run N**2 sorts on datasets > tooBig.
-  27 Aug 21 -- Converting to modules by removing getcommandline, and removed the depricated ioutil.
+  27 Aug 21 -- Converting to modules by removing getcommandline, and removed the deprecated ioutil.
   23 Oct 21 -- Removed call to make slice to receive words file.
   12 Mar 22 -- I'm back in the code to refactor based on what I've learned from Bill Kennedy's course.  I'm now using bytes.Reader and strings.Builder.
   14 Jul 22 -- Added comment in both non-recursive quicksorts about stack being blown in book code, hence the broken routines.
