@@ -76,9 +76,10 @@ import (
  31 Mar 23 -- StaticCheck found an issue where I forgot to do timeSort = append(timeSort, ts)
  19 Sep 23 -- added const stackSize
  20 Sep 23 -- Tweaked output from container/heap to match the others.
+ 23 Sep 23 -- Adding Stephens version of quicksort.  And I changed the value for modified quicksort to 7, it was 12.
 */
 
-const LastAlteredDate = "Sep 20, 2023"
+const LastAlteredDate = "Sep 23, 2023"
 const tooBig = 170_000
 const stackSize = 50
 
@@ -519,7 +520,7 @@ func QuickSort(a []string) []string {
 } // END QuickSort
 
 func qsortmodified(a []string, lo, hi int) []string {
-	if hi-lo < 12 {
+	if hi-lo < 7 {
 		b := StraightInsertion(a[lo : hi+1])
 		i := lo
 		for _, s := range b {
@@ -560,6 +561,54 @@ func ModifiedQuickSort(a []string) []string {
 }
 
 // -----------------------------------------------------------
+
+func stephensQuicksort(arr []string) {
+	// This is from the Manning live project I'm taking.  See comments above.
+
+	// See if we should stop the recursion.
+	if len(arr) < 2 {
+		return
+	}
+
+	// Partition.
+	pivotI := stephensPartition(arr)
+
+	// Recursively sort the two halves.
+	stephensQuicksort(arr[0:pivotI])
+	stephensQuicksort(arr[pivotI+1:])
+}
+
+// Partition the slice.
+func stephensPartition(arr []string) int {
+	// Set the lower and upper indexes.
+	lo := 0
+	hi := len(arr) - 1
+
+	// Use the last element as the pivot.
+	pivot := arr[hi]
+
+	// Temporary pivot index
+	i := lo - 1
+
+	for j := lo; j < hi; j++ {
+		// See if arr[j] <= pivot.
+		if arr[j] <= pivot {
+			// Move the temporary pivot index forward
+			i = i + 1
+
+			// Swap arr[i] and arr[j].
+			arr[i], arr[j] = arr[j], arr[i]
+		}
+	}
+
+	// Drop the pivot in the between the two halves.
+	i = i + 1
+	arr[i], arr[hi] = arr[hi], arr[i]
+
+	// Return the pivot's index.
+	return i
+}
+
 // -----------------------------------------------------------
 func intStackInit(n int) {
 	intStack = make([]int, 0, n)
@@ -1117,7 +1166,7 @@ func main() {
 	ts = timesortType{s, HeapSortedTime}
 	timeSort = append(timeSort, ts)
 
-	// NRHeapSort which is from Numerical Recipies and converted from C++ code.
+	// NRHeapSort which is from "Numerical Recipes" and converted from C++ code.
 	t5 := time.Now()
 	copy(sliceofwords, mastersliceofwords)
 	NRHeapSortedWords := NRheapsort(sliceofwords)
@@ -1170,6 +1219,24 @@ func main() {
 		fmt.Println()
 	}
 	ts = timesortType{s, ModifiedQuickSortedTime}
+	timeSort = append(timeSort, ts)
+
+	// Stephens Quicksort, from the Manning live project I'm doing now.
+	t6b := time.Now()
+	copy(sliceofwords, mastersliceofwords)
+	stephensQuicksort(sliceofwords) // passed by reference, so upon return sliceofwords will be sorted.
+	stephensQuickSortTime := time.Since(t6b)
+	s = fmt.Sprintf(" After Stephens Quicksort: %s, %dns\n", stephensQuickSortTime.String(), stephensQuickSortTime.Nanoseconds())
+	_, err = OutBufioWriter.WriteString(s)
+	check(err)
+	fmt.Print(s)
+	if allowoutput {
+		for _, w := range sliceofwords {
+			fmt.Print(w, " ")
+		}
+		fmt.Println()
+	}
+	ts = timesortType{s, stephensQuickSortTime}
 	timeSort = append(timeSort, ts)
 
 	// MergeSort
