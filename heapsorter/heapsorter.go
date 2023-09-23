@@ -77,6 +77,9 @@ import (
  19 Sep 23 -- added const stackSize
  20 Sep 23 -- Tweaked output from container/heap to match the others.
  23 Sep 23 -- Adding Stephens version of quicksort.  And I changed the value for modified quicksort to 7, it was 12.
+                 According to the below measurements, lowering the modified quicksort value from 12 to 7 made it a bit faster.
+                 And Stephens' quicksort performs quite poorly, much worse than the other version I have from other sources.
+                 In fact, it's much slower than heapsort, mergesort and container/heapsort.  It's the slowest of the n*ln(n) algorithms.  How odd.  But interesting.
 */
 
 const LastAlteredDate = "Sep 23, 2023"
@@ -1617,6 +1620,56 @@ Mon Jan 4 2021 on same  requestedwordcount= 1247051, numberofwords= 1,080,126
 
 ------------------------------------------------------
 
+Sat Sep 23 2023 08:56:01 EDT
+ filesize = 6988211, requestedwordcount = 998,315
+
+ after NativeSort: 120.2626ms, 120262600 ns
+ After BinaryInsertion: 3m7.5622073s, 187562207300 ns
+ After BadShellSort: 411.9336ms, 411933600 ns
+ After MyShellSort: 3.7118192s, 3711819200 ns
+ After HeapSort: 313.6703ms, 313670300 ns
+ After NRheapsort: 333.5741ms, 333574100 ns
+ After QuickSort: 143.5555ms, 143555500 ns
+ After ModifiedQuickSort: 133.4969ms, 133496900 ns
+ After Stephens Quicksort: 7.2289792s, 7228979200ns
+ After mergeSort: 256.2392ms, 256239200 ns
+ After ModifiedMergeSort: 210.299ms, 210299000 ns
+ After Modula-2 NonRecursiveQuickSort: 180.4898ms, 180489800 ns
+ After NonRecursiveQuickSortOberon: 139.0707ms, 139070700 ns
+ After 2nd sort.StringSlice: 112.5228ms, 112522800 ns
+ After sort.Sort: 113.4547ms, 113454700 ns
+ After sort.Stable: 401.3781ms, 401378100 ns
+ After sort.Strings: 112.8011ms, 112801100 ns
+ After sort.Slice: 107.9005ms, 107900500 ns
+ After sort.SliceStable: 395.6118ms, 395611800 ns
+ after container/heap: 461.6336ms
+
+ ---- Sorted List of Times ----
+ms
+ After sort.Slice: 107.9005ms, 107900500 ns
+ After 2nd sort.StringSlice: 112.5228ms, 112522800 ns
+ After sort.Strings: 112.8011ms, 112801100 ns
+ After sort.Sort: 113.4547ms, 113454700 ns
+ after NativeSort: 120.2626ms, 120262600 ns
+ After ModifiedQuickSort: 133.4969ms, 133496900 ns
+ After NonRecursiveQuickSortOberon: 139.0707ms, 139070700 ns
+ After QuickSort: 143.5555ms, 143555500 ns
+ After Modula-2 NonRecursiveQuickSort: 180.4898ms, 180489800 ns
+ After ModifiedMergeSort: 210.299ms, 210299000 ns
+ After mergeSort: 256.2392ms, 256239200 ns
+ After HeapSort: 313.6703ms, 313670300 ns
+ After NRheapsort: 333.5741ms, 333574100 ns
+ After sort.SliceStable: 395.6118ms, 395611800 ns
+ After sort.Stable: 401.3781ms, 401378100 ns
+ After BadShellSort: 411.9336ms, 411933600 ns
+ after container/heap: 461.6336ms
+s
+ After MyShellSort: 3.7118192s, 3711819200 ns
+ After Stephens Quicksort: 7.2289792s, 7228979200ns
+m
+ After BinaryInsertion: 3m7.5622073s, 187562207300 ns
+ requestedwordcount= 998,315, numberofwords= 998,315, len(mastersliceofwords)= 998,315
+------------------------------------------------------
 
 
 
