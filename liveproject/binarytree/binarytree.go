@@ -54,7 +54,7 @@ func buildTree() *node {
 	return &aNode
 }
 
-func (nod *node) displayIndented(indent string, depth int) string {
+func (nod *node) displayIndented(indent string, depth int) string { // acts on the current node before it visits the children.  So it's a pre-order traversal.
 	var sbuild strings.Builder
 
 	sbuild.WriteString(strings.Repeat(indent, depth))
@@ -71,8 +71,28 @@ func (nod *node) displayIndented(indent string, depth int) string {
 	return sbuild.String()
 }
 
+func (nod *node) preOrder() string {
+	var sbuild strings.Builder
+
+	sbuild.WriteString(nod.data)
+
+	if nod.left != nil {
+		sbuild.WriteRune(' ')
+		sbuild.WriteString(nod.left.preOrder())
+	}
+	if nod.right != nil {
+		sbuild.WriteRune(' ')
+		sbuild.WriteString(nod.right.preOrder())
+	}
+
+	return sbuild.String()
+}
+
 func main() {
 	aNode := buildTree()
 
 	fmt.Println(aNode.displayIndented("  ", 0))
+	fmt.Println()
+	fmt.Println(aNode.preOrder())
+
 }
