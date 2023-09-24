@@ -155,13 +155,13 @@ func main() {
 
 	fmt.Println(aNode.displayIndented("  ", 0))
 	fmt.Println()
-	fmt.Println(aNode.preOrder())
+	fmt.Println(" PreOrder:", aNode.preOrder())
 	fmt.Println()
-	fmt.Println(aNode.inOrder())
+	fmt.Println(" InOrder:", aNode.inOrder())
 	fmt.Println()
-	fmt.Println(aNode.postOrder())
+	fmt.Println(" PostOrder:", aNode.postOrder())
 	fmt.Println()
-	fmt.Println(aNode.breadthFirst())
+	fmt.Println(" BreadthFirst:", aNode.breadthFirst())
 
 }
 
