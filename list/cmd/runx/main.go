@@ -64,7 +64,7 @@ import (
   24 Sep 23 -- I have to fix a bug.  It's not working as I expect on linux.  And Doug is 35 today.  But that's not why I'm here, in the code now.
 */
 
-const LastAltered = "24 Sep 2023" //
+const LastAltered = "25 Sep 2023" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -88,10 +88,11 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ].  Glob pattern is now set by the -g flag, and -rex is implemented.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " If have both -rex and -g, -rex is followed and -g is ignored, as is the x|w|p|a pattern.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
+		flag.PrintDefaults()
 		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
-		flag.PrintDefaults()
 	}
 
 	var revFlag bool
