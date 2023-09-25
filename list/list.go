@@ -50,6 +50,8 @@ import (
   12 Jul 23 -- Globbing isn't working.  Nevermind, I forgot about first param must be a dot if I'm going to use globbing.
   14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine.
   16 Jul 23 -- I'm thinking about adding GetFileInfoXFromRegexp.  And I'll need the corresponding rex flag for it.  And I'll need NewFromRex.
+  25 Sep 23 -- There's a bug in runlist and runx in which the beginning of line anchor is not processed correctly.  I'm tracking this down now.
+                 I found the bug.  I was matching against RelPath which includes the path dir info, so the ^ anchor is meaningless.
 */
 
 type DirAliasMapType map[string]string
@@ -921,7 +923,7 @@ func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses
 	if err != nil {
 		return nil, err
 	}
-	fileInfoX, err = MyReadDir(workingDir, excludeMe)
+	fileInfoX, err = MyReadDir(workingDir, excludeMe) // this already calls includeThis.
 	if err != nil {
 		return nil, err
 	}
@@ -932,14 +934,14 @@ func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses
 
 	fileInfoX2 := make([]FileInfoExType, 0, len(fileInfoX))
 	for _, f := range fileInfoX { // The exclude expression has already been processed.  Now I have to process the include regexp.
-
-		lower := strings.ToLower(f.RelPath)
-		match := rex.MatchString(lower)
-
-		if includeThis(f.FI, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
+		lower := strings.ToLower(f.FI.Name()) // I first used relname here, but that includes the directory, so the ^ anchor was meaningless.  Not what I want.
+		if VeryVerboseFlag {
+			fmt.Printf(" FileInfoXFromRegexp: lower = %q, regex = %q, rex.MatchString(lower) = %t\n", lower, rex.String(), rex.MatchString(lower))
+		}
+		if rex.MatchString(lower) {
 			fileInfoX2 = append(fileInfoX2, f)
 		}
-	} // for f ranges over filenames
+	}
 
 	return fileInfoX2, nil
 

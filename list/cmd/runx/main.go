@@ -241,7 +241,7 @@ func main() {
 			}
 		} else {
 			fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag.  Try again.\n")
-			fmt.Printf(" cmdStr = %q, globStr = %q, globString = %q, regexStr = %q", cmdStr, globStr, globString, regexStr)
+			fmt.Printf(" cmdStr = %q, globStr = %q, globString = %q, regexStr = %q, NArg = %d", cmdStr, globStr, globString, regexStr, flag.NArg())
 			if regex != nil {
 				fmt.Printf(" regex = %s\n", regex.String())
 			}
@@ -260,6 +260,12 @@ func main() {
 		}
 	} else { // Since I'm not allowing globbing on the command line, bash won't screw me up.  This is why I'm not allowing globbing on the command line.
 		fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag, and regex set by -rex.  Try again.\n")
+		fmt.Printf(" cmdStr = %q, globStr = %q, globString = %q, regexStr = %q, NArg = %d", cmdStr, globStr, globString, regexStr, flag.NArg())
+		if regex != nil {
+			fmt.Printf(" regex = %s\n", regex.String())
+		}
+		fmt.Printf(" Remember that strings may have to be quoted to be recognized as params.\n")
+		fmt.Println()
 		os.Exit(1)
 	}
 
