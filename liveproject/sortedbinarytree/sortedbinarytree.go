@@ -21,6 +21,8 @@ type Node struct {
 	left, right *Node
 }
 
+var foundValue *Node
+
 func (root *Node) insertValue(value string) {
 	// I have to first find the correct position to insert this new value.  If the new value is smaller than root, go down the left child.  If the new value is greater than root,
 	// go down the right child.  If the child value is nil, insert there.  I'm going to use recursion to do this, which is easier than iteration.  He doesn't say what to do if the new value
@@ -50,19 +52,43 @@ func (root *Node) insertValue(value string) {
 }
 
 func (root *Node) findValue(value string) *Node {
+	// I'm having a very hard time figuring out what to do w/ the rest of the routine after the recursion is already called.  I solved it here by using a global to handle the result.
+	// The iterative solution does not have this problem.
 	fmt.Printf(" in findValue: value = %s, root = %+v\n", value, root)
 	if root == nil {
-		fmt.Printf(" took root == nil branch.  root = %+v\n", root)
+		fmt.Printf(" took root == nil branch.  Value = %s, root = %+v\n", value, root)
+		foundValue = nil
 		return nil
 	}
-	if value < root.data {
-		again := root.left
-		again.findValue(value)
-	} else if value > root.data {
-		again := root.right
-		again.findValue(value)
+	if value == root.data {
+		fmt.Printf(" took value == root branch.  Value = %s, root = %+v\n", value, root)
+		foundValue = root
+		return root
 	}
-	return root
+	if value < root.data {
+		root.left.findValue(value)
+	} else if value > root.data {
+		root.right.findValue(value)
+	}
+	return nil
+}
+
+func (root *Node) findValueIterative(value string) *Node {
+	n := root
+	for {
+		if n == nil {
+			foundValue = nil
+			break
+		} else if value == n.data {
+			foundValue = n // this is here for completeness in the global I had to create for the recursive findValue.
+			break
+		} else if value < n.data {
+			n = n.left
+		} else if value > n.data {
+			n = n.right
+		}
+	}
+	return n
 }
 
 func buildTree() *Node { // from binary tree live project.  I don't use this here, but I want to keep it so I can refer to it if needed.
@@ -260,10 +286,17 @@ func main() {
 		// Find the value's node.
 		target = strings.ToUpper(target)
 		node := root.findValue(target)
-		if node == nil {
-			ctfmt.Printf(ct.Red, false, "%s not found\n", target)
+		if foundValue == nil {
+			ctfmt.Printf(ct.Red, false, "%s not found using findValue.  foundValue = %+v, node = %+v\n", target, foundValue, node)
 		} else {
-			ctfmt.Printf(ct.Green, false, "Found value %s in %+v\n\n", target, node)
+			ctfmt.Printf(ct.Green, false, "Found value %s using findValue in foundvalue = %+v,  node = %+v\n\n", target, foundValue, node)
+		}
+
+		node = root.findValueIterative(target)
+		if node == nil {
+			ctfmt.Printf(ct.Red, true, "%s not found using findValueIterative, node = %+v\n", target, node)
+		} else {
+			ctfmt.Printf(ct.Green, true, "Found value %s using findValueIterative in node = %+v\n\n", target, node)
 		}
 	}
 }
