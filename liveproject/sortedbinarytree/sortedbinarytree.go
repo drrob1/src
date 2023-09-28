@@ -54,23 +54,30 @@ func (root *Node) insertValue(value string) {
 func (root *Node) findValue(value string) *Node {
 	// I'm having a very hard time figuring out what to do w/ the rest of the routine after the recursion is already called.  I solved it here by using a global to handle the result.
 	// The iterative solution does not have this problem.
+	// I think I figured this out.  Recursion works well when the last line is the return statement.  So I have to re-write this so that the last line is return *Node or return nil.
+	// Nope, I'm still stuck w/ the case of what to do after the recursion finished.  I'll try returning nil, as below.
+	// So far, it seems to be working, that only the last return root is the result that is passed to the caller, the earlier return nil doesn't cause problems.  I have to check for
+	// root == nil first, so I don't dereference a nil pointer when I do root.data, root.left or root.right.
+	// Looks like this works.  Yay!
 	fmt.Printf(" in findValue: value = %s, root = %+v\n", value, root)
 	if root == nil {
 		fmt.Printf(" took root == nil branch.  Value = %s, root = %+v\n", value, root)
 		foundValue = nil
 		return nil
 	}
-	if value == root.data {
-		fmt.Printf(" took value == root branch.  Value = %s, root = %+v\n", value, root)
-		foundValue = root
-		return root
-	}
 	if value < root.data {
 		root.left.findValue(value)
+		return nil
 	} else if value > root.data {
 		root.right.findValue(value)
+		return nil
 	}
-	return nil
+	if value != root.data { // if get here, this should never be true.
+		s := fmt.Sprintf(" took value != root branch.  Value = %s, root = %+v\n", value, root)
+		panic(s)
+	}
+	foundValue = root
+	return root
 }
 
 func (root *Node) findValueIterative(value string) *Node {
@@ -420,3 +427,29 @@ func (list *doublyLinkedList) toString(separator string) string {
 	}
 	return sb.String()
 }
+
+/*
+func (root *Node) findValue(value string) *Node {
+	// I'm having a very hard time figuring out what to do w/ the rest of the routine after the recursion is already called.  I solved it here by using a global to handle the result.
+	// The iterative solution does not have this problem.
+	// I think I figured this out.  Recursion works well when the last line is the return statement.  So I have to re-write this so that the last line is return *Node.
+    // I'm preserving the version of this funcion before I started refactoring it.
+	fmt.Printf(" in findValue: value = %s, root = %+v\n", value, root)
+	if root == nil {
+		fmt.Printf(" took root == nil branch.  Value = %s, root = %+v\n", value, root)
+		foundValue = nil
+		return nil
+	}
+	if value == root.data {
+		fmt.Printf(" took value == root branch.  Value = %s, root = %+v\n", value, root)
+		foundValue = root
+		return root
+	}
+	if value < root.data {
+		root.left.findValue(value)
+	} else if value > root.data {
+		root.right.findValue(value)
+	}
+	return nil
+}
+*/
