@@ -20,6 +20,13 @@ func ufactorial(n uint64) uint64 {
 	return n * ufactorial(n-1)
 }
 
+func rfactorial(r float64) float64 { // real factorial
+	if r < 2 {
+		return 1
+	}
+	return r * rfactorial(r-1)
+}
+
 func main() {
 	var n int64
 	var u uint64
@@ -30,5 +37,6 @@ func main() {
 	for u = 0; u <= 21; u++ {
 		fmt.Printf(" %03d! = %20d\n", u, ufactorial(u))
 	}
+	fmt.Printf(" %03d! = %20f\n", 21, rfactorial(21))
 	fmt.Println()
 }
