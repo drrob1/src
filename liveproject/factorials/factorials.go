@@ -28,7 +28,7 @@ func main() {
 		fmt.Printf(" %03d! = %20d\n", n, factorial(n))
 	}
 	for u = 0; u <= 21; u++ {
-		fmt.Printf(" %03d! = %20d\n", n, ufactorial(u))
+		fmt.Printf(" %03d! = %20d\n", u, ufactorial(u))
 	}
 	fmt.Println()
 }
