@@ -13,11 +13,22 @@ func factorial(n int64) int64 {
 	return n * factorial(n-1)
 }
 
+func ufactorial(n uint64) uint64 {
+	if n < 2 {
+		return 1
+	}
+	return n * ufactorial(n-1)
+}
+
 func main() {
 	var n int64
+	var u uint64
 
 	for n = 0; n <= 21; n++ {
 		fmt.Printf(" %03d! = %20d\n", n, factorial(n))
+	}
+	for u = 0; u <= 21; u++ {
+		fmt.Printf(" %03d! = %20d\n", n, ufactorial(u))
 	}
 	fmt.Println()
 }
