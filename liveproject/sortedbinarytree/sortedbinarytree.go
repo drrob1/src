@@ -58,7 +58,9 @@ func (root *Node) findValue(value string) *Node {
 	// Nope, I'm still stuck w/ the case of what to do after the recursion finished.  I'll try returning nil, as below.
 	// So far, it seems to be working, that only the last return root is the result that is passed to the caller, the earlier return nil doesn't cause problems.  I have to check for
 	// root == nil first, so I don't dereference a nil pointer when I do root.data, root.left or root.right.
-	// Looks like this works.  Yay!
+	// Looks like this works.  Yay!  The first return root statement is what the caller gets as its result.  The subsequent return nil statements as the recursion unwinds are ignored.
+	// IE, the return nil statements after the recursion call do not affect the result returned by this function.
+	//
 	fmt.Printf(" in findValue: value = %s, root = %+v\n", value, root)
 	if root == nil {
 		fmt.Printf(" took root == nil branch.  Value = %s, root = %+v\n", value, root)
