@@ -3,6 +3,7 @@ package main
 import "fmt"
 
 // factorials.go for the factorials project part of the recursion liveproject
+// 21! is too big for even a uint64.  It is correctly computed by using a float64.
 
 func factorial(n int64) int64 {
 	if n < 0 {
@@ -37,6 +38,7 @@ func main() {
 	for u = 0; u <= 21; u++ {
 		fmt.Printf(" %03d! = %20d\n", u, ufactorial(u))
 	}
-	fmt.Printf(" %03d! = %20f\n", 21, rfactorial(21))
+	fmt.Println()
+	fmt.Printf(" %03d! = %20.0f\n", 21, rfactorial(21))
 	fmt.Println()
 }
