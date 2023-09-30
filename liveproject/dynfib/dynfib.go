@@ -8,7 +8,7 @@ import (
 // This uses dynamic fibonacci, or uses memoization to speed up the routines.
 // The author describes 3 methods, one is top-down, and 2 are bottom-up.
 
-const maxFib = 93
+const maxFib = 92
 
 var fibonacciValues []int64
 var fibonacciFlyValues []int64
@@ -62,7 +62,7 @@ func fibonacciBottomUp(n int) int64 {
 	var fibMinus1, fibMinus2, fibI int64
 	fibMinus1 = 1
 	fibMinus2 = 0
-	for i := 1; i < n; i++ {
+	for i := 1; i < n; i++ { // This isn't recursion.
 		fibI = fibMinus1 + fibMinus2
 
 		fibMinus2 = fibMinus1
@@ -71,14 +71,16 @@ func fibonacciBottomUp(n int) int64 {
 	return fibI
 }
 
+func init() {
+	// Mostly for Prefilled.
+	initializeSlice()
+}
+
 func main() {
 	// Fill-on-the-fly.
 	//fibonacciValues = make([]int64, 2)
 	//fibonacciValues[0] = 0
 	//fibonacciValues[1] = 1
-
-	// Prefilled.
-	initializeSlice()
 
 	for {
 		// Get n as a string.
@@ -106,8 +108,12 @@ func main() {
 	}
 
 	// Print out all memoized values just so we can see them.
-	fmt.Printf(" Len(fibonacciValues) = %d.  Len(FibonacciFlyValues) = %d", len(fibonacciValues), len(fibonacciFlyValues))
+	fmt.Printf(" Len(fibonacciValues) = %d.  Len(FibonacciFlyValues) = %d\n", len(fibonacciValues), len(fibonacciFlyValues))
+	for i := 0; i < len(fibonacciFlyValues); i++ {
+		fmt.Printf("%d: %d\n", i, fibonacciFlyValues[i])
+	}
+	fmt.Println()
 	for i := 0; i < len(fibonacciValues); i++ {
-		fmt.Printf("%d: %d; %d\n", i, fibonacciValues[i], fibonacciFlyValues[i])
+		fmt.Printf("%d: %d\n", i, fibonacciValues[i])
 	}
 }
