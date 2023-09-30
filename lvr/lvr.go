@@ -39,11 +39,12 @@ REVISION HISTORY
 23 Oct 22 -- Now called lvr for launch VLC random.  It will randomly select n files for inclusion on VLC's command line.
                Instead of shuffling the entire list and taking the first n of them, I could also use a random number generator to pluck out just those into a slice that I build
                up w/ appends.  I'll think about this.  I may try the first option to see how long that takes, before trying the 2nd option.  For the first option I can just
-               use an empty regexp, I think.  Turns out that launchv can sort the entire directory in ~ 1/2 sec.  So I'll code this using the 2nd option.
+               use an empty regexp, I think.  Turns out that launchv can sort the entire directory in ~ 1/2 sec.  So I'll code this using the 1st option.
 31 Mar 23 -- StaticCheck found an issue.
+30 Sep 23 -- Changing use of the random function to match current behavior, which was changed in Go 1.20.  I'll stop calling rand.Seed().
 */
 
-const lastModified = "Mar 31, 2023"
+const lastModified = "Sep 30, 2023"
 
 var includeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok bool
@@ -230,11 +231,11 @@ func getItAll(workingDir string) ([]string, error) {
 
 // ----------------------------------------------------------------------- doTheShuffle ------------------------------------------------------
 
-func doTheShuffle(infiles []string) []string {
+func doTheShuffle(infiles []string) []string { // pull out numNames random filenames.
 	n := len(infiles)
 	outFiles := make([]string, 0, n)
 
-	rand.Seed(time.Now().UnixNano())
+	//rand.Seed(time.Now().UnixNano())
 	for i := 0; i < numNames; i++ {
 		j := rand.Intn(n)
 		fi, err := os.Stat(infiles[j])
