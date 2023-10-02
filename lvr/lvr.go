@@ -235,7 +235,7 @@ func doTheShuffle(infiles []string) []string { // pull out numNames random filen
 	n := len(infiles)
 	outFiles := make([]string, 0, n)
 
-	//rand.Seed(time.Now().UnixNano())
+	//rand.Seed(time.Now().UnixNano())  Deprecated as of Go 1.20.
 	for i := 0; i < numNames; i++ {
 		j := rand.Intn(n)
 		fi, err := os.Stat(infiles[j])
