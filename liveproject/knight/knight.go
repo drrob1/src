@@ -12,6 +12,7 @@ import (
 // This demonstrates a class of recursive algorithms that search a solution space.  And this is a lead up to the N-queens problem.
 // I just looked at the partial solution.  The author says that for an 8 x 8 board, the solution takes ~11.6 minutes if open, and > 15 min if closed.
 // I need a longer timeout.  I'll try 15 min and see how it goes.
+// Nope, that didn't work.  The timeout triggered before a solution did.  I'll make it 30 min and see what happens.
 
 const numRows = 8
 const numCols = numRows
