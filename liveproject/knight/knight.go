@@ -14,7 +14,7 @@ import (
 // I need a longer timeout.  I'll try 15 min and see how it goes.
 // Nope, that didn't work.  The timeout triggered before a solution did.  I'll make it 30 min and see what happens.
 // I changed the initialize Offsets() to be as used by Stephens, and suddenly the 6 x 6 took ~ 1/2 sec, and the 8 x 8 took ~8 sec.  Down from > 30 min even for the 6 x 6.  Wow.
-// Turns out that the order of the different moves in the Offset struct matters. A lot!
+// Turns out that the order of the different moves in the Offset struct matters.  A lot!
 
 const numRows = 8
 const numCols = numRows
