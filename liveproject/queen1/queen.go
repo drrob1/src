@@ -28,12 +28,14 @@ func makeBoard(rows int) [][]string { // I had to google this to get it right.
 }
 
 func dumpBoard(board [][]string) {
+	fmt.Println()
 	for i := range board {
 		for j := range board[i] {
 			fmt.Printf("%s ", board[i][j])
 		}
 		fmt.Println()
 	}
+	fmt.Println()
 }
 
 func seriesIsLegal(board [][]string, r0, c0, dr, dc int) bool {
@@ -63,7 +65,7 @@ func boardIsLegal(board [][]string) bool {
 	numRows := len(board)
 
 	// check rows
-	for r := 0; r < numRows; r++ {
+	for r := range board {
 		good := seriesIsLegal(board, r, 0, 1, 0)
 		if !good {
 			return false
@@ -71,20 +73,47 @@ func boardIsLegal(board [][]string) bool {
 	}
 
 	// check cols
-	for c := 0; c < numRows; c++ {
+	for c := range board {
 		good := seriesIsLegal(board, 0, c, 0, 1)
 		if !good {
 			return false
 		}
 	}
 
-	// check diagonals.  I don't know how to do that yet.
+	// check diagonals.  I have to check 4 diagonal loops
+	for r := range board {
+		good := seriesIsLegal(board, r, 0, 1, 1) // go down
+		if !good {
+			return false
+		}
+	}
+	for c := range board {
+		good := seriesIsLegal(board, 0, c, 1, 1) // go across
+		if !good {
+			return false
+		}
+	}
+	for r := numRows - 1; r >= 0; r-- {
+		good := seriesIsLegal(board, r, 0, 1, -1) // go down starting from the right
+		if !good {
+			return false
+		}
+	}
+	for c := numRows - 1; c >= 0; c-- {
+		good := seriesIsLegal(board, 0, c, 1, -1) // go across starting from the right
+		if !good {
+			return false
+		}
+	}
+
 	return true
 }
 
 func main() {
 	// const numRows = 5
 	board := makeBoard(numRowsCols)
+	board[3][3] = "Q"
+	board[1][2] = "Q"
 	dumpBoard(board)
 
 	start := time.Now()
