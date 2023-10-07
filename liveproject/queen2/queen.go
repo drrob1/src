@@ -30,7 +30,7 @@ import (
 // const numRowsCols = 17 // using method 4.  Took ~155 ms, or 0.155 s.
 // const numRowsCols = 18 // using method 4.  Took ~1.33 s
 // const numRowsCols = 19 // using method 4.  Took ~90 ms, or 0.09 s
-const numRowsCols = 20 // using method 4.  Took ~8.5 s.
+const numRowsCols = 20 // using method 4.  Took ~8.5 s.  ~8 s on thelio.
 
 func makeBoard(rows int) [][]string { // I had to google this to get it right.
 	aBoard := make([][]string, rows)
