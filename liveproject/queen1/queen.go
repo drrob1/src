@@ -11,7 +11,8 @@ import (
 // a rotation or reflection operation.
 // Here we'll assume a square board.
 
-const numRowsCols = 5 // to start he wants 5.
+// const numRowsCols = 5 // to start he wants 5.  This took 0.0865 sec to find a solution.
+const numRowsCols = 6 // This took 133.56 sec to find a solution.  This seems to be much more than a quadratic function.  Goes from 1E-2 to 1E2, which is 4 orders of magnitude.
 
 func makeBoard(rows int) [][]string { // I had to google this to get it right.
 	aBoard := make([][]string, rows)
@@ -129,27 +130,63 @@ func boardIsASolution(board [][]string) bool {
 }
 
 func placeQueens1(board [][]string, numRows, r, c int) bool {
-	
+	// This function does not modify the board if the recursive calls find a solution.  So if a solution is found, it is sitting in the board as is.
+	// This brute force method takes a long time.  The author doesn't try above a 6 x 6 board.  It's more than a quadratic function.
+	if r >= numRows { // finished examining every position and have fallen off the board
+		return boardIsASolution(board)
+	}
+	var nextR, nextC int
+	nextR = r
+	nextC = c + 1
+	if nextC >= numRows {
+		nextR = r + 1
+		nextC = 0
+	}
+	//fmt.Printf(" r = %d, c = %d, nextR = %d, nextC = %d\n", r, c, nextR, nextC)
+	//exit := pause()
+	//if exit {
+	//	os.Exit(1)
+	//}
+	test := placeQueens1(board, numRows, nextR, nextC) // test if don't place a queen at current (r,c).
+	if test {
+		return true
+	}
+	board[r][c] = "Q"
+	test = placeQueens1(board, numRows, nextR, nextC) // test if do place a queen at current (r,c).
+	if test {
+		return true
+	}
+	// testing if don't place a queen at (r,c) and if do place a queen here.  Both returned false.  So there is no solution from this board.  Reset (r,c) and return false.
+	board[r][c] = "."
+	return false
 }
 
 func main() {
 	// const numRows = 5
 	board := makeBoard(numRowsCols)
-	board[3][3] = "Q"
-	board[1][2] = "Q"
-	dumpBoard(board)
 
 	start := time.Now()
-	//success := placeQueens1(board, numRowsCols, 0, 0)
+	success := placeQueens1(board, numRowsCols, 0, 0)
 	//success := placeQueens2(board, numRowsCols, 0, 0, 0)
 	//success := placeQueens3(board, numRowsCols, 0, 0, 0)
 
 	elapsed := time.Since(start)
-	//if success {
-	//	fmt.Println("Success!")
-	//	dumpBoard(board)
-	//} else {
-	//	fmt.Println("No solution")
-	//}
+	if success {
+		fmt.Println("Success!")
+		dumpBoard(board)
+	} else {
+		fmt.Println("No solution")
+	}
 	fmt.Printf("Elapsed: %f seconds\n", elapsed.Seconds())
+}
+
+func pause() bool {
+	fmt.Print(" Pausing.  Hit <enter> to continue.  Or 'n' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.Contains(ans, "n") {
+		return true
+	}
+	return false
 }
