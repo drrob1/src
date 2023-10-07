@@ -1,4 +1,4 @@
-package main
+package main // queen2 that will take the problem to a 20 x 20 board.
 
 import (
 	"fmt"
@@ -11,13 +11,26 @@ import (
 // a rotation or reflection operation.
 // Here we'll assume a square board.
 // The key problem is to reduce the solution space to a manageable size.  PlaceQueen1 -> PlaceQueen2 did some of that, but this project will reduce the solution space much further.
-// Each square has 2 states, queen or no queen.  So the solution space is 2^N*N.
+// Each square has 2 states, queen or no queen.  So the solution space is 2^N*N.  He changes the problem so that a queen is placed only once in each column, so it becomes N^N.
 
 // const numRowsCols = 5 // to start he wants 5.  This took 0.0865 sec to find a solution using method 1.
 // const numRowsCols = 6 // This took 133.56 sec to find a solution using method 1.  This seems to be much more than a quadratic function.  Goes from 1E-2 to 1E2, which is 4 orders of magnitude.
 // const numRowsCols = 5 // using method 2.  Took 0.0603 sec.
 // const numRowsCols = 6 // using method 2.  Took 0.1104 sec.
-const numRowsCols = 7 // using method 2.  Took 4.19 sec.
+// const numRowsCols = 7 // using method 2.  Took 4.19 sec.  Now using method 4 time = 0 on Windows11.
+// const numRowsCols = 8 // using method 4.  Took ~513 us, or 0.000513 s
+// const numRowsCols = 9 // using method 4.  Took ~500 us, or 0.0005 s.  Some runs on Win11 showed 0 sec.
+// const numRowsCols = 10 // using method 4.  Took ~515 us, or 0.000515 s.  A few runs on Win11 showed 0 sec.
+// const numRowsCols = 11 // using method 4.  Also took ~515 us, or 0.000515 s.  No runs on Win11 showed 0 sec.
+// const numRowsCols = 12 // using method 4.  Took ~2.57 ms, or 0.00257 s.
+// const numRowsCols = 13 // using method 4.  Took ~1.54 ms, or 0.00154 s.
+// const numRowsCols = 14 // using method 4.  Took ~29 ms, or 0.029 s.
+// const numRowsCols = 15 // using method 4.   Took ~25.5 ms, or 0.0255 s.
+// const numRowsCols = 16 // using method 4.  Took ~237 ms, or 0.237 s.
+// const numRowsCols = 17 // using method 4.  Took ~155 ms, or 0.155 s.
+// const numRowsCols = 18 // using method 4.  Took ~1.33 s
+// const numRowsCols = 19 // using method 4.  Took ~90 ms, or 0.09 s
+const numRowsCols = 20 // using method 4.  Took ~8.5 s.
 
 func makeBoard(rows int) [][]string { // I had to google this to get it right.
 	aBoard := make([][]string, rows)
@@ -134,10 +147,9 @@ func boardIsASolution(board [][]string) bool {
 	return queens == numRowsCols
 }
 
-func placeQueens1(board [][]string, r, c int) bool {
+func placeQueens1(board [][]string, numRows, r, c int) bool {
 	// This function does not modify the board if the recursive calls find a solution.  So if a solution is found, it is sitting in the board as is.
 	// This brute force method takes a long time.  The author doesn't try above a 6 x 6 board.  It's more than a quadratic function.
-	numRows := len(board)
 	if r >= numRows { // finished examining every position and have fallen off the board
 		return boardIsASolution(board)
 	}
@@ -153,12 +165,12 @@ func placeQueens1(board [][]string, r, c int) bool {
 	//if exit {
 	//	os.Exit(1)
 	//}
-	test := placeQueens1(board, nextR, nextC) // test if don't place a queen at current (r,c).
+	test := placeQueens1(board, numRows, nextR, nextC) // test if don't place a queen at current (r,c).
 	if test {
 		return true
 	}
 	board[r][c] = "Q"
-	test = placeQueens1(board, nextR, nextC) // test if do place a queen at current (r,c).
+	test = placeQueens1(board, numRows, nextR, nextC) // test if do place a queen at current (r,c).
 	if test {
 		return true
 	}
@@ -167,10 +179,9 @@ func placeQueens1(board [][]string, r, c int) bool {
 	return false
 }
 
-func placeQueens2(board [][]string, numQueens, r, c int) bool {
+func placeQueens2(board [][]string, numQueens, numRows, r, c int) bool {
 	// This function does not modify the board if the recursive calls find a solution.  So if a solution is found, it is sitting in the board as is.
 	// This brute force method takes a long time.  The author doesn't try above a 6 x 6 board.  It's more than a quadratic function.
-	numRows := len(board)
 	if numQueens == numRows {
 		//fmt.Printf(" numQueens = %d, numRows = %d.  These should be equal.\n", numQueens, numRows)
 		return boardIsASolution(board)
@@ -190,18 +201,41 @@ func placeQueens2(board [][]string, numQueens, r, c int) bool {
 	//if exit {
 	//	os.Exit(1)
 	//}
-	test := placeQueens2(board, numQueens, nextR, nextC) // test if don't place a queen at current (r,c).
+	test := placeQueens2(board, numQueens, numRows, nextR, nextC) // test if don't place a queen at current (r,c).
 	if test {
 		return true
 	}
 	board[r][c] = "Q"
 	numPlaced := numQueens + 1
-	test = placeQueens2(board, numPlaced, nextR, nextC) // test if do place a queen at current (r,c).
+	test = placeQueens2(board, numPlaced, numRows, nextR, nextC) // test if do place a queen at current (r,c).
 	if test {
 		return true
 	}
 	// testing if don't place a queen at (r,c) and if do place a queen here.  Both returned false.  So there is no solution from this board.  Reset (r,c) and return false.
 	board[r][c] = "."
+	return false
+}
+
+func placeQueens4(board [][]string, c int) bool {
+	numRows := len(board)
+	if c == numRows { // then a queen is assigned to every column
+		return boardIsLegal(board)
+	}
+	if c < numRows {
+		good := boardIsLegal(board)
+		if !good {
+			return false
+		}
+	}
+	for r := 0; r < numRows; r++ {
+		board[r][c] = "Q"
+		success := placeQueens4(board, c+1)
+		if success {
+			return true
+		}
+		board[r][c] = "."
+		continue
+	}
 	return false
 }
 
@@ -211,7 +245,8 @@ func main() {
 
 	start := time.Now()
 	//success := placeQueens1(board, numRowsCols, 0, 0)
-	success := placeQueens2(board, 0, 0, 0)
+	//success := placeQueens2(board, 0, numRowsCols, 0, 0)
+	success := placeQueens4(board, 0)
 
 	elapsed := time.Since(start)
 	if success {
@@ -220,7 +255,7 @@ func main() {
 	} else {
 		fmt.Println("No solution")
 	}
-	fmt.Printf("Elapsed: %f seconds\n", elapsed.Seconds())
+	fmt.Printf("Elapsed: %f seconds, %s\n", elapsed.Seconds(), elapsed.String())
 }
 
 func pause() bool {
