@@ -112,6 +112,26 @@ func boardIsLegal(board [][]string) bool {
 	return true
 }
 
+func boardIsASolution(board [][]string) bool {
+	var queens int
+	legal := boardIsLegal(board)
+	if !legal {
+		return false
+	}
+	for i := range board {
+		for j := range board[i] {
+			if strings.ToUpper(board[i][j]) == "Q" {
+				queens++
+			}
+		}
+	}
+	return queens == numRowsCols
+}
+
+func placeQueens1(board [][]string, numRows, r, c int) bool {
+	
+}
+
 func main() {
 	// const numRows = 5
 	board := makeBoard(numRowsCols)

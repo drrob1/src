@@ -125,3 +125,28 @@ func TestBoardIsLegal(t *testing.T) {
 		t.Errorf(" Expected big board to be legal, but it's %t instead.\n", good)
 	}
 }
+
+func TestBoardIsASolution(t *testing.T) {
+	dumpBoard(board)
+	soln := boardIsASolution(board)
+	if !soln {
+		fmt.Printf(" Board is not a solution, which is expected\n")
+	} else {
+		t.Errorf(" Expected board to not be a solution, but found %t instead\n", soln)
+	}
+
+	board = makeBoard(numRowsCols)
+	board[0][0] = "Q"
+	board[2][1] = "Q"
+	board[4][2] = "Q"
+	board[1][3] = "Q"
+	board[3][4] = "Q"
+	dumpBoard(board)
+	soln = boardIsASolution(board)
+	if soln {
+		fmt.Printf(" Board is a solution, which is expected\n")
+	} else {
+		t.Errorf(" Expected board to be a solution, but found %t instead\n", soln)
+	}
+	board = makeBoard(numRowsCols)
+}
