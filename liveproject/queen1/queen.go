@@ -47,17 +47,17 @@ func seriesIsLegal(board [][]string, r0, c0, dr, dc int) bool {
 
 	for {
 		if r >= numRows || c >= numRows || r < 0 || c < 0 {
-			fmt.Printf(" about to break in seriesIsLegal.  r = %d, c = %d\n", r, c)
+			//fmt.Printf(" about to break in seriesIsLegal.  r = %d, c = %d\n", r, c)
 			break
 		}
-		fmt.Printf(" board[%d][%d] = %s\n", r, c, board[r][c])
+		//fmt.Printf(" board[%d][%d] = %s\n", r, c, board[r][c])
 		if strings.ToUpper(board[r][c]) == "Q" {
 			numQueens++
 		}
 		r += dr
 		c += dc
 	}
-	fmt.Printf(" NumQueens = %d\n", numQueens)
+	//fmt.Printf(" NumQueens = %d\n", numQueens)
 	if numQueens < 2 {
 		return true
 	}
@@ -69,7 +69,7 @@ func boardIsLegal(board [][]string) bool {
 
 	// check rows
 	for r := range board {
-		good := seriesIsLegal(board, r, 0, 1, 0)
+		good := seriesIsLegal(board, r, 0, 0, 1)
 		if !good {
 			return false
 		}
@@ -77,7 +77,7 @@ func boardIsLegal(board [][]string) bool {
 
 	// check cols
 	for c := range board {
-		good := seriesIsLegal(board, 0, c, 0, 1)
+		good := seriesIsLegal(board, 0, c, 1, 0)
 		if !good {
 			return false
 		}
