@@ -80,6 +80,19 @@ func (hashTable *ChainingHashTable) set(name, phone string) {
 	hashTable.buckets[tblIdx][empIdx].phone = phone
 }
 
+func (hashTable *ChainingHashTable) get(name string) string {
+	tblIdx, empIdx := hashTable.find(name)
+	if empIdx < 0 { // employee not found
+		return ""
+	}
+	return hashTable.buckets[tblIdx][empIdx].phone
+}
+
+func (hashTable *ChainingHashTable) contains(name string) bool {
+	_, empIdx := hashTable.find(name)
+	return empIdx >= 0
+}
+
 func main() {
 
 }
