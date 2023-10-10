@@ -34,6 +34,9 @@ func hash(value string) int {
 
 func newChainingHashTable(numBuckets int) *ChainingHashTable {
 	slice := make([][]*Employee, numBuckets)
+	for i := range slice {
+		slice[i] = []*Employee{}
+	}
 	table := ChainingHashTable{
 		numBuckets: numBuckets,
 		buckets:    slice,
@@ -61,7 +64,7 @@ func (hashTable *ChainingHashTable) find(name string) (int, int) { // return buc
 	if hashTable.numBuckets == 0 {
 		return h, -1
 	}
-	fmt.Printf(" In find.  numBuckets = %d, h = %d\n", hashTable.numBuckets, h)
+	//fmt.Printf(" In find.  numBuckets = %d, h = %d\n", hashTable.numBuckets, h)
 	for i, bkt := range hashTable.buckets[h] {
 		if bkt.name == name {
 			return h, i
@@ -72,13 +75,15 @@ func (hashTable *ChainingHashTable) find(name string) (int, int) { // return buc
 
 func (hashTable *ChainingHashTable) set(name, phone string) {
 	tblIdx, empIdx := hashTable.find(name)
+	//fmt.Printf(" Set %s, %s.  tblIdx = %d, empIdx = %d\n", name, phone, tblIdx, empIdx)
 	if empIdx < 0 { // add a new employee record because the employee is not here
 		empl := Employee{
 			name:  name,
 			phone: phone,
 		}
 		hashTable.buckets[tblIdx] = append(hashTable.buckets[tblIdx], &empl) // this uses pointer semantics
-		hashTable.numBuckets++
+		// Don't increment numBuckets as that doesn't change when add an entry.
+		return
 	}
 
 	// Employee record is here, so need to update the phone field
