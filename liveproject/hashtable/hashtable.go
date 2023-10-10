@@ -103,6 +103,22 @@ func (hashTable *ChainingHashTable) contains(name string) bool {
 	return empIdx >= 0
 }
 
+func (hashTable *ChainingHashTable) delete(name string) {
+	tblIdx, empIdx := hashTable.find(name)
+	if empIdx < 0 { // name not found.  Do nothing.
+		return
+	}
+
+	// Employee record is here, so need to delete it.
+	for EmpIdx := range hashTable.buckets[tblIdx] {
+		if hashTable.buckets[tblIdx][EmpIdx].name == name {
+			slice := append(hashTable.buckets[tblIdx][:EmpIdx], hashTable.buckets[tblIdx][empIdx+1:]...)
+			hashTable.buckets[tblIdx] = slice
+		}
+	}
+
+}
+
 func main() {
 	// Make some names.
 	employees := []Employee{
@@ -124,14 +140,15 @@ func main() {
 	}
 	hashTable.dump()
 
-	//fmt.Printf("Table contains Sally Owens: %t\n", hashTable.contains("Sally Owens"))
-	//fmt.Printf("Table contains Dan Deever: %t\n", hashTable.contains("Dan Deever"))
-	//fmt.Println("Deleting Dan Deever")
-	//hashTable.delete("Dan Deever")
-	//fmt.Printf("Table contains Dan Deever: %t\n", hashTable.contains("Dan Deever"))
-	//fmt.Printf("Sally Owens: %s\n", hashTable.get("Sally Owens"))
-	//fmt.Printf("Fred Franklin: %s\n", hashTable.get("Fred Franklin"))
-	//fmt.Println("Changing Fred Franklin")
-	//hashTable.set("Fred Franklin", "202-555-0100")
-	//fmt.Printf("Fred Franklin: %s\n", hashTable.get("Fred Franklin"))
+	fmt.Printf("Table contains Sally Owens: %t\n", hashTable.contains("Sally Owens"))
+	fmt.Printf("Table contains Dan Deever: %t\n", hashTable.contains("Dan Deever"))
+	fmt.Println("Deleting Dan Deever")
+	hashTable.delete("Dan Deever")
+	fmt.Printf("Table contains Dan Deever: %t\n", hashTable.contains("Dan Deever"))
+	fmt.Printf("Sally Owens: %s\n", hashTable.get("Sally Owens"))
+	fmt.Printf("Bob Baker: %s\n", hashTable.get("Bob Baker"))
+	fmt.Printf("Fred Franklin: %s\n", hashTable.get("Fred Franklin"))
+	fmt.Println("Changing Fred Franklin")
+	hashTable.set("Fred Franklin", "202-555-0100")
+	fmt.Printf("Fred Franklin: %s\n", hashTable.get("Fred Franklin"))
 }
