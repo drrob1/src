@@ -40,7 +40,7 @@ func makeBoard(rows int) [][]string { // I had to google this to get it right.
 
 	for i := range aBoard[0] {
 		for j := range aBoard[i] {
-			aBoard[i][j] = "."
+			aBoard[i][j] = "·" // this is not a period, as the exercise recommended.
 		}
 	}
 	return aBoard
@@ -175,7 +175,8 @@ func placeQueens1(board [][]string, numRows, r, c int) bool {
 		return true
 	}
 	// testing if don't place a queen at (r,c) and if do place a queen here.  Both returned false.  So there is no solution from this board.  Reset (r,c) and return false.
-	board[r][c] = "."
+	board[r][c] = "·" // this is not a period, as the exercise recommended.
+	//                    board[r][c] = "."
 	return false
 }
 
@@ -212,7 +213,7 @@ func placeQueens2(board [][]string, numQueens, numRows, r, c int) bool {
 		return true
 	}
 	// testing if don't place a queen at (r,c) and if do place a queen here.  Both returned false.  So there is no solution from this board.  Reset (r,c) and return false.
-	board[r][c] = "."
+	board[r][c] = "·" // this is not a period, as the exercise recommended.
 	return false
 }
 
@@ -233,7 +234,7 @@ func placeQueens4(board [][]string, c int) bool {
 		if success {
 			return true
 		}
-		board[r][c] = "."
+		board[r][c] = "·" // this is not a period, as the exercise recommended.
 		continue
 	}
 	return false
