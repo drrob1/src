@@ -95,6 +95,7 @@ REVISION HISTORY
 15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', ie, string is in scientific notation.
 25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
  3 Jul 20 -- Added cbrt as synonym for curt.
+14 Oct 23 -- It will now compile, as I made changes to tknptr.  I didn't like the error, despite the fact that I no longer use this routine in the calculator programs.
 */
 
 const HeaderDivider = "+-------------------+------------------------------+"
@@ -127,8 +128,8 @@ const PI = math.Pi // 3.141592653589793;
 var LastX, MemReg float64
 var sigfig = -1 // default significant figures of -1 for the strconv.FormatFloat call.
 
-//-----------------------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------ ROUND ----------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------ ROUND ----------------------------------------------------------------------
 func Round(f float64) float64 {
 	sign := 1.0
 	if math.Signbit(f) {
@@ -138,19 +139,19 @@ func Round(f float64) float64 {
 	return result
 }
 
-//------------------------------------------------------ STACKUP
+// ------------------------------------------------------ STACKUP
 func STACKUP() {
 	for S := T2; S >= X; S-- {
 		Stack[S+1] = Stack[S]
 	}
 } // STACKUP
-//------------------------------------------------------ STACKDN
+// ------------------------------------------------------ STACKDN
 func STACKDN() {
 	for S := Y; S < T1; S++ { // Does not affect X, so can do calculations and then remove Y and Z as needed.
 		Stack[S] = Stack[S+1]
 	}
 } // STACKDN
-//------------------------------------------------------ STACKROLLDN
+// ------------------------------------------------------ STACKROLLDN
 func STACKROLLDN() {
 	TEMP := Stack[X]
 	Stack[X] = Stack[Y]
@@ -173,20 +174,20 @@ func PUSHX(R float64) {
 	Stack[X] = R
 }
 
-//------------------------------------------------------ READX
+// ------------------------------------------------------ READX
 func READX() float64 {
 	return Stack[X]
 } // READX
-//------------------------------------------------------ SWAPXY
+// ------------------------------------------------------ SWAPXY
 func SWAPXY() {
 	Stack[X], Stack[Y] = Stack[Y], Stack[X]
 } // SWAPXY
-//------------------------------------------------------ GETSTACK
+// ------------------------------------------------------ GETSTACK
 func GETSTACK() StackType {
 	return Stack
 } // GETSTACK
 
-//-------------------------------------------------------------------- InsertByteSlice
+// -------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
@@ -222,7 +223,7 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
-//-----------------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------------
 func CropNStr(instr string) string {
 
 	//   A bug is if there is no decimal pt and there is a 0 in ones place, then that will no longer be
@@ -247,7 +248,7 @@ func CropNStr(instr string) string {
 	return strings.TrimSpace(outstr)
 } // CropNStr
 
-//------------------------------------------------------------------ DumpStackFixed -----------------------------------------------------------
+// ------------------------------------------------------------------ DumpStackFixed -----------------------------------------------------------
 func DumpStackFixed() []string {
 	var SRN int
 	var str string
@@ -283,7 +284,7 @@ func DumpStackFloat() []string {
 	ss = append(ss, fmt.Sprintf("%s", HeaderDivider))
 	return ss
 } // DumpStackFloat
-//************************************************* OutputFixedOrFloat *******************************
+// ************************************************* OutputFixedOrFloat *******************************
 func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now only rpn.go still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
@@ -293,7 +294,7 @@ func OutputFixedOrFloat(r float64) { // All output is thru a string slice.  Now 
 		fmt.Print(str)
 	}
 } // OutputFixedOrFloat
-//************************************************** DumpStackGeneral ***************************
+// ************************************************** DumpStackGeneral ***************************
 func DumpStackGeneral() []string {
 	var SRN int
 	var str string
@@ -312,7 +313,7 @@ func DumpStackGeneral() []string {
 	return ss
 } // DumpStackGeneral
 
-//------------------------------------------------- ToHex ------------------
+// ------------------------------------------------- ToHex ------------------
 // The new algorithm is elegantly simple.
 func ToHex(L float64) string {
 	const hexDigits = "0123456789abcdef"
@@ -460,7 +461,7 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 	return 0, false
 } // IsPrime
 
-//----------------------------------------------- usqrt ---------------------------
+// ----------------------------------------------- usqrt ---------------------------
 func usqrt(u uint) uint {
 
 	sqrt := u / 2
@@ -476,7 +477,7 @@ func usqrt(u uint) uint {
 }
 
 // ---------------------------------------- PWRI -------------------------------------------------
-//POWER OF I.
+// POWER OF I.
 // This is a power function with a real base and integer exponent, using the optimized algorithm as discussed in PIM-2, V.  2.
 func PWRI(R float64, I int) float64 {
 	Z := 1.0
@@ -498,24 +499,24 @@ func PWRI(R float64, I int) float64 {
 	return Z
 } // PWRI
 
-//-------------------------------------------------------- StacksMatrixUp
+// -------------------------------------------------------- StacksMatrixUp
 func StacksMatrixUp() {
 	for i := T2; i >= X; i-- {
 		StackUndoMatrix[i+1] = StackUndoMatrix[i]
 	} // FOR i
 } // StacksMatrixUp
-//-------------------------------------------------------- StacksMatrixDown
+// -------------------------------------------------------- StacksMatrixDown
 func StacksMatrixDown() {
 	for i := Y; i <= T1; i++ {
 		StackUndoMatrix[i-1] = StackUndoMatrix[i]
 	} // FOR i
 } // StacksMatrixDown
-//-------------------------------------------------------- PushMatrixStacks
+// -------------------------------------------------------- PushMatrixStacks
 func PushMatrixStacks() {
 	StacksMatrixUp()
 	StackUndoMatrix[Bottom] = Stack
 } // PushMatrixStacks
-//-------------------------------------------------------- UndoMatrixStacks
+// -------------------------------------------------------- UndoMatrixStacks
 func UndoMatrixStacks() { // RollDown operation for main stack
 	TempStack := Stack
 	Stack = StackUndoMatrix[Bottom]
@@ -525,7 +526,7 @@ func UndoMatrixStacks() { // RollDown operation for main stack
 	StackUndoMatrix[Top] = TempStack
 } // UndoMatrixStacks  IE RollDown
 
-//-------------------------------------------------------- RedoMatrixStacks
+// -------------------------------------------------------- RedoMatrixStacks
 func RedoMatrixStacks() { // RollUp uperation for main stack
 	TempStack := Stack
 	Stack = StackUndoMatrix[Top]
@@ -535,7 +536,7 @@ func RedoMatrixStacks() { // RollUp uperation for main stack
 	StackUndoMatrix[Bottom] = TempStack
 } // RedoMatrixStacks  IE RollUp
 
-//-------------------------------------------------------- HCF -------------------------------------
+// -------------------------------------------------------- HCF -------------------------------------
 func HCF(a, b int) int {
 	// a = bt + r, then hcf(a,b) = hcf(b,r)
 	var r, a1, b1 int
@@ -559,7 +560,7 @@ func HCF(a, b int) int {
 } // HCF
 //------------------------------------------------------------------------
 
-//------------------------------------------------------------------------- GetResults -----------
+// ------------------------------------------------------------------------- GetResults -----------
 func GetResult(s string) (float64, []string) {
 	// var c, c1, c2, c3 int // these were used for the HCF and date arith commands, but were moved into a more narrow scope 9 Feb 20.
 	var I, year int
@@ -568,7 +569,7 @@ func GetResult(s string) (float64, []string) {
 	// var Holiday holidaycalc.HolType  Moved into a more narrow scope, as it's only used in the hol command.  Done 9 Feb 20.
 	ss := make([]string, 0, 100) // stringslice is too long to keep having to type, esp in the help section.
 
-	tokenPointer := tknptr.INITKN(s)
+	tokenPointer := tknptr.New(s)
 	for { //  UNTIL reached EOL
 		Token, EOL = tokenPointer.GETTKNREAL()
 		//    fmt.Println(" In GetResult after GetTknReal and R =",Token.Rsum,", Token.Str =",Token.Str,  ", TokenState = ", FSATypeString[Token.State]);
