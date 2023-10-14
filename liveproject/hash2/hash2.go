@@ -233,3 +233,36 @@ func pause() bool {
 	}
 	return false
 }
+
+/*
+Author's Solution
+func (hash_table *LinearProbingHashTable) find(name string) (int, int) {
+    // Return the key's index or where it would be if present and the probe sequence length.
+    // If the key is not present and the table is full, return -1 for the index.
+
+    // Hash the key.
+    hash := hash(name) % hash_table.capacity
+
+    // Probe up to hash_table.capacity times.
+    for i := 0; i < hash_table.capacity; i++ {
+        index := (hash + i) % hash_table.capacity // this handles wrap around w/ the modulo operation.  Neat!
+
+        // If this spot is empty, the value isn't in the table.
+        if hash_table.employees[index] == nil {
+            return index, i + 1
+        }
+
+        // If this cell holds the key, return its data.
+        if hash_table.employees[index].name == name {
+            return index, i + 1
+        }
+
+        // Otherwise continue the loop.
+    }
+
+    // If we get here, then the key is not
+    // in the table and the table is full.
+    return -1, hash_table.capacity
+}
+
+*/
