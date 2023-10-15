@@ -134,10 +134,11 @@ REVISION HISTORY
                I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
  8 Jul 23 -- I'm testing the new TokenReal(), here in production.  Looks to be working.  I won't recompile the others just yet.  I'll try to shift into using rpn2 for a while.
  9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
-20 Jul 23 -- Ammended help text to show that to enter a negative exponent, must use '_' char.
+20 Jul 23 -- Amended help text to show that to enter a negative exponent, must use '_' char.
+15 Oct 23 -- Help doesn't report HCF (highest common factor), and I'll add a GCD synonym.
 */
 
-const LastAlteredDate = "20 July 2023"
+const LastAlteredDate = "15 Oct 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -242,6 +243,7 @@ func init() {
 	cmdMap["CEIL"] = 260
 	cmdMap["HEX"] = 270
 	cmdMap["HCF"] = 280
+	cmdMap["GCD"] = 280
 	cmdMap["P"] = 290
 	cmdMap["X"] = 290 // ignore these
 	cmdMap["Q"] = 290
@@ -760,8 +762,8 @@ func HCF(a, b int) int {
 	}
 	return a1
 } // HCF
-//------------------------------------------------------------------------
 
+//------------------------------------------------------------------------
 //------------------------------------------------------------------------- GetResults -----------
 
 func GetResult(s string) (float64, []string) {
@@ -907,7 +909,7 @@ outerloop:
 			ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
 			ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
 			ss = append(ss, " HEX -- Round X register to a long_integer and output it in hex format.")
-			ss = append(ss, " HCF -- Push HCF(Y,X) onto stack without removing Y or X.")
+			ss = append(ss, " HCF -- Displays highest common factor for rounded X and Y.  GCD for greatest common denominator is a synonym.")
 			ss = append(ss, " HOL -- Display holidays.")
 			ss = append(ss, " UNDO, REDO -- entire stack.  More comprehensive than lastx.")
 			ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
