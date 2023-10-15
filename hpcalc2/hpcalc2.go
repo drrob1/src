@@ -683,10 +683,10 @@ func PWRI(R float64, I int) float64 {
 	}
 	for I > 0 {
 		if I%2 == 1 {
-			Z = Z * R
+			Z *= R // Z = Z*R
 		}
-		R = R * R
-		I = I / 2
+		R *= R // R = R squared
+		I /= 2 // I = half I
 	}
 	if NEGFLAG {
 		Z = 1 / Z
