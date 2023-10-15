@@ -2,12 +2,18 @@ package main
 
 import "fmt"
 
-// This is the crypto section, using RSA algorithm.  Will start w/ GCD and LCM, ie, greatest common factor and lowest common multiple.
+// This is the crypto section, using RSA algorithm.  Will start w/ GCD and LCM, ie, greatest common denominator (or divisor) and lowest common multiple.
 // GCD is also called HCF, ie, highest common factor.
 
 func gcd(a, b int) int {
-	if a <= 0 || b <= 0 {
+	if a == 0 || b == 0 {
 		return 0
+	}
+	if a < 0 {
+		a = -a
+	}
+	if b < 0 {
+		b = -b
 	}
 
 	if a < b { // swap 'em
