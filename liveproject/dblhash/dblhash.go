@@ -308,7 +308,7 @@ func main() {
 		Employee{"Gina Gable", "202-555-0107", false},
 	}
 
-	hashTable := NewDoubleHashTable(100)
+	hashTable := NewDoubleHashTable(50)
 	for _, employee := range employees {
 		hashTable.set(employee.name, employee.phone)
 	}
