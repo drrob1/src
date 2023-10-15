@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // This is the crypto section, using RSA algorithm.  Will start w/ GCD and LCM, ie, greatest common factor and lowest common multiple.
 // GCD is also called HCF, ie, highest common factor.
 
@@ -33,7 +35,22 @@ func lcm(a, b int) int { // lowest common multiple
 }
 
 func main() {
-
+	var a, b int
+	for {
+		fmt.Printf(" enter A: ")
+		n, err := fmt.Scanln(&a)
+		if a < 1 || err != nil || n == 0 {
+			break
+		}
+		fmt.Printf(" Enter B: ")
+		n, err = fmt.Scanln(&b)
+		if b < 1 || err != nil || n == 0 {
+			break
+		}
+		g := gcd(a, b)
+		m := lcm(a, b)
+		fmt.Printf(" A = %d, B = %d, gcd = %d, lcm = %d\n", a, b, g, m)
+	}
 }
 
 /*
@@ -46,7 +63,6 @@ VAR
 
 BEGIN
   IF a < b THEN
-                                                                                      (* C1 := a; a := b; b := C1; *)
     a := a BXOR b;
     b := a BXOR b;
     a := a BXOR b;
