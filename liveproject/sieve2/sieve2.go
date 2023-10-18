@@ -8,18 +8,23 @@ import (
 // Now called the Sieve of Euler, based on Sieve of Eratosthenes for prime numbers.
 // The algorithm is to make p loop over odd numbers from 3 .. max.  For each loop, calculate the largest odd integer max / p, and then loop down from that maxQ to p.
 // If p is marked prime, then p * q is marked not prime.
+// Something I just noticed by his solution and mine.  In sieveOfEratosthenes, he does for i := 3; i < max; i += 2.  I don't go to the max, but instead I go to sqrt(max).
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {
 		return nil
 	}
 
-	sieve := make([]bool, mx)
+	sieve := make([]bool, mx+1) // part of author's solution
 
-	for i := range sieve {
+	//for i := range sieve { // I need to only made all odd numbers default to true.
+	//	sieve[i] = true
+	//}
+
+	sieve[2] = true
+	for i := 3; i < mx; i += 2 { // Here I set only the odd numbers to default to be prime.
 		sieve[i] = true
 	}
-	sieve[0] = false
 
 	if mx < 4 {
 		return sieve
@@ -47,12 +52,15 @@ func eulerSieve(mx int) []bool {
 		return nil
 	}
 
-	sieve := make([]bool, mx)
+	sieve := make([]bool, mx+1) // part of author's solution.  I need this here because when I tested w/ 999, I got an index out of bounds on line 77.
 
-	for i := range sieve {
+	//for i := range sieve {
+	//	sieve[i] = true
+	//}
+	sieve[2] = true
+	for i := 3; i < mx; i += 2 {
 		sieve[i] = true
 	}
-	sieve[0] = false
 
 	if mx < 4 {
 		return sieve
@@ -65,7 +73,7 @@ func eulerSieve(mx int) []bool {
 			maxQ-- // make the number odd
 		}
 		for q := maxQ; q >= p; q -= 2 {
-			if sieve[p*q] {
+			if sieve[q] { // I misunderstood the algorithm.  I first made this if sieve[p*q], but the author uses this expression so I changed my code.
 				sieve[p*q] = false
 			}
 		}
@@ -132,6 +140,7 @@ func main() {
 		fmt.Println(primes)
 	}
 
+	fmt.Println()
 	start = time.Now()
 	euler := eulerSieve(max)
 	elapsed = time.Since(start)
