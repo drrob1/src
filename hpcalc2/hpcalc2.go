@@ -136,9 +136,10 @@ REVISION HISTORY
  9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
 20 Jul 23 -- Amended help text to show that to enter a negative exponent, must use '_' char.
 15 Oct 23 -- Help doesn't report HCF (highest common factor), and I'll add a GCD synonym.
+18 Oct 23 -- Writing the sieve code for the liveproject showed me that there's an off by 1 issue w/ my sqrt routine.  I fixed it as I did in the sieve code.
 */
 
-const LastAlteredDate = "15 Oct 2023"
+const LastAlteredDate = "18 Oct 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -667,7 +668,7 @@ func usqrt(u uint) uint {
 			break
 		}
 	}
-	return sqrt
+	return sqrt + 1 // to fix an off by 1 issue I discovered by writing the Sieve code.
 }
 
 // ---------------------------------------- PWRI -------------------------------------------------
