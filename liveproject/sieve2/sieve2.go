@@ -65,7 +65,7 @@ func eulerSieve(mx int) []bool {
 			maxQ-- // make the number odd
 		}
 		for q := maxQ; q >= p; q -= 2 {
-			if sieve[q*q] {
+			if sieve[p*q] {
 				sieve[p*q] = false
 			}
 		}
