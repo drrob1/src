@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"src/getcommandline"
 	"strconv"
 )
@@ -15,7 +16,7 @@ import (
   ================
   26 Feb 18 -- First version
   14 Jun 18 -- Added Newton's method as estimate factor.
-  21 Oct 23 -- Updated code to compile w/ modules.
+  21 Oct 23 -- Updated code to compile w/ modules.  And added timestamp display code.
 */
 
 const LastAlteredDate = "21 Oct 23"
@@ -24,14 +25,18 @@ func main() {
 
 	var INBUF string
 
-	fmt.Println(" usqrt Program.  Last altered ", LastAlteredDate)
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+
+	fmt.Printf(" usqrt Program.  Last altered %s, compiled w/ %s, binary %s linked %s\n", LastAlteredDate, runtime.Version(), execName, LastLinkedTimeStamp)
 	fmt.Println()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	if len(os.Args) > 1 {
 		INBUF = getcommandline.GetCommandLineString()
 	} else {
-		fmt.Print(" Enter number to factor : ")
+		fmt.Print(" Enter number: ")
 		scanner.Scan()
 		INBUF = scanner.Text()
 		if err := scanner.Err(); err != nil {
@@ -50,14 +55,15 @@ func main() {
 		os.Exit(1)
 	}
 	sqrt := usqrt(uint(U))
-	fmt.Println(" sqrt of ", U, " is ", sqrt)
+
+	fmt.Println(" using usqrt [divint], sqrt of ", U, " is ", sqrt)
 	x := float64(U)
 	fmt.Println()
-	fmt.Println(" using divfloat=", divfloat(x))
+	fmt.Printf(" using divfloat=%.6f, using math.Sqrt=%.6f\n", divfloat(x), math.Sqrt(x))
 	fmt.Println()
-	fmt.Println(" using newtonfloat=", newtonfloat(x))
+	fmt.Printf(" using newtonfloat=%.6f\n", newtonfloat(x))
 	fmt.Println()
-	fmt.Println(" using newtonint=", newtonint(int(U)))
+	fmt.Printf(" using newtonint=%d\n", newtonint(int(U)))
 }
 
 // ----------------------------------------------- usqrt ---------------------------
@@ -68,11 +74,14 @@ func usqrt(u uint) uint {
 	for i := 0; i < 20; i++ {
 		guess := u / sqrt
 		sqrt = (guess + sqrt) / 2
-		fmt.Println(" i=", i, ", guess=", guess, ", sqrt=", sqrt)
+		//fmt.Print("   i=", i, ", guess=", guess, ", sqrt=", sqrt)
+		fmt.Print("   i=", i, ", sqrt=", sqrt)
 		if sqrt-guess <= 1 { // recall that this is not floating math.
 			break
 		}
 	}
+	fmt.Println()
+	fmt.Println()
 	return sqrt
 }
 
@@ -82,11 +91,13 @@ func divfloat(x float64) float64 {
 	for i := 0; i < 30; i++ {
 		guess := x / sqrt
 		sqrt = (guess + sqrt) / 2
-		fmt.Println(" i=", i, ", guess=", guess, ", sqrt=", sqrt)
-		if math.Abs(sqrt-guess) <= 1.e-4*sqrt { // recall that this is not floating math.
+		fmt.Printf("   i=%d, sqrt=%.4f", i, sqrt)
+		if math.Abs(sqrt-guess) <= 1.e-6*sqrt {
 			break
 		}
 	}
+	fmt.Println()
+	fmt.Println()
 	return sqrt
 }
 
@@ -96,11 +107,13 @@ func newtonfloat(x float64) float64 {
 	for i := 0; i < 30; i++ {
 		z0 := z
 		z -= (z*z - x) / (2 * z)
-		if math.Abs(z0-z) < 1.e-4*z {
+		if math.Abs(z0-z) < 1.e-6*z {
 			break
 		}
-		fmt.Println(" i=", i, ", z=", z)
+		fmt.Printf("   i=%d, z0=%.4f, z=%.4f", i, z0, z)
 	}
+	fmt.Println()
+	fmt.Println()
 	return z
 }
 
@@ -110,12 +123,14 @@ func newtonint(x int) int {
 	for i := 0; i < 30; i++ {
 		z0 := z
 		z -= (z*z - x) / (2 * z)
-		fmt.Println(" i=", i, ", z=", z)
+		fmt.Print("   i=", i, ", z=", z)
 		if iAbs(z0-z) <= 1 {
 			break
 		}
 	}
-	return z - 1
+	fmt.Println()
+	fmt.Println()
+	return z //- 1  I think I'll remove the fudge factor.
 }
 
 // ------------------------------------------- iabs ---------------------------
