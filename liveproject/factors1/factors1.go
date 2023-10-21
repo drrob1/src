@@ -24,7 +24,7 @@ func findFactors(num int) []int {
 	}
 	fmt.Printf(" in findFactors after check for factors of 2:  num=%d, factors so far is/are: %v\n", num, factors)
 
-	// Now all factors of 2 have been handled.  Handle larger factors.  I don't understand the book instructions at all.
+	// Now all factors of 2 have been handled.  Handle larger factors.  I don't understand the project instructions at all.
 	// Problems so far, the last factor is not getting appended to the slice.  And my sqrt routine doesn't work for small numbers.  I have to see what's a small number by trial and error.
 
 	factor := 3
