@@ -105,7 +105,7 @@ func main() {
 
 	sieveTime := time.Now()
 	//sieve := eulerSieve(20_000_000)
-	sieve := eulerSieve(1_800_000_000)
+	sieve := eulerSieve(1_600_000_000)
 	elapsedSieveTime := time.Since(sieveTime)
 	primes = sieveToPrimes(sieve)
 	fmt.Printf(" Time to create a sieve up to 1.6 billion is %s\n", elapsedSieveTime.String()) // turned out to be ~7.5 sec for 1.6 billion, and 8.4 sec for 1.8 billion on win11 system.
