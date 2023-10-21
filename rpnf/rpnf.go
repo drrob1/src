@@ -56,10 +56,11 @@ import (
 11 Aug 22 -- About command will give more info about the exe binary
 21 Oct 22 -- golangci-lint caught that I have an unneeded Sprintf call.  I removed both of them.  And added to show when the binary was last linked for the ABOUT cmd.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
- 3 Sep 23 -- When entering an arrow key for stack manipulation, the entry is lost.  Time to fix that by send the input string, if it exists, down the chan before sending the arrow key.
+ 3 Sep 23 -- When entering an arrow key for stack manipulation, the entry is lost.  Time to fix that by sending the input string, if it exists, down the chan before sending the arrow key.
+20 Oct 23 -- Removed KeyQ -> quit from key processing.  I couldn't enter sqrt otherwise easily.  I had to type directly into the input box until I coded this fix.
 */
 
-const lastModified = "Sep 3, 2023"
+const lastModified = "Oct 20, 2023"
 
 const ( // output modes
 	outputfix = iota
@@ -472,7 +473,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		}
 		inbufChan <- "~"
 		return
-	case fyne.KeyEscape, fyne.KeyQ:
+	case fyne.KeyEscape: // fyne.KeyQ  removed "Q" from quitting, because then I couldn't enter sqrt, for example.
 		globalW.Close() // quits the app if this is the last window.
 		//                                                                                               globalA.Quit()
 		//	                                                                                          (*globalA).Quit()

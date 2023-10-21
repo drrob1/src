@@ -621,12 +621,12 @@ func PrimeFactorMemoized(U uint) []uint {
 
 	for u := U; u > 1; {
 		fac, facflag := NextPrimeFac(u, val)
-		//		fmt.Print(u, " ", fac, " ", val, " ", primeflag, ", ")
+
 		if facflag {
 			PrimeUfactors = append(PrimeUfactors, fac)
 			u = u / fac
 			val = fac
-		} else {
+		} else { // this means that there are no more prime factors.
 			PrimeUfactors = append(PrimeUfactors, u)
 			break
 		}
@@ -637,6 +637,8 @@ func PrimeFactorMemoized(U uint) []uint {
 // ------------------------------------------------- NextPrimeFac -----------------
 
 func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
+	// This returns a prime factor or zero, and a bool which is true when the function returns a prime factor.
+	// It will return false when there are no more prime factors.
 
 	var t uint = startfac
 
