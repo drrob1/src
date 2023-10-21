@@ -20,7 +20,7 @@ func findFactors(num int) []int {
 
 	factors := make([]int, 0, 10) // I just plucked 10 out of the air.
 	for num%2 == 0 && num > 0 {   // This loop stops when num is odd.
-		if num%2 == 0 {
+		if num%2 == 0 { // this if statement is probably redundant.
 			factors = append(factors, 2)
 			num = num / 2
 		}
@@ -78,7 +78,11 @@ func findFactorsSieve(num int) []int {
 	lenPrimes := len(primes)
 	for facIdx := 1; factor <= numSQRT && num > 1 && facIdx < lenPrimes; facIdx++ { // only need to check factors < sqrt(num), and for very big numbers I have to make sure we don't panic.
 		factor = primes[facIdx]
-		if num%factor == 0 {
+		//if num%factor == 0 { // this is not right.  This will only check a factor once.
+		//	factors = append(factors, factor)
+		//	num = num / factor
+		//}
+		for num%factor == 0 {
 			factors = append(factors, factor)
 			num = num / factor
 		}
