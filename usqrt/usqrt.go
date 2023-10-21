@@ -1,24 +1,24 @@
 // usqrt.go
 package main
 
+import (
+	"bufio"
+	"fmt"
+	"math"
+	"os"
+	"src/getcommandline"
+	"strconv"
+)
+
 /*
   REVISION HISTORY
   ================
   26 Feb 18 -- First version
   14 Jun 18 -- Added Newton's method as estimate factor.
-
+  21 Oct 23 -- Updated code to compile w/ modules.
 */
 
-import (
-	"bufio"
-	"fmt"
-	"getcommandline"
-	"math"
-	"os"
-	"strconv"
-)
-
-const LastAlteredDate = "14 Jun 18"
+const LastAlteredDate = "21 Oct 23"
 
 func main() {
 
@@ -60,7 +60,7 @@ func main() {
 	fmt.Println(" using newtonint=", newtonint(int(U)))
 }
 
-//----------------------------------------------- usqrt ---------------------------
+// ----------------------------------------------- usqrt ---------------------------
 func usqrt(u uint) uint {
 
 	sqrt := u / 2
@@ -111,7 +111,7 @@ func newtonint(x int) int {
 		z0 := z
 		z -= (z*z - x) / (2 * z)
 		fmt.Println(" i=", i, ", z=", z)
-		if iabs(z0-z) <= 1 {
+		if iAbs(z0-z) <= 1 {
 			break
 		}
 	}
@@ -119,7 +119,7 @@ func newtonint(x int) int {
 }
 
 // ------------------------------------------- iabs ---------------------------
-func iabs(i int) int {
+func iAbs(i int) int {
 	if i < 0 {
 		i = -i
 	}
