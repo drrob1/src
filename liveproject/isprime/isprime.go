@@ -17,7 +17,7 @@ import (
 
 // var random = rand.New(rand.NewSource(time.Now().UnixNano()))  But Go 1.20+ doesn't need this, so I'm not going to use it.
 
-const numOfTests = 20 // Will set this at top of package so it's easy to change later.
+const numOfTests = 30 // Will set this at top of package so it's easy to change later.
 
 func isProbablyPrime(p int, numTests int) bool {
 	if p%2 == 0 {
@@ -75,7 +75,7 @@ func testKnownValues() {
 func main() {
 	prob := math.Pow(2, float64(-numOfTests))
 	percentProb := prob * 100
-	fmt.Printf(" Main pgm for findPrime for largish numbers.  will use %d tests of Fermat's little theorem, giving a probability of %f of being wrong.\n",
+	fmt.Printf(" Main pgm for findPrime for largish numbers.  will use %d tests of Fermat's little theorem, giving a probability of %.5g %% of being wrong.\n",
 		numOfTests, percentProb)
 	testKnownValues()
 
