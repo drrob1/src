@@ -36,12 +36,12 @@ func fastExpMod(num, pow, mod int) int { // pow can't be negative, or else it wi
 	}
 	for pow > 0 {
 		if pow%2 == 1 { // ie, if pow is odd
-			Z *= num % mod // Z = Z * R
+			Z = (Z * num) % mod // Z = (Z * R) % mod.  Can't use *= operator here as the mod operator won't be correctly applied.
 		}
-		num *= num % mod // R = R squared
-		pow /= 2         // I = half I
+		num = (num * num) % mod // R = (R squared) % mod.  Can't use *= operator here as the mod operator won't be correctly applied.
+		pow /= 2                // I = half I
 	}
-	return Z % mod
+	return Z //% mod Author's solution does not have the mod operator here.  So I guess it's not needed?
 }
 
 func main() { // I know these work because of the unit testing I've done, code is in rsa2_test.go
