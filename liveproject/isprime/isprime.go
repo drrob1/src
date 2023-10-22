@@ -17,13 +17,16 @@ import (
 
 // var random = rand.New(rand.NewSource(time.Now().UnixNano()))  But Go 1.20+ doesn't need this, so I'm not going to use it.
 
-const numOfTests = 30 // Will set this at top of package so it's easy to change later.
+const numOfTests = 30 // Will set this at top of package so it's easy to change later.  // 20 gives a similar chance of being struck by lightning/yr, 30 gives better odds of winning powerball than the numbers not being prime.
 
 func isProbablyPrime(p int, numTests int) bool {
 	if p%2 == 0 {
 		return false
 	}
-	// Run numTests number of Fermat's little theorem.  For any that fail, return false, if all succeed return true.
+	if p == 1 {
+		return false
+	}
+	// Run numTests number of Fermat's little theorem.  For any that fail, return false, if all succeed return true.  These are fast to check, so having numTests of 30, 50 or 100 will be fast.
 	for i := 0; i < numTests; i++ {
 		n := randRange(p/3, p)
 		expMod := fastExpMod(n, p-1, p)
