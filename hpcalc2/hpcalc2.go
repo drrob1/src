@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"sort"
 	"strconv"
@@ -136,7 +137,8 @@ REVISION HISTORY
  9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
 20 Jul 23 -- Amended help text to show that to enter a negative exponent, must use '_' char.
 15 Oct 23 -- Help doesn't report HCF (highest common factor), and I'll add a GCD synonym.
-18 Oct 23 -- Writing the sieve code for the liveproject showed me that there's an off by 1 issue w/ my sqrt routine.  I fixed it as I did in the sieve code.
+18 Oct 23 -- Writing the sieve code for the liveproject showed me that there's an off by 1 issue w/ my int sqrt routine.  I fixed it as I did in the sieve code.
+23 Oct 23 -- Added the probably prime routines I learned about in the live project by Stephens.  I'll add them to the prime command.
 */
 
 const LastAlteredDate = "18 Oct 2023"
@@ -159,6 +161,7 @@ const (
 
 const Top = T1
 const Bottom = X
+const numOfFermatTests = 100 // Will set this at top of package so it's easy to change later.  // 20 gives a similar chance of being struck by lightning/yr, 30 gives better odds of winning powerball than the numbers not being prime.
 
 var StackRegNamesString []string = []string{" X", " Y", " Z", "T5", "T4", "T3", "T2", "T1"}
 
@@ -959,11 +962,20 @@ outerloop:
 			Stack[X] = math.Floor(Stack[X])
 		case 220: // PRIME
 			n := Round(Stack[X])
-			if IsPrime(n) {
-				ss = append(ss, fmt.Sprintf("%d is prime.", int64(n)))
+			i := int(n)
+
+			if isProbablyPrime(i, numOfFermatTests) {
+				ss = append(ss, fmt.Sprintf("%d is probably prime.", i))
 			} else {
-				ss = append(ss, fmt.Sprintf("%d is NOT prime.", int64(n)))
+				ss = append(ss, fmt.Sprintf("%d is NOT probably prime.", i))
 			}
+
+			if IsPrime(n) {
+				ss = append(ss, fmt.Sprintf("%d is prime.", i))
+			} else {
+				ss = append(ss, fmt.Sprintf("%d is NOT prime.", i))
+			}
+
 		case 230: // PRIMEFAC, PRIMEF or PRIMEFA  Intended for PrimeFactors or PrimeFactorization
 			U := uint(Round(Stack[X]))
 			if U < 2 {
@@ -1530,4 +1542,49 @@ func getFullMatchingName(abbrev string) string {
 
 func SigFig() int {
 	return sigfig
+}
+
+// ----------------------------------------------------------- isProbablyPrime -----------------------------
+
+func isProbablyPrime(p int, numTests int) bool {
+	if p%2 == 0 {
+		return false
+	}
+	if p == 1 {
+		return false
+	}
+	// Run numTests number of Fermat's little theorem.  For any that fail, return false, if all succeed return true.  These are fast to check, so having numTests of 30, 50 or 100 will be fast.
+	for i := 0; i < numTests; i++ {
+		n := randRange(p/3, p)
+		expMod := fastExpMod(n, p-1, p)
+		//fmt.Printf(" n=%d, p=%d, ExpMod = %d\n", n, p, expMod)
+		if expMod != 1 {
+			return false
+		}
+	}
+	return true
+}
+
+// ------------------------------------------------------------- fastExpMod ------------------------------
+
+func fastExpMod(num, pow, mod int) int { // pow can't be negative, or else it will panic.
+	Z := 1
+	if pow < 0 || mod < 0 {
+		s := fmt.Sprintf("fastExpMod pow or mod cannot be negative.  pow = %d, mod = %d", pow, mod)
+		panic(s)
+	}
+	for pow > 0 {
+		if pow%2 == 1 { // ie, if pow is odd
+			Z = (Z * num) % mod // Z = Z * R
+		}
+		num = (num * num) % mod // R = R squared
+		pow /= 2                // I = half I
+	}
+	return Z //% mod
+}
+
+// --------------------------------------------------------------- randRange ----------------------------
+
+func randRange(minP, maxP int) int { // note that this is not cryptographically secure.  Writing a cryptographically secure pseudorandom number generator (CSPRNG) is beyond the scope of this exercise.
+	return minP + rand.Intn(maxP-minP)
 }
