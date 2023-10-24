@@ -46,6 +46,7 @@ func findPrime(minP, maxP, numTests int) int { // I don't want to clobber the ne
 	// Will need an infinite for loop to keep calling isProbablyPrime until it succeeds.
 	for {
 		p := randRange(minP, maxP)
+		fmt.Printf(" random prime candidate = %d\n", p)
 		if isProbablyPrime(p, numOfTests) { // test for being even is in isProbablyPrime.
 			return p
 		}
@@ -90,7 +91,7 @@ func main() {
 		if n == 0 || err != nil {
 			break
 		}
-		if numDigits <= 0 || numDigits > 9 {
+		if numDigits <= 0 || numDigits > 9 { // w/ > 9 digits, the pgm has problems w/ integer overflow.
 			fmt.Printf(" %d is out of range.  Can't have more than 9 digits, or be zero or less.  Try again.\n", numDigits)
 			continue
 		}
@@ -98,6 +99,7 @@ func main() {
 		maxF := 10 * minF
 		minP := int(minF)
 		maxP := int(maxF)
+		fmt.Printf(" MinF = %.4g, maxF = %.4g, minP = %d, maxP = %d\n", minF, maxF, minP, maxP)
 		p := findPrime(minP, maxP, numOfTests)
 		fmt.Printf(" Random prime having %d digits is %d.\n", numDigits, p)
 	}
