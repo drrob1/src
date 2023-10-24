@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
+	"strings"
 )
 
 // This is the pgm that will demo the RSA algorithm.  RSA is in the public domain, hence, it can be used as a basis for these projects.
@@ -16,7 +18,7 @@ func totient(p, q int) int { //  totient is lambda(n) where n = p x q.  p and q 
 	return lcm(p-1, q-1)
 }
 
-func randomExponent(lambdaN int) int { // picks random public exponent, e, btwn 2 and lambda(n), such that gcd(e, lambda(n)) = 1.
+func randomExponent(lambdaN int) int { // picks random public exponent, e, btwn 2 and lambda(n), such that gcd(e, lambda(n)) = 1.  IE, e and lambda(n) are mutually prime.
 	var g, e int
 	for {
 		e = randRange(3, lambdaN)
@@ -33,18 +35,14 @@ func inverseMod(a, n int) int { // I don't get this at all.
 	newT := 1
 	r := n
 	newR := a
-	var ctr int
 
 	for newR != 0 {
-		ctr++
 		quotient := r / newR
-		t = newT
-		newT = t - quotient*newT
-		r = newR
-		newR = r - quotient*newR
+		t, newT = newT, t-quotient*newT
+		r, newR = newR, r-quotient*newR
 	}
 
-	if r > 1 { // then 'a' is not invertable
+	if r > 1 { // then 'a' is not invertible
 		return -1
 	}
 	if t < 0 {
@@ -55,15 +53,61 @@ func inverseMod(a, n int) int { // I don't get this at all.
 }
 
 func main() {
-	p := randRange(10_000, 50_000) // using larger numbers here would run into integer overflow issues.
-	q := randRange(10_000, 50_000) // would need hundreds of digits, like 6 hundred digits.
-	n := p * q                     // this is the public key modulus
+	p := findPrime(10_000, 50_000, numOfTests) // using larger numbers here would run into integer overflow issues.
+	q := findPrime(10_000, 50_000, numOfTests) // would need hundreds of digits, like 6 hundred digits.
+	n := p * q                                 // this is the public key modulus
 	lambdaN := totient(p, q)
 	e := randomExponent(lambdaN)
 	d := inverseMod(e, lambdaN)
 
 	fmt.Printf("*** Public ***\n public key modulus:  %d\n public key exponent: %d\n\n", n, e)
 	fmt.Printf("*** Private ***\n Primes:    %d, %d \n lambda(n): %d \n d:        %d\n", p, q, lambdaN, d)
+
+	if d < 1 {
+		fmt.Printf(" inverseMod failed.  Aborting.\n")
+		os.Exit(1)
+	}
+
+	var m int
+	for {
+		fmt.Printf(" Enter a number > 1 and < public key modulus, %d: ", n)
+		numChars, err := fmt.Scanln(&m)
+		if numChars == 0 || err != nil || m < 1 {
+			break
+		}
+		if m >= n {
+			fmt.Printf(" Number too large.  Try again.\n")
+			continue
+		}
+		cipherText := fastExpMod(m, e, n)
+		fmt.Printf(" cipherText is %d.\n", cipherText)
+		plainText := fastExpMod(cipherText, d, n)
+		fmt.Printf(" plainText is %d.\n", plainText)
+	}
+
+	var ans string
+	var cipherText []int
+	var plainText strings.Builder
+	for {
+		fmt.Printf(" Enter a word: ")
+		numChars, err := fmt.Scanln(&ans)
+		if numChars == 0 || err != nil {
+			break
+		}
+		for _, ch := range ans {
+			cipher := fastExpMod(int(ch), e, n)
+			cipherText = append(cipherText, cipher)
+		}
+		fmt.Printf(" CipherText: %+v\n", cipherText)
+
+		for _, i := range cipherText {
+			ch := fastExpMod(i, d, n)
+			plainText.WriteRune(rune(ch))
+		}
+		fmt.Printf(" PlainText: %s\n", plainText.String())
+		cipherText = []int{}
+		plainText.Reset()
+	}
 }
 
 func isProbablyPrime(p int, numTests int) bool {
@@ -75,7 +119,7 @@ func isProbablyPrime(p int, numTests int) bool {
 	}
 	// Run numTests number of Fermat's little theorem.  For any that fail, return false, if all succeed return true.  These are fast to check, so having numTests of 30, 50 or 100 will be fast.
 	for i := 0; i < numTests; i++ {
-		n := randRange(p/3, p)
+		n := randRange(1, p)
 		expMod := fastExpMod(n, p-1, p)
 		//fmt.Printf(" n=%d, p=%d, ExpMod = %d\n", n, p, expMod)
 		if expMod != 1 {
@@ -94,7 +138,7 @@ func findPrime(minP, maxP, numTests int) int { // I don't want to clobber the ne
 	for {
 		p := randRange(minP, maxP)
 		fmt.Printf(" random prime candidate = %d\n", p)
-		if isProbablyPrime(p, numOfTests) { // test for being even is in isProbablyPrime.
+		if isProbablyPrime(p, numTests) { // test for being even is in isProbablyPrime.
 			return p
 		}
 	}
@@ -140,10 +184,6 @@ func gcd(a, b int) int {
 		a = b
 		b = r
 	}
-}
-
-func hcf(a, b int) int {
-	return gcd(a, b)
 }
 
 func lcm(a, b int) int { // lowest common multiple

@@ -47,7 +47,7 @@ func findPrime(minP, maxP, numTests int) int { // I don't want to clobber the ne
 	for {
 		p := randRange(minP, maxP)
 		fmt.Printf(" random prime candidate = %d\n", p)
-		if isProbablyPrime(p, numOfTests) { // test for being even is in isProbablyPrime.
+		if isProbablyPrime(p, numTests) { // test for being even is in isProbablyPrime.
 			return p
 		}
 	}
