@@ -139,9 +139,10 @@ REVISION HISTORY
 15 Oct 23 -- Help doesn't report HCF (highest common factor), and I'll add a GCD synonym.
 18 Oct 23 -- Writing the sieve code for the liveproject showed me that there's an off by 1 issue w/ my int sqrt routine.  I fixed it as I did in the sieve code.
 23 Oct 23 -- Added the probably prime routines I learned about in the live project by Stephens.  I'll add them to the prime command.
+24 Oct 23 -- Added that the prime command will primefactor if the number is not prime.
 */
 
-const LastAlteredDate = "18 Oct 2023"
+const LastAlteredDate = "24 Oct 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -963,6 +964,7 @@ outerloop:
 		case 220: // PRIME
 			n := Round(Stack[X])
 			i := int(n)
+			var primeFlag bool
 
 			if isProbablyPrime(i, numOfFermatTests) {
 				ss = append(ss, fmt.Sprintf("%d is probably prime.", i))
@@ -972,8 +974,23 @@ outerloop:
 
 			if IsPrime(n) {
 				ss = append(ss, fmt.Sprintf("%d is prime.", i))
+				primeFlag = true
 			} else {
 				ss = append(ss, fmt.Sprintf("%d is NOT prime.", i))
+			}
+			if !primeFlag {
+				u := uint(i)
+				if u < 2 {
+					ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
+				} else {
+					PrimeUfactors := PrimeFactorMemoized(u)
+					stringslice := make([]string, 0, 10)
+
+					for _, pf := range PrimeUfactors {
+						stringslice = append(stringslice, fmt.Sprintf("%d", pf))
+					}
+					ss = append(ss, strings.Join(stringslice, ", "))
+				}
 			}
 
 		case 230: // PRIMEFAC, PRIMEF or PRIMEFA  Intended for PrimeFactors or PrimeFactorization
