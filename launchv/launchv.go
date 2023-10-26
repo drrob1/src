@@ -92,7 +92,7 @@ func main() {
 	}
 	preDefinedRegexp := []string{
 		"femdom|tntu",
-		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp",
+		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually",
 	}
 	var preBoolOne, preBoolTwo bool
 
@@ -128,7 +128,7 @@ func main() {
 		listPath(searchPath)
 	}
 
-	if flag.NArg() < 1 { // if there are more than 1 arguments, the extra ones are ignored.
+	if flag.NArg() < 1 && !preBoolOne && !preBoolTwo { // if there are more than 1 arguments, the extra ones are ignored.
 		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
 		os.Exit(0)
 	}
