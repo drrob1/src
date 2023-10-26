@@ -42,15 +42,18 @@ REVISION HISTORY
                I undid it.
 18 Jan 23 -- Adding smartCase
 16 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
+26 Oct 23 -- Added hard coded regexp's.  And increased the default value for numNames.
 */
 
-const lastModified = "Feb 16, 2023"
+const lastModified = "Oct 26, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
+
+//var preDefinedRegexp []string
 
 func init() {
 	goVersion := runtime.Version()
@@ -87,6 +90,11 @@ func main() {
 	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
 		searchPath = path
 	}
+	preDefinedRegexp := []string{
+		"femdom|tntu",
+		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp",
+	}
+	var preBoolOne, preBoolTwo bool
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp using smart case, against all filenames in the current directory\n")
@@ -101,10 +109,12 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
-	flag.IntVar(&numNames, "n", 20, " Number of file names to output on the commandline to vlc.")
+	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.")
 	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
+	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
+	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp")
 	flag.Parse()
-	//numNames += 2 // account for 2 extra items I have to add to the slice, ie, the -C and vlc add'l params.  Not needed anymore.
+
 	if veryverboseFlag { // very verbose also turns on verbose flag.
 		verboseFlag = true
 	}
@@ -123,7 +133,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
+	if preBoolOne {
+		includeRexString = preDefinedRegexp[0]
+	} else if preBoolTwo {
+		includeRexString = preDefinedRegexp[1]
+	} else {
+		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
+	}
+
 	var err error
 	smartCase := regexp.MustCompile("[A-Z]")
 	smartCaseFlag = smartCase.MatchString(includeRexString)
@@ -136,6 +153,7 @@ func main() {
 		fmt.Printf(" Error from compiling the regexp input string is %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Printf(" using regular expression of: %s, %s\n", includeRexString, includeRegex.String())
 	if excludeRexString != "" {
 		excludeRegex, err = regexp.Compile(strings.ToLower(excludeRexString))
 		if err != nil {
