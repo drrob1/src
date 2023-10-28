@@ -9,20 +9,21 @@ import (
 
 // This is the pgm that will demo the RSA algorithm.  RSA is in the public domain, hence, it can be used as a basis for these projects.
 // Rivest Shamir Adleman is how the algorithm is named.  These are the mathematicians from MIT that came up w/ the algorithm in 1977.  A patent was granted in 1983, and expired in 2000.
+// I used the digraph ^k l* to enter the greek lower case lambda.
 
 const numOfTests = 30 // Will set this at top of package so it's easy to change later.  // 20 gives a similar chance of being struck by lightning/yr, 30 gives better odds of winning powerball than the numbers not being prime.
 
-func totient(p, q int) int { //  totient is lambda(n) where n = p x q.  p and q are primes.  lambda(n) is the smallest value, m, where a**m == (1 mod n) for all 'a' that are relatively prime to n.
+func totient(p, q int) int { //  totient is λ(n) where n = p x q.  p and q are primes.  λ(n) is the smallest value, m, where a**m == (1 mod n) for all 'a' that are relatively prime to n.
 	// This sounds like Fermat's little theorem.
-	// n = pq, lambda(n) = lcm(lambda(p), lambda(q)). Since p and q are prime, (skipping math) lambda(n) = lcm(p-1, q-1).  Lambda(n) is kept secret.
+	// n = pq, λ(n) = lcm(λ(p), λ(q)). Since p and q are prime, (skipping math) λ(n) = lcm(p-1, q-1).  λ(n) is kept secret.
 	return lcm(p-1, q-1)
 }
 
-func randomExponent(lambdaN int) int { // picks random public exponent, e, btwn 2 and lambda(n), such that gcd(e, lambda(n)) = 1.  IE, e and lambda(n) are mutually prime.
+func randomExponent(λN int) int { // picks random public exponent, e, btwn 2 and λ(n), such that gcd(e, λ(n)) = 1.  IE, e and λ(n) are mutually prime.
 	var g, e int
 	for {
-		e = randRange(3, lambdaN)
-		g = gcd(e, lambdaN)
+		e = randRange(3, λN)
+		g = gcd(e, λN)
 		if g == 1 {
 			break
 		}
@@ -56,12 +57,12 @@ func main() {
 	p := findPrime(10_000, 50_000, numOfTests) // using larger numbers here would run into integer overflow issues.
 	q := findPrime(10_000, 50_000, numOfTests) // would need hundreds of digits, like 6 hundred digits.
 	n := p * q                                 // this is the public key modulus
-	lambdaN := totient(p, q)
-	e := randomExponent(lambdaN)
-	d := inverseMod(e, lambdaN)
+	λN := totient(p, q)
+	e := randomExponent(λN)
+	d := inverseMod(e, λN)
 
 	fmt.Printf("*** Public ***\n public key modulus:  %d\n public key exponent: %d\n\n", n, e)
-	fmt.Printf("*** Private ***\n Primes:    %d, %d \n lambda(n): %d \n d:        %d\n", p, q, lambdaN, d)
+	fmt.Printf("*** Private ***\n Primes:    %d, %d \n λ(n): %d \n d:        %d\n", p, q, λN, d)
 
 	if d < 1 {
 		fmt.Printf(" inverseMod failed.  Aborting.\n")

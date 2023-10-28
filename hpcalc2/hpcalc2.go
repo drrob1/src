@@ -137,12 +137,13 @@ REVISION HISTORY
  9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
 20 Jul 23 -- Amended help text to show that to enter a negative exponent, must use '_' char.
 15 Oct 23 -- Help doesn't report HCF (highest common factor), and I'll add a GCD synonym.
-18 Oct 23 -- Writing the sieve code for the liveproject showed me that there's an off by 1 issue w/ my int sqrt routine.  I fixed it as I did in the sieve code.
+18 Oct 23 -- Writing the sieve code for the live project showed me that there's an off by 1 issue w/ my int sqrt routine.  I fixed it as I did in the sieve code.  It's like ceil(n).
 23 Oct 23 -- Added the probably prime routines I learned about in the live project by Stephens.  I'll add them to the prime command.
-24 Oct 23 -- Added that the prime command will primefactor if the number is not prime.
+24 Oct 23 -- Added that the prime command will prime factor if the number is not prime.
+28 Oct 23 -- Updated the message for the probably prime routine.
 */
 
-const LastAlteredDate = "24 Oct 2023"
+const LastAlteredDate = "28 Oct 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -967,9 +968,9 @@ outerloop:
 			var primeFlag bool
 
 			if isProbablyPrime(i, numOfFermatTests) {
-				ss = append(ss, fmt.Sprintf("%d is probably prime.", i))
+				ss = append(ss, fmt.Sprintf("%d is probably prime using %d tests.", i, numOfFermatTests))
 			} else {
-				ss = append(ss, fmt.Sprintf("%d is NOT probably prime.", i))
+				ss = append(ss, fmt.Sprintf("%d is NOT probably prime using %d tests.", i, numOfFermatTests))
 			}
 
 			if IsPrime(n) {
