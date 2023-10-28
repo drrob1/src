@@ -92,7 +92,7 @@ func main() {
 	}
 	preDefinedRegexp := []string{
 		"femdom|tntu",
-		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually",
+		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas",
 	}
 	var preBoolOne, preBoolTwo bool
 
@@ -112,7 +112,7 @@ func main() {
 	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.")
 	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
-	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually")
+	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
