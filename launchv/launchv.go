@@ -71,6 +71,7 @@ func init() {
 }
 
 func main() {
+	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag bool
 	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
 
 	workingDir, _ := os.Getwd()
@@ -93,8 +94,8 @@ func main() {
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas",
+		"\b+\b",
 	}
-	var preBoolOne, preBoolTwo bool
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp using smart case, against all filenames in the current directory\n")
@@ -113,6 +114,9 @@ func main() {
 	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
+	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
+	flag.BoolVar(&fuckFlag, "fuck", false, "Use predifined pattern #2.")
+	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^\b+\b.")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
@@ -128,14 +132,14 @@ func main() {
 		listPath(searchPath)
 	}
 
-	if flag.NArg() < 1 && !preBoolOne && !preBoolTwo { // if there are more than 1 arguments, the extra ones are ignored.
+	if flag.NArg() < 1 && !preBoolOne && !preBoolTwo && !domFlag && !fuckFlag && !numericFlag { // if there are more than 1 arguments, the extra ones are ignored.
 		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
 		os.Exit(0)
 	}
 
-	if preBoolOne {
+	if preBoolOne || domFlag {
 		includeRexString = preDefinedRegexp[0]
-	} else if preBoolTwo {
+	} else if preBoolTwo || fuckFlag {
 		includeRexString = preDefinedRegexp[1]
 	} else {
 		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
