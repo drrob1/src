@@ -116,7 +116,7 @@ func main() {
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
 	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
 	flag.BoolVar(&fuckFlag, "fuck", false, "Use predifined pattern #2.")
-	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^\b+\b.")
+	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^\\b+\\b.")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
