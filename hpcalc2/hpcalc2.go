@@ -131,14 +131,15 @@ REVISION HISTORY
 21 Oct 22 -- golangci-lint says I have an unnecessary Sprintf call.  It's right.
 21 Nov 22 -- static linter found a few more issues.
 24 Jun 23 -- Will only close the map reg file when needed, ie, when I open it.  This is to not have rpnt and rpnf clobber each other.
-               I'm not exporting the map close function, and I renamed it to mapWriteAndClose.  By not exporting it, I'm making sure that the client programs can't close this file and clobber one another.
+               I'm not exporting the map close function, and I renamed it to mapWriteAndClose.  By not exporting it, I'm making sure that the client programs can't close this file and clobber one
+               another.
                I decided to not read the map info in the init fcn, but instead I have to have it read the map file with every operation.  This is to prevent the local map from becoming stale.
  8 Jul 23 -- I'm testing the new TokenReal(), here in production.  Looks to be working.  I won't recompile the others just yet.  I'll try to shift into using rpn2 for a while.
  9 Jul 23 -- Now to fix hex input.  This is handled in tknptr.go.
 20 Jul 23 -- Amended help text to show that to enter a negative exponent, must use '_' char.
 15 Oct 23 -- Help doesn't report HCF (highest common factor), and I'll add a GCD synonym.
 18 Oct 23 -- Writing the sieve code for the live project showed me that there's an off by 1 issue w/ my int sqrt routine.  I fixed it as I did in the sieve code.  It's like ceil(n).
-23 Oct 23 -- Added the probably prime routines I learned about in the live project by Stephens.  I'll add them to the prime command.
+23 Oct 23 -- Added the probably prime routines I learned about in the live project by Rod Stephens.  I'll add them to the prime command.
 24 Oct 23 -- Added that the prime command will prime factor if the number is not prime.
 28 Oct 23 -- Updated the message for the probably prime routine.
 */
