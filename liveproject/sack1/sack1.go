@@ -29,13 +29,13 @@ type Item struct {
 func makeItems(numItems, minValue, maxValue, minWeight, maxWeight int) []Item {
 	// Initialize a pseudorandom number generator.
 	//random := rand.New(rand.NewSource(time.Now().UnixNano())) // Initialize with a changing seed  Not needed as of Go 1.20
-	//random := rand.New(rand.NewSource(1337)) // Initialize with a fixed seed  Not needed as of Go 1.20
+	random := rand.New(rand.NewSource(1337)) // Initialize with a fixed seed  Not needed as of Go 1.20
 
 	items := make([]Item, numItems)
 	for i := 0; i < numItems; i++ {
 		items[i] = Item{
-			rand.Intn(maxValue-minValue+1) + minValue,
-			rand.Intn(maxWeight-minWeight+1) + minWeight,
+			random.Intn(maxValue-minValue+1) + minValue,
+			random.Intn(maxWeight-minWeight+1) + minWeight,
 			false}
 	}
 	return items
@@ -134,14 +134,14 @@ func doExhaustiveSearch(items []Item, allowedWeight, nextIndex int) ([]Item, int
 		return copyOfItems, currentValue, 1
 	}
 
-	// have not reached the bottom of the solution space tree or exceeded the constraint.
+	// have not reached the bottom of the solution space tree and have not exceeded the constraint.
 	items[nextIndex].isSelected = true
 	resultSolnIfYes, totalValueIfYes, numberOfFunctionCallsIfYes := doExhaustiveSearch(items, allowedWeight, nextIndex+1)
 	//fmt.Printf(" doing exhaustive search: totalValueIfYes = %d, allowedWeight=%d\n", totalValueIfYes, allowedWeight)
 	items[nextIndex].isSelected = false
 	resultSolnIfNo, totalValueIfNo, numberOfFunctionCallsIfNo := doExhaustiveSearch(items, allowedWeight, nextIndex+1)
 	//fmt.Printf(" doing exhaustive search: totalValueIfNo = %d, allowedWeight=%d\n", totalValueIfNo, allowedWeight)
-	if totalValueIfYes <= allowedWeight && totalValueIfYes > 0 {
+	if totalValueIfYes >= totalValueIfNo && totalValueIfYes > 0 {
 		return resultSolnIfYes, totalValueIfYes, numberOfFunctionCallsIfYes + numberOfFunctionCallsIfNo + 1
 	}
 	return resultSolnIfNo, totalValueIfNo, numberOfFunctionCallsIfNo + numberOfFunctionCallsIfYes + 1
