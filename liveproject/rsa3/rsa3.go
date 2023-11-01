@@ -39,8 +39,8 @@ func inverseMod(a, n int) int { // I don't get this at all.
 
 	for newR != 0 {
 		quotient := r / newR
-		t, newT = newT, t-quotient*newT
-		r, newR = newR, r-quotient*newR
+		t, newT = newT, t-quotient*newT // These lines are NOT the same as t = newT; newT = t-quotient*newT, because the computations for both variables,
+		r, newR = newR, r-quotient*newR // t and newT, have to be conducted w/ the old values before assignment.  So it would have needed temp intermediate variables.
 	}
 
 	if r > 1 { // then 'a' is not invertible

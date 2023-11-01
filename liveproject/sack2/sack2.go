@@ -8,7 +8,17 @@ import (
 
 /*
    The first part of the knapsack problem for the Manning live project by Rod Stephens.  It uses an exhaustive search approach.
-
+   The 2nd part of the knapsack problem.  This version will used branch and bound to reduce the solution space.  The proposed solution branch of the tree is checked against
+   estimated bounds, and is discarded if it doesn't produce better results than the best one found so far.
+   Here, we're going to use bounds on weight and value.
+   Outline
+   bestValue = value of the best solution found so far
+   currentValue = hmm, current solution's total value
+   currentWeight = well, guess
+   remainingValue = remaining total value available, initially the sum of all item values.
+   If there's a complete assignment, return it
+   If not, check the value bound, currentValue + remainingValue > bestValue.  If we can't improve on bestValue, return nil
+   If not bailed, check the weight bound.  This is more complex, so the code will show it.
 */
 
 const numItems = 20 // A reasonable value for exhaustive search.
@@ -102,14 +112,15 @@ func printSelected(items []Item) {
 }
 
 // Run the algorithm. Display the elapsed time and solution.
-func runAlgorithm(alg func([]Item, int) ([]Item, int, int), items []Item, allowedWeight int) {
+func runAlgorithm(alg func([]Item, int, int, int, int, int, int) ([]Item, int, int),
+	items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) {
 	// Copy the items so the run isn't influenced by a previous run.
 	testItems := copyItems(items)
 
 	start := time.Now()
 
 	// Run the algorithm.
-	solution, totalValue, functionCalls := alg(testItems, allowedWeight)
+	solution, totalValue, functionCalls := alg(testItems, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue)
 
 	elapsed := time.Since(start)
 
@@ -123,34 +134,57 @@ func runAlgorithm(alg func([]Item, int) ([]Item, int, int), items []Item, allowe
 // Recursively assign values in or out of the solution.
 // Return the best assignment, value of that assignment,
 // and the number of function calls we made.
-func exhaustiveSearch(items []Item, allowedWeight int) ([]Item, int, int) {
-	return doExhaustiveSearch(items, allowedWeight, 0)
+func branchAndBound(items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) ([]Item, int, int) {
+	return doBranchAndBound(items, allowedWeight, 0, bestValue, currentValue, currentWeight, remainingValue)
 }
 
-func doExhaustiveSearch(items []Item, allowedWeight, nextIndex int) ([]Item, int, int) {
-	currentValue := solutionValue(items, allowedWeight)
-	if nextIndex >= len(items) || currentValue < 0 {
+func doBranchAndBound(items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) ([]Item, int, int) {
+	var test1Solution, test2Solution []Item
+	var test1Value, test1Calls, test2Value, test2Calls int
+
+	if nextIndex >= len(items) {
 		copyOfItems := copyItems(items)
-		return copyOfItems, currentValue, 1
+		return copyOfItems, allowedWeight, 1
 	}
 
-	// have not reached the bottom of the solution space tree and have not exceeded the constraint.
-	items[nextIndex].isSelected = true
-	resultSolnIfYes, totalValueIfYes, numberOfFunctionCallsIfYes := doExhaustiveSearch(items, allowedWeight, nextIndex+1)
-	//fmt.Printf(" doing exhaustive search: totalValueIfYes = %d, allowedWeight=%d\n", totalValueIfYes, allowedWeight)
-	items[nextIndex].isSelected = false
-	resultSolnIfNo, totalValueIfNo, numberOfFunctionCallsIfNo := doExhaustiveSearch(items, allowedWeight, nextIndex+1)
-	//fmt.Printf(" doing exhaustive search: totalValueIfNo = %d, allowedWeight=%d\n", totalValueIfNo, allowedWeight)
-	if totalValueIfYes >= totalValueIfNo && totalValueIfYes > 0 {
-		return resultSolnIfYes, totalValueIfYes, numberOfFunctionCallsIfYes + numberOfFunctionCallsIfNo + 1
+	// we do not have a full assignment.  Can we improve on this solution so it's worth continuing
+	if currentValue+remainingValue <= bestValue {
+		// No, we can't improve on the best solution found so far
+		return nil, 0, 1
 	}
-	return resultSolnIfNo, totalValueIfNo, numberOfFunctionCallsIfNo + numberOfFunctionCallsIfYes + 1
+
+	// Try adding the next item
+	if currentWeight+items[nextIndex].weight <= allowedWeight {
+		items[nextIndex].isSelected = true
+		nextValue := items[nextIndex].value + currentValue
+		nextWeight := items[nextIndex].weight + currentWeight
+		remainingVal := remainingValue - items[nextIndex].value
+		test1Solution, test1Value, test1Calls = doBranchAndBound(items, allowedWeight, nextIndex+1, bestValue, nextValue, nextWeight, remainingVal)
+	} else {
+		test1Solution, test1Value, test1Calls = nil, 0, 1
+	}
+
+	// Try not adding the next item
+	// See if there's a chance of improvement without this item's value.
+	if currentValue+remainingValue-items[nextIndex].value > bestValue {
+		remainingVal := remainingValue - items[nextIndex].value
+		test2Solution, test2Value, test2Calls = doBranchAndBound(items, allowedWeight, nextIndex+1, bestValue, currentValue, currentWeight, remainingVal)
+	} else {
+		test2Solution, test2Value, test2Calls = nil, 0, 1
+	}
+
+	// return the better solution
+	if test1Value >= test2Value {
+		return test1Solution, test1Value, test1Calls + test2Calls + 1
+	}
+	return test2Solution, test2Value, test1Calls + test2Calls + 1
 }
 
 func main() {
 	//items := makeTestItems()
 	items := makeItems(numItems, minValue, maxValue, minWeight, maxWeight)
 	allowedWeight = sumWeights(items, true) / 2
+	remainingValue := sumValues(items, true)
 
 	// Display basic parameters.
 	fmt.Println("*** Parameters ***")
@@ -161,10 +195,15 @@ func main() {
 	fmt.Println()
 
 	// Exhaustive search
-	if numItems > 23 { // Only run exhaustive search if numItems <= 23.
+	if numItems > 45 { // Only run branch and bound search if numItems <= 45.
 		fmt.Println("Too many items for exhaustive search")
 	} else {
 		fmt.Println("*** Exhaustive Search ***")
-		runAlgorithm(exhaustiveSearch, items, allowedWeight)
+		runAlgorithm(branchAndBound, items, allowedWeight, 0, maxValue, 0, 0, remainingValue)
 	}
 }
+
+/*
+func runAlgorithm(alg func([]Item, int, int, int, int, int, int) ([]Item, int, int),
+	items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) {
+*/
