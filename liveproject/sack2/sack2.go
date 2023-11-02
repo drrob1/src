@@ -39,13 +39,13 @@ type Item struct {
 func makeItems(numItems, minValue, maxValue, minWeight, maxWeight int) []Item {
 	// Initialize a pseudorandom number generator.
 	//random := rand.New(rand.NewSource(time.Now().UnixNano())) // Initialize with a changing seed  Not needed as of Go 1.20
-	random := rand.New(rand.NewSource(1337)) // Initialize with a fixed seed  Not needed as of Go 1.20
+	//random := rand.New(rand.NewSource(1337)) // Initialize with a fixed seed  Not needed as of Go 1.20
 
 	items := make([]Item, numItems)
 	for i := 0; i < numItems; i++ {
 		items[i] = Item{
-			random.Intn(maxValue-minValue+1) + minValue,
-			random.Intn(maxWeight-minWeight+1) + minWeight,
+			rand.Intn(maxValue-minValue+1) + minValue,
+			rand.Intn(maxWeight-minWeight+1) + minWeight,
 			false}
 	}
 	return items
@@ -144,13 +144,13 @@ func doBranchAndBound(items []Item, allowedWeight, nextIndex, bestValue, current
 
 	if nextIndex >= len(items) {
 		copyOfItems := copyItems(items)
-		return copyOfItems, allowedWeight, 1
+		return copyOfItems, currentValue, 1
 	}
 
 	// we do not have a full assignment.  Can we improve on this solution so it's worth continuing
 	if currentValue+remainingValue <= bestValue {
 		// No, we can't improve on the best solution found so far
-		return nil, 0, 1
+		return nil, currentValue, 1
 	}
 
 	// Try adding the next item
@@ -166,12 +166,9 @@ func doBranchAndBound(items []Item, allowedWeight, nextIndex, bestValue, current
 
 	// Try not adding the next item
 	// See if there's a chance of improvement without this item's value.
-	if currentValue+remainingValue-items[nextIndex].value > bestValue {
-		remainingVal := remainingValue - items[nextIndex].value
-		test2Solution, test2Value, test2Calls = doBranchAndBound(items, allowedWeight, nextIndex+1, bestValue, currentValue, currentWeight, remainingVal)
-	} else {
-		test2Solution, test2Value, test2Calls = nil, 0, 1
-	}
+	items[nextIndex].isSelected = false
+	remainingVal := remainingValue - items[nextIndex].value
+	test2Solution, test2Value, test2Calls = doBranchAndBound(items, allowedWeight, nextIndex+1, bestValue, currentValue, currentWeight, remainingVal)
 
 	// return the better solution
 	if test1Value >= test2Value {
@@ -198,7 +195,7 @@ func main() {
 	if numItems > 45 { // Only run branch and bound search if numItems <= 45.
 		fmt.Println("Too many items for exhaustive search")
 	} else {
-		fmt.Println("*** Exhaustive Search ***")
+		fmt.Println("*** branch and bound Search ***")
 		runAlgorithm(branchAndBound, items, allowedWeight, 0, maxValue, 0, 0, remainingValue)
 	}
 }
