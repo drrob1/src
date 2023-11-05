@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"time"
 )
 
 /*
    The first part of the knapsack problem for the Manning live project by Rod Stephens.  It uses an exhaustive search approach.
+
    The 2nd part of the knapsack problem.  This version will used branch and bound to reduce the solution space.  The proposed solution branch of the tree is checked against
    estimated bounds, and is discarded if it doesn't produce better results than the best one found so far.
    Here, we're going to use bounds on weight and value.
@@ -19,6 +21,10 @@ import (
    If there's a complete assignment, return it
    If not, check the value bound, currentValue + remainingValue > bestValue.  If we can't improve on bestValue, return nil
    If not bailed, check the weight bound.  This is more complex, so the code will show it.
+
+   The 3rd part of the knapsack problem.  This will use his refinement to the branch and bound reduction of the solution space.
+   It involves one item blocking another item.
+
 */
 
 const numItems = 20 // A reasonable value for exhaustive search.
@@ -31,6 +37,8 @@ const maxWeight = 10
 var allowedWeight int
 
 type Item struct {
+	id, blockedBy int
+	blockList     []int
 	value, weight int
 	isSelected    bool
 }
@@ -44,11 +52,109 @@ func makeItems(numItems, minValue, maxValue, minWeight, maxWeight int) []Item {
 	items := make([]Item, numItems)
 	for i := 0; i < numItems; i++ {
 		items[i] = Item{
-			rand.Intn(maxValue-minValue+1) + minValue,
-			rand.Intn(maxWeight-minWeight+1) + minWeight,
-			false}
+			id:         i,
+			blockedBy:  -1,
+			blockList:  nil,
+			value:      rand.Intn(maxValue-minValue+1) + minValue,
+			weight:     rand.Intn(maxWeight-minWeight+1) + minWeight,
+			isSelected: false}
 	}
 	return items
+}
+
+func makeBlockLists(items []Item) {
+	for i := range items {
+		items[i].blockList = []int{}
+		for j := range items {
+			if i != j && items[i].value >= items[j].value && items[i].weight <= items[j].weight {
+				items[i].blockList = append(items[i].blockList, j)
+			}
+		}
+	}
+}
+
+func blockItems(source Item, items []Item) {
+	for i := range source.blockList {
+		if items[i].blockedBy == -1 {
+			items[i].blockedBy = source.id
+		}
+	}
+}
+
+func unBlockItems(source Item, items []Item) {
+	for i := range source.blockList {
+		if items[i].blockedBy == source.id {
+			items[i].blockedBy = -1
+		}
+	}
+}
+
+func RodsTechnique(items []Item, allowedWeight int) ([]Item, int, int) {
+	bestValue := 0
+	currentValue := 0
+	currentWeight := 0
+	remainingValue := sumValues(items, true)
+	makeBlockLists(items)
+	return doRodsTechnique(items, allowedWeight, 0, bestValue, currentValue, currentWeight, remainingValue)
+}
+
+func RodsTechniqueSorted(items []Item, allowedWeight int) ([]Item, int, int) {
+	makeBlockLists(items)
+	lessFcn := func(i, j int) bool {
+		return len(items[i].blockList) > len(items[j].blockList)
+	}
+	sort.Slice(items, lessFcn)
+	// reset the IDs of each item
+	for i := range items {
+		items[i].id = i
+	}
+	// rebuild the lists w/ the new indices
+	makeBlockLists(items)
+
+	bestValue := 0
+	currentValue := 0
+	currentWeight := 0
+	remainingValue := sumValues(items, true)
+	return doRodsTechnique(items, allowedWeight, 0, bestValue, currentValue, currentWeight, remainingValue)
+}
+
+func doRodsTechnique(items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) ([]Item, int, int) {
+	var test1Solution, test2Solution []Item
+	var test1Value, test1Calls, test2Value, test2Calls int
+
+	if nextIndex >= len(items) {
+		copyOfItems := copyItems(items)
+		return copyOfItems, currentValue, 1
+	}
+
+	// we do not have a full assignment.  Can we improve on this solution so it's worth continuing
+	if currentValue+remainingValue <= bestValue {
+		// No, we can't improve on the best solution found so far
+		return nil, currentValue, 1
+	}
+
+	// Try adding the next item
+	if currentWeight+items[nextIndex].weight <= allowedWeight {
+		items[nextIndex].isSelected = true
+		nextValue := items[nextIndex].value + currentValue
+		nextWeight := items[nextIndex].weight + currentWeight
+		remainingVal := remainingValue - items[nextIndex].value
+		test1Solution, test1Value, test1Calls = doBranchAndBound(items, allowedWeight, nextIndex+1, bestValue, nextValue, nextWeight, remainingVal)
+	} else {
+		test1Solution, test1Value, test1Calls = nil, 0, 1
+	}
+
+	// Try not adding the next item
+	// See if there's a chance of improvement without this item's value.
+	items[nextIndex].isSelected = false
+	remainingVal := remainingValue - items[nextIndex].value
+	test2Solution, test2Value, test2Calls = doBranchAndBound(items, allowedWeight, nextIndex+1, bestValue, currentValue, currentWeight, remainingVal)
+
+	// return the better solution
+	if test1Value >= test2Value {
+		return test1Solution, test1Value, test1Calls + test2Calls + 1
+	}
+	return test2Solution, test2Value, test1Calls + test2Calls + 1
 }
 
 // Return a copy of the items slice.
@@ -112,15 +218,14 @@ func printSelected(items []Item) {
 }
 
 // Run the algorithm. Display the elapsed time and solution.
-func runAlgorithm(alg func([]Item, int, int, int, int, int, int) ([]Item, int, int),
-	items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) {
+func runAlgorithm(alg func([]Item, int) ([]Item, int, int), items []Item, allowedWeight int) {
 	// Copy the items so the run isn't influenced by a previous run.
 	testItems := copyItems(items)
 
 	start := time.Now()
 
 	// Run the algorithm.
-	solution, totalValue, functionCalls := alg(testItems, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue)
+	solution, totalValue, functionCalls := alg(testItems, allowedWeight)
 
 	elapsed := time.Since(start)
 
@@ -134,7 +239,11 @@ func runAlgorithm(alg func([]Item, int, int, int, int, int, int) ([]Item, int, i
 // Recursively assign values in or out of the solution.
 // Return the best assignment, value of that assignment,
 // and the number of function calls we made.
-func branchAndBound(items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) ([]Item, int, int) {
+func branchAndBound(items []Item, allowedWeight int) ([]Item, int, int) {
+	bestValue := 0
+	currentValue := 0
+	currentWeight := 0
+	remainingValue := sumValues(items, true)
 	return doBranchAndBound(items, allowedWeight, 0, bestValue, currentValue, currentWeight, remainingValue)
 }
 
@@ -181,7 +290,6 @@ func main() {
 	//items := makeTestItems()
 	items := makeItems(numItems, minValue, maxValue, minWeight, maxWeight)
 	allowedWeight = sumWeights(items, true) / 2
-	remainingValue := sumValues(items, true)
 
 	// Display basic parameters.
 	fmt.Println("*** Parameters ***")
@@ -191,16 +299,22 @@ func main() {
 	fmt.Printf("Allowed weight: %d\n", allowedWeight)
 	fmt.Println()
 
+	// Rod's method
+	if numItems > 85 {
+		fmt.Println("Too many items for Rod's Method j")
+	} else {
+		runAlgorithm(RodsTechnique, items, allowedWeight)
+
+	}
 	// Branch and bound search
 	if numItems > 45 { // Only run branch and bound search if numItems <= 45.
 		fmt.Println("Too many items for exhaustive search")
 	} else {
 		fmt.Println("*** branch and bound Search ***")
-		runAlgorithm(branchAndBound, items, allowedWeight, 0, maxValue, 0, 0, remainingValue)
+		runAlgorithm(branchAndBound, items, allowedWeight)
 	}
 }
 
 /*
-func runAlgorithm(alg func([]Item, int, int, int, int, int, int) ([]Item, int, int),
-	items []Item, allowedWeight, nextIndex, bestValue, currentValue, currentWeight, remainingValue int) {
+func runAlgorithm(alg func([]Item, int) ([]Item, int, int), items []Item, allowedWeight int) {
 */
