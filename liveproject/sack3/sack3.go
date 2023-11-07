@@ -301,20 +301,57 @@ func main() {
 
 	// Rod's method
 	if numItems > 85 {
-		fmt.Println("Too many items for Rod's Method j")
+		fmt.Println("Too many items for Rod's Method ")
 	} else {
+		fmt.Printf(" Running Rod's Technique:\n")
 		runAlgorithm(RodsTechnique, items, allowedWeight)
-
 	}
+
+	// Rod's method sorted
+	if numItems > 350 {
+		fmt.Println("Too many items for Rod's Method sorted")
+	} else {
+		fmt.Printf(" Running Rod's Technique, sorted:\n")
+		runAlgorithm(RodsTechniqueSorted, items, allowedWeight)
+	}
+
 	// Branch and bound search
 	if numItems > 45 { // Only run branch and bound search if numItems <= 45.
-		fmt.Println("Too many items for exhaustive search")
+		fmt.Println("Too many items for branch and bound search")
 	} else {
 		fmt.Println("*** branch and bound Search ***")
 		runAlgorithm(branchAndBound, items, allowedWeight)
 	}
+
+	// Exhaustive search
+	if numItems > 23 { // Only run exhaustive search if numItems <= 23.
+		fmt.Println("Too many items for exhaustive search")
+	} else {
+		fmt.Println("*** Exhaustive Search ***")
+		runAlgorithm(exhaustiveSearch, items, allowedWeight)
+	}
 }
 
-/*
-func runAlgorithm(alg func([]Item, int) ([]Item, int, int), items []Item, allowedWeight int) {
-*/
+func exhaustiveSearch(items []Item, allowedWeight int) ([]Item, int, int) {
+	return doExhaustiveSearch(items, allowedWeight, 0)
+}
+
+func doExhaustiveSearch(items []Item, allowedWeight, nextIndex int) ([]Item, int, int) {
+	currentValue := solutionValue(items, allowedWeight)
+	if nextIndex >= len(items) || currentValue < 0 {
+		copyOfItems := copyItems(items)
+		return copyOfItems, currentValue, 1
+	}
+
+	// have not reached the bottom of the solution space tree and have not exceeded the constraint.
+	items[nextIndex].isSelected = true
+	resultSolnIfYes, totalValueIfYes, numberOfFunctionCallsIfYes := doExhaustiveSearch(items, allowedWeight, nextIndex+1)
+	//fmt.Printf(" doing exhaustive search: totalValueIfYes = %d, allowedWeight=%d\n", totalValueIfYes, allowedWeight)
+	items[nextIndex].isSelected = false
+	resultSolnIfNo, totalValueIfNo, numberOfFunctionCallsIfNo := doExhaustiveSearch(items, allowedWeight, nextIndex+1)
+	//fmt.Printf(" doing exhaustive search: totalValueIfNo = %d, allowedWeight=%d\n", totalValueIfNo, allowedWeight)
+	if totalValueIfYes >= totalValueIfNo && totalValueIfYes > 0 {
+		return resultSolnIfYes, totalValueIfYes, numberOfFunctionCallsIfYes + numberOfFunctionCallsIfNo + 1
+	}
+	return resultSolnIfNo, totalValueIfNo, numberOfFunctionCallsIfNo + numberOfFunctionCallsIfYes + 1
+}
