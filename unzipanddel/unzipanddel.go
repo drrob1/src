@@ -14,22 +14,22 @@ REVISION HISTORY
 
 const lastModified = "17 Nov 2023" // I doubt this will be finished quickly.
 
-func unzipAndShow(src, dest string) error {
-	filenames, err := zip.Unzip(src, dest)
+func UnzipAndShow(src string) error {
+	filenames, err := zip.Unzip(src, ".")
 	if err != nil {
 		return err
 	}
-	fmt.Printf(" filenames: %+v\n", filenames)
+	fmt.Printf(" unzipped: %+v\n", filenames)
 	return nil
 }
 
-func unzipAndDel(src, dest string) error {
-	_, err := zip.Unzip(src, dest)
+func UnzipAndDel(src string) ([]string, error) {
+	filenames, err := zip.Unzip(src, ".")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = os.Remove(src)
-	return err
+	return filenames, err
 }
 
 /*
