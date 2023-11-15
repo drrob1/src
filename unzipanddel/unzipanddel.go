@@ -15,9 +15,10 @@ REVISION HISTORY
 const lastModified = "17 Nov 2023" // I doubt this will be finished quickly.
 var dest string
 
-func init() {
-	home, _ := os.UserHomeDir()
-	dest = home + "/Downloads"
+func init() { // need to change this to use current working dir, not always ~/Downloads.  Not tested yet.
+	//home, _ := os.UserHomeDir()
+	//dest = home + "/Downloads"
+	dest, _ = os.Getwd()
 }
 
 func UnzipAndShow(src string) error {

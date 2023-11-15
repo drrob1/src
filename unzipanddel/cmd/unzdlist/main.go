@@ -132,10 +132,13 @@ func main() {
 		fmt.Printf(" The selected list of files is empty.  Exiting.\n")
 		os.Exit(1)
 	}
+	if verboseFlag {
+		fmt.Printf(" \nLength of filelist after the selection is %d.  The filelist is %+v\n", len(fileList), fileList)
+	}
 	for _, f := range fileList {
 		filenames, er := unzipanddel.UnzipAndDel(f.FullPath)
 		if er == nil {
-			fmt.Printf(" \n%s successfully unzipped and deleted: %+v\n", f, filenames)
+			fmt.Printf(" \n\n%s successfully unzipped and deleted: %+v\n", f, filenames)
 		} else {
 			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f, er)
 		}
