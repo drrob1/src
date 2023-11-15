@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"src/list2"
@@ -150,15 +149,16 @@ func main() {
 	}
 	start := time.Now()
 	for _, f := range fileList {
-		fullPath, e := filepath.Abs(f.RelPath)
-		if e != nil {
-			panic(e)
-		}
-		filenames, er := unzipanddel.UnzipAndDel(fullPath)
+		//fullPath, e := filepath.Abs(f.RelPath) not needed
+		//if e != nil {
+		//	panic(e)
+		//}
+		now := time.Now()
+		filenames, er := unzipanddel.UnzipAndDel(f.RelPath)
 		if er == nil {
-			fmt.Printf(" \n%s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(start).String(), filenames)
+			fmt.Printf(" \n%s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(now).String(), filenames)
 		} else {
-			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", fullPath, er)
+			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f.RelPath, er)
 		}
 	}
 	fmt.Println()
