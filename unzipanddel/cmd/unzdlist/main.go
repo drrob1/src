@@ -9,6 +9,7 @@ import (
 	"src/list"
 	"src/unzipanddel"
 	"strings"
+	"time"
 )
 
 /*
@@ -135,6 +136,7 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" \nLength of filelist after the selection is %d.  The filelist is %+v\n", len(fileList), fileList)
 	}
+	start := time.Now()
 	for _, f := range fileList {
 		filenames, er := unzipanddel.UnzipAndDel(f.FullPath)
 		if er == nil {
@@ -144,4 +146,6 @@ func main() {
 		}
 	}
 	fmt.Println()
+	elapsed := time.Since(start)
+	fmt.Printf(" Unzip and del took %s\n", elapsed.String())
 }
