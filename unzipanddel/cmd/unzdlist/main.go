@@ -4,9 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
-	"src/list"
+	"src/list2"
 	"src/unzipanddel"
 	"strings"
 	"time"
@@ -16,11 +17,14 @@ import (
 REVISION HISTORY
 -------- -------
 14 Nov 23 -- Started working on the first version of this pgm.
+15 Nov 23 -- Will switch to using list2 instead of list.
 */
 
-const lastModified = "14 Nov 2023"
+const lastModified = "15 Nov 2023"
 
 var err error
+var rex *regexp.Regexp
+var rexStr, inputStr string
 
 func main() {
 	execName, _ := os.Executable()
@@ -58,8 +62,9 @@ func main() {
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
-	//flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
-	//flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
+
+	flag.StringVar(&inputStr, "i", "", "Input source directory which can be a symlink.")
+	flag.StringVar(&rexStr, "rex", "", "Regular expression inclusion pattern for input files")
 
 	flag.Parse()
 
@@ -82,17 +87,24 @@ func main() {
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
-	list.FilterFlag = filterFlag
-	list.VerboseFlag = verboseFlag
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.ReverseFlag = revFlag
-	list.SizeFlag = sizeFlag
-	list.ExcludeRex = excludeRegex
-	list.DelListFlag = true
-
-	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
+	rexStr = "zip$"
+	rex, err = regexp.Compile(rexStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		fmt.Printf(" Input regular expression error is %s.  Ignoring\n", err)
+	}
+
+	list2.InputDir = ""
+	list2.FilterFlag = filterFlag
+	list2.VerboseFlag = verboseFlag
+	list2.VeryVerboseFlag = veryVerboseFlag
+	list2.ReverseFlag = revFlag
+	list2.SizeFlag = sizeFlag
+	list2.ExcludeRex = excludeRegex
+	list2.IncludeRex = rex
+
+	fileList, err := list2.New() // fileList used to be []string, but now it's []FileInfoExType.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from list2.New is %s\n", err)
 		fmt.Printf(" flag.NArg = %d, len(os.Args) = %d\n", flag.NArg(), len(os.Args))
 		fmt.Print(" Continue? [yN] ")
 		var ans string
@@ -120,7 +132,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileList, err = list.FileSelection(fileList)
+	fileList, err = list2.FileSelection(fileList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
 		os.Exit(1)
@@ -138,14 +150,18 @@ func main() {
 	}
 	start := time.Now()
 	for _, f := range fileList {
-		filenames, er := unzipanddel.UnzipAndDel(f.FullPath)
+		fullPath, e := filepath.Abs(f.RelPath)
+		if e != nil {
+			panic(e)
+		}
+		filenames, er := unzipanddel.UnzipAndDel(fullPath)
 		if er == nil {
-			fmt.Printf(" \n%s successfully unzipped and deleted: %+v\n", f.FullPath, filenames)
+			fmt.Printf(" \n%s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(start).String(), filenames)
 		} else {
-			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f.FullPath, er)
+			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", fullPath, er)
 		}
 	}
 	fmt.Println()
 	elapsed := time.Since(start)
-	fmt.Printf(" Unzip and del took %s\n", elapsed.String())
+	fmt.Printf(" Unzip and del took %s to complete processing %d zipfiles.\n", elapsed.String(), len(fileList))
 }
