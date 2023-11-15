@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-const lastModified = "14 Nov 2023"
-
 /*
 REVISION HISTORY
 -------- -------
 14 Nov 23 -- Started working on the first version of this pgm.
 */
+
+const lastModified = "14 Nov 2023"
 
 func main() {
 	execName, _ := os.Executable()
