@@ -138,9 +138,9 @@ func main() {
 	for _, f := range fileList {
 		filenames, er := unzipanddel.UnzipAndDel(f.FullPath)
 		if er == nil {
-			fmt.Printf(" \n\n%s successfully unzipped and deleted: \n\n%+v\n", f, filenames)
+			fmt.Printf(" \n%s successfully unzipped and deleted: %+v\n", f.FullPath, filenames)
 		} else {
-			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f, er)
+			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f.FullPath, er)
 		}
 	}
 	fmt.Println()
