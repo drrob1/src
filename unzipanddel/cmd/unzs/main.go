@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"src/unzipanddel"
+	"strings"
 )
 
 /*
@@ -24,10 +25,14 @@ func main() {
 		fmt.Printf(" Need name of zip file.  Exiting.")
 		os.Exit(1)
 	}
-	fn := os.Args[1] + ".zip"
+	fn := os.Args[1]
+	lowerFN := strings.ToLower(fn)
+	if !strings.HasSuffix(lowerFN, "zip") {
+		fn += ".zip"
+	}
 	err := unzipanddel.UnzipAndShow(fn)
 	if err == nil {
-		fmt.Printf(" Successfully unzipped %+v\n", fn)
+		fmt.Printf(" %s successfully unzipped\n", fn)
 	} else {
 		fmt.Printf(" Unsuccessfully unzipped %s with error of %s\n", fn, err)
 	}
