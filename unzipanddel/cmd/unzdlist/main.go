@@ -29,7 +29,8 @@ func main() {
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Printf(" unzip and delete list, last modified %s, binary is %s, timstamp of binary is %s\n", lastModified, execName, LastLinkedTimeStamp)
+	fmt.Printf(" unzip and delete list, last modified %s, binary is %s, timstamp of binary is %s, compiled with %s\n",
+		lastModified, execName, LastLinkedTimeStamp, runtime.Version())
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], lastModified, runtime.Version())
