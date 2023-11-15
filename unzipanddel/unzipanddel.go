@@ -13,9 +13,15 @@ REVISION HISTORY
 */
 
 const lastModified = "17 Nov 2023" // I doubt this will be finished quickly.
+var dest string
+
+func init() {
+	home, _ := os.UserHomeDir()
+	dest = home + "/Downloads"
+}
 
 func UnzipAndShow(src string) error {
-	filenames, err := zip.Unzip(src, "")
+	filenames, err := zip.Unzip(src, dest) // would not work on linux when tried ".", "./", or ""
 	if err != nil {
 		return err
 	}
@@ -24,7 +30,7 @@ func UnzipAndShow(src string) error {
 }
 
 func UnzipAndDel(src string) ([]string, error) {
-	filenames, err := zip.Unzip(src, "")
+	filenames, err := zip.Unzip(src, dest)
 	if err != nil {
 		return nil, err
 	}
