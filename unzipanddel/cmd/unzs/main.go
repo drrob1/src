@@ -19,7 +19,7 @@ func main() {
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	fmt.Printf(" unzip and delete, last modified %s, binary is %s, timstamp of binary is %s\n", lastModified, execName, LastLinkedTimeStamp)
+	fmt.Printf(" unzip and show, last modified %s, binary is %s, timstamp of binary is %s\n", lastModified, execName, LastLinkedTimeStamp)
 
 	if len(os.Args) < 2 {
 		fmt.Printf(" Need name of zip file.  Exiting.")
