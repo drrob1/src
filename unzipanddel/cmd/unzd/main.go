@@ -5,6 +5,7 @@ import (
 	"os"
 	"src/unzipanddel"
 	"strings"
+	"time"
 )
 
 /*
@@ -13,7 +14,7 @@ REVISION HISTORY
 14 Nov 23 -- Started working on the first version of this pgm.
 */
 
-const lastModified = "14 Nov 2023"
+const lastModified = "16 Nov 2023"
 
 func main() {
 	execName, _ := os.Executable()
@@ -31,9 +32,10 @@ func main() {
 	if !strings.HasSuffix(lowerFN, "zip") {
 		fn += ".zip"
 	}
+	start := time.Now()
 	filenames, err := unzipanddel.UnzipAndDel(fn)
 	if err == nil {
-		fmt.Printf(" %s successfully unzipped and deleted: %+v\n", fn, filenames)
+		fmt.Printf(" %s successfully unzipped and deleted, needing %s: %s\n", fn, time.Since(start).String(), strings.Join(filenames, ", "))
 	} else {
 		fmt.Printf(" Unsuccessfully unzipped or deleted %s with error of %s\n", fn, err)
 	}

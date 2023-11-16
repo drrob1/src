@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"src/list2"
@@ -19,7 +20,7 @@ REVISION HISTORY
 15 Nov 23 -- Will switch to using list2 instead of list.
 */
 
-const lastModified = "15 Nov 2023"
+const lastModified = "16 Nov 2023"
 
 var err error
 var rex *regexp.Regexp
@@ -157,7 +158,9 @@ func main() {
 		now := time.Now()
 		filenames, er := unzipanddel.UnzipAndDel(f.RelPath)
 		if er == nil {
-			fmt.Printf(" %s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(now).String(), filenames)
+			//fmt.Printf(" %s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(now).String(), strings.Join(filenames,", "))
+			fmt.Printf(" %s successfully unzipped and deleted, taking %s.  Unzipped: %s\n",
+				filepath.Base(f.RelPath), time.Since(now).String(), strings.Join(filenames, ", "))
 		} else {
 			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f.RelPath, er)
 		}
