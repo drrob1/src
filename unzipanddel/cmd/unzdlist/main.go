@@ -157,7 +157,7 @@ func main() {
 		now := time.Now()
 		filenames, er := unzipanddel.UnzipAndDel(f.RelPath)
 		if er == nil {
-			fmt.Printf(" \n%s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(now).String(), filenames)
+			fmt.Printf(" %s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(now).String(), filenames)
 		} else {
 			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f.RelPath, er)
 		}
