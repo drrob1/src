@@ -43,9 +43,10 @@ REVISION HISTORY
 18 Jan 23 -- Adding smartCase
 16 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 26 Oct 23 -- Added hard coded regexp's.  And increased the default value for numNames.
+15 Nov 23 -- Added another hard coded regexp.
 */
 
-const lastModified = "Oct 26, 2023"
+const lastModified = "Nov 15, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -71,7 +72,7 @@ func init() {
 }
 
 func main() {
-	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag bool
+	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag bool
 	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
 
 	workingDir, _ := os.Getwd()
@@ -93,8 +94,10 @@ func main() {
 	}
 	preDefinedRegexp := []string{
 		"femdom|tntu",
-		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas",
-		"\b+\b",
+		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
+		"^\b+\b",
+		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vibe|ethnick|",
+		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",
 	}
 
 	flag.Usage = func() {
@@ -117,6 +120,8 @@ func main() {
 	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
 	flag.BoolVar(&fuckFlag, "fuck", false, "Use predifined pattern #2.")
 	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^\\b+\\b.")
+	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern for vibrating.")
+	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
@@ -133,14 +138,20 @@ func main() {
 	}
 
 	if flag.NArg() < 1 && !preBoolOne && !preBoolTwo && !domFlag && !fuckFlag && !numericFlag { // if there are more than 1 arguments, the extra ones are ignored.
-		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> cannot be empty.  Exiting\n")
-		os.Exit(0)
+		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> may not be empty.\n")
 	}
 
+	// Process predefined regular expressions.
 	if preBoolOne || domFlag {
 		includeRexString = preDefinedRegexp[0]
 	} else if preBoolTwo || fuckFlag {
 		includeRexString = preDefinedRegexp[1]
+	} else if numericFlag {
+		includeRexString = preDefinedRegexp[2]
+	} else if vibeFlag {
+		includeRexString = preDefinedRegexp[3]
+	} else if spandexFlag {
+		includeRexString = preDefinedRegexp[4]
 	} else {
 		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	}
