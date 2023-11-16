@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -159,13 +161,13 @@ func main() {
 		filenames, er := unzipanddel.UnzipAndDel(f.RelPath)
 		if er == nil {
 			//fmt.Printf(" %s successfully unzipped and deleted, taking %s.  Unzipped: %+v\n", f.RelPath, time.Since(now).String(), strings.Join(filenames,", "))
-			fmt.Printf(" %s successfully unzipped and deleted, taking %s.  Unzipped: %s\n",
+			ctfmt.Printf(ct.Green, false, " %s successfully unzipped and deleted, taking %s.  Unzipped: %s\n",
 				filepath.Base(f.RelPath), time.Since(now).String(), strings.Join(filenames, ", "))
 		} else {
-			fmt.Printf(" \nUnsuccessfully unzipped or deleted %s with error of %s\n", f.RelPath, er)
+			ctfmt.Printf(ct.Red, true, " Unsuccessfully unzipped or deleted %s, size = %d, with error of %s\n", filepath.Base(f.RelPath), f.FI.Size(), er)
 		}
 	}
 	fmt.Println()
 	elapsed := time.Since(start)
-	fmt.Printf(" Unzip and del took %s to complete processing %d zipfiles.\n", elapsed.String(), len(fileList))
+	ctfmt.Printf(ct.Yellow, false, " Unzip and del took %s to complete processing %d zipfiles.\n", elapsed.String(), len(fileList))
 }
