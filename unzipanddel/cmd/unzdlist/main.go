@@ -180,6 +180,7 @@ func main() {
 		os.Exit(0)
 	}
 
+	fmt.Printf("\n\n\n")
 	// 7z processing, if needed.
 	var execCmd *exec.Cmd
 
