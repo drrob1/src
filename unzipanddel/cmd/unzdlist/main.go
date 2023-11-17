@@ -185,11 +185,11 @@ func main() {
 
 	fmt.Printf(" Need to pass %d files to 7z.\n", len(for7z))
 
-	execCmd.Stdin = os.Stdin
-	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
 	for _, z := range for7z {
 		execCmd = exec.Command("7z", "x", z)
+		execCmd.Stdin = os.Stdin // this assignment panics w/ a nil ptr dereference if this line is above this loop.
+		execCmd.Stdout = os.Stdout
+		execCmd.Stderr = os.Stderr
 		err = execCmd.Run()
 		if err == nil {
 			ctfmt.Printf(ct.Green, false, " 7z x %s successful.\n", z)
