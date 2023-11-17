@@ -190,9 +190,10 @@ func main() {
 		execCmd.Stdin = os.Stdin // this assignment panics w/ a nil ptr dereference if this line is above this loop.
 		execCmd.Stdout = os.Stdout
 		execCmd.Stderr = os.Stderr
+		start = time.Now()
 		err = execCmd.Run()
 		if err == nil {
-			ctfmt.Printf(ct.Green, false, " 7z x %s successful.\n", z)
+			ctfmt.Printf(ct.Green, false, " 7z x %s successful after %s.\n", z, time.Since(start).String())
 		} else {
 			ctfmt.Printf(ct.Red, true, " 7z x %s NOT successful.  Error: %s\n", z, err)
 		}
