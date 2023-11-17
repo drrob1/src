@@ -6,6 +6,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -20,6 +21,7 @@ REVISION HISTORY
 -------- -------
 14 Nov 23 -- Started working on the first version of this pgm.
 15 Nov 23 -- Will switch to using list2 instead of list.
+16 Nov 23 -- Turns out that this unzipping routine cannot handle files > 2 GB.  For those, I have to use 7z.
 */
 
 const lastModified = "16 Nov 2023"
@@ -27,6 +29,9 @@ const lastModified = "16 Nov 2023"
 var err error
 var rex *regexp.Regexp
 var rexStr, inputStr string
+
+// var for7z []list2.FileInfoExType
+var for7z []string
 
 func main() {
 	execName, _ := os.Executable()
@@ -165,9 +170,31 @@ func main() {
 				filepath.Base(f.RelPath), time.Since(now).String(), strings.Join(filenames, ", "))
 		} else {
 			ctfmt.Printf(ct.Red, true, " Unsuccessfully unzipped or deleted %s, size = %d, with error of %s\n", filepath.Base(f.RelPath), f.FI.Size(), er)
+			for7z = append(for7z, f.RelPath)
 		}
 	}
 	fmt.Println()
 	elapsed := time.Since(start)
 	ctfmt.Printf(ct.Yellow, false, " Unzip and del took %s to complete processing %d zipfiles.\n", elapsed.String(), len(fileList))
+	if len(for7z) == 0 {
+		os.Exit(0)
+	}
+
+	// 7z processing, if needed.
+	var execCmd *exec.Cmd
+
+	fmt.Printf(" Need to pass %d files to 7z.\n", len(for7z))
+
+	execCmd.Stdin = os.Stdin
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	for _, z := range for7z {
+		execCmd = exec.Command("7z", "x", z)
+		err = execCmd.Run()
+		if err == nil {
+			ctfmt.Printf(ct.Green, false, " 7z x %s successful.\n", z)
+		} else {
+			ctfmt.Printf(ct.Red, true, " 7z x %s NOT successful.  Error: %s\n", z, err)
+		}
+	}
 }
