@@ -96,7 +96,7 @@ func main() {
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
 		"^\b+\b",
-		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|",
+		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair",
 		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",
 	}
 
