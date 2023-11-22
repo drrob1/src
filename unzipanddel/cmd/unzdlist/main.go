@@ -22,9 +22,10 @@ REVISION HISTORY
 14 Nov 23 -- Started working on the first version of this pgm.
 15 Nov 23 -- Will switch to using list2 instead of list.
 16 Nov 23 -- Turns out that this unzipping routine cannot handle files > 2 GB.  For those, I have to use 7z.
+22 Nov 23 -- Tweaking the output.
 */
 
-const lastModified = "16 Nov 2023"
+const lastModified = "22 Nov 2023"
 
 var err error
 var rex *regexp.Regexp
@@ -153,8 +154,9 @@ func main() {
 		fmt.Printf(" The selected list of files is empty.  Exiting.\n")
 		os.Exit(1)
 	}
+	fmt.Printf(" \nLength of filelist after the selection is %d.\n", len(fileList))
 	if verboseFlag {
-		fmt.Printf(" \nLength of filelist after the selection is %d.  The filelist is %+v\n", len(fileList), fileList)
+		fmt.Printf(" The filelist is %+v\n", fileList)
 	}
 	start := time.Now()
 	for _, f := range fileList {
