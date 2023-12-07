@@ -44,9 +44,10 @@ REVISION HISTORY
 16 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 26 Oct 23 -- Added hard coded regexp's.  And increased the default value for numNames.
 15 Nov 23 -- Added another hard coded regexp.
+ 6 Dec 23 -- Fixed the numeric pattern, and added alternate num option.
 */
 
-const lastModified = "Nov 15, 2023"
+const lastModified = "Dec 6, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -95,7 +96,8 @@ func main() {
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
-		"^\b+\b",
+		//"^\b+\b",  This doesn't work
+		"[0-9]+[0-9]",
 		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair",
 		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",
 	}
@@ -119,7 +121,8 @@ func main() {
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
 	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
 	flag.BoolVar(&fuckFlag, "fuck", false, "Use predifined pattern #2.")
-	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^\\b+\\b.")
+	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^[0-9]+[0-9]")
+	numFlag := flag.Bool("num", false, "Alternate for numeric.")
 	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern for vibrating.")
 	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern")
 	flag.Parse()
@@ -146,7 +149,7 @@ func main() {
 		includeRexString = preDefinedRegexp[0]
 	} else if preBoolTwo || fuckFlag {
 		includeRexString = preDefinedRegexp[1]
-	} else if numericFlag {
+	} else if numericFlag || *numFlag {
 		includeRexString = preDefinedRegexp[2]
 	} else if vibeFlag {
 		includeRexString = preDefinedRegexp[3]
