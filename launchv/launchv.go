@@ -47,7 +47,7 @@ REVISION HISTORY
  6 Dec 23 -- Fixed the numeric pattern, and added alternate num option.
 */
 
-const lastModified = "Dec 6, 2023"
+const lastModified = "Dec 7, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -171,7 +171,7 @@ func main() {
 		fmt.Printf(" Error from compiling the regexp input string is %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" using regular expression of: %s, %s\n", includeRexString, includeRegex.String())
+	fmt.Printf(" using regular expression of: %s\n", includeRegex.String())
 	if excludeRexString != "" {
 		excludeRegex, err = regexp.Compile(strings.ToLower(excludeRexString))
 		if err != nil {
