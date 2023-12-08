@@ -55,8 +55,6 @@ var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
-//var preDefinedRegexp []string
-
 func init() {
 	goVersion := runtime.Version()
 	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
