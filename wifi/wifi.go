@@ -47,6 +47,11 @@ func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func
 	//}()
 }
 func Clock(arg ...string) chan string {
+
+	// The article explains why this code uses time.Unix.  Go does not provide elegant formatting as a string for duration type, as returned from the time.Since() function.
+	// Go does provide elegant formatting for absolute time values using the Format() function.  To get formatting for the duration type, the code converts a value of type duration
+	// to absolute time by adding it to the beginning of time at zero Unix seconds.
+
 	ch := make(chan string)
 	start := time.Now()
 
@@ -59,6 +64,22 @@ func Clock(arg ...string) chan string {
 	}()
 
 	return ch
+}
+
+func Clock2() chan string {
+	// I want to play w/ just using the string interface of a duration and see what happens.  And I'll make it a buffered channel.
+
+	chn := make(chan string, 1)
+	start := time.Now()
+
+	go func() {
+		for {
+			chn <- time.Since(start).String()
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	return chn
 }
 
 func Ping(addr ...string) chan string {
