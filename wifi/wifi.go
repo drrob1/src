@@ -68,14 +68,22 @@ func Clock(arg ...string) chan string {
 
 func Clock2() chan string {
 	// I want to play w/ just using the string interface of a duration and see what happens.  And I'll make it a buffered channel.
+	// Now it's working to my satisfaction.
 
 	chn := make(chan string, 1)
 	start := time.Now()
 
 	go func() {
 		for {
-			chn <- time.Since(start).String()
-			time.Sleep(1 * time.Second)
+			dur := time.Since(start)
+			hrs := int(dur.Hours())
+			minutes := int(dur.Minutes()) % 60
+			totalSec := int(dur.Seconds())
+			sec := totalSec % 60
+			chn <- fmt.Sprintf("%d : %d : %d", hrs, minutes, sec)
+			time.Sleep(996 * time.Millisecond)
+			//                          t := fmt.Sprintf("%.0f hrs %.0f min %2.2f sec", dur.Hours(), dur.Minutes(), dur.Seconds())  this doesn't work
+			//                          chn <- time.Since(start).String()  I didn't like the way this looked.  Too many insignificant digits.
 		}
 	}()
 

@@ -14,11 +14,12 @@ func main() {
 
 	go func() {
 		for {
-			val := <-ch // this is no longer blocking
-			app.QueueUpdateDraw(func() {
+			val := <-ch     // this is no longer blocking
+			clk := func() { // now I'm playing w/ the syntax I find more clear than what I usually see.  The conventional syntax is in clock/main.go
 				tv.Clear()
 				fmt.Fprintf(tv, "%s ", val)
-			})
+			}
+			app.QueueUpdateDraw(clk)
 		}
 	}()
 
