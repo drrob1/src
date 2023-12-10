@@ -7,6 +7,8 @@ package wifi
 
   Each of these functions runs forever by starting a new goroutine that returns its results on the returned string channel.  So NewPlugin just needs to start the function passed to it once,
   and then it starts a separate goroutine to receive the channel strings and update the assigned table row forever.
+
+  The original code uses blocking channels; I changed that to use buffered channels.
 */
 
 import (
@@ -34,10 +36,10 @@ func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func
 	// call the new function, which runs forever.
 	ch := fu(arg...)
 
-	// call the new function in a separate go routine.
+	// create a separate go routine to receive the string in its channel, and update the correct row.
 	go func() {
 		for {
-			val := <-ch // this is blocking.
+			val := <-ch // this used to be blocking.
 			setCellFunc := func() {
 				table.SetCell(row, 1, tview.NewTableCell(val))
 			}
@@ -61,7 +63,7 @@ func Clock(arg ...string) chan string {
 	// Go does provide elegant formatting for absolute time values using the Format() function.  To get formatting for the duration type, the code converts a value of type duration
 	// to absolute time by adding it to the beginning of time at zero Unix seconds.
 
-	ch := make(chan string)
+	ch := make(chan string, 1)
 	start := time.Now()
 
 	go func() {
@@ -100,7 +102,7 @@ func Clock2() chan string {
 }
 
 func Ping(addr ...string) chan string {
-	ch := make(chan string)
+	ch := make(chan string, 1)
 	firstTime := true
 
 	go func() {
@@ -137,7 +139,7 @@ func Ping(addr ...string) chan string {
 }
 
 func Nifs(arg ...string) chan string {
-	ch := make(chan string)
+	ch := make(chan string, 1)
 
 	go func() {
 		for {
@@ -187,7 +189,7 @@ func Ifconfig() ([]string, error) {
 }
 
 func HttpGet(arg ...string) chan string {
-	ch := make(chan string)
+	ch := make(chan string, 1)
 
 	firstTime := true
 	go func() {
