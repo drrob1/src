@@ -9,6 +9,15 @@ package wifi
   and then it starts a separate goroutine to receive the channel strings and update the assigned table row forever.
 
   The original code uses blocking channels; I changed that to use buffered channels.
+
+  If the Ifconfig rtn returns an IP in the range of 192.168.0.x, then the connection to the router is working.  If only the loopback interface appears, something is wrong w/ the
+  assignment of IP addresses, so check the dhcp settings.
+
+  The httpGet rtn provides an end-to-end test by loading the YouTube title page off of the web.  If this works, everything should be fine.  Because it also measures the time it takes
+  to retrieve the page, you can estimate the speed of the ISP connection.  The article shows a time of 0.142 sec here, which it says is perfect.
+  If the display in the table column gets stuck at Fetching ..., then something is wrong w/ the connection.  The other tests should give you some clues to the cause.
+
+  If the hostname resolution fails due to incorrect DNS configuration, the error message is sent into the channel for display.
 */
 
 import (
@@ -31,19 +40,19 @@ func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func
 
 	// associate the function w/ the next avail row by appending a new row to the table w/ each call.
 	row := table.GetRowCount()
-	table.SetCell(row, 0, tview.NewTableCell(field))
+	table.SetCell(row, 0, tview.NewTableCell(field)) // append a row to the table.
 
 	// call the new function, which runs forever.
 	ch := fu(arg...)
 
-	// create a separate go routine to receive the string in its channel, and update the correct row.
+	// create a separate go routine (which runs forever) to receive the string in its channel, and update the correct row.
 	go func() {
 		for {
 			val := <-ch // this used to be blocking.
 			setCellFunc := func() {
-				table.SetCell(row, 1, tview.NewTableCell(val))
+				table.SetCell(row, 1, tview.NewTableCell(val)) // update contents of row
 			}
-			app.QueueUpdateDraw(setCellFunc)
+			app.QueueUpdateDraw(setCellFunc) // redraw the table whenever the pgm gets around to it durng the next refresh.  Hence the Queue in the function name.
 		}
 	}()
 	//go func() {  This is the way it's coded in the article.  Don't need select statement when there's only 1 channel to select.  I made that mistake also.  Flagged by staticCheck.
@@ -101,14 +110,14 @@ func Clock2() chan string {
 	return chn
 }
 
-func Ping(addr ...string) chan string {
+func Ping(addr ...string) chan string { // expects either a hostname or an IP address as its argument.  The returned channel is used to continuously return ping results to the caller.
 	ch := make(chan string, 1)
 	firstTime := true
 
 	go func() {
 		for {
-			pinger, err := probing.NewPinger(addr[0])
-			pinger.Timeout, _ = time.ParseDuration("10s")
+			pinger, err := probing.NewPinger(addr[0])     // send ICMP packets to the addr.
+			pinger.Timeout, _ = time.ParseDuration("10s") // sets a timeout of 10 sec.
 
 			if err != nil {
 				ch <- err.Error()
@@ -121,7 +130,7 @@ func Ping(addr ...string) chan string {
 				firstTime = false
 			}
 
-			pinger.Count = 3
+			pinger.Count = 3 // send 3 pings for each run.
 			err = pinger.Run()
 
 			if err != nil {
@@ -131,7 +140,7 @@ func Ping(addr ...string) chan string {
 			}
 
 			stats := pinger.Statistics()
-			ch <- fmt.Sprintf("%v ", stats.Rtts)
+			ch <- fmt.Sprintf("%v ", stats.Rtts) // stats.Rtts is a slice of floats containing the response times, in seconds.
 			time.Sleep(10 * time.Second)
 		}
 	}()
@@ -161,13 +170,13 @@ func Nifs(arg ...string) chan string {
 
 func Ifconfig() ([]string, error) {
 	var list []string
-	ifaces, err := net.Interfaces()
+	ifaces, err := net.Interfaces() // std lib function that returns all of the computer's network interfaces.
 	if err != nil {
 		return list, err
 	}
 
 	for _, iface := range ifaces {
-		addrs, err := iface.Addrs()
+		addrs, err := iface.Addrs() // this fetches the IP addresses for the computer's network interfaces.  It will have an address only if the network op succeeded.
 		if err != nil {
 			return list, err
 		}
@@ -176,15 +185,15 @@ func Ifconfig() ([]string, error) {
 			continue
 		}
 
-		for _, addr := range addrs {
+		for _, addr := range addrs { // check the IP addresses fetched from iface.Addrs().
 			ip := strings.Split(addr.String(), "/")[0]
-			if net.ParseIP(ip).To4() != nil {
-				list = append(list, iface.Name+" "+ip)
+			if net.ParseIP(ip).To4() != nil { // filter out IPv6 addresses, as almost no one in the US has one.
+				list = append(list, iface.Name+" "+ip) // append interface name and IP address without the subnet suffix.
 			}
 		}
 	}
 
-	sort.Strings(list)
+	sort.Strings(list) // sort by interface name before returning them.
 	return list, nil
 }
 
@@ -200,14 +209,14 @@ func HttpGet(arg ...string) chan string {
 			}
 
 			now := time.Now()
-			_, err := http.Get(arg[0])
+			_, err := http.Get(arg[0]) // function blocks until data arrives or server returns an error.
 			if err != nil {
 				ch <- err.Error()
 				time.Sleep(10 * time.Second)
 				continue
 			}
 
-			dur := time.Since(now)
+			dur := time.Since(now) // measure how long the Get call took.
 			ch <- fmt.Sprintf("%.3f OK ", dur.Seconds())
 			time.Sleep(10 * time.Second)
 		}
