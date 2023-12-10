@@ -7,8 +7,8 @@ import (
 
 func main() {
 	app := tview.NewApplication()
-	table := tview.NewTable().SetBorders(true)
-	table.SetBorder(true).SetTitle("Wifi Monitor v1.0")
+	table := tview.NewTable().SetBorders(true)          // this means draw row and col lines
+	table.SetBorder(true).SetTitle("Wifi Monitor v1.0") // refers to the container holding the table, and this means draw a border around the application, w/ a title at the top.
 
 	wifi.NewPlugin(app, table, "Time", wifi.Clock)
 	wifi.NewPlugin(app, table, "Ping", wifi.Ping, "www.google.com")

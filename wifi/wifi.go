@@ -4,6 +4,9 @@ package wifi
   From Go Network Diagnostics, Linux Magazine 275, Oct 2023, pp 58ff
 
   It is using unbuffered channels, so all channel read operations are blocking.  I took out the select statement in the code; this was also flagged by staticCheck.
+
+  Each of these functions runs forever by starting a new goroutine that returns its results on the returned string channel.  So NewPlugin just needs to start the function passed to it once,
+  and then it starts a separate goroutine to receive the channel strings and update the assigned table row forever.
 */
 
 import (
@@ -18,21 +21,27 @@ import (
 )
 
 func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func(...string) chan string, arg ...string) {
+	// this is to integrate the functions w/ the table rows.  Input is a pointer to the application, pointer to the table, field name, a function that returns one or more strings, and an
+	// optional last param is a string that is also used in the field name cell in col 1 for that row.
 	if len(arg) > 0 {
 		field += " " + strings.Join(arg, " ")
 	}
 
+	// associate the function w/ the next avail row by appending a new row to the table w/ each call.
 	row := table.GetRowCount()
 	table.SetCell(row, 0, tview.NewTableCell(field))
 
+	// call the new function, which runs forever.
 	ch := fu(arg...)
 
+	// call the new function in a separate go routine.
 	go func() {
 		for {
 			val := <-ch // this is blocking.
-			app.QueueUpdateDraw(func() {
+			setCellFunc := func() {
 				table.SetCell(row, 1, tview.NewTableCell(val))
-			})
+			}
+			app.QueueUpdateDraw(setCellFunc)
 		}
 	}()
 	//go func() {  This is the way it's coded in the article.  Don't need select statement when there's only 1 channel to select.  I made that mistake also.  Flagged by staticCheck.
@@ -80,7 +89,7 @@ func Clock2() chan string {
 			minutes := int(dur.Minutes()) % 60
 			totalSec := int(dur.Seconds())
 			sec := totalSec % 60
-			chn <- fmt.Sprintf("%d : %d : %d", hrs, minutes, sec)
+			chn <- fmt.Sprintf("%d:%d:%d", hrs, minutes, sec)
 			time.Sleep(996 * time.Millisecond)
 			//                          t := fmt.Sprintf("%.0f hrs %.0f min %2.2f sec", dur.Hours(), dur.Minutes(), dur.Seconds())  this doesn't work
 			//                          chn <- time.Since(start).String()  I didn't like the way this looked.  Too many insignificant digits.
