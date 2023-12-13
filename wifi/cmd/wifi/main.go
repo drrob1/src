@@ -19,6 +19,7 @@ func main() {
 	wifi.NewPlugin(app, table, "Ping", wifi.Ping, "8.8.8.8")
 	wifi.NewPlugin(app, table, "Ifconfig", wifi.Nifs)
 	wifi.NewPlugin(app, table, "HTTP", wifi.HttpGet, "https://youtu.be")
+	wifi.NewPlugin(app, table, "Average", wifi.AveFetchTime)
 
 	err := app.SetRoot(table, true).SetFocus(table).Run()
 	if err != nil {

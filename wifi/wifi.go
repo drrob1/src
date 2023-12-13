@@ -1,5 +1,16 @@
 package wifi
 
+import (
+	"fmt"
+	"github.com/prometheus-community/pro-bing"
+	"github.com/rivo/tview"
+	"net"
+	"net/http"
+	"sort"
+	"strings"
+	"time"
+)
+
 /*
   From Go Network Diagnostics, Linux Magazine 275, Oct 2023, pp 58ff
 
@@ -24,18 +35,22 @@ package wifi
   Nifs returns its string value on the string channel.
 
   tview is based on tcell.  So maybe I'll try a routine I wrote for tcell here.
+
+  REVISION HISTORY
+  ======== =======
+  13 Dec 23 -- Starting to add the averaging code for the time it takes to retrieve the youtube header.  And I'm going to discard the first one, as that's always much too long.
+               While the time is typically ~150 ms, the first one is 500-600 ms.
 */
 
-import (
-	"fmt"
-	"github.com/prometheus-community/pro-bing"
-	"github.com/rivo/tview"
-	"net"
-	"net/http"
-	"sort"
-	"strings"
-	"time"
-)
+const lastModified = "14 Dec 2023"
+const timeToSleep = 10 * time.Second
+const debugFile = "debug.out"
+
+var sliceOfSeconds []float64
+
+func init() {
+	sliceOfSeconds = make([]float64, 0, 100)
+}
 
 func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func(...string) chan string, arg ...string) {
 	// this is to integrate the functions w/ the table rows.  Input is a pointer to the application, pointer to the table, field name to display in the first col,
@@ -148,7 +163,7 @@ func Ping(addr ...string) chan string { // expects either a hostname or an IP ad
 
 			stats := pinger.Statistics()
 			ch <- fmt.Sprintf("%v ", stats.Rtts) // stats.Rtts is a slice of floats containing the response times, in seconds.
-			time.Sleep(10 * time.Second)
+			time.Sleep(timeToSleep)
 		}
 	}()
 	return ch
@@ -168,7 +183,7 @@ func Nifs(arg ...string) chan string {
 			}
 
 			ch <- strings.Join(eths, ", ")
-			time.Sleep(10 * time.Second)
+			time.Sleep(timeToSleep)
 		}
 	}()
 
@@ -224,9 +239,58 @@ func HttpGet(arg ...string) chan string {
 			}
 
 			dur := time.Since(now) // measure how long the Get call took.
+			sliceOfSeconds = append(sliceOfSeconds, dur.Seconds())
 			ch <- fmt.Sprintf("%.3f OK ", dur.Seconds())
-			time.Sleep(10 * time.Second)
+			time.Sleep(timeToSleep)
 		}
+	}()
+
+	return ch
+}
+
+func AveFetchTime(arg ...string) chan string {
+
+	//OutputFile, err := os.OpenFile(debugFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	//if err != nil {
+	//	fmt.Printf(" Cannot open %s becuase ERROR is: %s\n", debugFile, err)
+	//}
+	//OutputFile.WriteString("--------------------------------------------------------------------------------------\n")
+	//OutputFile.Close()
+
+	ch := make(chan string, 1)
+
+	firstTime := true
+
+	go func() {
+		for {
+			if firstTime {
+				ch <- "Fetching ..."
+				firstTime = false
+				time.Sleep(timeToSleep)
+				continue
+			}
+			sliceCopy := make([]float64, len(sliceOfSeconds))
+			copy(sliceCopy, sliceOfSeconds) // when I didn't copy the slice, this routine was clobbering the slice when I removed the first element.  So now I copy the slice and trim the copy.  Now it works.
+
+			if len(sliceOfSeconds) > 2 {
+				sliceCopy = sliceCopy[1:]
+			}
+			//OutputFile, _ := os.OpenFile(debugFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+			//s := fmt.Sprintf("AveFetchTime:  len of slice=%d, 1st slice=%v, len 2nd=%d, 2nd slice: %v\n", len(sliceOfSeconds), sliceOfSeconds, len(sliceCopy), sliceCopy)
+			//OutputFile.WriteString(s)
+			var sumT float64 // When I defined this above the goroutine, it wasn't being initialized each time, so the totals were wrong.
+			for _, r := range sliceCopy {
+				sumT += r
+			}
+			ave := sumT / float64(len(sliceOfSeconds))
+			//s = fmt.Sprintf("AveFetchTime: sumT = %.3f, len(sliceOfSeconds)=%d, ave=%.3f\n", sumT, len(sliceOfSeconds), ave)
+			//OutputFile.WriteString(s)
+			//OutputFile.Close()
+
+			ch <- fmt.Sprintf("%.3f ave", ave)
+			time.Sleep(timeToSleep)
+		}
+
 	}()
 
 	return ch
