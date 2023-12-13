@@ -18,6 +18,12 @@ package wifi
   If the display in the table column gets stuck at Fetching ..., then something is wrong w/ the connection.  The other tests should give you some clues to the cause.
 
   If the hostname resolution fails due to incorrect DNS configuration, the error message is sent into the channel for display.
+
+  Now I have to understand how these routines return their values to be displayed.
+  All except Ifconfig returns its string value in a string channel.  But Ifconfig is called by Nifs.  Ifconfig is not initialized by NewPlugin.
+  Nifs returns its string value on the string channel.
+
+  tview is based on tcell.  So maybe I'll try a routine I wrote for tcell here.
 */
 
 import (
@@ -32,8 +38,10 @@ import (
 )
 
 func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func(...string) chan string, arg ...string) {
-	// this is to integrate the functions w/ the table rows.  Input is a pointer to the application, pointer to the table, field name, a function that returns one or more strings, and an
-	// optional last param is a string that is also used in the field name cell in col 1 for that row.
+	// this is to integrate the functions w/ the table rows.  Input is a pointer to the application, pointer to the table, field name to display in the first col,
+	// a function that takes input of one or more strings and returns a string channel, and finally an
+	// optional last param is a string that is also used in the field name cell in col 0 for that row.  IE, the first col.
+	// Since app and table are both pointers, they are output params as well as input params.
 	if len(arg) > 0 {
 		field += " " + strings.Join(arg, " ")
 	}
@@ -43,14 +51,14 @@ func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func
 	table.SetCell(row, 0, tview.NewTableCell(field)) // append a row to the table.
 
 	// call the new function, which runs forever.
-	ch := fu(arg...)
+	ch := fu(arg...) // arg is input to this routine as the last input param
 
 	// create a separate go routine (which runs forever) to receive the string in its channel, and update the correct row.
 	go func() {
 		for {
-			val := <-ch // this used to be blocking.
+			val := <-ch // this does not need to be in a select statement
 			setCellFunc := func() {
-				table.SetCell(row, 1, tview.NewTableCell(val)) // update contents of row
+				table.SetCell(row, 1, tview.NewTableCell(val)) // update contents of row and 2nd col, ie, col 1.
 			}
 			app.QueueUpdateDraw(setCellFunc) // redraw the table whenever the pgm gets around to it durng the next refresh.  Hence the Queue in the function name.
 		}
@@ -66,7 +74,8 @@ func NewPlugin(app *tview.Application, table *tview.Table, field string, fu func
 	//	}
 	//}()
 }
-func Clock(arg ...string) chan string {
+
+func Clock(arg ...string) chan string { // signature has to match the others.
 
 	// The article explains why this code uses time.Unix.  Go does not provide elegant formatting as a string for duration type, as returned from the time.Since() function.
 	// Go does provide elegant formatting for absolute time values using the Format() function.  To get formatting for the duration type, the code converts a value of type duration
@@ -102,8 +111,6 @@ func Clock2() chan string {
 			sec := totalSec % 60
 			chn <- fmt.Sprintf("%d:%d:%d", hrs, minutes, sec)
 			time.Sleep(996 * time.Millisecond)
-			//                          t := fmt.Sprintf("%.0f hrs %.0f min %2.2f sec", dur.Hours(), dur.Minutes(), dur.Seconds())  this doesn't work
-			//                          chn <- time.Since(start).String()  I didn't like the way this looked.  Too many insignificant digits.
 		}
 	}()
 

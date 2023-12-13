@@ -1,12 +1,16 @@
 package main
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"src/wifi"
 )
 
+var app *tview.Application
+
 func main() {
-	app := tview.NewApplication()
+	app = tview.NewApplication()
+	app.SetInputCapture(inputCap)
 	table := tview.NewTable().SetBorders(true)          // this means draw row and col lines
 	table.SetBorder(true).SetTitle("Wifi Monitor v1.0") // refers to the container holding the table, and this means draw a border around the application, w/ a title at the top.
 
@@ -21,3 +25,22 @@ func main() {
 		panic(err)
 	}
 }
+
+// --------------------------------------------------- inputCap for tcell--------------------------------------
+
+func inputCap(event *tcell.EventKey) *tcell.EventKey { // to be used for SetInputCapture
+	//func (a *Application) SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) *Application
+
+	pollevent := func() {
+		for {
+			if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyEsc || event.Key() == tcell.KeyEnter {
+				app.Stop()
+			}
+		}
+	}
+
+	go pollevent()
+
+	return nil
+
+} // inputCap for tcell
