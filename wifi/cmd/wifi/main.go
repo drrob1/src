@@ -10,7 +10,7 @@ var app *tview.Application
 
 func main() {
 	app = tview.NewApplication()
-	app.SetInputCapture(inputCap)
+	app.SetInputCapture(inputCapt)
 	table := tview.NewTable().SetBorders(true)          // this means draw row and col lines
 	table.SetBorder(true).SetTitle("Wifi Monitor v1.0") // refers to the container holding the table, and this means draw a border around the application, w/ a title at the top.
 
@@ -30,10 +30,10 @@ func main() {
 
 // --------------------------------------------------- inputCap for tcell--------------------------------------
 
-func inputCap(event *tcell.EventKey) *tcell.EventKey { // to be used for SetInputCapture
+func inputCapt(event *tcell.EventKey) *tcell.EventKey { // to be used for SetInputCapture
 	//func (a *Application) SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) *Application
 
-	pollevent := func() {
+	pollEvent := func() {
 		for {
 			if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyEsc || event.Key() == tcell.KeyEnter {
 				app.Stop()
@@ -41,7 +41,7 @@ func inputCap(event *tcell.EventKey) *tcell.EventKey { // to be used for SetInpu
 		}
 	}
 
-	go pollevent()
+	go pollEvent()
 
 	return nil
 

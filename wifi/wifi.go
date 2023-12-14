@@ -35,10 +35,11 @@ import (
   Nifs returns its string value on the string channel.
 
   tview is based on tcell.  So maybe I'll try a routine I wrote for tcell here.
+  I was able to get a key processing routine working here.  The original code from Linux Magazine needed ctrl-c to stop; it now will stop w/ <escape> or <return>.
 
   REVISION HISTORY
   ======== =======
-  12 Dec 23 -- Starting to add the averaging code for the time it takes to retrieve the youtube header.  And I'm going to discard the first one, as that's always much too long.
+  12 Dec 23 -- Starting to add the averaging code for the time it takes to retrieve the YouTube header.  And I'm going to discard the first one, as that's always much too long.
                While the time is typically ~150 ms, the first one is 500-600 ms.
 */
 
