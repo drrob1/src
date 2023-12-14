@@ -17,6 +17,7 @@ func main() {
 	wifi.NewPlugin(app, table, "Time", wifi.Clock)
 	wifi.NewPlugin(app, table, "Ping", wifi.Ping, "www.google.com")
 	wifi.NewPlugin(app, table, "Ping", wifi.Ping, "8.8.8.8")
+	wifi.NewPlugin(app, table, "Ping", wifi.Ping, "1.1.1.1")
 	wifi.NewPlugin(app, table, "Ifconfig", wifi.Nifs)
 	wifi.NewPlugin(app, table, "HTTP", wifi.HttpGet, "https://youtu.be")
 	wifi.NewPlugin(app, table, "Average", wifi.AveFetchTime)
