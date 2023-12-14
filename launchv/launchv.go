@@ -45,9 +45,10 @@ REVISION HISTORY
 26 Oct 23 -- Added hard coded regexp's.  And increased the default value for numNames.
 15 Nov 23 -- Added another hard coded regexp.
  6 Dec 23 -- Fixed the numeric pattern, and added alternate num option.
+13 Dec 23 -- Really fixed the numeric pattern.
 */
 
-const lastModified = "Dec 7, 2023"
+const lastModified = "Dec 13, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -95,7 +96,7 @@ func main() {
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
 		//"^\b+\b",  This doesn't work
-		"[0-9]+[0-9]",
+		"^[0-9]+[0-9]",
 		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair",
 		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",
 	}

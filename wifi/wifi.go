@@ -38,11 +38,11 @@ import (
 
   REVISION HISTORY
   ======== =======
-  13 Dec 23 -- Starting to add the averaging code for the time it takes to retrieve the youtube header.  And I'm going to discard the first one, as that's always much too long.
+  12 Dec 23 -- Starting to add the averaging code for the time it takes to retrieve the youtube header.  And I'm going to discard the first one, as that's always much too long.
                While the time is typically ~150 ms, the first one is 500-600 ms.
 */
 
-const lastModified = "14 Dec 2023"
+const lastModified = "13 Dec 2023"
 const timeToSleep = 10 * time.Second
 const debugFile = "debug.out"
 
