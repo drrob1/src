@@ -47,6 +47,7 @@ REVISION HISTORY
  6 Dec 23 -- Fixed the numeric pattern, and added alternate num option.
 13 Dec 23 -- Really fixed the numeric pattern.
 14 Dec 23 -- Going to try setting the StdErr to /dev/null and see what happens.  I don't want to see all the errors that show up on linux.
+               No, that didn't work.  But I can not assign it to anything, and that works.
 */
 
 const lastModified = "Dec 14, 2023"
@@ -272,7 +273,7 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
-	//execCmd.Stderr = os.Stderr  I don't have to assign this.  Let's see what happens if I leave it at nil.
+	//execCmd.Stderr = os.Stderr  I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
