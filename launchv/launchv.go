@@ -46,9 +46,10 @@ REVISION HISTORY
 15 Nov 23 -- Added another hard coded regexp.
  6 Dec 23 -- Fixed the numeric pattern, and added alternate num option.
 13 Dec 23 -- Really fixed the numeric pattern.
+14 Dec 23 -- Going to try setting the StdErr to /dev/null and see what happens.  I don't want to see all the errors that show up on linux.
 */
 
-const lastModified = "Dec 13, 2023"
+const lastModified = "Dec 14, 2023"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -271,7 +272,7 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
+	//execCmd.Stderr = os.Stderr  I don't have to assign this.  Let's see what happens if I leave it at nil.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
