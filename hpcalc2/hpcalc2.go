@@ -1580,7 +1580,7 @@ func isProbablyPrime(p int, numTests int) (int, bool) {
 		expMod := fastExpMod(n, p-1, p)
 		//fmt.Printf(" n=%d, p=%d, ExpMod = %d\n", n, p, expMod)
 		if expMod != 1 {
-			return i, false
+			return i + 1, false // so if the first test fails, it returns 1 instead of zero.
 		}
 	}
 	return numTests, true
