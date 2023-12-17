@@ -142,9 +142,10 @@ REVISION HISTORY
 23 Oct 23 -- Added the probably prime routines I learned about in the live project by Rod Stephens.  I'll add them to the prime command.
 24 Oct 23 -- Added that the prime command will prime factor if the number is not prime.
 28 Oct 23 -- Updated the message for the probably prime routine.
+17 Dec 23 -- Updating probably prime routine.
 */
 
-const LastAlteredDate = "28 Oct 2023"
+const LastAlteredDate = "17 Dec 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -968,10 +969,11 @@ outerloop:
 			i := int(n)
 			var primeFlag bool
 
-			if isProbablyPrime(i, numOfFermatTests) {
-				ss = append(ss, fmt.Sprintf("%d is probably prime using %d tests.", i, numOfFermatTests))
+			num, probably := isProbablyPrime(i, numOfFermatTests)
+			if probably {
+				ss = append(ss, fmt.Sprintf("%d is probably prime using %d tests.", i, num))
 			} else {
-				ss = append(ss, fmt.Sprintf("%d is NOT probably prime using %d tests.", i, numOfFermatTests))
+				ss = append(ss, fmt.Sprintf("%d is NOT probably prime using %d tests.", i, num))
 			}
 
 			if IsPrime(n) {
@@ -1565,12 +1567,12 @@ func SigFig() int {
 
 // ----------------------------------------------------------- isProbablyPrime -----------------------------
 
-func isProbablyPrime(p int, numTests int) bool {
+func isProbablyPrime(p int, numTests int) (int, bool) {
 	if p%2 == 0 {
-		return false
+		return 0, false
 	}
 	if p == 1 {
-		return false
+		return 0, false
 	}
 	// Run numTests number of Fermat's little theorem.  For any that fail, return false, if all succeed return true.  These are fast to check, so having numTests of 30, 50 or 100 will be fast.
 	for i := 0; i < numTests; i++ {
@@ -1578,10 +1580,10 @@ func isProbablyPrime(p int, numTests int) bool {
 		expMod := fastExpMod(n, p-1, p)
 		//fmt.Printf(" n=%d, p=%d, ExpMod = %d\n", n, p, expMod)
 		if expMod != 1 {
-			return false
+			return i, false
 		}
 	}
-	return true
+	return numTests, true
 }
 
 // ------------------------------------------------------------- fastExpMod ------------------------------
