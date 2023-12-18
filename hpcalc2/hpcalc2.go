@@ -142,7 +142,7 @@ REVISION HISTORY
 23 Oct 23 -- Added the probably prime routines I learned about in the live project by Rod Stephens.  I'll add them to the prime command.
 24 Oct 23 -- Added that the prime command will prime factor if the number is not prime.
 28 Oct 23 -- Updated the message for the probably prime routine.
-17 Dec 23 -- Updating probably prime routine.
+17 Dec 23 -- Updating probably prime routine.  And added some comments.
 */
 
 const LastAlteredDate = "17 Dec 2023"
@@ -1493,16 +1493,16 @@ func getMapRegName(cmd string) string {
 	sub := cmd[3:] // slice off first three characters, which are the subcmd sto, rcl or sho
 	inspected := string(sub[0])
 	mappedregname := sub
-	if strings.ContainsAny(inspected, "!~`") {
+	if strings.ContainsAny(inspected, "!~`") { // if first char represents a space, lop it off
 		mappedregname = sub[1:]
 	}
 
-	mappedregname = MakeSubst(mappedregname)
-	mappedregname = strings.TrimSpace(mappedregname)
+	mappedregname = MakeSubst(mappedregname)         // changes ~ ! and ` to a space
+	mappedregname = strings.TrimSpace(mappedregname) // if there are any spaces at beginning or end, trim them off
 	return mappedregname
 }
 
-// ------------------------------------------------------------ MakeSubst ---------
+// ------------------------------------------------------------ MakeSubst -----------------------------------------------
 
 func MakeSubst(instr string) string {
 	// substitute ! ~ ` chara for spaces.  Copied from rpntcell
