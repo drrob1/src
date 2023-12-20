@@ -142,10 +142,10 @@ REVISION HISTORY
 23 Oct 23 -- Added the probably prime routines I learned about in the live project by Rod Stephens.  I'll add them to the prime command.
 24 Oct 23 -- Added that the prime command will prime factor if the number is not prime.
 28 Oct 23 -- Updated the message for the probably prime routine.
-17 Dec 23 -- Updating probably prime routine.  And added some comments.
+17 Dec 23 -- Updating probably prime routine to report how many guesses it took to say a number is probably not prime.  And added some comments.
 */
 
-const LastAlteredDate = "17 Dec 2023"
+const LastAlteredDate = "20 Dec 2023"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
