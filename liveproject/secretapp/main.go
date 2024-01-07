@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -94,6 +95,7 @@ func main() {
 	if len(dataFilePath) == 0 {
 		log.Fatal("Specify DATA_FILE_PATH")
 	}
+	fmt.Printf(" Using a listen address of %s and data file path of %s\n", listenAddr, dataFilePath)
 
 	filestore.Init(dataFilePath)
 
