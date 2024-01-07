@@ -47,8 +47,12 @@ import (
     DATA_FILE_PATH=./data/json  ./secretapp
 
   In another terminal, you should be able to create a secret w/ curl:
-    curl -X POST http://localhost:8080 -d '{"plain_text":"my super secret"}' {"id": the MD5 hash of my super secret}
-  $ curl -X POST http://localhost:8080 -d '{"plain_text":"My super secret123"}' {"id":"c616584ac64a93aafe1c16b6620f5bcd"}
+    curl -X POST http://localhost:8080 -d '{"plain_text":"my super secret"}'
+
+  response is: {"id": the MD5 hash of my super secret}
+  response is: {"id":"c616584ac64a93aafe1c16b6620f5bcd"}
+
+  $ curl -X POST http://localhost:8080 -d '{"plain_text":"My super secret123"}'
 
   Now terminate the server w/ ctrl-C in its terminal.  And start the server again.
 
