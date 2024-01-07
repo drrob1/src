@@ -77,9 +77,10 @@ import (
   28 Mar 23 -- Added message saying how many files will be copied.
   31 Mar 23 -- StaticCheck found a few issues.
    6 Sep 23 -- Changed the final message.
+   7 Jan 24 -- Edited a comment
 */
 
-const LastAltered = "Sep 6, 2023" //
+const LastAltered = "Jan 7, 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -366,7 +367,7 @@ func main() {
 	num := min(pooling, len(fileList)*len(targetDirs))
 	cfChan = make(chan cfType, num)
 	for i := 0; i < num; i++ {
-		go func() { // set up a pool of worker routines, all waiting for work on the same channel.
+		go func() { // set up a pool of worker routines, all waiting for work from the same channel.
 			for c := range cfChan {
 				CopyAFile(c.srcFile, c.destDir)
 			}
