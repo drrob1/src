@@ -77,7 +77,7 @@ import (
   28 Mar 23 -- Added message saying how many files will be copied.
   31 Mar 23 -- StaticCheck found a few issues.
    6 Sep 23 -- Changed the final message.
-   7 Jan 24 -- Edited a comment
+   7 Jan 24 -- Edited a comment.  Main sets up the channels and both the file list and destination list.  The actual work of copying is done by CopyAFile.  I'm putting this here as I forgot it.
 */
 
 const LastAltered = "Jan 7, 2024" //
