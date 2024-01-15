@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -45,7 +45,8 @@ func newsRoutine(c chan News, Location string) {
 	defer wg.Done()
 	var n News
 	resp, _ := http.Get(Location)
-	bytes, _ := ioutil.ReadAll(resp.Body)
+	// bytes, _ := ioutil.ReadAll(resp.Body)  Deprecated as of Go 1.16.
+	bytes, _ := io.ReadAll(resp.Body)
 	xml.Unmarshal(bytes, &n)
 	resp.Body.Close()
 	c <- n
@@ -55,7 +56,8 @@ func newsAggHandler(w http.ResponseWriter, r *http.Request) {
 
 	var s Sitemapindex
 	resp, _ := http.Get("https://www.washingtonpost.com/news-sitemap-index.xml")
-	bytes, _ := ioutil.ReadAll(resp.Body)
+	// bytes, _ := ioutil.ReadAll(resp.Body) Deprecated as of Go 1.16
+	bytes, _ := io.ReadAll(resp.Body)
 	xml.Unmarshal(bytes, &s)
 	news_map := make(map[string]NewsMap)
 	resp.Body.Close()
@@ -76,9 +78,9 @@ func newsAggHandler(w http.ResponseWriter, r *http.Request) {
 
 	p := NewsAggPage{Title: "A News Aggregator based on the Washington Post", News: news_map}
 	t, err := template.ParseFiles(tmplt)
-	//	t, err := template.ParseFiles("newsaggtemplate.gohtml")
+	//	                                                         t, err := template.ParseFiles("newsaggtemplate.gohtml")
 	check(err)
-	//	t, _ := template.ParseFiles("aggregatorfinish.html")
+	//	                                                         t, _ := template.ParseFiles("aggregatorfinish.html")
 	t.Execute(w, p)
 }
 

@@ -33,8 +33,8 @@ func main() {
 		Addr: "127.0.0.1:8080",
 	}
 
-	http.HandleFunc("/hello", hello)
-	http.HandleFunc("/world", world)
+	http.HandleFunc("/hello/", hello) // will now catch more.  See text
+	http.HandleFunc("/world/", world) // will now catch more.  See text
 	http.HandleFunc("/", helloWorld)
 
 	fmt.Printf(" About to start the server on localhost:8080\n")
