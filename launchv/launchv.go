@@ -48,9 +48,10 @@ REVISION HISTORY
 13 Dec 23 -- Really fixed the numeric pattern.
 14 Dec 23 -- Going to try setting the StdErr to /dev/null and see what happens.  I don't want to see all the errors that show up on linux.
                No, that didn't work.  But I can not assign it to anything, and that works.
+20 Jan 24 -- Adding femdom as a switch
 */
 
-const lastModified = "Dec 14, 2023"
+const lastModified = "Jan 20, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -74,7 +75,7 @@ func init() {
 }
 
 func main() {
-	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag bool
+	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag bool
 	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
 
 	workingDir, _ := os.Getwd()
@@ -121,11 +122,12 @@ func main() {
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
 	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
-	flag.BoolVar(&fuckFlag, "fuck", false, "Use predifined pattern #2.")
+	flag.BoolVar(&fuckFlag, "fuck", false, "Use predefined pattern #2.")
 	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^[0-9]+[0-9]")
 	numFlag := flag.Bool("num", false, "Alternate for numeric.")
 	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern for vibrating.")
 	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern")
+	flag.BoolVar(&femdomFlag, "femdom", false, "Use predefined pattern for femdom")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
@@ -146,7 +148,7 @@ func main() {
 	}
 
 	// Process predefined regular expressions.
-	if preBoolOne || domFlag {
+	if preBoolOne || domFlag || femdomFlag {
 		includeRexString = preDefinedRegexp[0]
 	} else if preBoolTwo || fuckFlag {
 		includeRexString = preDefinedRegexp[1]
