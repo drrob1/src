@@ -18,8 +18,6 @@ import (
 	"strings"
 )
 
-const lastModified = "10 Jan 22"
-
 /*
   REVISION HISTORY
   ----------------
@@ -84,7 +82,10 @@ const lastModified = "10 Jan 22"
   17 Oct 20 -- Removed the strings.ToLower for output filenames.
    8 Jan 22 -- Converted to modules; it shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
                  Added verbose flag to control the display of pauses.  Removed use of ioutil that was depracated as of Go 1.16
+  21 Jan 24 -- Expanded stop code to include "," and "."
 */
+
+const lastModified = "21 Jan 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -186,10 +187,10 @@ func main() {
 			fmt.Printf("filename[%d, %c] is %s \n", i, i+'a', filenames[i])
 		}
 		fmt.Print(" Enter filename choice (stop code=999) : ")
-		fmt.Scanln(&ans)
-		if len(ans) == 0 {
+		n, err := fmt.Scanln(&ans)
+		if len(ans) == 0 || err != nil || n == 0 { // these are redundant.  I'm playing now.
 			ans = "0"
-		} else if ans == "999" {
+		} else if ans == "999" || ans == "." || ans == "," || ans == "/" {
 			fmt.Println(" Stop code entered.")
 			os.Exit(0)
 		}
@@ -495,7 +496,7 @@ func DateFieldAccessToSQlite(datein string) string {
 	return dateout
 } // END DateFieldAccessToSQlite
 
-//--------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------
 func getOfxToken(buf *bytes.Buffer, allowEmptyToken bool) ofxTokenType {
 	// Delimiters are angle brackets and EOL.
 	//   I forgot that break applies to switch-case as well as for loop.  I had to be more specific for this to work.
@@ -693,7 +694,7 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 	return transaction
 } // END getTransactionData
 
-//--------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 	// transactions slice is passed as a global
 
@@ -890,14 +891,14 @@ func ExtractNumberFromString(s string) (string, int) {
 	}
 } // end ExtractNumberFromString
 
-//-------------------------------------------------------
+// -------------------------------------------------------
 func check(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-//-------------------------------------------------------
+// -------------------------------------------------------
 func min(a, b int) int {
 	if a < b {
 		return a
