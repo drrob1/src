@@ -31,7 +31,7 @@ package main // shufv.go
    6 Feb 23 -- Fixed a comment and will now show number of shuffling iterations.
   10 Mar 23 -- Now called shufv, short for shufflevlc, based on vlcshuffle and xspf code.
   12 Mar 23 -- Came home from Phoenix last night.  Found that waiting for me to close this instance of vlc to delete the temp xspf file will tie up the terminal.
-                 I'll change it so that I can delete them afterwards.  The pattern is vlc and a 10-digit number which I can delete myself.
+                 I'll change it so that I can delete them afterward.  The pattern is vlc and a 10-digit number which I can delete myself.
    1 Apr 23 -- StaticCheck found a few issues.
 */
 

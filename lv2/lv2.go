@@ -1,12 +1,14 @@
 package main // lv2.go from launchV.go
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/jonhadfield/findexec"
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -58,6 +60,7 @@ REVISION HISTORY
                track has location line, and then the extension application stuff needs a counter starting from 0.  <track> <location> <extension application> </extension> </track>
                </trackList><playlist>
                So the input code is essentially the same as launchV.go.  It's the output code that has to be fairly different from launchV.go.
+               First the pgm builds the filenames slice, then shuffles it, then writes the output file, and finally calls vlc w/ the .xspf file on the command line.
 */
 
 /*
@@ -84,7 +87,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 21, 2024"
+const lastModified = "Jan 24, 2024"
 
 const header1 = ` <?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
@@ -102,6 +105,7 @@ const extensionClose = "</extension"
 const vlcIDOpen = "<vlc:id>"
 const vlcIDClose = "</vlc:id>"
 const playListClose = "</playlist"
+const extDefault = ".xspf" // XML Sharable Playlist Format
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -119,7 +123,7 @@ func init() {
 			return
 		}
 	} else {
-		fmt.Printf(" ERROR from Atoi: %s\n", err)
+		fmt.Printf(" ERROR from Atoi: %s.  Calling rand.Seed(time.Now().UnixNano())\n", err)
 	}
 	rand.Seed(time.Now().UnixNano())
 }
@@ -257,6 +261,32 @@ func main() {
 	}
 
 	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
+
+	// The file names slice is ready.  Now to create the output file.
+
+	outputFilename, err := os.CreateTemp(workingDir, "vlc")
+	if err != nil {
+		fmt.Printf(" os.CreateTemp ERROR is %s\n", err)
+		os.Exit(1)
+	}
+	tempFilename := outputFilename.Name()
+	fullTempFilename, err := filepath.Abs(tempFilename)
+	if err != nil {
+		fmt.Printf(" filepath.Abs(%s) ERROR is %s.  Exiting\n", tempFilename, err)
+		os.Exit(1)
+	}
+
+	if verboseFlag {
+		fmt.Printf(" Temp filename is %s, workingDir is %s, abs() is %s\n", tempFilename, workingDir, fullTempFilename)
+	}
+	outfileBuf := bufio.NewWriter(outputFilename)
+
+	var lineDelim string
+	if runtime.GOOS == "windows" {
+		lineDelim = "\r\n"
+	} else {
+		lineDelim = "\n"
+	}
 
 	// ready to start calling vlc
 
