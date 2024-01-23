@@ -61,6 +61,8 @@ REVISION HISTORY
                </trackList><playlist>
                So the input code is essentially the same as launchV.go.  It's the output code that has to be fairly different from launchV.go.
                First the pgm builds the filenames slice, then shuffles it, then writes the output file, and finally calls vlc w/ the .xspf file on the command line.
+22 Jan 24 -- It works.  I got stuck for at least 2 hrs in that the file was created but vlc would not use it.  Then I finally saw the error, there was an extra space at the beginning of
+               the first line.  When I took that out, it started working.  But I had already fixed some of the strings so that all had a closing angle bracket.  I left a few off at first.
 */
 
 /*
