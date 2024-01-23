@@ -89,7 +89,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 22, 2024"
+const lastModified = "Jan 23, 2024"
 
 const header1 = `<?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
@@ -369,11 +369,12 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	//execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr //I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
+	//execCmd.Stderr = os.Stderr //I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
 	}
+	fmt.Printf(" Full output file name is %s\n", fullOutFilename)
 } // end main()
 
 // ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
