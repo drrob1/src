@@ -87,24 +87,24 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 24, 2024"
+const lastModified = "Jan 22, 2024"
 
-const header1 = ` <?xml version="1.0" encoding="UTF-8"?>
+const header1 = `<?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
 `
 const titleOpen = "<title>"
 const titleClose = "</title>"
 const trackListOpen = "<trackList>"
-const trackListClose = "</trackList"
+const trackListClose = "</trackList>"
 const trackOpen = "<track>"
-const trackClose = "</track"
-const locationOpen = "<location>"
-const locationClose = "</location"
+const trackClose = "</track>"
+const locationOpen = "<location>file:///"
+const locationClose = "</location>"
 const extensionApplication = "<extension application=\"http://www.videolan.org/vlc/playlist/0\">"
-const extensionClose = "</extension"
+const extensionClose = "</extension>"
 const vlcIDOpen = "<vlc:id>"
 const vlcIDClose = "</vlc:id>"
-const playListClose = "</playlist"
+const playListClose = "</playlist>"
 const extDefault = ".xspf" // XML Sharable Playlist Format
 
 var includeRegex, excludeRegex *regexp.Regexp
@@ -132,7 +132,11 @@ func main() {
 	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag bool
 	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
 
-	workingDir, _ := os.Getwd()
+	workingDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf(" Call to Getwd failed w/ ERROR: %s.  Bye-Bye.\n", err)
+		os.Exit(1)
+	}
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
@@ -152,9 +156,9 @@ func main() {
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
-		//"^\b+\b",  This doesn't work
+		//                                                                                  "^\b+\b",  This doesn't work
 		"^[0-9]+[0-9]",
-		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair",
+		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse",
 		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",
 	}
 
@@ -216,7 +220,6 @@ func main() {
 		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	}
 
-	var err error
 	smartCase := regexp.MustCompile("[A-Z]")
 	smartCaseFlag = smartCase.MatchString(includeRexString)
 	if smartCaseFlag {
@@ -262,31 +265,59 @@ func main() {
 
 	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
 
-	// The file names slice is ready.  Now to create the output file.
+	// The file names slice is ready.  Now to create the output file.  Part of the filename will be the regexp used to create this file.
 
-	outputFilename, err := os.CreateTemp(workingDir, "vlc")
+	regexpStr := includeRegex.String()
+	rplcPattern := strings.NewReplacer("=", "", "+", "", ".", "", "?", "", "*", "", "|", "_", " ", "", "[", "", "]", "", "^", "", "$", "")
+	replacedStr := rplcPattern.Replace(regexpStr)
+	outFilename := "vlc" + "_" + replacedStr + "_" + strconv.Itoa(len(fileNames)) + extDefault
+	outputFile, err := os.Create(outFilename)
 	if err != nil {
-		fmt.Printf(" os.CreateTemp ERROR is %s\n", err)
+		fmt.Printf(" Tried to create %s but got ERROR: %s.  Bye-bye.\n", outFilename, err)
 		os.Exit(1)
 	}
-	tempFilename := outputFilename.Name()
-	fullTempFilename, err := filepath.Abs(tempFilename)
+	defer outputFile.Close()
+	defer outputFile.Sync()
+
+	fullOutFilename, err := filepath.Abs(outputFile.Name())
 	if err != nil {
-		fmt.Printf(" filepath.Abs(%s) ERROR is %s.  Exiting\n", tempFilename, err)
+		fmt.Printf(" filepath.Abs(%s) = ERROR is %s.  Exiting\n", outFilename, err)
 		os.Exit(1)
 	}
 
 	if verboseFlag {
-		fmt.Printf(" Temp filename is %s, workingDir is %s, abs() is %s\n", tempFilename, workingDir, fullTempFilename)
+		fmt.Printf(" Output filename is %s, workingDir is %s, abs() is %s \n", outFilename, workingDir, fullOutFilename)
 	}
-	outfileBuf := bufio.NewWriter(outputFilename)
+	outfileBuf := bufio.NewWriter(outputFile)
+	defer outfileBuf.Flush()
 
-	var lineDelim string
-	if runtime.GOOS == "windows" {
-		lineDelim = "\r\n"
-	} else {
-		lineDelim = "\n"
+	// Now to write out the xspf file
+
+	err = writeOutputFile(outfileBuf, fileNames)
+	if err != nil {
+		fmt.Printf(" Writing output file %s failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
+		os.Exit(1)
 	}
+
+	err = outfileBuf.Flush()
+	if err != nil {
+		fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
+		os.Exit(1)
+	}
+
+	err = outputFile.Sync()
+	if err != nil {
+		fmt.Printf(" Sync-ing %s failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
+		os.Exit(1)
+	}
+
+	err = outputFile.Close()
+	if err != nil {
+		fmt.Printf(" Closing %s failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("")
 
 	// ready to start calling vlc
 
@@ -296,8 +327,6 @@ func main() {
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
 		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
-		//vlcStr = "vlc"
-		//shellStr = os.Getenv("ComSpec") not needed anymore
 	} else if runtime.GOOS == "linux" {
 		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
 		shellStr = "/bin/bash"            // not needed as I found out by some experimentation on leox.
@@ -316,11 +345,8 @@ func main() {
 	if notccFlag {
 		variadicParam = []string{}
 	}
-	variadicParam = append(variadicParam, fileNames...)
-	n := minInt(numNames, len(fileNames))
-	if n > 0 {
-		variadicParam = variadicParam[:n]
-	}
+	//variadicParam = append(variadicParam, fileNames...)
+	variadicParam = append(variadicParam, fullOutFilename)
 
 	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.
 	// I got this answer from stack overflow.
@@ -331,22 +357,8 @@ func main() {
 		} else { // this isn't needed anymore.  I'll leave it here because it does work, in case I ever need to do this again.
 			execCmd = exec.Command(shellStr, variadicParam...)
 		}
-		//switch n { // just to see if this works.  Once I figured out the variadic syntax I don't need a switch case statement here.
-		//case 1:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0])
-		//case 2:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1])
-		//case 3:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2])
-		//case 4:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3])
-		//case 5:
-		//	execCmd = exec.Command(shellStr, "-C", vlcStr, fileNames[0], fileNames[1], fileNames[2], fileNames[3], fileNames[4])
-		//default:
-		//	execCmd = exec.Command(shellStr, variadicParam...)
-		//}
 	} else if runtime.GOOS == "linux" { // I'm ignoring this for now.  I'll come back to it after I get the Windows code working.
-		execCmd = exec.Command(vlcStr, fileNames...)
+		execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
 	if veryverboseFlag {
@@ -354,8 +366,8 @@ func main() {
 	}
 
 	execCmd.Stdin = os.Stdin
-	execCmd.Stdout = os.Stdout
-	//execCmd.Stderr = os.Stderr  I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
+	//execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr //I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
@@ -407,12 +419,12 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 
 // ------------------------------- minInt ----------------------------------------
 
-func minInt(i, j int) int {
-	if i <= j {
-		return i
-	}
-	return j
-}
+//func minInt(i, j int) int {
+//	if i <= j {
+//		return i
+//	}
+//	return j
+//}
 
 // ------------------------------- listPath --------------------------------------
 
@@ -423,37 +435,130 @@ func listPath(path string) {
 	}
 }
 
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
-/*
-func MakeDateStr() string {
+// ------------------------------- writeOutputFile --------------------------------
 
-	const DateSepChar = "-"
-	var dateStr string
+func writeOutputFile(w *bufio.Writer, fn []string) error {
+	w.WriteString(header1) // this includes a lineTerm
 
-	m, d, y := timlibg.TIME2MDY()
-	timeNow := timlibg.GetDateTime()
+	w.WriteRune('\t')
+	s := fmt.Sprintf("%s%s%s\n", titleOpen, "Playlist", titleClose)
+	w.WriteString(s)
 
-	MSTR := strconv.Itoa(m)
-	DSTR := strconv.Itoa(d)
-	YSTR := strconv.Itoa(y)
-	Hr := strconv.Itoa(timeNow.Hours)
-	Min := strconv.Itoa(timeNow.Minutes)
-	Sec := strconv.Itoa(timeNow.Seconds)
+	w.WriteRune('\t')
+	w.WriteString(trackListOpen)
+	w.WriteRune('\n')
 
-	dateStr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar + Sec + "__" + timeNow.DayOfWeekStr
-	return dateStr
-} // MakeDateStr
+	for i, f := range fn {
+		fullName, err := filepath.Abs(f)
+		if err != nil {
+			//fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
+			return err
+		}
 
-// ------------------------------ pause -----------------------------------------
+		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
+		w.WriteString(s2)
 
-func pause() bool {
-	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
-	var ans string
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
-		return true
+		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
+		_, err = w.WriteString(s2)
+		if err != nil {
+			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)
+			return err
+		}
 	}
-	return false
+
+	w.WriteRune('\t')
+	w.WriteString(trackListClose)
+	w.WriteRune('\n')
+
+	w.WriteString(playListClose)
+	_, err := w.WriteRune('\n')
+	return err
 }
+
+/*
+func writeOutputFile(w *bufio.Writer, fn []string) {
+	w.WriteString(header1) // this includes a lineTerm
+
+	w.WriteRune('\t')
+	w.WriteString(titleOpen)
+	w.WriteString(includeRegex.String())
+	if excludeRexString != "" {
+		w.WriteRune('_')
+		w.WriteString(excludeRegex.String())
+	}
+	w.WriteString(titleClose)
+	w.WriteString(lineTerm)
+
+	w.WriteRune('\t')
+	w.WriteString(trackListOpen)
+	w.WriteString(lineTerm)
+
+	for i, f := range fn {
+		fullName, err := filepath.Abs(f)
+		if err != nil {
+			fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
+			os.Exit(1)
+		}
+
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteString(trackOpen)
+		w.WriteString(lineTerm)
+
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteString(locationOpen)
+		w.WriteString(fullName)
+		w.WriteString(locationClose)
+		w.WriteString(lineTerm)
+
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteString(extensionApplication)
+		w.WriteString(lineTerm)
+
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteString(vlcIDOpen)
+		w.WriteString(strconv.Itoa(i))
+		w.WriteString(vlcIDClose)
+		w.WriteString(lineTerm)
+
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteString(extensionClose)
+		w.WriteString(lineTerm)
+
+		w.WriteRune('\t')
+		w.WriteRune('\t')
+		w.WriteString(trackClose)
+		w.WriteString(lineTerm)
+	}
+
+	w.WriteRune('\t')
+	w.WriteString(trackListClose)
+	w.WriteString(lineTerm)
+
+	w.WriteString(playListClose)
+	w.WriteString(lineTerm)
+}
+
+
 */
