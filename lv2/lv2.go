@@ -64,6 +64,7 @@ REVISION HISTORY
 22 Jan 24 -- It works.  I got stuck for at least 2 hrs in that the file was created but vlc would not use it.  Then I finally saw the error, there was an extra space at the beginning of
                the first line.  When I took that out, it started working.  But I had already fixed some of the strings so that all had a closing angle bracket.  I left a few off at first.
 23 Jan 24 -- I'm going to remove code I haven't used in quite a while.
+24 Jan 24 -- I'm having the default for the excludeRegex be xspf$.  And I'm adding maxNumOfTracks and numOfTracks.  Hey, it worked.  The patterns now all work.
 */
 
 /*
@@ -90,9 +91,11 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 23, 2024"
+const lastModified = "Jan 24, 2024"
 
-const lineTooLong = 500
+const lineTooLong = 500    // essentially removing it
+const maxNumOfTracks = 100 // I'm trying to track down why some xspf files work and others don't.  Maybe there's a parsing max # of characters?
+
 const header1 = `<?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
 `
@@ -115,6 +118,7 @@ var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, ok, smartCaseFlag bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
+var numOfTracks int
 
 func init() {
 	goVersion := runtime.Version()
@@ -178,7 +182,7 @@ func main() {
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
-	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
+	flag.StringVar(&excludeRexString, "x", "xspf$", " Exclude file regexp string, which is usually empty.")
 	//flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
@@ -190,6 +194,7 @@ func main() {
 	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern: wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse.")
 	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern: spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb")
 	flag.BoolVar(&forcedFlag, "forced", false, "Use predefined pattern: vib|forced|abuse|torture.")
+	flag.IntVar(&numOfTracks, "n", 100, "Max num of tracks in the output file.  Currently 100.")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
@@ -439,6 +444,10 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 	w.WriteRune('\n')
 
 	for i, f := range fn {
+		if i > 0 && i > numOfTracks { // allow i == 0 to mean unlimited.
+			break
+		}
+
 		fullName, err := filepath.Abs(f)
 		if err != nil {
 			//fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
