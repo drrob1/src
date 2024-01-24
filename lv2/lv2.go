@@ -1,4 +1,4 @@
-package main // lv2.go from launchV.go
+package main // lv2.go from launchV.go from vlcshuffle.go
 
 import (
 	"bufio"
@@ -65,6 +65,7 @@ REVISION HISTORY
                the first line.  When I took that out, it started working.  But I had already fixed some of the strings so that all had a closing angle bracket.  I left a few off at first.
 23 Jan 24 -- I'm going to remove code I haven't used in quite a while.
 24 Jan 24 -- I'm having the default for the excludeRegex be xspf$.  And I'm adding maxNumOfTracks and numOfTracks.  Hey, it worked.  The patterns now all work.
+                I'm now going to as a random number to the name of the file so similar regexp's don't clobber one other.
 */
 
 /*
@@ -279,7 +280,7 @@ func main() {
 	regexpStr := includeRegex.String()
 	rplcPattern := strings.NewReplacer("=", "", "+", "", ".", "", "?", "", "*", "", "|", "_", " ", "", "[", "", "]", "", "^", "", "$", "")
 	replacedStr := rplcPattern.Replace(regexpStr)
-	outFilename := "vlc" + "_" + replacedStr + "_" + strconv.Itoa(len(fileNames)) + extDefault
+	outFilename := "vlc" + "_" + replacedStr + "_" + strconv.Itoa(len(fileNames)) + "-" + strconv.Itoa(shuffleAmount) + extDefault
 	outputFile, err := os.Create(outFilename)
 	if err != nil {
 		fmt.Printf(" Tried to create %s but got ERROR: %s.  Bye-bye.\n", outFilename, err)
