@@ -63,6 +63,7 @@ REVISION HISTORY
                First the pgm builds the filenames slice, then shuffles it, then writes the output file, and finally calls vlc w/ the .xspf file on the command line.
 22 Jan 24 -- It works.  I got stuck for at least 2 hrs in that the file was created but vlc would not use it.  Then I finally saw the error, there was an extra space at the beginning of
                the first line.  When I took that out, it started working.  But I had already fixed some of the strings so that all had a closing angle bracket.  I left a few off at first.
+23 Jan 24 -- I'm going to remove code I haven't used in quite a while.
 */
 
 /*
@@ -91,6 +92,7 @@ REVISION HISTORY
 
 const lastModified = "Jan 23, 2024"
 
+const lineTooLong = 500
 const header1 = `<?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
 `
@@ -110,10 +112,9 @@ const playListClose = "</playlist>"
 const extDefault = ".xspf" // XML Sharable Playlist Format
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
+var verboseFlag, veryverboseFlag, ok, smartCaseFlag bool
 var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
-var numNames int
 
 func init() {
 	goVersion := runtime.Version()
@@ -131,7 +132,7 @@ func init() {
 }
 
 func main() {
-	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag bool
+	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag, forcedFlag bool
 	fmt.Printf(" %s last modified %s, compiled w/ %s\n\n", os.Args[0], lastModified, runtime.Version())
 
 	workingDir, err := os.Getwd()
@@ -161,7 +162,8 @@ func main() {
 		//                                                                                  "^\b+\b",  This doesn't work
 		"^[0-9]+[0-9]",
 		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse",
-		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",
+		"spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb",
+		"vib|forced|abuse|torture",
 	}
 
 	flag.Usage = func() {
@@ -177,17 +179,17 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
-	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.")
-	flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
+	//flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
+	flag.BoolVar(&femdomFlag, "femdom", false, "Use predefined pattern for femdom")
 	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
 	flag.BoolVar(&fuckFlag, "fuck", false, "Use predefined pattern #2.")
 	flag.BoolVar(&numericFlag, "numeric", false, "Use predefined pattern ^[0-9]+[0-9]")
 	numFlag := flag.Bool("num", false, "Alternate for numeric.")
-	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern for vibrating.")
-	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern")
-	flag.BoolVar(&femdomFlag, "femdom", false, "Use predefined pattern for femdom")
+	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern: wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse.")
+	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern: spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb")
+	flag.BoolVar(&forcedFlag, "forced", false, "Use predefined pattern: vib|forced|abuse|torture.")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
@@ -326,12 +328,11 @@ func main() {
 	// Turns out that the shell searches against the path on Windows, but just executing it here doesn't.  So I have to search the path myself.
 	// Nope, I still have that wrong.  I need to start a command processor, too.  And vlc is not in the %PATH, but it does work when I just give it as a command without a path.
 
-	var vlcStr, shellStr string
+	var vlcStr string
 	if runtime.GOOS == "windows" {
 		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
 	} else if runtime.GOOS == "linux" {
 		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
-		shellStr = "/bin/bash"            // not needed as I found out by some experimentation on leox.
 	}
 
 	if vlcStr == "" {
@@ -343,28 +344,14 @@ func main() {
 
 	var execCmd *exec.Cmd
 
-	variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
-	if notccFlag {
-		variadicParam = []string{}
-	}
-	//variadicParam = append(variadicParam, fileNames...)
-	variadicParam = append(variadicParam, fullOutFilename)
-
-	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.
-	// I got this answer from stack overflow.
-
 	if runtime.GOOS == "windows" {
-		if notccFlag {
-			execCmd = exec.Command(vlcStr, variadicParam...)
-		} else { // this isn't needed anymore.  I'll leave it here because it does work, in case I ever need to do this again.
-			execCmd = exec.Command(shellStr, variadicParam...)
-		}
-	} else if runtime.GOOS == "linux" { // I'm ignoring this for now.  I'll come back to it after I get the Windows code working.
+		execCmd = exec.Command(vlcStr, fullOutFilename)
+	} else if runtime.GOOS == "linux" {
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
 	if veryverboseFlag {
-		fmt.Printf(" vlcStr = %s, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
+		fmt.Printf(" vlcStr = %s, len of filenames = %d, regex = %s and excludeRegex = %q\n", vlcStr, len(fileNames), includeRegex.String(), excludeRexString)
 	}
 
 	execCmd.Stdin = os.Stdin
@@ -372,9 +359,9 @@ func main() {
 	//execCmd.Stderr = os.Stderr //I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
 	e := execCmd.Start()
 	if e != nil {
-		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
+		fmt.Printf(" Error returned by running vlc %s is %v\n", fullOutFilename, e)
 	}
-	fmt.Printf(" Full output file name is %s\n", fullOutFilename)
+	fmt.Printf(" Full output file name is %s, from regexp of %s, excludeRegexp of %q\n", fullOutFilename, includeRegex.String(), excludeRexString)
 } // end main()
 
 // ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
@@ -443,9 +430,9 @@ func listPath(path string) {
 func writeOutputFile(w *bufio.Writer, fn []string) error {
 	w.WriteString(header1) // this includes a lineTerm
 
-	w.WriteRune('\t')
-	s := fmt.Sprintf("%s%s%s\n", titleOpen, "Playlist", titleClose)
-	w.WriteString(s)
+	//	w.WriteRune('\t')    don't need the title
+	//s := fmt.Sprintf("%s%s%s\n", titleOpen, "Playlist", titleClose)
+	//w.WriteString(s)
 
 	w.WriteRune('\t')
 	w.WriteString(trackListOpen)
@@ -457,23 +444,34 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 			//fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
 			return err
 		}
+		if len(fullName) > lineTooLong {
+			continue
+		}
+
+		fullName = strings.ReplaceAll(fullName, "\\", "/") // Change backslash to forward slash, if that makes a difference.
 
 		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
+		//s2 := fmt.Sprintf("%s\n", trackOpen)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
+		//s2 = fmt.Sprintf("%s%s%s\n", locationOpen, fullName, locationClose)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
+		//s2 = fmt.Sprintf("%s\n", extensionApplication)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
+		//s2 = fmt.Sprintf("%s%d%s\n", vlcIDOpen, i, vlcIDClose)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
+		//s2 = fmt.Sprintf("%s\n", extensionClose)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
+		//s2 = fmt.Sprintf("%s\n", trackClose)
 		_, err = w.WriteString(s2)
 		if err != nil {
 			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)

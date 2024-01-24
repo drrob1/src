@@ -25,14 +25,17 @@ import (
                  go test isn't working by me passing -dots to it.  I'm going to try what happens when I use noDotsFlagPtr.  Nope, no difference.
    6 May 23 -- I posted on golang-nuts@googlegroups.com for help on how to use the go test system.  I finally got it working.
   11 May 23 -- Fixing bug in use of flag.NArg().
+  23 Jan 24 -- Added noWorkFlag, which means do not actually do anything.  Just print what would be done.  And changed the name of the other option to dot.  It was too hard to type detox -dots
 */
 
-const lastModified = "11 May 23"
+const lastModified = "23 Jan 24"
 
 var noDotsFlag bool
+var noWorkFlag bool
 
 func init() {
-	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
+	flag.BoolVar(&noDotsFlag, "dot", false, "Enable removing excess dots from filenames.")
+	flag.BoolVar(&noWorkFlag, "no", false, "No work is to be done.  Just show what would be done.")
 }
 
 func main() {
@@ -60,7 +63,7 @@ func main() {
 		name := strings.ToLower(fn)
 		if BOOL, _ := filepath.Match(globPattern, name); BOOL {
 			detoxedName, toxic := detoxFilenameNewWay(fn)
-			if toxic {
+			if toxic && !noWorkFlag {
 				err := os.Rename(fn, detoxedName)
 				if err != nil {
 					//fmt.Fprintf(os.Stderr, " Error from rename function for name %s -> %s: %v \n", fn, detoxedName, err)
