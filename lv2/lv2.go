@@ -65,7 +65,8 @@ REVISION HISTORY
                the first line.  When I took that out, it started working.  But I had already fixed some of the strings so that all had a closing angle bracket.  I left a few off at first.
 23 Jan 24 -- I'm going to remove code I haven't used in quite a while.
 24 Jan 24 -- I'm having the default for the excludeRegex be xspf$.  And I'm adding maxNumOfTracks and numOfTracks.  Hey, it worked.  The patterns now all work.
-                I'm now going to as a random number to the name of the file so similar regexp's don't clobber one other.
+                I'm now going to as a random number to the name of the file so similar regexp's don't clobber one other.  I read at xspf.org that <title>Playlist</title> is not required.
+                So I deleted it.
 */
 
 /*
@@ -100,8 +101,9 @@ const maxNumOfTracks = 100 // I'm trying to track down why some xspf files work 
 const header1 = `<?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
 `
-const titleOpen = "<title>"
-const titleClose = "</title>"
+
+// const titleOpen = "<title>"
+// const titleClose = "</title>"
 const trackListOpen = "<trackList>"
 const trackListClose = "</trackList>"
 const trackOpen = "<track>"
@@ -195,7 +197,7 @@ func main() {
 	flag.BoolVar(&vibeFlag, "vibe", false, "Use predefined pattern: wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse.")
 	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern: spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb")
 	flag.BoolVar(&forcedFlag, "forced", false, "Use predefined pattern: vib|forced|abuse|torture.")
-	flag.IntVar(&numOfTracks, "n", 100, "Max num of tracks in the output file.  Currently 100.")
+	flag.IntVar(&numOfTracks, "n", maxNumOfTracks, "Max num of tracks in the output file.  Currently 100.")
 	flag.Parse()
 
 	if veryverboseFlag { // very verbose also turns on verbose flag.
