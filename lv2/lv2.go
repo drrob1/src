@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/jonhadfield/findexec"
 	"math/rand"
 	"os"
@@ -67,6 +69,9 @@ REVISION HISTORY
 24 Jan 24 -- I'm having the default for the excludeRegex be xspf$.  And I'm adding maxNumOfTracks and numOfTracks.  Hey, it worked.  The patterns now all work.
                 I'm now going to as a random number to the name of the file so similar regexp's don't clobber one other.  I read at xspf.org that <title>Playlist</title> is not required.
                 So I deleted it.
+26 Jan 24 -- Still trying to figure out what makes xspf files too large.  So I added output of total file string lengths.  And since my go.mod file says a min of Go 1.21 for compilation,
+                I don't need the init() fcn here to possibly call rand.Seed().  I removed it.  And I'm colorizing the final output message.
+                So far, the maximum string buffer for location strings is >13,333 but < 13965.
 */
 
 /*
@@ -93,7 +98,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 24, 2024"
+const lastModified = "Jan 26, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 100 // I'm trying to track down why some xspf files work and others don't.  Maybe there's a parsing max # of characters?
@@ -123,20 +128,20 @@ var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numOfTracks int
 
-func init() {
-	goVersion := runtime.Version()
-	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-	goVersionInt, err := strconv.Atoi(goVersion)
-	if err == nil {
-		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-			return
-		}
-	} else {
-		fmt.Printf(" ERROR from Atoi: %s.  Calling rand.Seed(time.Now().UnixNano())\n", err)
-	}
-	rand.Seed(time.Now().UnixNano())
-}
+//func init() {
+//	goVersion := runtime.Version()
+//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+//	goVersionInt, err := strconv.Atoi(goVersion)
+//	if err == nil {
+//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+//			return
+//		}
+//	} else {
+//		fmt.Printf(" ERROR from Atoi: %s.  Calling rand.Seed(time.Now().UnixNano())\n", err)
+//	}
+//	rand.Seed(time.Now().UnixNano())
+//}
 
 func main() {
 	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag, forcedFlag bool
@@ -213,10 +218,6 @@ func main() {
 		listPath(searchPath)
 	}
 
-	if flag.NArg() < 1 && !preBoolOne && !preBoolTwo && !domFlag && !fuckFlag && !numericFlag { // if there are more than 1 arguments, the extra ones are ignored.
-		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> may not be empty.\n")
-	}
-
 	// Process predefined regular expressions.
 	if preBoolOne || domFlag || femdomFlag {
 		includeRexString = preDefinedRegexp[0]
@@ -230,6 +231,13 @@ func main() {
 		includeRexString = preDefinedRegexp[4]
 	} else {
 		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
+	}
+
+	if includeRexString == "" { // if there are more than 1 arguments, the extra ones are ignored.
+		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> should not be empty.\n")
+		flag.PrintDefaults()
+		fmt.Println()
+		fmt.Println()
 	}
 
 	smartCase := regexp.MustCompile("[A-Z]")
@@ -305,7 +313,7 @@ func main() {
 
 	// Now to write out the xspf file
 
-	err = writeOutputFile(outfileBuf, fileNames)
+	totStrngLen, err := writeOutputFile(outfileBuf, fileNames)
 	if err != nil {
 		fmt.Printf(" Writing output file %s failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
 		os.Exit(1)
@@ -369,7 +377,11 @@ func main() {
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", fullOutFilename, e)
 	}
-	fmt.Printf(" Full output file name is %s, from regexp of %s, excludeRegexp of %q\n", fullOutFilename, includeRegex.String(), excludeRexString)
+	//fmt.Printf(" Full output file name is %s, from regexp of %s, excludeRegexp of %q, and total string length= %d\n", fullOutFilename, includeRegex.String(), excludeRexString, totStrngLen)
+	ctfmt.Printf(ct.Green, false, "Full output filename is %s, ", fullOutFilename)
+	ctfmt.Printf(ct.Yellow, false, "from regexp of %s, ", includeRegex.String())
+	ctfmt.Printf(ct.Cyan, true, "exclude regexp of %q, ", excludeRexString)
+	ctfmt.Printf(ct.Yellow, true, "and total string length= %d\n", totStrngLen)
 } // end main()
 
 // ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
@@ -435,7 +447,9 @@ func listPath(path string) {
 
 // ------------------------------- writeOutputFile --------------------------------
 
-func writeOutputFile(w *bufio.Writer, fn []string) error {
+func writeOutputFile(w *bufio.Writer, fn []string) (int, error) {
+	var totalStrLen int
+
 	w.WriteString(header1) // this includes a lineTerm
 
 	//	w.WriteRune('\t')    don't need the title
@@ -454,13 +468,14 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 		fullName, err := filepath.Abs(f)
 		if err != nil {
 			//fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
-			return err
+			return 0, err
 		}
 		if len(fullName) > lineTooLong {
 			continue
 		}
 
 		fullName = strings.ReplaceAll(fullName, "\\", "/") // Change backslash to forward slash, if that makes a difference.
+		totalStrLen += len(fullName)
 
 		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
 		//s2 := fmt.Sprintf("%s\n", trackOpen)
@@ -487,7 +502,7 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 		_, err = w.WriteString(s2)
 		if err != nil {
 			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)
-			return err
+			return 0, err
 		}
 	}
 
@@ -497,7 +512,7 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 
 	w.WriteString(playListClose)
 	_, err := w.WriteRune('\n')
-	return err
+	return totalStrLen, err
 }
 
 /*
