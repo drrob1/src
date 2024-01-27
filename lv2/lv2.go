@@ -71,7 +71,7 @@ REVISION HISTORY
                 So I deleted it.
 26 Jan 24 -- Still trying to figure out what makes xspf files too large.  So I added output of total file string lengths.  And since my go.mod file says a min of Go 1.21 for compilation,
                 I don't need the init() fcn here to possibly call rand.Seed().  I removed it.  And I'm colorizing the final output message.
-                So far, the maximum string buffer for location strings is >13,333 but < 13965.
+                So far, the maximum string buffer for location strings is 13,937 < max 4 buffer < 13965.
 */
 
 /*
