@@ -39,6 +39,7 @@ package main // xspfTotStrLen from shufv.go
                  This routine will continue to read in all the tracks.  Then I will go thru the tracks to get the total of the string lengths to display.  I don't need to shuffle them, either.
                  And I'll add the ability to capture the max string length and show it and the contents.
                  This works, but I can't get a consistent param that predicts when vlc will not load the xspf file correctly and run it.
+                 Found it.  Bad filenames containing characters that choked vlc.  In this case, !!! was the culprit.  When I removed those files, it worked.  Then I detoxed those files.
 */
 
 import (
