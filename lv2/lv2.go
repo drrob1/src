@@ -99,10 +99,10 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 26, 2024"
+const lastModified = "Jan 28, 2024"
 
 const lineTooLong = 500    // essentially removing it
-const maxNumOfTracks = 100 // I'm trying to track down why some xspf files work and others don't.  Maybe there's a parsing max # of characters?
+const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
 
 const header1 = `<?xml version="1.0" encoding="UTF-8"?>
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
