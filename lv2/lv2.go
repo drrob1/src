@@ -73,6 +73,7 @@ REVISION HISTORY
                 I don't need the init() fcn here to possibly call rand.Seed().  I removed it.  And I'm colorizing the final output message.
                 So far, the maximum string buffer for location strings is 13,937 < max 4 buffer < 13965.  Nope, that's not it.  See xspftotstrlen.go.
 27 Jan 24 -- Found it.  Bad filenames containing characters that choked vlc.  In this case, !!! was the culprit.  When I removed those files, it worked.  Then I detoxed those files.
+ 5 Feb 24 -- Increased the shuffling number
 */
 
 /*
@@ -99,7 +100,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Jan 28, 2024"
+const lastModified = "Feb 5, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -172,11 +173,11 @@ func main() {
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
-		//                                                                                  "^\b+\b",  This doesn't work
 		"^[0-9]+[0-9]",
 		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse",
 		"spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb",
 		"vib|forced|abuse|torture",
+		//                                                                                  "^\b+\b",  This doesn't work
 	}
 
 	flag.Usage = func() {
@@ -230,6 +231,8 @@ func main() {
 		includeRexString = preDefinedRegexp[3]
 	} else if spandexFlag {
 		includeRexString = preDefinedRegexp[4]
+	} else if forcedFlag {
+		includeRexString = preDefinedRegexp[5]
 	} else {
 		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	}
@@ -276,7 +279,7 @@ func main() {
 
 	now := time.Now()
 	//                  rand.Seed(now.UnixNano())  Now handled by the init() function that knows Go 1.20+ doesn't want Seed called.
-	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
+	shuffleAmount := now.Nanosecond()/1e4 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year() + len(fileNames) // incr'g # of shuffling loops.
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
