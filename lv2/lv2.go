@@ -74,6 +74,7 @@ REVISION HISTORY
                 So far, the maximum string buffer for location strings is 13,937 < max 4 buffer < 13965.  Nope, that's not it.  See xspftotstrlen.go.
 27 Jan 24 -- Found it.  Bad filenames containing characters that choked vlc.  In this case, !!! was the culprit.  When I removed those files, it worked.  Then I detoxed those files.
  5 Feb 24 -- Increased the shuffling number
+ 6 Feb 24 -- Added randRange.
 */
 
 /*
@@ -100,7 +101,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Feb 5, 2024"
+const lastModified = "Feb 6, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -242,6 +243,12 @@ func main() {
 		flag.PrintDefaults()
 		fmt.Println()
 		fmt.Println()
+		fmt.Printf(" No arguments specified.  Are you sure? ")
+		var ans string
+		fmt.Scanln(&ans)
+		if strings.Contains(strings.ToLower(ans), "n") {
+			os.Exit(0)
+		}
 	}
 
 	smartCase := regexp.MustCompile("[A-Z]")
@@ -286,8 +293,12 @@ func main() {
 	for i := 0; i < shuffleAmount; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
+	more := randRange(50_000, 100_000)
+	for i := 0; i < more; i++ {
+		rand.Shuffle(len(fileNames), swapFnt)
+	}
 
-	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
+	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount+more, time.Since(now))
 
 	// The file names slice is ready.  Now to create the output file.  Part of the filename will be the regexp used to create this file.
 
@@ -517,6 +528,10 @@ func writeOutputFile(w *bufio.Writer, fn []string) (int, error) {
 	w.WriteString(playListClose)
 	_, err := w.WriteRune('\n')
 	return totalStrLen, err
+}
+
+func randRange(minP, maxP int) int { // note that this is not cryptographically secure.  Writing a cryptographically secure pseudorandom number generator (CSPRNG) is beyond the scope of this exercise.
+	return minP + rand.Intn(maxP-minP)
 }
 
 /*
