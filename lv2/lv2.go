@@ -287,18 +287,17 @@ func main() {
 	now := time.Now()
 	//                  rand.Seed(now.UnixNano())  Now handled by the init() function that knows Go 1.20+ doesn't want Seed called.
 	shuffleAmount := now.Nanosecond()/1e4 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year() + len(fileNames) // incr'g # of shuffling loops.
+	more := randRange(50_000, 100_000)
+	sumShuffle := shuffleAmount + more
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
-	for i := 0; i < shuffleAmount; i++ {
-		rand.Shuffle(len(fileNames), swapFnt)
-	}
-	more := randRange(50_000, 100_000)
-	for i := 0; i < more; i++ {
+	fmt.Printf(" ShuffleAmount = %d, more = %d, sumShuffle = %d.  About to start the Shuffle.\n\n", shuffleAmount, more, sumShuffle)
+	for i := 0; i < sumShuffle; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
 
-	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount+more, time.Since(now))
+	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), sumShuffle, time.Since(now))
 
 	// The file names slice is ready.  Now to create the output file.  Part of the filename will be the regexp used to create this file.
 
