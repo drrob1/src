@@ -1,7 +1,6 @@
 package main // upgradego.go
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,9 +21,10 @@ import (
   11 Sep 23 -- Now called upgradego, and I will add the filepicker stuff.  Hmmm, what do you know, it's already there.  IE, I coded that in updatego and I forgot I did that.
                 It must be because of today's date.  :=)
                 I'll check to make sure the answer is in bounds
+   7 Feb 24 -- Instead of using a []byte for the Stdout and Stderr, I'll see what happens if I use a strings.builder.
 */
 
-const lastUpdated = "Sep 12, 2023"
+const lastUpdated = "Feb 7, 2024"
 
 func main() {
 	execName, _ := os.Executable()
@@ -36,9 +36,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf(" %s is last altered %s, and has time stamp of %s \n", os.Args[0], lastUpdated, ExecTimeStamp)
+	fmt.Printf(" %s is last altered %s, and has time stamp of %s.  Working Directory is %s \n", os.Args[0], lastUpdated, ExecTimeStamp, workingDir)
 
-	// filepicker stuff.
+	// file picker stuff.
 
 	var ans string
 	var fn string
@@ -93,20 +93,29 @@ func main() {
 	}
 	fmt.Printf(" Filename is %s\n\n", fn)
 
+	//fullFileName := workingDir + string(filepath.Separator) + fn
+	fullFileName, err := filepath.Abs(fn)
+	if err != nil {
+		fmt.Printf(" After filepath.Abs(%s), ERROR: %s.  Bye-bye.\n", fn, err)
+		os.Exit(1)
+	}
+
 	ans = "" // blank out the above answer.  I got confused about this.  Turns out that when there's no input, the var, ans, is not altered.
 
 	// Now have the filename, need to nuke the old Go installation
 
-	err := os.Chdir("/usr/local") // I forgot to change dir back to where the go1 tarball is.  I probably don't need the -C flag to the tar command.  But this code works, so I'll leave it alone.
+	err = os.Chdir("/usr/local") // I forgot to change dir back to where the go1 tarball is.  I probably don't need the -C flag to the tar command.  But this code works, so I'll leave it alone.
 	if err != nil {
 		fmt.Printf(" Error from os.Chdir(/usr/local) is %s.  Exiting.\n", err)
 		os.Exit(1)
 	}
 
-	buf := make([]byte, 0, 500_000)
-	w1 := bytes.NewBuffer(buf)
-	buf2 := make([]byte, 0, 1000)
-	w2 := bytes.NewBuffer(buf2)
+	//buf := make([]byte, 0, 500_000)  This is how I did it in updateGo.go.
+	//w1 := bytes.NewBuffer(buf)
+	//buf2 := make([]byte, 0, 1000)
+	//w2 := bytes.NewBuffer(buf2)
+
+	var w1, w2 strings.Builder
 
 	var skipNuke bool
 	_, err = os.Stat("go/")
@@ -127,8 +136,8 @@ func main() {
 	if !skipNuke {
 		nukeCmd := exec.Command("doas", "rm", "-rfv", "go/") // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
 		nukeCmd.Stdin = os.Stdin
-		nukeCmd.Stdout = w1
-		nukeCmd.Stderr = w2
+		nukeCmd.Stdout = &w1
+		nukeCmd.Stderr = &w2
 		nukeCmd.Run()
 		if w1.Len() < 1000 {
 			fmt.Printf(" Output from nuke /usr/local/go is %s\n", w1.String())
@@ -161,8 +170,6 @@ func main() {
 	//	fmt.Printf(" Err from os.Stat(%s) is %s\n", fn, err)
 	//}
 
-	fullFileName := workingDir + string(filepath.Separator) + fn
-
 	//fmt.Printf(" About to call os.Stat(%s)\n", fullFileName)
 	//_, err = os.Stat(fullFileName)
 	//if err != nil {
@@ -189,8 +196,8 @@ func main() {
 	w2.Reset()
 
 	tarCmd.Stdin = os.Stdin
-	tarCmd.Stdout = w1
-	tarCmd.Stderr = w2
+	tarCmd.Stdout = &w1
+	tarCmd.Stderr = &w2
 	tarCmd.Run()
 
 	if w1.Len() == 0 {
@@ -208,10 +215,9 @@ func main() {
 }
 
 // ------------------------------------------- min -------------------------------------------------------------------------
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
+//func min(x, y int) int {  Not needed now that there are built in generic functions called min() and max(), as of Go 1.21.
+//	if x < y {
+//		return x
+//	}
+//	return y
+//}
