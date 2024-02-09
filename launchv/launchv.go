@@ -4,14 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jonhadfield/findexec"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
-	"strconv"
+	"src/misc"
 	"strings"
 	"time"
+	//											"strconv"
 )
 
 /*
@@ -49,9 +50,10 @@ REVISION HISTORY
 14 Dec 23 -- Going to try setting the StdErr to /dev/null and see what happens.  I don't want to see all the errors that show up on linux.
                No, that didn't work.  But I can not assign it to anything, and that works.
 20 Jan 24 -- Adding femdom as a switch
+ 9 Feb 24 -- Using Go 1.22 specific code for random numbers and took out the init() func.
 */
 
-const lastModified = "Jan 20, 2024"
+const lastModified = "Feb 9, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
@@ -59,20 +61,20 @@ var includeRexString, excludeRexString, searchPath, path, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
-func init() {
-	goVersion := runtime.Version()
-	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-	goVersionInt, err := strconv.Atoi(goVersion)
-	if err == nil {
-		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-			return
-		}
-	} else {
-		fmt.Printf(" ERROR from Atoi: %s\n", err)
-	}
-	rand.Seed(time.Now().UnixNano())
-}
+//func init() {
+//	goVersion := runtime.Version()
+//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+//	goVersionInt, err := strconv.Atoi(goVersion)
+//	if err == nil {
+//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+//			return
+//		}
+//	} else {
+//		fmt.Printf(" ERROR from Atoi: %s\n", err)
+//	}
+//	rand.Seed(time.Now().UnixNano())
+//}
 
 func main() {
 	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag bool
@@ -199,14 +201,17 @@ func main() {
 	now := time.Now()
 	//                  rand.Seed(now.UnixNano())  Now handled by the init() function that knows Go 1.20+ doesn't want Seed called.
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
+	more := misc.RandRange(50_000, 100_000)
+	sumShuffle := shuffleAmount + more
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
-	for i := 0; i < shuffleAmount; i++ {
+	fmt.Printf(" ShuffleAmount = %d, more = %d, sumShuffle = %d for %d files.  About to start the Shuffle.\n\n", shuffleAmount, more, sumShuffle, len(fileNames))
+	for i := 0; i < sumShuffle; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
 
-	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
+	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), sumShuffle, time.Since(now))
 
 	// ready to start calling vlc
 

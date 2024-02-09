@@ -103,7 +103,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Feb 8, 2024"
+const lastModified = "Feb 9, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -294,7 +294,7 @@ func main() {
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
-	fmt.Printf(" ShuffleAmount = %d, more = %d, sumShuffle = %d.  About to start the Shuffle.\n\n", shuffleAmount, more, sumShuffle)
+	fmt.Printf(" ShuffleAmount = %d, more = %d, sumShuffle = %d for %d files.  About to start the Shuffle.\n\n", shuffleAmount, more, sumShuffle, len(fileNames))
 	for i := 0; i < sumShuffle; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
