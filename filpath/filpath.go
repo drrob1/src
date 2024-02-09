@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"getcommandline"
+	"src/getcommandline"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"timlibg"
+	"src/timlibg"
 )
 
 func main() {

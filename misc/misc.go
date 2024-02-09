@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"math/rand/v2"
 	"strings"
 )
 
@@ -68,3 +69,14 @@ func ReadLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
+
+// ------------------------------------------------randRange -----------------------------------------------------------
+// I learned about this from the manning live project that taught RSA public key cryptography.
+//
+
+func RandRange(minP, maxP int) int { // note that this is not cryptographically secure.  Would need crypto/rand for that.
+	if maxP < minP {
+		minP, maxP = maxP, minP
+	}
+	return minP + rand.IntN(maxP-minP)
+}

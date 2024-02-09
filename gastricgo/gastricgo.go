@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 	//
-	"getcommandline"
-	"tknptr"
+	"src/getcommandline"
+	"src/tknptr"
 )
 
 /*

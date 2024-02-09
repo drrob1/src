@@ -4,7 +4,7 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
-	"getcommandline"
+	"src/getcommandline"
 	"io"
 	"io/ioutil"
 	"os"
