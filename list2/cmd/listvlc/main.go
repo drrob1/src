@@ -4,12 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jonhadfield/findexec"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"src/list2"
+	"src/misc"
 	"strings"
 	"time"
 )
@@ -44,9 +45,10 @@ REVISION HISTORY
 18 Jan 23 -- Adding smartCase
 18 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 21 Apr 23 -- Making spell checker happy, and removing dead code.
+ 9 Feb 24 -- Using Go 1.22 code for random numbers.
 */
 
-const lastModified = "Apr 21, 2023"
+const lastModified = "Feb 9, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -197,14 +199,17 @@ func main() {
 	now := time.Now()
 	//rand.Seed(now.UnixNano())  Now handled in init()
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
+	more := misc.RandRange(50_000, 100_000)
+	sumShuffle := shuffleAmount + more
 	swapFnt := func(i, j int) {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
-	for i := 0; i < shuffleAmount; i++ {
+	fmt.Printf(" ShuffleAmount = %d, more = %d, sumShuffle = %d for %d files.  About to start the Shuffle.\n\n", shuffleAmount, more, sumShuffle, len(fileNames))
+	for i := 0; i < sumShuffle; i++ {
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
 
-	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), shuffleAmount, time.Since(now))
+	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), sumShuffle, time.Since(now))
 
 	// ready to start calling vlc
 
