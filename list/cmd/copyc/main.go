@@ -79,6 +79,7 @@ import (
   25 May 23 -- Changed the final message to be multicolored.
    8 Jul 23 -- I fixed part where dest dir is tested.
   26 Aug 23 -- I'm going to change the final message to suppress when zero files were copied or not copied.
+  10 Feb 24 -- Making the timeFudgeFactor 1 ms
 */
 
 const LastAltered = "27 Aug 2023" //
@@ -86,7 +87,7 @@ const LastAltered = "27 Aug 2023" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 10 * time.Millisecond
+const timeFudgeFactor = 1 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
