@@ -80,9 +80,10 @@ import (
    8 Jul 23 -- I fixed part where dest dir is tested.
   26 Aug 23 -- I'm going to change the final message to suppress when zero files were copied or not copied.
   10 Feb 24 -- Making the timeFudgeFactor 1 ms
+  11 Feb 24 -- I removed the min func, so the code will use the built-in func of min.  This was new in Go 1.21.  As I write this, I'm  now compiling w/ Go 1.22.
 */
 
-const LastAltered = "10 Feb 2024" //
+const LastAltered = "11 Feb 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -350,18 +351,20 @@ func main() {
 // ------------------------------------------------------------- min ---------------------------------------------------
 
 // min(int1, int2) int  -- this returns the smaller of 2 int.  As of Go 1.21, this is a built-in fcn.  Removing this forces compilation to Go 1.21+
-func min(n1, n2 int) int {
-	if n1 < n2 {
-		return n1
-	}
-	return n2
-}
+//func min(n1, n2 int) int {
+//	if n1 < n2 {
+//		return n1
+//	}
+//	return n2
+//}
 
 // CopyAFile                    ------------------------------------ Copy ----------------------------------------------
 // CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
 func copyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
+	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
+	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
 
 	in, err := os.Open(srcFile)
 	if err != nil {
