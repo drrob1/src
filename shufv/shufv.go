@@ -33,6 +33,7 @@ package main // shufv.go
   12 Mar 23 -- Came home from Phoenix last night.  Found that waiting for me to close this instance of vlc to delete the temp xspf file will tie up the terminal.
                  I'll change it so that I can delete them afterward.  The pattern is vlc and a 10-digit number which I can delete myself.
    1 Apr 23 -- StaticCheck found a few issues.
+  11 Feb 24 -- Added math/rand/v2, so this must be compiled w/ Go 1.22+
 */
 
 import (
@@ -43,7 +44,7 @@ import (
 	"fmt"
 	"github.com/jonhadfield/findexec"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,7 +58,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "Apr 1 2023"
+const LastCompiled = "Feb 11 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -109,21 +110,21 @@ var tokenStateNames = []string{"empty", "contents", "openingHTML", "closingHTML"
 var verboseFlag, veryVerBoseFlag bool
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 
-func init() {
-	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
-	goVersion := runtime.Version()
-	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-	goVersionInt, err := strconv.Atoi(goVersion)
-	if err == nil {
-		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-			return
-		}
-	} else {
-		fmt.Printf(" ERROR from Atoi: %s\n", err)
-	}
-	rand.Seed(time.Now().UnixNano())
-}
+//func init() {  Removed when Go 1.22 came out, which provided math/rand/v2.
+//	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
+//	goVersion := runtime.Version()
+//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+//	goVersionInt, err := strconv.Atoi(goVersion)
+//	if err == nil {
+//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+//			return
+//		}
+//	} else {
+//		fmt.Printf(" ERROR from Atoi: %s\n", err)
+//	}
+//	rand.Seed(time.Now().UnixNano())
+//}
 
 // ---------------------------------------------------------------- getChar -----------------------------
 

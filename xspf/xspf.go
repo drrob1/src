@@ -36,6 +36,7 @@ package main
                  And I removed an errant call to rand.Seed() just before the shuffling loop in getShuffledFileNames.
   10 Feb 23 -- Enhanced testing of the code that detects the version of Go.
    1 Apr 23 -- StaticCheck found some issues.
+  11 Feb 24 -- Added math/rand/v2 so removed init() which called rand.seed
 */
 
 import (
@@ -45,7 +46,7 @@ import (
 	"fmt"
 	"github.com/jonhadfield/findexec"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,7 +58,7 @@ import (
 	"time"
 )
 
-const LastCompiled = "1 Apr 2023"
+const LastCompiled = "11 Feb 2024"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -110,21 +111,21 @@ var TrackSlice []*TrackType // Global variable.  But still needs to call make in
 var veryVerboseFlag bool
 var verboseFlag bool
 
-func init() {
-	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
-	goVersion := runtime.Version()
-	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-	goVersionInt, err := strconv.Atoi(goVersion)
-	if err == nil {
-		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-			return
-		}
-	} else {
-		fmt.Printf(" ERROR from Atoi: %s\n", err)
-	}
-	rand.Seed(time.Now().UnixNano())
-}
+//func init() {
+//	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
+//	goVersion := runtime.Version()
+//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
+//	goVersionInt, err := strconv.Atoi(goVersion)
+//	if err == nil {
+//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
+//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
+//			return
+//		}
+//	} else {
+//		fmt.Printf(" ERROR from Atoi: %s\n", err)
+//	}
+//	rand.Seed(time.Now().UnixNano())
+//}
 
 // ---------------------------------------------------------------- getChar -----------------------------
 
