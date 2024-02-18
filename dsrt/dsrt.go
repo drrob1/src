@@ -131,10 +131,11 @@ REVISION HISTORY
                 I'll leave -N to mean lines/screen, as there's no point in having a command line switch to change that;  I could just use the nscreen option directly.
                 I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var along the lines of allScreens, defaulting to 50 or so.
  3 Jul 23 -- Added environment var h to mean halfFlag.
- 4 Jul 23 -- Improved ProcessEnvironString
+ 4 Jul 23 -- Improved ProcessEnvironString.
+18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
 */
 
-const LastAltered = "4 July 2023"
+const LastAltered = "18 Feb 2023"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -148,11 +149,6 @@ type DsrtParamType struct {
 	numscreens                                                                            int // set by dsrt environ var.
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
 }
-
-//type DsrtParamType struct {
-//	numlines                                                                    int
-//	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag bool
-//}
 
 const defaultHeight = 40
 const minWidth = 90
@@ -237,9 +233,7 @@ func main() {
 	var NLines int
 	flag.IntVar(&NLines, "N", numOfLines, "number of lines to display, and takes priority over the auto settings.") // Value
 
-	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
-	var SizeFlag bool                                                       // will always be false.  I can leave it this way, for now.
-	//flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+	var sizeflag = flag.Bool("s", false, "sort by size instead of by mod date") // pointer
 
 	var DirListFlag = flag.Bool("d", false, "include directories in the output listing") // pointer
 
@@ -327,7 +321,7 @@ func main() {
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
 
-	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
+	SizeSort := *sizeflag || dsrtParam.sizeflag
 	DateSort := !SizeSort // convenience variable
 
 	if verboseFlag {

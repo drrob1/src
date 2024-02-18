@@ -125,9 +125,10 @@ Revision History
                And I added back -g for globFlag.  That got lost somehow.
  4 Jul 23 -- I'm back porting code from dsrt to here.  I added the -a flag here, changed the environ number to mean number of screens for the all option, and added environ var h to mean halfFlag.
                Then I improved ProcessEnvironString, as long as I was here.
+18 Feb 24 -- Made it clear that this sorts by mod date.  And now *nscreens * numOfCols is the multiplier for num of lines.  Should have been this way all along.
 */
 
-const LastAltered = "4 July 2023"
+const LastAltered = "18 Feb 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -241,8 +242,8 @@ func main() {
 	var NLines int
 	flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
 
-	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
-	var SizeFlag bool                                                       // will always be false.  I'll leave it this way for now.
+	var sizeflag = flag.Bool("s", false, "sort by size instead of by mod date") // pointer
+	var SizeFlag bool                                                           // will always be false.  I'll leave it this way for now.
 	//flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
 
 	var DirListFlag = flag.Bool("d", false, "include directories in the output listing") // pointer
@@ -300,31 +301,11 @@ func main() {
 
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
-		//                                       } else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
-		//	                                         numOfLines = dsrtParam.numlines
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like if the display is redirected
 		numOfLines = defaultHeight
 	}
-
-	if dsrtParam.numscreens > 0 {
-		allScreens = dsrtParam.numscreens
-	}
-	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
-		*nscreens = allScreens
-	}
-	numOfLines *= *nscreens
-
-	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
-		numOfLines /= 2
-	}
-
-	if dsrtParam.filterflag && !*noFilterFlag {
-		filterFlag = true
-	}
-
-	noExtensionFlag = *extensionflag || *extflag
 
 	if numOfCols < 1 {
 		numOfCols = 1
@@ -338,6 +319,24 @@ func main() {
 			numOfCols = 3
 		}
 	}
+
+	if dsrtParam.numscreens > 0 {
+		allScreens = dsrtParam.numscreens
+	}
+	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+		*nscreens = allScreens
+	}
+	numOfLines *= *nscreens * numOfCols // updated 18 Feb 24.
+
+	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
+		numOfLines /= 2
+	}
+
+	if dsrtParam.filterflag && !*noFilterFlag {
+		filterFlag = true
+	}
+
+	noExtensionFlag = *extensionflag || *extflag
 
 	if verboseFlag {
 		execName, _ := os.Executable()
