@@ -121,9 +121,10 @@ Revision History
                I may just always show that, as it seems it would be easy and only 1 line.  I'll place that line at the bottom.
                I removed the -t ShowGrandTotal flag as I removed the code that calculated it quite a while ago.
 28 Aug 23 -- Added the all flag, currently equivalent to indicating 50 screens.  Mostly copied the code from dsrt.go.
+20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
 */
 
-const LastAltered = "Aug 28, 2023"
+const LastAltered = "Feb 20, 2024"
 
 type dirAliasMapType map[string]string
 
@@ -251,9 +252,8 @@ func main() {
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
-	var sizeflag = flag.Bool("s", false, "sort by size instead of by date") // pointer
-	var SizeFlag bool                                                       // will always be false.
-	//flag.BoolVar(&SizeFlag, "S", false, "sort by size instead of by date")
+	var sizeflag = flag.Bool("s", false, "sort by size instead of by mod date") // pointer
+	var SizeFlag bool                                                           // will always be false.
 
 	flag.BoolVar(&dirListFlag, "d", false, "include directories in the output listing")
 
@@ -373,9 +373,7 @@ func main() {
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
 		*nscreens = allScreens
 	}
-	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
-
-	numOfLines *= *nscreens
+	numOfLines *= *nscreens * numOfCols // Doesn't matter if *nscreens or numOfCols = 1
 
 	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
