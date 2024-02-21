@@ -34,6 +34,7 @@ package main // shufv.go
                  I'll change it so that I can delete them afterward.  The pattern is vlc and a 10-digit number which I can delete myself.
    1 Apr 23 -- StaticCheck found a few issues.
   11 Feb 24 -- Added math/rand/v2, so this must be compiled w/ Go 1.22+
+  20 Feb 24 -- Increased the number of times to shuffle, as I did in launchv and lv2.  And updated the shuffle message.
 */
 
 import (
@@ -49,6 +50,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"src/misc"
 	"strconv"
 	"strings"
 	"time"
@@ -58,7 +60,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "Feb 11 2024"
+const LastCompiled = "Feb 20, 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -527,13 +529,18 @@ func ProcessXMLfile(inputfile *bytes.Reader, outputfile *bufio.Writer) {
 
 	Time := timlibg.GetDateTime()
 	shuffling := Time.Month + Time.Day + Time.Hours + Time.Minutes + Time.Year + Time.Seconds
-	for k := 0; k < shuffling; k++ {
+	more := misc.RandRange(100_000, 200_000) // requires Go 1.22 as it uses math/rand/v2.
+	sumShuffle := shuffling + more
+	//for k := 0; k < sumShuffle; k++ { old way
+	//	rand.Shuffle(len(TrackSlice), swapFnt)
+	//}
+	for range sumShuffle { // Allowed as of Go 1.22.  And I don't need to assign to a variable or blank identifier.
 		rand.Shuffle(len(TrackSlice), swapFnt)
 	}
 	// Finished shuffling.
 
 	timeToShuffle := time.Since(t0) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	fmt.Printf(" It took %s to shuffle this file %d times.\n", timeToShuffle.String(), shuffling)
+	fmt.Printf(" It took %s to shuffle %d items %d times.\n", timeToShuffle.String(), len(TrackSlice), sumShuffle)
 	fmt.Println()
 
 	// Write the output file.
