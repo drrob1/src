@@ -126,6 +126,7 @@ Revision History
  4 Jul 23 -- I'm back porting code from dsrt to here.  I added the -a flag here, changed the environ number to mean number of screens for the all option, and added environ var h to mean halfFlag.
                Then I improved ProcessEnvironString, as long as I was here.
 18 Feb 24 -- Made it clear that this sorts by mod date.  And now *nscreens * numOfCols is the multiplier for num of lines.  Should have been this way all along.
+22 Feb 24 -- Undid change about *nscreens.  Increasing the number of columns does not need a larger number of lines.  Oops.
 */
 
 const LastAltered = "18 Feb 2024"
@@ -326,7 +327,7 @@ func main() {
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
 		*nscreens = allScreens
 	}
-	numOfLines *= *nscreens * numOfCols // updated 18 Feb 24.
+	numOfLines *= *nscreens // updated 18 Feb 24.
 
 	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
