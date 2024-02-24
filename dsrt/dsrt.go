@@ -135,7 +135,7 @@ REVISION HISTORY
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
 */
 
-const LastAltered = "18 Feb 2023"
+const LastAltered = "18 Feb 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
