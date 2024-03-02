@@ -27,22 +27,27 @@ import (
   11 May 23 -- Fixing bug in use of flag.NArg().
   23 Jan 24 -- Added noWorkFlag, which means do not actually do anything.  Just print what would be done.  And changed the name of the other option to dot.  It was too hard to type detox -dots
   28 Jan 24 -- noWorkFlag now really does work.
+   2 Mar 24 -- Added back -dots as an alternative, so both -dot and -dots do the same thing.
 */
 
-const lastModified = "28 Jan 24"
+const lastModified = "2 Mar 24"
 
-var noDotsFlag bool
+var noDotsFlag, noDotFlag bool
 var noWorkFlag bool
 
 func init() {
-	flag.BoolVar(&noDotsFlag, "dot", false, "Enable removing excess dots from filenames.")
+	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
+	flag.BoolVar(&noDotFlag, "dot", false, "Enable removing excess dots from filenames.")
 	flag.BoolVar(&noWorkFlag, "no", false, "No work is to be done.  Just show what would be done.")
 }
 
 func main() {
 	var globPattern string
-	//flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
+
 	flag.Parse()
+	if noDotFlag { // so if -dot is used, it will also set -noDotsFlag.  If noDotsFlag is set by the -dots option, it doesn't matter.
+		noDotsFlag = true
+	}
 
 	fmt.Println()
 
@@ -54,8 +59,8 @@ func main() {
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s.  noDotsFlag=%t. \n",
-		lastModified, globPattern, startDirectory, noDotsFlag)
+	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s.  noDotsFlag=%t, noDotFlag=%t. \n",
+		lastModified, globPattern, startDirectory, noDotsFlag, noDotFlag)
 	fmt.Println()
 
 	files := myReadDirNames(startDirectory)
