@@ -519,6 +519,20 @@ func solveTest2() {
 	ss = mat.Write(D, 3)
 	printString(ss)
 
+	fmt.Printf("\n Will now use matrix inversion as a solution method.  Result is:\n")
+	inverseA := mat.Invert(A)
+	inverseSoln := mat.Mul(inverseA, B)
+	ss = mat.WriteZero(inverseSoln, 3)
+	printString(ss)
+
+	if mat.Equal(solveSoln, inverseSoln) {
+		ctfmt.Printf(ct.Green, true, " The Solve and matrix inversion methods returned equal results.\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT returned equal results.\n")
+	}
+	fmt.Println()
+	fmt.Println()
+
 } // end SolveTest2
 
 func printString(s []string) {
