@@ -4,22 +4,18 @@ import (
 	"fmt"
 	"math"
 	"math/cmplx"
-	"math/rand"
+	"math/rand/v2"
 	"src/vec"
 	"strconv"
 	"strings"
 )
 
 //               Matrix arithmetic
-
 //   Programmer:         P. Moylan
 //   Last edited:        15 August 1995
 //   Status:             OK
-
-//    Portability problem: I've had to use an XDS
-//    language extension (open arrays) here; I
-//    haven't yet figured out how to do the job
-//    in ISO standard Modula-2.
+//    Modula-2 Portability problem: I've had to use an XDS language extension (open arrays) here.
+//    I haven't yet figured out how to do the job in ISO standard Modula-2.
 
 /*
  REVISION HISTORY
@@ -32,6 +28,7 @@ import (
  21 Nov 22 -- static linter reported issues, so some of them are addressed, and others are ignored.
  31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics when I needed pointer semantics on the return var.  I took it out as it wasn't idiomatic anyway.
   3 Apr 23 -- Exporting Small.  And writing WriteZero, WriteZeroPair, and SolveInversion.
+ 10 Mar 24 -- Updated to Go 1.22, mostly in math/rand/v2.  And added Equal func.
 */
 
 const Small = 1.0e-10
@@ -41,8 +38,6 @@ type Matrix2D [][]float64
 type Permutation []int
 
 type LongComplexSlice []complex128 //
-
-//func init() { rand.Seed(time.Now().UnixNano())  Now that I'm using Go 1.20 by default, this code is wrong. }
 
 //   Creating matrices
 
@@ -98,7 +93,7 @@ func Random(matrix Matrix2D) Matrix2D {
 
 	for r := range matrix {
 		for c := range matrix[r] {
-			matrix[r][c] = float64(rand.Intn(100))
+			matrix[r][c] = float64(rand.IntN(100))
 		}
 	}
 	return matrix
@@ -548,6 +543,25 @@ func SolveInvert(a, b Matrix2D) Matrix2D {
 	return x
 }
 
+// ---------------------------------- Equal --------------------------------------
+
+func Equal(a, b Matrix2D) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a[0]) != len(b[0]) {
+		return false
+	}
+	for i := range a {
+		for j := range a[0] {
+			if math.Abs(a[i][j]-b[i][j]) >= Small { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
+				return false
+			}
+		}
+	}
+	return true
+}
+
 //   EIGENPROBLEMS
 
 func Balance(A Matrix2D) Matrix2D {
@@ -982,6 +996,8 @@ func Write(M Matrix2D, places int) []string {
 	return OutputStringSlice
 } // END Write
 
+// ------------------------------------------------------------------------------ WriteZero ----------------------------
+
 func WriteZero(M Matrix2D, places int) []string {
 	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
 
@@ -1001,6 +1017,8 @@ func WriteZero(M Matrix2D, places int) []string {
 
 	return OutputStringSlice
 } // END WriteZero
+
+// ------------------------------------------------------------------------------ WriteZeroPair ----------------------------
 
 func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.

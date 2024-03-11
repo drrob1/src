@@ -1,6 +1,6 @@
 package main
 
-/********************************************************)
+/**********************************************************)
   (*                                                      *)
   (*              Test of Matrices module                 *)
   (*                                                      *)
@@ -19,14 +19,17 @@ REVISION HISTORY
 13 Feb 22 -- Converted to modules
 21 Nov 22 -- static linter found issues.  Now addressed.
  1 Apr 23 -- Since I'm here because of StaticCheck, I'll fix some of the messages and update the code.
-10 Mar 24 -- Added test of ScalarMult
+10 Mar 24 -- Now called mattest2, derived from mattest.  I'm updating to Go 1.22, and will generate test data if no input file is specified.
 */
 
 import (
 	"bufio"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"src/mat"
+	"src/misc"
 	"strings"
 )
 
@@ -81,15 +84,6 @@ func BasicTest() {
 	B = mat.Random(B) // Random (B, Brows, Bcols);
 	fmt.Println(" Matrix B is:")
 	ss = mat.Write(B, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
-	fmt.Println()
-
-	// Test scalar multiply
-	A5 := mat.ScalarMul(5, A)
-	fmt.Printf(" 5 dot A, or scalar multiply of A, is:\n")
-	ss = mat.Write(A5, 3)
 	for _, s := range ss {
 		fmt.Print(s)
 	}
@@ -315,12 +309,6 @@ func SolveTest() {
 	for _, s := range ss {
 		fmt.Print(s)
 	}
-	//fmt.Println()
-	//fmt.Println("As a check, AX-B evaluates to zero after running mat.BelowSmallMakeZero")
-	//ss = mat.Write(D, 4)
-	//for _, s := range ss {
-	//	fmt.Print(s)
-	//}
 	fmt.Println()
 
 	// Check that the solution looks right from mat.GaussJ.
@@ -397,7 +385,7 @@ func SingularTest() {
 
 func InversionTest() {
 
-	// Inverting a matrix, also an eigenvalue calculation.
+	// Inverting a matrix.  I removed eigenvalue calculation, which I couldn't test anyway.  I don't remember why they're important anymore.
 
 	const N = 5
 
@@ -451,43 +439,108 @@ func InversionTest() {
 
 	pause()
 
-	fmt.Println()
-	fmt.Println("EIGENVALUES")
-	fmt.Println()
-	fmt.Println("The eigenvalues of A are")
-	W := mat.Eigenvalues(A)
-	for j := range W {
-		fmt.Print("    ")
-		fmt.Print(W[j])
-		fmt.Println()
-	}
-	fmt.Println()
-	for _, w := range W { // just to see if this also works
-		fmt.Printf("  %5G\n", w)
-	}
-	fmt.Println()
-
-	fmt.Println("The eigenvalues of its inverse are")
-	W = mat.Eigenvalues(X)
-	for _, w := range W {
-		fmt.Printf("  %5G\n", w)
-	}
-	fmt.Println()
-
 } //    END InversionTest;
+
+func solveTest2() {
+
+	const aRows = 3
+	const aCols = aRows
+	const bRows = aRows
+	const bCols = 1 // represents a column vector
+
+	var A, B, X mat.Matrix2D
+
+	A = mat.NewMatrix(aRows, aCols)
+	B = mat.NewMatrix(bRows, bCols)
+	X = mat.NewMatrix(bRows, bCols)
+
+	fmt.Println("Solving linear algebraic equations of form AX = B, solve for X")
+
+	// Give a value to the A matrix.
+	// I want these values to be whole positive numbers.  I need to determine the coefficient matrix, A, and values for the column vector, B.
+
+	initialVal := misc.RandRange(1, 50)
+	increment := misc.RandRange(1, 50)
+
+	X[0][0] = float64(initialVal)
+	X[1][0] = X[0][0] + float64(increment)
+	X[2][0] = X[1][0] + float64(increment)
+
+	// Now need to assign coefficients in matrix A
+	for i := range A {
+		for j := range A[0] {
+			A[i][j] = float64(misc.RandRange(1, 20))
+		}
+	}
+
+	fmt.Printf(" Coefficient matrix A is:\n")
+	ss := mat.Write(A, 3)
+	printString(ss)
+	fmt.Println()
+
+	//fmt.Printf(" x = %g, y = %g, z = %g\n\n", X[0][0], X[1][0], X[2][0])
+
+	// Now do the calculation to determine what the V column vector needs to be for this to work.
+	for i := range A {
+		for j := range A[i] {
+			product := A[i][j] * X[j][0]
+			B[i][0] += product
+			//fmt.Printf(" i=%d, j=%d, A[%d,%d] is %g, X[%d,0] is %g, product is %g, B[%d,0] is %g\n", i, j, i, j, A[i][j], i, X[j][0], product, i, B[i][0])
+			//newPause()
+		}
+	}
+
+	fmt.Printf("\n Column vectors X and B are:\n")
+	ss = mat.WriteZeroPair(X, B, 4)
+	printString(ss)
+	fmt.Println()
+	fmt.Printf("\n\n")
+
+	solveSoln := mat.Solve(A, B)
+	gaussSoln := mat.GaussJ(A, B)
+
+	fmt.Printf("The solution X to AX = B\n using Solve       and then      GaussJ are:\n")
+	ss = mat.WriteZeroPair(solveSoln, gaussSoln, 3)
+	printString(ss)
+	fmt.Println()
+
+	if mat.Equal(solveSoln, gaussSoln) {
+		ctfmt.Printf(ct.Green, true, " The Solve and GaussJ methods returned equal results.\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT returned equal results.\n")
+	}
+	fmt.Println()
+
+	// Does AX - B = 0
+	C := mat.Mul(A, solveSoln)
+	D := mat.Sub(B, C)
+
+	fmt.Println("As a check, AX-B should be 0, and evaluates to")
+	ss = mat.Write(D, 3)
+	printString(ss)
+
+} // end SolveTest2
+
+func printString(s []string) {
+	for _, line := range s {
+		ctfmt.Print(ct.Yellow, true, line)
+	}
+
+}
 
 // -----------------------------------------------------------------------
 //                              MAIN PROGRAM
 // -----------------------------------------------------------------------
 
 func main() {
-	BasicTest()
-	pause()
-	SolveTest()
-	newPause()
-	//SingularTest()
+	solveTest2()
 	//newPause()
-	InversionTest()
+	//BasicTest()
+	//pause()
+	//SolveTest()
+	//newPause()
+	//InversionTest()
+	//newPause()
 }
 
 func pause() { // written a long time ago, probably my first stab at this.
@@ -505,9 +558,12 @@ func pause() { // written a long time ago, probably my first stab at this.
 }
 
 func newPause() {
-	fmt.Print(" pausing ... hit <enter>")
+	fmt.Print(" pausing ... hit <enter>  x to stop ")
 	var ans string
 	fmt.Scanln(&ans)
+	if strings.ToLower(ans) == "x" {
+		os.Exit(1)
+	}
 }
 
 // END MatTest.
