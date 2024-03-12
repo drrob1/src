@@ -20,6 +20,7 @@ REVISION HISTORY
 21 Nov 22 -- static linter found issues.  Now addressed.
  1 Apr 23 -- Since I'm here because of StaticCheck, I'll fix some of the messages and update the code.
 10 Mar 24 -- Now called mattest2, derived from mattest.  I'm updating to Go 1.22, and will generate test data if no input file is specified.
+12 Mar 24 -- Playing w/ gonum.org mat package, from Miami
 */
 
 import (
@@ -27,18 +28,19 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	gomat "gonum.org/v1/gonum/mat"
 	"os"
 	"src/mat"
 	"src/misc"
 	"strings"
 )
 
-func solveTest2() {
+const aRows = 3
+const aCols = aRows
+const bRows = aRows
+const bCols = 1 // represents a column vector
 
-	const aRows = 3
-	const aCols = aRows
-	const bRows = aRows
-	const bCols = 1 // represents a column vector
+func solveTest2() {
 
 	var A, B, X mat.Matrix2D
 
@@ -146,6 +148,39 @@ func solveTest2() {
 func printString(s []string) {
 	for _, line := range s {
 		ctfmt.Print(ct.Yellow, true, line)
+	}
+
+}
+
+func goNumMatTest() {
+
+	initialVal := float64(misc.RandRange(1, 50))
+	increment := float64(misc.RandRange(1, 50))
+
+	initX := make([]float64, aCols)
+	initX[0] = initialVal
+	initX[1] = initialVal + increment
+	initX[2] = initialVal + 2*increment
+
+	X := gomat.NewDense(aRows, bCols, initX)
+
+	// Now need to assign coefficients in matrix A
+	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
+
+	for i := range initA {
+		initA[i] = float64(misc.RandRange(1, 20))
+	}
+
+	A := gomat.NewDense(aRows, aCols, initA)
+
+	initB := make([]float64, bRows*bCols)
+	// Now do the calculation to determine what the B column vector needs to be for this to work.
+	// I have to get the proper way to access a matrix element, and use it in the loop below.
+	for i := range initB {
+		product := A[i][j] * X[j][0]
+		initB[i] += product
+		//fmt.Printf(" i=%d, j=%d, A[%d,%d] is %g, X[%d,0] is %g, product is %g, B[%d,0] is %g\n", i, j, i, j, A[i][j], i, X[j][0], product, i, B[i][0])
+		//newPause()
 	}
 
 }
