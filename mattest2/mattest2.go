@@ -188,19 +188,22 @@ func goNumMatTest() {
 	Bvec := gomat.NewVecDense(bRows, initB)
 	fmt.Printf(" Bvec:\n%v\n\n", gomat.Formatted(Bvec))
 
-	B := gomat.NewDense(bRows, bCols, initB)
-	fmt.Printf(" B:\n%v\n\n", gomat.Formatted(B))
-
 	// Will try w/ inersion
-	var inverseA, invSoln gomat.Dense
+	var inverseA, invSoln, invSolnVec gomat.Dense
 	err := inverseA.Inverse(A)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	invSoln.Mul(&inverseA, Bvec)
-	fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln))
+	invSolnVec.Mul(&inverseA, Bvec)
+	fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec))
 	//fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
+
+	B := gomat.NewDense(bRows, bCols, initB)
+	fmt.Printf(" B:\n%v\n\n", gomat.Formatted(B))
+
+	invSoln.Mul(&inverseA, B)
+	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln))
 
 	// Try LU stuff
 	var lu gomat.LU
@@ -218,7 +221,7 @@ func goNumMatTest() {
 	var qr gomat.QR
 	var qrSoln *gomat.Dense
 	qr.Factorize(A)
-	err = qr.SolveTo(qrSoln, false, B)
+	err = qr.SolveTo(qrSoln, false, Bvec)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
