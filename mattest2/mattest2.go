@@ -98,14 +98,14 @@ func solveTest2() {
 	printString(ss)
 	fmt.Println()
 
-	if mat.Equal(solveSoln, gaussSoln) {
+	if mat.EqualApprox(solveSoln, gaussSoln) {
 		ctfmt.Printf(ct.Green, true, " The Solve and GaussJ methods returned equal results.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT returned equal results.\n")
 	}
 	fmt.Println()
 
-	if mat.Equal(solveSoln, X) {
+	if mat.EqualApprox(solveSoln, X) {
 		ctfmt.Printf(ct.Green, true, " The Solve and X column vector returned equal results.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT returned equal results.\n")
@@ -119,6 +119,8 @@ func solveTest2() {
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	ss = mat.Write(D, 3)
 	printString(ss)
+	ss = mat.WriteZero(D, 3)
+	printString(ss)
 
 	fmt.Printf("\n Will now use matrix inversion as a solution method.  Result is:\n")
 	inverseA := mat.Invert(A)
@@ -128,13 +130,13 @@ func solveTest2() {
 
 	solveInvert := mat.SolveInvert(A, B)
 
-	if mat.Equal(solveSoln, inverseSoln) {
+	if mat.EqualApprox(solveSoln, inverseSoln) {
 		ctfmt.Printf(ct.Green, true, " The Solve and matrix inversion methods returned equal results.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT returned equal results.\n")
 	}
 
-	if mat.Equal(solveInvert, inverseSoln) {
+	if mat.EqualApprox(solveInvert, inverseSoln) {
 		ctfmt.Printf(ct.Green, true, " The SolveInvert and matrix inversion methods returned equal results.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " The SolveInvert and matrix inversion methods DID NOT returned equal results.\n")
@@ -164,7 +166,7 @@ func goNumMatTest() {
 	initX[2] = initialVal + 2*increment
 
 	X := gomat.NewVecDense(bRows, initX)
-	fmt.Printf(" X:\n %v\n\n", gomat.Formatted(X))
+	fmt.Printf(" X:\n%v\n\n", gomat.Formatted(X))
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
@@ -174,7 +176,7 @@ func goNumMatTest() {
 	}
 
 	A := gomat.NewDense(aRows, aCols, initA)
-	fmt.Printf(" A:\n %v\n\n", gomat.Formatted(A))
+	fmt.Printf(" A:\n%v\n\n", gomat.Formatted(A))
 
 	initB := make([]float64, bRows) // col vec
 	for i := range aRows {
@@ -183,8 +185,11 @@ func goNumMatTest() {
 			initB[i] += product
 		}
 	}
-	B := gomat.NewVecDense(bRows, initB)
-	fmt.Printf(" B:\n %v\n\n", gomat.Formatted(B))
+	Bvec := gomat.NewVecDense(bRows, initB)
+	fmt.Printf(" Bvec:\n%v\n\n", gomat.Formatted(Bvec))
+
+	B := gomat.NewDense(bRows, bCols, initB)
+	fmt.Printf(" B:\n%v\n\n", gomat.Formatted(B))
 
 	// Will try w/ inersion
 	var inverseA, invSoln gomat.Dense
@@ -193,28 +198,9 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	invSoln.Mul(&inverseA, B)
-	fmt.Printf(" Solution by GoNum inversion is:\n %.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
-
-	// try w/ QR stuff
-	var qr gomat.QR
-	var qrSoln *gomat.Dense
-	qr.Factorize(A)
-	err = qr.SolveTo(qrSoln, false, B)
-	if err != nil {
-		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf(" Soluton by QR factorization is:\n %v\n\n", gomat.Formatted(qrSoln))
-
-	// Try Solve stuff
-	var solvSoln *gomat.Dense
-	err = solvSoln.Solve(A, B)
-	if err != nil {
-		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf(" Solution by Solve is:\n %v\n\n", gomat.Formatted(solvSoln))
+	invSoln.Mul(&inverseA, Bvec)
+	fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln))
+	//fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
 
 	// Try LU stuff
 	var lu gomat.LU
@@ -226,7 +212,27 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by LU factorization is:\n %v\n\n", gomat.Formatted(luSoln))
+	fmt.Printf(" Soluton by gonum LU factorization is:\n %v\n\n", gomat.Formatted(luSoln))
+
+	// try w/ QR stuff
+	var qr gomat.QR
+	var qrSoln *gomat.Dense
+	qr.Factorize(A)
+	err = qr.SolveTo(qrSoln, false, B)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Soluton by gonum QR factorization is:\n %v\n\n", gomat.Formatted(qrSoln))
+
+	// Try Solve stuff
+	var solvSoln *gomat.Dense
+	err = solvSoln.Solve(A, B)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Solution by gonum Solve is:\n %v\n\n", gomat.Formatted(solvSoln))
 
 } // end gonummatTest
 

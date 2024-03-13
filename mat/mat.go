@@ -543,9 +543,9 @@ func SolveInvert(a, b Matrix2D) Matrix2D {
 	return x
 }
 
-// ---------------------------------- Equal --------------------------------------
+// ---------------------------------- EqualApprox --------------------------------------
 
-func Equal(a, b Matrix2D) bool {
+func EqualApprox(a, b Matrix2D) bool {
 	if len(a) != len(b) {
 		return false
 	}
