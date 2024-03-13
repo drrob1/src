@@ -153,6 +153,7 @@ func printString(s []string) {
 }
 
 func goNumMatTest() {
+	// Will look to solve AX = B, for X
 
 	initialVal := float64(misc.RandRange(1, 50))
 	increment := float64(misc.RandRange(1, 50))
@@ -162,7 +163,8 @@ func goNumMatTest() {
 	initX[1] = initialVal + increment
 	initX[2] = initialVal + 2*increment
 
-	X := gomat.NewDense(aRows, bCols, initX)
+	X := gomat.NewVecDense(bRows, initX)
+	fmt.Printf(" X:\n %v\n\n", gomat.Formatted(X))
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
@@ -172,18 +174,61 @@ func goNumMatTest() {
 	}
 
 	A := gomat.NewDense(aRows, aCols, initA)
+	fmt.Printf(" A:\n %v\n\n", gomat.Formatted(A))
 
-	initB := make([]float64, bRows*bCols)
-	// Now do the calculation to determine what the B column vector needs to be for this to work.
-	// I have to get the proper way to access a matrix element, and use it in the loop below.
-	for i := range initB {
-		product := A[i][j] * X[j][0]
-		initB[i] += product
-		//fmt.Printf(" i=%d, j=%d, A[%d,%d] is %g, X[%d,0] is %g, product is %g, B[%d,0] is %g\n", i, j, i, j, A[i][j], i, X[j][0], product, i, B[i][0])
-		//newPause()
+	initB := make([]float64, bRows) // col vec
+	for i := range aRows {
+		for j := range aCols {
+			product := A.At(i, j) * X.At(j, 0)
+			initB[i] += product
+		}
 	}
+	B := gomat.NewVecDense(bRows, initB)
+	fmt.Printf(" B:\n %v\n\n", gomat.Formatted(B))
 
-}
+	// Will try w/ inersion
+	var inverseA, invSoln gomat.Dense
+	err := inverseA.Inverse(A)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
+		os.Exit(1)
+	}
+	invSoln.Mul(&inverseA, B)
+	fmt.Printf(" Solution by GoNum inversion is:\n %.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
+
+	// try w/ QR stuff
+	var qr gomat.QR
+	var qrSoln *gomat.Dense
+	qr.Factorize(A)
+	err = qr.SolveTo(qrSoln, false, B)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Soluton by QR factorization is:\n %v\n\n", gomat.Formatted(qrSoln))
+
+	// Try Solve stuff
+	var solvSoln *gomat.Dense
+	err = solvSoln.Solve(A, B)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Solution by Solve is:\n %v\n\n", gomat.Formatted(solvSoln))
+
+	// Try LU stuff
+	var lu gomat.LU
+	var luSoln *gomat.Dense
+
+	lu.Factorize(A)
+	err = lu.SolveTo(luSoln, false, B)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Soluton by LU factorization is:\n %v\n\n", gomat.Formatted(luSoln))
+
+} // end gonummatTest
 
 // -----------------------------------------------------------------------
 //                              MAIN PROGRAM
@@ -191,6 +236,7 @@ func goNumMatTest() {
 
 func main() {
 	solveTest2()
+	goNumMatTest()
 }
 
 func pause() { // written a long time ago, probably my first stab at this.
