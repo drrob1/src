@@ -21,6 +21,7 @@ REVISION HISTORY
  1 Apr 23 -- Since I'm here because of StaticCheck, I'll fix some of the messages and update the code.
 10 Mar 24 -- Now called mattest2, derived from mattest.  I'm updating to Go 1.22, and will generate test data if no input file is specified.
 12 Mar 24 -- Playing w/ gonum.org mat package, from Miami
+18 Mar 24 -- Back home.  Playing some more.
 */
 
 import (
@@ -89,6 +90,11 @@ func solveTest2() {
 	printString(ss)
 	fmt.Println()
 	fmt.Printf("\n\n")
+
+	// Another way to find the B column vector is to just do AX.  I'll do that now.
+	newB := mat.Mul(A, X)
+	fmt.Printf(" Column vector newB is:\n")
+	mat.WriteZeroln(newB, 6)
 
 	solveSoln := mat.Solve(A, B)
 	gaussSoln := mat.GaussJ(A, B)

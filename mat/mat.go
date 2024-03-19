@@ -2,6 +2,8 @@ package mat
 
 import (
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"math"
 	"math/cmplx"
 	"math/rand/v2"
@@ -29,6 +31,7 @@ import (
  31 Mar 23 -- StaticCheck reported that Copy2 won't work, because I used value semantics when I needed pointer semantics on the return var.  I took it out as it wasn't idiomatic anyway.
   3 Apr 23 -- Exporting Small.  And writing WriteZero, WriteZeroPair, and SolveInversion.
  10 Mar 24 -- Updated to Go 1.22, mostly in math/rand/v2.  And added Equal func.
+ 18 Mar 24 -- Adding WriteZeroln and WriteZeroPairLn, which just does the screen writes without returning anything.
 */
 
 const Small = 1.0e-10
@@ -996,6 +999,18 @@ func Write(M Matrix2D, places int) []string {
 	return OutputStringSlice
 } // END Write
 
+func Writeln(M Matrix2D, places int) {
+	ss := Write(M, places)
+	printString(ss)
+}
+
+func printString(s []string) { // not exported, at the moment.
+	for _, line := range s {
+		ctfmt.Print(ct.Yellow, true, line)
+	}
+
+}
+
 // ------------------------------------------------------------------------------ WriteZero ----------------------------
 
 func WriteZero(M Matrix2D, places int) []string {
@@ -1017,6 +1032,11 @@ func WriteZero(M Matrix2D, places int) []string {
 
 	return OutputStringSlice
 } // END WriteZero
+
+func WriteZeroln(M Matrix2D, places int) {
+	ss := WriteZero(M, places)
+	printString(ss)
+}
 
 // ------------------------------------------------------------------------------ WriteZeroPair ----------------------------
 
@@ -1085,6 +1105,11 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 
 	return OutputStringSlice
 } // END WriteZeroPair
+
+func WriteZeroPairln(m1, m2 Matrix2D, places int) {
+	ss := WriteZeroPair(m1, m2, places)
+	println(ss)
+}
 
 // END Mat.
 

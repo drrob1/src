@@ -12,6 +12,7 @@ REVISION HISTORY
 10 Mar 24 -- Now called mattest2, derived from mattest.  I'm updating to Go 1.22, and will generate test data if no input file is specified.
 12 Mar 24 -- Playing w/ gonum.org mat package, from Miami
 12 Mar 24 -- Now mattestQR, to try to simplify it to isolate why it's not working.
+18 Mar 24 -- More playing, now that I'm homw again.
 */
 
 import (
@@ -26,7 +27,6 @@ import (
 const aRows = 3
 const aCols = aRows
 const bRows = aRows
-const bCols = 1 // represents a column vector
 
 func goNumQRTest() {
 	// Will look to solve AX = B, for X
@@ -40,7 +40,7 @@ func goNumQRTest() {
 	initX[2] = initialVal + 2*increment
 
 	X := gomat.NewVecDense(bRows, initX)
-	fmt.Printf(" X:\n%v\n\n", gomat.Formatted(X))
+	fmt.Printf(" X:\n%.4g\n\n", gomat.Formatted(X))
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
@@ -50,24 +50,17 @@ func goNumQRTest() {
 	}
 
 	A := gomat.NewDense(aRows, aCols, initA)
-	fmt.Printf(" A:\n%v\n\n", gomat.Formatted(A))
+	fmt.Printf(" A:\n%.4g\n\n", gomat.Formatted(A))
 
-	initB := make([]float64, bRows) // col vec
-	for i := range aRows {
-		for j := range aCols {
-			product := A.At(i, j) * X.At(j, 0)
-			initB[i] += product
-		}
-	}
+	var B gomat.Dense
+	B.Mul(A, X)
+	fmt.Printf(" B:\n%.4g\n\n", gomat.Formatted(&B))
 
-	Bvec := gomat.NewVecDense(bRows, initB)
-	fmt.Printf(" Bvec:\n%v\n\n", gomat.Formatted(Bvec))
-
-	// try w/ QR stuff
+	// try QR stuff
 	var qr gomat.QR
-	var qrSoln *gomat.VecDense
+	var qrSoln *gomat.Dense
 	qr.Factorize(A)
-	err := qr.SolveVecTo(qrSoln, false, Bvec)
+	err := qr.SolveTo(qrSoln, false, &B) // this panics w/ invalid memory reference or nil pointer dereference.
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
