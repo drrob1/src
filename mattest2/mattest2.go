@@ -295,6 +295,7 @@ func extractDense(m *gomat.Dense) [][]float64 {
 
 func main() {
 	solveTest2()
+	pause()
 	goNumMatTest()
 }
 

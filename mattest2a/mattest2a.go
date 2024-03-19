@@ -177,7 +177,7 @@ func goNumMatTest() {
 
 	X := gomat.NewVecDense(bRows, initX)
 	str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
-	//                                                      showRunes(str)
+	showRunes(str)
 	str = cleanString(str)
 	fmt.Printf(" X=\n%s\n\n", str)
 	newPause()
@@ -291,6 +291,7 @@ func extractDense(m *gomat.Dense) [][]float64 {
 
 func main() {
 	solveTest2()
+	pause()
 	goNumMatTest()
 }
 
