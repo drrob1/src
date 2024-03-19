@@ -91,7 +91,7 @@ func solveTest2() {
 	fmt.Println()
 	fmt.Printf("\n\n")
 
-	// Another way to find the B column vector is to just do AX.  I'll do that now.
+	// Another way to find the B column vector is to just do A*X.  It works.
 	newB := mat.Mul(A, X)
 	fmt.Printf(" Column vector newB is:\n")
 	mat.WriteZeroln(newB, 6)
@@ -194,16 +194,16 @@ func goNumMatTest() {
 	Bvec := gomat.NewVecDense(bRows, initB)
 	fmt.Printf(" Bvec:\n%v\n\n", gomat.Formatted(Bvec))
 
-	// Will try w/ inersion
+	// Will try w/ inversion
 	var inverseA, invSoln, invSolnVec gomat.Dense
 	err := inverseA.Inverse(A)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	invSolnVec.Mul(&inverseA, Bvec)
+	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
 	fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec))
-	//fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
+	//            fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
 
 	B := gomat.NewDense(bRows, bCols, initB)
 	fmt.Printf(" B:\n%v\n\n", gomat.Formatted(B))
