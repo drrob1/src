@@ -19,7 +19,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	gomat "gonum.org/v1/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 	"math/rand/v2"
 	"os"
 )
@@ -27,6 +27,7 @@ import (
 const aRows = 3
 const aCols = aRows
 const bRows = aRows
+const bCols = 1
 
 func goNumQRTest() {
 	// Will look to solve AX = B, for X
@@ -39,8 +40,8 @@ func goNumQRTest() {
 	initX[1] = initialVal + increment
 	initX[2] = initialVal + 2*increment
 
-	X := gomat.NewVecDense(bRows, initX)
-	fmt.Printf(" X:\n%.4g\n\n", gomat.Formatted(X))
+	X := mat.NewVecDense(bRows, initX)
+	fmt.Printf(" X:\n%.4g\n\n", mat.Formatted(X))
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
@@ -49,23 +50,23 @@ func goNumQRTest() {
 		initA[i] = float64(randRange(1, 20))
 	}
 
-	A := gomat.NewDense(aRows, aCols, initA)
-	fmt.Printf(" A:\n%.4g\n\n", gomat.Formatted(A))
+	A := mat.NewDense(aRows, aCols, initA)
+	fmt.Printf(" A:\n%.4g\n\n", mat.Formatted(A))
 
-	var B gomat.Dense
+	var B mat.Dense
 	B.Mul(A, X)
-	fmt.Printf(" B:\n%.4g\n\n", gomat.Formatted(&B))
+	fmt.Printf(" B:\n%.4g\n\n", mat.Formatted(&B))
 
 	// try QR stuff
-	var qr gomat.QR
-	var qrSoln *gomat.Dense
+	var qr mat.QR
 	qr.Factorize(A)
+	qrSoln := mat.NewDense(bRows, bCols, nil)
 	err := qr.SolveTo(qrSoln, false, &B) // this panics w/ invalid memory reference or nil pointer dereference.
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum QR factorization is:\n %v\n\n", gomat.Formatted(qrSoln))
+	fmt.Printf(" Soluton by gonum QR factorization is:\n %.5g\n\n", mat.Formatted(qrSoln))
 
 } // end gonumQRTest
 

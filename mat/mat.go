@@ -1008,7 +1008,6 @@ func printString(s []string) { // not exported, at the moment.
 	for _, line := range s {
 		ctfmt.Print(ct.Yellow, true, line)
 	}
-
 }
 
 // ------------------------------------------------------------------------------ WriteZero ----------------------------

@@ -163,6 +163,8 @@ func printString(s []string) {
 func goNumMatTest() {
 	// Will look to solve AX = B, for X
 
+	fmt.Printf("---------------------------------------------------------------------------\n")
+	fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
 	initialVal := float64(misc.RandRange(1, 50))
 	increment := float64(misc.RandRange(1, 50))
 
@@ -172,7 +174,11 @@ func goNumMatTest() {
 	initX[2] = initialVal + 2*increment
 
 	X := gomat.NewVecDense(bRows, initX)
-	fmt.Printf(" X:\n%v\n\n", gomat.Formatted(X))
+	str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
+	//                                                      showRunes(str)
+	str = cleanString(str)
+	fmt.Printf(" X=\n%s\n\n", str)
+	newPause()
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
@@ -182,7 +188,10 @@ func goNumMatTest() {
 	}
 
 	A := gomat.NewDense(aRows, aCols, initA)
-	fmt.Printf(" A:\n%v\n\n", gomat.Formatted(A))
+	fmt.Printf(" A:\n%.5g\n", gomat.Formatted(A, gomat.Squeeze()))
+	aMatrix := extractDense(A)
+	mat.WriteZeroln(aMatrix, 5)
+	newPause()
 
 	initB := make([]float64, bRows) // col vec
 	for i := range aRows {
@@ -192,7 +201,7 @@ func goNumMatTest() {
 		}
 	}
 	Bvec := gomat.NewVecDense(bRows, initB)
-	fmt.Printf(" Bvec:\n%v\n\n", gomat.Formatted(Bvec))
+	fmt.Printf(" Bvec:\n%.5g\n\n", gomat.Formatted(Bvec, gomat.Squeeze()))
 
 	// Will try w/ inversion
 	var inverseA, invSoln, invSolnVec gomat.Dense
@@ -202,18 +211,19 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
-	fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec))
-	//            fmt.Printf(" Solution by GoNum inversion is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Prefix("   "), gomat.Squeeze()))
+	fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
 
 	B := gomat.NewDense(bRows, bCols, initB)
-	fmt.Printf(" B:\n%v\n\n", gomat.Formatted(B))
+	fmt.Printf(" B:\n%.5g\n\n", gomat.Formatted(B, gomat.Squeeze()))
+	bMatrix := extractDense(B)
+	mat.WriteZeroln(bMatrix, 4)
 
 	invSoln.Mul(&inverseA, B)
-	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln))
+	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
 
 	// Try LU stuff
 	var lu gomat.LU
-	var luSoln *gomat.Dense
+	luSoln := gomat.NewDense(bRows, bCols, nil)
 
 	lu.Factorize(A)
 	err = lu.SolveTo(luSoln, false, B)
@@ -221,29 +231,57 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum LU factorization is:\n %v\n\n", gomat.Formatted(luSoln))
+	fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
 
 	// try w/ QR stuff
 	var qr gomat.QR
-	var qrSoln *gomat.Dense
+	qrSoln := gomat.NewDense(bRows, bCols, nil)
 	qr.Factorize(A)
 	err = qr.SolveTo(qrSoln, false, Bvec)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum QR factorization is:\n %v\n\n", gomat.Formatted(qrSoln))
+	fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
 
 	// Try Solve stuff
-	var solvSoln *gomat.Dense
+	solvSoln := gomat.NewDense(bRows, bCols, nil)
 	err = solvSoln.Solve(A, B)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Solution by gonum Solve is:\n %v\n\n", gomat.Formatted(solvSoln))
+	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
 
-} // end gonummatTest
+} // end goNumMatTest
+
+func showRunes(s string) {
+	for _, r := range s {
+		fmt.Printf(" %c, %x, %d, %s\n", r, r, r, string(r))
+	}
+}
+
+func cleanString(s string) string {
+	var sb strings.Builder
+
+	for _, r := range s {
+		if r < 128 {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
+}
+
+func extractDense(m *gomat.Dense) [][]float64 {
+	r, c := m.Dims()
+	matrix := mat.NewMatrix(r, c)
+	for i := range r {
+		for j := range c {
+			matrix[i][j] = m.At(i, j)
+		}
+	}
+	return matrix
+}
 
 // -----------------------------------------------------------------------
 //                              MAIN PROGRAM
