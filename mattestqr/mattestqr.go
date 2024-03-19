@@ -66,7 +66,7 @@ func goNumQRTest() {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum QR factorization is:\n %.5g\n\n", mat.Formatted(qrSoln))
+	fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", mat.Formatted(qrSoln))
 
 } // end gonumQRTest
 
