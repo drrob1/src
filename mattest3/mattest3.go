@@ -46,6 +46,8 @@ import (
 	"strings"
 )
 
+const small = 1e-10
+
 var n int
 var aRows int
 var aCols int
@@ -181,9 +183,10 @@ func goNumMatTest() {
 	X := gomat.NewVecDense(bRows, initX)
 	str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
 	//                                                      showRunes(str)
+	fmt.Printf(" X=\n%s\n\n", str)
 	str = cleanString(str)
 	fmt.Printf(" X=\n%s\n\n", str)
-	newPause()
+	//newPause()
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
@@ -196,7 +199,7 @@ func goNumMatTest() {
 	fmt.Printf(" A:\n%.5g\n", gomat.Formatted(A, gomat.Squeeze()))
 	aMatrix := extractDense(A)
 	mat.WriteZeroln(aMatrix, 5)
-	newPause()
+	//newPause()
 
 	initB := make([]float64, bRows) // col vec
 	for i := range aRows {
@@ -268,6 +271,37 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
+
+	if gomat.EqualApprox(X, &invSoln, small) {
+		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal.\n")
+	}
+	if gomat.EqualApprox(X, luSoln, small) {
+		ctfmt.Printf(ct.Green, false, " X and LU solution are equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, false, " X and LU solution are not equal.\n")
+	}
+	if gomat.EqualApprox(X, &invSolnVec, small) {
+		ctfmt.Printf(ct.Green, false, " X and vector inversion solution are equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " X and vector inversion solution are not equal.\n")
+	}
+	if gomat.EqualApprox(X, qrSoln, small) {
+		ctfmt.Printf(ct.Green, false, " X and QR solution are equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, false, " X and QR solution are not equal.\n")
+	}
+	if gomat.EqualApprox(X, solvSoln, small) {
+		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
+	}
+	if gomat.EqualApprox(X, vecSolveSoln, small) {
+		ctfmt.Printf(ct.Green, false, " X and Vec Solve solution are equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, false, " X and Vec Solve solution are not equal.\n")
+	}
 
 } // end goNumMatTest
 
