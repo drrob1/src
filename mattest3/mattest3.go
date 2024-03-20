@@ -1,4 +1,4 @@
-package main // mattest2 from mattest.  Both test mat.  Duh!
+package main // mattest3 from mattest2a from mattest2 from mattest.  Both test mat.  Duh!
 
 /**********************************************************)
   (*                                                      *)
@@ -22,19 +22,20 @@ REVISION HISTORY
 10 Mar 24 -- Now called mattest2, derived from mattest.  I'm updating to Go 1.22, and will generate test data if no input file is specified.
 12 Mar 24 -- Playing w/ gonum.org mat package, from Miami
 18 Mar 24 -- Back home.  Playing some more.
-             Summary of what I've discovered today.
+19 Mar 22 -- Summary of what I've discovered today.
              The problem I was having w/ using the gonum matrix stuff was that I needed to initialize the solution result, as in
 				qrSoln := mat.NewDense(bRows, bCols, nil)
              That left me w/ the formatting issue.  Turned out that the characters that are being output are not handled correctly by tcc.  Cmd does, and these are matrix symbols.
              I can clean the output by either using my clean string routine, or by converting to a mat.Matrix2D and outputting that.  I did not write the conversion routine to
              handle a VecDense type.  I could, but I won't bother now that I've figured it out.  I could either run the tests from cmd, or use cleanString before outputting them.
 19 Mar 24 -- Now called mattest2a, and I'll increase X.
-
 			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
+20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
 */
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -45,13 +46,13 @@ import (
 	"strings"
 )
 
-const aRows = 4
-const aCols = aRows
-const bRows = aRows
-const bCols = 1 // represents a column vector
+var n int
+var aRows int
+var aCols int
+var bRows int
+var bCols int
 
 func solveTest2() {
-
 	var A, B, X mat.Matrix2D
 
 	A = mat.NewMatrix(aRows, aCols)
@@ -179,7 +180,7 @@ func goNumMatTest() {
 
 	X := gomat.NewVecDense(bRows, initX)
 	str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
-	showRunes(str)
+	//                                                      showRunes(str)
 	str = cleanString(str)
 	fmt.Printf(" X=\n%s\n\n", str)
 	newPause()
@@ -303,6 +304,13 @@ func extractDense(m *gomat.Dense) [][]float64 {
 // -----------------------------------------------------------------------
 
 func main() {
+	flag.IntVar(&n, "n", 3, "Size of X and other arrays.  Default is 3.")
+	flag.Parse()
+	aRows = n
+	aCols = aRows
+	bRows = n
+	bCols = 1
+
 	solveTest2()
 	pause()
 	goNumMatTest()

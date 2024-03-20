@@ -22,7 +22,7 @@ REVISION HISTORY
 10 Mar 24 -- Now called mattest2, derived from mattest.  I'm updating to Go 1.22, and will generate test data if no input file is specified.
 12 Mar 24 -- Playing w/ gonum.org mat package, from Miami
 18 Mar 24 -- Back home.  Playing some more.
-             Summary of what I've discovered today.
+19 Mar 24 -- Summary of what I've discovered today.
              The problem I was having w/ using the gonum matrix stuff was that I needed to initialize the solution result, as in
 				qrSoln := mat.NewDense(bRows, bCols, nil)
              That left me w/ the formatting issue.  Turned out that the characters that are being output are not handled correctly by tcc.  Cmd does, and these are matrix symbols.
