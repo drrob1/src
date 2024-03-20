@@ -28,6 +28,8 @@ REVISION HISTORY
              That left me w/ the formatting issue.  Turned out that the characters that are being output are not handled correctly by tcc.  Cmd does, and these are matrix symbols.
              I can clean the output by either using my clean string routine, or by converting to a mat.Matrix2D and outputting that.  I did not write the conversion routine to
              handle a VecDense type.  I could, but I won't bother now that I've figured it out.  I could either run the tests from cmd, or use cleanString before outputting them.
+
+			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
 */
 
 import (
@@ -169,25 +171,22 @@ func printString(s []string) {
 func goNumMatTest() {
 	// Will look to solve AX = B, for X
 
-	fmt.Printf("---------------------------------------------------------------------------\n")
+	fmt.Printf("---------------------------------------------------------------------------")
 	fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
-	initialVal := float64(misc.RandRange(1, 50))
-	increment := float64(misc.RandRange(1, 50))
-
 	initX := make([]float64, aCols)
-	initX[0] = initialVal
-	initX[1] = initialVal + increment
-	initX[2] = initialVal + 2*increment
+	for i := range aCols {
+		initX[i] = float64(misc.RandRange(1, 50))
+	}
 
 	X := gomat.NewVecDense(bRows, initX)
 	str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
-	//                                                      showRunes(str)
+	//                                                      showRunes(str).  These are 0x23a2 .. 0x23a6, or 9122 .. 9126
 	str = cleanString(str)
 	fmt.Printf(" X=\n%s\n\n", str)
 	newPause()
 
 	// Now need to assign coefficients in matrix A
-	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
+	initA := make([]float64, aRows*aCols)
 
 	for i := range initA {
 		initA[i] = float64(misc.RandRange(1, 20))
@@ -258,6 +257,15 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+
+	// Try Vec Solve
+	vecSolveSoln := gomat.NewVecDense(bRows, nil)
+	err = vecSolveSoln.SolveVec(A, Bvec)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
 
 } // end goNumMatTest
 

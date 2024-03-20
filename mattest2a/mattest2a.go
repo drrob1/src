@@ -29,6 +29,8 @@ REVISION HISTORY
              I can clean the output by either using my clean string routine, or by converting to a mat.Matrix2D and outputting that.  I did not write the conversion routine to
              handle a VecDense type.  I could, but I won't bother now that I've figured it out.  I could either run the tests from cmd, or use cleanString before outputting them.
 18 Mar 24 -- Now called mattest2a, and I'll increase X.
+
+			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
 */
 
 import (
@@ -168,7 +170,7 @@ func printString(s []string) {
 func goNumMatTest() {
 	// Will look to solve AX = B, for X
 
-	fmt.Printf("---------------------------------------------------------------------------\n")
+	fmt.Printf("---------------------------------------------------------------------------")
 	fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
 	initX := make([]float64, aCols)
 	for i := range aCols {
@@ -254,6 +256,15 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+
+	// Try Vec Solve
+	vecSolveSoln := gomat.NewVecDense(bRows, nil)
+	err = vecSolveSoln.SolveVec(A, Bvec)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
 
 } // end goNumMatTest
 
