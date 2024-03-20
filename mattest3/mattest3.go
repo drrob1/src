@@ -189,7 +189,7 @@ func goNumMatTest() {
 	//newPause()
 
 	// Now need to assign coefficients in matrix A
-	initA := make([]float64, aRows*aCols) // 3 x 3 = 9, as of this writing.
+	initA := make([]float64, aRows*aCols)
 
 	for i := range initA {
 		initA[i] = float64(misc.RandRange(1, 20))
