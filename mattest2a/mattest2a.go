@@ -249,7 +249,8 @@ func goNumMatTest() {
 	fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
 
 	// Try Solve stuff
-	solvSoln := gomat.NewDense(bRows, bCols, nil)
+	bR, bC := B.Dims()
+	solvSoln := gomat.NewDense(bR, bC, nil) // just to see if this works.
 	err = solvSoln.Solve(A, B)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
@@ -258,7 +259,8 @@ func goNumMatTest() {
 	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
 
 	// Try Vec Solve
-	vecSolveSoln := gomat.NewVecDense(bRows, nil)
+	bRV, _ := Bvec.Dims() // just to see if this works.
+	vecSolveSoln := gomat.NewVecDense(bRV, nil)
 	err = vecSolveSoln.SolveVec(A, Bvec)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
