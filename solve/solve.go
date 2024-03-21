@@ -10,7 +10,8 @@ MODULE Solve;
    4 Mar 05 -- Don't need N as 1st line now.
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
   24 Dec 16 -- Converted to Go.
-  13 Feb 21 -- Updated to modules.  And added filepicker and flag package.
+  13 Feb 21 -- Updated to modules.  And added filePicker and flag package.
+  21 Feb 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
 */
 
 import (
@@ -27,11 +28,10 @@ import (
 	"strings"
 )
 
-const LastCompiled = "21 Nov 22"
+const LastCompiled = "21 Feb 24"
 const MaxN = 9
 
 //                          MaxRealArray is not square because the B column vector is in last column of IM
-//                                             TYPE MaxRealArray = ARRAY [1..MaxN],[1..MaxN+1] OF LONGREAL;
 
 //type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
 
@@ -142,12 +142,12 @@ CountLinesLoop:
 					IM[lines][col] = token.Rsum // remember that IM is Input Matrix
 					col++
 				} // ENDIF token.state=DGT
-			} //  UNTIL (EOL is true) OR (col > MaxN);
+			}            //  UNTIL (EOL is true) OR (col > MaxN);
 			if col > 0 { // text only or null lines do not increment the row counter.
 				lines++
 			}
 		} // END for n
-	} // END reading loop
+	}          // END reading loop
 	N := lines // Note: lines is 0 origin
 
 	// Now need to create A and B matrices
@@ -155,78 +155,57 @@ CountLinesLoop:
 	A := mat.NewMatrix(N, N) // ra1 in Modula-2 code, ie, square matrix of coefficients to solve
 	B := mat.NewMatrix(N, 1) // ra2 in Modula-2 code, ie, a column vector of coefficients on the RHS of each line.
 	for row := range A {     // FOR row :=  1 TO N DO
-		for col := range A[0] { //   FOR col := 1 TO N DO
+		for col := range A[row] { //   FOR col := 1 TO N DO
 			A[row][col] = IM[row][col]
-		} // END FOR col
+		}
 		B[row][0] = IM[row][N] // I have to keep remembering that [0,0] is the first row and col.
-	} // END FOR row
+	}
 
 	fmt.Println(" coef matrix A is:")
-	ss := mat.Write(A, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
-	fmt.Println()
+	mat.Writeln(A, 5)
 
 	fmt.Println(" Right hand side vector matrix B is:")
-	ss = mat.Write(B, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(B, 5)
 	fmt.Println()
 
 	//ans := mat.NewMatrix(N, N)  I don't have to do this.  Obviously, I learned this sometime after 2016 when this code was written.
 	ans := mat.Solve(A, B) // Solve (ra1, ra2, ans, N, 1);
 	fmt.Println("The solution X to AX = B using Solve is")
-	ss = mat.Write(ans, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(ans, 5)
 
 	//ans2 := mat.NewMatrix(N, N)
 	ans2 := mat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
 	fmt.Println("The solution X to AX = B using GaussJ is")
-	ss = mat.Write(ans2, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(ans2, 5)
 	fmt.Println()
 
 	//  pause();
 
 	// Check that the solution looks right.
 
-	//C := mat.NewMatrix(N, 1)  linter said this value of C is not used
-	//D := mat.NewMatrix(N, 1)  linter said this value of D is not used
 	C := mat.Mul(A, ans) // Mul (ra1, ans, N, N, 1, ra3);
 	D := mat.Sub(B, C)   //  Sub (ra3, ra2, N, 1, ra4);
 
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
-	ss = mat.Write(D, 5) //    Write (ra4, N, 1, 4);
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(D, 5) //    Write (ra4, N, 1, 4);
 
 	D = mat.BelowSmallMakeZero(D)
 
 	fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to")
-	ss = mat.Write(D, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(D, 5)
 	fmt.Println()
 	fmt.Println()
 
 } // END Solve.
 
-// -------------------------------------------- min ---------------------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+//// -------------------------------------------- min ---------------------------------------------
+//func min(a, b int) int {
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
 
 /*
 func pause() {  Written in Dec 2016.  It's not the way I would write this in 2022.  I would use fmt.Scanln(&ans)

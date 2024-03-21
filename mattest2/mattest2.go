@@ -83,7 +83,7 @@ func solveTest2() {
 
 	//fmt.Printf(" x = %g, y = %g, z = %g\n\n", X[0][0], X[1][0], X[2][0])
 
-	// Now do the calculation to determine what the V column vector needs to be for this to work.
+	// Now do the calculation to determine what the B column vector needs to be for this to work.
 	for i := range A {
 		for j := range A[i] {
 			product := A[i][j] * X[j][0]

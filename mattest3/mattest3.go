@@ -31,6 +31,7 @@ REVISION HISTORY
 19 Mar 24 -- Now called mattest2a, and I'll increase X.
 			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
 20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
+21 Mar 24 -- Adding output of A and B so that these can be read by solve.go
 */
 
 import (
@@ -43,6 +44,7 @@ import (
 	"os"
 	"src/mat"
 	"src/misc"
+	"strconv"
 	"strings"
 )
 
@@ -54,7 +56,7 @@ var aCols int
 var bRows int
 var bCols int
 
-func solveTest2() {
+func solveTest2(fn string) {
 	var A, B, X mat.Matrix2D
 
 	A = mat.NewMatrix(aRows, aCols)
@@ -85,7 +87,7 @@ func solveTest2() {
 
 	//fmt.Printf(" x = %g, y = %g, z = %g\n\n", X[0][0], X[1][0], X[2][0])
 
-	// Now do the calculation to determine what the V column vector needs to be for this to work.
+	// Now do the calculation to determine what the B column vector needs to be for this to work.
 	for i := range A {
 		for j := range A[i] {
 			product := A[i][j] * X[j][0]
@@ -105,6 +107,8 @@ func solveTest2() {
 	newB := mat.Mul(A, X)
 	fmt.Printf(" Column vector newB is:\n")
 	mat.WriteZeroln(newB, 6)
+
+	WriteMatrices(A, B, fn)
 
 	solveSoln := mat.Solve(A, B)
 	gaussSoln := mat.GaussJ(A, B)
@@ -167,7 +171,54 @@ func printString(s []string) {
 	for _, line := range s {
 		ctfmt.Print(ct.Yellow, true, line)
 	}
+}
 
+func WriteMatrices(A, B mat.Matrix2D, name string) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf(" ERROR from os.Getwd is %s.  Output file not written.\n", err)
+		return
+	}
+	outputFile, err := os.CreateTemp(workingDir, name)
+	defer outputFile.Close()
+	if err != nil {
+		fmt.Printf(" ERROR from os.CreateTemp is %s.  Output file not written.\n", err)
+		return
+	}
+
+	//fmt.Printf(" WriteMatrices outputFile is %s and %s\n", name, outputFile.Name())
+	outputBuf := bufio.NewWriter(outputFile)
+	defer outputBuf.Flush()
+	fmt.Printf(" WriteMatrices outputbuf created.\n")
+
+	for i := range A {
+		for j := range A[i] { // write a row of A
+			s := strconv.FormatFloat(A[i][j], 'g', 6, 64)
+			//fmt.Printf(" value = %.6g; s = %s\n", A[i][j], s)
+			_, err = outputBuf.WriteString(s)
+			if err != nil {
+				fmt.Printf(" ERROR from %s.WriteString(%s) is %s.  Aborting writing output file.\n", outputFile.Name(), s, err)
+				return
+			}
+			_, err = outputBuf.WriteString("  ")
+			if err != nil {
+				fmt.Printf(" ERROR from %s.WriteString(%s) is %s.  Aborting writing output file.\n", outputFile.Name(), s, err)
+				return
+			}
+		}
+		s := strconv.FormatFloat(B[i][0], 'g', 6, 64)
+		_, err = outputBuf.WriteString(s)
+		if err != nil {
+			fmt.Printf(" ERROR from %s.WriteString(%s) is %s.  Aborting writing output file.\n", outputFile.Name(), s, err)
+			return
+		}
+		_, err = outputBuf.WriteRune('\n')
+		if err != nil {
+			fmt.Printf(" ERROR from %s.WriteString(%s) is %s.  Aborting writing output file.\n", outputFile.Name(), s, err)
+			return
+		}
+	}
+	fmt.Printf(" Finished writing matrices.\n")
 }
 
 func goNumMatTest() {
@@ -345,7 +396,9 @@ func main() {
 	bRows = n
 	bCols = 1
 
-	solveTest2()
+	outFilename := "mat-" + strconv.Itoa(n) + "-*.txt"
+
+	solveTest2(outFilename)
 	pause()
 	goNumMatTest()
 }
