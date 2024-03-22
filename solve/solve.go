@@ -11,7 +11,7 @@ MODULE Solve;
   26 Feb 06 -- Will reject non-numeric entries and allows <tab> as delim.
   24 Dec 16 -- Converted to Go.
   13 Feb 21 -- Updated to modules.  And added filePicker and flag package.
-  21 Feb 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
+  21 Mar 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
 */
 
 import (
@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-const LastCompiled = "21 Feb 24"
+const LastCompiled = "22 Mar 24"
 const MaxN = 9
 const small = 1e-10
 
@@ -63,6 +63,22 @@ func makeDense(matrix mat.Matrix2D) *gomat.Dense {
 	//
 
 	dense := gomat.NewDense(r, c, initDense)
+	return dense
+}
+
+func makeDense2(matrix mat.Matrix2D) *gomat.Dense {
+	// Just to see if this works too.  It does.
+	var idx int
+	r := len(matrix)
+	c := len(matrix[0])
+	dense := gomat.NewDense(r, c, nil)
+	for i := range matrix {
+		for j := range matrix[i] {
+			dense.Set(i, j, matrix[i][j])
+			idx++
+		}
+	}
+
 	return dense
 }
 
@@ -308,6 +324,15 @@ CountLinesLoop:
 		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
+	}
+
+	denseA2 := makeDense2(A)
+	denseB2 := makeDense2(B)
+	denseX2 := makeDense2(X) // used below for validation checks.
+	if gomat.Equal(denseX, denseX2) && gomat.Equal(denseA, denseA2) && gomat.Equal(denseB2, denseB) {
+		ctfmt.Printf(ct.Green, false, " makeDense and makeDense2 matrices are exactly equal.\n")
+	} else {
+		ctfmt.Printf(ct.Red, false, " makeDense and makeDense2 matrices are NOT exactly equal.\n")
 	}
 
 } // END Solve.
