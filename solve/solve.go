@@ -12,6 +12,7 @@ MODULE Solve;
   24 Dec 16 -- Converted to Go.
   13 Feb 21 -- Updated to modules.  And added filePicker and flag package.
   21 Mar 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
+  23 Mar 24 -- Increased MaxN
 */
 
 import (
@@ -31,8 +32,8 @@ import (
 	"strings"
 )
 
-const LastCompiled = "22 Mar 24"
-const MaxN = 9
+const LastCompiled = "23 Mar 24"
+const MaxN = 99
 const small = 1e-10
 
 //                          MaxRealArray is not square because the B column vector is in last column of IM
