@@ -31,7 +31,7 @@ REVISION HISTORY
 19 Mar 24 -- Now called mattest2a, and I'll increase X.
 			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
 20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
-21 Mar 24 -- Adding output of A and B so that these can be read by solve.go
+21 Mar 24 -- Adding file output of A and B so that these can be read by solve.go
 */
 
 import (
@@ -356,7 +356,7 @@ func goNumMatTest() {
 
 } // end goNumMatTest
 
-func showRunes(s string) {
+func showRunes(s string) { // the unidentified runes turned out to be matrix symbols 0x23a1 .. 0x23a6, or 9121 .. 9126
 	for _, r := range s {
 		fmt.Printf(" %c, %x, %d, %s\n", r, r, r, string(r))
 	}
