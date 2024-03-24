@@ -36,7 +36,7 @@ func main() {
 
 	rawRuneMap := make(map[rune]int, 255)
 
-	fmt.Printf(" freq, a letter frequency program written in Go.  Last altered %s, compiled with %s. \n", lastCompiled, runtime.Version())
+	fmt.Printf(" freq2, a letter frequency program written in Go.  Last altered %s, compiled with %s. \n", lastCompiled, runtime.Version())
 	var testFlag = flag.Bool("test", false, "enter a testing mode to println more variables")
 	var verboseFlag = flag.Bool("v", false, "verbose mode to println more variables and messages.")
 	flag.Parse()
