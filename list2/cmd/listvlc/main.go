@@ -46,9 +46,10 @@ REVISION HISTORY
 18 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 21 Apr 23 -- Making spell checker happy, and removing dead code.
  9 Feb 24 -- Using Go 1.22 code for random numbers.
+25 Mar 24 -- Changed last verVerboseFlag to verboseFlag, as I forgot that I needed very verbose to see the variadic param for the vlc command.
 */
 
-const lastModified = "Feb 9, 2024"
+const lastModified = "Mar 25, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -258,7 +259,7 @@ func main() {
 		execCmd = exec.Command(vlcStr, fileNames...)
 	}
 
-	if veryVerboseFlag {
+	if verboseFlag {
 		fmt.Printf(" vlcStr = %s, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
 	}
 

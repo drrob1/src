@@ -32,6 +32,7 @@ import (
   3 Apr 23 -- Exporting Small.  And writing WriteZero, WriteZeroPair, and SolveInversion.
  10 Mar 24 -- Updated to Go 1.22, mostly in math/rand/v2.  And added Equal func.
  18 Mar 24 -- Adding WriteZeroln and WriteZeroPairLn, which just does the screen writes without returning anything.
+ 25 Mar 24 -- Added EqualApproximately.
 */
 
 const Small = 1.0e-10
@@ -558,6 +559,23 @@ func EqualApprox(a, b Matrix2D) bool {
 	for i := range a {
 		for j := range a[0] {
 			if math.Abs(a[i][j]-b[i][j]) >= Small { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func EqualApproximately(a, b Matrix2D, tol float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a[0]) != len(b[0]) {
+		return false
+	}
+	for i := range a {
+		for j := range a[0] {
+			if math.Abs(a[i][j]-b[i][j]) >= tol { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
 				return false
 			}
 		}
