@@ -32,6 +32,7 @@ REVISION HISTORY
 			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
 20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
 21 Mar 24 -- Adding file output of A and B so that these can be read by solve.go
+26 Mar 24 -- Enhancing the equality test.
 */
 
 import (
@@ -121,14 +122,24 @@ func solveTest2(fn string) {
 	if mat.EqualApprox(solveSoln, gaussSoln) {
 		ctfmt.Printf(ct.Green, true, " The Solve and GaussJ methods returned equal results.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT returned equal results.\n")
+		ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT return equal results.\n")
+		if mat.EqualApproximately(solveSoln, gaussSoln, mat.Small*10) {
+			ctfmt.Printf(ct.Green, true, " Now the Solve and GaussJ methods returned equal results using a larger tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT return equal results, even using a larger tolerance factor.\n")
+		}
 	}
 	fmt.Println()
 
 	if mat.EqualApprox(solveSoln, X) {
 		ctfmt.Printf(ct.Green, true, " The Solve and X column vector returned equal results.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT returned equal results.\n")
+		ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT return equal results.\n")
+		if mat.EqualApproximately(solveSoln, X, mat.Small*10) {
+			ctfmt.Printf(ct.Green, true, " Now the Solve and X column vector returned equal results using a larger tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT return equal results, even using a larger tolerance factor.\n")
+		}
 	}
 	fmt.Println()
 
