@@ -13,6 +13,7 @@ MODULE Solve;
   13 Feb 21 -- Updated to modules.  And added filePicker and flag package.
   21 Mar 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
   23 Mar 24 -- Increased MaxN
+  26 Mar 24 -- Added checks on input matrix size, so it won't panic.
 */
 
 import (
@@ -53,16 +54,6 @@ func makeDense(matrix mat.Matrix2D) *gomat.Dense {
 			idx++
 		}
 	}
-
-	// This may also work.  I have not tested this.
-	//for i := range matrix {
-	//	for j := range matrix[i] {
-	//		Dense.Set(i, j, matrix[i][j])
-	//		idx++
-	//	}
-	//}
-	//
-
 	dense := gomat.NewDense(r, c, initDense)
 	return dense
 }
@@ -198,12 +189,20 @@ CountLinesLoop:
 					break
 				}
 				if token.State == tokenize.DGT {
+					if col >= MaxN {
+						ctfmt.Printf(ct.Red, true, " ERROR: number of columns exceeds the current max of %d.  Aborting.\n", MaxN)
+						return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
+					}
 					IM[lines][col] = token.Rsum // remember that IM is Input Matrix
 					col++
 				} // ENDIF token.state=DGT
 			} //  UNTIL (EOL is true) OR (col > MaxN);
 			if col > 0 { // text only or null lines do not increment the row counter.
 				lines++
+				if lines >= MaxN {
+					ctfmt.Printf(ct.Red, true, " ERROR: number of lines exceeds the current max of %d.  Aborting.\n", MaxN)
+					return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
+				}
 			}
 		} // END for n
 	} // END reading loop
