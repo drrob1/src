@@ -32,7 +32,7 @@ REVISION HISTORY
 			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
 20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
 21 Mar 24 -- Adding file output of A and B so that these can be read by solve.go
-26 Mar 24 -- Enhancing the equality test.
+26 Mar 24 -- Enhancing the equality test.  And adding possibly negative numbers.
 */
 
 import (
@@ -52,6 +52,7 @@ import (
 const small = 1e-10
 
 var n int
+var negFlag bool
 var aRows int
 var aCols int
 var bRows int
@@ -72,6 +73,9 @@ func solveTest2(fn string) {
 	// initialize X
 	for i := range aRows {
 		X[i][0] = float64(misc.RandRange(1, 50))
+		if negFlag {
+
+		}
 	}
 
 	// Now need to assign coefficients in matrix A
@@ -401,6 +405,8 @@ func extractDense(m *gomat.Dense) [][]float64 {
 
 func main() {
 	flag.IntVar(&n, "n", 3, "Size of X and other arrays.  Default is 3.")
+	flag.BoolVar(&negFlag, "neg", false, "Allow creation of negative coefficients.")
+
 	flag.Parse()
 	aRows = n
 	aCols = aRows

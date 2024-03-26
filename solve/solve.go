@@ -33,15 +33,14 @@ import (
 	"strings"
 )
 
-const LastCompiled = "23 Mar 24"
+const LastCompiled = "26 Mar 24"
 const MaxN = 99
 const small = 1e-10
 
-//                          MaxRealArray is not square because the B column vector is in last column of IM
-
-//type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
-
 var verboseFlag = flag.Bool("v", false, "Verbose mode.")
+
+//                          MaxRealArray is not square because the B column vector is in last column of IM
+//                          type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
 
 func makeDense(matrix mat.Matrix2D) *gomat.Dense {
 	var idx int
@@ -154,6 +153,9 @@ func main() {
 	}
 
 	defer infile.Close()
+	if *verboseFlag {
+		fmt.Printf(" Opened filename is %s\n", infile.Name())
+	}
 	scanner := bufio.NewScanner(infile)
 
 	IM := mat.NewMatrix(MaxN, MaxN+1) // IM is input matrix
@@ -162,29 +164,30 @@ func main() {
 	lines := 0
 CountLinesLoop:
 	for { // read, count and process lines
-		for n := 0; n < MaxN; n++ { // WHILE N < MaxN DO
-			readSuccess := scanner.Scan() //   FRDTXLN(InFile,inputbuf,80,bool);
-			if readSuccess {
-				// do nothing for now,  I thought N=n made sense until I saw the need to not process short
-				// lines, assuming that they are a comment line.  And lines without numbers are comment lines.
-			} else {
-				break CountLinesLoop
-			} // if readSuccess
-			inputline := scanner.Text()
-			if readErr := scanner.Err(); readErr != nil {
-				if readErr == io.EOF {
-					break CountLinesLoop
-				} else { // this may be redundant because of the readSuccess test
-					break CountLinesLoop
+		for n := 0; n < MaxN; n++ {
+			readSuccess := scanner.Scan()
+			if !readSuccess {
+				if readErr := scanner.Err(); readErr != nil {
+					if *verboseFlag {
+						fmt.Printf(" readErr is %s\n", readErr)
+					}
+					if readErr == io.EOF {
+						break CountLinesLoop
+					} else { // this may be redundant because of the readSuccess test
+						ctfmt.Printf(ct.Red, true, " ERROR while reading from %s at line %d is %s.\n", filename, lines, readErr)
+						break CountLinesLoop
+					}
 				}
+				break CountLinesLoop
 			}
+			inputline := scanner.Text()
 
 			tokenize.INITKN(inputline)
 			col := 0
 			var EOL bool
 			var token tokenize.TokenType
 			for !EOL && (n <= MaxN) { // linter says to not do (EOL == false), but to change it to what's there now.
-				token, EOL = tokenize.GETTKNREAL() // if I use the gopher operator here, then EOL gets shadowed and is not the variable evaluated in the for condition.
+				token, EOL = tokenize.GETTKNREAL()
 				if EOL {
 					break
 				}
@@ -208,15 +211,19 @@ CountLinesLoop:
 	} // END reading loop
 	N := lines // Note: lines is 0 origin
 
+	if *verboseFlag {
+		fmt.Printf(" Number of lines read is %d, and N = %d\n", lines, N)
+	}
+
 	// Now need to create A and B matrices
 
-	A := mat.NewMatrix(N, N) // ra1 in Modula-2 code, ie, square matrix of coefficients to solve
-	B := mat.NewMatrix(N, 1) // ra2 in Modula-2 code, ie, a column vector of coefficients on the RHS of each line.
-	for row := range A {     // FOR row :=  1 TO N DO
-		for col := range A[row] { //   FOR col := 1 TO N DO
+	A := mat.NewMatrix(N, N)
+	B := mat.NewMatrix(N, 1)
+	for row := range A {
+		for col := range A[row] {
 			A[row][col] = IM[row][col]
 		}
-		B[row][0] = IM[row][N] // I have to keep remembering that [0,0] is the first row and col.
+		B[row][0] = IM[row][N]
 	}
 
 	fmt.Println(" coef matrix A is:")
