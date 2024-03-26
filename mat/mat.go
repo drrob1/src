@@ -446,7 +446,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				pivot = temp
 				prow = j
 			} // END IF temp > pivot
-		} // END FOR j from i to N-1
+		}                            // END FOR j from i to N-1
 		if math.Abs(pivot) < Small { // Coefficient matrix is singular.  Aborting,
 			return nil
 		} // END IF pivot < small
@@ -573,6 +573,7 @@ func EqualApproximately(a, b Matrix2D, tol float64) bool {
 	if len(a[0]) != len(b[0]) {
 		return false
 	}
+	tol = math.Abs(tol)
 	for i := range a {
 		for j := range a[0] {
 			if math.Abs(a[i][j]-b[i][j]) >= tol { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
@@ -629,7 +630,7 @@ func Balance(A Matrix2D) Matrix2D {
 
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[row][j] *= g
-					} //END FOR j range A
+					}                  //END FOR j range A
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[j][row] *= f
 					} // END FOR j range A
