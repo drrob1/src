@@ -42,6 +42,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	gomat "gonum.org/v1/gonum/mat"
+	"math/rand/v2"
 	"os"
 	"src/mat"
 	"src/misc"
@@ -74,14 +75,17 @@ func solveTest2(fn string) {
 	for i := range aRows {
 		X[i][0] = float64(misc.RandRange(1, 50))
 		if negFlag {
-
+			X[i][0] -= float64(rand.N(50))
 		}
 	}
 
 	// Now need to assign coefficients in matrix A
 	for i := range A {
-		for j := range A[0] {
-			A[i][j] = float64(misc.RandRange(1, 20))
+		for j := range A[i] {
+			A[i][j] = float64(misc.RandRange(1, 40))
+			if negFlag {
+				A[i][j] -= float64(rand.N(40))
+			}
 		}
 	}
 
@@ -244,6 +248,9 @@ func goNumMatTest() {
 	initX := make([]float64, aCols)
 	for i := range aCols {
 		initX[i] = float64(misc.RandRange(1, 50))
+		if negFlag {
+			initX[i] -= float64(rand.N(50))
+		}
 	}
 
 	X := gomat.NewVecDense(bRows, initX)
@@ -259,6 +266,9 @@ func goNumMatTest() {
 
 	for i := range initA {
 		initA[i] = float64(misc.RandRange(1, 20))
+		if negFlag {
+			initA[i] -= float64(rand.N(20))
+		}
 	}
 
 	A := gomat.NewDense(aRows, aCols, initA)

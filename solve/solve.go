@@ -169,7 +169,7 @@ CountLinesLoop:
 			if !readSuccess {
 				if readErr := scanner.Err(); readErr != nil {
 					if *verboseFlag {
-						fmt.Printf(" readErr is %s\n", readErr)
+						fmt.Printf(" readErr is %s, n = %d, lines = %d\n", readErr, n, lines)
 					}
 					if readErr == io.EOF {
 						break CountLinesLoop
@@ -206,6 +206,9 @@ CountLinesLoop:
 					ctfmt.Printf(ct.Red, true, " ERROR: number of lines exceeds the current max of %d.  Aborting.\n", MaxN)
 					return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
 				}
+			}
+			if *verboseFlag {
+				fmt.Printf(" at bottom of file reading loop.  lines = %d, n = %d, col = %d, token.Str = %s\n", lines, n, col, token.Str)
 			}
 		} // END for n
 	} // END reading loop
