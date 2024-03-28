@@ -33,8 +33,10 @@ import (
  10 Mar 24 -- Updated to Go 1.22, mostly in math/rand/v2.  And added Equal func.
  18 Mar 24 -- Adding WriteZeroln and WriteZeroPairLn, which just does the screen writes without returning anything.
  25 Mar 24 -- Added EqualApproximately.
+ 28 Mar 24 -- Added IsZeroApproximately, and IsZeroApprox.
 */
 
+const LastAltered = "28 Mar 2024"
 const Small = 1.0e-10
 const SubscriptDim = 8192
 
@@ -102,32 +104,6 @@ func Random(matrix Matrix2D) Matrix2D {
 	}
 	return matrix
 }
-
-/*
-func Copy2(Src Matrix2D, Dest Matrix2D) {
-	// Copies an r x c matrix A to B, by doing an element by element copy.  I don't think just copying pointers is correct.
-	// But since it used value semantics so therefore it won't work, I'm commenting it out completely.
-
-	SrcRows := len(Src)
-	SrcCols := len(Src[0])
-	DestRows := len(Dest)
-	DestCols := len(Dest[0])
-
-	if (SrcRows != DestRows) || (SrcCols != DestCols) {
-		fmt.Println(" Src and Dest are not same size.  Copy aborted.")
-		Dest = Zero(Dest)
-		return
-	}
-
-	//copy(Dest, Src) // pointed out by golangci-lint.  Doesn't work so I did it wrong.
-	for r := range Src {
-		copy(Dest[r], Src[r]) // this works.
-		//for c := range Src[r] {
-		//	Dest[r][c] = Src[r][c]
-		//}
-	}
-}
-*/
 
 func Copy(Src Matrix2D) Matrix2D {
 	// Copies an r x c matrix A to B, by doing an element by element copy.  I don't think just copying pointers is correct.
@@ -411,7 +387,7 @@ func LUSolve(LU, B Matrix2D, perm Permutation) Matrix2D {
 	return B
 } // END LUSolve;
 
-// ---------------------------------- GaussJ ----------------------------
+// ---------------------------------- GaussJordan Elimination ----------------------------
 
 func GaussJ(A, B Matrix2D) Matrix2D {
 
@@ -557,7 +533,7 @@ func EqualApprox(a, b Matrix2D) bool {
 		return false
 	}
 	for i := range a {
-		for j := range a[0] {
+		for j := range a[i] {
 			if math.Abs(a[i][j]-b[i][j]) >= Small { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
 				return false
 			}
@@ -575,8 +551,24 @@ func EqualApproximately(a, b Matrix2D, tol float64) bool {
 	}
 	tol = math.Abs(tol)
 	for i := range a {
-		for j := range a[0] {
+		for j := range a[i] {
 			if math.Abs(a[i][j]-b[i][j]) >= tol { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func IsZeroApprox(a Matrix2D) bool {
+	return IsZeroApproximately(a, Small)
+}
+
+func IsZeroApproximately(a Matrix2D, tol float64) bool {
+	tol = math.Abs(tol)
+	for i := range a {
+		for j := range a[i] {
+			if math.Abs(a[i][j]) >= tol { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
 				return false
 			}
 		}

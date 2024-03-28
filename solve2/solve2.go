@@ -35,7 +35,7 @@ import (
 	"strings"
 )
 
-const LastCompiled = "28 Mar 2024"
+const LastAltered = "28 Mar 2024"
 const small = 1e-10
 
 type rows []float64
@@ -102,11 +102,12 @@ func cleanString(s string) string {
  ************************************************************************/
 
 func main() {
-	fmt.Printf(" Equation solver v2 written in Go.  Last altered %s, compiled with %s\n", LastCompiled, runtime.Version())
+	fmt.Printf(" Equation solver v2 written in Go.  Last altered %s on %s, last altered mat on %s, compiled with %s\n",
+		os.Args[0], LastAltered, mat.LastAltered, runtime.Version())
 	fmt.Println()
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastCompiled, runtime.Version())
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Solves vector equation A*X = B; A is a square coef matrix.")
 		fmt.Fprintf(flag.CommandLine.Output(), " Input text file has each row being the coefficients.")
 		fmt.Fprintf(flag.CommandLine.Output(), " N is determined by number of rows and B value is last on each line.")
@@ -249,7 +250,12 @@ func main() {
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	mat.Writeln(D, 5)
 
-	fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to")
+	if mat.IsZeroApprox(D) {
+		ctfmt.Printf(ct.Green, false, " Result of AX-B is approx zero.\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " Result of AX-B is NOT approx zero.\n")
+	}
+	fmt.Println("After calling WriteZeroln:")
 	mat.WriteZeroln(D, 5)
 	fmt.Println()
 	fmt.Println()
