@@ -13,10 +13,12 @@ package main // solve2.go, from solve.go
   23 Mar 24 -- Increased MaxN
   26 Mar 24 -- Added checks on input matrix size, so it won't panic.
   27 Mar 24 -- Now called Solve2.  I intend to build the IM by appending to a slice so I don't need a maxN size.  And I won't display the matrix symbols on Windows.
+               I'm amazed that this worked the first time.  I based the code on cal2 and cal3, and this seemed to have worked.  Wow!
 */
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -28,20 +30,20 @@ import (
 	"src/filepicker"
 	"src/mat"
 	"src/tknptr"
-	"src/tokenize"
 	"strconv"
 	"strings"
 )
 
-const LastCompiled = "27 Mar 24"
-const MaxN = 99
+const LastCompiled = "27 Mar 2024"
 const small = 1e-10
+
+type rows []float64
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode.")
 var onWin = runtime.GOOS == "windows"
 
-//                          MaxRealArray is not square because the B column vector is in last column of IM
-//                          type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
+//                          InputMatrix (IM) is not square because the B column vector is in last column of IM
+//                          type Matrix2D [][]float64  It is defined in and used by mat.
 
 func makeDense(matrix mat.Matrix2D) *gomat.Dense {
 	var idx int
@@ -154,7 +156,7 @@ func main() {
 
 	infile, err := os.Open(filename)
 	if err != nil {
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintf(os.Stderr, " %s does not exit.  Exiting.", filename)
 		} else {
 			fmt.Fprintf(os.Stderr, " Error while opening %s is %v.  Exiting.\n ", filename, err)
@@ -168,64 +170,47 @@ func main() {
 	}
 	scanner := bufio.NewScanner(infile)
 
-	//IM := mat.NewMatrix(MaxN, MaxN+1) // IM is input matrix
-	//IM = mat.Zero(IM)
-	rows := make([]float64, 0, 20)
-	IM := make([][]float64, 0, 20)
+	IM := make([]rows, 0, 20)
 
-	lines := 0
-CountLinesLoop:
-	for { // read, count and process lines
+	for { // read and process all the lines in the input file.
 		readSuccess := scanner.Scan()
 		if !readSuccess {
 			if readErr := scanner.Err(); readErr != nil {
 				if *verboseFlag {
-					fmt.Printf(" readErr is %s, lines = %d\n", readErr, lines)
+					fmt.Printf(" readErr is %s, len(IM) = %d\n", readErr, len(IM))
 				}
 				if readErr == io.EOF {
-					break CountLinesLoop
+					break
 				} else { // this may be redundant because of the readSuccess test
-					ctfmt.Printf(ct.Red, true, " ERROR while reading from %s at line %d is %s.\n", filename, lines, readErr)
-					break CountLinesLoop
+					ctfmt.Printf(ct.Red, true, " ERROR while reading from %s at line %d is %s.\n", filename, len(IM), readErr)
+					break
 				}
 			}
-			break CountLinesLoop
+			break
 		}
 		inputLine := scanner.Text()
 
-		tokenP := tknptr.New(inputLine)
-		col := 0
-		var EOL bool
-		var token tokenize.TokenType
-		for !EOL {
-			token, EOL = tokenize.GETTKNREAL()
-			if EOL {
-				break
-			}
-			if token.State == tokenize.DGT {
-				if col >= MaxN {
-					ctfmt.Printf(ct.Red, true, " ERROR: number of columns exceeds the current max of %d.  Aborting.\n", MaxN)
-					return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
-				}
-				IM[lines][col] = token.Rsum // remember that IM is Input Matrix
-				col++
-			} // ENDIF token.state=DGT
-		} //  UNTIL (EOL is true) OR (col > MaxN);
-		if col > 0 { // text only or null lines do not increment the row counter.
-			lines++
-			if lines >= MaxN {
-				ctfmt.Printf(ct.Red, true, " ERROR: number of lines exceeds the current max of %d.  Aborting.\n", MaxN)
-				return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
+		token := tknptr.TokenRealSlice(inputLine)
+		if token[0].State != tknptr.DGT { // treat this as a comment line if it doesn't begin w/ a number.
+			continue
+		}
+
+		row := make(rows, 0, 20)
+		// append all numbers to a row
+		for _, t := range token {
+			if t.State == tknptr.DGT { // ignore non numerical tokens on an individual line
+				row = append(row, t.Rsum)
 			}
 		}
+		IM = append(IM, row)
 		if *verboseFlag {
-			fmt.Printf(" at bottom of file reading loop.  lines = %d, n = %d, col = %d, token.Str = %s\n", lines, n, col, token.Str)
+			fmt.Printf(" at bottom of line reading loop.  lines so far = %d, len(row) = %d, len(token) = %d\n", len(IM), len(row), len(token))
 		}
-	} // END reading loop
-	N := lines // Note: lines is 0 origin
+	} // END file reading loop, ie, all lines in the file are to have been read by now.
+	N := len(IM) // Note: lines is 0 origin, but N is length.
 
 	if *verboseFlag {
-		fmt.Printf(" Number of lines read is %d, and N = %d\n", lines, N)
+		fmt.Printf(" Read in all lines in %s file.  Number of lines read is %d\n", filename, N)
 	}
 
 	// Now need to create A and B matrices
@@ -250,21 +235,18 @@ CountLinesLoop:
 	fmt.Println("The solution X to AX = B using Solve is")
 	mat.Writeln(X, 5)
 
-	//ans2 := mat.NewMatrix(N, N)
-	ans2 := mat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
+	ans2 := mat.GaussJ(A, B)
 	fmt.Println("The solution X to AX = B using GaussJ is")
 	mat.Writeln(ans2, 5)
 	fmt.Println()
 
 	// Check that the solution looks right.
 
-	C := mat.Mul(A, X) // Mul (ra1, ans, N, N, 1, ra3);
-	D := mat.Sub(B, C) //  Sub (ra3, ra2, N, 1, ra4);
+	C := mat.Mul(A, X)
+	D := mat.Sub(B, C)
 
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
-	mat.Writeln(D, 5) //    Write (ra4, N, 1, 4);
-
-	//D = mat.BelowSmallMakeZero(D)
+	mat.Writeln(D, 5)
 
 	fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to")
 	mat.WriteZeroln(D, 5)
