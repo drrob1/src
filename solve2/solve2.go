@@ -14,6 +14,7 @@ package main // solve2.go, from solve.go
   26 Mar 24 -- Added checks on input matrix size, so it won't panic.
   27 Mar 24 -- Now called Solve2.  I intend to build the IM by appending to a slice so I don't need a maxN size.  And I won't display the matrix symbols on Windows.
                I'm amazed that this worked the first time.  I based the code on cal2 and cal3, and this seemed to have worked.  Wow!
+  28 Mar 24 -- Adding AX -B = 0 to the gonum.org part.
 */
 
 import (
@@ -34,7 +35,7 @@ import (
 	"strings"
 )
 
-const LastCompiled = "27 Mar 2024"
+const LastCompiled = "28 Mar 2024"
 const small = 1e-10
 
 type rows []float64
@@ -342,6 +343,23 @@ func main() {
 		ctfmt.Printf(ct.Green, false, " makeDense and makeDense2 matrices are exactly equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " makeDense and makeDense2 matrices are NOT exactly equal.\n")
+	}
+
+	rA, _ := denseA.Dims()
+	_, cB := denseB.Dims()
+	shouldBeZeroMatrix := gomat.NewDense(rA, cB, nil)
+	intermResult := gomat.NewDense(rA, cB, nil)
+	intermResult.Mul(denseA, denseX)
+	shouldBeZeroMatrix.Sub(intermResult, denseB)
+	fmt.Printf("\n AX - B should be Zero matrix:\n")
+	outputDense(shouldBeZeroMatrix)
+	fmt.Println()
+	allZeros := gomat.NewDense(rA, cB, nil)
+	allZeros.Zero()
+	if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small) {
+		ctfmt.Printf(ct.Green, false, " shouldbeZeroMatrix and allZeros matrix are approximately equal.\n\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
 	}
 
 } // END Solve.
