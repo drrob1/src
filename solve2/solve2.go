@@ -15,6 +15,7 @@ package main // solve2.go, from solve.go
   27 Mar 24 -- Now called Solve2.  I intend to build the IM by appending to a slice so I don't need a maxN size.  And I won't display the matrix symbols on Windows.
                I'm amazed that this worked the first time.  I based the code on cal2 and cal3, and this seemed to have worked.  Wow!
   28 Mar 24 -- Adding AX -B = 0 to the gonum.org part.
+  29 Mar 24 -- Will make it succeed quietly, and fail noisily.
 */
 
 import (
@@ -35,13 +36,14 @@ import (
 	"strings"
 )
 
-const LastAltered = "28 Mar 2024"
+const LastAltered = "29 Mar 2024"
 const small = 1e-10
 
 type rows []float64
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode.")
 var onWin = runtime.GOOS == "windows"
+var notEqualFlag bool
 
 //                          InputMatrix (IM) is not square because the B column vector is in last column of IM
 //                          type Matrix2D [][]float64  It is defined in and used by mat.
@@ -209,7 +211,7 @@ func main() {
 			fmt.Printf(" at bottom of line reading loop.  lines so far = %d, len(row) = %d, len(token) = %d\n", len(IM), len(row), len(token))
 		}
 	} // END file reading loop, ie, all lines in the file are to have been read by now.
-	N := len(IM) // Note: lines is 0 origin, but N is length.
+	N := len(IM)
 
 	if *verboseFlag {
 		fmt.Printf(" Read in all lines in %s file.  Number of lines read is %d\n", filename, N)
@@ -226,55 +228,65 @@ func main() {
 		B[row][0] = IM[row][N]
 	}
 
-	fmt.Println(" coef matrix A is:")
-	mat.Writeln(A, 5)
-
-	fmt.Println(" Right hand side vector matrix B is:")
-	mat.Writeln(B, 5)
-	fmt.Println()
-
 	X := mat.Solve(A, B)
-	fmt.Println("The solution X to AX = B using Solve is")
-	mat.Writeln(X, 5)
+	X2 := mat.GaussJ(A, B)
 
-	ans2 := mat.GaussJ(A, B)
-	fmt.Println("The solution X to AX = B using GaussJ is")
-	mat.Writeln(ans2, 5)
-	fmt.Println()
+	if mat.EqualApprox(X, X2) {
+		ctfmt.Printf(ct.Green, false, " Solve and GaussJ solutions are approx equal.  X:\n")
+		mat.Writeln(X, 5)
+		fmt.Println()
+	} else {
+		if mat.EqualApproximately(X, X2, small*10) {
+			ctfmt.Printf(ct.Green, false, " Solve and GaussJ solutions are approx equal using small*10.  X:\n")
+			mat.Writeln(X, 5)
+			fmt.Println()
+		} else {
+			ctfmt.Printf(ct.Red, true, " Solve and GaussJordan solutions are not approx equal.  X:\n")
+			mat.Writeln(X, 5)
+			fmt.Println()
+			ctfmt.Printf(ct.Red, true, " GaussJordan solution is X2:\n")
+			mat.Writeln(X2, 5)
+			fmt.Println()
+			fmt.Println(" coef matrix A is:")
+			mat.Writeln(A, 5)
+			fmt.Println(" Right hand side vector matrix B is:")
+			mat.Writeln(B, 5)
+			fmt.Println()
+		}
+	}
 
 	// Check that the solution looks right.
 
 	C := mat.Mul(A, X)
 	D := mat.Sub(B, C)
 
-	fmt.Println("As a check, AX-B should be 0, and evaluates to")
-	mat.Writeln(D, 5)
-
 	if mat.IsZeroApprox(D) {
 		ctfmt.Printf(ct.Green, false, " Result of AX-B is approx zero.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " Result of AX-B is NOT approx zero.\n")
+		if mat.IsZeroApproximately(D, small*10) {
+			ctfmt.Printf(ct.Green, false, " Result of AX-B is approx zero using small*10 tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " Result of AX-B is NOT approx zero even using small*10 tolerance factor.\n")
+			fmt.Println("As a check, AX-B should be 0, and evaluates to")
+			mat.Writeln(D, 5)
+			fmt.Println("After calling WriteZeroln:")
+			mat.WriteZeroln(D, 5)
+			fmt.Println()
+			fmt.Println()
+		}
 	}
-	fmt.Println("After calling WriteZeroln:")
-	mat.WriteZeroln(D, 5)
-	fmt.Println()
-	fmt.Println()
 
 	newPause()
-
-	// New for the gonum.org code.
 
 	fmt.Printf("---------------------------------------------------------------------------")
 	fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
 
-	denseA := makeDense(A)
+	// Now for the gonum.org code.
+
+	denseA := makeDense(A) // makeDense is my procedure to, well, make a Dense matrix from a Matrix2D type var.
 	denseB := makeDense(B)
 	denseX := makeDense(X) // used below for validation checks.
-	fmt.Printf("A:\n")
-	outputDense(denseA)
-	fmt.Println()
-	fmt.Printf("B:\n")
-	outputDense(denseB)
 
 	// Will try w/ inversion
 	var inverseA, invSoln gomat.Dense
@@ -284,8 +296,6 @@ func main() {
 		os.Exit(1)
 	}
 	invSoln.Mul(&inverseA, denseB)
-	fmt.Printf(" Solution by GoNum inversion and B is:\n")
-	outputDense(&invSoln)
 
 	// Try LU stuff
 	var lu gomat.LU
@@ -296,8 +306,6 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum LU factorization is:\n")
-	outputDense(luSoln)
 
 	// try w/ QR stuff
 	var qr gomat.QR
@@ -308,8 +316,6 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum QR factorization is:\n")
-	outputDense(qrSoln)
 
 	// Try Solve stuff
 	solvSoln := gomat.NewDense(N, 1, nil) // just to see if this works.
@@ -318,28 +324,72 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Solution by gonum Solve is:\n")
-	outputDense(solvSoln)
 
 	if gomat.EqualApprox(denseX, &invSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal.\n")
+		if gomat.EqualApprox(denseX, &invSoln, small*10) {
+			ctfmt.Printf(ct.Green, false, " X and inversion solution are approx equal using 10*small tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal, even when using 10*small tolerance factor.\n")
+			fmt.Printf(" Solution by GoNum inversion and B is:\n")
+			outputDense(&invSoln)
+			fmt.Println()
+			notEqualFlag = true
+		}
 	}
 	if gomat.EqualApprox(denseX, luSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and LU solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and LU solution are not equal.\n")
+		if gomat.EqualApprox(denseX, luSoln, small*10) {
+			ctfmt.Printf(ct.Green, false, " X and LU solution are approx equal using 10*small tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " X and LU solution are not equal, even when using 10*small tolerance factor.\n")
+			fmt.Printf(" Soluton by gonum LU factorization is:\n")
+			outputDense(luSoln)
+			fmt.Println()
+			notEqualFlag = true
+		}
 	}
 	if gomat.EqualApprox(denseX, qrSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and QR solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and QR solution are not equal.\n")
+		if gomat.EqualApprox(denseX, qrSoln, small*10) {
+			ctfmt.Printf(ct.Green, false, " X and QR solution are approx equal using 10*small tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " X and QR solution are not equal, even when using 10*small tolerance factor.\n")
+			fmt.Printf(" Soluton by gonum QR factorization is:\n")
+			outputDense(qrSoln)
+			fmt.Println()
+			notEqualFlag = true
+		}
 	}
 	if gomat.EqualApprox(denseX, solvSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
+		if gomat.EqualApprox(denseX, solvSoln, small*10) {
+			ctfmt.Printf(ct.Green, false, " X and solve solution are approx equal using 10*small tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " X and solve solution are not equal, even when using 10*small tolerance factor.\n")
+			fmt.Printf(" Solution by gonum Solve is:\n")
+			outputDense(solvSoln)
+			fmt.Println()
+			notEqualFlag = true
+		}
+	}
+
+	if notEqualFlag {
+		fmt.Printf(" A:\n")
+		outputDense(denseA)
+		fmt.Printf("\n B:\n")
+		outputDense(denseB)
+		fmt.Printf("\n X:\n")
+		outputDense(denseX)
+		notEqualFlag = false
 	}
 
 	denseA2 := makeDense2(A)
@@ -357,17 +407,37 @@ func main() {
 	intermResult := gomat.NewDense(rA, cB, nil)
 	intermResult.Mul(denseA, denseX)
 	shouldBeZeroMatrix.Sub(intermResult, denseB)
-	fmt.Printf("\n AX - B should be Zero matrix:\n")
-	outputDense(shouldBeZeroMatrix)
-	fmt.Println()
 	allZeros := gomat.NewDense(rA, cB, nil)
 	allZeros.Zero()
 	if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small) {
 		ctfmt.Printf(ct.Green, false, " shouldbeZeroMatrix and allZeros matrix are approximately equal.\n\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
+		if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small*10) {
+			ctfmt.Printf(ct.Green, false, " shouldbeZeroMatrix and allZeros matrix are approximately equal using small*10.\n\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " AX-B is not zero matrix, even using small*10 as tolerance factor.  result is:\n")
+			outputDense(shouldBeZeroMatrix)
+			fmt.Println()
+		}
 	}
 
+	fmt.Printf(" Do you want to see A, B and X? (y/N) : ")
+	var ans string
+	n, err := fmt.Scanln(&ans)
+	if n == 0 || err != nil {
+		fmt.Printf("OK, bye-bye:\n")
+	} else {
+		ans = strings.ToLower(ans)
+		if strings.Contains(ans, "y") {
+			fmt.Printf(" A:\n")
+			outputDense(denseA)
+			fmt.Printf("\n B:\n")
+			outputDense(denseB)
+			fmt.Printf("\n X:\n")
+			outputDense(denseX)
+		}
+	}
 } // END Solve.
 
 func newPause() {
