@@ -173,6 +173,11 @@ func solveTest2(fn string) {
 		ctfmt.Printf(ct.Green, true, " The Solve and matrix inversion methods returned equal results.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT returned equal results.\n")
+		if mat.EqualApproximately(solveSoln, inverseSoln, mat.Small*10) {
+			ctfmt.Printf(ct.Green, true, " Now the Solve and matrix inversion methods returned equal results using mat.Small*10 tolerance factor.\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT return equal results, even using mat.Small*10 tolerance factor.\n")
+		}
 	}
 
 	if mat.EqualApprox(solveInvert, inverseSoln) {
@@ -199,11 +204,11 @@ func WriteMatrices(A, B mat.Matrix2D, name string) {
 		return
 	}
 	outputFile, err := os.CreateTemp(workingDir, name)
-	defer outputFile.Close()
 	if err != nil {
 		fmt.Printf(" ERROR from os.CreateTemp is %s.  Output file not written.\n", err)
 		return
 	}
+	defer outputFile.Close()
 
 	//fmt.Printf(" WriteMatrices outputFile is %s and %s\n", name, outputFile.Name())
 	outputBuf := bufio.NewWriter(outputFile)
