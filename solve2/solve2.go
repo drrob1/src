@@ -16,6 +16,7 @@ package main // solve2.go, from solve.go
                I'm amazed that this worked the first time.  I based the code on cal2 and cal3, and this seemed to have worked.  Wow!
   28 Mar 24 -- Adding AX -B = 0 to the gonum.org part.
   29 Mar 24 -- Will make it succeed quietly, and fail noisily.
+  30 Mar 24 -- Added belowTolMakeSmall -- needed because sometimes a value of X should be zero, but it comes out very small.  So I have to make it zero, if needed.
 */
 
 import (
@@ -27,6 +28,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	gomat "gonum.org/v1/gonum/mat"
 	"io"
+	"math"
 	"os"
 	"runtime"
 	"src/filepicker"
@@ -80,7 +82,7 @@ func makeDense2(matrix mat.Matrix2D) *gomat.Dense {
 }
 
 func outputDense(m *gomat.Dense) {
-	s := fmt.Sprintf("%.5g\n", gomat.Formatted(m, gomat.Squeeze()))
+	s := fmt.Sprintf("%.6g\n", gomat.Formatted(m, gomat.Squeeze()))
 	if onWin {
 		s = cleanString(s)
 	}
@@ -229,7 +231,9 @@ func main() {
 	}
 
 	X := mat.Solve(A, B)
+	X = mat.BelowSmallMakeZero(X)
 	X2 := mat.GaussJ(A, B)
+	X2 = mat.BelowSmallMakeZero(X2)
 
 	if mat.EqualApprox(X, X2) {
 		ctfmt.Printf(ct.Green, false, " Solve and GaussJ solutions are approx equal.  X determined by Solve:\n")
@@ -296,6 +300,7 @@ func main() {
 		os.Exit(1)
 	}
 	invSoln.Mul(&inverseA, denseB)
+	belowTolMakeZero(&invSoln, small)
 
 	// Try LU stuff
 	var lu gomat.LU
@@ -306,6 +311,7 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZero(luSoln, small)
 
 	// try w/ QR stuff
 	var qr gomat.QR
@@ -316,6 +322,7 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZero(qrSoln, small)
 
 	// Try Solve stuff
 	solvSoln := gomat.NewDense(N, 1, nil) // just to see if this works.
@@ -324,6 +331,7 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZero(solvSoln, small)
 
 	if gomat.EqualApprox(denseX, &invSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
@@ -446,5 +454,15 @@ func newPause() {
 	fmt.Scanln(&ans)
 	if strings.ToLower(ans) == "x" {
 		os.Exit(1)
+	}
+}
+func belowTolMakeZero(m *gomat.Dense, tol float64) {
+	r, c := m.Dims()
+	for i := range r {
+		for j := range c {
+			if math.Abs(m.At(i, j)) < tol {
+				m.Set(i, j, m.At(i, j))
+			}
+		}
 	}
 }

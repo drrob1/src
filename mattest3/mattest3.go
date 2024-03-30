@@ -34,6 +34,7 @@ REVISION HISTORY
 21 Mar 24 -- Adding file output of A and B so that these can be read by solve.go
 26 Mar 24 -- Enhancing the equality test.  And adding possibly negative numbers.
 30 Mar 24 -- Added findMaxDiff for when the equality test fails.  Added lastAltered string, and added verboseFlag.
+             And added call to mat.BelowSmallMakeZero() and belowTolMakeZero(), to be used as needed.
 */
 
 import (
@@ -94,25 +95,23 @@ func solveTest(fn string) {
 		}
 	}
 
-	fmt.Printf(" Coefficient matrix A is:\n")
-	ss := mat.Write(A, 3)
-	printString(ss)
-	fmt.Println()
-
-	//fmt.Printf(" x = %g, y = %g, z = %g\n\n", X[0][0], X[1][0], X[2][0])
+	if verboseFlag {
+		fmt.Printf(" Coefficient matrix A is:\n")
+		ss := mat.Write(A, 3)
+		printString(ss)
+		fmt.Println()
+	}
 
 	// Now do the calculation to determine what the B column vector needs to be for this to work.
 	for i := range A {
 		for j := range A[i] {
 			product := A[i][j] * X[j][0]
 			B[i][0] += product
-			//fmt.Printf(" i=%d, j=%d, A[%d,%d] is %g, X[%d,0] is %g, product is %g, B[%d,0] is %g\n", i, j, i, j, A[i][j], i, X[j][0], product, i, B[i][0])
-			//newPause()
 		}
 	}
 
 	fmt.Printf("\n Column vectors X and B are:\n")
-	ss = mat.WriteZeroPair(X, B, 4)
+	ss := mat.WriteZeroPair(X, B, 4)
 	printString(ss)
 	fmt.Println()
 	fmt.Printf("\n\n")
@@ -122,10 +121,15 @@ func solveTest(fn string) {
 	fmt.Printf(" Column vector newB is:\n")
 	mat.WriteZeroln(newB, 6)
 
+	// Generate file to be read in by Solve(2).
 	WriteMatrices(A, B, fn)
 
 	solveSoln := mat.Solve(A, B)
 	gaussSoln := mat.GaussJ(A, B)
+	if negFlag {
+		solveSoln = mat.BelowSmallMakeZero(solveSoln)
+		gaussSoln = mat.BelowSmallMakeZero(gaussSoln)
+	}
 
 	fmt.Printf("The solution X to AX = B\n using Solve       and then      GaussJ are:\n")
 	ss = mat.WriteZeroPair(solveSoln, gaussSoln, 3)
@@ -147,11 +151,18 @@ func solveTest(fn string) {
 	inverseA := mat.Invert(A)
 	inverseSoln := mat.Mul(inverseA, B)
 
+	if negFlag {
+		inverseSoln = mat.BelowSmallMakeZero(inverseSoln)
+	}
+
 	if verboseFlag {
 		mat.WriteZeroln(inverseSoln, 3)
 	}
 
 	solveInvert := mat.SolveInvert(A, B)
+	if negFlag {
+		solveInvert = mat.BelowSmallMakeZero(solveInvert)
+	}
 
 	if mat.EqualApprox(solveSoln, gaussSoln) {
 		ctfmt.Printf(ct.Green, true, " The Solve and GaussJ methods returned approx equal results.\n")
@@ -275,7 +286,6 @@ func goNumMatTest() {
 		str = cleanString(str)
 		fmt.Printf(" X=\n%s\n\n", str)
 	}
-	//newPause()
 
 	// Now need to assign coefficients in matrix A
 	initA := make([]float64, aRows*aCols)
@@ -293,7 +303,6 @@ func goNumMatTest() {
 		aMatrix := extractDense(A)
 		mat.WriteZeroln(aMatrix, 5)
 	}
-	//newPause()
 
 	initB := make([]float64, bRows) // col vec
 	for i := range aRows {
@@ -316,6 +325,7 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
+	belowTolMakeZero(&invSolnVec, small)
 	if verboseFlag {
 		fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
 	}
@@ -330,6 +340,7 @@ func goNumMatTest() {
 	}
 
 	invSoln.Mul(&inverseA, B)
+	belowTolMakeZero(&invSoln, small)
 	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
 
 	// Try LU stuff
@@ -342,6 +353,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZero(luSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
 	}
@@ -355,6 +367,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZero(qrSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
 	}
@@ -367,6 +380,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZero(solvSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
 	}
@@ -508,6 +522,17 @@ func findMaxDiff(a, b mat.Matrix2D) float64 {
 		}
 	}
 	return maxVal
+}
+
+func belowTolMakeZero(m *gomat.Dense, tol float64) { // This won't handle a gomat.VecDense type.  Maybe I can extend it in a bit.
+	r, c := m.Dims()
+	for i := range r {
+		for j := range c {
+			if math.Abs(m.At(i, j)) < tol {
+				m.Set(i, j, m.At(i, j))
+			}
+		}
+	}
 }
 
 // END MatTest3.
