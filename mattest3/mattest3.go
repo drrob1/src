@@ -33,6 +33,7 @@ REVISION HISTORY
 20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
 21 Mar 24 -- Adding file output of A and B so that these can be read by solve.go
 26 Mar 24 -- Enhancing the equality test.  And adding possibly negative numbers.
+30 Mar 24 -- Added findMaxDiff, for when the equality test fails.
 */
 
 import (
@@ -42,6 +43,7 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	gomat "gonum.org/v1/gonum/mat"
+	"math"
 	"math/rand/v2"
 	"os"
 	"src/mat"
@@ -176,7 +178,8 @@ func solveTest2(fn string) {
 		if mat.EqualApproximately(solveSoln, inverseSoln, mat.Small*10) {
 			ctfmt.Printf(ct.Green, true, " Now the Solve and matrix inversion methods returned equal results using mat.Small*10 tolerance factor.\n")
 		} else {
-			ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT return equal results, even using mat.Small*10 tolerance factor.\n")
+			f := findMaxDiff(solveSoln, inverseSoln)
+			ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT return equal results, using mat.Small*10 tol fac.  Diff=%.3g\n", f)
 		}
 	}
 
@@ -458,4 +461,22 @@ func newPause() {
 	}
 }
 
-// END MatTest.
+func findMaxDiff(a, b mat.Matrix2D) float64 {
+	var maxVal float64
+	if len(a) != len(b) {
+		return 10 // this means the matrices are not the same size
+	}
+	if len(a[0]) != len(b[0]) {
+		return 10 // this means the matrices are not the same size
+	}
+	for i := range a {
+		for j := range a[i] {
+			if math.Abs(a[i][j]-b[i][j]) >= maxVal { // I can't compare floats using equal, it's too likely to fail due small differences in the numbers.
+				maxVal = math.Abs(a[i][j] - b[i][j])
+			}
+		}
+	}
+	return maxVal
+}
+
+// END MatTest3.
