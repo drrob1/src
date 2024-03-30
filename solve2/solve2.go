@@ -461,7 +461,7 @@ func belowTolMakeZero(m *gomat.Dense, tol float64) {
 	for i := range r {
 		for j := range c {
 			if math.Abs(m.At(i, j)) < tol {
-				m.Set(i, j, m.At(i, j))
+				m.Set(i, j, 0)
 			}
 		}
 	}

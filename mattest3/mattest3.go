@@ -234,7 +234,7 @@ func WriteMatrices(A, B mat.Matrix2D, name string) {
 	//fmt.Printf(" WriteMatrices outputFile is %s and %s\n", name, outputFile.Name())
 	outputBuf := bufio.NewWriter(outputFile)
 	defer outputBuf.Flush()
-	fmt.Printf(" WriteMatrices outputbuf created.\n")
+	//                                                                 fmt.Printf(" WriteMatrices outputBuf created.\n")
 
 	for i := range A {
 		for j := range A[i] { // write a row of A
@@ -393,6 +393,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
+	belowTolMakeZeroVector(vecSolveSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
 	}
@@ -524,12 +525,23 @@ func findMaxDiff(a, b mat.Matrix2D) float64 {
 	return maxVal
 }
 
-func belowTolMakeZero(m *gomat.Dense, tol float64) { // This won't handle a gomat.VecDense type.  Maybe I can extend it in a bit.
+func belowTolMakeZero(m *gomat.Dense, tol float64) {
 	r, c := m.Dims()
 	for i := range r {
 		for j := range c {
 			if math.Abs(m.At(i, j)) < tol {
-				m.Set(i, j, m.At(i, j))
+				m.Set(i, j, 0)
+			}
+		}
+	}
+}
+
+func belowTolMakeZeroVector(vec *gomat.VecDense, tol float64) {
+	r, c := vec.Dims()
+	for i := range r {
+		for j := range c {
+			if math.Abs(vec.At(i, j)) < tol {
+				vec.SetVec(i, 0)
 			}
 		}
 	}
