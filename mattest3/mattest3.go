@@ -172,14 +172,14 @@ func solveTest2(fn string) {
 	solveInvert := mat.SolveInvert(A, B)
 
 	if mat.EqualApprox(solveSoln, inverseSoln) {
-		ctfmt.Printf(ct.Green, true, " The Solve and matrix inversion methods returned equal results.\n")
+		ctfmt.Printf(ct.Green, true, " The Solve and matrix inversion methods returned approx equal results.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT returned equal results.\n")
+		ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT returned approx equal results.\n")
 		if mat.EqualApproximately(solveSoln, inverseSoln, mat.Small*10) {
-			ctfmt.Printf(ct.Green, true, " Now the Solve and matrix inversion methods returned equal results using mat.Small*10 tolerance factor.\n")
+			ctfmt.Printf(ct.Green, true, " Now the Solve and matrix inversion methods returned approx equal results using mat.Small*10 tolerance factor.\n")
 		} else {
 			f := findMaxDiff(solveSoln, inverseSoln)
-			ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT return equal results, using mat.Small*10 tol fac.  Diff=%.3g\n", f)
+			ctfmt.Printf(ct.Red, true, " The Solve and matrix inversion methods DID NOT return approx equal results, using mat.Small*10 tol fac.  Diff=%.3g\n", f)
 		}
 	}
 
@@ -357,34 +357,34 @@ func goNumMatTest() {
 	fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
 
 	if gomat.EqualApprox(X, &invSoln, small) {
-		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and inversion solution are approx equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal.\n")
+		ctfmt.Printf(ct.Red, true, " X and inversion solution are not approx equal.\n")
 	}
 	if gomat.EqualApprox(X, luSoln, small) {
-		ctfmt.Printf(ct.Green, false, " X and LU solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and LU solution are approx equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, false, " X and LU solution are not equal.\n")
+		ctfmt.Printf(ct.Red, false, " X and LU solution are not approx equal.\n")
 	}
 	if gomat.EqualApprox(X, &invSolnVec, small) {
-		ctfmt.Printf(ct.Green, false, " X and vector inversion solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and vector inversion solution are approx equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " X and vector inversion solution are not equal.\n")
+		ctfmt.Printf(ct.Red, true, " X and vector inversion solution are not approx equal.\n")
 	}
 	if gomat.EqualApprox(X, qrSoln, small) {
-		ctfmt.Printf(ct.Green, false, " X and QR solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and QR solution are approx equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, false, " X and QR solution are not equal.\n")
+		ctfmt.Printf(ct.Red, false, " X and QR solution are not approx equal.\n")
 	}
 	if gomat.EqualApprox(X, solvSoln, small) {
-		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and Solve solution are approx equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
+		ctfmt.Printf(ct.Red, false, " X and Solve solution are not approx equal.\n")
 	}
 	if gomat.EqualApprox(X, vecSolveSoln, small) {
-		ctfmt.Printf(ct.Green, false, " X and Vec Solve solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and Vec Solve solution are approx equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, false, " X and Vec Solve solution are not equal.\n")
+		ctfmt.Printf(ct.Red, false, " X and Vec Solve solution are not approx equal.\n")
 	}
 
 } // end goNumMatTest
