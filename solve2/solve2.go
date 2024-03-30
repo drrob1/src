@@ -36,7 +36,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "29 Mar 2024"
+const LastAltered = "30 Mar 2024"
 const small = 1e-10
 
 type rows []float64
@@ -232,7 +232,7 @@ func main() {
 	X2 := mat.GaussJ(A, B)
 
 	if mat.EqualApprox(X, X2) {
-		ctfmt.Printf(ct.Green, false, " Solve and GaussJ solutions are approx equal.  X:\n")
+		ctfmt.Printf(ct.Green, false, " Solve and GaussJ solutions are approx equal.  X determined by Solve:\n")
 		mat.Writeln(X, 5)
 		fmt.Println()
 	} else {
@@ -368,13 +368,13 @@ func main() {
 		}
 	}
 	if gomat.EqualApprox(denseX, solvSoln, small) {
-		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
+		ctfmt.Printf(ct.Green, false, " X and gonum Solve solution are equal.\n")
 	} else {
-		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
+		ctfmt.Printf(ct.Red, false, " X and gonum Solve solution are not equal.\n")
 		if gomat.EqualApprox(denseX, solvSoln, small*10) {
-			ctfmt.Printf(ct.Green, false, " X and solve solution are approx equal using 10*small tolerance factor.\n")
+			ctfmt.Printf(ct.Green, false, " X and gonum solve solution are approx equal using 10*small tolerance factor.\n")
 		} else {
-			ctfmt.Printf(ct.Red, true, " X and solve solution are not equal, even when using 10*small tolerance factor.\n")
+			ctfmt.Printf(ct.Red, true, " X and gonum solve solution are not equal, even when using 10*small tolerance factor.\n")
 			fmt.Printf(" Solution by gonum Solve is:\n")
 			outputDense(solvSoln)
 			fmt.Println()
@@ -410,13 +410,13 @@ func main() {
 	allZeros := gomat.NewDense(rA, cB, nil)
 	allZeros.Zero()
 	if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small) {
-		ctfmt.Printf(ct.Green, false, " shouldbeZeroMatrix and allZeros matrix are approximately equal.\n\n")
+		ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal.\n\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
+		ctfmt.Printf(ct.Red, true, "AX-B: shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
 		if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small*10) {
-			ctfmt.Printf(ct.Green, false, " shouldbeZeroMatrix and allZeros matrix are approximately equal using small*10.\n\n")
+			ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using small*10.\n\n")
 		} else {
-			ctfmt.Printf(ct.Red, true, " AX-B is not zero matrix, even using small*10 as tolerance factor.  result is:\n")
+			ctfmt.Printf(ct.Red, true, "AX-B is not zero matrix, even using small*10 as tolerance factor.  result is:\n")
 			outputDense(shouldBeZeroMatrix)
 			fmt.Println()
 		}

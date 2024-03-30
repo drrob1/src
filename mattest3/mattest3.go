@@ -33,7 +33,7 @@ REVISION HISTORY
 20 Mar 24 -- Will accept a param that will determine the matrix sizes, esp size of X.  I'll use the flag package for this.
 21 Mar 24 -- Adding file output of A and B so that these can be read by solve.go
 26 Mar 24 -- Enhancing the equality test.  And adding possibly negative numbers.
-30 Mar 24 -- Added findMaxDiff, for when the equality test fails.
+30 Mar 24 -- Added findMaxDiff for when the equality test fails.  Added lastAltered string, and added verboseFlag.
 */
 
 import (
@@ -46,6 +46,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"os"
+	"runtime"
 	"src/mat"
 	"src/misc"
 	"strconv"
@@ -53,15 +54,17 @@ import (
 )
 
 const small = 1e-10
+const lastAltered = "Mar 30, 2024"
 
 var n int
 var negFlag bool
+var verboseFlag bool
 var aRows int
 var aCols int
 var bRows int
 var bCols int
 
-func solveTest2(fn string) {
+func solveTest(fn string) {
 	var A, B, X mat.Matrix2D
 
 	A = mat.NewMatrix(aRows, aCols)
@@ -129,47 +132,52 @@ func solveTest2(fn string) {
 	printString(ss)
 	fmt.Println()
 
+	// Does AX - B = 0
+	C := mat.Mul(A, solveSoln)
+	D := mat.Sub(B, C)
+
+	fmt.Println("As a check, AX-B should be approximately zero, and evaluates to:")
+	mat.Writeln(D, 3)
+
+	if verboseFlag {
+		mat.WriteZeroln(D, 3)
+	}
+
+	fmt.Printf("\n Will now use matrix inversion as a solution method.  Result is:\n")
+	inverseA := mat.Invert(A)
+	inverseSoln := mat.Mul(inverseA, B)
+
+	if verboseFlag {
+		mat.WriteZeroln(inverseSoln, 3)
+	}
+
+	solveInvert := mat.SolveInvert(A, B)
+
 	if mat.EqualApprox(solveSoln, gaussSoln) {
-		ctfmt.Printf(ct.Green, true, " The Solve and GaussJ methods returned equal results.\n")
+		ctfmt.Printf(ct.Green, true, " The Solve and GaussJ methods returned approx equal results.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT return equal results.\n")
+		ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT return approx equal results.\n")
 		if mat.EqualApproximately(solveSoln, gaussSoln, mat.Small*10) {
-			ctfmt.Printf(ct.Green, true, " Now the Solve and GaussJ methods returned equal results using a larger tolerance factor.\n")
+			ctfmt.Printf(ct.Green, true, " Now the Solve and GaussJ methods returned approx equal results using Small*10 tolerance factor.\n")
 		} else {
-			ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT return equal results, even using a larger tolerance factor.\n")
+			f := findMaxDiff(solveSoln, gaussSoln)
+			ctfmt.Printf(ct.Red, true, " The Solve and GaussJ methods DID NOT return approx equal results, even using Small*10 tol fac.  Diff=%.3g\n", f)
 		}
 	}
 	fmt.Println()
 
 	if mat.EqualApprox(solveSoln, X) {
-		ctfmt.Printf(ct.Green, true, " The Solve and X column vector returned equal results.\n")
+		ctfmt.Printf(ct.Green, true, " The Solve and X column vector returned approx equal results.\n")
 	} else {
-		ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT return equal results.\n")
+		ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT return approx equal results.\n")
 		if mat.EqualApproximately(solveSoln, X, mat.Small*10) {
-			ctfmt.Printf(ct.Green, true, " Now the Solve and X column vector returned equal results using a larger tolerance factor.\n")
+			ctfmt.Printf(ct.Green, true, " Now the Solve and X column vector returned approx equal results using Small*10 tolerance factor.\n")
 		} else {
-			ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT return equal results, even using a larger tolerance factor.\n")
+			f := findMaxDiff(solveSoln, X)
+			ctfmt.Printf(ct.Red, true, " The Solve and X column vector DID NOT return equal results, even using Small*10 tol fac.  Diff=%.3g\n", f)
 		}
 	}
 	fmt.Println()
-
-	// Does AX - B = 0
-	C := mat.Mul(A, solveSoln)
-	D := mat.Sub(B, C)
-
-	fmt.Println("As a check, AX-B should be 0, and evaluates to")
-	ss = mat.Write(D, 3)
-	printString(ss)
-	ss = mat.WriteZero(D, 3)
-	printString(ss)
-
-	fmt.Printf("\n Will now use matrix inversion as a solution method.  Result is:\n")
-	inverseA := mat.Invert(A)
-	inverseSoln := mat.Mul(inverseA, B)
-	ss = mat.WriteZero(inverseSoln, 3)
-	printString(ss)
-
-	solveInvert := mat.SolveInvert(A, B)
 
 	if mat.EqualApprox(solveSoln, inverseSoln) {
 		ctfmt.Printf(ct.Green, true, " The Solve and matrix inversion methods returned approx equal results.\n")
@@ -190,9 +198,8 @@ func solveTest2(fn string) {
 	}
 
 	fmt.Println()
-	fmt.Println()
 
-} // end SolveTest2
+} // end SolveTest
 
 func printString(s []string) {
 	for _, line := range s {
@@ -262,11 +269,12 @@ func goNumMatTest() {
 	}
 
 	X := gomat.NewVecDense(bRows, initX)
-	str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
-	//                                                      showRunes(str)
-	fmt.Printf(" X=\n%s\n\n", str)
-	str = cleanString(str)
-	fmt.Printf(" X=\n%s\n\n", str)
+	if verboseFlag {
+		str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
+		fmt.Printf(" X=\n%s\n\n", str)
+		str = cleanString(str)
+		fmt.Printf(" X=\n%s\n\n", str)
+	}
 	//newPause()
 
 	// Now need to assign coefficients in matrix A
@@ -280,9 +288,11 @@ func goNumMatTest() {
 	}
 
 	A := gomat.NewDense(aRows, aCols, initA)
-	fmt.Printf(" A:\n%.5g\n", gomat.Formatted(A, gomat.Squeeze()))
-	aMatrix := extractDense(A)
-	mat.WriteZeroln(aMatrix, 5)
+	if verboseFlag {
+		fmt.Printf(" A:\n%.5g\n", gomat.Formatted(A, gomat.Squeeze()))
+		aMatrix := extractDense(A)
+		mat.WriteZeroln(aMatrix, 5)
+	}
 	//newPause()
 
 	initB := make([]float64, bRows) // col vec
@@ -293,7 +303,10 @@ func goNumMatTest() {
 		}
 	}
 	Bvec := gomat.NewVecDense(bRows, initB)
-	fmt.Printf(" Bvec:\n%.5g\n\n", gomat.Formatted(Bvec, gomat.Squeeze()))
+
+	if verboseFlag {
+		fmt.Printf(" Bvec:\n%.6g\n\n", gomat.Formatted(Bvec, gomat.Squeeze()))
+	}
 
 	// Will try w/ inversion
 	var inverseA, invSoln, invSolnVec gomat.Dense
@@ -303,12 +316,18 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
-	fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
+	if verboseFlag {
+		fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
+	}
 
 	B := gomat.NewDense(bRows, bCols, initB)
-	fmt.Printf(" B:\n%.5g\n\n", gomat.Formatted(B, gomat.Squeeze()))
+	if verboseFlag {
+		fmt.Printf(" B:\n%.5g\n\n", gomat.Formatted(B, gomat.Squeeze()))
+	}
 	bMatrix := extractDense(B)
-	mat.WriteZeroln(bMatrix, 4)
+	if verboseFlag {
+		mat.WriteZeroln(bMatrix, 4)
+	}
 
 	invSoln.Mul(&inverseA, B)
 	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
@@ -323,7 +342,9 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
+	if verboseFlag {
+		fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
+	}
 
 	// try w/ QR stuff
 	var qr gomat.QR
@@ -334,7 +355,9 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
+	if verboseFlag {
+		fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
+	}
 
 	// Try Solve stuff
 	bR, bC := B.Dims()
@@ -344,7 +367,9 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+	if verboseFlag {
+		fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+	}
 
 	// Try Vec Solve
 	bRV, _ := Bvec.Dims() // just to see if this works.
@@ -354,7 +379,9 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
+	if verboseFlag {
+		fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
+	}
 
 	if gomat.EqualApprox(X, &invSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are approx equal.\n")
@@ -424,6 +451,7 @@ func extractDense(m *gomat.Dense) [][]float64 {
 func main() {
 	flag.IntVar(&n, "n", 3, "Size of X and other arrays.  Default is 3.")
 	flag.BoolVar(&negFlag, "neg", false, "Allow creation of negative coefficients.")
+	flag.BoolVar(&verboseFlag, "v", false, "Versose output flag.")
 
 	flag.Parse()
 	aRows = n
@@ -431,9 +459,12 @@ func main() {
 	bRows = n
 	bCols = 1
 
+	fmt.Printf(" Linear Algebra Matrix Test routine 3.  Last altered %s, compiled w/ %s\n", lastAltered, runtime.Version())
+
 	outFilename := "mat-" + strconv.Itoa(n) + "-*.txt"
 
-	solveTest2(outFilename)
+	newPause()
+	solveTest(outFilename)
 	pause()
 	goNumMatTest()
 }
