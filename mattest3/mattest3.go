@@ -464,9 +464,9 @@ func main() {
 	outFilename := "mat-" + strconv.Itoa(n) + "-*.txt"
 
 	newPause()
-	solveTest(outFilename)
-	pause()
 	goNumMatTest()
+	pause()
+	solveTest(outFilename)
 }
 
 func pause() { // written a long time ago, probably my first stab at this.
