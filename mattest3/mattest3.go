@@ -346,7 +346,7 @@ func goNumMatTest() {
 
 	invSoln.Mul(&inverseA, B)
 	belowSmallMakeZero(&invSoln, small)
-	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
+	fmt.Printf(" Solution by GoNum inversion and B is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
 
 	// Try LU stuff
 	var lu gomat.LU
@@ -360,7 +360,7 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(luSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
+		fmt.Printf(" Soluton by gonum LU factorization is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
 	}
 
 	// try w/ QR stuff
@@ -374,7 +374,7 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(qrSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
+		fmt.Printf(" Soluton by gonum QR factorization is (after calling belowSmallMakeZero on *Dense:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
 	}
 
 	// Try Solve stuff
@@ -387,7 +387,7 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(solvSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+		fmt.Printf(" Solution by gonum Solve is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
 	}
 
 	// Try Vec Solve
@@ -400,7 +400,7 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(vecSolveSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
+		fmt.Printf(" Solution by gonum VecSolve is (after calling belowSmallMakeZero on *VecDense):\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
 	}
 
 	if gomat.EqualApprox(X, &invSoln, small) {
