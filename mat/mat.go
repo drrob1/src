@@ -391,7 +391,7 @@ func LUSolve(LU, B Matrix2D, perm Permutation) Matrix2D {
 
 func GaussJ(A, B Matrix2D) Matrix2D {
 
-	// Solves the equation AX = B by Gauss-Jordan elimination.  In the present version A must be square and nonsingular.
+	// Solves the equation AX = B by Gauss-Jordan elimination.  In the present version A must be square and non-singular.
 	// This approach to solving the equation is not the best available -- see below -- but is included here
 	// anyway since it is popular.
 	// Dimensions: A is NxN, B is NxM.
@@ -422,7 +422,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				pivot = temp
 				prow = j
 			} // END IF temp > pivot
-		} // END FOR j from i to N-1
+		}                            // END FOR j from i to N-1
 		if math.Abs(pivot) < Small { // Coefficient matrix is singular.  Aborting,
 			return nil
 		} // END IF pivot < small
@@ -622,7 +622,7 @@ func Balance(A Matrix2D) Matrix2D {
 
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[row][j] *= g
-					} //END FOR j range A
+					}                  //END FOR j range A
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[j][row] *= f
 					} // END FOR j range A
