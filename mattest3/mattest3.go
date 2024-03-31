@@ -56,7 +56,7 @@ import (
 )
 
 const small = 1e-10
-const lastAltered = "Mar 30, 2024"
+const lastAltered = "Mar 31, 2024"
 
 var n int
 var negFlag bool
@@ -141,7 +141,11 @@ func solveTest(fn string) {
 	C := mat.Mul(A, solveSoln)
 	D := mat.Sub(B, C)
 
-	fmt.Println("As a check, AX-B should be approximately zero, and evaluates to:")
+	if mat.IsZeroApprox(D) {
+		ctfmt.Printf(ct.Green, false, " As a check, AX-B is approx zero, and evaluates to:\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, "AX-B is not approx zero, but is:\n")
+	}
 	mat.Writeln(D, 3)
 
 	if verboseFlag {
@@ -232,7 +236,7 @@ func WriteMatrices(A, B mat.Matrix2D, name string) {
 	}
 	defer outputFile.Close()
 
-	//fmt.Printf(" WriteMatrices outputFile is %s and %s\n", name, outputFile.Name())
+	//                                   fmt.Printf(" WriteMatrices outputFile is %s and %s\n", name, outputFile.Name())
 	outputBuf := bufio.NewWriter(outputFile)
 	defer outputBuf.Flush()
 	//                                                                 fmt.Printf(" WriteMatrices outputBuf created.\n")
