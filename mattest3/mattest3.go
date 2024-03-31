@@ -35,6 +35,7 @@ REVISION HISTORY
 26 Mar 24 -- Enhancing the equality test.  And adding possibly negative numbers.
 30 Mar 24 -- Added findMaxDiff for when the equality test fails.  Added lastAltered string, and added verboseFlag.
              And added call to mat.BelowSmallMakeZero() and belowTolMakeZero(), to be used as needed.
+31 Mar 24 -- My first use of a type assertion.  These are not called type checks, as type checks is something the compiler always does.
 */
 
 import (
@@ -325,7 +326,7 @@ func goNumMatTest() {
 		os.Exit(1)
 	}
 	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
-	belowTolMakeZero(&invSolnVec, small)
+	belowSmallMakeZero(&invSolnVec, small)
 	if verboseFlag {
 		fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
 	}
@@ -340,7 +341,7 @@ func goNumMatTest() {
 	}
 
 	invSoln.Mul(&inverseA, B)
-	belowTolMakeZero(&invSoln, small)
+	belowSmallMakeZero(&invSoln, small)
 	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
 
 	// Try LU stuff
@@ -353,7 +354,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	belowTolMakeZero(luSoln, small)
+	belowSmallMakeZero(luSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
 	}
@@ -367,7 +368,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	belowTolMakeZero(qrSoln, small)
+	belowSmallMakeZero(qrSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
 	}
@@ -380,7 +381,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	belowTolMakeZero(solvSoln, small)
+	belowSmallMakeZero(solvSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
 	}
@@ -393,7 +394,7 @@ func goNumMatTest() {
 		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	belowTolMakeZeroVector(vecSolveSoln, small)
+	belowSmallMakeZero(vecSolveSoln, small)
 	if verboseFlag {
 		fmt.Printf(" Solution by gonum VecSolve is:\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
 	}
@@ -523,6 +524,14 @@ func findMaxDiff(a, b mat.Matrix2D) float64 {
 		}
 	}
 	return maxVal
+}
+
+func belowSmallMakeZero(m gomat.Matrix, small float64) {
+	if matrx, ok := m.(*gomat.Dense); ok {
+		belowTolMakeZero(matrx, small)
+	} else if matrx, ok := m.(*gomat.VecDense); ok {
+		belowTolMakeZeroVector(matrx, small)
+	}
 }
 
 func belowTolMakeZero(m *gomat.Dense, tol float64) {
