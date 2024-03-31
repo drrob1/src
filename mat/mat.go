@@ -401,9 +401,8 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 
 	N := len(A)
 
-	//W := NewMatrix(N, N)  Not needed.
-	W := Copy(A) //        Copy (A, N, N, W^);
-	X = Copy(B)  //        Copy (B, N, M, X);
+	W := Copy(A)
+	X = Copy(B)
 
 	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
 	// bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
@@ -422,7 +421,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				pivot = temp
 				prow = j
 			} // END IF temp > pivot
-		}                            // END FOR j from i to N-1
+		} // END FOR j from i to N-1
 		if math.Abs(pivot) < Small { // Coefficient matrix is singular.  Aborting,
 			return nil
 		} // END IF pivot < small
@@ -447,7 +446,6 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 		}
 
 		// Implicitly reduce the sub-column below W[i,i] to zero.
-
 		for k := i + 1; k < N; k++ {
 			scale := W[k][i]
 			for j := i + 1; j < N; j++ {
@@ -457,23 +455,19 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 				X[k][j] -= scale * X[i][j]
 			}
 		}
-
 	} // END FOR i range W
 
 	// Pass 2: reduce the above-diagonal elements of W to zero.
 
 	for i := N - 1; i > 0; i-- {
-
 		// Implicitly reduce the sub-column above W[i,i] to zero.
-
 		for k := 0; k < i; k++ {
 			scale := W[k][i]
 			for j := range X[i] {
 				X[k][j] -= scale * X[i][j]
 			}
 		}
-
-	} // END FOR i from N-1 to 1 BY -1
+	}
 
 	return X
 } //    END GaussJ;
@@ -509,10 +503,10 @@ func Solve(A, B Matrix2D) Matrix2D {
 
 func Invert(A Matrix2D) Matrix2D {
 	N := len(A)
-	I := NewMatrix(N, N)
-	I = Unit(I)
-	X := Solve(A, I) // Solve (A, I^, X, N, N);
-	return X
+	u := NewMatrix(N, N)
+	u = Unit(u)
+	inv := Solve(A, u)
+	return inv
 } // END Invert;
 
 // ---------------------------------- SolveInvert ------------------------------
@@ -622,7 +616,7 @@ func Balance(A Matrix2D) Matrix2D {
 
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[row][j] *= g
-					}                  //END FOR j range A
+					} //END FOR j range A
 					for j := range A { // FOR j := 0 TO N-1 DO
 						A[j][row] *= f
 					} // END FOR j range A
