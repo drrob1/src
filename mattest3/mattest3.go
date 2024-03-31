@@ -532,7 +532,7 @@ func belowSmallMakeZero(m gomat.Matrix, small float64) {
 	} else if matrx, ok := m.(*gomat.VecDense); ok {
 		belowTolMakeZeroVector(matrx, small)
 	} else {
-		fmt.Printf(" Invalid type for use of belowSmallMakZero.  Skipped.\n")
+		fmt.Printf(" Invalid type (%T) for use of belowSmallMakZero.  Skipped.\n", m)
 	}
 }
 
