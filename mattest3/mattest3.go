@@ -56,7 +56,7 @@ import (
 )
 
 const small = 1e-10
-const lastAltered = "Mar 31, 2024"
+const lastAltered = "Apr 1, 2024"
 
 var n int
 var negFlag bool
@@ -286,10 +286,10 @@ func goNumMatTest() {
 
 	X := gomat.NewVecDense(bRows, initX)
 	if verboseFlag {
-		str := fmt.Sprintf("%.5g", gomat.Formatted(X, gomat.Squeeze()))
-		fmt.Printf(" X=\n%s\n\n", str)
+		str := fmt.Sprintf("%.5g\n", gomat.Formatted(X, gomat.Squeeze()))
+		fmt.Printf("not cleaned X=\n%s\n\n", str)
 		str = cleanString(str)
-		fmt.Printf(" X=\n%s\n\n", str)
+		fmt.Printf("cleaned X=\n%s\n\n", str)
 	}
 
 	// Now need to assign coefficients in matrix A
@@ -332,7 +332,7 @@ func goNumMatTest() {
 	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
 	belowSmallMakeZero(&invSolnVec, small)
 	if verboseFlag {
-		fmt.Printf(" Solution by GoNum inversion and Bvec is:\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
+		fmt.Printf(" Solution by GoNum inversion and Bvec is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
 	}
 
 	B := gomat.NewDense(bRows, bCols, initB)
