@@ -67,6 +67,8 @@ var bRows int
 var bCols int
 
 func solveTest(fn string) {
+	fmt.Printf("---------------------------------------------------------------------------")
+	fmt.Printf(" my mat Test ---------------------------------------------------------------------------\n\n")
 	var A, B, X mat.Matrix2D
 
 	A = mat.NewMatrix(aRows, aCols)
