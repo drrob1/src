@@ -27,14 +27,16 @@ Adding linked list type of stack
          intStack:  ~3.2 ns/op
         HiLoStack:  ~5 ns/op
 
-
+Having intStack push and pop 2 integers to be comparable to HiLo stack
+         intStack: ~5.7 ns/op
+        HiLoStack: ~4.9 ns/op
 */
 
 import (
 	ct "github.com/daviddengcn/go-colortext"
 )
 
-func BenchmarkGeneric1(b *testing.B) {
+func BenchmarkGeneric1(b *testing.B) { // using an int
 	iStack := New[int]()
 	for i := range b.N {
 		iStack.Push(b.N - i - 1)
@@ -50,7 +52,7 @@ func BenchmarkGeneric1(b *testing.B) {
 	}
 }
 
-func BenchmarkGeneric2(b *testing.B) {
+func BenchmarkGeneric2(b *testing.B) { // using HiLo type
 	iStack := New[hiloIndexType]()
 	for i := range b.N {
 		iStack.Push(hiloIndexType{b.N - i - 1, b.N - i - 1})
@@ -66,7 +68,7 @@ func BenchmarkGeneric2(b *testing.B) {
 	}
 }
 
-func BenchmarkLinkedList(b *testing.B) {
+func BenchmarkLinkedList(b *testing.B) { // using linked list code from Stephens course I took last year
 	list := MakeLinkedList()
 	for i := range b.N {
 		list.Push(b.N - i - 1)
@@ -79,13 +81,15 @@ func BenchmarkLinkedList(b *testing.B) {
 	}
 }
 
-func BenchmarkIntStack(b *testing.B) {
-	intStackInit(b.N)
+func BenchmarkIntStack(b *testing.B) { // to compare to HiLo type, I'll push and pop 2 integers
+	intStackInit(b.N * 2)
 	for i := range b.N {
+		intStackPush(b.N - i - 1)
 		intStackPush(b.N - i - 1)
 	}
 	for i := range b.N {
 		a := intStackPop()
+		a = intStackPop()
 		if a != i {
 			ctfmt.Printf(ct.Red, false, "i = %d, a = %d \n", i, a)
 		}
