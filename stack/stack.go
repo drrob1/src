@@ -157,3 +157,58 @@ func hiloStackPop() hiloIndexType {
 func hiloStackLen() int {
 	return len(hiloStack)
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// I got this from somewhere, ahd the file is called stacker.go
+
+//type HayStack []interface{}  old syntax, prior to Go 1.18 or so.
+
+type HayStack []any
+
+//                                 Len()
+
+func (stack HayStack) Len() int {
+	return len(stack)
+}
+
+//                                 Cap()
+
+func (stack HayStack) Cap() int {
+	return cap(stack)
+}
+
+//                                 IsEmpty()
+
+func (stack HayStack) IsEmpty() bool {
+	if len(stack) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (stack HayStack) Top() (interface{}, error) {
+	if len(stack) == 0 {
+		return nil, errors.New("Cannot Top() an empty stack.")
+	}
+	return stack[len(stack)-1], nil
+}
+
+//                                 Push
+
+func (stack *HayStack) Push(x interface{}) {
+	*stack = append(*stack, x) // the book has these dereferenced.  I found that deref must be explicit.
+}
+
+//                                Pop
+
+func (stack *HayStack) Pop() (interface{}, error) {
+	thestack := *stack // the code did not work until I added this from the book.  Deref op is important here.
+	if len(thestack) == 0 {
+		return nil, errors.New("Cannot Pop() an empty stack.")
+	}
+	x := thestack[len(thestack)-1]
+	*stack = thestack[:len(thestack)-1] // Deref op is important.  thestack value slice created so don't need to deref everywhere
+	return x, nil
+}

@@ -30,6 +30,11 @@ Adding linked list type of stack
 Having intStack push and pop 2 integers to be comparable to HiLo stack
          intStack: ~5.7 ns/op
         HiLoStack: ~4.9 ns/op
+
+Adding Double HayStack: ~31 ns/op
+       Single HayStack: ~16 ns/op
+
+
 */
 
 import (
@@ -105,6 +110,42 @@ func BenchmarkHiLoStack(b *testing.B) {
 		a := hiloStackPop()
 		if i != a.hi {
 			ctfmt.Printf(ct.Red, false, "i = %d, a.hi = %d\n", i, a.hi)
+		}
+	}
+}
+
+func BenchmarkDoubleHayStack(b *testing.B) {
+	haystack := make(HayStack, 0, b.N*2)
+	for i := range b.N {
+		haystack.Push(b.N - i - 1)
+		haystack.Push(b.N - i - 1)
+	}
+	for i := range b.N {
+		a, err := haystack.Pop()
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, "ERROR from haystack.Pop() is %s\n", err)
+		}
+		a, err = haystack.Pop()
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, "ERROR from haystack.Pop() is %s\n", err)
+		}
+		if a != i {
+			ctfmt.Printf(ct.Red, true, "a = %d, i = %d\n", a, i)
+		}
+	}
+}
+func BenchmarkSingleHayStack(b *testing.B) {
+	haystack := make(HayStack, 0, b.N)
+	for i := range b.N {
+		haystack.Push(b.N - i - 1)
+	}
+	for i := range b.N {
+		a, err := haystack.Pop()
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, "ERROR from haystack.Pop() is %s\n", err)
+		}
+		if a != i {
+			ctfmt.Printf(ct.Red, true, "a = %d, i = %d\n", a, i)
 		}
 	}
 }
