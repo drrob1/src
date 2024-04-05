@@ -162,7 +162,7 @@ func hiloStackLen() int {
 
 // I got this from somewhere, ahd the file is called stacker.go
 
-//type HayStack []interface{}  old syntax, prior to Go 1.18 or so.
+//type HayStack []interface{}  old syntax, prior to Go 1.18.
 
 type HayStack []any
 
