@@ -78,6 +78,7 @@ import (
   31 Mar 23 -- StaticCheck found a few issues.
    6 Sep 23 -- Changed the final message.
    7 Jan 24 -- Edited a comment.  Main sets up the channels and both the file list and destination list.  The actual work of copying is done by CopyAFile.  I'm putting this here as I forgot it.
+   7 Apr 24 -- Shorted the destination file is same or older message
 */
 
 const LastAltered = "Jan 7, 2024" //
@@ -471,7 +472,7 @@ func CopyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
