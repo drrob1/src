@@ -408,7 +408,7 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s", baseFile, destDir)
+			ErrNotNew = fmt.Errorf(" %s is not newer than %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
