@@ -81,9 +81,10 @@ import (
   26 Aug 23 -- I'm going to change the final message to suppress when zero files were copied or not copied.
   10 Feb 24 -- Making the timeFudgeFactor 1 ms
   11 Feb 24 -- I removed the min func, so the code will use the built-in func of min.  This was new in Go 1.21.  As I write this, I'm  now compiling w/ Go 1.22.
+   6 Apr 24 -- Shortened the destination file is same or older message.
 */
 
-const LastAltered = "11 Feb 2024" //
+const LastAltered = "6 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -407,7 +408,7 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+			ErrNotNew = fmt.Errorf(" %s is same or older than destination %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
