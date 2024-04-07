@@ -86,7 +86,7 @@ func BenchmarkLinkedList(b *testing.B) { // using linked list code from Stephens
 	}
 }
 
-func BenchmarkIntStack(b *testing.B) { // to compare to HiLo type, I'll push and pop 2 integers
+func BenchmarkIntStackDouble(b *testing.B) { // to compare to HiLo type, I'll push and pop 2 integers
 	intStackInit(b.N * 2)
 	for i := range b.N {
 		intStackPush(b.N - i - 1)
@@ -95,6 +95,19 @@ func BenchmarkIntStack(b *testing.B) { // to compare to HiLo type, I'll push and
 	for i := range b.N {
 		a := intStackPop()
 		a = intStackPop()
+		if a != i {
+			ctfmt.Printf(ct.Red, false, "i = %d, a = %d \n", i, a)
+		}
+	}
+}
+
+func BenchmarkIntStackSingle(b *testing.B) {
+	intStackInit(b.N)
+	for i := range b.N {
+		intStackPush(b.N - i - 1)
+	}
+	for i := range b.N {
+		a := intStackPop()
 		if a != i {
 			ctfmt.Printf(ct.Red, false, "i = %d, a = %d \n", i, a)
 		}
@@ -134,6 +147,7 @@ func BenchmarkDoubleHayStack(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkSingleHayStack(b *testing.B) {
 	haystack := make(HayStack, 0, b.N)
 	for i := range b.N {

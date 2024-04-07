@@ -38,8 +38,8 @@ import (
   18 Mar 23 -- Thought I experienced a bug, but then I figured it out.  There's no bug here. :-)
   24 Mar 23 -- Added CheckDest after fixing issue in listutil_linux.go.  More details in listutil_linux.go
   31 Mar 23 -- StaticCheck found a few issues.
-   1 Apr 23 -- dellist not using the pattern on the commandline on Windows.  Investigating why.  Nevermind, I forgot that dellist is now under list2 and works differently.
-   4 Apr 23 -- dellist moved back here under list.go.  I added a flag, DelListFlag, so the last item on the linux command line will be included.
+   1 Apr 23 -- delList not using the pattern on the commandline on Windows.  Investigating why.  Nevermind, I forgot that dellist is now under list2 and works differently.
+   4 Apr 23 -- delList moved back here under list.go.  I added a flag, DelListFlag, so the last item on the linux command line will be included.
                  And I added FileSelectionString, which returns a string instead of the FileInfoExType.
    5 Apr 23 -- Fixed CheckDest(), ProcessDirectoryAliases and an issue in listutil_windows found by staticCheck.
    8 Apr 23 -- New now does not need params.  NewList will be the format that needs params.
@@ -52,6 +52,9 @@ import (
   16 Jul 23 -- I'm thinking about adding GetFileInfoXFromRegexp.  And I'll need the corresponding rex flag for it.  And I'll need NewFromRex.
   25 Sep 23 -- There's a bug in runlist and runx in which the beginning of line anchor is not processed correctly.  I'm tracking this down now.
                  I found the bug.  I was matching against RelPath which includes the path dir info, so the ^ anchor is meaningless.
+   7 Apr 24 -- Adding color to the display of choices, ie, alternating white and yellow.
+                 Nevermind.  I already do something like this; the color of the filename is determined by the size of the file.
+                 They only use the same color if they are all in the same size magnitude.
 */
 
 type DirAliasMapType map[string]string
@@ -584,7 +587,7 @@ outerLoop:
 		for i, f := range fList {
 			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
 			s, colr := GetMagnitudeString(f.FI.Size())
-			//ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
+			//                                  ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
 			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
 			clr := ct.White
 			if clr == colr { // don't use same color as rest of the displayed string.
