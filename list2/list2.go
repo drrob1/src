@@ -37,6 +37,7 @@ import (
    8 Feb 23 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
   31 Mar 23 -- StaticCheck found a minor issue, about byte values can't be < 0.
   11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
+   7 Apr 24 -- See notes from today in list.go.  Essentially, I added alternating brightness in the selection display to help see adjacent lines w/ the came color.
 */
 
 type DirAliasMapType map[string]string
@@ -61,6 +62,8 @@ var IncludeRex *regexp.Regexp
 var InputDir string
 var SizeFlag bool
 var SmartCaseFlag bool
+var onWin bool      // true on windows and false on linux
+var brightFlag bool // intended for use in the file selection routines so the brightness will alternate on and off.
 
 const defaultHeight = 40
 const minWidth = 90
@@ -331,7 +334,7 @@ func FileSelection(inList []FileInfoExType) ([]FileInfoExType, error) {
 	var beg, end int
 	lenList := len(inList)
 	var ans string
-	onWin := runtime.GOOS == "windows"
+	onWin = runtime.GOOS == "windows"
 
 outerLoop:
 	for {
@@ -346,8 +349,9 @@ outerLoop:
 		for i, f := range fList {
 			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
 			s, colr := GetMagnitudeString(f.FI.Size())
-			//ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
-			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			brightFlag = i%2 == 0
+			//                                                   ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			ctfmt.Printf(colr, brightFlag, " %c: %s ", i+'a', f.RelPath)
 			clr := ct.White
 			if clr == colr { // don't use same color as rest of the displayed string.
 				clr = ct.Yellow

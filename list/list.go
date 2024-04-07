@@ -54,7 +54,9 @@ import (
                  I found the bug.  I was matching against RelPath which includes the path dir info, so the ^ anchor is meaningless.
    7 Apr 24 -- Adding color to the display of choices, ie, alternating white and yellow.
                  Nevermind.  I already do something like this; the color of the filename is determined by the size of the file.
-                 They only use the same color if they are all in the same size magnitude.
+                 They only use the same color if they are all in the same size magnitude. I think I'm going to test if the color is yellow, then ... nevermind.
+                 I'm going to alternate brightness, ie, bright is true or false, and see what happens.
+                 I like it, so I'll keep it for now.  And I added it to list2.go.
 */
 
 type DirAliasMapType map[string]string
@@ -80,6 +82,8 @@ var IncludeRex *regexp.Regexp
 var InputDir string
 var SizeFlag bool
 var DelListFlag bool
+var onWin bool      // true on windows and false on linux
+var brightFlag bool // intended for use in the file selection routines so the brightness will alternate on and off.
 
 //var directoryAliasesMap DirAliasMapType  Not needed anymore.
 
@@ -572,7 +576,7 @@ func FileSelection(inList []FileInfoExType) ([]FileInfoExType, error) {
 	var beg, end int
 	lenList := len(inList)
 	var ans string
-	onWin := runtime.GOOS == "windows"
+	// onWin = runtime.GOOS == "windows"
 
 outerLoop:
 	for {
@@ -587,8 +591,9 @@ outerLoop:
 		for i, f := range fList {
 			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
 			s, colr := GetMagnitudeString(f.FI.Size())
-			//                                  ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
-			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			brightFlag = i%2 == 0
+			// experimenting with alternating brightness.        ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			ctfmt.Printf(colr, brightFlag, " %c: %s ", i+'a', f.RelPath)
 			clr := ct.White
 			if clr == colr { // don't use same color as rest of the displayed string.
 				clr = ct.Yellow
@@ -648,7 +653,7 @@ func FileSelectionString(inList []FileInfoExType) ([]string, error) {
 	var beg, end int
 	lenList := len(inList)
 	var ans string
-	onWin := runtime.GOOS == "windows"
+	onWin = runtime.GOOS == "windows"
 
 outerLoop:
 	for {
@@ -663,8 +668,9 @@ outerLoop:
 		for i, f := range fList {
 			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
 			s, colr := GetMagnitudeString(f.FI.Size())
-			//ctfmt.Printf(colr, onWin, " %c: %s -- %s  %s\n", i+'a', f.RelPath, s, t)
-			ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			brightFlag = i%2 == 0
+			//                                                   ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
+			ctfmt.Printf(colr, brightFlag, " %c: %s ", i+'a', f.RelPath)
 			clr := ct.White
 			if clr == colr { // don't use same color as rest of the displayed string.
 				clr = ct.Yellow
@@ -715,12 +721,12 @@ outerLoop:
 
 // ---------------------------------- min ----------------------------------
 
-func min(i, j int) int {
-	if i < j {
-		return i
-	}
-	return j
-}
+//func min(i, j int) int {  I'll remove this so the std function will become visible.
+//	if i < j {
+//		return i
+//	}
+//	return j
+//}
 
 // ----------------------------- GetMagnitudeString -------------------------------
 
