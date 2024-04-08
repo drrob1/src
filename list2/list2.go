@@ -62,7 +62,6 @@ var IncludeRex *regexp.Regexp
 var InputDir string
 var SizeFlag bool
 var SmartCaseFlag bool
-var onWin bool      // true on windows and false on linux
 var brightFlag bool // intended for use in the file selection routines so the brightness will alternate on and off.
 
 const defaultHeight = 40
@@ -334,7 +333,6 @@ func FileSelection(inList []FileInfoExType) ([]FileInfoExType, error) {
 	var beg, end int
 	lenList := len(inList)
 	var ans string
-	onWin = runtime.GOOS == "windows"
 
 outerLoop:
 	for {
@@ -350,14 +348,13 @@ outerLoop:
 			t := f.FI.ModTime().Format("Jan-02-2006_15:04:05") // t is a timestamp string.
 			s, colr := GetMagnitudeString(f.FI.Size())
 			brightFlag = i%2 == 0
-			//                                                   ctfmt.Printf(colr, onWin, " %c: %s ", i+'a', f.RelPath)
 			ctfmt.Printf(colr, brightFlag, " %c: %s ", i+'a', f.RelPath)
 			clr := ct.White
 			if clr == colr { // don't use same color as rest of the displayed string.
 				clr = ct.Yellow
 			}
-			ctfmt.Printf(clr, onWin, " -- %s", t)
-			ctfmt.Printf(ct.Cyan, onWin, " %s\n", s)
+			ctfmt.Printf(clr, brightFlag, " -- %s", t)
+			ctfmt.Printf(ct.Cyan, brightFlag, " %s\n", s)
 		}
 
 		fmt.Print(" Enter selections: ")
