@@ -83,6 +83,7 @@ var InputDir string
 var SizeFlag bool
 var DelListFlag bool
 var brightFlag bool // intended for use in the file selection routines so the brightness will alternate on and off.
+var LastAltered = "Apr 8, 2024"
 
 //var directoryAliasesMap DirAliasMapType  Not needed anymore.
 

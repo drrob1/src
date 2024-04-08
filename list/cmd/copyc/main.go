@@ -82,9 +82,10 @@ import (
   10 Feb 24 -- Making the timeFudgeFactor 1 ms
   11 Feb 24 -- I removed the min func, so the code will use the built-in func of min.  This was new in Go 1.21.  As I write this, I'm  now compiling w/ Go 1.22.
    6 Apr 24 -- Shortened the destination file is same or older message.
+   8 Apr 24 -- Now shows the last altered dated for list.go
 */
 
-const LastAltered = "6 Apr 2024" //
+const LastAltered = "8 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -129,7 +130,8 @@ func main() {
 		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
 	}
 	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Printf("%s is compiled w/ %s, last altered %s, exec binary timestamp is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
+	fmt.Printf("%s is compiled w/ %s, last altered %s, list.go last altered %s,, exec binary timestamp is %s\n",
+		os.Args[0], runtime.Version(), LastAltered, list.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		//autoDefaults = false

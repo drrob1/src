@@ -63,6 +63,7 @@ var InputDir string
 var SizeFlag bool
 var SmartCaseFlag bool
 var brightFlag bool // intended for use in the file selection routines so the brightness will alternate on and off.
+var LastAltered = "Apr 8, 2024"
 
 const defaultHeight = 40
 const minWidth = 90

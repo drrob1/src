@@ -79,9 +79,10 @@ import (
    6 Sep 23 -- Changed the final message.
    7 Jan 24 -- Edited a comment.  Main sets up the channels and both the file list and destination list.  The actual work of copying is done by CopyAFile.  I'm putting this here as I forgot it.
    7 Apr 24 -- Shorted the destination file is same or older message
+   8 Apr 24 -- Now shows the last altered date for list2.go.
 */
 
-const LastAltered = "Jan 7, 2024" //
+const LastAltered = "Apr 8, 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -133,7 +134,8 @@ func main() {
 		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
 	}
 	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Printf("%s is compiled w/ %s, last altered %s, binary timestamp is %s\n", os.Args[0], runtime.Version(), LastAltered, execTimeStamp)
+	fmt.Printf("%s is compiled w/ %s, last altered %s, list2.go last altered %s, binary timestamp is %s\n",
+		os.Args[0], runtime.Version(), LastAltered, list2.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		autoHeight = defaultHeight
