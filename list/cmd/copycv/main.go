@@ -77,9 +77,10 @@ import (
    8 Apr 23 -- Changed list.New signature.
   10 Apr 23 -- Moved copyAFile to its own separate file.  This will make maintenance easier.
   28 Apr 23 -- It didn't make maintenance easier.  I made a change there to see if I can delete a copied file that threw an error.
+   8 Apr 24 -- Added help text to remind me that this is separate because it defaults to verify on.
 */
 
-const LastAltered = "28 Apr 2023" //
+const LastAltered = "8 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -136,7 +137,8 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
+		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, compiled with %s and exec binary timestamp is %s.  This defaults to verify on.\n",
+			os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: %s [flags] source-files destination-directory\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
