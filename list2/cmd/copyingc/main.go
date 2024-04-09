@@ -80,9 +80,10 @@ import (
    7 Jan 24 -- Edited a comment.  Main sets up the channels and both the file list and destination list.  The actual work of copying is done by CopyAFile.  I'm putting this here as I forgot it.
    7 Apr 24 -- Shorted the destination file is same or older message
    8 Apr 24 -- Now shows the last altered date for list2.go.
+   9 Apr 24 -- Looks like I never added the code her to del a failed file transfer.  Added now.
 */
 
-const LastAltered = "Apr 8, 2024" //
+const LastAltered = "Apr 9, 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -499,27 +500,74 @@ func CopyAFile(srcFile, destDir string) {
 	defer out.Close()
 
 	_, err = io.Copy(out, in)
+
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Red,
-			success: false,
+		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+		if e != nil {
+			msg := msgType{
+				s:        "",
+				e:        e,
+				color:    ct.Yellow, // so I see it.
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+			return
 		}
-		msgChan <- msg
+		er := os.Remove(outName)
+		if er == nil {
+			msg := msgType{
+				s: "",
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
+					err, e, outName, outName),
+				color:    ct.Yellow, // so I see it
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		} else {
+			msg := msgType{
+				s: "",
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
+				color:    ct.Yellow, // so I see it
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		}
 		return
 	}
 
 	err = out.Sync()
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Magenta,
-			success: false,
+		var msg msgType
+
+		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+		er := os.Remove(outName)
+		if er == nil {
+			msg = msgType{
+				s: "",
+				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
+					err, e, outName, outName),
+				color:    ct.Yellow, // yellow to make sure I see it.
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		} else {
+			msg = msgType{
+				s: "",
+				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
+				color:    ct.Yellow, // yellow to make sure I see it.
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
 		}
-		msgChan <- msg
 		return
+
 	}
 
 	err = out.Close()
@@ -537,6 +585,7 @@ func CopyAFile(srcFile, destDir string) {
 	if runtime.GOOS == "linux" {
 		t = t.Add(timeFudgeFactor)
 	}
+
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
 		msg := msgType{
@@ -567,7 +616,6 @@ func CopyAFile(srcFile, destDir string) {
 		verified: verifyFlag, // this flag must be false by now.
 	}
 	msgChan <- msg
-	//return  this is implied.
 } // end CopyAFile
 
 // --------------------------------------------- validateTarget -----------------------------------------------------

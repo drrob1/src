@@ -352,7 +352,8 @@ func main() {
 	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
 } // end main
 
-//                     ------------------------------------ CopyAFile ----------------------------------------------
+//	------------------------------------ CopyAFile ----------------------------------------------
+//
 // CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
 func copyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
