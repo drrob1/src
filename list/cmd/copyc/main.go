@@ -83,9 +83,10 @@ import (
   11 Feb 24 -- I removed the min func, so the code will use the built-in func of min.  This was new in Go 1.21.  As I write this, I'm  now compiling w/ Go 1.22.
    6 Apr 24 -- Shortened the destination file is same or older message.
    8 Apr 24 -- Now shows the last altered dated for list.go
+   9 Apr 24 -- Found an error in CopyAFile, in that I don't check for an error when I close the file.
 */
 
-const LastAltered = "8 Apr 2024" //
+const LastAltered = "9 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -351,17 +352,7 @@ func main() {
 	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
 } // end main
 
-// ------------------------------------------------------------- min ---------------------------------------------------
-
-// min(int1, int2) int  -- this returns the smaller of 2 int.  As of Go 1.21, this is a built-in fcn.  Removing this forces compilation to Go 1.21+
-//func min(n1, n2 int) int {
-//	if n1 < n2 {
-//		return n1
-//	}
-//	return n2
-//}
-
-// CopyAFile                    ------------------------------------ Copy ----------------------------------------------
+//                     ------------------------------------ CopyAFile ----------------------------------------------
 // CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
 func copyAFile(srcFile, destDir string) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
@@ -447,13 +438,24 @@ func copyAFile(srcFile, destDir string) {
 		// msgChan <- msg  Too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+		if e != nil {
+			msg = msgType{
+				s:        "",
+				e:        e,
+				color:    ct.Yellow, // so I see it.
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+			return
+		}
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s: "",
 				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
 					err, e, outName, outName),
-				color:    ct.Yellow,
+				color:    ct.Yellow, // so I see it
 				success:  false,
 				verified: false,
 			}
@@ -463,7 +465,7 @@ func copyAFile(srcFile, destDir string) {
 				s: "",
 				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
 					err, e, outName, er),
-				color:    ct.Yellow,
+				color:    ct.Yellow, // so I see it
 				success:  false,
 				verified: false,
 			}
