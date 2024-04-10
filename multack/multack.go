@@ -9,6 +9,7 @@
                With a ResultType buffer of  50,000 items, it's ~15% faster than anack.
                With a ResultType buffer of 100,000 items, it's ~24% faster than anack.
                I'll stop at 100,000 items.  It's great it works.
+               (4/10/24 but it's obvious I got the code wrong)
 
    2 Apr 20 -- Updated its start string to declare its correct name.  I forgot to change that yesterday.
   23 Apr 20 -- 2 edge cases don't work on linux.  If there is a filepattern but no matching files in the start directory,
@@ -48,7 +49,8 @@
   14 Nov 22 -- Adding a usage message.  I never did that before.  And adding processing for '~' which only applies to Windows.
   21 Nov 22 -- static linter found an error w/ a format verb.  Now fixed.
   24 Feb 23 -- I'm changing the multiplier to = 1, based on what Bill Kennedy said, ie, that NumCPU() is sort of a sweet spot.  And Evan is 31 today, but that's not relevant here.
-  25 Feb 23 -- Optimizing walkDir as I did in since.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
+  25 Feb 23 -- Optimizing walkDir as I did in since.go.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
+  10 Apr 24 -- I/O bound jobs benefit from having more workers than what NumCPU() says.
 */
 package main
 
@@ -70,15 +72,16 @@ import (
 	"time"
 )
 
-const lastAltered = "25 Feb 2023"
+const lastAltered = "10 Apr 2024"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
-//const workerPoolMultiplier = 20
-const workerPoolMultiplier = 1
+// const workerPoolMultiplier = 20
+const multiplier = 100 // default value for the worker pool multiplier
+var workerPoolMultiplier int
 
 const sliceSize = 1000 // a magic number I plucked out of the air.
 
@@ -117,16 +120,17 @@ var wg sync.WaitGroup
 var verboseFlag, veryverboseFlag bool
 
 func main() {
-	workerPoolSize := runtime.NumCPU()*workerPoolMultiplier - 1 // account for main routine
-	if workerPoolSize < 1 {
-		workerPoolSize = 1
-	}
-	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
+	//if workerPoolSize < 1 {
+	//	workerPoolSize = 1
+	//}
+	//runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores.  Turns out to be the default, so I'll remove this call.
 	log.SetFlags(0)
 	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
+	flag.IntVar(&workerPoolMultiplier, "m", multiplier, "Multiplier for the number of goroutines in the worker pool.")
 	flag.Parse()
+	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
 	if veryverboseFlag {
 		verboseFlag = true
 	}
@@ -239,7 +243,7 @@ func main() {
 
 	// start the worker pool
 	grepChan = make(chan grepType, workerPoolSize) // buffered channel
-	for w := 0; w < workerPoolSize; w++ {
+	for range workerPoolSize {                     // don't need w:=0;w<workerPoolSize;w++ anymore.
 		go func() {
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
 				grepFile(g.regex, g.filename)

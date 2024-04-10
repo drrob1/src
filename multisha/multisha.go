@@ -74,9 +74,10 @@ import (
    4 Jul 23 -- The other day I created the misc package that has the code from makesubst, and I added the fixed readLine(*bytes.Reader) to it.  There should only be 1 version
                  of the code that I have to maintain.
    8 Aug 23 -- tknptr.NewToken -> tknptr.New
+  10 Apr 24 -- Now that I learned that I/O bound work can benefit from many more goroutines than CPU bound work, and this here is I/O bound work, I'll increase the workers.
 */
 
-const LastCompiled = "8 Aug 2023"
+const LastCompiled = "10 Apr 2024"
 
 const (
 	undetermined = iota
@@ -87,7 +88,9 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU() - 2 // subtracting for resultChan and the hashChan.  I could also subt for the main routine, but I won't.
+const multiplier = 100
+
+var numOfWorkers = runtime.NumCPU()
 
 type hashType struct {
 	fName     string
@@ -188,9 +191,9 @@ func main() {
 	var h hashType
 	//var counter int
 
-	if numOfWorkers < 1 {
-		numOfWorkers = 1
-	}
+	//if numOfWorkers < 1 {
+	//	numOfWorkers = 1
+	//}
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -207,7 +210,7 @@ func main() {
 	//hashChan = make(chan hashType, 1)          // this may be slightly faster.
 	hashChan = make(chan hashType)             // Bill Kennedy says in the worker pool pattern, making this synchronous is recommended.  And it seems to be the fastest of all I tested today.
 	resultChan = make(chan resultMatchType, 1) // This is slightly faster than when the buffer is numOfWorkers
-	for w := 0; w < numOfWorkers; w++ {
+	for range numOfWorkers * multiplier {
 		go func() {
 			for h := range hashChan {
 				matchOrNoMatch(h)
@@ -230,7 +233,7 @@ func main() {
 			} else {
 				ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
 			}
-			atomic.AddInt64(&postCounter, 1)
+			postCounter++ // I can't see why this needs to be atomic, as there's only 1 of these goroutines.
 			wg2.Done()
 		}
 	}()
@@ -345,7 +348,7 @@ func main() {
 		wg1.Add(1)
 		wg2.Add(1)
 		preCounter++
-		hashChan <- h
+		hashChan <- h // one sender (here), many receivers which are the workers in the pool.
 	}
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan

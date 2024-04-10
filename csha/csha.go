@@ -88,9 +88,10 @@ import (
    8 Sep 23 -- There's a bug here in the processing of the errors, ie, when one file is found and another is not found.  I found the error, it was using a var that was not assigned.
                  I tried removing the hashSlice, but the code ran slightly slower on Win11 desktop.  ~35 ms without the slice, vs ~33 ms w/ the slice.  Go figure.
                  I used git to restore the prev code.
+  10 Apr 24 -- I/O bound work, as in here, benefits from more workers than NumCPU()
 */
 
-const LastCompiled = "8 Sep 2023"
+const LastCompiled = "10 Apr 2024"
 
 const (
 	undetermined = iota
@@ -101,7 +102,7 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU() - 1 // account for the hashChan routine.
+var numOfWorkers = runtime.NumCPU() * 100
 
 type hashType struct {
 	fName     string
@@ -180,9 +181,9 @@ func main() {
 	var preCounter int
 	var verboseFlag bool
 
-	if numOfWorkers < 1 {
-		numOfWorkers = 1
-	}
+	//if numOfWorkers < 1 {
+	//	numOfWorkers = 1
+	//}
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)

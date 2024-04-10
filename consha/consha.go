@@ -87,9 +87,10 @@ import (
    4 Jul 23 -- The other day I created the misc package that has the code from makesubst, and I added the fixed readLine(*bytes.Reader) to it.  There should only be 1 version
                  of the code that I have to maintain.
    8 Aug 23 -- Since I changed tknptr and removed NewToken, I had make the change here, so NewToken becomes New.  This is more idiomatic for Go, anyway.
+  10 Apr 24 -- I/O bound work benefits from having more goroutines than NumCPU()
 */
 
-const LastCompiled = "8 Aug 2023"
+const LastCompiled = "10 Apr 2024"
 
 const (
 	undetermined = iota
@@ -100,7 +101,7 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU() - 1 // account for the hashChan routine.
+var numOfWorkers = runtime.NumCPU() * 100
 
 type hashType struct {
 	fName     string
@@ -170,7 +171,6 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	} else {
 		ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", hashIn.fName, hashName[hashInt])
 	}
-	// don't need a return statement, as I'm going to allow it to go out the bottom.
 } // end matchOrNoMatch
 
 // --------------------------------------- MAIN ----------------------------------------------------
@@ -180,9 +180,9 @@ func main() {
 	var h hashType
 	var preCounter int
 
-	if numOfWorkers < 1 {
-		numOfWorkers = 1
-	}
+	//if numOfWorkers < 1 {
+	//	numOfWorkers = 1
+	//}
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
@@ -198,7 +198,8 @@ func main() {
 	hashChan = make(chan hashType, 1) // Now I can't tell if this is better.  I'm leaving this for now.
 	onWin = runtime.GOOS == "windows"
 
-	for w := 0; w < numOfWorkers; w++ {
+	//for w := 0; w < numOfWorkers; w++ {  old syntax
+	for range numOfWorkers { // new syntax, as of Go 1.22
 		go func() {
 			for h := range hashChan {
 				matchOrNoMatch(h)
