@@ -89,6 +89,7 @@ import (
                  I tried removing the hashSlice, but the code ran slightly slower on Win11 desktop.  ~35 ms without the slice, vs ~33 ms w/ the slice.  Go figure.
                  I used git to restore the prev code.
   10 Apr 24 -- I/O bound work, as in here, benefits from more workers than NumCPU()
+                 But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
 */
 
 const LastCompiled = "10 Apr 2024"
@@ -102,7 +103,7 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU() * 100
+var numOfWorkers = runtime.NumCPU() * 10
 
 type hashType struct {
 	fName     string

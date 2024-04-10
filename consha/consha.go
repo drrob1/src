@@ -88,6 +88,7 @@ import (
                  of the code that I have to maintain.
    8 Aug 23 -- Since I changed tknptr and removed NewToken, I had make the change here, so NewToken becomes New.  This is more idiomatic for Go, anyway.
   10 Apr 24 -- I/O bound work benefits from having more goroutines than NumCPU()
+                 But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
 */
 
 const LastCompiled = "10 Apr 2024"
@@ -101,7 +102,7 @@ const (
 	sha512hash
 )
 
-var numOfWorkers = runtime.NumCPU() * 100
+var numOfWorkers = runtime.NumCPU() * 10
 
 type hashType struct {
 	fName     string

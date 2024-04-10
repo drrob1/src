@@ -51,6 +51,7 @@
   24 Feb 23 -- I'm changing the multiplier to = 1, based on what Bill Kennedy said, ie, that NumCPU() is sort of a sweet spot.  And Evan is 31 today, but that's not relevant here.
   25 Feb 23 -- Optimizing walkDir as I did in since.go.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
   10 Apr 24 -- I/O bound jobs benefit from having more workers than what NumCPU() says.
+                 But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
 */
 package main
 
@@ -80,7 +81,7 @@ const null = 0 // null rune to be used for strings.ContainsRune in GrepFile belo
 // On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
 // const workerPoolMultiplier = 20
-const multiplier = 100 // default value for the worker pool multiplier
+const multiplier = 10 // default value for the worker pool multiplier
 var workerPoolMultiplier int
 
 const sliceSize = 1000 // a magic number I plucked out of the air.
