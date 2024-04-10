@@ -81,6 +81,8 @@ import (
    7 Apr 24 -- Shorted the destination file is same or older message
    8 Apr 24 -- Now shows the last altered date for list2.go.
    9 Apr 24 -- Looks like I never added the code her to del a failed file transfer.  Added now.
+               Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
+               But for CPU bound, there's no advantage to exceeding that number.
 */
 
 const LastAltered = "Apr 9, 2024" //
@@ -88,7 +90,7 @@ const LastAltered = "Apr 9, 2024" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 10 * time.Millisecond
+const timeFudgeFactor = 1 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
@@ -107,7 +109,9 @@ type verifyType struct {
 	srcFile, destFile, destDir string
 }
 
-var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
+// var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
+// But Miki Tebeka in Feb 2024 said that only applies to CPU bound work.  For I/O bound work, there is an advantage to exceeding this number.
+var pooling = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
 var verifyChan chan verifyType

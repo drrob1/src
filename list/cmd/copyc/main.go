@@ -84,6 +84,8 @@ import (
    6 Apr 24 -- Shortened the destination file is same or older message.
    8 Apr 24 -- Now shows the last altered dated for list.go
    9 Apr 24 -- Found an error in CopyAFile, in that I don't check for an error when I close the file.
+               Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
+               But for CPU bound, there's no advantage to exceeding that number.
 */
 
 const LastAltered = "9 Apr 2024" //
@@ -108,7 +110,11 @@ type msgType struct {
 
 var autoWidth, autoHeight int
 var onWin = runtime.GOOS == "windows"
-var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
+
+// var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
+//
+//	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
+var workerPool = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
@@ -116,12 +122,7 @@ var succeeded, failed int64
 var ErrNotNew error
 var verifyFlag, verFlag bool
 
-//var ErrByteCountMismatch error
-
 func main() {
-	if fanOut < 1 {
-		fanOut = 1
-	}
 	execName, err := os.Executable()
 	if err != nil {
 		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
@@ -304,7 +305,7 @@ func main() {
 
 	// Time to start the go routines.
 
-	num := min(fanOut, len(fileList))
+	num := min(workerPool, len(fileList))
 	cfChan = make(chan cfType, num)
 	for i := 0; i < num; i++ {
 		go func() {
@@ -314,7 +315,7 @@ func main() {
 		}()
 	}
 
-	msgChan = make(chan msgType, fanOut)
+	msgChan = make(chan msgType, workerPool)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {
