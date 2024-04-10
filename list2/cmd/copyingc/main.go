@@ -127,9 +127,9 @@ var ErrNotNew error
 var verifyFlag, verFlag bool
 
 func main() {
-	if pooling < 1 {
-		pooling = 1
-	}
+	//if pooling < 1 {  Not needed now that this can't go negative.
+	//	pooling = 1
+	//}
 	execName, err := os.Executable()
 	if err != nil {
 		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
