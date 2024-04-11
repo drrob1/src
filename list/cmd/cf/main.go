@@ -183,7 +183,7 @@ func main() {
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
 	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
-	flag.IntVar(&multiplier, "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.")
+	flag.IntVar(&multiplier, "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
 	flag.Parse()
 

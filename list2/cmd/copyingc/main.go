@@ -83,9 +83,10 @@ import (
    9 Apr 24 -- Looks like I never added the code her to del a failed file transfer.  Added now.
                Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
+  11 Apr 24 -- Adding a multiplier, as I already did in cf.
 */
 
-const LastAltered = "Apr 9, 2024" //
+const LastAltered = "Apr 11, 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -112,6 +113,7 @@ type verifyType struct {
 // var pooling = runtime.NumCPU() - 3 // account for main, msgChan and verifyChan routines.  Bill Kennedy says that NumCPU() is near the sweet spot.  It's a worker pool pattern.
 // But Miki Tebeka in Feb 2024 said that only applies to CPU bound work.  For I/O bound work, there is an advantage to exceeding this number.
 var pooling = runtime.NumCPU()
+var multiplier int
 var cfChan chan cfType
 var msgChan chan msgType
 var verifyChan chan verifyType
@@ -183,6 +185,8 @@ func main() {
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
 	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
+
+	flag.IntVar(&multiplier, "m", 10, "Multiplier for worker pool.  Default is 10.")
 
 	flag.Parse()
 
@@ -326,8 +330,9 @@ func main() {
 
 	// time to set up the channels for the concurrent parts.  I'm going to base this on copyC1 as I got that working the other day.
 
+	num := min(pooling*multiplier, len(fileList)*len(targetDirs))
 	if verifyFlag {
-		verifyChan = make(chan verifyType, pooling)
+		verifyChan = make(chan verifyType, num)
 		go func() { // a single verify go routine.
 			for v := range verifyChan {
 				result, err := few.Feq32withNames(v.srcFile, v.destFile)
@@ -368,11 +373,8 @@ func main() {
 				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
 			}
 		}()
-	} else {
-		pooling++ // Doing this here means I don't have to check for pooling < 1.
 	}
 
-	num := min(pooling, len(fileList)*len(targetDirs))
 	cfChan = make(chan cfType, num)
 	for i := 0; i < num; i++ {
 		go func() { // set up a pool of worker routines, all waiting for work from the same channel.
