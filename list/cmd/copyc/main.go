@@ -88,7 +88,7 @@ import (
                But for CPU bound, there's no advantage to exceeding that number.
 */
 
-const LastAltered = "9 Apr 2024" //
+const LastAltered = "11 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -315,7 +315,7 @@ func main() {
 		}()
 	}
 
-	msgChan = make(chan msgType, workerPool)
+	msgChan = make(chan msgType, num)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {

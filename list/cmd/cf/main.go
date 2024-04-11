@@ -89,7 +89,7 @@ import (
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
 */
 
-const LastAltered = "10 Apr 2024" //
+const LastAltered = "11 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -318,7 +318,7 @@ func main() {
 		}()
 	}
 
-	msgChan = make(chan msgType, workerPool)
+	msgChan = make(chan msgType, num)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {
