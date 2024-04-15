@@ -52,6 +52,8 @@ REVISION HISTORY
 10 Apr 24 -- I/O bound jobs, like here, benefit from having more goroutines than NumCPU()
 
 	But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+
+15 Apr 24 -- Added the multiplier.
 */
 package main
 
@@ -73,11 +75,9 @@ import (
 	"time"
 )
 
-const LastAltered = "10 Apr 2024"
+const LastAltered = "15 Apr 2024"
 const maxSecondsToTimeout = 300
 
-// const workerPoolMultiplier = 20
-const workerPoolMultiplier = 10
 const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
 
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
@@ -114,6 +114,7 @@ var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
 var sliceOfStrings []string // based on an anonymous type.
+var workerPoolMultiplier int
 
 var wg sync.WaitGroup
 
@@ -121,20 +122,23 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
 	log.SetFlags(0)
 
-	if workers > limitWorkerPool {
-		workers = limitWorkerPool
-	}
-
 	// flag definitions and processing
 	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
 	verboseFlag := flag.Bool("v", false, "Verbose flag")
 	var timeoutOpt = flag.Int64("timeout", maxSecondsToTimeout, "seconds (0 means no timeout)")
+	flag.IntVar(&workerPoolMultiplier, "m", 10, "Multiplier of workers, default is 10.")
 	flag.Parse()
 
 	if *timeoutOpt < 1 || *timeoutOpt > maxSecondsToTimeout {
 		fmt.Fprintln(os.Stderr, "timeout is", *timeoutOpt, ", and is out of range of [0,300] seconds.  Set to", maxSecondsToTimeout)
 		*timeoutOpt = maxSecondsToTimeout
 	}
+
+	workers *= workerPoolMultiplier
+	if workers > limitWorkerPool {
+		workers = limitWorkerPool
+	}
+
 	args := flag.Args()
 	if len(args) < 1 {
 		log.Fatalln("a regexp to match must be specified")

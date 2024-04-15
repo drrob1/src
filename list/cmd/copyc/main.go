@@ -86,9 +86,10 @@ import (
    9 Apr 24 -- Found an error in CopyAFile, in that I don't check for an error when I close the file.
                Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
+  15 Apr 24 -- Added a multiplier for worker pools
 */
 
-const LastAltered = "11 Apr 2024" //
+const LastAltered = "15 Apr 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -115,6 +116,7 @@ var onWin = runtime.GOOS == "windows"
 //
 //	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
 var workerPool = runtime.NumCPU()
+var multiplier int
 var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
@@ -182,6 +184,8 @@ func main() {
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
 	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 
+	flag.IntVar(&multiplier, "m", 1, "Multiplier for worker pool.  Default is 1.")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
@@ -191,7 +195,7 @@ func main() {
 
 	verifyFlag = verifyFlag || verFlag
 
-	//Reverse := revFlag
+	workerPool *= multiplier // default is 1, but can be set by a param.
 
 	if verboseFlag {
 		execName, _ := os.Executable()
