@@ -166,8 +166,8 @@ var deck []int
 var runsWon, runsLost []int
 var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
-var totalWins, totalLosses /* totalPushes,*/, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
-	/* totalDoubles,*/ totalSurrenders, totalBusts, totalHands int
+var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
+	totalDoubles, totalSurrenders, totalBusts, totalHands int
 
 // var winsInARow, lossesInARow int
 var score float64
@@ -862,7 +862,7 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = wondbl
 					totalDblWins++
-					//totalDoubles++
+					totalDoubles++
 				} else {
 					playerHand[i].result = won
 					totalWins++
@@ -871,19 +871,19 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = wondbl
 					totalDblWins++
-					//totalDoubles++
+					totalDoubles++
 				} else {
 					playerHand[i].result = won
 					totalWins++
 				}
 			} else if playerHand[i].total == dealerHand.total {
 				playerHand[i].result = pushed
-				//totalPushes++
+				totalPushes++
 			} else if playerHand[i].total < dealerHand.total {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = lostdbl
 					totalDblLosses++
-					//totalDoubles++
+					totalDoubles++
 				} else {
 					playerHand[i].result = lost
 					totalLosses++
@@ -1705,8 +1705,8 @@ PlayAllRounds:
 
 	score = 1.5*float64(totalBJwon) + float64(totalDblWins)*2 + float64(totalWins) - float64(totalDblLosses)*2 - float64(totalLosses) -
 		float64(totalSurrenders)/2
-	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d \n",
-		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders)
+	scoreString := fmt.Sprintf(" Score=  %.2f, BJ won=%d, wins=%d, losses=%d, Double wins=%d, Double losses=%d, surrendered=%d, total pushes=%d, total Doubles=%d \n",
+		score, totalBJwon, totalWins, totalLosses, totalDblWins, totalDblLosses, totalSurrenders, totalPushes, totalDoubles)
 	fmt.Print(scoreString)
 
 	var ratioTotalDblWins, ratioTotalWins, ratioTotalDblLosses, ratioTotalLosses float64
