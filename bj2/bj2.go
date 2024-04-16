@@ -111,9 +111,10 @@ import (
   20 Nov 22 -- Static linter reported more issues, one of which I'll fix and the others not yet.
    7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
                  I'm not going to fix it now.  Maybe another time.
+  16 Apr 24 -- I changed the API for tknptr, so I updated that here.  I changed to tkptr.New().
 */
 
-const lastAltered = "Nov 20, 2022"
+const lastAltered = "Apr 16, 2024"
 
 var numOfDecks = 100_000 // took ~1/2 hr to run on thelio at this default value.  It's now a var because I'm extracting the value from the .deck filename.
 
@@ -272,7 +273,7 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 		if len(rowbuf) == 0 { // ignore blank lines
 			continue
 		}
-		tknbuf := tknptr.NewToken(rowbuf)
+		tknbuf := tknptr.New(rowbuf)
 		rowID, EOL := tknbuf.GetToken(true) // force upper case token.
 		if EOL {
 			return

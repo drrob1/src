@@ -91,9 +91,10 @@ import (
   20 Nov 22 -- Ran a static linter and will make recommended changes
    7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
                  I'm not going to fix it now.  Maybe another time.
+  16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().
 */
 
-const lastAltered = "Nov 20, 2022"
+const lastAltered = "Apr 16, 2024"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -256,7 +257,7 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 		if len(rowbuf) == 0 { // ignore blank lines
 			continue
 		}
-		tknbuf := tknptr.NewToken(rowbuf)
+		tknbuf := tknptr.New(rowbuf)
 		rowID, EOL := tknbuf.GetToken(true) // force upper case token.
 		if EOL {
 			return
