@@ -58,12 +58,13 @@ import (
 	"fmt"
 	pb "github.com/schollz/progressbar/v3"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"src/misc"
 	"src/tknptr"
 	"strconv"
 	"strings"
@@ -91,7 +92,7 @@ import (
   20 Nov 22 -- Ran a static linter and will make recommended changes
    7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
                  I'm not going to fix it now.  Maybe another time.
-  16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().
+  16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().  Updated the rand interface.  And staticcheck found a few issues, now fixed.
 */
 
 const lastAltered = "Apr 16, 2024"
@@ -164,8 +165,8 @@ var deck []int
 var runsWon, runsLost []int
 var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
-var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
-	totalDoubles, totalSurrenders, totalBusts, totalHands int
+var totalWins, totalLosses /* totalPushes,*/, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
+	/* totalDoubles,*/ totalSurrenders, totalBusts, totalHands int
 
 // var winsInARow, lossesInARow int
 var score float64
@@ -186,6 +187,7 @@ var OutputFilename string
 var OutputHandle *os.File
 var bufOutputFileWriter *bufio.Writer
 var verboseFlag bool
+var Filename string
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {
@@ -857,7 +859,7 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = wondbl
 					totalDblWins++
-					totalDoubles++
+					//totalDoubles++
 				} else {
 					playerHand[i].result = won
 					totalWins++
@@ -866,19 +868,19 @@ func showDown() {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = wondbl
 					totalDblWins++
-					totalDoubles++
+					//totalDoubles++
 				} else {
 					playerHand[i].result = won
 					totalWins++
 				}
 			} else if playerHand[i].total == dealerHand.total {
 				playerHand[i].result = pushed
-				totalPushes++
+				//totalPushes++
 			} else if playerHand[i].total < dealerHand.total {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = lostdbl
 					totalDblLosses++
-					totalDoubles++
+					//totalDoubles++
 				} else {
 					playerHand[i].result = lost
 					totalLosses++
@@ -1421,9 +1423,12 @@ func wrStatsToFile() {
 		}
 	}
 
-	_, err = bufOutputFileWriter.WriteRune('\n') // linter says the err value is not used.
-	_, err = bufOutputFileWriter.WriteRune('\n') // it's right.  But I won't change
-	_, err = bufOutputFileWriter.WriteRune('\n') // it now.  Maybe later.
+	bufOutputFileWriter.WriteRune('\n')          // linter says the err value is not used.
+	_, _ = bufOutputFileWriter.WriteRune('\n')   // it's right.  But I won't change it now.
+	_, err = bufOutputFileWriter.WriteRune('\n') // Now I'm ready.
+	if err != nil {
+		fmt.Printf(" ERROR while WriteRune written to %s is %s\n", OutputFilename, err)
+	}
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
 } // wrStatsToFile
@@ -1461,7 +1466,6 @@ func main() {
 	//commandline := os.Args[1] // Args[0] is the name of the executable binary
 	commandLine := flag.Arg(0)
 	BaseFilename := filepath.Clean(commandLine)
-	var Filename string
 
 	if strings.Contains(BaseFilename, ".") {
 		Filename = BaseFilename
@@ -1525,14 +1529,18 @@ func main() {
 		datestring, dealerHitsSoft17, resplitAcesFlag)
 
 	_, err = bufOutputFileWriter.WriteString(str) // the linter complained that this err value is not used.  It's right but I won't change it now.
+	if err != nil {
+		fmt.Printf(" ERROR while writing to %s is %s\n", OutputFilename, err)
+	}
 
 	WriteStrategyMatrix(bufOutputFileWriter)
 
-	_, err = bufOutputFileWriter.WriteString("==============================================================================\n") // linter said same thing about this err value.
+	_, _ = bufOutputFileWriter.WriteString("==============================================================================\n")
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
-		os.Exit(1)
+		return // this should allow the deferred calls to execute.
+		//os.Exit(1)  Doesn't execute the deferred function calls.
 	}
 
 	// just in case there is a panic of some type, this file will be closed so I can inspect it, so far.
@@ -1549,19 +1557,17 @@ func main() {
 		fmt.Println()
 	}
 
-	rand.Seed(int64(date.Nanosecond()))
+	//rand.Seed(int64(date.Nanosecond()))
 
 	//       need to shuffle here
 	swapFnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
 	milliSec := date.Nanosecond() / 1e6
-	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year()
+	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year() + misc.RandRange(5000, 10_000)
 	shuffleStartTime := time.Now()
 	for i := 0; i < shuffleAmount; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
-		_ = rand.Int()
 		rand.Shuffle(len(deck), swapFnt)
-		//rand.Shuffle(len(deck), swapfnt)  I think this is too much.
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
 	if displayRound || verboseFlag {

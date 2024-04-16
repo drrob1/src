@@ -74,7 +74,6 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	pb "github.com/schollz/progressbar/v3"
 	"io"
-	"math/rand"
 	"os"
 	"os/exec"
 	"runtime"
@@ -111,7 +110,7 @@ import (
   20 Nov 22 -- Static linter reported more issues, one of which I'll fix and the others not yet.
    7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
                  I'm not going to fix it now.  Maybe another time.
-  16 Apr 24 -- I changed the API for tknptr, so I updated that here.  I changed to tkptr.New().
+  16 Apr 24 -- I changed the API for tknptr, so I updated that here.  I changed to tkptr.New().  And took out unneeded call to rand.Seed()
 */
 
 const lastAltered = "Apr 16, 2024"
@@ -183,7 +182,7 @@ var deck []int
 var runsWon, runsLost []int
 var lastHandWinLose int = ErrorValue // this cannot be a bool to correctly count surrender.  Not having it zero means that the first hand is counted correctly, also.
 var currentRunWon, currentRunLost int
-var totalWins, totalLosses, totalPushes, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
+var totalWins, totalLosses /* totalPushes,*/, totalDblWins, totalDblLosses, totalBJwon, totalBJpushed, totalBJwithDealerAce, totalSplits,
 	totalDoubles, totalSurrenders, totalBusts, totalHands int
 
 // var winsInARow, lossesInARow int
@@ -893,7 +892,7 @@ func showDown() {
 				}
 			} else if playerHand[i].total == dealerHand.total {
 				playerHand[i].result = pushed
-				totalPushes++
+				//totalPushes++
 			} else if playerHand[i].total < dealerHand.total {
 				if playerHand[i].doubledflag {
 					playerHand[i].result = lostdbl
@@ -904,8 +903,7 @@ func showDown() {
 					totalLosses++
 				}
 			}
-		} // seitch-case
-
+		} // switch-case
 	} // for range over all hands, incl'g split hands.
 } // showDown
 
@@ -1441,9 +1439,12 @@ func wrStatsToFile() {
 		}
 	}
 
-	_, err = bufOutputFileWriter.WriteRune('\n') // linter reports err not checked.
-	_, err = bufOutputFileWriter.WriteRune('\n') // I'll maybe change this later
+	_, _ = bufOutputFileWriter.WriteRune('\n')   // linter reports err not checked.
+	bufOutputFileWriter.WriteRune('\n')          // I'll maybe change this later
 	_, err = bufOutputFileWriter.WriteRune('\n') // but not now.
+	if err != nil {
+		fmt.Printf(" ERROR while writing %s is %s\n", OutputFilename, err)
+	}
 	bufOutputFileWriter.Flush()
 	OutputHandle.Close()
 } // wrStatsToFile
@@ -1502,7 +1503,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rand.Seed(int64(time.Now().Nanosecond()))
+	//rand.Seed(int64(time.Now().Nanosecond()))
 
 	if verboseFlag {
 		fmt.Printf("\n Deck filename is %s and strategy matrix filename is %s. \n\n", deckFilename, strategyFilename)
@@ -1566,15 +1567,15 @@ func main() {
 	}
 
 	date := time.Now()
-	datestring := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
+	dateString := date.Format("Mon Jan 2 2006 15:04:05 MST") // written to output file below.
 	str := fmt.Sprintf(" Date is %s; Dealer hitting on soft 17 flag is %v, Re-split aces flag is %v \n \n",
-		datestring, dealerHitsSoft17, resplitAcesFlag)
+		dateString, dealerHitsSoft17, resplitAcesFlag)
 
-	_, err = bufOutputFileWriter.WriteString(str) // linter reports this err is not checked.  But I won't change it now.
+	bufOutputFileWriter.WriteString(str) // linter reports this err is not checked.  But I won't change it now.
 
 	WriteStrategyMatrix(bufOutputFileWriter)
 
-	_, err = bufOutputFileWriter.WriteString("==============================================================================\n") // linter reports this err is not checked.  I won't change it now.
+	_, _ = bufOutputFileWriter.WriteString("==============================================================================\n") // linter reports this err is not checked.  I won't change it now.
 	_, err = bufOutputFileWriter.WriteRune('\n')
 	if err != nil {
 		fmt.Println(" Writing to output file,", OutputFilename, "produced this error:", err, ".  Exiting")
@@ -1707,7 +1708,7 @@ PlayAllRounds:
 	ratioBJdealerAce := float64(totalBJwithDealerAce) / totalBJhandFloat
 	ratioBusts := float64(totalBusts) / totalHandsFloat
 	ratioSplits := float64(totalSplits) / totalHandsFloat
-	bufOutputFileWriter.WriteString(datestring)
+	bufOutputFileWriter.WriteString(dateString)
 	bufOutputFileWriter.WriteRune('\n')
 	bufOutputFileWriter.WriteString(elapsedString)
 
