@@ -93,6 +93,7 @@ import (
    7 Apr 23 -- Ran staticCheck (which is what Bill Kennedy uses).  It reported that totalPushes and totalDoubles are both unused.  I guess I used to display them.
                  I'm not going to fix it now.  Maybe another time.
   16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().  Updated the rand interface.  And staticcheck found a few issues, now fixed.
+                 And changed for loop syntax from for i:=0; i < shuffleAmount; i++ {} to for range shuffleAmount {}
 */
 
 const lastAltered = "Apr 16, 2024"
@@ -458,11 +459,13 @@ func InitDeck() { // Initalize the deck of cards.
 func doTheShuffle() {
 	currentCard = 0
 	now := time.Now()
-	shuffleAmount := now.Nanosecond() / 1e6 // + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year().  This took too long every time.  Former 10 sec run -> 9 hrs.  That's nuts.
+	//shuffleAmount := now.Nanosecond() / 1e6 // + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year().  This took too long every time.  Former 10 sec run -> 9 hrs.  That's nuts.
+	shuffleAmount := misc.RandRange(1000, 2000)
 	swapfnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
-	for i := 0; i < shuffleAmount; i++ {
+	//for i := 0; i < shuffleAmount; i++ {
+	for range shuffleAmount {
 		rand.Shuffle(len(deck), swapfnt)
 	}
 	if verboseFlag {

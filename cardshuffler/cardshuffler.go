@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	pb "github.com/schollz/progressbar/v3"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"runtime"
@@ -20,11 +20,12 @@ import (
    9 Apr 22 -- While on boat, I'm coding this rtn to make the very big shoe.  I've been thinking about it all week.
   10 Apr 22 -- Now home from boat, and I changed the name from makedeck.go to cardshuffler.go.  Runs of 1000 decks on linux-laptop took 7-10 min each and ~500K iterations.
   11 Apr 22 -- Leox: 1 million estimated at 2 weeks by progressBar, 100K estimated at 32 hrs.  I'll change the shuffling amount.  Current estimate for thelio is ~ 1/2 hr.  I'll wait.
+  16 Apr 24 -- Now at Go 1.22, so I updated math/rand/v2
 */
 
-const lastAltered = "Apr 11, 2022"
+const lastAltered = "Apr 16, 2024"
 
-//const numOfDecks = 100_000 // used to be 8 and was a const.  1 million was estimated at 2 weeks by progressbar.  100K estimated to take 32 hours.  I plan on waiting for it here on leox.
+// const numOfDecks = 100_000 // used to be 8 and was a const.  1 million was estimated at 2 weeks by progressbar.  100K estimated to take 32 hours.  I plan on waiting for it here on leox.
 const numOfDecks = 500_000 // On leox, this took 14 hrs for 26 million cards.
 const NumOfCards = 52 * numOfDecks
 
@@ -105,7 +106,7 @@ func main() {
 	}
 
 	date := time.Now()
-	rand.Seed(int64(date.Nanosecond()))
+	//rand.Seed(int64(date.Nanosecond()))  deprecated by Go 1.22, which now uses math/rand/v2
 
 	//       need to shuffle here
 	swapFnt := func(i, j int) {
@@ -124,7 +125,7 @@ func main() {
 	progBar := pb.Default(int64(shufflingAmount))
 
 	shuffleStartTime := time.Now()
-	for i := 0; i < shufflingAmount; i++ {
+	for range shufflingAmount {
 		rand.Shuffle(len(deck), swapFnt)
 		progBar.Add(1)
 	}
