@@ -97,7 +97,7 @@ import (
                  I'm not going to fix it now.  Maybe another time.
   16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().  Updated the rand interface.  And staticcheck found a few issues, now fixed.
                  And changed for loop syntax from for i:=0; i < shuffleAmount; i++ {} to for range shuffleAmount {}
-  17 Apr 24 -- Adding filepicker for the strategy matrix
+  17 Apr 24 -- Adding filepicker for the strategy matrix, using -n flag to set number of players.  And added colored output for ratioScore.
 */
 
 const lastAltered = "Apr 17, 2024"
@@ -1443,9 +1443,11 @@ func wrStatsToFile() {
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
 func main() {
-	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s.  Use verbose flag for interactive mode. \n", lastAltered, runtime.Version())
+	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s.  Use -n for num of players and verbose flag for interactive mode. \n",
+		lastAltered, runtime.Version())
 
-	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose mode")
+	flag.IntVar(&numOfPlayers, "n", 1, "Number of players to simulate")
 	flag.Parse()
 
 	const InputExtDefault = ".strat"
@@ -1620,11 +1622,11 @@ func main() {
 		fmt.Println(deck)
 	}
 
-	fmt.Print(" How many hands to play: ")
-	_, err = fmt.Scanln(&numOfPlayers)
-	if err != nil {
-		numOfPlayers = 1
-	}
+	fmt.Printf(" Number of hands to play now set by -n flag.\n ")
+	//_, err = fmt.Scanln(&numOfPlayers)
+	//if err != nil {
+	//	numOfPlayers = 1
+	//}
 	if numOfPlayers > maxNumOfPlayers { // just in case I forget and put in a number like 500, which I just did.
 		numOfPlayers = maxNumOfPlayers
 	}
@@ -1755,6 +1757,7 @@ PlayAllRounds:
 	ratioTotalWins = float64(totalWins) / float64(totalWins+totalLosses)
 	ratioTotalLosses = float64(totalLosses) / float64(totalWins+totalLosses)
 	ratioScore := 100 * score / float64(totalHands)
+	ctfmt.Printf(ct.Green, false, " RatioScore = %.4f%%\n", ratioScore)
 	ratioString := fmt.Sprintf(" RatioScore= %.4f%%,  TotalWins= %.4f, TotalLosses= %.4f, TotalDblWins= %.4f, TotalDblLosses= %.4f \n",
 		ratioScore, ratioTotalWins, ratioTotalLosses, ratioTotalDblWins, ratioTotalDblLosses)
 	fmt.Print(ratioString)
