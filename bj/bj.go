@@ -46,7 +46,7 @@ package main // bj.go
 Mar 31, 2022
 A comment about the StrategyMatrix.  Ace is the first column, also called column zero.  Ten value cards are the last position.
 I think I have to correct the indexing from Ace = 1 to a zero origin system.  Column index is dealear card1 - 1 to do this correction.  Row index is the hand total.
-So the .strat files have one format, and my take away cheat sheet has a different format.
+So the .strat files have one format, and my takeaway cheat sheet has a different format.
 I sometimes forget that.
 
 */
@@ -56,6 +56,8 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	pb "github.com/schollz/progressbar/v3"
 	"io"
 	"math/rand/v2"
@@ -64,6 +66,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"src/filepicker"
 	"src/misc"
 	"src/tknptr"
 	"strconv"
@@ -94,9 +97,10 @@ import (
                  I'm not going to fix it now.  Maybe another time.
   16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().  Updated the rand interface.  And staticcheck found a few issues, now fixed.
                  And changed for loop syntax from for i:=0; i < shuffleAmount; i++ {} to for range shuffleAmount {}
+  17 Apr 24 -- Adding filepicker for the strategy matrix
 */
 
-const lastAltered = "Apr 16, 2024"
+const lastAltered = "Apr 17, 2024"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -1439,7 +1443,7 @@ func wrStatsToFile() {
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
 func main() {
-	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s \n", lastAltered, runtime.Version())
+	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s.  Use verbose flag for interactive mode. \n", lastAltered, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode")
 	flag.Parse()
@@ -1447,10 +1451,10 @@ func main() {
 	const InputExtDefault = ".strat"
 	const OutputExtDefault = ".results"
 
-	if flag.NArg() < 1 {
-		fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
-		os.Exit(1)
-	}
+	//if flag.NArg() < 1 {  Now uses file picker.
+	//	fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
+	//	os.Exit(1)
+	//}
 
 	/* now handled by verbose mode.
 	       fmt.Print(" Display each round? Y/n ")
@@ -1465,9 +1469,45 @@ func main() {
 	displayRound = verboseFlag
 	deck = make([]int, 0, NumOfCards)
 
-	//commandline := getcommandline.GetCommandLineString()
-	//commandline := os.Args[1] // Args[0] is the name of the executable binary
-	commandLine := flag.Arg(0)
+	// File picker stuff added Apr 2024
+
+	var commandLine string
+	if flag.NArg() < 1 {
+		filenames, err := filepicker.GetRegexFilenames(InputExtDefault + "$") // needs to end w/ this pattern.
+		if err != nil {
+			ctfmt.Printf(ct.Red, false, " Error from filepicker is %v.  Exiting \n", err)
+			os.Exit(1)
+		}
+		for i := 0; i < min(len(filenames), 26); i++ {
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
+		}
+		var ans string // since I allow either a number or a letter, this must be a string.  Else I could use Scanln to parse the number for me.
+		fmt.Print(" Enter filename choice : ")
+		n, er := fmt.Scanln(&ans)
+		if n == 0 || er != nil {
+			ans = "0"
+		} else if ans == "999" {
+			fmt.Println(" Stop code entered.  Exiting.")
+			os.Exit(0)
+		}
+		i, e := strconv.Atoi(ans)
+		if e == nil {
+			commandLine = filenames[i]
+		} else {
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A')
+			commandLine = filenames[i]
+		}
+		fmt.Println(" Picked filename is", commandLine)
+	} else { // will use filename entered on commandline
+		commandLine = flag.Arg(0)
+		fmt.Println(" Will use filename of", commandLine)
+	}
+
+	fmt.Println()
+
 	BaseFilename := filepath.Clean(commandLine)
 
 	if strings.Contains(BaseFilename, ".") {

@@ -75,7 +75,7 @@ import (
                  of the code that I have to maintain.
    8 Aug 23 -- tknptr.NewToken -> tknptr.New
   10 Apr 24 -- Now that I learned that I/O bound work can benefit from many more goroutines than CPU bound work, and this here is I/O bound work, I'll increase the workers.
-                 But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+                 But I have to remember that linux only has 1024 file handles; this number cannot be exceeded.
 */
 
 const LastCompiled = "10 Apr 2024"
