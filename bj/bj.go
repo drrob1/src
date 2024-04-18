@@ -98,9 +98,10 @@ import (
   16 Apr 24 -- Updated because I changed the API for tknptr.  Now uses tknptr.New().  Updated the rand interface.  And staticcheck found a few issues, now fixed.
                  And changed for loop syntax from for i:=0; i < shuffleAmount; i++ {} to for range shuffleAmount {}
   17 Apr 24 -- Adding filepicker for the strategy matrix, using -n flag to set number of players.  And added colored output for ratioScore.
+  18 Apr 24 -- Adding interactiveFlag.
 */
 
-const lastAltered = "Apr 17, 2024"
+const lastAltered = "Apr 18, 2024"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -191,7 +192,7 @@ var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
 var OutputFilename string
 var OutputHandle *os.File
 var bufOutputFileWriter *bufio.Writer
-var verboseFlag bool
+var verboseFlag, interactiveFlag bool
 var Filename string
 
 // ------------------------------------------------------- init -----------------------------------
@@ -1443,10 +1444,11 @@ func wrStatsToFile() {
 // ------------------------------------------------------- main -----------------------------------
 // ------------------------------------------------------- main -----------------------------------
 func main() {
-	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s.  Use -n for num of players and verbose flag for interactive mode. \n",
+	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s.  Use -n for num of players and -i for interactive mode. \n",
 		lastAltered, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose mode")
+	flag.BoolVar(&interactiveFlag, "i", false, "Interactive mode flag")
 	flag.IntVar(&numOfPlayers, "n", 1, "Number of players to simulate")
 	flag.Parse()
 
@@ -1458,7 +1460,7 @@ func main() {
 	//	os.Exit(1)
 	//}
 
-	/* now handled by verbose mode.
+	/* now handled by interactive flag
 	       fmt.Print(" Display each round? Y/n ")
 	   	ans := ""
 	   	_, e := fmt.Scanln(&ans)
@@ -1468,7 +1470,7 @@ func main() {
 	   		displayRound = true
 	   	}
 	*/
-	displayRound = verboseFlag
+	displayRound = interactiveFlag
 	deck = make([]int, 0, NumOfCards)
 
 	// File picker stuff added Apr 2024
@@ -1527,7 +1529,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	//byteslice := make([]byte, 0, FI.Size()+50)
 	byteSlice, er := os.ReadFile(Filename)
 	if er != nil {
 		fmt.Println(" Error from os.ReadFile: ", er, ".  Exiting.")
