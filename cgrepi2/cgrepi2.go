@@ -1,44 +1,91 @@
-// cgrepi2.go
 /*
-  REVISION HISTORY
-  ----------------
-  20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
-                 And then I figured I could not improve performance by using more packages.
-                 But I can change the side effect of displaying altered case.
-  22 Mar 20 -- Will add timing code that I wrote for anack.
-  27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
-  14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is mure complex than it
-                 needs to be.  I'm going to take a crack at writing a simpler version myself.
-                 It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
-                 thru all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
-                 this better.  It seems much too complex.  I'm going to simplify it.
-  16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
-  18 Dec 21 -- Adding optimizations as recommended by Bill Kennedy in his last example.  It's maybe 20% faster, but it's hard for me to be sure.
-                 And on Ryzen 9 5950X, it's maybe 5 - 10% faster.  But it is faster.
-  21 Oct 22 -- golangci-lint recommended removing unused field in grepType.
+REVISION HISTORY
+----------------
+20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
+
+	And then I figured I could not improve performance by using more packages.
+	But I can change the side effect of displaying altered case.
+
+22 Mar 20 -- Will add timing code that I wrote for anack.
+27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
+14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is more complex than it
+
+	needs to be.  I'm going to take a crack at writing a simpler version myself.
+	It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
+	through all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
+	this better.  It seems much too complex.  I'm going to simplify it.
+
+16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
+19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
+
+	keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
+	Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
+
+30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
+
+	              But if input string has an upper case character, then the search is case sensitive.
+	1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
+	2 Oct 22 -- The extension system is made mostly obsolete by null byte detection.  So the default will be *.  But I discovered when the files slice exceeds 1790 elements,
+	              the go routines all deadlock, so the wait group is not exiting.
+
+	            Posted to gonuts using the go playground for the code: 10/2/22 @1:35 pm   go playground sharing link: https://go.dev/play/p/gIVVLsiTqod/
+	              Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the syncronization.
+	              Nope, then I got a negative WaitGroup number panic.  I moved it back, for now.
+
+	            First reported to me by Matthew Zimmerman.
+	            Looks like the error was the order of the defer and if err statements.  The way I first had it, defer was after the if err, so if there was a file error
+	              (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "MY Pictures") then wg.Done() would not be called.
+	              So the wait group count would not go down to zero.  How subtle, and I needed help from someone else to notice that.
+
+	            Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
+	              So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
+	5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
+	7 Oct 22 -- Added color to output.
+
+20 Nov 22 -- static linter found an issue, so I commented it out.
+11 Dec 22 -- From the Go course I bought from ArdanLabs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.  So I'll include this limit in the code now.
+15 Feb 23 -- I'll play w/ lowering the number of workers.  I think the easiest way to do this is to make the multiplier = 1 and do measurements.  But for tomorrow.  It's too late now.
+
+	Bill Kennedy said that the magic number is about the same as runtime.NumCPU().  Wow, it IS faster.
+	On Win10 Desktop, time went from 222 ms -> 192 ms, using "cgrepi elapsed".  That's ~ 13.5% faster
+
+10 Apr 24 -- I/O bound jobs, like here, benefit from having more goroutines than NumCPU()
+
+	But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+
+15 Apr 24 -- Added the multiplier because of Miki Tebeka saying that I/O bound work, as this is, is not limited to NumCPU() go routines for optimal performance.
+18 Apr 24 -- Had to fix the multiplier, because the current code structure doesn't allow for the multiplier to be flag controlled.  So I made it a const of 10 as of this writing.
+
+	Now called cgrepi2, and I will have it set the multiplier from a flag.  But I have to make some changes for that to work.
+	And I removed my own min() fcn, as Go 1.22 has that as a generic built in.
 */
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-const LastAltered = "21 Oct 2021"
+const LastAltered = "18 Apr 2024"
 const maxSecondsToTimeout = 300
-const workerPoolMultiplier = 20
 
-var workers = runtime.NumCPU() * workerPoolMultiplier
+const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
+var workerPoolMultiplier int
+
+const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -46,9 +93,32 @@ type grepType struct {
 	// goRtnNum int
 }
 
+type matchType struct {
+	fpath        string
+	lino         int
+	lineContents string
+}
+
+type matchesSliceType []matchType // this is a named type.  I need a named type for the sort functions to work.  An anonymous type won't cut it.
+
+func (m matchesSliceType) Len() int {
+	return len(m)
+}
+func (m matchesSliceType) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+func (m matchesSliceType) Less(i, j int) bool {
+	return strings.ToLower(m[i].fpath) < strings.ToLower(m[j].fpath)
+}
+
+var caseSensitiveFlag bool // default is false.
 var grepChan chan grepType
+var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
+var sliceOfStrings []string // based on an anonymous type.
+//var workerPoolMultiplier int
+
 var wg sync.WaitGroup
 
 func main() {
@@ -56,24 +126,43 @@ func main() {
 	log.SetFlags(0)
 
 	// flag definitions and processing
-	globflag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
-	var timeoutOpt = flag.Int64("timeout", 0, "seconds (0 means no timeout)")
+	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
+	verboseFlag := flag.Bool("v", false, "Verbose flag")
+	var timeoutOpt = flag.Int64("timeout", maxSecondsToTimeout, "seconds (0 means no timeout)")
+	flag.IntVar(&workerPoolMultiplier, "m", 10, "Multiplier of workers, default is 10.")
 	flag.Parse()
 
 	if *timeoutOpt < 1 || *timeoutOpt > maxSecondsToTimeout {
 		fmt.Fprintln(os.Stderr, "timeout is", *timeoutOpt, ", and is out of range of [0,300] seconds.  Set to", maxSecondsToTimeout)
 		*timeoutOpt = maxSecondsToTimeout
 	}
+
+	workers := runtime.NumCPU() * workerPoolMultiplier
+	if workers > limitWorkerPool {
+		workers = limitWorkerPool
+	}
+
 	args := flag.Args()
 	if len(args) < 1 {
 		log.Fatalln("a regexp to match must be specified")
 	}
 	pattern := args[0]
-	pattern = strings.ToLower(pattern) // this is the change for the pattern.
+	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
+	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
+	if *verboseFlag {
+		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
+	}
+	if !caseSensitiveFlag {
+		pattern = strings.ToLower(pattern) // this is the change for the pattern.
+	}
+	if *verboseFlag {
+		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
+	}
 	files := args[1:]
 	if len(files) < 1 { // no files or globbing pattern on command line.
 		if runtime.GOOS == "windows" {
-			files = []string{"*.txt"}
+			//files = []string{"*.txt"}
+			files = []string{"*"} // Now that files containing a null byte are skipped, I can default to every file in this directory.
 		} else {
 			files = txtFiles() // intended only for use on linux.
 		}
@@ -87,20 +176,28 @@ func main() {
 	}
 
 	fmt.Println()
-	fmt.Printf(" Concurrent grep insensitive case v2 last altered %s, using pattern of %q, %d worker rtns, compiled with %s. \n",
+	gotWin := runtime.GOOS == "windows"
+	ctfmt.Printf(ct.Yellow, gotWin, " Concurrent grep ignore case last altered %s, using pattern of %q, %d worker rtns, compiled with %s. \n",
 		LastAltered, pattern, workers, runtime.Version())
 	fmt.Println()
 
-	if *globflag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
+	workingDir, _ := os.Getwd()
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
+	if *verboseFlag {
+		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
+	}
+
+	if *globFlag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
 		files = globCommandLineFiles(files) // this fails vet because it's in the platform specific code file.
 	} else {
 		files = commandLineFiles(files)
 	}
 
 	minGoRtns := min(len(files), workers)
-
 	// start the worker pool
-	grepChan = make(chan grepType, workers) // buffered channel that may be larger than the worker pool.
+	grepChan = make(chan grepType, workers) // buffered channel
 	for w := 0; w < minGoRtns; w++ {
 		go func() {
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
@@ -109,49 +206,90 @@ func main() {
 		}()
 	}
 
+	if *verboseFlag {
+		fmt.Printf(" Length of files = %d, minGoRtns = %d.\n\n", len(files), minGoRtns)
+	}
+
+	matchChan = make(chan matchType, workers)
+	sliceOfAllMatches := make(matchesSliceType, 0, len(files)) // this uses a named type, needed to satisfy the sort interface.
+	sliceOfStrings = make([]string, 0, len(files))             // this uses an anonymous type.
+	go func() {                                                // start the receiving operation before the sending starts
+		for match := range matchChan {
+			sliceOfAllMatches = append(sliceOfAllMatches, match)
+			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
+			sliceOfStrings = append(sliceOfStrings, s)
+		}
+	}()
+
 	for _, file := range files {
 		wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
 	}
+	close(grepChan) // must close the channel so the worker go routines know to stop.  Doing this after all work is sent into the channel.
 
-	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
-	close(grepChan)                  // must close the channel so the worker go routines know to stop.
+	goRtns := runtime.NumGoroutine()
 	wg.Wait()
+	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
 
 	elapsed := time.Since(t0)
-	//time.Sleep(time.Second) // I've noticed that sometimes main exits before everything can be displayed.  This sleep line fixes that.
 
-	fmt.Println()
+	ctfmt.Printf(ct.Green, gotWin, "\n Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
 	fmt.Println()
 
-	fmt.Printf(" Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed.String(), goRtns, totMatchesFound, totFilesScanned)
-	fmt.Println()
+	// Time to sort and show
+	sort.Strings(sliceOfStrings)
+	sortStringElapsed := time.Since(t0)
+	sort.Stable(sliceOfAllMatches)
+	sortMatchedElapsed := time.Since(t0)
+
+	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
+		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents)
+	}
+
+	ctfmt.Printf(ct.Yellow, gotWin, "\n There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
+	outputElapsed := time.Since(t0)
+	ctfmt.Printf(ct.Green, gotWin, "\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown) and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
+		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 }
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
-	file, err := os.ReadFile(fpath)
-	if err != nil {
-		log.Printf("grepFile os.ReadFile error : %s\n", err)
-		return
-	}
-	defer func() {
-		// file.Close()  Not needed now that I'm reading in the entire file at once.
+	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
+	file, err := os.Open(fpath)
+	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.
+		wg.Done()
+		file.Close()
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches)
-		wg.Done()
 	}()
+	if err != nil {
+		log.Printf("grepFile os.Open error is: %s\n", err)
+		return
+	}
 
-	reader := bytes.NewBuffer(file)
+	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
-		lineStr, er := reader.ReadString('\n')
-		lineStrLower := strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
-		if lineRegex.MatchString(lineStrLower) {
-			fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
-			localMatches++
-		}
-		if er != nil { // when can't read any more bytes, break.  The test for er is here so line fragments are processed, too.
+		lineStr, er := reader.ReadString('\n') // lineStr is terminated w/ the \n character.  I would have to call a trim function to remove it.
+		if er != nil {                         // when can't read any more bytes, break.  If any bytes were read, er == nil.
 			break // just exit when hit EOF condition.
+		}
+		if strings.ContainsRune(lineStr, null) {
+			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.  The wg.Done() is deferred so it doesn't matter.
+		}
+		if caseSensitiveFlag {
+			lineStrng = lineStr
+		} else {
+			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
+		}
+
+		if lineRegex.MatchString(lineStrng) { // this is now either case sensitive or not, depending on whether the input pattern has upper case letters.
+			//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)  Will now only see the sorted output.
+			localMatches++
+			matchChan <- matchType{
+				fpath:        fpath,
+				lino:         lino,
+				lineContents: lineStr,
+			}
 		}
 		now := time.Now()
 		if now.After(tfinal) {
@@ -178,21 +316,14 @@ func txtFiles() []string { // intended to be needed on linux.
 		if d.IsDir() {
 			continue // skip it
 		}
-		bool, er := filepath.Match(pattern, strings.ToLower(d.Name()))
+		boolean, er := filepath.Match(pattern, strings.ToLower(d.Name()))
 		if er != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
-		if bool {
+		if boolean {
 			matchingNames = append(matchingNames, d.Name())
 		}
 	}
 	return matchingNames
-}
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
 }

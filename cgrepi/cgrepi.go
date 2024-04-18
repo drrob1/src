@@ -53,8 +53,11 @@ REVISION HISTORY
 
 	But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
 
-15 Apr 24 -- Added the multiplier.
+15 Apr 24 -- Added the multiplier because of Miki Tebeka saying that I/O bound work, as this is, is not limited to NumCPU() go routines for optimal performance.
+18 Apr 24 -- Had to fix the multiplier, because the current code structure doesn't allow for the multiplier to be flag controlled.  So I made it a const of 10 as of this writing.
+	         And I removed my own min(), as Go 1.22 has that as a generic built-in.
 */
+
 package main
 
 import (
@@ -75,14 +78,14 @@ import (
 	"time"
 )
 
-const LastAltered = "15 Apr 2024"
+const LastAltered = "18 Apr 2024"
 const maxSecondsToTimeout = 300
 
 const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
 
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
-var workers = runtime.NumCPU() * workerPoolMultiplier
+var workers = runtime.NumCPU()
 
 type grepType struct {
 	regex    *regexp.Regexp
@@ -339,9 +342,9 @@ func txtFiles() []string { // intended to be needed on linux.
 	return matchingNames
 }
 
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
+//func min(x, y int) int {
+//	if x < y {
+//		return x
+//	}
+//	return y
+//}
