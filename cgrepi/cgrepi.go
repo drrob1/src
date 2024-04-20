@@ -43,7 +43,8 @@ REVISION HISTORY
 	7 Oct 22 -- Added color to output.
 
 20 Nov 22 -- static linter found an issue, so I commented it out.
-11 Dec 22 -- From the Go course I bought from ArdanLabs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.  So I'll include this limit in the code now.
+11 Dec 22 -- From the Go course I bought from ArdanLabs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.
+             So I'll include this limit in the code now.
 15 Feb 23 -- I'll play w/ lowering the number of workers.  I think the easiest way to do this is to make the multiplier = 1 and do measurements.  But for tomorrow.  It's too late now.
 
 	Bill Kennedy said that the magic number is about the same as runtime.NumCPU().  Wow, it IS faster.
@@ -51,11 +52,12 @@ REVISION HISTORY
 
 10 Apr 24 -- I/O bound jobs, like here, benefit from having more goroutines than NumCPU()
 
-	But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+	But I have to remember that linux only has 1024 or so file handles; this number cannot be exceeded.
 
 15 Apr 24 -- Added the multiplier because of Miki Tebeka saying that I/O bound work, as this is, is not limited to NumCPU() go routines for optimal performance.
 18 Apr 24 -- Had to fix the multiplier, because the current code structure doesn't allow for the multiplier to be flag controlled.  So I made it a const of 10 as of this writing.
 	         And I removed my own min(), as Go 1.22 has that as a generic built-in.
+18 Apr 24 -- Added workerPoolMultiplier flag option.
 */
 
 package main

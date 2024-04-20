@@ -117,7 +117,6 @@ var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
 var sliceOfStrings []string // based on an anonymous type.
-//var workerPoolMultiplier int
 
 var wg sync.WaitGroup
 
