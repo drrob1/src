@@ -27,14 +27,14 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " Is not big endian\n")
 	}
 	if goarch == "amd64" {
-		fmt.Printf(" HasAES = %t, HasADX add carry extension = %t, HasAVX512 advanced vector extension = %t, HasCX16 compare and exchange 16 bytes = %t \n",
-			cpu.X86.HasAES, cpu.X86.HasADX, cpu.X86.HasAVX512, cpu.X86.HasCX16)
+		fmt.Printf(" HasAES = %t, HasADX add carry extension = %t, HasCX16 compare and exchange 16 bytes = %t \n",
+			cpu.X86.HasAES, cpu.X86.HasADX, cpu.X86.HasCX16)
 		fmt.Printf(" HasFMA fused multiply add = %t, HasRDRAND on chip rand generator = %t, HasRDSEED on chip rand seed = %t, and HasSSE42 streaming SIMD ext 4 and 4.2 = %t \n",
 			cpu.X86.HasFMA, cpu.X86.HasRDRAND, cpu.X86.HasRDSEED, cpu.X86.HasSSE42)
-		fmt.Printf(" HasAMX Tile advanced matrix extension tile = %t, HasAMXInt8 = %t, HasAMSBF16 BFloat16 = %t, \n",
-			cpu.X86.HasAMXTile, cpu.X86.HasAMXInt8, cpu.X86.HasAMXBF16)
 		fmt.Printf(" HasBMI2 bit manip instrn 2 = %t, HasERMS enhanced rep for MOVSB and STOSB= %t \n",
 			cpu.X86.HasBMI2, cpu.X86.HasERMS)
+		fmt.Printf(" HasAMX Tile advanced matrix extension tile = %t, HasAMXInt8 = %t, HasAMSBF16 BFloat16 = %t, \n",
+			cpu.X86.HasAMXTile, cpu.X86.HasAMXInt8, cpu.X86.HasAMXBF16)
 		if cpu.X86.HasAVX512 {
 			ctfmt.Printf(ct.Green, false, " yes AVX512 advanced vector extension \n")
 		} else {
