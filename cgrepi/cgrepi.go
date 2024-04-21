@@ -58,6 +58,7 @@ REVISION HISTORY
 18 Apr 24 -- Had to fix the multiplier, because the current code structure doesn't allow for the multiplier to be flag controlled.  So I made it a const of 10 as of this writing.
 	         And I removed my own min(), as Go 1.22 has that as a generic built-in.
 18 Apr 24 -- Added workerPoolMultiplier flag option.
+21 Apr 24 -- Took out the first 2 lines, that were probably coded by the late Michael T Jones.  Looks like these would be the defaults, anyway.
 */
 
 package main
@@ -80,7 +81,7 @@ import (
 	"time"
 )
 
-const LastAltered = "18 Apr 2024"
+const LastAltered = "21 Apr 2024"
 const maxSecondsToTimeout = 300
 
 const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
@@ -124,8 +125,8 @@ var workerPoolMultiplier int
 var wg sync.WaitGroup
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
-	log.SetFlags(0)
+	//runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores.  This is the default.  I'll take this out.
+	//log.SetFlags(0)  This is also probably the default.  So I'll take it out, too.
 
 	// flag definitions and processing
 	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr

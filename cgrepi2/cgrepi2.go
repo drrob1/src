@@ -58,6 +58,8 @@ REVISION HISTORY
 
 	Now called cgrepi2, and I will have it set the multiplier from a flag.  But I have to make some changes for that to work.
 	And I removed my own min() fcn, as Go 1.22 has that as a generic built in.
+
+21 Apr 24 -- Deleted the first 2 lines that were probably the defaults.  These were coded by the late Michael T Jones.
 */
 package main
 
@@ -79,7 +81,7 @@ import (
 	"time"
 )
 
-const LastAltered = "18 Apr 2024"
+const LastAltered = "21 Apr 2024"
 const maxSecondsToTimeout = 300
 
 const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
@@ -121,8 +123,6 @@ var sliceOfStrings []string // based on an anonymous type.
 var wg sync.WaitGroup
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores
-	log.SetFlags(0)
 
 	// flag definitions and processing
 	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
