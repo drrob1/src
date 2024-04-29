@@ -3,7 +3,6 @@ package main // listVLC
 import (
 	"flag"
 	"fmt"
-	"github.com/jonhadfield/findexec"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -11,6 +10,7 @@ import (
 	"runtime"
 	"src/list2"
 	"src/misc"
+	"src/whichexec"
 	"strings"
 	"time"
 )
@@ -46,10 +46,12 @@ REVISION HISTORY
 18 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
 21 Apr 23 -- Making spell checker happy, and removing dead code.
  9 Feb 24 -- Using Go 1.22 code for random numbers.
-25 Mar 24 -- Changed last verVerboseFlag to verboseFlag, as I forgot that I needed very verbose to see the variadic param for the vlc command.
+25 Mar 24 -- Changed last veryVerboseFlag to verboseFlag, as I forgot that I needed very verbose to see the variadic param for the vlc command.
+29 Apr 24 -- I finished writing whichExec, based on code from Mastering Go, 4th ed.  I'm looking at adding it here.  While I'm here, I'm editing some comments and help text.
+               Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
 */
 
-const lastModified = "Mar 25, 2024"
+const lastModified = "Apr 29, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -83,15 +85,15 @@ func main() {
 	path = os.Getenv("PATH")
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
-		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
+		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.  And replace the default value of vlcPath defined globally.
 	}
-	if runtime.GOOS == "windows" {
-		searchPath = vlcPath + ";" + path
-	} else if runtime.GOOS == "linux" && ok {
-		searchPath = vlcPath + ":" + path
-	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
-		searchPath = path
-	}
+	//if runtime.GOOS == "windows" {  supplanted by whichExec.Find, used below
+	//	searchPath = vlcPath + ";" + path
+	//} else if runtime.GOOS == "linux" && ok {
+	//	searchPath = vlcPath + ":" + path
+	//} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
+	//	searchPath = path
+	//}
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase\n")
@@ -99,6 +101,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
@@ -219,17 +222,18 @@ func main() {
 
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+		vlcStr = whichexec.Find("vlc", vlcPath) // My own whichExec.Find adds vlcPath to the system path automatically.  I don't have to build search path up anymore.
+		//vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
 		//vlcStr = "vlc"
 		//shellStr = os.Getenv("ComSpec") not needed anymore
 	} else if runtime.GOOS == "linux" {
-		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
-		shellStr = "/bin/bash"            // not needed as I found out by some experimentation on leox.
+		vlcStr = whichexec.Find("vlc", "") // calling vlc without a console.
+		shellStr = "/bin/bash"             // not needed as I found out by some experimentation on leox.
 	}
 
 	if vlcStr == "" {
 		fmt.Printf(" vlcStr is null.  Exiting ")
-		os.Exit(1)
+		return
 	}
 
 	// Time to run vlc.
@@ -238,7 +242,8 @@ func main() {
 
 	variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
 	if noTccFlag {
-		variadicParam = []string{}
+		// variadicParam = []string{}
+		variadicParam = make([]string, 0, len(fileNames))
 	}
 	variadicParam = append(variadicParam, fileNames...)
 	n := minInt(numNames, len(fileNames))
