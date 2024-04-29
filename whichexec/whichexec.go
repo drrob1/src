@@ -18,19 +18,28 @@ import (
 REVISION HISTORY
 -------- -------
 28 Apr 24 -- First started writing this
+29 Apr 24 -- Added option to search more directories.  IE, more directories option is appended to the system path for the search.  This is different from findExec.
+
 */
 
 const LastAltered = "29 Apr 2024"
 
+var onWin = runtime.GOOS == "windows"
+
 var VerboseFlag bool
 
-func Find(file string) string {
+func Find(file, morePath string) string {
 
 	if VerboseFlag {
 		fmt.Printf("In Find: Finding file %s\n", file)
 	}
 	path := os.Getenv("PATH")
 	pathSplit := filepath.SplitList(path)
+	if morePath != "" {
+		moreSplit := filepath.SplitList(morePath)
+		pathSplit = append(pathSplit, moreSplit...)
+	}
+
 	for _, directory := range pathSplit {
 		fullPath := filepath.Join(directory, file)
 		if runtime.GOOS == "windows" && !strings.HasSuffix(fullPath, ".exe") {
@@ -43,7 +52,7 @@ func Find(file string) string {
 			continue
 		}
 
-		if runtime.GOOS == "windows" {
+		if onWin {
 			f := strings.ToLower(fullPath)
 			fn := strings.ToLower(file)
 			if strings.HasSuffix(fullPath, "exe") && strings.Contains(f, fn) {
