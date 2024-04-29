@@ -25,8 +25,8 @@ func main() {
 	}
 	execBin := whichexec.Find(file)
 	if execBin == "" {
-		ctfmt.Printf(ct.Red, false, "%s is not found!", file)
+		ctfmt.Printf(ct.Red, false, "%s is not found!\n", file)
 	} else {
-		ctfmt.Printf(ct.Green, false, "%s is found!", file)
+		ctfmt.Printf(ct.Green, false, "%s is found!\n", file)
 	}
 }
