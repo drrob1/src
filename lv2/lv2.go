@@ -6,7 +6,6 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/jonhadfield/findexec"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -14,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"src/misc"
+	"src/whichexec"
 	"strconv"
 	"strings"
 	"time"
@@ -77,6 +77,7 @@ REVISION HISTORY
  5 Feb 24 -- Increased the shuffling number
  6 Feb 24 -- Added randRange.
  8 Feb 24 -- Added math/rand/v2, newly introduced w/ Go 1.22
+30 Apr 24 -- Changed to use my own which exec code instead of someone else's code.
 */
 
 /*
@@ -103,7 +104,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Feb 9, 2024"
+const lastModified = "Apr 30, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -128,25 +129,10 @@ const playListClose = "</playlist>"
 const extDefault = ".xspf" // XML Sharable Playlist Format
 
 var includeRegex, excludeRegex *regexp.Regexp
-var verboseFlag, veryverboseFlag, ok, smartCaseFlag bool
-var includeRexString, excludeRexString, searchPath, path, vPath string
+var verboseFlag, veryVerboseFlag, ok, smartCaseFlag bool
+var includeRexString, excludeRexString, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numOfTracks int
-
-//func init() {
-//	goVersion := runtime.Version()
-//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-//	goVersionInt, err := strconv.Atoi(goVersion)
-//	if err == nil {
-//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-//			return
-//		}
-//	} else {
-//		fmt.Printf(" ERROR from Atoi: %s.  Calling rand.Seed(time.Now().UnixNano())\n", err)
-//	}
-//	rand.Seed(time.Now().UnixNano())
-//}
 
 func main() {
 	var preBoolOne, preBoolTwo, domFlag, fuckFlag, numericFlag, vibeFlag, spandexFlag, femdomFlag, forcedFlag bool
@@ -161,18 +147,14 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	path = os.Getenv("PATH")
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
 		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
 	}
-	if runtime.GOOS == "windows" {
-		searchPath = vlcPath + ";" + path
-	} else if runtime.GOOS == "linux" && ok {
-		searchPath = vlcPath + ":" + path
-	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
-		searchPath = path
+	if !ok && runtime.GOOS == "linux" { // on a linux system vlcPath isn't needed, unless the VLCPATH environment variable is set by the user.
+		vlcPath = ""
 	}
+
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
@@ -189,12 +171,13 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Environment variable VLCPATH can be used to specify the path to vlc binary. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
 
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
-	flag.BoolVar(&veryverboseFlag, "vv", false, " Very Verbose mode flag.")
+	flag.BoolVar(&veryVerboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "xspf$", " Exclude file regexp string, which is usually empty.")
 	//flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
@@ -210,7 +193,7 @@ func main() {
 	flag.IntVar(&numOfTracks, "n", maxNumOfTracks, "Max num of tracks in the output file.  Currently 300.")
 	flag.Parse()
 
-	if veryverboseFlag { // very verbose also turns on verbose flag.
+	if veryVerboseFlag { // very verbose also turns on verbose flag.
 		verboseFlag = true
 	}
 
@@ -219,8 +202,7 @@ func main() {
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 	}
 	if verboseFlag {
-		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		listPath(searchPath)
+		fmt.Printf(" vlcPath = %s \n", vlcPath)
 	}
 
 	// Process predefined regular expressions.
@@ -360,12 +342,9 @@ func main() {
 	// Turns out that the shell searches against the path on Windows, but just executing it here doesn't.  So I have to search the path myself.
 	// Nope, I still have that wrong.  I need to start a command processor, too.  And vlc is not in the %PATH, but it does work when I just give it as a command without a path.
 
-	var vlcStr string
-	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
-	} else if runtime.GOOS == "linux" {
-		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
-	}
+	// Turns out on Windows that vlc was not in the path.  But it shows up when I use "which vlc" in tcc.  On linux only use VLCPATH if set by the user, on Windows always use it, either
+	// using the default setting as defined above, or the one set by the user in the environment variable.  Above, vlcPath is blanked if it's not needed, ie, on linux or not set by user.
+	vlcStr := whichexec.Find("vlc", vlcPath)
 
 	if vlcStr == "" {
 		fmt.Printf(" vlcStr is null.  Exiting ")
@@ -382,7 +361,7 @@ func main() {
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
-	if veryverboseFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" vlcStr = %s, len of filenames = %d, regex = %s and excludeRegex = %q\n", vlcStr, len(fileNames), includeRegex.String(), excludeRexString)
 	}
 
@@ -406,7 +385,7 @@ func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
 
 	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
 
-	if veryverboseFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
 	}
 
@@ -442,24 +421,6 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 	}
 	return fileNames
 } // myReadDir
-
-// ------------------------------- minInt ----------------------------------------
-
-//func minInt(i, j int) int {
-//	if i <= j {
-//		return i
-//	}
-//	return j
-//}
-
-// ------------------------------- listPath --------------------------------------
-
-func listPath(path string) {
-	splitEnv := strings.Split(path, ";")
-	for _, s := range splitEnv {
-		fmt.Printf(" %s\n", s)
-	}
-}
 
 // ------------------------------- writeOutputFile --------------------------------
 

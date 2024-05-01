@@ -3,16 +3,17 @@ package main // launchv.go
 import (
 	"flag"
 	"fmt"
-	"github.com/jonhadfield/findexec"
 	"math/rand/v2"
 	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"src/misc"
+	"src/whichexec"
 	"strings"
 	"time"
 	//											"strconv"
+	//                  "github.com/jonhadfield/findexec"
 )
 
 /*
@@ -51,14 +52,19 @@ REVISION HISTORY
                No, that didn't work.  But I can not assign it to anything, and that works.
 20 Jan 24 -- Adding femdom as a switch
  9 Feb 24 -- Using Go 1.22 specific code for random numbers and took out the init() func.
+30 Apr 24 -- Changing to use my own whichexec code.
 */
 
-const lastModified = "Feb 9, 2024"
+const lastModified = "Apr 30, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryverboseFlag, notccFlag, ok, smartCaseFlag bool
-var includeRexString, excludeRexString, searchPath, path, vPath string
-var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
+var includeRexString, excludeRexString, vPath string
+
+// var includeRexString, excludeRexString, searchPath, path, vPath string
+var vlcPath = "C:/Program Files/VideoLAN/VLC"
+
+// var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
 //func init() {
@@ -85,18 +91,17 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	path = os.Getenv("PATH")
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
 		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
 	}
-	if runtime.GOOS == "windows" {
-		searchPath = vlcPath + ";" + path
-	} else if runtime.GOOS == "linux" && ok {
-		searchPath = vlcPath + ":" + path
-	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
-		searchPath = path
-	}
+	//if runtime.GOOS == "windows" {
+	//	searchPath = vlcPath + ";" + path
+	//} else if runtime.GOOS == "linux" && ok {
+	//	searchPath = vlcPath + ":" + path
+	//} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
+	//	searchPath = path
+	//}
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
@@ -112,6 +117,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Reads the location of vlc.exe from environment variable VLCPATH. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
@@ -141,8 +147,8 @@ func main() {
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 	}
 	if verboseFlag {
-		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		listPath(searchPath)
+		fmt.Printf(" vlcPath = %s \n", vlcPath)
+		//listPath(searchPath)
 	}
 
 	if flag.NArg() < 1 && !preBoolOne && !preBoolTwo && !domFlag && !fuckFlag && !numericFlag { // if there are more than 1 arguments, the extra ones are ignored.
@@ -220,12 +226,14 @@ func main() {
 
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+		vlcStr = whichexec.Find("vlc", vlcPath)
+		//vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
 		//vlcStr = "vlc"
 		//shellStr = os.Getenv("ComSpec") not needed anymore
 	} else if runtime.GOOS == "linux" {
-		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
-		shellStr = "/bin/bash"            // not needed as I found out by some experimentation on leox.
+		vlcStr = whichexec.Find("vlc", "") // calling vlc without a console.
+		//                                           vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
+		shellStr = "/bin/bash" // not needed as I found out by some experimentation on leox.
 	}
 
 	if vlcStr == "" {
@@ -340,13 +348,13 @@ func minInt(i, j int) int {
 }
 
 // ------------------------------- listPath --------------------------------------
-
-func listPath(path string) {
-	splitEnv := strings.Split(path, ";")
-	for _, s := range splitEnv {
-		fmt.Printf(" %s\n", s)
-	}
-}
+// Not used anymore, since I wrote my own whichExec.Find
+//func listPath(path string) {
+//	splitEnv := strings.Split(path, ";")
+//	for _, s := range splitEnv {
+//		fmt.Printf(" %s\n", s)
+//	}
+//}
 
 /* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
 /*

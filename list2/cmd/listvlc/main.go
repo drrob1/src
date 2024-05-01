@@ -51,11 +51,13 @@ REVISION HISTORY
                Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
 */
 
-const lastModified = "Apr 29, 2024"
+const lastModified = "Apr 30, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
-var includeRexString, excludeRexString, searchPath, path, vPath string
+
+// var includeRexString, excludeRexString, searchPath, path, vPath string
+var includeRexString, excludeRexString, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
 
@@ -82,7 +84,7 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	path = os.Getenv("PATH")
+	//                                            path = os.Getenv("PATH")
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
 		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.  And replace the default value of vlcPath defined globally.
@@ -134,8 +136,8 @@ func main() {
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName)
 	}
 	if verboseFlag {
-		fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		listPath(searchPath)
+		fmt.Printf(" vlcPath = %s \n", vlcPath)
+		//listPath(searchPath)
 	}
 
 	includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
