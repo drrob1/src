@@ -144,6 +144,9 @@ REVISION HISTORY
              The coordination with a wait group and the done channel works, but is slightly slower than dsrt.  This is w/ fetch = 1000.  It's worse when fetch=100.  And maybe also
              slightly worse when fetch = 2000.  I'll leave it at 1000, and stop working on this.
              At least I got it to work.
+             When run in jpg1 w/ 23000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
+             When run on thelio and logged into the /mnt/misc dir w/ 23000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
+             So this is more complicated after all.
 */
 
 const LastAltered = "2 May 2024"
