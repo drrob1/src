@@ -17,6 +17,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 	"unicode"
 )
 
@@ -138,6 +140,10 @@ REVISION HISTORY
  1 May 24 -- Now called fdsrt, for fast directory sort.  I'm going to see if I can use a worker pool here for collecting the []FileInfos to be returned.  I'm playing on Windows now.
              First I have to create the sending and receiving go routines, and then I write the code to send the data into the first channel.  This occurs all within MyReadDir, for now.
              That's done.  Now I have to check the other routines.
+ 2 May 24 -- I decided to debug what I have before writing more.  Just goes to show you that not everything can be sped up by concurrency.
+             The coordination with a wait group and the done channel works, but is slightly slower than dsrt.  This is w/ fetch = 1000.  It's worse when fetch=100.  And maybe also
+             slightly worse when fetch = 2000.  I'll leave it at 1000, and stop working on this.
+             At least I got it to work.
 */
 
 const LastAltered = "2 May 2024"
@@ -162,7 +168,7 @@ const fetch = 1000    // used for the concurrency pattern in MyReadDir
 var numWorkers = runtime.NumCPU() * multiplier
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
+var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag, fastFlag bool
 var filterAmt, numLines, numOfLines, grandTotalCount int
 var sizeTotal, grandTotal int64
 var filterStr string
@@ -275,6 +281,8 @@ func main() {
 	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
 
 	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
+
+	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
 	flag.Parse()
 
@@ -436,6 +444,8 @@ func main() {
 			*nscreens, numLines, flag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}
 
+	t0 := time.Now()
+
 	fileInfos = getFileInfosFromCommandLine()
 	if verboseFlag {
 		fmt.Printf(" After call to getFileInfosFromCommandLine.  flag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", flag.NArg(), len(fileInfos), numOfLines)
@@ -443,6 +453,8 @@ func main() {
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn) // must be sorted here for sortfcn to work correctly, because the slice name it uses must be correct.  Better if that name is not global.
 	}
+
+	elapsed := time.Since(t0)
 
 	displayFileInfos(fileInfos)
 
@@ -454,7 +466,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Print(" File Size total = ", s)
+	fmt.Printf(" Elapsed time = %s, File Size total = %s", elapsed, s)
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
@@ -611,12 +623,19 @@ func ProcessDirectoryAliases(cmdline string) string {
 func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
 	// Adding concurrency in returning []os.FileInfo
 
+	var wg sync.WaitGroup
+
+	if verboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
 	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
 	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
 	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
-	fiSlice := make([]os.FileInfo, fetch*multiplier)
+	fiSlice := make([]os.FileInfo, 0, fetch*multiplier)
+	wg.Add(numWorkers)
 	for range numWorkers { // reading from deChan to get the slices of DirEntry's
 		go func() {
+			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
 					fi, err := de.Info()
@@ -626,7 +645,6 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 					}
 					fiChan <- fi
 				}
-				close(fiChan)
 			}
 		}()
 	}
@@ -654,18 +672,32 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 	for {
 		// reading DirEntry's and sending the slices into the channel needs to happen here.
 		deSlice, err := d.ReadDir(fetch)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
-			continue
-		}
 		if errors.Is(err, io.EOF) { // finished.  So return the slice.
 			close(deChan)
 			break
 		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
 		deChan <- deSlice
 	}
 
+	wg.Wait()     // for the deChan
+	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
 	<-doneChan // block until channel is freed
+
+	if verboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
+	}
+
+	if fastFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
+		if pause() {
+			os.Exit(1)
+		}
+	}
 
 	return fiSlice
 } // myReadDir
@@ -742,4 +774,17 @@ func includeThis(fi os.FileInfo) bool {
 		}
 	}
 	return true
+}
+
+// ------------------------------ pause -----------------------------------------
+
+func pause() bool {
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+		return true
+	}
+	return false
 }

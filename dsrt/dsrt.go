@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -133,9 +134,10 @@ REVISION HISTORY
  3 Jul 23 -- Added environment var h to mean halfFlag.
  4 Jul 23 -- Improved ProcessEnvironString.
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
+ 2 May 24 -- Added timer to compare to fdsrt.
 */
 
-const LastAltered = "18 Feb 2024"
+const LastAltered = "2 May 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -428,6 +430,8 @@ func main() {
 			*nscreens, numLines, flag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}
 
+	t0 := time.Now()
+
 	fileInfos = getFileInfosFromCommandLine()
 	if verboseFlag {
 		fmt.Printf(" After call to getFileInfosFromCommandLine.  flag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", flag.NArg(), len(fileInfos), numOfLines)
@@ -435,6 +439,8 @@ func main() {
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn) // must be sorted here for sortfcn to work correctly, because the slice name it uses must be correct.  Better if that name is not global.
 	}
+
+	elapsed := time.Since(t0)
 
 	displayFileInfos(fileInfos)
 
@@ -446,7 +452,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Print(" File Size total = ", s)
+	fmt.Printf(" Elapsed time = %s, File Size total = %s", elapsed, s)
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
