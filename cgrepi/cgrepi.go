@@ -59,6 +59,7 @@ REVISION HISTORY
 	         And I removed my own min(), as Go 1.22 has that as a generic built-in.
 18 Apr 24 -- Added workerPoolMultiplier flag option.
 21 Apr 24 -- Took out the first 2 lines, that were probably coded by the late Michael T Jones.  Looks like these would be the defaults, anyway.
+ 3 May 24 -- I misunderstood how wait groups work.  They're at the go routine level, not individual files.  I'm going to change that now.
 */
 
 package main
@@ -81,7 +82,7 @@ import (
 	"time"
 )
 
-const LastAltered = "21 Apr 2024"
+const LastAltered = "3 May 2024"
 const maxSecondsToTimeout = 300
 
 const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
@@ -199,10 +200,12 @@ func main() {
 	}
 
 	minGoRtns := min(len(files), workers)
+	wg.Add(minGoRtns)
 	// start the worker pool
 	grepChan = make(chan grepType, workers) // buffered channel
 	for w := 0; w < minGoRtns; w++ {
 		go func() {
+			defer wg.Done()
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
 				grepFile(g.regex, g.filename)
 			}
@@ -223,7 +226,7 @@ func main() {
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, len(files)) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, len(files))             // this uses an anonymous type.
-	go func() {                                                // start the receiving operation before the sending starts
+	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
@@ -232,7 +235,7 @@ func main() {
 	}()
 
 	for _, file := range files {
-		wg.Add(1)
+		//wg.Add(1)
 		grepChan <- grepType{regex: lineRegex, filename: file}
 	}
 	close(grepChan) // must close the channel so the worker go routines know to stop.  Doing this after all work is sent into the channel.
@@ -274,7 +277,7 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	file, err := os.Open(fpath)
 	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.
-		wg.Done()
+		//wg.Done()  this has been changed to not increment and decrement for individual files on May 3, 2024.
 		file.Close()
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches)
