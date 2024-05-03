@@ -76,9 +76,10 @@ import (
    8 Aug 23 -- tknptr.NewToken -> tknptr.New
   10 Apr 24 -- Now that I learned that I/O bound work can benefit from many more goroutines than CPU bound work, and this here is I/O bound work, I'll increase the workers.
                  But I have to remember that linux only has 1024 file handles; this number cannot be exceeded.
+   3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
 */
 
-const LastCompiled = "10 Apr 2024"
+const LastCompiled = "3 May 2024"
 
 const (
 	undetermined = iota
@@ -113,7 +114,7 @@ var preCounter, postCounter int64 // atomic add requires int64, not int.  I migh
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 	targetFile, err := os.Open(hashIn.fName)
-	defer wg1.Done() // this has to be here to make sure that wg1.Done() is called, even if there's an error.
+	//defer wg1.Done() // this has to be here to make sure that wg1.Done() is called, even if there's an error.  The logic here changed 3 May 24.
 	if err != nil {
 		result := resultMatchType{
 			fname: hashIn.fName,
@@ -211,8 +212,10 @@ func main() {
 	//hashChan = make(chan hashType, 1)          // this may be slightly faster.
 	hashChan = make(chan hashType)             // Bill Kennedy says in the worker pool pattern, making this synchronous is recommended.  And it seems to be the fastest of all I tested today.
 	resultChan = make(chan resultMatchType, 1) // This is slightly faster than when the buffer is numOfWorkers
+	wg1.Add(numOfWorkers * multiplier)
 	for range numOfWorkers * multiplier {
 		go func() {
+			defer wg1.Done()
 			for h := range hashChan {
 				matchOrNoMatch(h)
 			}
@@ -220,13 +223,15 @@ func main() {
 	}
 
 	// Start the results go routine.  There is only 1 of these.
+	wg2.Add(1)
 	go func() {
+		defer wg2.Done()
 		onWin := runtime.GOOS == "windows"
 		for result := range resultChan {
 			if result.err != nil {
 				ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", result.err)
 				atomic.AddInt64(&postCounter, 1)
-				wg2.Done()
+				//wg2.Done()
 				continue // Using return was bad here; it's working using continue.
 			}
 			if result.match {
@@ -235,7 +240,7 @@ func main() {
 				ctfmt.Printf(ct.Red, onWin, " %s did not match using %s hash\n", result.fname, hashName[result.hashNum])
 			}
 			postCounter++ // I can't see why this needs to be atomic, as there's only 1 of these goroutines.
-			wg2.Done()
+			//wg2.Done()
 		}
 	}()
 
@@ -346,8 +351,8 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
-		wg1.Add(1)
-		wg2.Add(1)
+		//wg1.Add(1)
+		//wg2.Add(1)
 		preCounter++
 		hashChan <- h // one sender (here), many receivers which are the workers in the pool.
 	}
@@ -356,23 +361,23 @@ func main() {
 	close(hashChan)
 	//                                                               ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
 
-	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
-	//                                                               fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
-	wg2.Wait() // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg2.Done().
-	//                                                               fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
+	wg1.Wait() // wg1.Done() used to be called in matchOrNoMatch.  Now it is called when the goroutine shuts down.
+	fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
 	close(resultChan) // all work is done, so I can close the resultChan.
+	wg2.Wait()        // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg2.Done().
+	fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
 
 	ctfmt.Printf(ct.Yellow, onWin, "\n Elapsed time for everything was %s.\n\n\n", time.Since(t0))
 } // Main for sha.go.
 
 // ------------------------------------------------------- min ---------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+//func min(a, b int) int {  Not needed starting in Go 1.21.  I'm using Go 1.22 now.
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
 
 // ----------------------------------------------------- readLine ------------------------------------------------------
 // Needed as a bytes reader does not have a readString method.

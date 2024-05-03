@@ -89,9 +89,10 @@ import (
    8 Aug 23 -- Since I changed tknptr and removed NewToken, I had make the change here, so NewToken becomes New.  This is more idiomatic for Go, anyway.
   10 Apr 24 -- I/O bound work benefits from having more goroutines than NumCPU()
                  But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+   3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
 */
 
-const LastCompiled = "10 Apr 2024"
+const LastCompiled = "3 May 2024"
 
 const (
 	undetermined = iota
@@ -120,7 +121,7 @@ var onWin bool
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 	TargetFile, err := os.Open(hashIn.fName)
-	defer wg1.Done()
+	//defer wg1.Done()
 	defer atomic.AddInt64(&postCounter, 1)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -200,8 +201,10 @@ func main() {
 	onWin = runtime.GOOS == "windows"
 
 	//for w := 0; w < numOfWorkers; w++ {  old syntax
+	wg1.Add(numOfWorkers)
 	for range numOfWorkers { // new syntax, as of Go 1.22
 		go func() {
+			defer wg1.Done()
 			for h := range hashChan {
 				matchOrNoMatch(h)
 			}
@@ -318,7 +321,7 @@ func main() {
 			hashValIn: HashValueReadFromFile,
 		}
 		//                                          fmt.Printf(" Just before sending h down the hashChan.  h= %+v\n", h)
-		wg1.Add(1)
+		//wg1.Add(1)
 		preCounter++
 		hashChan <- h
 	}
@@ -336,13 +339,13 @@ func main() {
 } // Main for sha.go.
 
 // ------------------------------------------------------- min ---------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+//func min(a, b int) int {  Not needed in Go 1.21+.  I'm not using Go 1.22
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
 
 // ----------------------------------------------------- readLine ------------------------------------------------------
 // Needed as a bytes reader does not have a readString method.

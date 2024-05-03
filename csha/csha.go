@@ -89,10 +89,11 @@ import (
                  I tried removing the hashSlice, but the code ran slightly slower on Win11 desktop.  ~35 ms without the slice, vs ~33 ms w/ the slice.  Go figure.
                  I used git to restore the prev code.
   10 Apr 24 -- I/O bound work, as in here, benefits from more workers than NumCPU()
-                 But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+                 But I have to remember that linux only has 1024 file handles; this number cannot be exceeded.
+   3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
 */
 
-const LastCompiled = "10 Apr 2024"
+const LastCompiled = "3 May 2024"
 
 const (
 	undetermined = iota
@@ -121,7 +122,7 @@ var onWin bool
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
 	TargetFile, err := os.Open(hashIn.fName)
-	defer wg1.Done()
+	//defer wg1.Done()
 	defer atomic.AddInt64(&postCounter, 1)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -303,7 +304,7 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
-		wg1.Add(1)
+		//wg1.Add(1)
 		preCounter++
 		hashSlice = append(hashSlice, h)
 	}
@@ -316,9 +317,11 @@ func main() {
 	// Have constructed the hashSlice.  Now need to send the work to the worker rtn's using the hashChan.
 
 	num := min(numOfWorkers, len(hashSlice))
+	wg1.Add(num)
 	hashChan = make(chan hashType, num)
 	for w := 0; w < num; w++ {
 		go func() {
+			defer wg1.Done()
 			for h := range hashChan {
 				matchOrNoMatch(h)
 			}
@@ -339,7 +342,7 @@ func main() {
 			runningGoRoutines, preCounter, postCounter) // counter = 25 is correct.
 	}
 
-	wg1.Wait() // wg1.Done() is called in matchOrNoMatch.
+	wg1.Wait() // wg1.Done() used to be called in matchOrNoMatch, now it's deferred in the worker goroutines.
 
 	if verboseFlag {
 		ctfmt.Printf(ct.Cyan, true, "\n After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
@@ -350,11 +353,11 @@ func main() {
 } // Main for sha.go.
 
 // ------------------------------------------------------- min ---------------------------------
-// When I set Go to be version 1.21+, I won't need this function.
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+// Go is set to be version 1.21+, so I don't need this function.
+//func min(a, b int) int {
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
