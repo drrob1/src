@@ -137,7 +137,7 @@ REVISION HISTORY
  2 May 24 -- Added timer to compare to fdsrt.
 */
 
-const LastAltered = "2 May 2024"
+const LastAltered = "3 May 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -424,7 +424,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" *** Here I am ***")
+		fmt.Println(" *** Here I am in main() on or about line 427 ***")
 		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
 		fmt.Printf(" nscreens=%d, numLines=%d, flag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
 			*nscreens, numLines, flag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
@@ -452,7 +452,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Printf(" Elapsed time = %s, File Size total = %s", elapsed, s)
+	fmt.Printf(" Elapsed time = %s, File Size total = %s, len(fileinfos)=%d", elapsed, s, len(fileInfos))
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")

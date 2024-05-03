@@ -147,9 +147,10 @@ REVISION HISTORY
              When run in jpg1 w/ 23000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
              When run on thelio and logged into the /mnt/misc dir w/ 23000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
              So this is more complicated after all.
+ 3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where they belong.  Now the timing may be slightly faster than dsrt, here on Win11
 */
 
-const LastAltered = "2 May 2024"
+const LastAltered = "3 May 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -469,7 +470,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Printf(" Elapsed time = %s, File Size total = %s", elapsed, s)
+	fmt.Printf(" Elapsed time = %s, File Size total = %s, len(fileInfos)=%d", elapsed, s, len(fileInfos))
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
@@ -634,7 +635,7 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
 	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
 	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
-	fiSlice := make([]os.FileInfo, 0, fetch*multiplier)
+	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
 	wg.Add(numWorkers)
 	for range numWorkers { // reading from deChan to get the slices of DirEntry's
 		go func() {
@@ -646,7 +647,9 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
 						continue
 					}
-					fiChan <- fi
+					if includeThis(fi) {
+						fiChan <- fi
+					}
 				}
 			}
 		}()
@@ -654,9 +657,7 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 
 	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
 		for fi := range fiChan {
-			if includeThis(fi) {
-				fiSlice = append(fiSlice, fi)
-			}
+			fiSlice = append(fiSlice, fi)
 			if fi.Mode().IsRegular() && showGrandTotal {
 				grandTotal += fi.Size()
 				grandTotalCount++
