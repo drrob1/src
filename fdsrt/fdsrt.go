@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -147,7 +148,9 @@ REVISION HISTORY
              When run in jpg1 w/ 23000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
              When run on thelio and logged into the /mnt/misc dir w/ 23000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
              So this is more complicated after all.
- 3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where they belong.  Now the timing may be slightly faster than dsrt, here on Win11
+ 3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where it belongs.  Now the timing may be slightly faster than dsrt, here on Win11
+             I'm going to continue development after all.  On windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
+             And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
 */
 
 const LastAltered = "3 May 2024"
@@ -349,6 +352,11 @@ func main() {
 			dsrtParam.numScreens, NLines, autoHeight, defaultHeight, numOfLines)
 	}
 	noExtensionFlag = *extensionflag || *extflag
+
+	if globFlag {
+		fmt.Printf(" Glob flag has been removed from fdsrt.  This flag is now ignored.\n")
+		globFlag = false
+	}
 
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
@@ -706,6 +714,89 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 	return fiSlice
 } // myReadDir
 
+func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
+	// Adding concurrency in returning []os.FileInfo
+	// This routine add a call to filepath.Match
+
+	var wg sync.WaitGroup
+
+	if verboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+	for range numWorkers { // reading from deChan to get the slices of DirEntry's
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThisWithMatch(fi, matchPat) {
+						fiChan <- fi
+					}
+				}
+			}
+		}()
+	}
+
+	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+		for fi := range fiChan {
+			fiSlice = append(fiSlice, fi)
+			if fi.Mode().IsRegular() && showGrandTotal {
+				grandTotal += fi.Size()
+				grandTotalCount++
+			}
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So return the slice.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
+		deChan <- deSlice
+	}
+
+	wg.Wait()     // for the deChan
+	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if verboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
+	}
+
+	if fastFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
+		if pause() {
+			os.Exit(1)
+		}
+	}
+
+	return fiSlice
+} // myReadDir
+
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
 	var s1 string
@@ -776,6 +867,34 @@ func includeThis(fi os.FileInfo) bool {
 		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
 		}
+	}
+	return true
+}
+
+func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
+	if veryVerboseFlag {
+		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, match pattern=%s \n", noExtensionFlag, excludeFlag, filterAmt, matchPat)
+	}
+	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+		return false
+	} else if filterAmt > 0 {
+		if fi.Size() < int64(filterAmt) {
+			return false
+		}
+	}
+	if excludeFlag {
+		if excludeRegex.MatchString(strings.ToLower(fi.Name())) {
+			return false
+		}
+	}
+	matchPat = strings.ToLower(matchPat)
+	f := strings.ToLower(fi.Name())
+	match, err := filepath.Match(matchPat, f)
+	if err != nil {
+		return false
+	}
+	if !match {
+		return false
 	}
 	return true
 }
