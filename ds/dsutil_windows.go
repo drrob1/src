@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -50,97 +49,100 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fmt.Printf(" In getFileInfosFromCommandLine.  After any processing, pattern = %s\n", pattern)
 		}
 
-		dirName, fileName := filepath.Split(pattern)
-		fileNamePatternLowered := strings.ToLower(fileName)
+		dirName, fileNamePat := filepath.Split(pattern)
+		//fileNamePatternLowered := strings.ToLower(fileNamePat)
 
 		if verboseFlag {
-			fmt.Printf(" In getFileInfosFromCommandLine.  After any filepath.Split(%s), dirName = %q, fileName = %q\n", pattern, dirName, fileName)
+			fmt.Printf(" In getFileInfosFromCommandLine.  After any filepath.Split(%s), dirName = %q, fileName Pattern = %q\n", pattern, dirName, fileNamePat)
 		}
 
-		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
+		if dirName != "" && fileNamePat == "" { // then have a dir pattern without a filename pattern
 			fileInfos = myReadDir(dirName)
 			return fileInfos
 		}
 		if dirName == "" {
 			dirName = "."
 		}
-		if fileName == "" { // need this to not be blank because of the call to Match below.
-			fileName = "*"
+		if fileNamePat == "" { // need this to not be blank because of the call to Match below.
+			fileNamePat = "*"
 		}
 
 		if verboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+			fmt.Printf(" dirName=%s, fileName Pattern=%s \n", dirName, fileNamePat)
 		}
 
-		var filenames []string
-		if globFlag {
-			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
-			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
-			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
-			filenames, err = filepath.Glob(pattern)
-			if err != nil {
-				ctfmt.Printf(ct.Red, false, "ERROR from filepath.Glob(%s) is %s\n", pattern, err)
-				os.Exit(1)
-			}
-			if verboseFlag {
-				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
-			}
+		//var filenames []string
+		//if globFlag {
+		//	// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
+		//	// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
+		//	// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
+		//	filenames, err = filepath.Glob(pattern)
+		//	if err != nil {
+		//		ctfmt.Printf(ct.Red, false, "ERROR from filepath.Glob(%s) is %s\n", pattern, err)
+		//		os.Exit(1)
+		//	}
+		//	if verboseFlag {
+		//		fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+		//	}
+		//
+		//} else
+		//{
+		//	d, err := os.Open(dirName)
+		//	if err != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from Windows getFileInfosFromCommandLine os.Open is %v\n", err)
+		//		os.Exit(1)
+		//	}
+		//	defer d.Close()
+		//	if verboseFlag {
+		//		fmt.Printf(" In getFileInfosFromCommandLine after os.Open(%s), which succeeded\n", dirName)
+		//	}
+		//	filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
+		//	if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+		//		fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+		//		fileInfos = myReadDir(dirName)
+		//		return fileInfos // I think the errant return fileInfos needed to be here all along.
+		//	}
+		//	if verboseFlag {
+		//		fmt.Printf(" In getFileInfosFromCommandLine after %s.Readdirnames: len(filenames) = %d\n", dirName, len(filenames))
+		//	}
+		//	//return fileInfos  could this have been the bug all along?  Commenting this out fixed it???  Yep, that was it.  Oh shit!
+		//}
 
-		} else {
-			d, err := os.Open(dirName)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Windows getFileInfosFromCommandLine os.Open is %v\n", err)
-				os.Exit(1)
-			}
-			defer d.Close()
-			if verboseFlag {
-				fmt.Printf(" In getFileInfosFromCommandLine after os.Open(%s), which succeeded\n", dirName)
-			}
-			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
-			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfos = myReadDir(dirName)
-				return fileInfos // I think the errant return fileInfos needed to be here all along.
-			}
-			if verboseFlag {
-				fmt.Printf(" In getFileInfosFromCommandLine after %s.Readdirnames: len(filenames) = %d\n", dirName, len(filenames))
-			}
-			//return fileInfos  could this have been the bug all along?  Commenting this out fixed it???  Yep, that was it.  Oh shit!
-		}
+		//fileInfos = make([]os.FileInfo, 0, len(filenames))
+		//const sepStr = string(os.PathSeparator)
+		//for _, f := range filenames { // basically I do this here because of a pattern to be matched.
+		//	var path string
+		//	if strings.Contains(f, sepStr) {
+		//		path = f
+		//	} else {
+		//		path = dirName + sepStr + f
+		//	}
+		//
+		//	fi, err := os.Lstat(path)
+		//	if err != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
+		//		continue
+		//	}
+		//
+		//	match, err := filepath.Match(fileNamePatternLowered, strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
+		//	if err != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, err)
+		//		continue
+		//	}
+		//	if veryVerboseFlag {
+		//		fmt.Printf(" in getFileInfosFromCommandLine after filepath.Match(%s, %s) = %t\n", fileNamePatternLowered, f, match)
+		//	}
+		//
+		//	if includeThis(fi) && match { // has to match size criteria and not match an exclude pattern.
+		//		fileInfos = append(fileInfos, fi)
+		//	}
+		//	if fi.Mode().IsRegular() && showGrandTotal {
+		//		grandTotal += fi.Size()
+		//		grandTotalCount++
+		//	}
+		//} // for f ranges over filenames
 
-		fileInfos = make([]os.FileInfo, 0, len(filenames))
-		const sepStr = string(os.PathSeparator)
-		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
-			var path string
-			if strings.Contains(f, sepStr) {
-				path = f
-			} else {
-				path = dirName + sepStr + f
-			}
-
-			fi, err := os.Lstat(path)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
-				continue
-			}
-
-			match, err := filepath.Match(fileNamePatternLowered, strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, err)
-				continue
-			}
-			if veryVerboseFlag {
-				fmt.Printf(" in getFileInfosFromCommandLine after filepath.Match(%s, %s) = %t\n", fileNamePatternLowered, f, match)
-			}
-
-			if includeThis(fi) && match { // has to match size criteria and not match an exclude pattern.
-				fileInfos = append(fileInfos, fi)
-			}
-			if fi.Mode().IsRegular() && showGrandTotal {
-				grandTotal += fi.Size()
-				grandTotalCount++
-			}
-		} // for f ranges over filenames
+		fileInfos = myReadDirWithMatch(dirName, fileNamePat)
 	} // if flag.NArgs()
 
 	return fileInfos

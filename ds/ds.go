@@ -1,20 +1,25 @@
-// ds.go -- directory sort output in a single column
+// ds.go -- directory sort output in columns using a shortened output and truncation.
 
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 	"unicode"
 )
 
@@ -105,7 +110,7 @@ Revision History
  1 Feb 22 -- Added veryVerboseFlag, intended for only when I really need it.  And fixed environ var by making it dsrt instead of what it was, ds.
                And optimized includeThis.
  3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
- 5 Feb 22 -- Now to add the numOfCols stuff that works in rex.go.  So this will also allow multi column displays, too.
+ 5 Feb 22 -- Now to add the numOfCols stuff that works in rex.go.  So this will also allow multi-column displays, too.
 10 Feb 22 -- Fixing bug of when an error is returned to MyReadDir.
 14 Feb 22 -- Fix bug of not treating an absolute path one that begins w/ the filepath.Separator character.  Actual fix is in _linux.go file.
 15 Feb 22 -- Replaced testFlag w/ verboseFlag
@@ -127,9 +132,11 @@ Revision History
                Then I improved ProcessEnvironString, as long as I was here.
 18 Feb 24 -- Made it clear that this sorts by mod date.  And now *nscreens * numOfCols is the multiplier for num of lines.  Should have been this way all along.
 22 Feb 24 -- Undid change about *nscreens.  Increasing the number of columns does not need a larger number of lines.  Oops.
+ 4 May 24 -- I was able to add concurrency to speed up dsrt by writing fast dsrt (fdsrt).  I'll add that code here too.
+              I'm removing -g, glob switch.  I never used it, and it overly complicates the code.  It remains in dsrt, but not in fdsrt or here.
 */
 
-const LastAltered = "18 Feb 2024"
+const LastAltered = "4 May 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -156,9 +163,12 @@ const minWidth = 90
 const maxWidth = 300
 const min2Width = 160
 const min3Width = 170
+const multiplier = 10 // used for the worker pool pattern in MyReadDir
+const fetch = 1000    // used for the concurrency pattern in MyReadDir
+var numWorkers = runtime.NumCPU() * multiplier
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
+var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag, fastFlag bool
 var filterAmt, numOfLines, grandTotalCount int
 
 var sizeTotal, grandTotal int64
@@ -180,7 +190,7 @@ func main() {
 	var userPtr *user.User // from os/user
 	var fileInfos []os.FileInfo
 	var err error
-	var SizeTotal, GrandTotal int64
+	var GrandTotal int64
 	var excludeRegexPattern string
 	var numOfCols int
 
@@ -286,6 +296,8 @@ func main() {
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
 
+	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
@@ -338,6 +350,11 @@ func main() {
 	}
 
 	noExtensionFlag = *extensionflag || *extflag
+
+	if globFlag {
+		fmt.Printf(" Glob flag has been removed.  This flag is now ignored here; it remains only in dsrt.\n")
+		globFlag = false
+	}
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -488,9 +505,13 @@ func main() {
 		fmt.Println(" FilterFlag =", filterFlag, ", filterStr =", filterStr, ", filterAmt =", filterAmt, ", globFlag =", globFlag)
 	}
 
+	t0 := time.Now()
+
 	fileInfos = getFileInfosFromCommandLine() // this rtn is in dsutil_windows.go and dsutil_linux.go.  So go vet gets this wrong.
+
+	elapsed := time.Since(t0)
 	if verboseFlag {
-		fmt.Printf(" in main, after getFileInfosFromCommandLine(): Length(fileInfos) = %d\n", len(fileInfos))
+		fmt.Printf(" in main, after getFileInfosFromCommandLine(): Length(fileInfos) = %d, elapsed = %s\n", len(fileInfos), elapsed)
 	}
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn)
@@ -524,15 +545,15 @@ func main() {
 	}
 	fmt.Println()
 
-	s := fmt.Sprintf("%d", SizeTotal)
-	if SizeTotal > 100000 {
+	s := fmt.Sprintf("%d", sizeTotal)
+	if sizeTotal > 100000 {
 		s = AddCommas(s)
 	}
 	s0 := fmt.Sprintf("%d", GrandTotal)
 	if GrandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Print(" File Size total = ", s)
+	fmt.Printf(" Elapsed = %s, len(fileInfos) = %d, File Size total = %s", elapsed, len(fileInfos), s)
 	if ShowGrandTotal {
 		s1, color := getMagnitudeString(GrandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
@@ -685,28 +706,195 @@ func ProcessDirectoryAliases(cmdline string) string {
 
 // ------------------------------- myReadDir -----------------------------------
 
-func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
+//func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Old one, not concurrent code.
+//	dirEntries, err := os.ReadDir(dir)
+//	if err != nil {
+//		return nil
+//	}
+//
+//	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
+//	for _, d := range dirEntries {
+//		fi, e := d.Info()
+//		if e != nil {
+//			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
+//			continue
+//		}
+//		if includeThis(fi) {
+//			fileInfos = append(fileInfos, fi)
+//		}
+//		if fi.Mode().IsRegular() && showGrandTotal {
+//			grandTotal += fi.Size()
+//			grandTotalCount++
+//		}
+//	}
+//	return fileInfos
+//} // myReadDir
+
+// ------------------------------- myReadDir -----------------------------------
+
+func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  With concurrent code.
+	// Adding concurrency in returning []os.FileInfo
+
+	var wg sync.WaitGroup
+
+	if verboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+	for range numWorkers { // reading from deChan to get the slices of DirEntry's
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThis(fi) {
+						fiChan <- fi
+					}
+				}
+			}
+		}()
 	}
 
-	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
-	for _, d := range dirEntries {
-		fi, e := d.Info()
-		if e != nil {
-			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
+	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+		for fi := range fiChan {
+			fiSlice = append(fiSlice, fi)
+			if fi.Mode().IsRegular() && showGrandTotal {
+				grandTotal += fi.Size()
+				grandTotalCount++
+			}
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So return the slice.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
 			continue
 		}
-		if includeThis(fi) {
-			fileInfos = append(fileInfos, fi)
-		}
-		if fi.Mode().IsRegular() && showGrandTotal {
-			grandTotal += fi.Size()
-			grandTotalCount++
+		deChan <- deSlice
+	}
+
+	wg.Wait()     // for the deChan
+	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if verboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
+	}
+
+	if fastFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
+		if pause() {
+			os.Exit(1)
 		}
 	}
-	return fileInfos
+
+	return fiSlice
+} // myReadDir
+
+func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
+	// Adding concurrency in returning []os.FileInfo
+	// This routine add a call to filepath.Match
+
+	var wg sync.WaitGroup
+
+	if verboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+	for range numWorkers { // reading from deChan to get the slices of DirEntry's
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThisWithMatch(fi, matchPat) {
+						fiChan <- fi
+					}
+				}
+			}
+		}()
+	}
+
+	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+		for fi := range fiChan {
+			fiSlice = append(fiSlice, fi)
+			if fi.Mode().IsRegular() && showGrandTotal {
+				grandTotal += fi.Size()
+				grandTotalCount++
+			}
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
+		deChan <- deSlice
+	}
+
+	wg.Wait()     // for the closing of the deChan to stop all worker goroutines.
+	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if verboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
+	}
+
+	if fastFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
+		if pause() {
+			os.Exit(1)
+		}
+	}
+
+	return fiSlice
 } // myReadDir
 
 // ----------------------------- getMagnitudeString -------------------------------
@@ -780,4 +968,45 @@ func includeThis(fi os.FileInfo) bool {
 		}
 	}
 	return true
+}
+
+func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
+	if veryVerboseFlag {
+		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, match pattern=%s \n", noExtensionFlag, excludeFlag, filterAmt, matchPat)
+	}
+	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+		return false
+	} else if filterAmt > 0 {
+		if fi.Size() < int64(filterAmt) {
+			return false
+		}
+	}
+	if excludeFlag {
+		if excludeRegex.MatchString(strings.ToLower(fi.Name())) {
+			return false
+		}
+	}
+	matchPat = strings.ToLower(matchPat)
+	f := strings.ToLower(fi.Name())
+	match, err := filepath.Match(matchPat, f)
+	if err != nil {
+		return false
+	}
+	if !match {
+		return false
+	}
+	return true
+}
+
+// ------------------------------ pause -----------------------------------------
+
+func pause() bool {
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+		return true
+	}
+	return false
 }
