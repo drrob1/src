@@ -4,11 +4,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -18,6 +20,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
+
 	//"time"
 	"unicode"
 )
@@ -69,13 +74,14 @@ Revision History
  3 Jul 19 -- Removing a confusing comment, and removed need for a flag variable for issymlink
  4 Jul 19 -- Removed the pattern check code on linux.  And this revealed a bug on linux if only 1 file is globbed on command line.  Now fixed.
  5 Jul 19 -- Optimized order of printing file types.  I hope.
-18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a work around.
+18 Jul 19 -- When there is an error from ioutil.ReadDir, I cannot change its behavior of not reading any more.  Just do dsrt * in bash as a workaround.
 19 Jul 19 -- Wrote MyReadDir
 22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
  9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
 22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
  4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
                So as long as I want the exact same code for both platforms, I do need platform specific code.
+------------------------------------------------------------------------------------------------------------------------------------------------------
  5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.  And doesn't have -x flag to exclude.
  6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
  8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
@@ -122,15 +128,16 @@ Revision History
                I removed the -t ShowGrandTotal flag as I removed the code that calculated it quite a while ago.
 28 Aug 23 -- Added the all flag, currently equivalent to indicating 50 screens.  Mostly copied the code from dsrt.go.
 20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
+ 4 May 24 -- Adding concurrent code from fdsrt.
 */
 
-const LastAltered = "Feb 20, 2024"
+const LastAltered = "May 4, 2024"
 
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numscreens, w                                                  int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, halfFlag bool
+	numscreens, w                                                             int
+	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalFlag, halfFlag bool
 }
 
 type colorizedStr struct {
@@ -144,15 +151,18 @@ const minWidth = 90
 const min2Width = 160
 const min3Width = 170
 
-//const dateSize = 30  // space the filesize and date occupy.
+const multiplier = 10 // used for the worker pool pattern in MyReadDir
+const fetch = 1000    // used for the concurrency pattern in MyReadDir
+var numWorkers = runtime.NumCPU() * multiplier
 
 var excludeRegex *regexp.Regexp
 
-// var dirListFlag, longFileSizeListFlag, filenameList /*showGrandTotal,*/, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
-var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
-var maxDimFlag bool
-var sizeTotal int64
-var numOfLines int
+var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
+
+// var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
+var maxDimFlag, fastFlag bool
+var sizeTotal, grandTotal int64
+var numOfLines, grandTotalCount int
 var smartCase bool
 
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
@@ -260,7 +270,7 @@ func main() {
 	var FilenameListFlag bool
 	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
 
-	//var TotalFlag = flag.Bool("t", false, "include grand total of directory")  Removed 8/27/23
+	var TotalFlag = flag.Bool("t", false, "include grand total of directory") // Removed 8/27/23, added back 5/4/24
 
 	flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")
 	flag.BoolVar(&verboseFlag, "v", false, "enter a verbose (testing) mode to println more variables")
@@ -288,6 +298,8 @@ func main() {
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 
 	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
+
+	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
 	flag.Parse()
 
@@ -404,7 +416,7 @@ func main() {
 	filenameList = !(FilenameListFlag || dsrtParam.filenamelistflag)                                     // need to reverse the flag because D means suppress the output of filenames.
 	longFileSizeListFlag = *longflag
 
-	//ShowGrandTotal := *TotalFlag || dsrtParam.totalflag                                             // added 09/12/2018 12:32:23 PM, and removed 8/27/23.
+	showGrandTotal = *TotalFlag || dsrtParam.totalFlag // added 09/12/2018 12:32:23 PM, and removed 8/27/23.
 
 	inputRegExStr := ""
 	workingDir, er := os.Getwd()
@@ -545,7 +557,10 @@ func main() {
 	// The entire contents of the directory is read in and then only matching files after the excluded ones are removed, are returned as the slice of file infos.
 	// Then the slice of fileinfo's is sorted, and finally the file infos are colorized and displayed in columns
 
+	t0 := time.Now()
 	fileInfos = getFileInfos(workingDir, inputRegEx)
+	elapsed := time.Since(t0)
+
 	sort.Slice(fileInfos, sortfcn)
 	totalMatches := len(fileInfos) // this is before the fileInfos is truncated to only what's to be output.
 	cs := getColorizedStrings(fileInfos, numOfCols)
@@ -579,8 +594,11 @@ func main() {
 		s = AddCommas(s)
 	}
 
-	fmt.Printf(" Total Matches = %d, displayed file Size total = %s.", totalMatches, s)
+	fmt.Printf(" Total Matches = %d, displayed file Size total = %s, took %s.", totalMatches, s, elapsed)
 	fmt.Println()
+	if showGrandTotal {
+		fmt.Printf(" Grand total of %d files is %d\n", grandTotalCount, grandTotal)
+	}
 } // end main rex
 
 //-------------------------------------------------------------------- InsertByteSlice --------------------------------
@@ -648,6 +666,8 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 			dsrtparam.dirlistflag = true
 		} else if s == 'D' {
 			dsrtparam.filenamelistflag = true
+		} else if s == 't' { // added 09/12/2018 12:26:01 PM
+			dsrtparam.totalFlag = true // for the grand total operation
 		} else if s == 'h' {
 			dsrtparam.halfFlag = true
 		} else if unicode.IsDigit(rune(s)) {
@@ -819,7 +839,7 @@ func fixedStringLen(s string, size int) string {
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
 
-	fileInfos := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
+	fileInfos := myReadDirWithMatch(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
 	if verboseFlag {
 		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
 	}
@@ -832,43 +852,132 @@ func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
 
 // ------------------------------- myReadDir -----------------------------------
 // The entire change including use of []DirEntry happens here.  Call to FileInfo only happens if file is to be included in the slice of fileInfos.
-func myReadDir(dir string, inputRegex *regexp.Regexp) []os.FileInfo {
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
+//func myReadDir(dir string, inputRegex *regexp.Regexp) []os.FileInfo {
+//	dirEntries, err := os.ReadDir(dir)
+//	if err != nil {
+//		return nil
+//	}
+//
+//	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
+//	for _, d := range dirEntries {
+//		if !smartCase && !inputRegex.MatchString(strings.ToLower(d.Name())) { // skip dirEntries that do not match the input regex.
+//			continue
+//		} else if smartCase && !inputRegex.MatchString(d.Name()) {
+//			continue
+//		} else if includeThis(d.Name()) {
+//			fi, e := d.Info()
+//			if e != nil {
+//				fmt.Fprintf(os.Stderr, " In myReadDir: error from %s.Info() is %v\n", d.Name(), e)
+//			}
+//			fileInfos = append(fileInfos, fi)
+//		}
+//	}
+//	return fileInfos
+//} // myReadDir
+
+func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
+	// Adding concurrency in returning []os.FileInfo
+	// This routine add a call to filepath.Match
+
+	var wg sync.WaitGroup
+
+	if verboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+	for range numWorkers { // reading from deChan to get the slices of DirEntry's
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThisWithRegex(fi, regex) {
+						fiChan <- fi
+					}
+				}
+			}
+		}()
 	}
 
-	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
-	for _, d := range dirEntries {
-		if !smartCase && !inputRegex.MatchString(strings.ToLower(d.Name())) { // skip dirEntries that do not match the input regex.
-			continue
-		} else if smartCase && !inputRegex.MatchString(d.Name()) {
-			continue
-		} else if includeThis(d.Name()) {
-			fi, e := d.Info()
-			if e != nil {
-				fmt.Fprintf(os.Stderr, " In myReadDir: error from %s.Info() is %v\n", d.Name(), e)
+	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+		for fi := range fiChan {
+			fiSlice = append(fiSlice, fi)
+			if fi.Mode().IsRegular() && showGrandTotal {
+				grandTotal += fi.Size()
+				grandTotalCount++
 			}
-			fileInfos = append(fileInfos, fi)
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
+		deChan <- deSlice
+	}
+
+	wg.Wait()     // for the closing of the deChan to stop all worker goroutines.
+	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if verboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
+	}
+
+	if fastFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
+		if pause() {
+			os.Exit(1)
 		}
 	}
-	return fileInfos
+
+	return fiSlice
 } // myReadDir
 
 // --------------------------------------------- includeThis ----------------------------------------------------------
 
-func includeThis(fn string) bool { // I removed the filter against file size, so the input param can now be a string.
+func includeThisWithRegex(fi os.FileInfo, regex *regexp.Regexp) bool { // I removed the filter against file size, so the input param can now be a string.
 	if veryVerboseFlag {
 		//fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t \n", noExtensionFlag, excludeFlag)
 	}
-	if noExtensionFlag && strings.ContainsRune(fn, '.') {
+	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
 		return false
 	}
 	if excludeFlag {
-		if BOOL := excludeRegex.MatchString(strings.ToLower(fn)); BOOL {
+		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
 		}
+	}
+
+	if !smartCase && !regex.MatchString(strings.ToLower(fi.Name())) {
+		return false
+	} else if smartCase && !regex.MatchString(fi.Name()) {
+		return false
 	}
 	return true
 }
@@ -915,4 +1024,17 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr { // co
 		}
 	}
 	return cs
+}
+
+// ------------------------------ pause -----------------------------------------
+
+func pause() bool {
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+		return true
+	}
+	return false
 }

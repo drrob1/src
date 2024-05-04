@@ -81,7 +81,7 @@ Revision History
 25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
 18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
  7 Nov 20 -- Learned that the idiomatic way to test absence of environment variables is LookupEnv.  From the Go Standard Lib Cookbook.
-20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
+20 Dec 20 -- For date sorting, I changed away from using NanoSeconds, and I'm now using the time.Before(time) and time.After(time) functions.
                  I hope these are faster.  I haven't used the sort interface in a long time.  It's still in file dated Dec-20-2020 as a demo.
                  I removed the demo code from here.
 10 Jan 21 -- Adjusting alignment of decimal points
@@ -97,6 +97,7 @@ Revision History
 16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
+------------------------------------------------------------------------------------------------------------------------------------------------------
  9 Jul 21 -- Now called ds, and I'll use limited lengths of the file name strings.  Uses environemnt variables ds and dsw, if present.
 11 Jul 21 -- Decided to not show the mode bits.
 23 Jul 21 -- The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
@@ -895,7 +896,7 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 	}
 
 	return fiSlice
-} // myReadDir
+} // myReadDirWithMatch
 
 // ----------------------------- getMagnitudeString -------------------------------
 
