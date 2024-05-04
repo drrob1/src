@@ -767,7 +767,7 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 	for {
 		// reading DirEntry's and sending the slices into the channel needs to happen here.
 		deSlice, err := d.ReadDir(fetch)
-		if errors.Is(err, io.EOF) { // finished.  So return the slice.
+		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
 			close(deChan)
 			break
 		}
@@ -778,7 +778,7 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 		deChan <- deSlice
 	}
 
-	wg.Wait()     // for the deChan
+	wg.Wait()     // for the closing of the deChan to stop all worker goroutines.
 	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
 
 	<-doneChan // block until channel is freed

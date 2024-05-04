@@ -77,6 +77,7 @@ import (
   10 Apr 24 -- Now that I learned that I/O bound work can benefit from many more goroutines than CPU bound work, and this here is I/O bound work, I'll increase the workers.
                  But I have to remember that linux only has 1024 file handles; this number cannot be exceeded.
    3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
+                 Here I use 2 wait groups.  In fdsrt, I use a wait group and a done channel.
 */
 
 const LastCompiled = "3 May 2024"
@@ -364,7 +365,7 @@ func main() {
 	wg1.Wait() // wg1.Done() used to be called in matchOrNoMatch.  Now it is called when the goroutine shuts down.
 	fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)
 	close(resultChan) // all work is done, so I can close the resultChan.
-	wg2.Wait()        // wg2.Done() is called in the goroutine that receives the results, after processing results so 2 branches in that goroutine call wg2.Done().
+	wg2.Wait()        // wg2.Done() is called in the goroutine that receives the results
 	fmt.Printf(" After wg2.Wait.  PostCounter = %d.\n", postCounter)
 
 	ctfmt.Printf(ct.Yellow, onWin, "\n Elapsed time for everything was %s.\n\n\n", time.Since(t0))
