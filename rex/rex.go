@@ -877,7 +877,6 @@ func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
 
 func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
 	// Adding concurrency in returning []os.FileInfo
-	// This routine add a call to filepath.Match
 
 	var wg sync.WaitGroup
 
@@ -894,12 +893,12 @@ func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The
 			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
-					fi, err := de.Info()
-					if err != nil {
-						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
-						continue
-					}
-					if includeThisWithRegex(fi, regex) {
+					if includeThisWithRegex(de.Name(), regex) { // this optimization only calls Stat for those DirEntry's that we're keeping.
+						fi, err := de.Info()
+						if err != nil {
+							fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+							continue
+						}
 						fiChan <- fi
 					}
 				}
@@ -960,23 +959,24 @@ func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The
 
 // --------------------------------------------- includeThis ----------------------------------------------------------
 
-func includeThisWithRegex(fi os.FileInfo, regex *regexp.Regexp) bool { // I removed the filter against file size, so the input param can now be a string.
+func includeThisWithRegex(fn string, regex *regexp.Regexp) bool { // I removed the filter against file size, so the input param can now be a string.
 	if veryVerboseFlag {
 		//fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t \n", noExtensionFlag, excludeFlag)
 	}
-	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+	if noExtensionFlag && strings.ContainsRune(fn, '.') {
 		return false
 	}
+	fnl := strings.ToLower(fn)
 	if excludeFlag {
-		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
+		if excludeRegex.MatchString(fnl) {
 			return false
 		}
 	}
 
-	if !smartCase && !regex.MatchString(strings.ToLower(fi.Name())) {
+	if !smartCase && !regex.MatchString(fnl) {
 		return false
-	} else if smartCase && !regex.MatchString(fi.Name()) {
+	} else if smartCase && !regex.MatchString(fn) {
 		return false
 	}
 	return true
