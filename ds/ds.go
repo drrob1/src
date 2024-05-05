@@ -705,7 +705,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 	return completeValue
 } // ProcessDirectoryAliases
 
-// ------------------------------- myReadDir -----------------------------------
+// ------------------------------- myReadDir (not concurrent one) -----------------------------------
 
 //func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Old one, not concurrent code.
 //	dirEntries, err := os.ReadDir(dir)
@@ -731,7 +731,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 //	return fileInfos
 //} // myReadDir
 
-// ------------------------------- myReadDir -----------------------------------
+// ------------------------------- myReadDir concurrent code is here -----------------------------------
 
 func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  With concurrent code.
 	// Adding concurrency in returning []os.FileInfo

@@ -71,6 +71,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fmt.Printf(" dirName=%s, fileName Pattern=%s \n", dirName, fileNamePat)
 		}
 
+		// globFlag code, now commented out
 		//var filenames []string
 		//if globFlag {
 		//	// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
@@ -108,6 +109,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		//	//return fileInfos  could this have been the bug all along?  Commenting this out fixed it???  Yep, that was it.  Oh shit!
 		//}
 
+		// old way to get the fileInfos slice.
 		//fileInfos = make([]os.FileInfo, 0, len(filenames))
 		//const sepStr = string(os.PathSeparator)
 		//for _, f := range filenames { // basically I do this here because of a pattern to be matched.
