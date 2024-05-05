@@ -153,7 +153,7 @@ REVISION HISTORY
              And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
 */
 
-const LastAltered = "3 May 2024"
+const LastAltered = "5 May 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -209,7 +209,7 @@ func main() {
 	dsrtEnviron := os.Getenv("dsrt")
 	dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
 	winflag := runtime.GOOS == "windows"          // this is needed because I use it in the color statements, so the colors are bolded only on windows.
-	ctfmt.Printf(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s",
+	ctfmt.Printf(ct.Magenta, winflag, "fdsrt will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s",
 		LastAltered, runtime.Version())
 	if dsrtEnviron == "" {
 		ctfmt.Printf(ct.Magenta, winflag, "\n")
