@@ -138,6 +138,7 @@ REVISION HISTORY
  3 Jul 23 -- Added environment var h to mean halfFlag.
  4 Jul 23 -- Improved ProcessEnvironString.
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
+------------------------------------------------------------------------------------------------------------------------------------------------------
  1 May 24 -- Now called fdsrt, for fast directory sort.  I'm going to see if I can use a worker pool here for collecting the []FileInfos to be returned.  I'm playing on Windows now.
              First I have to create the sending and receiving go routines, and then I write the code to send the data into the first channel.  This occurs all within MyReadDir, for now.
              That's done.  Now I have to check the other routines.
