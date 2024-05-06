@@ -52,6 +52,7 @@
   25 Feb 23 -- Optimizing walkDir as I did in since.go.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
   10 Apr 24 -- I/O bound jobs benefit from having more workers than what NumCPU() says.
                  But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
+   6 May 24 -- Wait groups are for the goroutines themselves, not the items processed by the goroutines.  I'm making that change now.
 */
 package main
 
@@ -73,14 +74,14 @@ import (
 	"time"
 )
 
-const lastAltered = "10 Apr 2024"
+const lastAltered = "6 May 2024"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
 // Now it will be a multiplier of number of logical CPUs.
-// const workerPoolMultiplier = 20
+
 const multiplier = 10 // default value for the worker pool multiplier
 var workerPoolMultiplier int
 
@@ -121,11 +122,7 @@ var wg sync.WaitGroup
 var verboseFlag, veryverboseFlag bool
 
 func main() {
-	//if workerPoolSize < 1 {
-	//	workerPoolSize = 1
-	//}
-	//runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores.  Turns out to be the default, so I'll remove this call.
-	log.SetFlags(0)
+
 	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
@@ -167,22 +164,6 @@ func main() {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
-	/*  Made obsolete by realization of meaning of null bytes.  Commented out Oct 2, 2022.
-	extensions := make([]string, 0, 100)
-	if flag.NArg() < 2 {
-		//extensions = append(extensions, ".txt")
-		extensions = append(extensions, "*")
-	} else if runtime.GOOS == "linux" {
-		files := args[1:]
-		extensions = extractExtensions(files)
-	} else { // on windows
-		extensions = args[1:]
-		for i := range extensions {
-			extensions[i] = strings.ToLower(strings.ReplaceAll(extensions[i], "*", ""))
-		}
-	}
-	*/
-
 	startDirectory, errr := os.Getwd() // startDirectory is a string
 	if errr != nil {
 		fmt.Printf(" Error from os.Getwd() is %s\n", errr)
@@ -210,10 +191,6 @@ func main() {
 	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
-	//execDir, _ := os.Getwd()
-	//execName, _ := os.Executable()
-	//ExecFI, _ := os.Stat(execName)
-	//LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 	if verboseFlag {
 		execDir, _ := os.Getwd()
 		execName, _ := os.Executable()
@@ -222,16 +199,11 @@ func main() {
 		fmt.Printf(" Current working Directory is %s; %s timestamp is %s.\n\n", execDir, execName, LastLinkedTimeStamp)
 	}
 
-	//DirAlreadyWalked := make(map[string]bool, 500)  // now only for directories to be skipped.
-	//DirAlreadyWalked[".git"] = true // ignore .git and its subdir's
-	// dirToSkip := make(map[string]bool, 5)  This didn't get triggered in a directory I know has a .git.  I'm removing the overhead.
-	//dirToSkip[".git"] = true
-
-	//done := make(chan bool)                                 // unbuffered, so the read is a blocking read.
 	matchChan = make(chan matchType, sliceSize)               // this is a buffered channel.
 	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
-	go func() {                                               // start the receiving operation before the sending starts
+	doneChan := make(chan bool)
+	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
@@ -239,13 +211,15 @@ func main() {
 		}
 		sort.Stable(sliceOfAllMatches)
 		sort.Strings(sliceOfStrings) // the sort operation is now done here in the go routine, instead of the main function body.
-		// done <- true   nevermind
+		close(doneChan)
 	}()
 
 	// start the worker pool
+	wg.Add(workerPoolSize)
 	grepChan = make(chan grepType, workerPoolSize) // buffered channel
 	for range workerPoolSize {                     // don't need w:=0;w<workerPoolSize;w++ anymore.
 		go func() {
+			defer wg.Done()
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
 				grepFile(g.regex, g.filename)
 			}
@@ -257,72 +231,7 @@ func main() {
 	t0 := time.Now()
 	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
 
-	// walkfunc closures.  Only the last one is being used now.
-	/*
-		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf(" Error from walk is %v. \n ", err)
-				return nil
-			}
-
-			if fi.IsDir() {
-				//	if DirAlreadyWalked[fpath] { return filepath.SkipDir
-				//	} else {  I don't think I have to track the directories visited myself.  So I'm taking this out.
-				//		DirAlreadyWalked[fpath] = true
-				//	}
-
-				if dirToSkip[fpath] {
-					return filepath.SkipDir
-				}
-				//} else if isSymlink(fi.Mode()) && fi.IsDir() {  // also not needed, because the docs say that walk does not follow symlinks.
-				//	return filepath.SkipDir
-			} else if fi.Mode().IsRegular() {
-				for _, ext := range extensions {
-					fpathlower := strings.ToLower(fpath)
-					fpathext := filepath.Ext(fpathlower)
-					//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-					if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-						grepFile(lineRegex, fpath, resultsChan)
-					}
-				}
-			}
-
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-			}
-			return nil
-		}
-	*/
-	/*
-		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf(" Error from walk is %v. \n ", err)
-				return nil
-			}
-
-			if dirToSkip[fpath] {
-				return filepath.SkipDir
-			}
-
-			for _, ext := range extensions {
-				fpathlower := strings.ToLower(fpath)
-				fpathext := filepath.Ext(fpathlower)
-				//if strings.HasSuffix(fpathlower, ext) { // only search thru indicated extensions.  Especially not thru binary or swap files.
-				if strings.HasPrefix(fpathext, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-					grepFile(lineRegex, fpath, resultsChan)
-				}
-			}
-
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-			}
-			return nil
-		}
-
-		err = filepath.Walk(startDirectory, filepathwalkfunction)
-	*/
+	// walkfunc closure.
 
 	walkDirFunction := func(fPath string, d os.DirEntry, err error) error { // this doesn't follow symlinks
 		if err != nil {
@@ -348,23 +257,6 @@ func main() {
 			return nil
 		}
 
-		// only search thru indicated extensions, especially not thru binary or swap files.  Made obsolete by recognition of role of null bytes in files.
-		/*  commented out 10/2/22.
-		for _, ext := range extensions {
-			fpathLower := strings.ToLower(fpath)
-			fpathExt := filepath.Ext(fpathLower)
-
-			if strings.HasPrefix(fpathExt, ext) { // added Dec 7, 2021.  So .doc will match .docx, etc.
-				wg.Add(1)
-				grepChan <- grepType{ // send this to a worker go routine.
-					regex:    lineRegex,
-					filename: fpath,
-				}
-			}
-		}
-		*/
-
-		wg.Add(1)
 		grepChan <- grepType{ // send this to a worker go routine.
 			regex:    lineRegex,
 			filename: fPath,
@@ -382,35 +274,25 @@ func main() {
 		log.Fatalln(" Error from filepath.walk is", err, ".  Elapsed time is", time.Since(t0))
 	}
 
-	close(grepChan) // must close the channel so the worker go routines know to stop.  When get here, all work is sent to the workers.
-
 	goRtns := runtime.NumGoroutine() // must capture this before we sleep for a second.
-	wg.Wait()                        // all grep routines are finished when this is allowed to continue.
-	//<-done           // This waits for the done signal on this blocking channel call.  Interestingly, this channel is not closed.  Nevermind
+	close(grepChan)                  // must close the channel so the worker go routines know to stop.  When get here, all work is sent to the workers.
+
+	wg.Wait()        // all grep routines are finished when this is allowed to continue.
 	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
+	<-doneChan
 
 	elapsed := time.Since(t0)
 
 	gotWin := runtime.GOOS == "windows"
-	ctfmt.Printf(ct.Yellow, gotWin, " Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
-	fmt.Println()
 
-	// Time to sort and show
-	// sort.Strings(sliceOfStrings)  This is now done in the go routine and not here in the main function body.
-	sortStringElapsed := time.Since(t0)
-	//sort.Sort(sliceOfAllMatches)
-	//sort.Stable(sliceOfAllMatches)
-	sortMatchedElapsed := time.Since(t0)
-	//fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n", sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
+	// Time to show
 
 	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
 		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents) // remember that lineContents includes a \n at the end of each string.
 	}
 
-	ctfmt.Printf(ct.Green, gotWin, "\n There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
-	outputElapsed := time.Since(t0)
-	ctfmt.Printf(ct.Cyan, gotWin, "\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown), and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
-		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
+	ctfmt.Printf(ct.Yellow, gotWin, " Elapsed time is %s and there are %d go routines that found %d matches in %d files\n", elapsed, goRtns, totMatchesFound, totFilesScanned)
+	fmt.Println()
 } // end main
 
 func grepFile(lineRegex *regexp.Regexp, fpath string) {
@@ -421,7 +303,6 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 		file.Close()
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches)
-		wg.Done()
 	}()
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
