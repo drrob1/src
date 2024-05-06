@@ -21,8 +21,6 @@ import (
 	"unicode"
 )
 
-const LastAltered = "27 Oct 2022"
-
 /*
 Revision History
 ----------------
@@ -97,6 +95,7 @@ Revision History
 16 Mar 21 -- Tweaked a file not found message on linux.  And changed from ToUpper -> ToLower on Windows.
 17 Mar 21 -- Added exclude string flag to allow entering the exclude regex pattern on command line; convenient for recalling the command.
 22 May 21 -- Adding filter option, to filter out smaller files from the display.  And v flag for verbose, which uses also uses testFlag.
+------------------------------------------------------------------------------------------------------------------------------------------------------
  9 Jul 21 -- Now called ds, and I'll use limited lengths of the file name strings.  Uses environemnt variables ds and dsw, if present.
 11 Jul 21 -- Decided to not show the mode bits.
 23 Jul 21 -- The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
@@ -105,8 +104,16 @@ Revision History
                Now that I know autoheight, I'll have n be a multiplier for the number of screens to display, each autolines - 5 in size.  N will remain as is.
 28 Jul 21 -- Backporting the changes from ds2 and ds3, ie, autoheight, autowidth, and putting the output as strings in a slice struct.
 22 Oct 21 -- Changed the code that uses bytes.NewBuffer()
-26 Jan 22 -- Now called glob.go, and will use the filepath.Glob function on Windows.  And removed use of ioutil, which is depracated as of Go 1.16.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+26 Jan 22 -- Now called glob.go, and will use the filepath.Glob function on Windows.  And removed use of ioutil, which is deprecated as of Go 1.16.
+ 6 May 24 -- This calls filepath.Glob() early in the code and calls os.Lstat on these names.  Then it filters out names based on filesize, exclude pattern, etc,
+               and this is determined by ShowThis.  Those that survive this get displayed.
+               On linux, it is the std dsrt code of Jan 2022.
+             I cleaned up some comments and a minimal amount of code.
+
 */
+
+const LastAltered = "6 May 2024"
 
 type FISlice []os.FileInfo
 type dirAliasMapType map[string]string
@@ -147,7 +154,7 @@ func main() {
 
 	linuxflag := runtime.GOOS == "linux"
 	winflag := runtime.GOOS == "windows"
-	ctfmt.Print(ct.Magenta, winflag, "ds -- Directory SoRTed w/ filename truncation.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
+	ctfmt.Print(ct.Magenta, winflag, "glob -- Directory SoRTed w/ columns and filename truncation.  LastAltered ", LastAltered, ", compiled using ", runtime.Version(), ".")
 	fmt.Println()
 
 	autoDefaults := term.IsTerminal(int(os.Stdout.Fd())) // This now works on Windows, too
@@ -828,7 +835,7 @@ func ProcessEnvironString() DsrtParamType { // use system utils when can because
 	return dsrtparam
 } // end ProcessEnvironString
 
-//------------------------------ GetDirectoryAliases ----------------------------------------
+// ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 
 	s, ok := os.LookupEnv("diraliases")
