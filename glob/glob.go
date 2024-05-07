@@ -112,10 +112,11 @@ Revision History
                and this is determined by ShowThis.  Those that survive this get displayed.
                On linux, it is the std dsrt code of Jan 2022.
              I cleaned up some comments and a minimal amount of code.
-
+ 7 May 24 -- It doesn't sort the output.  I'm finding out why so I can fix it.  Found it.  A branch didn't call the sort function.  It does now, and the comments show that.
+               And I reversed "x" and "exclude" so it behaves as the others do.  I reversed that 2 years ago in the other routines.
 */
 
-const LastAltered = "6 May 2024"
+const LastAltered = "7 May 2024"
 
 type FISlice []os.FileInfo
 type dirAliasMapType map[string]string
@@ -285,8 +286,8 @@ func main() {
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
-	var excludeFlag = flag.Bool("x", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "exclude", "", "regex to be excluded from output.") // var, not a ptr.
+	var excludeFlag = flag.Bool("exclude", false, "exclude regex entered after prompt")
+	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var filterAmt int
 	var filterStr string
@@ -377,16 +378,16 @@ func main() {
 	}
 
 	// set which sort function will be in the sortfcn var
-	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
+	sortFcn := func(i, j int) bool { return false } // became available as of Go 1.8
 	if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
-		sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
+		sortFcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
 			return files[i].Size() > files[j].Size() // I want a largest first sort
 		}
 		if testFlag {
 			fmt.Println("sortfcn = largest size.")
 		}
 	} else if DateSort && Forward {
-		sortfcn = func(i, j int) bool { // this is a closure anonymous function
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
 			return files[i].ModTime().After(files[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
 		}
@@ -394,14 +395,14 @@ func main() {
 			fmt.Println("sortfcn = newest date.")
 		}
 	} else if SizeSort && Reverse {
-		sortfcn = func(i, j int) bool { // this is a closure anonymous function
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			return files[i].Size() < files[j].Size() // I want an smallest-first sort
 		}
 		if testFlag {
 			fmt.Println("sortfcn = smallest size.")
 		}
 	} else if DateSort && Reverse {
-		sortfcn = func(i, j int) bool { // this is a closure anonymous function
+		sortFcn = func(i, j int) bool { // this is a closure anonymous function
 			//return files[i].ModTime().UnixNano() < files[j].ModTime().UnixNano() // I want an oldest-first sort
 			return files[i].ModTime().Before(files[j].ModTime()) // I want an oldest-first sort
 		}
@@ -465,7 +466,7 @@ func main() {
 					GrandTotalCount++
 				}
 			}
-			sort.Slice(files, sortfcn)
+			sort.Slice(files, sortFcn)
 			havefiles = true
 		}
 
@@ -507,6 +508,7 @@ func main() {
 			files = append(files, fi)
 		}
 		havefiles = true
+		sort.Slice(files, sortFcn) // this branch didn't sort before 5/7/24
 
 		if testFlag {
 			fmt.Printf(" Len of files = %d; files slice = %v\n", len(files), files)
@@ -546,7 +548,7 @@ func main() {
 				}
 			}
 		}
-		sort.Slice(files, sortfcn)
+		sort.Slice(files, sortFcn)
 	}
 
 	if testFlag {

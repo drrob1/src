@@ -462,11 +462,6 @@ func main() {
 	}
 
 	if verboseFlag {
-		//execname, _ := os.Executable()
-		//ExecFI, _ := os.Stat(execname)
-		//ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		//fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execname)
-		//fmt.Println()
 		if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
 			fmt.Printf(" uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s.\n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
