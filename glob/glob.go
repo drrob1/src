@@ -106,7 +106,9 @@ Revision History
 22 Oct 21 -- Changed the code that uses bytes.NewBuffer()
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 26 Jan 22 -- Now called glob.go, and will use the filepath.Glob function on Windows.  And removed use of ioutil, which is deprecated as of Go 1.16.
- 6 May 24 -- This calls filepath.Glob() early in the code and calls os.Lstat on these names.  Then it filters out names based on filesize, exclude pattern, etc,
+27-29 Jan 22 -- dsrt.go underwent a major refactoring to use more platform specific code and to remove the if GOOS blocks here.  I'm not bothering because I use this so rarely.
+                And there were 2 yrs worth of enhancements that are not reflected in the code here.  So it goes.
+ 6 May 24 -- This calls filepath.Glob() early in the code and calls os.Lstat on these names.  Then it filters out names based on filesize, exclude pattern, etc.,
                and this is determined by ShowThis.  Those that survive this get displayed.
                On linux, it is the std dsrt code of Jan 2022.
              I cleaned up some comments and a minimal amount of code.
