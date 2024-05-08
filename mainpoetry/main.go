@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"poetry"
+	"src/poetry"
 	"time"
 	//	"math/rand"
 	//	"shuffler"
@@ -21,7 +21,7 @@ func main() {
 	//	p0 := poetry.NewPoem();
 	p1 := poetry.Poem{{"the quick", "brown fox", "jumps over", "the lazy dog"}} // create poem directly without use of an empty exported function.
 
-	v, c := p1.Stats()
+	v, c, _ := p1.Stats()
 	fmt.Println(" vowels:", v, ", consonants:", c)
 
 	fmt.Println(" stanzas:", p1.GetNumStanzas(), ", lines:", p1.GetNumLines())

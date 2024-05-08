@@ -4,21 +4,19 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
-	"filepicker"
 	"fmt"
-	"getcommandline"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"src/filepicker"
+	"src/getcommandline"
+	"src/tknptr"
+	"src/tokenize"
 	"strconv"
 	"strings"
-	"tknptr"
-	"tokenize"
 	"unicode"
 )
-
-const lastModified = "14 Mar 2018"
 
 /*
   REVISION HISTORY
@@ -73,7 +71,10 @@ const lastModified = "14 Mar 2018"
 			   white space before the date that I want to remove.
   13 Mar 18 -- Now that this works in writing the .csv, I'll also write an .xls file using tab delims.
   14 Mar 18 -- Comment made to be HSBC.
+   8 May 24 -- Fixed import list so it could compile under modules.  And I updated to the current API for my routines.
 */
+
+const lastModified = "8 May 2024"
 
 type Row struct {
 	date, amount, descr, comment string
@@ -94,7 +95,7 @@ func main() {
 
 	fmt.Println(" transhist.go (date,amount,descr,comment) lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetFilenames("*" + csvext)
+		filenames, _ := filepicker.GetFilenames("*" + csvext)
 		for i := 0; i < min(len(filenames), 10); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
@@ -296,12 +297,12 @@ func ReformatToISO8601date(in string) string {
 	out := ystr + "-" + mstr + "-" + dstr
 	return out
 } // end ReformatToISO8601date, formerly ExtractDateFromString
-//-------------------------------------------------------
+// -------------------------------------------------------
 func ReformatToStdDate(in string) string {
 	// need to construct MM/DD/YYYY from YYYY-MM-DD
 	var mstr, dstr, ystr string
 
-	tknP := tknptr.INITKN(in)
+	tknP := tknptr.New(in)
 	token, EOL := tknP.GETTKN() // get YYYY
 	if EOL || token.State != tknptr.DGT {
 		return ""
@@ -342,7 +343,7 @@ func ReformatToStdDate(in string) string {
 	out := mstr + "/" + dstr + "/" + ystr
 	return out
 } // end ReformatToStdDate
-//-------------------------------------------------------
+// -------------------------------------------------------
 func ExtractAmtFromString(in string) string {
 	// Need to make ($###.##) format to -###.##.  If already -###.##, leave alone.
 
@@ -374,14 +375,14 @@ func ExtractAmtFromString(in string) string {
 	return out
 } // end ExtractAmtFromString
 
-//-------------------------------------------------------
+// -------------------------------------------------------
 func check(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-//-------------------------------------------------------
+// -------------------------------------------------------
 func Pause() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print(" Pausing.  Hit <enter> to continue  ")
@@ -389,7 +390,7 @@ func Pause() {
 	_ = scanner.Text()
 }
 
-//------------------------------------------------------------
+// ------------------------------------------------------------
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -398,12 +399,12 @@ func min(a, b int) int {
 	}
 }
 
-//-------------------------------------------------------------------- InsertByteSlice
+// -------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
 
-//---------------------------------------------------------------------- AddCommas
+// ---------------------------------------------------------------------- AddCommas
 func AddCommas(instr string) string {
 	var Comma []byte = []byte{','}
 
@@ -419,20 +420,20 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
-//---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
 func IsISO8601(instr string) bool {
 	// Look for either a - or a / in the string.  That's it!
 	isISOdate := strings.Contains(instr, "-")
 	return isISOdate
 }
 
-//---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
 func IsNotDate(instr string) bool {
 	NotAdate := !strings.ContainsAny(instr, "-/")
 	return NotAdate
 }
 
-//---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
 func Stop() bool {
 	var ans string
 	_, _ = fmt.Scanln(&ans)

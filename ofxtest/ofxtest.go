@@ -4,19 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"getcommandline"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"src/getcommandline"
+	"src/timlibg"
 	"strconv"
 	"strings"
-	"timlibg"
 )
 
-const lastModified = "10 Jun 17"
-
 /*
-MODULE qfx2xls;
   REVISION HISTORY
   ----------------
   13 Mar 04 -- It does not seem to be always creating the output file.
@@ -50,8 +47,11 @@ MODULE qfx2xls;
 
    7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
                 which means open financial exchange (for/of information).  New name is ofx2cvs.go
-		I think I will first process the file using something like toascii.
+				I think I will first process the file using something like toascii.
+   8 May 24 -- Fixed the import list so it's correct using modules.
 */
+
+const lastModified = "8 May 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -213,7 +213,7 @@ func main() {
 
 } // end main of this package
 
-//---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
 func DateFieldReformat(datein string) (string, int) {
 	//                                                                    01234567    01234567
 	//  This procedure changes the date as it is input in a qfx file from yyyymmdd -> mm/dd/yy.
@@ -240,7 +240,7 @@ func DateFieldReformat(datein string) (string, int) {
 
 } // END DateFieldReformat;
 
-//--------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------
 func GetOfxToken(buf *bytes.Buffer) ofxTokenType {
 	// -------------------------------------------------- GetQfxToken ----------------------------------
 	// Delimiters are angle brackets and EOL.
@@ -418,7 +418,7 @@ func GetTransactionData(buf *bytes.Buffer) citiTransactionType {
 	return transaction
 } // END GetTransactionData
 
-//--------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 func ProcessOFXFile(buf *bytes.Buffer) (citiheadertype, citifootertype) {
 
 	var header citiheadertype

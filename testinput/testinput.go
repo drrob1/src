@@ -7,16 +7,17 @@ package main
   21 Sep 16 -- Now need to test my new GetTknStrPreserveCase routine.  And test the change I made to GETCHR.
   31 Aug 17 -- Now this is testinput.go, to test using fmt.Scan and fmt.Scanln to do unbuffered input
                from Stdin.  fmt.Scanln() didn't do what I want.  It only read 1 word in.
+   8 May 24 -- Fixed import list so it could compile under modules.
 */
 
 import (
 	"bufio"
 	"fmt"
-	"getcommandline"
 	"log"
 	"os"
+	"src/getcommandline"
+	"src/tokenize"
 	"strings"
-	"tokenize"
 )
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
