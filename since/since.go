@@ -39,9 +39,10 @@ import (
    17 Feb 2023 -- Timing info:  Here on Win10 desktop, the Nov 2022 version took 10.8 sec, and the latest version took 2.85 sec when running "since ~", which is 1/4 of orig time.
                                 On work win10 computer, the Nov 22 version took 4.7 sec, and the latest version took 1.4 sec to run "since ~", which is ~30% of orig time.
                                 This is a big drop.  Wow.
+    9 May 2024 -- Removed redundant code.
 */
 
-var LastAlteredDate = "Feb 16, 2023"
+var LastAlteredDate = "May 9, 2024"
 
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -56,8 +57,6 @@ var weeks = flag.Int("w", 0, "weeks duration")
 type devID uint64
 
 func main() {
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
@@ -139,7 +138,6 @@ func main() {
 	}
 	rootDeviceID = getDeviceID(fi)
 
-	//sizeVisitor := func(path string, info os.FileInfo, err error) error {
 	walkDirFunc := func(path string, d os.DirEntry, err error) error {
 		if *verbose {
 			fmt.Printf(" Path = %s, err = %s, isdir = %t, d.name = %s, d.type = %v  \n ", path, err, d.IsDir(), d.Name(), d.Type())
@@ -154,10 +152,6 @@ func main() {
 		}
 
 		atomic.AddInt64(&tFiles, 1)
-		//lock.Lock()
-		//tFiles += 1
-		//tBytes += int(info.Size())
-		//lock.Unlock()
 
 		if d.IsDir() {
 			if filepath.Ext(path) == ".git" || strings.Contains(path, "vmware") || strings.Contains(path, ".cache") { // adding extra skipDir's saved from 13 min -> 9 sec runtime.
@@ -165,11 +159,6 @@ func main() {
 					fmt.Printf(" skipping %s.\n", path)
 				}
 				return filepath.SkipDir
-				//} else if isSymlink(info.Mode()) { // skip all symlinked directories.  I intend this to catch bigbkupG and DSM.  It doesn't follow symlinks, so I'm removing this.
-				//	if *verbose {
-				//		fmt.Printf(" skipping symlink %s\n", path)
-				//	}
-				//	return filepath.SkipDir
 			}
 
 			info, err = d.Info()
@@ -195,10 +184,6 @@ func main() {
 		if info.ModTime().After(when) {
 			atomic.AddInt64(&rFiles, 1)
 			atomic.AddInt64(&rBytes, info.Size())
-			//lock.Lock()
-			//rFiles += 1
-			//rBytes += info.Size()
-			//lock.Unlock()
 
 			if !*quiet {
 				results <- path // allows sorting into "normal" order
@@ -207,17 +192,15 @@ func main() {
 		return nil
 	}
 
-	//err = filepath.Walk(dir, sizeVisitor)
 	err = filepath.WalkDir(dir, walkDirFunc)
 
 	if err != nil {
 		log.Printf(" error from walk.Walk is %v\n", err)
 	}
+	close(results) // no more results
 
 	// wait for traversal results and print
-	close(results) // no more results
-	<-done         // blocking channel receive, to wait for final results and sorting
-	//wg.Wait()
+	<-done // blocking channel receive, to wait for final results and sorting
 	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by nn/s it converts to sec, and is reported that way below.
 	elapsed := time.Since(now)
 
@@ -225,24 +208,13 @@ func main() {
 		fmt.Printf("%s\n", r)
 	}
 
-	fmt.Printf(" since ran for %s\n", elapsed)
+	fmt.Printf(" since ran for %s, finding %d files.\n", elapsed, len(result))
 
 	// print optional verbose summary report
 	if *verbose {
-		//log.Printf("     total: %8d files (%7.2f%%), %13d bytes (%7.2f%%)\n", tFiles, 100.0, tBytes, 100.0)
 		log.Printf("     total: %8d files (%7.2f%%)\n", tFiles, 100.0)
 
 		rfp := 100 * float64(rFiles) / float64(tFiles)
-		//rbp := 100 * float64(rBytes) / float64(tBytes)
-		//log.Printf("    recent: %8d files (%7.2f%%), %13d bytes (%7.2f%%) in %.4f seconds\n", rFiles, rfp, rBytes, rbp, 𝛥t)
 		log.Printf("    recent: %8d files (%7.2f%%), %13d bytes in %s \n", rFiles, rfp, rBytes, elapsed)
 	}
 }
-
-/* Not used as of Feb 16, 2023.
-func isSymlink(fm os.FileMode) bool {
-	intermed := fm & os.ModeSymlink
-	return intermed != 0
-}
-
-*/
