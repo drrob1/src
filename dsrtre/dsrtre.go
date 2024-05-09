@@ -1,26 +1,3 @@
-/*
-dsrtre.go
-  REVISION HISTORY
-  ----------------
-   1 Apr 20 -- dsrt recursive, named dsrtr.go.
-   2 Apr 20 -- Tracking down bug of not finding .pdf files, and probably also not finding .epub or .mobi
-                 Turned out to be case sensitivity in the comparisons.
-  17 Aug 20 -- I'm using this way more than I expected.  And it's slower than I expected.  I'm going to take a stab at
-                 multitasking here.
-  19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
-                 This forked from dsrtr and now called dsrtre as it takes a regular expression.
-                 Changed option to -t instead of -timeout, as I never remembered its name.
-  20 Aug 20 -- Will write errors to os.Stderr.  Changed how default timeout is set.
-  23 Aug 20 -- Make sure a newline is displayed after the error message.
-   5 Sep 20 -- Don't follow symlinked directories
-   4 Feb 22 -- Updated code, removing the concurrency pattern as it's not needed.  And removing the tracking of directories visited.
-  21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
-  12 Nov 22 -- Adding device ID code, and error handling code I developed for since and multack.  And I think I need a sync mechanism like a wait group or done channel.
-  14 Nov 22 -- Added processing for "~".
-  17 Feb 23 -- Based on what I learned by speeding up since.go, I'll port those optimizations here.  These are:
-                    I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
-                    and does an ordinary directory return without checking Modtime().After(when).
-*/
 package main
 
 import (
@@ -36,7 +13,33 @@ import (
 	"time"
 )
 
-const lastAltered = "17 Feb 2023"
+/*
+dsrtre.go
+
+	REVISION HISTORY
+	----------------
+	 1 Apr 20 -- dsrt recursive, named dsrtr.go.
+	 2 Apr 20 -- Tracking down bug of not finding .pdf files, and probably also not finding .epub or .mobi
+	               Turned out to be case sensitivity in the comparisons.
+	17 Aug 20 -- I'm using this way more than I expected.  And it's slower than I expected.  I'm going to take a stab at
+	               multitasking here.
+	19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
+	               This forked from dsrtr and now called dsrtre as it takes a regular expression.
+	               Changed option to -t instead of -timeout, as I never remembered its name.
+	20 Aug 20 -- Will write errors to os.Stderr.  Changed how default timeout is set.
+	23 Aug 20 -- Make sure a newline is displayed after the error message.
+	 5 Sep 20 -- Don't follow symlinked directories
+	 4 Feb 22 -- Updated code, removing the concurrency pattern as it's not needed.  And removing the tracking of directories visited.
+	21 Oct 22 -- Fixed bad format verb use caught by golangci-lint.
+	12 Nov 22 -- Adding device ID code, and error handling code I developed for since and multack.  And I think I need a sync mechanism like a wait group or done channel.
+	14 Nov 22 -- Added processing for "~".
+	17 Feb 23 -- Based on what I learned by speeding up since.go, I'll port those optimizations here.  These are:
+	                  I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
+	                  and does an ordinary directory return without checking Modtime().After(when).
+     9 May 24 -- Removed commented out code.  And added test for ".git".
+*/
+
+const lastAltered = "9 May 2024"
 
 type devID uint64
 
@@ -47,8 +50,6 @@ func main() {
 	var inputRegex *regexp.Regexp
 	var err error
 	var rootDeviceID devID
-
-	// runtime.GOMAXPROCS(runtime.NumCPU()) not needed anymore, this is done by start up code.
 
 	flag.Parse()
 	if *timeoutOpt < 0 || *timeoutOpt > 1800 {
@@ -122,60 +123,15 @@ func main() {
 		done <- true
 	}()
 
-	/*	// walkfunc closure
-		filepathwalkfunction := func(fpath string, fi os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from walk is %v. \n", err)
-				return nil
-			}
-
-			if fi.IsDir() {
-				if DirAlreadyWalked[fpath] {
-					return filepath.SkipDir
-				} else {
-					DirAlreadyWalked[fpath] = true
-				}
-			} else if isSymlink(fi.Mode()) && fi.IsDir() {
-				if runtime.GOOS == "linux" {
-					for _, fp := range args {
-						fp = strings.ToLower(fp)
-						NAME := strings.ToLower(fi.Name())
-						if BOOL := pattern.MatchString(NAME); BOOL {
-							var r ResultType
-							s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-							r.path = fpath
-							r.datestamp = s
-							r.sizeint = int(fi.Size()) // fi.Size() is an int64
-							resultsChan <- r
-						}
-					}
-				} else if runtime.GOOS == "windows" {
-					NAME := strings.ToLower(fi.Name()) // Despite windows not being case sensitive, filepath.Match is case sensitive.  Who new?
-					if BOOL := pattern.MatchString(NAME); BOOL {
-						var r ResultType
-						s := fi.ModTime().Format("Jan-02-2006_15:04:05")
-						r.path = fpath
-						r.datestamp = s
-						r.sizeint = int(fi.Size())
-						resultsChan <- r
-					}
-				}
-				now := time.Now()
-				if now.After(tfinal) {
-					log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
-				}
-			}
-			return nil
-		}
-
-		er := filepath.Walk(startDirectory, filepathwalkfunction)
-	*/
-
 	filepathWalkDirEntry := func(fPath string, d os.DirEntry, err error) error {
 		if err != nil {
 			if *verboseFlag {
 				fmt.Fprintf(os.Stderr, " Error from walk is %v. \n ", err)
 			}
+			return filepath.SkipDir
+		}
+
+		if fPath == ".git" {
 			return filepath.SkipDir
 		}
 
@@ -202,13 +158,6 @@ func main() {
 
 			return nil
 		}
-
-		//if isSymlink(d.Type()) {  the walk functions don't follow symlinks, so this isn't needed.
-		//	if *verboseFlag {
-		//		fmt.Printf(" %s is a symlink, name is %s. \n", fpath, d.Name())
-		//	}
-		//	return nil
-		//}
 
 		// Must be a regular file
 		NAME := strings.ToLower(d.Name()) // Despite windows not being case-sensitive, filepath.Match is case-sensitive.  Who new?
