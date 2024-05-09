@@ -85,11 +85,6 @@ func main() {
 		}
 		when = t
 	default:
-		//d, err := time.ParseDuration(*duration)
-		//if err != nil {
-		//	fmt.Printf("error parsing duration %q, %s\n", *duration, err)
-		//	os.Exit(2)
-		//}
 		*duration = *duration + time.Duration(*weeks)*7*24*time.Hour + time.Duration(*days)*24*time.Hour
 		when = now.Add(-*duration) // subtract duration from now.
 	}
@@ -105,7 +100,7 @@ func main() {
 	}
 
 	// goroutine to collect names of recently-modified files
-	var result []string
+	result := make([]string, 0, 1024)
 	done := make(chan bool)
 	results := make(chan string, 1024)
 	go func() {
