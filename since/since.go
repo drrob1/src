@@ -208,13 +208,21 @@ func main() {
 		fmt.Printf("%s\n", r)
 	}
 
-	fmt.Printf(" since ran for %s, finding %d files.\n", elapsed, len(result))
-
-	// print optional verbose summary report
-	if *verbose {
-		log.Printf("     total: %8d files (%7.2f%%)\n", tFiles, 100.0)
-
-		rfp := 100 * float64(rFiles) / float64(tFiles)
-		log.Printf("    recent: %8d files (%7.2f%%), %13d bytes in %s \n", rFiles, rfp, rBytes, elapsed)
+	sec := *duration / time.Second
+	minute := *duration / time.Minute
+	fmt.Printf(" since ran for %s, finding %d (%d) files since %s or since %d sec == %d min ago", elapsed, len(result), rFiles, when.Format(time.RFC822), sec, minute)
+	hour := *duration / time.Hour
+	if hour == 0 {
+		fmt.Printf(", total files %d\n", tFiles)
+	} else {
+		fmt.Printf(" == %d hours ago, total files %d\n", hour, tFiles)
 	}
+	//
+	//// print optional verbose summary report
+	//if *verbose {
+	//	log.Printf("     total: %8d files (%7.2f%%)\n", tFiles, 100.0)
+	//
+	//	rfp := 100 * float64(rFiles) / float64(tFiles)
+	//	log.Printf("    recent: %8d files (%7.2f%%), %13d bytes in %s \n", rFiles, rfp, rBytes, elapsed)
+	//}
 }
