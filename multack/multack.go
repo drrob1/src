@@ -1,4 +1,24 @@
 // multack.go
+package main
+
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+)
+
 /*
   REVISION HISTORY
   ----------------
@@ -53,28 +73,10 @@
   10 Apr 24 -- I/O bound jobs benefit from having more workers than what NumCPU() says.
                  But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
    6 May 24 -- Wait groups are for the goroutines themselves, not the items processed by the goroutines.  I'm making that change now.
+  10 May 24 -- Made sliceSize 50_000, as this can return ~20K matches when run in src directory.
 */
-package main
 
-import (
-	"bufio"
-	"flag"
-	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"regexp"
-	"runtime"
-	"sort"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
-)
-
-const lastAltered = "6 May 2024"
+const lastAltered = "10 May 2024"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -85,7 +87,7 @@ const null = 0 // null rune to be used for strings.ContainsRune in GrepFile belo
 const multiplier = 10 // default value for the worker pool multiplier
 var workerPoolMultiplier int
 
-const sliceSize = 1000 // a magic number I plucked out of the air.
+const sliceSize = 50_000 // a magic number I plucked out of the air.
 
 type devID uint64
 
