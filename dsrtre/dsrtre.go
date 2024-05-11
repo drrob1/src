@@ -37,9 +37,10 @@ dsrtre.go
 	                  I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
 	                  and does an ordinary directory return without checking Modtime().After(when).
      9 May 24 -- Removed commented out code.  And added test for ".git".
+    10 May 24 -- Made result slice to be size of 1000 instead of 0.
 */
 
-const lastAltered = "9 May 2024"
+const lastAltered = "10 May 2024"
 
 type devID uint64
 
@@ -112,7 +113,7 @@ func main() {
 	rootDeviceID = getDeviceID(rootFileInfo)
 
 	// goroutine to collect names of matching files
-	var result []string
+	result := make([]string, 0, 1000)
 	done := make(chan bool)
 	results := make(chan string, 1024)
 	go func() {
