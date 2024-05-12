@@ -203,7 +203,7 @@ func main() {
 		fmt.Printf("%s\n", r)
 	}
 
-	sec := *duration / time.Second
+	sec := *duration / time.Second // sec is type time.Duration
 	minute := *duration / time.Minute
 	fmt.Printf(" since ran for %s, finding %d (%d) files since %s or since %d sec == %d min ago", elapsed, len(result), rFiles, when.Format(time.RFC822), sec, minute)
 	hour := *duration / time.Hour
@@ -212,6 +212,8 @@ func main() {
 	} else {
 		fmt.Printf(" == %d hours ago, total files %d\n", hour, tFiles)
 	}
+	d, h, m, s := toDHMS(int(sec))
+	fmt.Printf(" Files found since %d days, %d hours, %d minutes, %d seconds\n", d, h, m, s)
 	//
 	//// print optional verbose summary report
 	//if *verbose {
@@ -220,4 +222,14 @@ func main() {
 	//	rfp := 100 * float64(rFiles) / float64(tFiles)
 	//	log.Printf("    recent: %8d files (%7.2f%%), %13d bytes in %s \n", rFiles, rfp, rBytes, elapsed)
 	//}
+}
+
+func toDHMS(sec int) (d, h, m, s int) {
+	d = sec / 86400
+	s = sec % 86400
+	h = s / 3600
+	s = s % 3600
+	m = s / 60
+	s = s % 60
+	return
 }
