@@ -213,7 +213,19 @@ func main() {
 		fmt.Printf(" == %d hours ago, total files %d\n", hour, tFiles)
 	}
 	d, h, m, s := toDHMS(int(sec))
-	fmt.Printf(" Files found since %d days, %d hours, %d minutes, %d seconds\n", d, h, m, s)
+	fmt.Print(" Files found since ")
+	if d > 0 {
+		fmt.Printf("%d days, ", d)
+	}
+	if h > 0 {
+		fmt.Printf("%d hours, ", h)
+	}
+	if m > 0 {
+		fmt.Printf("%d minutes, ", m)
+	}
+	fmt.Printf("%d seconds.\n", s)
+
+	//fmt.Printf(" Files found since %d days, %d hours, %d minutes, %d seconds\n", d, h, m, s)
 	//
 	//// print optional verbose summary report
 	//if *verbose {
