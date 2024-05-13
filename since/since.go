@@ -216,7 +216,7 @@ func main() {
 	if m > 0 {
 		fmt.Printf("%d minutes, ", m)
 	}
-	fmt.Printf("%d seconds.\n", s)
+	fmt.Printf("%d seconds ago.\n", s)
 
 	//fmt.Printf(" Files found since %d days, %d hours, %d minutes, %d seconds\n", d, h, m, s)
 	//
