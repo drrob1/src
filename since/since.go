@@ -40,9 +40,10 @@ import (
                                 On work win10 computer, the Nov 22 version took 4.7 sec, and the latest version took 1.4 sec to run "since ~", which is ~30% of orig time.
                                 This is a big drop.  Wow.
     9 May 2024 -- Removed redundant code.
+   13 May 2024 -- Added toDHMS yesterday, and updated it today
 */
 
-var LastAlteredDate = "May 9, 2024"
+var LastAlteredDate = "May 13, 2024"
 
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -203,17 +204,9 @@ func main() {
 		fmt.Printf("%s\n", r)
 	}
 
-	sec := *duration / time.Second // sec is type time.Duration
-	minute := *duration / time.Minute
-	fmt.Printf(" since ran for %s, finding %d (%d) files since %s or since %d sec == %d min ago", elapsed, len(result), rFiles, when.Format(time.RFC822), sec, minute)
-	hour := *duration / time.Hour
-	if hour == 0 {
-		fmt.Printf(", total files %d\n", tFiles)
-	} else {
-		fmt.Printf(" == %d hours ago, total files %d\n", hour, tFiles)
-	}
-	d, h, m, s := toDHMS(int(sec))
-	fmt.Print(" Files found since ")
+	fmt.Printf(" Since ran for %s, finding %d (%d) files since %s or ", elapsed, len(result), rFiles, when.Format(time.UnixDate))
+	d, h, m, s := toDHMS(*duration)
+	fmt.Print("since ")
 	if d > 0 {
 		fmt.Printf("%d days, ", d)
 	}
@@ -236,7 +229,8 @@ func main() {
 	//}
 }
 
-func toDHMS(sec int) (d, h, m, s int) {
+func toDHMS(t time.Duration) (d, h, m, s int) {
+	sec := int(t / time.Second) // t.Seconds() returns a float; I don't want a float here.
 	d = sec / 86400
 	s = sec % 86400
 	h = s / 3600
