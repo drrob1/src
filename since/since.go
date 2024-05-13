@@ -197,7 +197,7 @@ func main() {
 
 	// wait for traversal results and print
 	<-done // blocking channel receive, to wait for final results and sorting
-	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by nn/s it converts to sec, and is reported that way below.
+	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by ns/s it converts to sec, and is reported that way below.
 	elapsed := time.Since(now)
 
 	for _, r := range result {
