@@ -41,9 +41,10 @@ import (
                                 This is a big drop.  Wow.
     9 May 2024 -- Removed redundant code.
    13 May 2024 -- Added toDHMS yesterday, and updated it today
+   14 May 2024 -- Updated an example for use for -h
 */
 
-var LastAlteredDate = "May 13, 2024"
+var LastAlteredDate = "May 14, 2024"
 
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -69,6 +70,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Valid time units for duration are ns, us, ms, s, m, h. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " since -dur 5m -- show all files changed within last 5 minutes starting at current directory \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " since -dur 5m ~ or $HOME or %%userprofile -- show all files changed within last 5 minutes starting at home directory \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " since -w 1 -d 2 -dur 3h4m5s ~ or $HOME or %%userprofile -- show all files changed within last 5 minutes starting at home directory \n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()

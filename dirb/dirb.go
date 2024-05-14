@@ -31,9 +31,10 @@ const bookmarkfilename = "bookmarkfile.gob"
   10 Dec 2022 -- Will add flag package; for now I'll just define -v flag.  And removed the old code I used to get homeDir using Getenv of either HOME or userprofile.
                    This will make the binary slightly larger, but I think that'll be fine.
   18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
+  14 May 24 -- Need to have both a config dir and home dir.
 */
 
-const LastAltered = "Feb 18, 2023"
+const LastAltered = "May 14, 2024"
 
 func main() {
 	var bookmark map[string]string
@@ -49,15 +50,19 @@ func main() {
 		os.Exit(0)
 	}
 	sep := string(os.PathSeparator)
-	//homeDir, err := os.UserHomeDir()
-	homeDir, err := os.UserConfigDir()
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf(" os.UserHomeDir returned error of: %s.  Exiting...\n", err)
+		os.Exit(1)
+	}
+	configDir, err := os.UserConfigDir()
 	if err != nil {
 		fmt.Printf(" os.UserConfigDir returned error of: %s.  Exiting...\n", err)
-		os.Exit(1)
+		return
 	}
 
 	target := "cdd" + " " + homeDir
-	fullBookmarkFilename := homeDir + sep + bookmarkfilename
+	fullBookmarkFilename := configDir + sep + bookmarkfilename
 
 	if len(os.Args) == 1 { // No destination dir found on cmd line.
 		io.WriteString(os.Stdout, target)
@@ -69,13 +74,15 @@ func main() {
 	if err == nil { // need to read in bookmarkfile
 		bookmarkFile, err := os.Open(fullBookmarkFilename)
 		if err != nil {
-			log.Fatalln(" cannot open", fullBookmarkFilename, " as input bookmark file, because of", err)
+			log.Println(" cannot open", fullBookmarkFilename, " as input bookmark file, because of", err)
+			return
 		}
 		defer bookmarkFile.Close()
 		decoder := gob.NewDecoder(bookmarkFile)
 		err = decoder.Decode(&bookmark)
 		if err != nil {
-			log.Fatalln(" cannot decode", fullBookmarkFilename, ", error is", err, ".  Aborting")
+			log.Println(" cannot decode", fullBookmarkFilename, ", error is", err, ".  Aborting")
+			return
 		}
 		bookmarkFile.Close()
 		/*
@@ -89,6 +96,7 @@ func main() {
 	} else { // need to init bookmarkfile
 		bookmark = make(map[string]string, 15)
 
+		bookmark["config"] = target + configDir
 		bookmark["docs"] = target + "Documents"
 		bookmark["doc"] = target + "Documents"
 		bookmark["inet"] = target + "Downloads"

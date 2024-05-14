@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -36,9 +37,10 @@ REVISION HISTORY
 21 Nov 22 -- I'm here because of static linter.  And there's an issue w/ dirAliasesMap that doesn't need to be a param.
 10 Dec 22 -- I'm adding use of flag package, for now I'll just use -v and -h.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
+14 May 24 -- Have both configDir and HomeDir, which are separate.  I changed to userConfigDir badly last year by blurring these two.
 */
 
-const LastAltered = "Feb 18, 2023"
+const LastAltered = "May 14, 2024"
 
 const bookmarkFilename = "bookmarkfile.gob"
 
@@ -50,6 +52,7 @@ type bkmksliceType struct {
 }
 
 func main() {
+	var err error
 	fmt.Println(" makedirbkmk is a directory bookmark manager written in Go, last altered", LastAltered, "and compiled w/", runtime.Version())
 
 	verboseFlag := flag.Bool("v", false, "verbose message and exit.")
@@ -66,14 +69,19 @@ func main() {
 	}
 
 	sep := string(os.PathSeparator)
-	//HomeDir, err := os.UserHomeDir() // this routine became available in Go 1.12
-	HomeDir, err := os.UserConfigDir() // this routine became available in Go 1.14
+	HomeDir, err = os.UserHomeDir() // this routine became available in Go 1.12
+	if err != nil {
+		fmt.Println(err, "Exiting")
+		os.Exit(1)
+	}
+	configDir, err := os.UserConfigDir() // this routine became available in Go 1.14
 	if err != nil {
 		fmt.Println(err, "Exiting")
 		os.Exit(1)
 	}
 	target := "cdd" + " " + HomeDir + sep
-	fullBookmarkFilename := HomeDir + sep + bookmarkFilename
+	fullBookmarkFilename := filepath.Join(configDir, bookmarkFilename)
+	//fullBookmarkFilename := configDir + sep + bookmarkFilename // old way before I learned a better way
 
 	help := func() {
 		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ". ")
@@ -105,15 +113,17 @@ func main() {
 		decoder := gob.NewDecoder(bookmarkfile)
 		err = decoder.Decode(&bookmark)
 		if err != nil {
-			log.Fatalln(" cannot decode", fullBookmarkFilename, ", error is", err, ".  Aborting")
+			log.Println(" cannot decode", fullBookmarkFilename, ", error is", err, ".  Aborting")
+			return
 		}
 		bookmarkfile.Close()
 		fmt.Println(" Bookmarks read in from", fullBookmarkFilename)
 		fmt.Println()
 
 	} else { // need to init bookmarkfile
-		bookmark = make(map[string]string, 10)
+		bookmark = make(map[string]string, 15)
 
+		bookmark["config"] = target + configDir
 		bookmark["docs"] = target + "Documents"
 		bookmark["doc"] = target + "Documents"
 		bookmark["inet"] = target + "Downloads"
@@ -179,7 +189,8 @@ func main() {
 	// write out bookmarkFile
 	bookmarkFile, er := os.Create(fullBookmarkFilename)
 	if er != nil {
-		log.Fatalln(" could not create bookmarkfile upon exiting, because", er)
+		log.Println(" could not create bookmarkfile upon exiting, because", er)
+		return // better to return, because this allows the deferred functions to run.  os.Exit does not run deferred functions.
 	}
 	defer bookmarkFile.Close()
 
@@ -225,9 +236,8 @@ func dirsave() { // implement s (save) command
 	} else if len(os.Args) == 4 { // have potential directory target on command line
 		target := os.Args[3]
 		if strings.ContainsRune(target, ':') {
-			//directoryAliasesMap := GetDirectoryAliases() not used anyway.
 			target = ProcessDirectoryAliases(target)
-		} //else if strings.Contains(target, "~") {		}  static linter recommended the removal of this conditional.
+		}
 		target = strings.Replace(target, "~", HomeDir, 1)
 		// verify that target is a valid directory or symlink name.
 		_, err := os.Lstat(target)
