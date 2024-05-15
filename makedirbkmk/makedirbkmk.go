@@ -28,6 +28,7 @@ REVISION HISTORY
 			 os.Args = makedirbkmk.exe cmd bkmk-name target-directory
 		   subscript =      0           1      2           3
 			  len    =      1           2      3           4
+		  flag.Arg() =                  0      1           2
 28 Dec 19 -- changed cd to cdd, so it will change drive and directory at same time.
 14 Jan 20 -- my dirsave() also needed to change cd to cdd.  Just done.
 16 Sep 20 -- Added sl cmd, as in dirb, as synynom for p.  And will prompt if trying to overwrite a bookmark.
@@ -38,9 +39,10 @@ REVISION HISTORY
 10 Dec 22 -- I'm adding use of flag package, for now I'll just use -v and -h.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 14 May 24 -- Have both configDir and HomeDir, which are separate.  I changed to userConfigDir badly last year by blurring these two.
+15 May 24 -- Changed all the references to os.Arg[] to flag.Arg() and flag.NArgs.  Not yet fully tested.
 */
 
-const LastAltered = "May 14, 2024"
+const LastAltered = "May 15, 2024"
 
 const bookmarkFilename = "bookmarkfile.gob"
 
@@ -117,7 +119,7 @@ func main() {
 			return
 		}
 		bookmarkfile.Close()
-		fmt.Println(" Bookmarks read in from", fullBookmarkFilename)
+		fmt.Printf(" %d Bookmarks read in from %s\n", len(bookmark), fullBookmarkFilename)
 		fmt.Println()
 
 	} else { // need to init bookmarkfile
@@ -141,23 +143,21 @@ func main() {
 	}
 
 	ch := ""
-	if len(os.Args) < 2 {
+	if flag.NArg() == 0 {
 		fmt.Println(" usage: makedirbkmk [s|a|d|p|h].  Note that there is no dash preceeding the commands, as these are not options.")
 		help()
 		os.Exit(0)
 	} else {
 		ch = strings.ToLower(os.Args[1])
+		ch = strings.TrimPrefix(ch, "-") // recommended by static linter
 		//if strings.HasPrefix(ch, "-") { // removed as recommended by static linter
 		//	ch = ch[1:]
 		//}
-		ch = strings.TrimPrefix(ch, "-") // recommended by static linter
 	}
-	//	fmt.Println(" os.Args is", os.Args)
-	//	fmt.Println()
 
 	switch ch {
 	case "s": // save current directory or entered directory name
-		dirsave()
+		dirSave()
 		fmt.Println()
 		fmt.Println()
 		dirPrint()
@@ -166,24 +166,25 @@ func main() {
 
 	case "a": // about.
 		help()
-		os.Exit(0)
+		return
+		//os.Exit(0)
 
 	case "d": // delete entry given on same line
-		direntrydel()
+		dirEntryDel()
 
 	case "p", "sl": // print out bookmark list
 		dirPrint()
 		fmt.Println()
 		fmt.Println()
-		os.Exit(0)
+		return
 
 	case "h": // help
 		help()
-		os.Exit(0)
+		return
 
 	default:
 		fmt.Println(" command not recognized.", ch, "was entered.")
-		os.Exit(0)
+		return
 	}
 
 	// write out bookmarkFile
@@ -203,38 +204,40 @@ func main() {
 } // end main
 
 // ------------------------------------------ dirsave -----------------------------------------------
-func dirsave() { // implement s (save) command
+func dirSave() { // implement s (save) command
 	//    os.Args = makedirbkmk.exe cmd bkmk-name target-directory
 	//    len    =         1         2      3           4
 	//    subscript =      0         1      2           3
+	//   flag.Arg() =                0      1           2
+	//   flag.NArgs =                1      2           3
 
-	workingdir, err := os.Getwd()
+	workingDir, err := os.Getwd()
 	if err != nil {
 		log.Fatalln(" could not get working directory because", err)
 	}
 
-	if len(os.Args) <= 2 { // only have cmd without a bookmark name to save
+	if flag.NArg() < 2 { // len(os.Args) <= 2 { // only have cmd without a bookmark name to save
 		log.Fatalln(" need bookmark name on command line to use s command.")
-	} else if len(os.Args) == 3 { // no directory target name on command line.  Use current directory
-		bkmkname := os.Args[2]
-		_, ok := bookmark[bkmkname]
+	} else if flag.NArg() == 2 { // no directory target name on command line.  Use current directory
+		bkmkName := flag.Arg(1)
+		_, ok := bookmark[bkmkName]
 		if ok { // ok will be true if name already exists in the map.
-			fmt.Print(" bookmark named ", bkmkname, " already exists.  Overwrite? [y/N] ")
+			fmt.Print(" bookmark named ", bkmkName, " already exists.  Overwrite? [y/N] ")
 			ans := ""
 			fmt.Scanln(&ans)
 			ans = strings.ToLower(ans)
 			if strings.HasPrefix(ans, "y") {
-				bookmark[bkmkname] = "cdd " + workingdir
+				bookmark[bkmkName] = "cdd " + workingDir
 				fmt.Printf(" created bookmark[%s] = %s \n", os.Args[2], bookmark[os.Args[2]])
 			} else {
 				fmt.Println(" save bookmark command ignored.")
 			}
 		} else { // bookmark name is not already in the map.
-			bookmark[bkmkname] = "cdd " + workingdir
-			fmt.Printf(" created bookmark[%s] = %s \n", os.Args[2], bookmark[os.Args[2]])
+			bookmark[bkmkName] = "cdd " + workingDir
+			fmt.Printf(" created bookmark[%s] = %s \n", bkmkName, bookmark[bkmkName])
 		}
-	} else if len(os.Args) == 4 { // have potential directory target on command line
-		target := os.Args[3]
+	} else if flag.NArg() == 3 { // have potential directory target on command line
+		target := flag.Arg(2)
 		if strings.ContainsRune(target, ':') {
 			target = ProcessDirectoryAliases(target)
 		}
@@ -242,50 +245,55 @@ func dirsave() { // implement s (save) command
 		// verify that target is a valid directory or symlink name.
 		_, err := os.Lstat(target)
 		if err == nil {
-			bkmkname := os.Args[2]
-			_, ok := bookmark[bkmkname]
+			bkmkName := target
+			_, ok := bookmark[bkmkName]
 			if ok { // ok will be true if name already exists in the map
-				fmt.Print(" bookmark named ", bkmkname, " already exists.  Overwrite? [y/N] ")
+				fmt.Print(" bookmark named ", bkmkName, " already exists.  Overwrite? [y/N] ")
 				ans := ""
 				fmt.Scanln(&ans)
 				ans = strings.ToLower(ans)
 				if strings.HasPrefix(ans, "y") {
-					bookmark[bkmkname] = "cdd " + target
-					fmt.Printf(" created bookmark[%s] = %s \n", os.Args[2], bookmark[os.Args[2]])
+					bookmark[bkmkName] = "cdd " + target
+					fmt.Printf(" created bookmark[%s] = %s \n", bkmkName, bookmark[bkmkName])
 				} else {
 					fmt.Println(" save bookmark command ignored.")
 				}
 			} else { // bookmark name is not already in the map
-				bookmark[bkmkname] = "cdd " + target
-				fmt.Printf(" created bookmark[%s] = %s \n", os.Args[2], bookmark[os.Args[2]])
+				bookmark[bkmkName] = "cdd " + target
+				fmt.Printf(" created bookmark[%s] = %s \n", bkmkName, bookmark[bkmkName])
 			}
 		} else {
-			log.Fatalln(" Lstat call for", target, "failed with error of", err)
+			log.Println(" Lstat call for", target, "failed with error of", err)
+			os.Exit(1)
 		}
 	}
 
-} // end dirsave
+} // end dirSave
 
-// ------------------------------------------ direntrydel ----------------------------------
-func direntrydel() { // implement d (delete) command.
+// ------------------------------------------ dirEntryDel ----------------------------------
+func dirEntryDel() { // implement d (delete) command.
 	//    os.Args = makedirbkmk.exe cmd bkmk-name target-directory
 	//    len    =         1         2      3           4
 	//    subscript =      0         1      2           3
+	//   flag.Arg() =                0      1           2
+	//   flag.NArgs =                1      2           3
 
-	if len(os.Args) <= 2 {
-		log.Fatalln(" need bookmark name on command line to be deleted.  os.Args is ", os.Args, ", len(os.Args) is", len(os.Args))
+	if flag.NArg() < 2 {
+		log.Fatalln(" need bookmark name on command line to be deleted.  flag.Args is ", flag.Args(), ", len is", flag.NArg())
 	}
 
-	targt, ok := bookmark[os.Args[2]]
+	name := flag.Arg(1)
+	target, ok := bookmark[name]
 	if ok {
-		delete(bookmark, os.Args[2])
+		delete(bookmark, name)
 	} else {
-		log.Println(os.Args[2], " not in bookmark map.")
+		log.Println(name, " not in bookmark map.")
 	}
-	fmt.Printf(" deleted bookmark[%s] which referenced %s", os.Args[2], targt)
-} // end direntrydel
+	fmt.Printf(" deleted bookmark[%s] which referenced %s", name, target)
+} // end dirEntryDel
 
 // --------------------------- MakeSubst -------------------------------------------
+
 func MakeSubst(instr string, r1, r2 rune) string {
 
 	inRune := make([]rune, len(instr))
