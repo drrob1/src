@@ -32,6 +32,7 @@ const bookmarkfilename = "bookmarkfile.gob"
                    This will make the binary slightly larger, but I think that'll be fine.
   18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
   14 May 24 -- Need to have both a config dir and home dir.
+  16 May 24 -- Removing references to os.Args[] and replacing it w/ flag.Arg() and flag.NArg
 */
 
 const LastAltered = "May 14, 2024"
@@ -62,11 +63,12 @@ func main() {
 	}
 
 	target := "cdd" + " " + homeDir
-	fullBookmarkFilename := configDir + sep + bookmarkfilename
+	fullBookmarkFilename := filepath.Join(configDir, bookmarkfilename) // this is more idiomatic for Go
+	//fullBookmarkFilename := configDir + sep + bookmarkfilename
 
-	if len(os.Args) == 1 { // No destination dir found on cmd line.
+	if flag.NArg() == 0 { // No destination dir found on cmd line.
 		io.WriteString(os.Stdout, target)
-		os.Exit(0)
+		return
 	}
 
 	// read or init directory bookmark file
@@ -112,28 +114,30 @@ func main() {
 		//		fmt.Println("Bookmark's initialized.")
 	}
 
-	if strings.ToLower(os.Args[1]) == "help" || os.Args[1] == "about" {
-		fmt.Println(" dirb, a Directory Bookmark program written in Go.  Last altered", LastAltered)
-		fmt.Println()
+	cmd := strings.ToLower(flag.Arg(0))
+	if cmd == "help" || cmd == "about" {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Printf(" %s, a Directory Bookmark Program written in Go, last compiled %s by %s.  Full binary is %s with timestamp of %s.\n",
+			os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
+
 		fmt.Println(" HomeDir is", homeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
-		fmt.Println(" bookmark file is", fullBookmarkFilename)
+		fmt.Printf(" bookmark file is %s, configDir is %s, target is %s, bookmark file has %d entries, which are:\n",
+			fullBookmarkFilename, configDir, target, len(bookmark))
 		fmt.Println()
 		for idx, valu := range bookmark {
 			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
 		}
 		fmt.Println()
-		os.Exit(0)
+		return
 	}
 
 	var ok bool
 
-	target, ok = bookmark[os.Args[1]]
+	target, ok = bookmark[flag.Arg(0)]
 	if !ok {
-		destination := os.Args[1] + sep
-		destination = filepath.Clean(destination)
+		destination := flag.Arg(0)
 		if strings.HasPrefix(destination, "~") {
 			destination = strings.Replace(destination, "~", homeDir, 1)
 		}
