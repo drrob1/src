@@ -49,9 +49,10 @@ REVISION HISTORY
 25 Mar 24 -- Changed last veryVerboseFlag to verboseFlag, as I forgot that I needed very verbose to see the variadic param for the vlc command.
 29 Apr 24 -- I finished writing whichExec, based on code from Mastering Go, 4th ed.  I'm looking at adding it here.  While I'm here, I'm editing some comments and help text.
                Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
+17 May 24 -- On linux, passing "2>/dev/null" to suppress the garbage error messages.
 */
 
-const lastModified = "Apr 30, 2024"
+const lastModified = "May 17, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -262,7 +263,8 @@ func main() {
 		} else { // this isn't needed anymore.  I'll leave it here because it does work, in case I ever need to do this again.
 			execCmd = exec.Command(shellStr, variadicParam...)
 		}
-	} else if runtime.GOOS == "linux" { // I'm ignoring this for now.  I'll come back to it after I get the Windows code working.
+	} else if runtime.GOOS == "linux" {
+		fileNames = append(fileNames, "2>/dev/null")
 		execCmd = exec.Command(vlcStr, fileNames...)
 	}
 

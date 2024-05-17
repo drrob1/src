@@ -78,6 +78,7 @@ REVISION HISTORY
  6 Feb 24 -- Added randRange.
  8 Feb 24 -- Added math/rand/v2, newly introduced w/ Go 1.22
 30 Apr 24 -- Changed to use my own which exec code instead of someone else's code.
+17 May 24 -- On linux, will pass "2>/dev/nul" to suppress garbage error messages
 */
 
 /*
@@ -104,7 +105,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Apr 30, 2024"
+const lastModified = "May 17, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -358,7 +359,9 @@ func main() {
 	if runtime.GOOS == "windows" {
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	} else if runtime.GOOS == "linux" {
-		execCmd = exec.Command(vlcStr, fullOutFilename)
+		variadic := []string{fullOutFilename, "2>/dev/null"}
+		execCmd = exec.Command(vlcStr, variadic...)
+		//execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
 	if veryVerboseFlag {
