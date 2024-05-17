@@ -119,11 +119,11 @@ func main() {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Printf(" %s, a Directory Bookmark Program written in Go, last compiled %s by %s.  Full binary is %s with timestamp of %s.\n",
+		fmt.Printf(" %s, a Directory Bookmark Program written in Go, last compiled %s by %s.\n  Full binary is %s with timestamp of %s.\n",
 			os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
 
-		fmt.Println(" HomeDir is", homeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
-		fmt.Printf(" bookmark file is %s, configDir is %s, target is %s, bookmark file has %d entries, which are:\n",
+		fmt.Printf(" HomeDir is %s, %s timestamp is %s.\n", homeDir, ExecFI.Name(), ExecTimeStamp)
+		fmt.Printf(" Bookmark file is %s, configDir is %s, target is %s,\n bookmark file has %d entries, which are:\n",
 			fullBookmarkFilename, configDir, target, len(bookmark))
 		fmt.Println()
 		for idx, valu := range bookmark {
