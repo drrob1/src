@@ -54,6 +54,7 @@ REVISION HISTORY
 14 Dec 23 -- Going to try setting the StdErr to /dev/null and see what happens.  I don't want to see all the errors that show up on linux.
                No, that didn't work.  But I can not assign it to anything, and that works.
 20 Jan 24 -- Adding femdom as a switch
+------------------------------------------------------------------------------------------------------------------------------------------------------
 21 Jan 24 -- Now called lv2, for launchvlc 2.  By trial and error, I discovered that the input file to vlc must have an .xspf extension, but it does not need the duration line.
                So now I want to write all the files matched w/ the regexp to temp .xspf file.  Since I don't need the duration line, I can do this now.  I'll hardcode the html stuff
                that I need to use for each file.  It must have the <location> line else it won't work.  But it may be faster to parse if I give it everything I have but for the duration.
@@ -78,7 +79,7 @@ REVISION HISTORY
  6 Feb 24 -- Added randRange.
  8 Feb 24 -- Added math/rand/v2, newly introduced w/ Go 1.22
 30 Apr 24 -- Changed to use my own which exec code instead of someone else's code.
-17 May 24 -- On linux, will pass "2>/dev/nul" to suppress garbage error messages
+17 May 24 -- On linux, will pass "2>/dev/nul" to suppress garbage error messages.  Nevermind, not needed.  See comments.
 */
 
 /*
@@ -359,9 +360,9 @@ func main() {
 	if runtime.GOOS == "windows" {
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	} else if runtime.GOOS == "linux" {
-		variadic := []string{fullOutFilename, "2>/dev/null"}
-		execCmd = exec.Command(vlcStr, variadic...)
-		//execCmd = exec.Command(vlcStr, fullOutFilename)
+		//variadic := []string{fullOutFilename, "2>/dev/null"}  not needed.  Silly me.  See comments below.  Just don't assign Stderr to anything.
+		//execCmd = exec.Command(vlcStr, variadic...)
+		execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
 	if veryVerboseFlag {
