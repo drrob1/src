@@ -26,6 +26,7 @@ package main
                  and stopped structure end comments for small number of lines, ie, I can see beginning { and ending } on one screen.
                  And I converted to modules.
   13 Feb 22 -- Converted to new API for filepicker.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   19 Jan 23 -- Now called xspf.go.  It will read a vlc xsfp file, shuffle the filenames/titles it finds, and then call vlc w/ possibly a subslice of those names.
                  The main change is reading the file in at once, and then working on a bytes.buffer using the read, unread and write operations.
   20 Jan 23 -- It's finally working.  I'm going to stop now.  Maybe I'll come back to this another time, but I've had enough for now.  The mistake I made in the translation
