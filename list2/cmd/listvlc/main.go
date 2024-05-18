@@ -50,9 +50,10 @@ REVISION HISTORY
 29 Apr 24 -- I finished writing whichExec, based on code from Mastering Go, 4th ed.  I'm looking at adding it here.  While I'm here, I'm editing some comments and help text.
                Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
 17 May 24 -- On linux, passing "2>/dev/null" to suppress the garbage error messages.
+18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also supporess the many error messages from being seen.
 */
 
-const lastModified = "May 17, 2024"
+const lastModified = "May 18, 2024"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -264,7 +265,7 @@ func main() {
 			execCmd = exec.Command(shellStr, variadicParam...)
 		}
 	} else if runtime.GOOS == "linux" {
-		fileNames = append(fileNames, "2>/dev/null")
+		// fileNames = append(fileNames, "2>/dev/null")  not needed.  I just commented out the assignment of os.Stderr.
 		execCmd = exec.Command(vlcStr, fileNames...)
 	}
 
@@ -274,7 +275,7 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
+	//execCmd.Stderr = os.Stderr  commenting this out is enough to suppress the many error messages.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
