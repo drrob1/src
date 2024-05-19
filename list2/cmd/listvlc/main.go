@@ -1,11 +1,13 @@
 package main // listVLC
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"math/rand/v2"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"src/list2"
@@ -51,9 +53,27 @@ REVISION HISTORY
                Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
 17 May 24 -- On linux, passing "2>/dev/null" to suppress the garbage error messages.
 18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also supporess the many error messages from being seen.
+19 May 24 -- Before I make any changes, this routine puts the filenames on the command line.  That gets truncated on Windows.  I'll change that to create an xspf file, like lv2.
 */
 
-const lastModified = "May 18, 2024"
+const lastModified = "May 19, 2024"
+
+const header1 = `<?xml version="1.0" encoding="UTF-8"?>
+<playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
+`
+const trackListOpen = "<trackList>"
+const trackListClose = "</trackList>"
+const trackOpen = "<track>"
+const trackClose = "</track>"
+const locationOpen = "<location>file:///"
+const locationClose = "</location>"
+const extensionApplication = "<extension application=\"http://www.videolan.org/vlc/playlist/0\">"
+const extensionClose = "</extension>"
+const vlcIDOpen = "<vlc:id>"
+const vlcIDClose = "</vlc:id>"
+const playListClose = "</playlist>"
+const extDefault = ".xspf" // XML Sharable Playlist Format
+const outPattern = "vlc_"
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -62,21 +82,6 @@ var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
 var includeRexString, excludeRexString, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
-
-//func init() {  Default version of Go is now 1.20.2, so this isn't needed.  StaticCheck complains about the call to rand.Seed on the last line of this func, so I'll remove it.
-//	goVersion := runtime.Version()
-//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-//	goVersionInt, err := strconv.Atoi(goVersion)
-//	if err == nil {
-//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-//			return
-//		}
-//	} else {
-//		fmt.Printf(" ERROR from Atoi: %s\n", err)
-//	}
-//	rand.Seed(time.Now().UnixNano())
-//}
 
 func main() {
 	fmt.Printf(" listvlc.go.  Last modified %s, compiled w/ %s\n\n", lastModified, runtime.Version())
@@ -91,20 +96,13 @@ func main() {
 	if ok {
 		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.  And replace the default value of vlcPath defined globally.
 	}
-	//if runtime.GOOS == "windows" {  supplanted by whichExec.Find, used below
-	//	searchPath = vlcPath + ";" + path
-	//} else if runtime.GOOS == "linux" && ok {
-	//	searchPath = vlcPath + ":" + path
-	//} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
-	//	searchPath = path
-	//}
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: lv2 <options> <input-regex> where <input-regex> cannot be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
@@ -205,7 +203,6 @@ func main() {
 	// Now to shuffle the file names slice.
 
 	now := time.Now()
-	//rand.Seed(now.UnixNano())  Now handled in init()
 	shuffleAmount := now.Nanosecond()/1e6 + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year()
 	more := misc.RandRange(50_000, 100_000)
 	sumShuffle := shuffleAmount + more
@@ -218,6 +215,58 @@ func main() {
 	}
 
 	fmt.Printf(" Shuffled %d filenames %d times, which took %s.\n", len(fileNames), sumShuffle, time.Since(now))
+
+	// Create an xspf file
+
+	outFile, err := os.CreateTemp(workingDir, outPattern) // outPattern is likely still vlc_
+	if err != nil {
+		fmt.Printf(" Tried to createTemp xspf file but got ERROR: %s.  Bye-bye.\n", err)
+		os.Exit(1)
+	}
+	defer outFile.Close()
+	defer outFile.Sync()
+
+	outfileBuf := bufio.NewWriter(outFile)
+	defer outfileBuf.Flush()
+
+	err = writeOutputFile(outfileBuf, fileNames)
+	if err != nil {
+		fmt.Printf(" ERROR from writing output file %s: %s\n", outFile.Name(), err)
+	}
+
+	err = outfileBuf.Flush()
+	if err != nil {
+		fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFile.Name(), err)
+		return
+	}
+
+	err = outFile.Sync()
+	if err != nil {
+		fmt.Printf(" Sync-ing %s failed w/ ERROR: %s.  Bye-bye.\n", outFile.Name(), err)
+		return
+	}
+
+	err = outFile.Close()
+	if err != nil {
+		fmt.Printf(" Closing %s failed w/ ERROR: %s.  Bye-bye.\n", outFile.Name(), err)
+		return
+	}
+
+	newFilename := outFile.Name() + extDefault
+	err = os.Rename(outFile.Name(), newFilename)
+	if err != nil {
+		fmt.Printf(" Rename to %s failed w/ ERROR: %s.  Bye.\n", extDefault, err)
+		return
+	}
+
+	fullOutFilename, err := filepath.Abs(newFilename)
+	if err != nil {
+		fmt.Printf(" filepath.Abs(%s) = ERROR is %s.  Exiting\n", newFilename, err)
+		return
+	}
+	if verboseFlag {
+		fmt.Printf(" Will write output to %s\n", fullOutFilename)
+	}
 
 	// ready to start calling vlc
 
@@ -239,38 +288,38 @@ func main() {
 		fmt.Printf(" vlcStr is null.  Exiting ")
 		return
 	}
+	if verboseFlag {
+		fmt.Printf(" vlcStr is %s\n", vlcStr)
+	}
 
 	// Time to run vlc.
 
 	var execCmd *exec.Cmd
 
-	variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
-	if noTccFlag {
-		// variadicParam = []string{}
-		variadicParam = make([]string, 0, len(fileNames))
-	}
-	variadicParam = append(variadicParam, fileNames...)
-	n := minInt(numNames, len(fileNames))
-	if n > 0 {
-		variadicParam = variadicParam[:n]
-	}
+	//variadicParam := []string{"-C", "vlc"} //  I'll leave it here anyway, as a model in case I ever need to do this again.
+	//if noTccFlag {
+	//	variadicParam = make([]string, 0, len(fileNames))
+	//}
+	//variadicParam = append(variadicParam, fileNames...)
+	//n := minInt(numNames, len(fileNames))
+	//if n > 0 {
+	//	variadicParam = variadicParam[:n]
+	//}
 
 	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.
 	// I got this answer from stack overflow.
 
 	if runtime.GOOS == "windows" {
 		if noTccFlag {
-			execCmd = exec.Command(vlcStr, variadicParam...)
+			execCmd = exec.Command(vlcStr, fullOutFilename) // instead of appending filenames to command line, now read in the xspf file.
+			//execCmd = exec.Command(vlcStr, variadicParam...)
 		} else { // this isn't needed anymore.  I'll leave it here because it does work, in case I ever need to do this again.
-			execCmd = exec.Command(shellStr, variadicParam...)
+			execCmd = exec.Command(shellStr, fullOutFilename)
+			//execCmd = exec.Command(shellStr, variadicParam...)
 		}
 	} else if runtime.GOOS == "linux" {
-		// fileNames = append(fileNames, "2>/dev/null")  not needed.  I just commented out the assignment of os.Stderr.
-		execCmd = exec.Command(vlcStr, fileNames...)
-	}
-
-	if verboseFlag {
-		fmt.Printf(" vlcStr = %s, len of variadicParam = %d, and filenames in variadicParam are %v\n", vlcStr, len(variadicParam), variadicParam)
+		execCmd = exec.Command(vlcStr, fullOutFilename)
+		//execCmd = exec.Command(vlcStr, fileNames...)
 	}
 
 	execCmd.Stdin = os.Stdin
@@ -278,26 +327,78 @@ func main() {
 	//execCmd.Stderr = os.Stderr  commenting this out is enough to suppress the many error messages.
 	e := execCmd.Start()
 	if e != nil {
-		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
+		fmt.Printf(" Error returned by running vlc %s is %v\n", fullOutFilename, e)
 	}
 } // end main()
 
-// ------------------------------- minInt ----------------------------------------
-
-func minInt(i, j int) int {
-	if i <= j {
-		return i
-	}
-	return j
-}
-
 // ------------------------------- listPath --------------------------------------
 
-func listPath(path string) {
-	splitEnv := strings.Split(path, ";")
-	for _, s := range splitEnv {
-		fmt.Printf(" %s\n", s)
+//func listPath(path string) {  not used anymore
+//	splitEnv := strings.Split(path, ";")
+//	for _, s := range splitEnv {
+//		fmt.Printf(" %s\n", s)
+//	}
+//}
+
+// ------------------------------- writeOutputFile --------------------------------
+
+func writeOutputFile(w *bufio.Writer, fn []string) error {
+
+	w.WriteString(header1) // this includes a lineTerm
+
+	//	w.WriteRune('\t')    don't need the title
+	//s := fmt.Sprintf("%s%s%s\n", titleOpen, "Playlist", titleClose)
+	//w.WriteString(s)
+
+	w.WriteRune('\t')
+	w.WriteString(trackListOpen)
+	w.WriteRune('\n')
+
+	for i, f := range fn {
+		fullName, err := filepath.Abs(f)
+		if err != nil {
+			//fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
+			return err
+		}
+
+		fullName = strings.ReplaceAll(fullName, "\\", "/") // Change backslash to forward slash, if that makes a difference.
+
+		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
+		//s2 := fmt.Sprintf("%s\n", trackOpen)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
+		//s2 = fmt.Sprintf("%s%s%s\n", locationOpen, fullName, locationClose)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
+		//s2 = fmt.Sprintf("%s\n", extensionApplication)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
+		//s2 = fmt.Sprintf("%s%d%s\n", vlcIDOpen, i, vlcIDClose)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
+		//s2 = fmt.Sprintf("%s\n", extensionClose)
+		w.WriteString(s2)
+
+		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
+		//s2 = fmt.Sprintf("%s\n", trackClose)
+		_, err = w.WriteString(s2)
+		if err != nil {
+			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)
+			return err
+		}
 	}
+
+	w.WriteRune('\t')
+	w.WriteString(trackListClose)
+	w.WriteRune('\n')
+
+	w.WriteString(playListClose)
+	_, err := w.WriteRune('\n')
+	return err
 }
 
 /* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
