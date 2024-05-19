@@ -43,6 +43,7 @@ REVISION HISTORY
 23 Oct 22 -- On linux will call cvlc instead of vlc.  Nevermind, it's not better.  But I changed MyReadDir to skip directories.
 14 Nov 22 -- Will use fact that an empty regexp always matches everything.  Turned out to be a bad thing, because therefore the exclude expression excluded everything.
                I undid it.
+------------------------------------------------------------------------------------------------------------------------------------------------------
 16 Jan 23 -- Now called listvlc.go in list2 tree.  It will use the list routines to make a list to shuffle and then include in the vlc call.
 18 Jan 23 -- Adding smartCase
 18 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
@@ -53,7 +54,7 @@ REVISION HISTORY
                Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
 17 May 24 -- On linux, passing "2>/dev/null" to suppress the garbage error messages.
 18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also supporess the many error messages from being seen.
-19 May 24 -- Before I make any changes, this routine puts the filenames on the command line.  That gets truncated on Windows.  I'll change that to create an xspf file, like lv2.
+19 May 24 -- Before I made changes, this routine put the filenames on the command line, got truncated on Windows.  I changed that to create an xspf file, like lv2.
 */
 
 const lastModified = "May 19, 2024"
@@ -102,7 +103,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: lv2 <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> where <input-regex> cannot be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
@@ -159,6 +160,8 @@ func main() {
 			fmt.Printf(" Error from compiling the exclude regexp is %v\n", err)
 			os.Exit(1)
 		}
+	} else { // predefined regexp to exclude xspf files
+		excludeRegex = regexp.MustCompile("xspf$") // must compile panics if the expression fails to compile.  It's easier for me this way.
 	}
 
 	list2.VerboseFlag = verboseFlag
@@ -331,15 +334,6 @@ func main() {
 	}
 } // end main()
 
-// ------------------------------- listPath --------------------------------------
-
-//func listPath(path string) {  not used anymore
-//	splitEnv := strings.Split(path, ";")
-//	for _, s := range splitEnv {
-//		fmt.Printf(" %s\n", s)
-//	}
-//}
-
 // ------------------------------- writeOutputFile --------------------------------
 
 func writeOutputFile(w *bufio.Writer, fn []string) error {
@@ -364,27 +358,21 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 		fullName = strings.ReplaceAll(fullName, "\\", "/") // Change backslash to forward slash, if that makes a difference.
 
 		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
-		//s2 := fmt.Sprintf("%s\n", trackOpen)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
-		//s2 = fmt.Sprintf("%s%s%s\n", locationOpen, fullName, locationClose)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
-		//s2 = fmt.Sprintf("%s\n", extensionApplication)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
-		//s2 = fmt.Sprintf("%s%d%s\n", vlcIDOpen, i, vlcIDClose)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
-		//s2 = fmt.Sprintf("%s\n", extensionClose)
 		w.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
-		//s2 = fmt.Sprintf("%s\n", trackClose)
 		_, err = w.WriteString(s2)
 		if err != nil {
 			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)
@@ -400,90 +388,3 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 	_, err := w.WriteRune('\n')
 	return err
 }
-
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------* */
-/*
-func MakeDateStr() string {
-
-	const DateSepChar = "-"
-	var dateStr string
-
-	m, d, y := timlibg.TIME2MDY()
-	timeNow := timlibg.GetDateTime()
-
-	MSTR := strconv.Itoa(m)
-	DSTR := strconv.Itoa(d)
-	YSTR := strconv.Itoa(y)
-	Hr := strconv.Itoa(timeNow.Hours)
-	Min := strconv.Itoa(timeNow.Minutes)
-	Sec := strconv.Itoa(timeNow.Seconds)
-
-	dateStr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar + Sec + "__" + timeNow.DayOfWeekStr
-	return dateStr
-} // MakeDateStr
-*/
-
-// ------------------------------------------------------------------------ getFileNames -------------------------------------------------------
-/*
-func getFileNames(workingDir string, inputRegex *regexp.Regexp) []string {
-
-	fileNames := myReadDir(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
-
-	if veryVerboseFlag {
-		fmt.Printf(" Leaving getFileNames.  flag.Nargs=%d, len(flag.Args)=%d, len(fileNames)=%d\n", flag.NArg(), len(flag.Args()), len(fileNames))
-	}
-
-	return fileNames
-}
-
-*/
-
-// ------------------------------- myReadDir -----------------------------------
-/*
-func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
-
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-
-	fileNames := make([]string, 0, len(dirEntries))
-	for _, d := range dirEntries {
-		lower := strings.ToLower(d.Name())
-		if !inputRegex.MatchString(lower) { // skip dirEntries that do not match the input regex.
-			continue
-		}
-		if d.IsDir() { // skip directories
-			continue
-		}
-
-		//quotedString := fmt.Sprintf("%q", d.Name())
-		//fullPath, e := filepath.Abs(d.Name())
-		//if e != nil {
-		//	fmt.Fprintf(os.Stderr, " myReadDir error from filepath.Abs(%s) is %v\n", d.Name(), e)
-		//}
-		//fullPath = "file:///" + fullPath // I got this idea by reading the vlc help text
-		if excludeRegex == nil {
-			fileNames = append(fileNames, d.Name())
-		} else if !excludeRegex.MatchString(lower) { // excludeRegex is not empty, so using it won't panic.
-			fileNames = append(fileNames, d.Name())
-		}
-	}
-	return fileNames
-} // myReadDir
-
-*/
-
-// ------------------------------ pause -----------------------------------------
-/*
-func pause() bool {
-	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
-	var ans string
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
-		return true
-	}
-	return false
-}
-*/
