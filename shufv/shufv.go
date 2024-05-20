@@ -35,6 +35,7 @@ package main // shufv.go
    1 Apr 23 -- StaticCheck found a few issues.
   11 Feb 24 -- Added math/rand/v2, so this must be compiled w/ Go 1.22+
   20 Feb 24 -- Increased the number of times to shuffle, as I did in launchv and lv2.  And updated the shuffle message.
+  19 May 24 -- Removed min(), as it duplicates a built-in as of Go 1.22+.  And I clarified the startup message.
 */
 
 import (
@@ -60,7 +61,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "Feb 20, 2024"
+const LastCompiled = "May 19, 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -346,8 +347,6 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 		} else if (XMLToken.State == OPENINGHTML) && strings.EqualFold(XMLToken.Str, "track") {
 			fmt.Println(" in GetTrack and found an unexpected opening track tag")
 			break
-		} else {
-			//      Have random white space here, typically either a space or a tab before an opening html tag.  Ignore it.
 		} // if XMLtkn.state == whatever
 	} // Outer for loop for all contents of this track
 	return &trk, nil
@@ -577,14 +576,14 @@ func check(e error, msg string) {
 	}
 }
 
-// -------------------------------------------- min ---------------------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+//// -------------------------------------------- min ---------------------------------------------
+//func min(a, b int) int {
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
 
 // ------------------------------------------- MAIN --------------------------------
 func main() {
@@ -597,7 +596,7 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	fmt.Printf(" %s is a Shuffling program for the tracks in a vlc file, last altered %s, compiled by %s, and timestamp is %s.\n\n",
+	fmt.Printf(" %s is a Shuffling program for the tracks in a vlc file, calls vlc with a new randomized xspf from the old one, last altered %s, compiled by %s, and timestamp is %s.\n\n",
 		os.Args[0], LastCompiled, runtime.Version(), LastLinkedTimeStamp)
 
 	InExtDefault := ".xspf"

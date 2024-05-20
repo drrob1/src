@@ -38,6 +38,7 @@ package main
   10 Feb 23 -- Enhanced testing of the code that detects the version of Go.
    1 Apr 23 -- StaticCheck found some issues.
   11 Feb 24 -- Added math/rand/v2 so removed init() which called rand.seed
+  19 May 24 -- Removed min(), as it duplicated a built-in.  And clarified the startup message.
 */
 
 import (
@@ -347,8 +348,6 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 		} else if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
 			fmt.Println(" in GetTrack and found an unexpected opening track tag")
 			break
-		} else {
-			//      Have random white space here, typically either a space or a tab before an opening html tag.  Ignore it.
 		} // end if XMLtkn.state == whatever
 	} // Outer for loop for all contents of this track
 
@@ -468,14 +467,14 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 	return fn, nil
 } // getShuffledFilenames, formerly ProcessXMLFile
 
-// -------------------------------------------- min ---------------------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+//// -------------------------------------------- min ---------------------------------------------
+//func min(a, b int) int {  Removed 5/19/24.  It's built into Go 1.22+
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
 
 // ------------------------------------------- MAIN --------------------------------
 func main() {
@@ -485,7 +484,8 @@ func main() {
 	var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 	var numNames int
 
-	fmt.Printf(" %s for the tracks in a vlc file with xsfp extension.  Last altered %s, compiled by %s\n\n", os.Args[0], LastCompiled, runtime.Version())
+	fmt.Printf(" %s for the tracks in a vlc file with xsfp extension, placing names on command line.  Does not write a new xspf file.  Last altered %s, compiled by %s\n\n",
+		os.Args[0], LastCompiled, runtime.Version())
 
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)

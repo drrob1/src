@@ -62,7 +62,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "May 17, 2024"
+const LastCompiled = "May 19, 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -561,15 +561,16 @@ func check(e error, msg string) {
 	}
 }
 
-// -------------------------------------------- min ---------------------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
-
+// // -------------------------------------------- min ---------------------------------------------
+//
+//	func min(a, b int) int {
+//		if a < b {
+//			return a
+//		} else {
+//			return b
+//		}
+//	}
+//
 // ------------------------------------------- MAIN --------------------------------
 func main() {
 
@@ -581,7 +582,7 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	fmt.Printf(" %s is a Shuffling program for the tracks in a vlc file, last altered %s, compiled by %s, and timestamp is %s.\n\n",
+	fmt.Printf(" %s is a Shuffling program for the tracks in a vlc file, calling vlc with the new shuffled xspf file.  last altered %s, compiled by %s, and timestamp is %s.\n\n",
 		os.Args[0], LastCompiled, runtime.Version(), LastLinkedTimeStamp)
 	fmt.Printf(" Input is an .xspf file, it writes a temp xspf file and then calls vlc on that.\n")
 

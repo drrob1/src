@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -55,6 +56,7 @@ REVISION HISTORY
 17 May 24 -- On linux, passing "2>/dev/null" to suppress the garbage error messages.
 18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also supporess the many error messages from being seen.
 19 May 24 -- Before I made changes, this routine put the filenames on the command line, got truncated on Windows.  I changed that to create an xspf file, like lv2.
+               The API for the routine that writes the new xspf file was changed.
 */
 
 const lastModified = "May 19, 2024"
@@ -229,19 +231,19 @@ func main() {
 	defer outFile.Close()
 	defer outFile.Sync()
 
-	outfileBuf := bufio.NewWriter(outFile)
-	defer outfileBuf.Flush()
+	//outfileBuf := bufio.NewWriter(outFile)
+	//defer outfileBuf.Flush()
 
-	err = writeOutputFile(outfileBuf, fileNames)
+	err = writeOutputFile(outFile, fileNames)
 	if err != nil {
 		fmt.Printf(" ERROR from writing output file %s: %s\n", outFile.Name(), err)
 	}
 
-	err = outfileBuf.Flush()
-	if err != nil {
-		fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFile.Name(), err)
-		return
-	}
+	//err = outfileBuf.Flush()
+	//if err != nil {
+	//	fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFile.Name(), err)
+	//	return
+	//}
 
 	err = outFile.Sync()
 	if err != nil {
@@ -336,17 +338,21 @@ func main() {
 
 // ------------------------------- writeOutputFile --------------------------------
 
-func writeOutputFile(w *bufio.Writer, fn []string) error {
+func writeOutputFile(w io.Writer, fn []string) error {
+	//func writeOutputFile(w *bufio.Writer, fn []string) error { old API.  Redone 5/19/24 @ 20:30
 
-	w.WriteString(header1) // this includes a lineTerm
+	buf := bufio.NewWriter(w)
+	defer buf.Flush()
+
+	buf.WriteString(header1) // this includes a lineTerm
 
 	//	w.WriteRune('\t')    don't need the title
 	//s := fmt.Sprintf("%s%s%s\n", titleOpen, "Playlist", titleClose)
 	//w.WriteString(s)
 
-	w.WriteRune('\t')
-	w.WriteString(trackListOpen)
-	w.WriteRune('\n')
+	buf.WriteRune('\t')
+	buf.WriteString(trackListOpen)
+	buf.WriteRune('\n')
 
 	for i, f := range fn {
 		fullName, err := filepath.Abs(f)
@@ -358,33 +364,38 @@ func writeOutputFile(w *bufio.Writer, fn []string) error {
 		fullName = strings.ReplaceAll(fullName, "\\", "/") // Change backslash to forward slash, if that makes a difference.
 
 		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
-		_, err = w.WriteString(s2)
+		_, err = buf.WriteString(s2)
 		if err != nil {
 			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)
 			return err
 		}
 	}
 
-	w.WriteRune('\t')
-	w.WriteString(trackListClose)
-	w.WriteRune('\n')
+	buf.WriteRune('\t')
+	buf.WriteString(trackListClose)
+	buf.WriteRune('\n')
 
-	w.WriteString(playListClose)
-	_, err := w.WriteRune('\n')
-	return err
+	buf.WriteString(playListClose)
+	_, err := buf.WriteRune('\n')
+	if err == nil {
+		e := buf.Flush()
+		return e
+	} else {
+		return err
+	}
 }
