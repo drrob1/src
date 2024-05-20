@@ -396,6 +396,6 @@ func writeOutputFile(w io.Writer, fn []string) error {
 		e := buf.Flush()
 		return e
 	} else {
-		return err
+		return err // Flush() not called as there's no point after writing returned an error.
 	}
 }

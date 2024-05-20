@@ -6,6 +6,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"io"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -80,6 +81,7 @@ REVISION HISTORY
  8 Feb 24 -- Added math/rand/v2, newly introduced w/ Go 1.22
 30 Apr 24 -- Changed to use my own which exec code instead of someone else's code.
 17 May 24 -- On linux, will pass "2>/dev/nul" to suppress garbage error messages.  Nevermind, not needed.  See comments.
+20 May 24 -- Refactored the writeOutputFile routine.
 */
 
 /*
@@ -106,7 +108,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "May 17, 2024"
+const lastModified = "May 20, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -308,22 +310,22 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" Output filename is %s, workingDir is %s, abs() is %s \n", outFilename, workingDir, fullOutFilename)
 	}
-	outfileBuf := bufio.NewWriter(outputFile)
-	defer outfileBuf.Flush()
+	//outfileBuf := bufio.NewWriter(outputFile)
+	//defer outfileBuf.Flush()
 
 	// Now to write out the xspf file
 
-	totStrngLen, err := writeOutputFile(outfileBuf, fileNames)
+	totStrngLen, err := writeOutputFile(outputFile, fileNames)
 	if err != nil {
 		fmt.Printf(" Writing output file %s failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
-		os.Exit(1)
+		return // this will allow the deferred functions to run.
 	}
 
-	err = outfileBuf.Flush()
-	if err != nil {
-		fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
-		os.Exit(1)
-	}
+	//err = outfileBuf.Flush()  This is now handled within writeOutputFile.
+	//if err != nil {
+	//	fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
+	//	os.Exit(1)
+	//}
 
 	err = outputFile.Sync()
 	if err != nil {
@@ -428,18 +430,21 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 
 // ------------------------------- writeOutputFile --------------------------------
 
-func writeOutputFile(w *bufio.Writer, fn []string) (int, error) {
+func writeOutputFile(w io.Writer, fn []string) (int, error) {
 	var totalStrLen int
 
-	w.WriteString(header1) // this includes a lineTerm
+	buf := bufio.NewWriter(w)
+	defer buf.Flush()
+
+	buf.WriteString(header1) // this includes a lineTerm
 
 	//	w.WriteRune('\t')    don't need the title
 	//s := fmt.Sprintf("%s%s%s\n", titleOpen, "Playlist", titleClose)
 	//w.WriteString(s)
 
-	w.WriteRune('\t')
-	w.WriteString(trackListOpen)
-	w.WriteRune('\n')
+	buf.WriteRune('\t')
+	buf.WriteString(trackListOpen)
+	buf.WriteRune('\n')
 
 	for i, f := range fn {
 		if i > 0 && i > numOfTracks { // allow i == 0 to mean unlimited.
@@ -460,114 +465,43 @@ func writeOutputFile(w *bufio.Writer, fn []string) (int, error) {
 
 		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
 		//s2 := fmt.Sprintf("%s\n", trackOpen)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
 		//s2 = fmt.Sprintf("%s%s%s\n", locationOpen, fullName, locationClose)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
 		//s2 = fmt.Sprintf("%s\n", extensionApplication)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
 		//s2 = fmt.Sprintf("%s%d%s\n", vlcIDOpen, i, vlcIDClose)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
 		//s2 = fmt.Sprintf("%s\n", extensionClose)
-		w.WriteString(s2)
+		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
 		//s2 = fmt.Sprintf("%s\n", trackClose)
-		_, err = w.WriteString(s2)
+		_, err = buf.WriteString(s2)
 		if err != nil {
-			fmt.Printf(" Buffered write on track %d returnned ERROR: %s", i, err)
+			fmt.Printf(" Buffered write on track %d returned ERROR: %s", i, err)
 			return 0, err
 		}
 	}
 
-	w.WriteRune('\t')
-	w.WriteString(trackListClose)
-	w.WriteRune('\n')
+	buf.WriteRune('\t')
+	buf.WriteString(trackListClose)
+	buf.WriteRune('\n')
 
-	w.WriteString(playListClose)
-	_, err := w.WriteRune('\n')
-	return totalStrLen, err
-}
-
-/*
-func writeOutputFile(w *bufio.Writer, fn []string) {
-	w.WriteString(header1) // this includes a lineTerm
-
-	w.WriteRune('\t')
-	w.WriteString(titleOpen)
-	w.WriteString(includeRegex.String())
-	if excludeRexString != "" {
-		w.WriteRune('_')
-		w.WriteString(excludeRegex.String())
+	buf.WriteString(playListClose)
+	_, err := buf.WriteRune('\n')
+	if err == nil {
+		e := buf.Flush()
+		return totalStrLen, e
+	} else {
+		return totalStrLen, err // Flush() not called as there's no point after writing returned an error.
 	}
-	w.WriteString(titleClose)
-	w.WriteString(lineTerm)
-
-	w.WriteRune('\t')
-	w.WriteString(trackListOpen)
-	w.WriteString(lineTerm)
-
-	for i, f := range fn {
-		fullName, err := filepath.Abs(f)
-		if err != nil {
-			fmt.Printf(" filepath.Abs(%s) returned ERROR: %s.  Bye-Bye.\n", f, err)
-			os.Exit(1)
-		}
-
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteString(trackOpen)
-		w.WriteString(lineTerm)
-
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteString(locationOpen)
-		w.WriteString(fullName)
-		w.WriteString(locationClose)
-		w.WriteString(lineTerm)
-
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteString(extensionApplication)
-		w.WriteString(lineTerm)
-
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteString(vlcIDOpen)
-		w.WriteString(strconv.Itoa(i))
-		w.WriteString(vlcIDClose)
-		w.WriteString(lineTerm)
-
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteString(extensionClose)
-		w.WriteString(lineTerm)
-
-		w.WriteRune('\t')
-		w.WriteRune('\t')
-		w.WriteString(trackClose)
-		w.WriteString(lineTerm)
-	}
-
-	w.WriteRune('\t')
-	w.WriteString(trackListClose)
-	w.WriteString(lineTerm)
-
-	w.WriteString(playListClose)
-	w.WriteString(lineTerm)
 }
-
-
-*/
