@@ -60,7 +60,7 @@ import (
 	"time"
 )
 
-const LastCompiled = "11 Feb 2024"
+const LastCompiled = "19 May 2024"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -101,9 +101,6 @@ type CharType struct {
 
 // track was an array of TrackType.  Now it's a slice of pointers to TrackType, to make it easier to
 // shuffle.  And so I don't need NumArray anymore which just shuffles an array of indices into TrackArray.
-//var lineDelim string
-//var tabChar = '\t'
-//  var indivTrackNum = 0;  Still don't think I need this.
 
 type TrackType struct {
 	location, title, creator, image, duration, extension string
@@ -112,22 +109,6 @@ type TrackType struct {
 var TrackSlice []*TrackType // Global variable.  But still needs to call make in func main.
 var veryVerboseFlag bool
 var verboseFlag bool
-
-//func init() {
-//	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
-//	goVersion := runtime.Version()
-//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-//	goVersionInt, err := strconv.Atoi(goVersion)
-//	if err == nil {
-//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-//			return
-//		}
-//	} else {
-//		fmt.Printf(" ERROR from Atoi: %s\n", err)
-//	}
-//	rand.Seed(time.Now().UnixNano())
-//}
 
 // ---------------------------------------------------------------- getChar -----------------------------
 
@@ -355,10 +336,6 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 		fmt.Printf("Exiting GetTrack.  Err=%s,  Track= %#v\n", err, trk)
 	}
 
-	//if err == io.EOF && trk.location != "" { // If got EOF but already collected a track, clear the error before returning it.
-	//	err = nil
-	//}
-
 	return &trk, err // more obviously uses pointer semantics.
 
 } // GetTrack
@@ -466,15 +443,6 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 
 	return fn, nil
 } // getShuffledFilenames, formerly ProcessXMLFile
-
-//// -------------------------------------------- min ---------------------------------------------
-//func min(a, b int) int {  Removed 5/19/24.  It's built into Go 1.22+
-//	if a < b {
-//		return a
-//	} else {
-//		return b
-//	}
-//}
 
 // ------------------------------------------- MAIN --------------------------------
 func main() {
