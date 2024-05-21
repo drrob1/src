@@ -108,7 +108,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "May 20, 2024"
+const lastModified = "May 21, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -498,10 +498,9 @@ func writeOutputFile(w io.Writer, fn []string) (int, error) {
 
 	buf.WriteString(playListClose)
 	_, err := buf.WriteRune('\n')
-	if err == nil {
-		e := buf.Flush()
-		return totalStrLen, e
-	} else {
-		return totalStrLen, err // Flush() not called as there's no point after writing returned an error.
+	if err != nil {
+		return totalStrLen, err // Flush() not called as there's no point after writing returned an error.  It's deferred anyway.
 	}
+	err = buf.Flush()
+	return totalStrLen, err
 }

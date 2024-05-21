@@ -392,10 +392,9 @@ func writeOutputFile(w io.Writer, fn []string) error {
 
 	buf.WriteString(playListClose)
 	_, err := buf.WriteRune('\n')
-	if err == nil {
-		e := buf.Flush()
-		return e
-	} else {
-		return err // Flush() not called as there's no point after writing returned an error.
+	if err != nil {
+		return err // Flush() not called as there's no point after writing returned an error.  Defer will try anyway, I think.
 	}
+	err = buf.Flush()
+	return err
 }
