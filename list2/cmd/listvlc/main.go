@@ -59,22 +59,8 @@ REVISION HISTORY
                The API for the routine that writes the new xspf file was changed.
 */
 
-const lastModified = "May 19, 2024"
+const lastModified = "May 22, 2024"
 
-const header1 = `<?xml version="1.0" encoding="UTF-8"?>
-<playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
-`
-const trackListOpen = "<trackList>"
-const trackListClose = "</trackList>"
-const trackOpen = "<track>"
-const trackClose = "</track>"
-const locationOpen = "<location>file:///"
-const locationClose = "</location>"
-const extensionApplication = "<extension application=\"http://www.videolan.org/vlc/playlist/0\">"
-const extensionClose = "</extension>"
-const vlcIDOpen = "<vlc:id>"
-const vlcIDClose = "</vlc:id>"
-const playListClose = "</playlist>"
 const extDefault = ".xspf" // XML Sharable Playlist Format
 const outPattern = "vlc_"
 
@@ -339,7 +325,20 @@ func main() {
 // ------------------------------- writeOutputFile --------------------------------
 
 func writeOutputFile(w io.Writer, fn []string) error {
-	//func writeOutputFile(w *bufio.Writer, fn []string) error { old API.  Redone 5/19/24 @ 20:30
+	const header1 = `<?xml version="1.0" encoding="UTF-8"?>
+<playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
+`
+	const trackListOpen = "<trackList>"
+	const trackListClose = "</trackList>"
+	const trackOpen = "<track>"
+	const trackClose = "</track>"
+	const locationOpen = "<location>file:///"
+	const locationClose = "</location>"
+	const extensionApplication = "<extension application=\"http://www.videolan.org/vlc/playlist/0\">"
+	const extensionClose = "</extension>"
+	const vlcIDOpen = "<vlc:id>"
+	const vlcIDClose = "</vlc:id>"
+	const playListClose = "</playlist>"
 
 	buf := bufio.NewWriter(w)
 	defer buf.Flush()

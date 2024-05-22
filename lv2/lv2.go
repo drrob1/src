@@ -108,28 +108,11 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "May 21, 2024"
+const lastModified = "May 22, 2024"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
 
-const header1 = `<?xml version="1.0" encoding="UTF-8"?>
-<playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
-`
-
-// const titleOpen = "<title>"
-// const titleClose = "</title>"
-const trackListOpen = "<trackList>"
-const trackListClose = "</trackList>"
-const trackOpen = "<track>"
-const trackClose = "</track>"
-const locationOpen = "<location>file:///"
-const locationClose = "</location>"
-const extensionApplication = "<extension application=\"http://www.videolan.org/vlc/playlist/0\">"
-const extensionClose = "</extension>"
-const vlcIDOpen = "<vlc:id>"
-const vlcIDClose = "</vlc:id>"
-const playListClose = "</playlist>"
 const extDefault = ".xspf" // XML Sharable Playlist Format
 
 var includeRegex, excludeRegex *regexp.Regexp
@@ -431,6 +414,23 @@ func myReadDir(dir string, inputRegex *regexp.Regexp) []string {
 // ------------------------------- writeOutputFile --------------------------------
 
 func writeOutputFile(w io.Writer, fn []string) (int, error) {
+	const header1 = `<?xml version="1.0" encoding="UTF-8"?>
+<playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
+`
+
+	// const titleOpen = "<title>"
+	// const titleClose = "</title>"
+	const trackListOpen = "<trackList>"
+	const trackListClose = "</trackList>"
+	const trackOpen = "<track>"
+	const trackClose = "</track>"
+	const locationOpen = "<location>file:///"
+	const locationClose = "</location>"
+	const extensionApplication = "<extension application=\"http://www.videolan.org/vlc/playlist/0\">"
+	const extensionClose = "</extension>"
+	const vlcIDOpen = "<vlc:id>"
+	const vlcIDClose = "</vlc:id>"
+	const playListClose = "</playlist>"
 	var totalStrLen int
 
 	buf := bufio.NewWriter(w)
@@ -464,27 +464,21 @@ func writeOutputFile(w io.Writer, fn []string) (int, error) {
 		totalStrLen += len(fullName)
 
 		s2 := fmt.Sprintf("\t\t%s\n", trackOpen)
-		//s2 := fmt.Sprintf("%s\n", trackOpen)
 		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s%s%s\n", locationOpen, fullName, locationClose)
-		//s2 = fmt.Sprintf("%s%s%s\n", locationOpen, fullName, locationClose)
 		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionApplication)
-		//s2 = fmt.Sprintf("%s\n", extensionApplication)
 		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t\t%s%d%s\n", vlcIDOpen, i, vlcIDClose)
-		//s2 = fmt.Sprintf("%s%d%s\n", vlcIDOpen, i, vlcIDClose)
 		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t\t%s\n", extensionClose)
-		//s2 = fmt.Sprintf("%s\n", extensionClose)
 		buf.WriteString(s2)
 
 		s2 = fmt.Sprintf("\t\t%s\n", trackClose)
-		//s2 = fmt.Sprintf("%s\n", trackClose)
 		_, err = buf.WriteString(s2)
 		if err != nil {
 			fmt.Printf(" Buffered write on track %d returned ERROR: %s", i, err)
