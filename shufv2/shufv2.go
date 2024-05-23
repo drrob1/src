@@ -663,12 +663,6 @@ func main() {
 	}
 	outfileBuf := bufio.NewWriter(outputFile)
 
-	//if runtime.GOOS == "windows" {  I don't think I need to do this.
-	//	lineDelim = "\r\n"
-	//} else {
-	//	lineDelim = "\n"
-	//}
-
 	ProcessXMLfile(fileRdr, outfileBuf)
 	outfileBuf.Flush()
 	outputFile.Close()
