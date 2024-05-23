@@ -57,6 +57,7 @@ REVISION HISTORY
 18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also supporess the many error messages from being seen.
 19 May 24 -- Before I made changes, this routine put the filenames on the command line, got truncated on Windows.  I changed that to create an xspf file, like lv2.
                The API for the routine that writes the new xspf file was changed.
+22 May 24 -- Updated displayed messages.
 */
 
 const lastModified = "May 22, 2024"
@@ -88,10 +89,10 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output them on the command line to vlc.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then write them to xspf file which is then fed to vlc on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> where <input-regex> should not be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
@@ -217,19 +218,10 @@ func main() {
 	defer outFile.Close()
 	defer outFile.Sync()
 
-	//outfileBuf := bufio.NewWriter(outFile)
-	//defer outfileBuf.Flush()
-
 	err = writeOutputFile(outFile, fileNames)
 	if err != nil {
 		fmt.Printf(" ERROR from writing output file %s: %s\n", outFile.Name(), err)
 	}
-
-	//err = outfileBuf.Flush()
-	//if err != nil {
-	//	fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFile.Name(), err)
-	//	return
-	//}
 
 	err = outFile.Sync()
 	if err != nil {
@@ -267,9 +259,6 @@ func main() {
 	var vlcStr, shellStr string
 	if runtime.GOOS == "windows" {
 		vlcStr = whichexec.Find("vlc", vlcPath) // My own whichExec.Find adds vlcPath to the system path automatically.  I don't have to build search path up anymore.
-		//vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
-		//vlcStr = "vlc"
-		//shellStr = os.Getenv("ComSpec") not needed anymore
 	} else if runtime.GOOS == "linux" {
 		vlcStr = whichexec.Find("vlc", "") // calling vlc without a console.
 		shellStr = "/bin/bash"             // not needed as I found out by some experimentation on leox.
@@ -286,19 +275,6 @@ func main() {
 	// Time to run vlc.
 
 	var execCmd *exec.Cmd
-
-	//variadicParam := []string{"-C", "vlc"} //  I'll leave it here anyway, as a model in case I ever need to do this again.
-	//if noTccFlag {
-	//	variadicParam = make([]string, 0, len(fileNames))
-	//}
-	//variadicParam = append(variadicParam, fileNames...)
-	//n := minInt(numNames, len(fileNames))
-	//if n > 0 {
-	//	variadicParam = variadicParam[:n]
-	//}
-
-	// For me to be able to pass a variadic param here, I must match the definition of the function, not pass some and then try the variadic syntax.
-	// I got this answer from stack overflow.
 
 	if runtime.GOOS == "windows" {
 		if noTccFlag {

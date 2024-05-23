@@ -82,6 +82,7 @@ REVISION HISTORY
 30 Apr 24 -- Changed to use my own which exec code instead of someone else's code.
 17 May 24 -- On linux, will pass "2>/dev/nul" to suppress garbage error messages.  Nevermind, not needed.  See comments.
 20 May 24 -- Refactored the writeOutputFile routine.
+22 May 24 -- Fixed some displayed messages.
 */
 
 /*
@@ -154,10 +155,10 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp using smart case, against all filenames in the current directory\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output 'n' of them on the command line to vlc.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, write them to xspf file which is passed on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: lv2 <options> <input-regex> where <input-regex> should not be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Environment variable VLCPATH can be used to specify the path to vlc binary. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
@@ -166,7 +167,6 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "xspf$", " Exclude file regexp string, which is usually empty.")
-	//flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
 	flag.BoolVar(&femdomFlag, "femdom", false, "Use predefined pattern for femdom")
@@ -178,6 +178,7 @@ func main() {
 	flag.BoolVar(&spandexFlag, "spandex", false, "Use spandex predefined pattern: spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb")
 	flag.BoolVar(&forcedFlag, "forced", false, "Use predefined pattern: vib|forced|abuse|torture.")
 	flag.IntVar(&numOfTracks, "n", maxNumOfTracks, "Max num of tracks in the output file.  Currently 300.")
+	//flag.BoolVar(&notccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 	flag.Parse()
 
 	if veryVerboseFlag { // very verbose also turns on verbose flag.
@@ -210,7 +211,7 @@ func main() {
 	}
 
 	if includeRexString == "" { // if there are more than 1 arguments, the extra ones are ignored.
-		fmt.Printf(" Usage: launchv <options> <input-regex> where <input-regex> should not be empty.\n")
+		fmt.Printf(" Usage: lv2 <options> <input-regex> where <input-regex> should not be empty.\n")
 		flag.PrintDefaults()
 		fmt.Println()
 		fmt.Println()
@@ -293,8 +294,6 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" Output filename is %s, workingDir is %s, abs() is %s \n", outFilename, workingDir, fullOutFilename)
 	}
-	//outfileBuf := bufio.NewWriter(outputFile)
-	//defer outfileBuf.Flush()
 
 	// Now to write out the xspf file
 
@@ -303,12 +302,6 @@ func main() {
 		fmt.Printf(" Writing output file %s failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
 		return // this will allow the deferred functions to run.
 	}
-
-	//err = outfileBuf.Flush()  This is now handled within writeOutputFile.
-	//if err != nil {
-	//	fmt.Printf(" Flushing %s buffer failed w/ ERROR: %s.  Bye-bye.\n", outFilename, err)
-	//	os.Exit(1)
-	//}
 
 	err = outputFile.Sync()
 	if err != nil {
@@ -345,8 +338,6 @@ func main() {
 	if runtime.GOOS == "windows" {
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	} else if runtime.GOOS == "linux" {
-		//variadic := []string{fullOutFilename, "2>/dev/null"}  not needed.  Silly me.  See comments below.  Just don't assign Stderr to anything.
-		//execCmd = exec.Command(vlcStr, variadic...)
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
@@ -361,7 +352,7 @@ func main() {
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", fullOutFilename, e)
 	}
-	//fmt.Printf(" Full output file name is %s, from regexp of %s, excludeRegexp of %q, and total string length= %d\n", fullOutFilename, includeRegex.String(), excludeRexString, totStrngLen)
+
 	ctfmt.Printf(ct.Green, false, "Full output filename is %s, ", fullOutFilename)
 	ctfmt.Printf(ct.Yellow, false, "from regexp of %s, ", includeRegex.String())
 	ctfmt.Printf(ct.Cyan, true, "exclude regexp of %q, ", excludeRexString)
