@@ -62,7 +62,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "May 19, 2024"
+const LastCompiled = "May 23, 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -561,16 +561,6 @@ func check(e error, msg string) {
 	}
 }
 
-// // -------------------------------------------- min ---------------------------------------------
-//
-//	func min(a, b int) int {
-//		if a < b {
-//			return a
-//		} else {
-//			return b
-//		}
-//	}
-//
 // ------------------------------------------- MAIN --------------------------------
 func main() {
 

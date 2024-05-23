@@ -61,7 +61,7 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "May 19, 2024"
+const LastCompiled = "May 23, 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -112,22 +112,6 @@ var tabchar = '\t'
 var tokenStateNames = []string{"empty", "contents", "openingHTML", "closingHTML", "otherError"}
 var verboseFlag, veryVerBoseFlag bool
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
-
-//func init() {  Removed when Go 1.22 came out, which provided math/rand/v2.
-//	TrackSlice = make([]*TrackType, 0, MaxNumOfTracks)
-//	goVersion := runtime.Version()
-//	goVersion = goVersion[4:6] // this should be a string of characters 4 and 5, or the numerical digits after Go1.  At the time of writing this, it will be 20.
-//	goVersionInt, err := strconv.Atoi(goVersion)
-//	if err == nil {
-//		fmt.Printf(" Go 1 version is %d\n", goVersionInt)
-//		if goVersionInt >= 20 { // starting w/ go1.20, rand.Seed() is deprecated.  It will auto-seed if I don't call it, and it wants to do that itself.
-//			return
-//		}
-//	} else {
-//		fmt.Printf(" ERROR from Atoi: %s\n", err)
-//	}
-//	rand.Seed(time.Now().UnixNano())
-//}
 
 // ---------------------------------------------------------------- getChar -----------------------------
 
@@ -576,15 +560,6 @@ func check(e error, msg string) {
 	}
 }
 
-//// -------------------------------------------- min ---------------------------------------------
-//func min(a, b int) int {
-//	if a < b {
-//		return a
-//	} else {
-//		return b
-//	}
-//}
-
 // ------------------------------------------- MAIN --------------------------------
 func main() {
 
@@ -666,17 +641,6 @@ func main() {
 	}
 	fileRdr := bytes.NewReader(fileBuf)
 
-	//defer infile.Close()
-	//inputfile := bufio.NewReader(infile)
-	//   Build outfilename not needed, and will be replaced by a temp file.
-	//BaseFilename := filepath.Base(Filename)
-	//ExtFilename := filepath.Ext(Filename)
-	//lastIndex := strings.LastIndex(BaseFilename, ".")
-	//base := BaseFilename[:lastIndex] // base is the name without extension
-	//TodaysDateString := MakeDateStr()
-	//outfilename := base + TodaysDateString + ExtFilename
-
-	//outfile, err := os.Create(outfilename)
 	workingDir, err := os.Getwd()
 	if err != nil {
 		fmt.Printf(" os.Getwd() call ERROR is %s\n", err)
@@ -744,7 +708,6 @@ func main() {
 		fmt.Printf(" Error returned by running vlc %s is %s\n", temp, err)
 	}
 
-	// And now need to erase the temp file.
 	//os.Remove(temp)  No, I won't do this so the terminal is freed up right after this pgm runs.
 
 } //  vlc main
