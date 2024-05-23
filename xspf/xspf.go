@@ -39,6 +39,7 @@ package main
    1 Apr 23 -- StaticCheck found some issues.
   11 Feb 24 -- Added math/rand/v2 so removed init() which called rand.seed
   19 May 24 -- Removed min(), as it duplicated a built-in.  And clarified the startup message.
+  23 May 24 -- Took out dead code, tweaked a displayed message, and suppressed vlc errors.
 */
 
 import (
@@ -60,7 +61,7 @@ import (
 	"time"
 )
 
-const LastCompiled = "19 May 2024"
+const LastCompiled = "23 May 2024"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
 
@@ -232,21 +233,6 @@ func GetTrack(f *bytes.Reader) (*TrackType, error) {
 	var err error
 	var XMLtoken TokenType
 
-	//for { // LOOP to ignoring white space until get the opening track tag
-	//	XMLtoken, err := GetXMLToken(f)
-	//	if verboseFlag {
-	//		fmt.Printf("GetTrack looking for opening track XMLtoken at about line 238: token= %s, state=%s\n", XMLtoken.Str, tokenStateNames[XMLtoken.State])
-	//	}
-	//	if err != nil {
-	//		e := fmt.Errorf(" GetTrack and ERROR %s occurred when trying to get <track>.", err)
-	//		return nil, e
-	//	}
-	//
-	//	if (XMLtoken.State == OPENINGHTML) && strings.EqualFold(XMLtoken.Str, "track") {
-	//		break // if have tracklist, break this inner for loop.
-	//	}
-	//} // loop until get opening tracklist tag
-
 	for {
 		XMLtoken, err = GetXMLToken(f)
 		if verboseFlag {
@@ -409,22 +395,11 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 			e := fmt.Errorf(" Trying to get another track tag and got %s.  Ending", err)
 			return nil, e
 		}
-
-		//if (XMLtoken.State == CLOSINGHTML) && strings.EqualFold(XMLtoken.Str, "tracklist") { // unexpected condition
-		//	e := fmt.Errorf(" Unexpected tracklist token.  Token = %#V", XMLtoken)
-		//	return nil, e
-		//} // if have closing tracklist
 	} // loop to read in more tracks
-
-	//fmt.Printf("In getFileNames before sort.  Length of TrackSlice = %d, and length of fn = %d\n", len(TrackSlice), len(fn))
 
 	t0 := time.Now()
 
 	//   It's time to shuffle
-
-	//swapfnt := func(i, j int) {
-	//	TrackSlice[i], TrackSlice[j] = TrackSlice[j], TrackSlice[i]
-	//}
 
 	swapFcn := func(i, j int) {
 		fn[i], fn[j] = fn[j], fn[i]
@@ -452,7 +427,7 @@ func main() {
 	var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 	var numNames int
 
-	fmt.Printf(" %s for the tracks in a vlc file with xsfp extension, placing names on command line.  Does not write a new xspf file.  Last altered %s, compiled by %s\n\n",
+	fmt.Printf(" %s for the tracks in a vlc file with xsfp extension, placing names on command line to vlc.  Does not write a new xspf file.  Last altered %s, compiled by %s\n\n",
 		os.Args[0], LastCompiled, runtime.Version())
 
 	execName, _ := os.Executable()
@@ -493,8 +468,6 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" %s has timestamp of %s, and full name of executable is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, execName)
-		//fmt.Printf(" vlcPath = %s, searchPath is: \n", vlcPath)
-		//fmt.Printf(" SearchPath: %#v\n", searchPath)
 	}
 
 	if flag.NArg() == 0 { // need to use filepicker
@@ -595,7 +568,7 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
+	//execCmd.Stderr = os.Stderr  To suppress all those silly error messages that I would see on linux.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", variadicParam, e)
