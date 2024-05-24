@@ -443,7 +443,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle its contents, and then output 'n' of them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: xspf <options> <filename> where the filename may be with or without the xsfp extension. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: xspf <options> <filename> where the filename may be with or without the xsfp extension.  If empty, it asks for an xspf file. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
