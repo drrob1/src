@@ -23,33 +23,10 @@ import (
      6 Aug 16 -- Started converting to Go.
     13 Apr 17 -- golint complained, so I added some comments
      6 Aug 23 -- The julian date number is of type int.  This is a reminder comment.
+    24 May 24 -- Adding the comments so that go doc will work.
 */
 
-/*
- tm is a c standard datatype.
-  time_t t=time(0);  absolute time in seconds, or -1 if unknown
-  tm POINTER p = gmtime( ADROF t);   usually indicated as tm* p = whatever
-    sec,min,hour,mday,mon (0-11), year (subt 1900), wday, yday, isdst
-
-struct tm IS
-  tm_sec    int	seconds after the minute  0-60*
-  tm_min    int	minutes after the hour    0-59
-  tm_hour   int	hours since midnight      0-23
-  tm_mday   int	day of the month          1-31
-  tm_mon    int	months since January      0-11
-  tm_year   int	years since 1900
-  tm_wday   int	days since Sunday         0-6
-  tm_yday   int	days since January 1      0-365
-  tm_isdst  int	Daylight Saving Time flag
-END
-
-
-For historical reasons, it is generally implemented as an integral value representing the number of seconds
-elapsed since 00:00 hours, Jan 1, 1970 UTC (i.e., a unix timestamp). Although libraries may implement this
-type using alternative time representations.
-*/
-
-// DateTimeType golint wants a comment here.  I don't think I need one.
+// DateTimeType -- fields are Rawtime, Month, Day, Year, Hours, Minutes, Seconds, Nanosec, MonthStr and DayOfWeekStr.
 type DateTimeType struct {
 	Rawtime                                   time.Time
 	Month, Day, Year, Hours, Minutes, Seconds int
@@ -58,21 +35,22 @@ type DateTimeType struct {
 }
 
 var ( // I tried declaring these as const but this would not compile.
-	// DayNames golint wants a comment here
+	// DayNames Sunday .. Saturday
 	DayNames = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-	// MonthNames golint wants a comment here
+
+	// MonthNames January .. December
 	MonthNames = [...]string{"", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+
 	// ADIPM is Accumulated Days in Previous Month
 	ADIPM = [...]int{0, 1, -1, 0, 0, 1, 1, 2, 3, 3, 4, 4}
 )
 
-//  ADIPM is a typed constant that represents the difference btwn the last day
-//  of the previous month and 30, assuming each month was 30 days long.
+//  ADIPM is a constant that represents the difference btwn the last day of the previous month and 30, assuming each month was 30 days long.
 //  The variable name is an acronym of Accumulated Days In Previous Months.
 
-// TIME2MDY System Time To Month, Day, and Year Conversion.
-//
 //	*********************************** TIME2MDY *************************
+//
+// TIME2MDY System Time To Month, Day, and Year Conversion.
 func TIME2MDY() (MM, DD, YY int) {
 
 	var DateTime DateTimeType
@@ -84,8 +62,9 @@ func TIME2MDY() (MM, DD, YY int) {
 	return
 } // TIME2MDY
 
-// GetDateTime fills the structure.
-// **************************************************** GetDateTime ***********************************
+// --------------------------------------- GetDateTime
+
+// GetDateTime fills the DateTimeType structure.
 func GetDateTime() DateTimeType {
 	var DateTime DateTimeType
 
@@ -103,13 +82,12 @@ func GetDateTime() DateTimeType {
 	return DateTime
 } // GetDateTime
 
-// MDY2STR Month Day Year Cardinals To String.  By both returning a string as a param and as a function I have
 // ***************************************** MDY2STR ***************************************************
+
+// MDY2STR -- Input Month Day Year in, output String "mm/dd/yyyy".
 func MDY2STR(M, D, Y int) string {
 
 	const DateSepChar = "/"
-	//  var MSTR,DSTR,YSTR string;
-	//  var IntermedStr string;
 
 	MSTR := strconv.Itoa(M)
 	DSTR := strconv.Itoa(D)
@@ -118,8 +96,9 @@ func MDY2STR(M, D, Y int) string {
 	return IntermedStr
 } // MDY2STR
 
-// JULIAN used to need longint or longcard.  Since the numbers are < 800,000, regular 32 bit int are enough.
-// ************************************************ JULIAN **********************************
+// ----------------------------------------------- JULIAN
+
+// JULIAN used to need longint or longcard.  Since the numbers are < 800,000, 32-bit int would be enough, but this returns int.
 func JULIAN(M, D, Y int) int {
 
 	var (
@@ -157,12 +136,12 @@ func JULIAN(M, D, Y int) int {
 	return Juldate
 } // JULIAN
 
-// GREGORIAN is fine w/ int param for Juldate.  See above comment for JULIAN.
-// **************************************** GREGORIAN ****************************************
+// ----------------------------------------- GREGORIAN
+
+// GREGORIAN -- Input Juldate int, output M,D,Y int
 func GREGORIAN(Juldate int) (M, D, Y int) {
 
 	const MinJuldate = 630000
-	//  var Y0,M0,D0 int;
 
 	if Juldate <= MinJuldate { // Found this bug 07/09/2016.  Else get infinite loop.
 		M = 0

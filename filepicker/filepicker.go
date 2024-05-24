@@ -26,13 +26,10 @@ Revision History
                The original algorithm sorted all files first using sort.Sort; I am changing this to first only read the filenames,
                matching against that, and then sorting by file timestamp (newest first).
 30 Jan 22 -- Commented out a debugging print statement that I forgot to do before.
+24 May 24 -- Added comments that would be displayed by go doc.
 */
 
-// FIS is a FileInfo slice, as in os.FileInfo
-
-//type FISlice []os.FileInfo
-//type FISliceSize []os.FileInfo
-type FISliceDate []os.FileInfo
+type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
 
 const numLines = 50
 
@@ -48,9 +45,8 @@ func (f FISliceDate) Len() int {
 	return len(f)
 }
 
+// GetFilenames -- pattern uses filepath.Match to see if there's a match.  IE, a glob type match.
 func GetFilenames(pattern string) ([]string, error) { // This routine sorts using sort.Sort
-	//var files FISlice
-	//var filesSize FISliceSize
 	var filesDate FISliceDate
 
 	CleanDirName := "." + string(filepath.Separator)
@@ -65,8 +61,6 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 		CleanFileName = "*"
 	}
 
-	// fmt.Printf(" In GetFilenames.  pattern = %q, CleanDirName = %q, and CleanFileName = %q \n\n", pattern, CleanDirName, CleanFileName)
-	// filesDate, err = ioutil.ReadDir(CleanDirName)
 	dirname, err := os.Open(CleanDirName)
 	if err != nil {
 		return nil, err
@@ -77,7 +71,6 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 	if err != nil {
 		return nil, err
 	}
-	//                                                  fmt.Printf(" In GetFilenames.  len(names) = %d\n\n", len(names))
 
 	CleanFileName = strings.ToLower(CleanFileName)
 	filesDate = make(FISliceDate, 0, len(names))
@@ -93,7 +86,6 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 		}
 	}
 
-	//fmt.Printf(" In GetFilenames, len(filesDate) = %d\n\n", len(filesDate))
 	sort.Sort(filesDate)
 
 	stringSlice := make([]string, 0)
@@ -110,6 +102,7 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 	return stringSlice, nil
 } // end GetFilenames
 
+// GetRegexFilenames -- uses a regular expression to determine a match, by using regex.MatchString.
 func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts using sort.Slice
 	CleanDirName, CleanPattern := filepath.Split(pattern)
 
@@ -121,8 +114,6 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 		CleanPattern = "."
 	}
 	CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
-
-	// fmt.Printf(" In GetRegexFilenames.  pattern = %q, CleanDirName = %q, and CleanPattern = %q \n\n", pattern, CleanDirName, CleanPattern)
 
 	regex, err := regexp.Compile(CleanPattern)
 	if err != nil {
@@ -140,7 +131,6 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 		return nil, err
 	}
 
-	//                                               fmt.Printf(" In GetRegexFilenames.  Len(names) = %d\n", len(names))
 	filesDate := make(FISliceDate, 0, len(names))
 	for _, name := range names {
 		if regex.MatchString(name) {
@@ -151,7 +141,6 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 			filesDate = append(filesDate, L)
 		}
 	}
-	//                                       fmt.Printf(" In GetRegexFilenames.  len(filesdate) = %d\n", len(filesDate))
 
 	lessFunc := func(i, j int) bool {
 		return filesDate[i].ModTime().UnixNano() > filesDate[j].ModTime().UnixNano()

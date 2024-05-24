@@ -83,9 +83,10 @@ REVISION HISTORY
                much simpler; the only use of the finite state automaton is in GetToken().
                And I also added 3 fields to TokenType (FullString, RealFlag and HexFlag), and added a signaling flag, wantReal that TokenReal() uses to signal into GetToken().
 24 Jul 23 -- Spoke too soon.  Hex input isn't working correctly.  Gotta fix that now.  And I removed 'h' to indicate hex.  Now only 0x will work, as used in C-ish.
+24 May 24 -- Added comments that will be detected by go doc
 */
 
-const LastAltered = "24 July 2023"
+const LastAltered = "24 May 2024"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -94,6 +95,7 @@ const (
 	ALLELSE
 )
 
+// TokenType fields are Str, FullStr which includes the minus sign, State, DelimCH, Isum, Rsum, RealFlag, HexFlag.
 type TokenType struct {
 	Str        string
 	FullString string // includes minus sign character, if present.
@@ -106,6 +108,7 @@ type TokenType struct {
 	HexFlag    bool // only way I know of to signal that the input string is a hex format.
 } // TokenType record
 
+// CharType fields are Ch byte and State int.
 type CharType struct {
 	Ch    byte
 	State int
@@ -143,6 +146,7 @@ var wantReal bool // used by TokenReal
 
 // These variables are declared here to make the variable global so to maintain their values btwn calls.
 
+// Cap -- will convert a rune to its upper case value.  It takes a rune and returns a rune.
 func Cap(c rune) rune {
 	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
 	return r
@@ -165,6 +169,7 @@ it permits the sequence \' and disallows unescaped '. If set to a double quote, 
 either escape and allows both quote characters to appear unescaped.
 */
 
+// CAP -- will convert the param to an upper case letter.  It takes a byte and returns a byte.
 func CAP(c byte) byte {
 	if (c >= 'a') && (c <= 'z') {
 		c = c - 32
@@ -210,9 +215,8 @@ func InitStateMap(bs *BufferState) {
 	bs.StateMap['^'] = OP
 } // InitStateMap
 
-// ----------------------------------------- INITKN -------------------------------------------
 /*
-func INITKN(Str string) *BufferState { // constructor, initializer
+func INITKN(Str string) *BufferState { // not idiomatic so I removed it.
 	// INITIALIZE TOKEN.
 	// The purpose of the initialize token routine is to initialize the
 	// variables used by nxtchr to begin processing a new line.
@@ -237,9 +241,8 @@ func INITKN(Str string) *BufferState { // constructor, initializer
 } // INITKN
 */
 
-// ----------------------------------------- NewToken ----------------------------------------
 /*
-func NewToken(Str string) *BufferState { // constructor, initializer
+func NewToken(Str string) *BufferState { // not idiomatic so I removed it.
 	// INITIALIZE TOKEN, using the Go idiom.
 
 	if Str == "" {
@@ -256,6 +259,7 @@ func NewToken(Str string) *BufferState { // constructor, initializer
 
 // ----------------------------------------- New ----------------------------------------
 
+// New -- input is a string and it returns a *BufferState.  This is the init function call to start tokenizing.  The others have been removed.
 func New(Str string) *BufferState { // constructor, initializer
 	// INITIALIZE TOKEN, using the Go idiom.
 
@@ -270,6 +274,7 @@ func New(Str string) *BufferState { // constructor, initializer
 
 //------------------------------ STOTKNPOSN -----------------------------------
 
+// STOTKNPOSN -- stores the *BufferState, so it can be recalled later.  IIRC, this is an internal function.
 func (bs *BufferState) STOTKNPOSN() {
 	// STORE TOKEN POSITION.
 	// This routine will store the value of the curposn into a hold variable for later recall by RCLTKNPOSN.
@@ -285,6 +290,7 @@ func (bs *BufferState) STOTKNPOSN() {
 
 //------------------------------ RCLTKNPOSN ----------------------------------
 
+// RCLTKNPOSN -- recalls the *BufferState.  IIRC, this is an internal function.
 func (bs *BufferState) RCLTKNPOSN() {
 	/*
 	   RECALL TOKEN POSITION.
@@ -300,15 +306,8 @@ func (bs *BufferState) RCLTKNPOSN() {
 
 // ---------------------------- PeekChr -------------------------------------------
 
+// PeekChr -- Peeks at the next character in the buffer state, returning a CharType and a bool.  The bool is intended for the EOL condition.
 func (bs *BufferState) PeekChr() (CharType, bool) {
-
-	//-- This is the GET CHARACTER ROUTINE.  Its purpose is to get the next
-	//-- character from inbuf, determine its fsatyp (finite state automata type),
-	//-- and return the upper case value of char.
-	//-- NOTE: the curposn pointer is used before it's incremented, unlike most of the
-	//-- other pointers in this program.
-	//   As of 21 Sep 16, the CAP function was removed from here, and conditionally placed into GetToken.
-
 	var C CharType
 	var EOL bool
 	EOL = false
@@ -324,12 +323,14 @@ func (bs *BufferState) PeekChr() (CharType, bool) {
 
 // ---------------------------- NextChr  -------------------------------------------
 
+// NextChr -- only increments the Current position index.
 func (bs *BufferState) NextChr() {
 	bs.CURPOSN++
 } // NextChr
 
 // --------------------------------- GetChr --------------------------------
 
+// GETCHR -- Does both a PeekChr and a NextChr, returning a CharType and a bool which is true when EOL condition is met.
 func (bs *BufferState) GETCHR() (CharType, bool) {
 	C, EOL := bs.PeekChr()
 	bs.NextChr()
@@ -338,13 +339,8 @@ func (bs *BufferState) GETCHR() (CharType, bool) {
 
 // --------------------------------- UNGETCHR --------------------------------
 
+// UNGETCHR -- Does what its name says.  Primarily an internal function that decrements the current position index.
 func (bs *BufferState) UNGETCHR() {
-	/*
-	   -- UNGETCHaracteR.
-	   -- This is the routine that will allow the character last read to be read
-	   -- again by decrementing the pointer into the line buffer, CURPOSN.
-	*/
-
 	if bs.CURPOSN < 0 {
 		log.SetFlags(log.Llongfile)
 		log.Print(" CURPOSN out of range in UnGetChr")
@@ -354,8 +350,8 @@ func (bs *BufferState) UNGETCHR() {
 } // UNGETCHR
 
 // ------------------------------------- GetOpCode ---------------------------------------------
-// I am not coding this as a pointer receiver as it does not access its BufferState.
 
+// GETOPCODE -- Does what its name says.  Primarily an internal function.
 func (bs *BufferState) GETOPCODE(Token TokenType) int {
 
 	//-- GET OPCODE.
@@ -442,6 +438,7 @@ func (bs *BufferState) GETOPCODE(Token TokenType) int {
 
 //       ---------------------------=== GetToken ===--------------------------------------
 
+// GetToken (UpperCase bool) -- returns a TokenType which may be uppercase; EOL will be true when EOL condition is met.  Does not process scientific notation.
 func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 
 	var CHAR CharType
@@ -704,18 +701,21 @@ ExitForLoop:
 
 //--------------------------------------------------------- GETTKN --------------------------------------
 
+// GETTKN -- returns an upper cased token, and EOL condition.
 func (bs *BufferState) GETTKN() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetToken(true)
 	return TOKEN, EOL
 } // GETTKN
 
 // ---------------------------------- isdigit -----------------------------------------------
+// isdigit -- input a rune and return a bool.
 func isdigit(ch rune) bool {
 	isdgt := ch >= Dgt0 && ch <= Dgt9
 	return isdgt
 }
 
 // ---------------------------------- ishexdigit -------------------------------------------------
+// ishexdigit -- input a rune and return a bool.
 func ishexdigit(ch rune) bool {
 
 	ishex := isdigit(ch) || ((ch >= 'A') && (ch <= 'F'))
@@ -725,6 +725,7 @@ func ishexdigit(ch rune) bool {
 
 //----------------------------------- fromhex -------------------------------------------------
 
+// FromHex -- input a string and returns int.
 func FromHex(s string) int {
 	result := 0
 	var dgtval int
@@ -742,7 +743,7 @@ func FromHex(s string) int {
 } // FromHex
 
 // ---------------------------------------- SetMapDelim -----------------------------------------
-
+// SetMapDelim -- input a byte that will be included in the characters that are used as delimiters.
 func (bs *BufferState) SetMapDelim(char byte) {
 	bs.StateMap[char] = DELIM
 } // SetMapDelim
@@ -750,6 +751,7 @@ func (bs *BufferState) SetMapDelim(char byte) {
 //-------------------------------------------- TokenReal ---------------------------------------
 // Allows "0x" as hex prefix, as well as "H" as hex suffix.  And idiomatic Go does not have a function begin with Get.
 
+// TokenReal -- returns a TokenType and EOL state.  Does process scientific notation by changing the state of certain characters to simplify the code.
 func (bs *BufferState) TokenReal() (TokenType, bool) {
 	var token TokenType
 	var EOL bool
@@ -790,8 +792,9 @@ func (bs *BufferState) TokenReal() (TokenType, bool) {
 
 //-------------------------------------------- GETTKNREAL ---------------------------------------
 // I am copying the working code from TKNRTNS here.  See the comments in tknrtnsa.adb for reason why.
-// Now allows "0x" as hex prefix, as well as "H' as hex suffix.
+// Allows "0x" as hex prefix; no longer allows "H" as hex suffix.
 
+// GETTKNREAL -- Returns a TokenType and EOL indicater.  This is the rtn to do this.
 func (bs *BufferState) GETTKNREAL() (TOKEN TokenType, EOL bool) {
 	var CHAR CharType
 
@@ -894,6 +897,7 @@ ExitLoop:
 
 // --------------------------------------- GetTokenString ---------------------------------------
 
+// GetTokenString (uppercase bool) -- returns a possibly all upper case TokenType and the EOL indicator.
 func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var Char CharType
 	for c := Dgt0; c <= Dgt9; c++ {
@@ -968,6 +972,7 @@ func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool
 
 // --------------------------------------- GETTKNSTR ---------------------------------------
 
+// GETTKNSTR -- Must return a string, even if that string is all numbers.
 func (bs *BufferState) GETTKNSTR() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetTokenString(true)
 	return TOKEN, EOL
@@ -975,6 +980,7 @@ func (bs *BufferState) GETTKNSTR() (TOKEN TokenType, EOL bool) {
 
 // ---------------------------------------- GetTokenEOL -------------------------------------------
 
+// GetTokenEOL -- returns the rest of the original string as a string, and returns the EOL indicator.
 func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	// GET ToKeN to EndOfLine.
 	// This will build a token that consists of every character left on the line.
@@ -1012,6 +1018,7 @@ func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 
 // ----------------------------------------- GETTKNEOL ------------------------------------------
 
+// GETTKNEOL -- original token getting rtn, returning a TokenType and EOL indicator.
 func (bs *BufferState) GETTKNEOL() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetTokenEOL(true)
 	return TOKEN, EOL
@@ -1039,6 +1046,7 @@ func (bs *BufferState) UNGETTKN() {
 
 //                                        GetTokenSlice, now TokenSlice
 
+// TokenSlice -- Single routine that returns a slice of tokens as determined by GetToken.
 func TokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
@@ -1058,6 +1066,7 @@ func TokenSlice(str string) []TokenType {
 
 //                                 Old RealTokenSlice
 
+// RealTokenSlice -- Single routine that returns a slice of tokens as determined by GETTKNREAL.
 func RealTokenSlice(str string) []TokenType {
 	if str == "" {
 		return nil
@@ -1077,6 +1086,7 @@ func RealTokenSlice(str string) []TokenType {
 
 // -------------------------- TokenRealSlice ------------------------------
 
+// TokenRealSlice -- Single routine that returns a slice of tokens as determined by TokenReal.
 func TokenRealSlice(str string) []TokenType { // This uses the new TokenReal instead of the old GETTKNREAL.
 	if str == "" {
 		return nil
@@ -1095,13 +1105,3 @@ func TokenRealSlice(str string) []TokenType { // This uses the new TokenReal ins
 }
 
 // end tknptr
-
-/*
-  A way to output program file and line numbers in an error message.  Must be a closure, I think.  But
-  this is cumbersome.  I'll leave the code here in case I figure out a way to make it less cumbersome.
-  where := func() {
-      _, file, line, _ := runtime.Caller(1)
-      log.Fatalf(" In UNGETCHR and CurPosn is < 0.  %s:%d\n", file, line)
-  }
-  where();
-*/

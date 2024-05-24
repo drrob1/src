@@ -15,8 +15,10 @@ REVISION HISTORY
  1 Oct 21 -- I just noticed that strings package has a replacer type, that does this.  I'm going to try using that.
 30 Jun 23 -- Back in the 80's when I was using Modula-2, there was a module called MiscM2, and then StdMiscM2, or something like that.
                I'm doing that now in Go.  This module is now called misc, based on makesubst
+24 May 24 -- Adding comments that can be processed by go doc.
 */
 
+// MakeSubst -- input a string, output a string that substitutes '=' -> '+' and ';' -> '*'
 func MakeSubst(instr string) string {
 	instr = strings.TrimSpace(instr)
 	inRune := make([]rune, len(instr)) // was a slice of byte in the 1st version of this routine.
@@ -33,11 +35,11 @@ func MakeSubst(instr string) string {
 	return string(inRune)
 } // makesubst
 
-//  The first version of this routine used a ByteSlice.  Then I read an example in Go in 21st Century that uses a
-//slice of runes, which made more sense to me.  So I changed from inByteSlice that I called BS, to inRune
-//which is a slice of runes.  That works with no conversion to byte needed, as s is a rune and single quoted
-//characters are runes.
+// The first version of this routine used a ByteSlice.  Then I read an example in Go in 21st Century that uses a slice of runes, which made more sense to me.
+// So I changed from inByteSlice that I called BS, to inRune which is a slice of runes.
+// That works with no conversion to byte needed, as s is a rune and single quoted characters are runes.
 
+// MakeReplaced -- input a string, and uses strings.NewReplacer to '=' -> '+' and ';' -> '*'
 func MakeReplaced(instr string) string {
 	rplcd := strings.NewReplacer("=", "+", ";", "*")
 	return rplcd.Replace(instr)
@@ -47,6 +49,7 @@ func MakeReplaced(instr string) string {
 // Needed as a bytes reader does not have a readString method.
 // This includes the fix so that EOF can only be returned after the last line is returned, even if that line does not end in a newline.
 
+// ReadLine -- input a *bytes.Reader, and outputs a line delimited by \n, and an error returned by ReadByte that is not io.EOF.  io.EOF is expected for each line, so that's not an error.
 func ReadLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
@@ -74,6 +77,7 @@ func ReadLine(r *bytes.Reader) (string, error) {
 // I learned about this from the manning live project that taught RSA public key cryptography.
 //
 
+// RandRange -- Input a min and a max int, and returns a random int in that range.
 func RandRange(minP, maxP int) int { // note that this is not cryptographically secure.  Would need crypto/rand for that.
 	if maxP < minP {
 		minP, maxP = maxP, minP
