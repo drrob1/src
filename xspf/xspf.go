@@ -40,6 +40,8 @@ package main
   11 Feb 24 -- Added math/rand/v2 so removed init() which called rand.seed
   19 May 24 -- Removed min(), as it duplicated a built-in.  And clarified the startup message.
   23 May 24 -- Took out dead code, tweaked a displayed message, and suppressed vlc errors.
+  24 May 24 -- Took out findexec, and replaced it w/ my own whichexec.  I'm considering making this essentially the same as shufv and shufv2.  I'll probably
+                 make a switch to decide its behavior, and make the default using a new xspf file.
 */
 
 import (
@@ -47,7 +49,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/jonhadfield/findexec"
 	"io"
 	"math/rand/v2"
 	"os"
@@ -56,17 +57,15 @@ import (
 	"runtime"
 	"src/filepicker"
 	"src/timlibg"
+	"src/whichexec"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const LastCompiled = "23 May 2024"
+const LastCompiled = "24 May 2024"
 const MaxNumOfTracks = 2048 // Initial capacity
 const extension = ".xspf"
-
-//const blankline = "                                                                             " // ~70 spaces
-//const sepline = "-----------------------------------------------------------------------------"
 
 const ( // States of tokens
 	EMPTY    = iota
@@ -423,36 +422,28 @@ func getShuffledFileNames(inputFile *bytes.Reader) ([]string, error) {
 func main() {
 	var ans, filename string
 	var fileExistsFlag bool
-	var searchPath, path, vPath string
+	var vPath string
 	var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 	var numNames int
 
-	fmt.Printf(" %s for the tracks in a vlc file with xsfp extension, placing names on command line to vlc.  Does not write a new xspf file.  Last altered %s, compiled by %s\n\n",
+	fmt.Printf(" %s takes as input an xsfp file and places the shuffled names on command line to vlc.  Does not write a new xspf file.  Last altered %s, compiled by %s\n\n",
 		os.Args[0], LastCompiled, runtime.Version())
 
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	path = os.Getenv("PATH")
 	vPath, ok := os.LookupEnv("VLCPATH")
 	if ok {
 		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.
 	}
-	if runtime.GOOS == "windows" {
-		searchPath = vlcPath + ";" + path
-	} else if runtime.GOOS == "linux" && ok {
-		searchPath = vlcPath + ":" + path
-	} else { // on linux and not ok, meaning environment variable VLCPATH is empty.
-		searchPath = path
-	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will match an input regexp using smart case, against all filenames in the current directory\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then output 'n' of them on the command line to vlc.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will take an input xspf file,")
+		fmt.Fprintf(flag.CommandLine.Output(), " shuffle its contents, and then output 'n' of them on the command line to vlc.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: launchv <options> <input-regex> where <input-regex> cannot be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: xspf <options> <filename> where the filename may be with or without the xsfp extension. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
@@ -540,10 +531,12 @@ func main() {
 	}
 
 	var vlcStr string
+	// Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+	// My own whichexec works as I want it to.  I removed the use of findexec.
 	if runtime.GOOS == "windows" {
-		vlcStr = findexec.Find("vlc", searchPath) //Turns out that vlc was not in the path.  But it shows up when I use "which vlc".  So it seems that findexec doesn't find it on my win10 system.  So I added it to the path.
+		vlcStr = whichexec.Find("vlc", vlcPath)
 	} else if runtime.GOOS == "linux" {
-		vlcStr = findexec.Find("vlc", "") // calling vlc without a console.
+		vlcStr = whichexec.Find("vlc", "") // calling vlc without a console.
 	}
 
 	if vlcStr == "" {
