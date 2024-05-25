@@ -57,10 +57,12 @@ import (
                  They only use the same color if they are all in the same size magnitude. I think I'm going to test if the color is yellow, then ... nevermind.
                  I'm going to alternate brightness, ie, bright is true or false, and see what happens.
                  I like it, so I'll keep it for now.  And I added it to list2.go.
+  25 May 24 -- Adding doc comments for go doc.
 */
 
 type DirAliasMapType map[string]string
 
+// FileInfoExType is what is returned by all of the routines here.  Fields are file info, Dir, RelPath, AbsPath and FullPath.  Some may be redundant, but this is what it is.
 type FileInfoExType struct {
 	FI       os.FileInfo
 	Dir      string
@@ -69,7 +71,7 @@ type FileInfoExType struct {
 	FullPath string // probably not needed, but I really do want to be complete.
 }
 
-var filterAmt int64 // not exported.  Only the FilterFlag is exported.
+var filterAmt int64 // not exported
 var VerboseFlag bool
 var VeryVerboseFlag bool
 var FilterFlag bool
@@ -123,19 +125,19 @@ func init() {
 
 }
 
-// NewList is the format that needs these params: (excludeMe *regexp.Regexp, sizeSort, reverse bool)
+// NewList needs these params (excludeMe *regexp.Regexp, sizeSort, reverse bool) and returns a slice of FileInfoExType, and error.
 func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
 	lst, err := MakeList(excludeMe, sizeSort, reverse)
 	return lst, err
 }
 
-// New does not need params, so its signature is New().
+// New does not need params and returns a slice of FileInfoExType and an error.  This is the idiomatic way to call the routine here.
 func New() ([]FileInfoExType, error) {
 	lst, err := MakeList(ExcludeRex, SizeFlag, ReverseFlag)
 	return lst, err
 }
 
-// MakeList will return a slice of strings that contain a full filename including dir, and it needs params for excludeRegex, sizeSort and reverse.
+// MakeList needs the excludeRegex, sizeSort and reverse params, and returns a slice of FileInfoExType and error.  After writing this, I decided to use the idiomatic wrapper functions above.
 func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
 	var err error
 
@@ -196,7 +198,7 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 	return fileInfoX, nil
 } // end MakeList
 
-// SkipFirstNewList ...  will return a slice of strings that contain a full filename including dir, and it needs params for excludeRegex, sizeSort and reverse.
+// SkipFirstNewList will return a slice of FileInfoExType and an error.  I don't remember why I coded this.
 func SkipFirstNewList() ([]FileInfoExType, error) {
 	var err error
 
@@ -260,6 +262,7 @@ func SkipFirstNewList() ([]FileInfoExType, error) {
 	return fileInfoX, nil
 } // end SkipFirstNewList
 
+// NewFromGlob takes a glob expression and returns a slice of FileInfoExType, and an error.
 func NewFromGlob(globExpr string) ([]FileInfoExType, error) {
 	var err error
 
@@ -323,6 +326,7 @@ func NewFromGlob(globExpr string) ([]FileInfoExType, error) {
 	return fileInfoX, nil
 } // end NewFromGlob
 
+// NewFromRegexp takes a regexp and returns a slice of FileInfoExType and an error.
 func NewFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // remember that the caller must call regexp.Compile
 	var err error
 
@@ -425,19 +429,6 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool { // this alrea
 		return false
 	}
 
-	//if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-	//	return false
-	//} else if filterAmt > 0 {
-	//	if fi.Size() < int64(filterAmt) {
-	//		return false
-	//	}
-	//}
-	//if excludeRex.String() != "" {
-	//	if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
-	//		return false
-	//	}
-	//}
-
 	if excludeRex != nil {
 		if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
@@ -477,8 +468,6 @@ func GetDirectoryAliases() DirAliasMapType { // Env variable is diraliases.
 } // end getDirectoryAliases
 
 // ------------------------------ ProcessDirectoryAliases ---------------------------
-
-//func ProcessDirectoryAliases(aliasesMap DirAliasMapType, cmdline string) string {  I took out the aliasesMap param.  It doesn't belong as a param.  Flagged by StaticCheck.
 
 func ProcessDirectoryAliases(cmdline string) string {
 

@@ -38,10 +38,12 @@ import (
   31 Mar 23 -- StaticCheck found a minor issue, about byte values can't be < 0.
   11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
    7 Apr 24 -- See notes from today in list.go.  Essentially, I added alternating brightness in the selection display to help see adjacent lines w/ the came color.
+  25 May 24 -- Adding doc comments for go doc.
 */
 
 type DirAliasMapType map[string]string
 
+// FileInfoExType is what is returned by all of the routines here.  Fields are file info, Dir and RelPath.
 type FileInfoExType struct {
 	FI      os.FileInfo
 	Dir     string
@@ -105,12 +107,13 @@ func init() {
 	}
 }
 
+// New -- returns a slice of FileInfoExType and error.  Idiomatic way to use the routines here.
 func New() ([]FileInfoExType, error) {
 	lst, err := MakeList(ExcludeRex, SizeFlag, ReverseFlag)
 	return lst, err
 }
 
-// MakeList will return a slice of strings that contain a full filename including dir
+// MakeList returns a slice of FileInfoExType and error.  I initially wrote this, and later decided to use the idiomatic name as a wrapper to this.
 func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
 	var err error
 
