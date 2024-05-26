@@ -125,15 +125,15 @@ func init() {
 
 }
 
-// NewList needs these params (excludeMe *regexp.Regexp, sizeSort, reverse bool) and returns a slice of FileInfoExType, and error.
-func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
-	lst, err := MakeList(excludeMe, sizeSort, reverse)
-	return lst, err
-}
-
 // New does not need params and returns a slice of FileInfoExType and an error.  This is the idiomatic way to call the routine here.
 func New() ([]FileInfoExType, error) {
 	lst, err := MakeList(ExcludeRex, SizeFlag, ReverseFlag)
+	return lst, err
+}
+
+// NewList needs these params (excludeMe *regexp.Regexp, sizeSort, reverse bool) and returns a slice of FileInfoExType, and error.
+func NewList(excludeMe *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoExType, error) {
+	lst, err := MakeList(excludeMe, sizeSort, reverse)
 	return lst, err
 }
 
