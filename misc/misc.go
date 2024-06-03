@@ -1,10 +1,12 @@
 package misc
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"io"
 	"math/rand/v2"
+	"os"
 	"strings"
 )
 
@@ -83,4 +85,20 @@ func RandRange(minP, maxP int) int { // note that this is not cryptographically 
 		minP, maxP = maxP, minP
 	}
 	return minP + rand.IntN(maxP-minP)
+}
+
+// CreateOrAppendWithBuffer This takes a name string and returns a file pointer opened for writing using the bufio routines.  Will not truncate or clobber a file.
+func CreateOrAppendWithBuffer(name string) (*bufio.Writer, error) {
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+	buf := bufio.NewWriter(f)
+	return buf, nil
+}
+
+// CreateOrAppendWithoutBuffer This take a name string and returns a simple file pointer, NOT using the bufio routines.  Will not truncate or clobber a file.
+func CreateOrAppendWithoutBuffer(name string) (*os.File, error) {
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	return f, err
 }

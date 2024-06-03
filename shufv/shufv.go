@@ -36,6 +36,7 @@ package main // shufv.go
   11 Feb 24 -- Added math/rand/v2, so this must be compiled w/ Go 1.22+
   20 Feb 24 -- Increased the number of times to shuffle, as I did in launchv and lv2.  And updated the shuffle message.
   19 May 24 -- Removed min(), as it duplicates a built-in as of Go 1.22+.  And I clarified the startup message.
+   3 Jun 24 -- Changed how I create the output file to include the .xspf extension.
 */
 
 import (
@@ -57,11 +58,10 @@ import (
 	"time"
 	//
 	"src/filepicker"
-	"src/getcommandline"
 	"src/timlibg"
 )
 
-const LastCompiled = "May 23, 2024"
+const LastCompiled = "June 3, 2024"
 const MaxNumOfTracks = 2048
 
 // const blankline = "                                                                             " // ~70 spaces
@@ -609,7 +609,7 @@ func main() {
 		}
 		fmt.Println(" Picked filename is", Filename)
 	} else { // will use filename entered on commandline
-		ns := getcommandline.GetCommandLineString()
+		ns := flag.Arg(0)
 		Filename = filepath.Clean(ns)
 
 		if strings.Contains(Filename, ".") {
@@ -628,9 +628,9 @@ func main() {
 
 		if !FileExists {
 			fmt.Println(" File", Filename, " does not exist.  Exiting.")
-			os.Exit(1)
+			return
 		}
-		fmt.Println(" Filename is", Filename)
+		fmt.Println(" Input Filename is", Filename)
 	}
 
 	//infile, err := os.Open(Filename)
@@ -646,7 +646,7 @@ func main() {
 		fmt.Printf(" os.Getwd() call ERROR is %s\n", err)
 		os.Exit(1)
 	}
-	outputFile, err := os.CreateTemp(workingDir, "vlc")
+	outputFile, err := os.CreateTemp(workingDir, "vlc*.xspf") // this is supposed to place the random numbers in place of the wildcard.
 	tempFilename := outputFile.Name()
 	if err != nil {
 		fmt.Printf(" os.CreateTemp ERROR is %s\n", err)
@@ -666,8 +666,8 @@ func main() {
 	ProcessXMLfile(fileRdr, outfileBuf)
 	outfileBuf.Flush()
 	outputFile.Close()
-	temp := tempFilename + ".xspf"
-	os.Rename(tempFilename, temp)
+	//temp := tempFilename + ".xspf"
+	//os.Rename(tempFilename, temp)
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
 
@@ -697,7 +697,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	execCmd := exec.Command(vlcStr, temp)
+	execCmd := exec.Command(vlcStr, tempFilename)
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
@@ -705,10 +705,8 @@ func main() {
 	//err = execCmd.Run()
 	err = execCmd.Start()
 	if err != nil {
-		fmt.Printf(" Error returned by running vlc %s is %s\n", temp, err)
+		fmt.Printf(" Error returned by running vlc %s is %s\n", tempFilename, err)
 	}
-
-	//os.Remove(temp)  No, I won't do this so the terminal is freed up right after this pgm runs.
 
 } //  vlc main
 

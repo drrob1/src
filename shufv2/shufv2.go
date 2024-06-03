@@ -37,6 +37,7 @@ package main // shufv2.go from shufv.go
   20 Feb 24 -- Increased the number of times to shuffle, as I did in launchv and lv2.  And updated the shuffle message.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   17 May 24 -- Now called shufv2, and after shuffling and writing the xspf file, it will call vlc on it, like lv2 and listvlc do.
+   3 Jun 24 -- Simplified creation of the temp xspf file.
 */
 
 import (
@@ -58,15 +59,11 @@ import (
 	"time"
 	//
 	"src/filepicker"
-	"src/getcommandline"
 	"src/timlibg"
 )
 
-const LastCompiled = "May 23, 2024"
+const LastCompiled = "June 3, 2024"
 const MaxNumOfTracks = 2048
-
-// const blankline = "                                                                             " // ~70 spaces
-// const sepline = "-----------------------------------------------------------------------------"
 
 const (
 	EMPTY    = iota
@@ -611,7 +608,7 @@ func main() {
 		}
 		fmt.Println(" Picked filename is", Filename)
 	} else { // will use filename entered on commandline
-		ns := getcommandline.GetCommandLineString()
+		ns := flag.Arg(0)
 		Filename = filepath.Clean(ns)
 
 		if strings.Contains(Filename, ".") {
@@ -635,7 +632,6 @@ func main() {
 		fmt.Println(" Filename is", Filename)
 	}
 
-	//infile, err := os.Open(Filename)
 	fileBuf, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Cannot open input file,", Filename, ".  Does it exist?  Error is", err)
@@ -649,7 +645,7 @@ func main() {
 	lastIndex := strings.LastIndex(BaseFilename, ".")
 	base := BaseFilename[:lastIndex] // base is the name without extension
 	TodaysDateString := MakeDateStr()
-	outfilename := "vlc_" + base + TodaysDateString
+	outfilename := "vlc_" + base + TodaysDateString + "_*" + ExtFilename
 
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -661,14 +657,17 @@ func main() {
 		fmt.Printf(" os.CreateTemp ERROR is %s\n", err)
 		return
 	}
+	tempFilename := outputFile.Name()
+	if verboseFlag {
+		fmt.Printf(" TempFilename is %s\n", tempFilename)
+	}
 	outfileBuf := bufio.NewWriter(outputFile)
 
 	ProcessXMLfile(fileRdr, outfileBuf)
 	outfileBuf.Flush()
 	outputFile.Close()
-	tempFilename := outputFile.Name()
-	renTemp := tempFilename + ExtFilename
-	os.Rename(tempFilename, renTemp)
+	//renTemp := tempFilename + ExtFilename
+	//os.Rename(tempFilename, renTemp)
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
 
@@ -681,13 +680,13 @@ func main() {
 
 	// Time to run vlc.
 
-	execCmd := exec.Command(vlcStr, renTemp)
+	execCmd := exec.Command(vlcStr, tempFilename)
 	execCmd.Stdin = os.Stdin
 	//execCmd.Stdout = os.Stdout
 	//execCmd.Stderr = os.Stderr //I don't have to assign this.  Let's see what happens if I leave it at nil.  It worked as I hoped.  No errors are displayed to the screen in linux.
 	e := execCmd.Start()
 	if e != nil {
-		fmt.Printf(" Error returned by running vlc %s is %v\n", renTemp, e)
+		fmt.Printf(" Error returned by running vlc %s is %v\n", tempFilename, e)
 	}
 
 } //  vlc main
