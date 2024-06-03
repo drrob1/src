@@ -129,6 +129,7 @@ Revision History
 28 Aug 23 -- Added the all flag, currently equivalent to indicating 50 screens.  Mostly copied the code from dsrt.go.
 20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
  4 May 24 -- Adding concurrent code from fdsrt.
+ 3 Jun 24 -- Removed commented out code and edited a few comments.
 */
 
 const LastAltered = "May 4, 2024"
@@ -157,9 +158,8 @@ var numWorkers = runtime.NumCPU() * multiplier
 
 var excludeRegex *regexp.Regexp
 
-var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag /*filterAmt,*/, veryVerboseFlag, halfFlag bool
+var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
 
-// var dirListFlag, longFileSizeListFlag, filenameList, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
 var maxDimFlag, fastFlag bool
 var sizeTotal, grandTotal int64
 var numOfLines, grandTotalCount int
@@ -469,7 +469,7 @@ func main() {
 		if winFlag { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
 			if strings.ContainsRune(workingDir, ':') {
 				workingDir = ProcessDirectoryAliases(workingDir)
-			} //else if strings.Contains(workingDir, "~") { // this can only contain a ~ on Windows.			}  // static linter said just use the Replace func.
+			} //else if strings.Contains(workingDir, "~") // this can only contain a ~ on Windows.	Static linter said just use the Replace func.
 			workingDir = strings.Replace(workingDir, "~", HomeDirStr, 1)
 		}
 		f, err := os.Open(workingDir)
@@ -743,34 +743,6 @@ func ProcessDirectoryAliases(cmdline string) string {
 	return completeValue
 } // ProcessDirectoryAliases
 
-// ------------------------------- MyReadDir -----------------------------------
-/*  replaced by myReadDir, below
-func MyReadDir(dir string) []os.FileInfo {
-
-	dirname, err := os.Open(dir)
-	//	dirname, err := os.OpenFile(dir, os.O_RDONLY,0777)
-	if err != nil {
-		return nil
-	}
-	defer dirname.Close()
-
-	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
-	if err != nil {
-		return nil
-	}
-
-	fi := make([]os.FileInfo, 0, len(names))
-	for _, s := range names {
-		L, err := os.Lstat(s)
-		if err != nil {
-			log.Println(" Error from os.Lstat ", err)
-			continue
-		}
-		fi = append(fi, L)
-	}
-	return fi
-} // MyReadDir
-*/
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
 	var s1 string
@@ -800,16 +772,6 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 	return s1, color
 }
 
-/*
-{{{
-func truncStr(s string, w int) string {
-	if w <= 0 || len(s) < w {
-		return s
-	}
-	return s[:w]
-}}}
-*/
-
 // --------------------------------------------------- fixedString ---------------------------------------
 
 func fixedStringLen(s string, size int) string {
@@ -834,7 +796,7 @@ func fixedStringLen(s string, size int) string {
 
 // ------------------------------------------------------ getFileInfos -------------------------------------------------
 
-// getFileInfos will return a slice of FileInfos after the filter and exclude expression are processed
+// getFileInfos will return a slice of FileInfos after the regexp, filter and exclude expression are processed
 // It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
 func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
@@ -850,31 +812,6 @@ func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
 	return fileInfos
 }
 
-// ------------------------------- myReadDir -----------------------------------
-// The entire change including use of []DirEntry happens here.  Call to FileInfo only happens if file is to be included in the slice of fileInfos.
-//func myReadDir(dir string, inputRegex *regexp.Regexp) []os.FileInfo {
-//	dirEntries, err := os.ReadDir(dir)
-//	if err != nil {
-//		return nil
-//	}
-//
-//	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
-//	for _, d := range dirEntries {
-//		if !smartCase && !inputRegex.MatchString(strings.ToLower(d.Name())) { // skip dirEntries that do not match the input regex.
-//			continue
-//		} else if smartCase && !inputRegex.MatchString(d.Name()) {
-//			continue
-//		} else if includeThis(d.Name()) {
-//			fi, e := d.Info()
-//			if e != nil {
-//				fmt.Fprintf(os.Stderr, " In myReadDir: error from %s.Info() is %v\n", d.Name(), e)
-//			}
-//			fileInfos = append(fileInfos, fi)
-//		}
-//	}
-//	return fileInfos
-//} // myReadDir
-
 func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
 	// Adding concurrency in returning []os.FileInfo
 
@@ -883,6 +820,7 @@ func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The
 	if verboseFlag {
 		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
 	}
+	// numWorkers is set globally, above.
 	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
 	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
 	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
@@ -925,7 +863,7 @@ func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The
 	defer d.Close()
 
 	for {
-		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		// reading DirEntry's and sending the slices into the channel happens here.
 		deSlice, err := d.ReadDir(fetch)
 		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
 			close(deChan)
