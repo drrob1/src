@@ -88,13 +88,13 @@ func RandRange(minP, maxP int) int { // note that this is not cryptographically 
 }
 
 // CreateOrAppendWithBuffer This takes a name string and returns a file pointer opened for writing using the bufio routines.  Will not truncate or clobber a file.
-func CreateOrAppendWithBuffer(name string) (*bufio.Writer, error) {
+func CreateOrAppendWithBuffer(name string) (*os.File, *bufio.Writer, error) {
 	f, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	buf := bufio.NewWriter(f)
-	return buf, nil
+	return f, buf, nil
 }
 
 // CreateOrAppendWithoutBuffer This take a name string and returns a simple file pointer, NOT using the bufio routines.  Will not truncate or clobber a file.
