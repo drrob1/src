@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -49,6 +50,7 @@ import (
   27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
                  And I'm going to change from tokenize to tknptr.  Just to see if it works.
   25 Feb 21 -- Added 999 as a stop code.
+------------------------------------------------------------------------------------------------------------------------------------------------------
    3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoring file extension.
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using io.ReadAll. and go 1.15.8
    7 Mar 21 -- added strings.TrimSpace
@@ -57,6 +59,7 @@ import (
    9 Mar 22 -- Using package constants instead of my magic numbers.
   13 Jun 22 -- Cleaning up some comments, from Boston's SIR 2022.  And removed unused code.  And finally removed depracated ioutil.
   21 Oct 22 -- Now using strings.EqualFold as recommended by golangci-lint.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   11 Dec 22 -- Now called multisha to play w/ concurrent sha matching.  I decided the easiest name for this is multisha.  This will not be fast to code.
                  The result will be matched or not matched for each.
                  I would need to pass in the hash and filename for each, and let the matchOrNoMatch function determine which hash is in play.
@@ -78,9 +81,11 @@ import (
                  But I have to remember that linux only has 1024 file handles; this number cannot be exceeded.
    3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
                  Here I use 2 wait groups.  In fdsrt, I use a wait group and a done channel.
+   4 Jun 24 -- Changed how io.EOF is detected to use idiomatic code.  And removed dead code.  This routine has a results channel.  MatchOrNoMatch does not print the results.
+                 This spins up a constant number of hash workers and also spins up one result chan.
 */
 
-const LastCompiled = "3 May 2024"
+const LastCompiled = "4 June 2024"
 
 const (
 	undetermined = iota
@@ -192,11 +197,6 @@ func main() {
 	var ans, Filename string
 	var TargetFilename, HashValueReadFromFile string
 	var h hashType
-	//var counter int
-
-	//if numOfWorkers < 1 {
-	//	numOfWorkers = 1
-	//}
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
@@ -214,7 +214,7 @@ func main() {
 	hashChan = make(chan hashType)             // Bill Kennedy says in the worker pool pattern, making this synchronous is recommended.  And it seems to be the fastest of all I tested today.
 	resultChan = make(chan resultMatchType, 1) // This is slightly faster than when the buffer is numOfWorkers
 	wg1.Add(numOfWorkers * multiplier)
-	for range numOfWorkers * multiplier {
+	for range numOfWorkers * multiplier { // hashChan workers are spun up here.
 		go func() {
 			defer wg1.Done()
 			for h := range hashChan {
@@ -228,7 +228,7 @@ func main() {
 	go func() {
 		defer wg2.Done()
 		onWin := runtime.GOOS == "windows"
-		for result := range resultChan {
+		for result := range resultChan { // resultChan is spun up here.  There's only 1 of these.
 			if result.err != nil {
 				ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", result.err)
 				atomic.AddInt64(&postCounter, 1)
@@ -295,12 +295,8 @@ func main() {
 	t0 := time.Now()
 
 	for { // to read multiple lines
-		//                                                      inputLine, er := bytesBuffer.ReadString('\n')
 		inputLine, err := misc.ReadLine(bytesReader)
-		//                                                      inputLine = strings.TrimSpace(inputLine) // probably not needed as I tokenize this, but I want to see if this works.  Yeah, it works.
-		//                                                      fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-
-		if err == io.EOF /* && inputLine == "" */ { // reached EOF condition, there are no more lines to read, and no line.  If there is a line, process it and error out the next time thru.
+		if errors.Is(err, io.EOF) { // reached EOF condition, there are no more lines to read, and no line.
 			break
 		} else if len(inputLine) == 0 {
 			continue
@@ -352,15 +348,12 @@ func main() {
 			fName:     TargetFilename,
 			hashValIn: HashValueReadFromFile,
 		}
-		//wg1.Add(1)
-		//wg2.Add(1)
 		preCounter++
 		hashChan <- h // one sender (here), many receivers which are the workers in the pool.
 	}
 
 	// Sent all work into the matchOrNoMatch, so I'll close the hashChan
 	close(hashChan)
-	//                                                               ctfmt.Printf(ct.Green, true, " Just closed the hashChan.  There are %d goroutines, preCounter is %d and postCounter is %d.\n\n", runtime.NumGoroutine(), preCounter, postCounter) // counter = 24 is correct.
 
 	wg1.Wait() // wg1.Done() used to be called in matchOrNoMatch.  Now it is called when the goroutine shuts down.
 	fmt.Printf(" After wg1.Wait.  PostCounter = %d.\n", postCounter)

@@ -51,6 +51,7 @@ import (
   27 Sep 20 -- From help file of TakeCommand: MD-5 has 32 digits, SHA384 has 96 digits, and the above hash lengths are correct.
                  And I'm going to change from tokenize to tknptr.  Just to see if it works.
   25 Feb 21 -- Added 999 as a stop code.
+------------------------------------------------------------------------------------------------------------------------------------------------------
    3 Mar 21 -- Now called sha.go, which will always use hash length, while ignoring file extension.
                  Errors now go to Stderr.  Uses bytes buffer to read sha file using io.ReadAll. and go 1.15.8
    7 Mar 21 -- added strings.TrimSpace
@@ -68,6 +69,7 @@ import (
   13 Dec 22 -- On the testing.sha, sequential routine (sha) took 12.3963 sec, and this rtn took 6.0804 sec, ratio is 2.04.  So the concurrent code is 2X faster than non-concurrent.
                  The first wait group, wg1 below, still had results print after wg1.Wait().  I'll leave it in as the result is interesting to me.
                  I had to add another wait group that gets decremented after a result is printed.  That one, called wg2 below, does what I need.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   14 Dec 22 -- Now called conSha.go, and I want to simplify the code.  I don't need a receiving go routine; I'll have matchOrNoMatch print the results, too.
                  Timing results on same testing.sha show that this is slightly slower than multiSha.  IE, having separate go routines to collect the results and then show them is slightly
                  faster than doing both in the same routine.  Go figure.  Wait, scratch that.  This routine also has a post counter that is incremented atomically.  This is not in
@@ -75,6 +77,7 @@ import (
                  And this difference persists even after I added the atomic adds to multiSha.
   15 Feb 23 -- Following Bill Kennedy's advice and making the channel either synchronous or maybe buffer of 1.  This is still slower than multisha, by ~0.04 sec here on Win10 desktop.
    7 Apr 23 -- StaticCheck reports that resultMatchType is unused.  So I commented it out.  And another error in matchOrNoMatch, which I fixed.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   26 Apr 23 -- I'm going to use some of the enhancements I developed for the copyc family of routines here.
                  Now called csha, and I'll change to putting the hashes in a slice so I know how many there are, and then only start those go routines.
                  On win10 desktop, this sha file took 10.1 sec, but on leox it took 2 min 2.9 sec.  And now csha took 7.17 sec on win10 desktop, and 1 min 51.7 sec on leox.
@@ -91,9 +94,11 @@ import (
   10 Apr 24 -- I/O bound work, as in here, benefits from more workers than NumCPU()
                  But I have to remember that linux only has 1024 file handles; this number cannot be exceeded.
    3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
+   4 Jun 24 -- Removed dead code that was commented out long ago.  This routine first determines how many hashes need to be checked, and spins up that number of goroutines, up to a max.
+                 A results channel is not used as matchOrNoMatch prints the result as soon as it's determined.
 */
 
-const LastCompiled = "3 May 2024"
+const LastCompiled = "4 June 2024"
 
 const (
 	undetermined = iota
@@ -351,13 +356,3 @@ func main() {
 
 	ctfmt.Printf(ct.Yellow, onWin, "\n\n Elapsed time for everything was %s using %d goroutines.\n\n", time.Since(t0), runningGoRoutines)
 } // Main for sha.go.
-
-// ------------------------------------------------------- min ---------------------------------
-// Go is set to be version 1.21+, so I don't need this function.
-//func min(a, b int) int {
-//	if a < b {
-//		return a
-//	} else {
-//		return b
-//	}
-//}

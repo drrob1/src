@@ -90,9 +90,11 @@ import (
   10 Apr 24 -- I/O bound work benefits from having more goroutines than NumCPU()
                  But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
    3 May 24 -- Learned that wait groups are not intended to increment and decrement for each individual file; they cover the goroutines themselves.
+   4 Jun 24 -- Removed some dead code, commented out long ago.  The general logic here is to spin up a constant number of go routines, 10 times NumCPU, and feed the hashes as they're constructed.
+                 There's no result channel, as MatchOrNoMatch prints the result as it's computed and checked.
 */
 
-const LastCompiled = "3 May 2024"
+const LastCompiled = "4 June 2024"
 
 const (
 	undetermined = iota
@@ -182,9 +184,6 @@ func main() {
 	var h hashType
 	var preCounter int
 
-	//if numOfWorkers < 1 {
-	//	numOfWorkers = 1
-	//}
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
@@ -193,9 +192,9 @@ func main() {
 	fmt.Printf("Working directory is %s.  Full name of executable is %s.\n", workingDir, execName)
 	fmt.Println()
 
+	//resultChan = make(chan resultMatchType, numOfWorkers)  Not used here, as the result is determined in matchOrNoMatch and printed immediately.
 	// starting the worker go routines before the result goroutine.  This is a fan out pattern.
 	//hashChan = make(chan hashType) // this is now synchronous, at recommendation of Bill Kennedy.
-	//resultChan = make(chan resultMatchType, numOfWorkers)
 	//hashChan = make(chan hashType, numOfWorkers) // this is probably the slowest.  But still slower than multisha.
 	hashChan = make(chan hashType, 1) // Now I can't tell if this is better.  I'm leaving this for now.
 	onWin = runtime.GOOS == "windows"
@@ -261,10 +260,6 @@ func main() {
 	t0 := time.Now()
 
 	for { // to read multiple lines
-		//                                                                 inputLine, er := bytesBuffer.ReadString('\n')
-		//                                inputLine = strings.TrimSpace(inputLine) // It works, but it's not needed now.
-		//                                                 fmt.Printf(" after ReadString and line is: %#v\n", inputLine)
-		//                                                      fmt.Printf(" inputline: %q, err = %s\n", inputLine, err)
 		inputLine, err := misc.ReadLine(bytesReader)
 		if errors.Is(err, io.EOF) {
 			break
@@ -284,7 +279,6 @@ func main() {
 			ctfmt.Println(ct.Red, false, " EOL while getting 1st token in the hashing file.  Skipping to next line.")
 			continue
 		}
-		//                                                             fmt.Printf(" FirstToken is %q\n", FirstToken.Str)
 
 		if strings.ContainsRune(FirstToken.Str, '.') || strings.ContainsRune(FirstToken.Str, '-') ||
 			strings.ContainsRune(FirstToken.Str, '_') { // have filename first on line
