@@ -1,4 +1,4 @@
-package main // csha.go from consha.go
+package main // fansha.go from csha.go from consha.go
 
 import (
 	"bytes"
@@ -314,7 +314,7 @@ func main() {
 			runningGoRoutines, preCounter, postCounter) // counter = 25 is correct.
 	}
 
-	wg1.Wait() // wg1.Done() used to be called in matchOrNoMatch, now it's deferred in the worker goroutines.
+	wg1.Wait() // wg1.Done() is called in matchOrNoMatch
 
 	if verboseFlag {
 		ctfmt.Printf(ct.Cyan, true, "\n After wg1.  There are %d goroutines, pre counter is %d and post counter is %d.\n\n",
