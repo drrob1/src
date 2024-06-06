@@ -631,7 +631,6 @@ func main() {
 		fmt.Println(" Input Filename is", Filename)
 	}
 
-	//infile, err := os.Open(Filename)
 	fileBuf, err := os.ReadFile(Filename)
 	if err != nil {
 		fmt.Println(" Cannot open input file,", Filename, ".  Does it exist?  Error is", err)
@@ -703,7 +702,7 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
+	// execCmd.Stderr = os.Stderr  This will suppress all those error messages on linux.
 	err = execCmd.Start()
 	if err != nil {
 		fmt.Printf(" Error returned by running vlc %s is %s\n", tempFilename, err)
