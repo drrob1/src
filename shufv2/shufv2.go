@@ -664,10 +664,14 @@ func main() {
 	outfileBuf := bufio.NewWriter(outputFile)
 
 	ProcessXMLfile(fileRdr, outfileBuf)
-	outfileBuf.Flush()
-	outputFile.Close()
-	//renTemp := tempFilename + ExtFilename
-	//os.Rename(tempFilename, renTemp)
+	err = outfileBuf.Flush()
+	if err != nil {
+		fmt.Printf(" outfileBuf.Flush() ERROR is %s\n", err)
+	}
+	err = outputFile.Close()
+	if err != nil {
+		fmt.Printf(" outputFile.Close() ERROR is %s\n", err)
+	}
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
 

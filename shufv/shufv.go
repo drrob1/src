@@ -37,6 +37,7 @@ package main // shufv.go
   20 Feb 24 -- Increased the number of times to shuffle, as I did in launchv and lv2.  And updated the shuffle message.
   19 May 24 -- Removed min(), as it duplicates a built-in as of Go 1.22+.  And I clarified the startup message.
    3 Jun 24 -- Changed how I create the output file to include the .xspf extension.
+   6 Jun 24 -- Added error checking when flushing and closing the output file.
 */
 
 import (
@@ -61,11 +62,8 @@ import (
 	"src/timlibg"
 )
 
-const LastCompiled = "June 3, 2024"
+const LastCompiled = "June 6, 2024"
 const MaxNumOfTracks = 2048
-
-// const blankline = "                                                                             " // ~70 spaces
-// const sepline = "-----------------------------------------------------------------------------"
 
 const (
 	EMPTY    = iota
@@ -646,7 +644,7 @@ func main() {
 		fmt.Printf(" os.Getwd() call ERROR is %s\n", err)
 		os.Exit(1)
 	}
-	outputFile, err := os.CreateTemp(workingDir, "vlc*.xspf") // this is supposed to place the random numbers in place of the wildcard.
+	outputFile, err := os.CreateTemp(workingDir, "vlc-*.xspf") // this is supposed to place the random numbers in place of the wildcard.
 	tempFilename := outputFile.Name()
 	if err != nil {
 		fmt.Printf(" os.CreateTemp ERROR is %s\n", err)
@@ -664,10 +662,14 @@ func main() {
 	}
 
 	ProcessXMLfile(fileRdr, outfileBuf)
-	outfileBuf.Flush()
-	outputFile.Close()
-	//temp := tempFilename + ".xspf"
-	//os.Rename(tempFilename, temp)
+	err = outfileBuf.Flush()
+	if err != nil {
+		fmt.Printf(" outfileBuf.Flush() ERROR is %s\n", err)
+	}
+	err = outputFile.Close()
+	if err != nil {
+		fmt.Printf(" outputFile.Close() ERROR is %s\n", err)
+	}
 
 	// Now have the output file written, flushed and closed.  Now to pass it to vlc
 
@@ -702,7 +704,6 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
-	//err = execCmd.Run()
 	err = execCmd.Start()
 	if err != nil {
 		fmt.Printf(" Error returned by running vlc %s is %s\n", tempFilename, err)
@@ -729,178 +730,3 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 	}
 } // readLine
-/*
-// ---------------------------------------------------------------- PeekChar -----------------------------
-// peeks at the next char without advancing fileptr.  The filepointer is advanced by ReadChar, below.
-
-func PeekChar(f *bufio.Reader) (ch CharType, EOF bool) {
-	b := make([]byte, 1)
-	b, err := f.Peek(1) // b is a byte slice with size of 1 byte.
-	if err == io.EOF {  // basically any error is returned as EOF, because of the n==0 condition.
-		return CharType{}, true
-	} else if err != nil { // These 2 conditions are not essentially different.  They may be in the future.
-		return CharType{}, true
-	}
-
-	ch.Ch = b[0]
-
-	if ch.Ch == '<' {
-		ch.State = OPENANGLE
-	} else if ch.Ch == '>' {
-		ch.State = CLOSEANGLE
-	} else if ch.Ch == '/' {
-		ch.State = SLASH
-	} else if ch.Ch <= 31 { // remember that 32 is a space.
-		ch.State = CTRL
-	} else {
-		ch.State = PLAIN
-	}
-	return ch, EOF
-
-	set filepointer back one byte from its current position.  This will have Read get this byte again.
-	    Nevermind, by using bufio instead of os, I found a peek function.
-	   NextFileOffset, err = f.Seek(-1,1);
-	   if err != nil { fmt.Errorf(" Error from PeekChar call to Seek: %v\n",err); }
-
-
-} // PeekChar
-
-	// ------------------------------------------------------------- NextChar ----------------------------
-// advances filepointer.  PeekChar does not advance fileptr.  This rtn will throw the character away, as
-// it assumes that PeekChar already got and processed the character.
-
-func NextChar(f *bufio.Reader) {
-	_, err := f.Discard(1) // Discard 1 byte.  Throw away the return saying how many bytes were actually discarded
-	check(err, "In DiscardChar and got err:")
-} // DiscardChar
-*/
-
-/*
-// -------------------------------------------------------------------------- GetXMLtoken --------------------------------------------
-
-
-func GetXMLtoken(f *bufio.Reader) (XMLtoken TokenType, EOFFLG bool) {
-
-	   This will use the bufio file operations as I want this as a character stream.
-	   The only delimiters are angle brackets.  This is the only routine where input characters are read and processed.
-	   And I rewrote it to just exist as an XML token getter.  I need peeking functionality, as in a few sections below I don't advance the file pointer after peeking at
-	   the next byte.
-
-
-	//  XMLtoken := TokenType{};  // nil literal not needed because Go automatically does this for params.
-
-	tokenbyteslice := make([]byte, 0, 256) // intermed type to make a string before returning.
-
-MainForLoop:
-	for {
-		ch, EOF := PeekChar(f)
-		if EOF {
-			return TokenType{}, true
-		} // if EOFFLG then return empty TokenType and true for EOF
-
-		switch XMLtoken.State {
-		case EMPTY:
-			switch ch.State {
-			case PLAIN, SLASH:
-				if ch.Ch != ' ' { // ignore leading blanks, but always go to NextChar.
-					XMLtoken.State = CONTENTS
-					tokenbyteslice = append(tokenbyteslice, ch.Ch) // build contents
-				}
-				NextChar(f)
-			case OPENANGLE:
-				XMLtoken.State = OPENINGHTML
-				NextChar(f) // discard byte, but change state to begin a tag
-			case CTRL:
-				NextChar(f)  discard these
-			case CLOSEANGLE:
-				fmt.Errorf(" In peekXMLtoken and got an unexpected close angle.")
-				XMLtoken.State = OTHERERROR
-				return XMLtoken, false
-			} case ch.state when the token state is empty
-		case CONTENTS: // this case was STRING in the original Modula-2 code
-			switch ch.State {
-			case PLAIN, SLASH:
-				tokenbyteslice = append(tokenbyteslice, ch.Ch) // continue building the contents string
-				NextChar(f)
-			case CTRL:
-				NextChar(f) ignore control char
-			case OPENANGLE: openangle char is still avail for next loop iteration
-				break MainForLoop
-			case CLOSEANGLE:
-				fmt.Errorf(" In GetXMLToken.  String token got closeangle char")
-			} // case ch.state when the token state is STRING which is the value of the tag
-		case OPENINGHTML:
-			switch ch.State {
-			case PLAIN, OPENANGLE:
-				tokenbyteslice = append(tokenbyteslice, ch.Ch)
-				NextChar(f)
-			case SLASH:
-				NextChar(f)
-				if len(tokenbyteslice) == 0 {
-					XMLtoken.State = CLOSINGHTML // change state of this token from OPENING to CLOSING
-				} else {
-					tokenbyteslice = append(tokenbyteslice, ch.Ch)
-				} if length == 0
-			case CLOSEANGLE, CTRL:
-				NextChar(f)
-				break MainForLoop
-			} case chstate when the token state is OPENINGHTML
-		case CLOSINGHTML:
-			switch ch.State {
-			case PLAIN, SLASH, OPENANGLE:
-				tokenbyteslice = append(tokenbyteslice, ch.Ch)
-				NextChar(f)
-			case CLOSEANGLE, CTRL:
-				NextChar(f)
-				break MainForLoop
-			} case chstate
-		default:
-			fmt.Errorf(" In GetXMLtoken and tokenstate is in default clause of switch case.")
-			XMLtoken.State = OTHERERROR
-			return XMLtoken, false
-		} case XMLtoken.State
-	} // indefinite for loop
-
-	XMLtoken.Str = string(tokenbyteslice)
-	return XMLtoken, false
-} // GetXMLtoken
-*/
-
-/* ------------------------------------------- MakeDateStr ---------------------------------------------------
-
-func MakeDateStr() (datestr string) {
-
-	const DateSepChar = "-"
-
-	m, d, y := timlibg.TIME2MDY()
-	timenow := timlibg.GetDateTime()
-
-	MSTR := strconv.Itoa(m)
-	DSTR := strconv.Itoa(d)
-	YSTR := strconv.Itoa(y)
-	Hr := strconv.Itoa(timenow.Hours)
-	Min := strconv.Itoa(timenow.Minutes)
-	Sec := strconv.Itoa(timenow.Seconds)
-
-	datestr = "_" + MSTR + DateSepChar + DSTR + DateSepChar + YSTR + "_" + Hr + DateSepChar + Min + DateSepChar +
-		Sec + "__" + timenow.DayOfWeekStr
-	return datestr
-} // MakeDateStr
-
--------------------------------------------- Shuffle ----------------------------------------------------
-
-func Shuffle() {  replaced by rand.Shuffle
-	// Shuffle the array by passing once through the array, swapping each element with another, randomly chosen, element.
-
-	n := len(TrackSlice)
-
-	for c := 1; c < n; c++ { // c is not used in the loop below.  It's just an outer loop counter.
-		for i := n - 1; i > 0; i-- {
-			// swap element i with any element at or below that place.  Note that i is not allowed to be 0, but k can be
-			k := rand.Intn(i)
-			TrackSlice[i], TrackSlice[k] = TrackSlice[k], TrackSlice[i] // Go swap idiom, to swap pointers to a track that's held in TrackSlice
-		}
-	}
-} // Shuffle;
-
-*/
