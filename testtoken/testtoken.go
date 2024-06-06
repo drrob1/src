@@ -6,16 +6,17 @@ package main
   19 Aug 16 -- First Go version completed to test all parts of tokenize.go package
   21 Sep 16 -- Now need to test my new GetTknStrPreserveCase routine.  And test the change I made to GETCHR.
   13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
+   5 Jun 24 -- Updated code for modules, just so go get doesn't complain.
 */
 
 import (
 	"bufio"
 	"fmt"
-	"getcommandline"
 	"log"
 	"os"
+	"src/getcommandline"
+	"src/tokenize"
 	"strings"
-	"tokenize"
 )
 
 // var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
