@@ -152,9 +152,10 @@ REVISION HISTORY
  3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where it belongs.  Now the timing may be slightly faster than dsrt, here on Win11
              I'm going to continue development after all.  On windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
              And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
+ 7 Jun 24 -- Edited some comments and changed the final message.
 */
 
-const LastAltered = "5 May 2024"
+const LastAltered = "7 June 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -479,7 +480,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Printf(" Elapsed time = %s, File Size total = %s, len(fileInfos)=%d", elapsed, s, len(fileInfos))
+	fmt.Printf(" %s: Elapsed time = %s, File Size total = %s, len(fileInfos)=%d", os.Args[0], elapsed, s, len(fileInfos))
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
@@ -646,7 +647,9 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
 	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
 	wg.Add(numWorkers)
-	for range numWorkers { // reading from deChan to get the slices of DirEntry's
+
+	// reading from deChan to get the slices of DirEntry's
+	for range numWorkers {
 		go func() {
 			defer wg.Done()
 			for deSlice := range deChan {
@@ -664,7 +667,9 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 		}()
 	}
 
-	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+	// I figured it out, by closing the channel after all work is sent to it.
+	go func() {
 		for fi := range fiChan {
 			fiSlice = append(fiSlice, fi)
 			if fi.Mode().IsRegular() && showGrandTotal {
@@ -717,7 +722,7 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 
 func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
 	// Adding concurrency in returning []os.FileInfo
-	// This routine add a call to filepath.Match
+	// This routine adds a call to filepath.Match
 
 	var wg sync.WaitGroup
 
@@ -729,7 +734,9 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
 	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
 	wg.Add(numWorkers)
-	for range numWorkers { // reading from deChan to get the slices of DirEntry's
+
+	// reading from deChan to get the slices of DirEntry's
+	for range numWorkers {
 		go func() {
 			defer wg.Done()
 			for deSlice := range deChan {
@@ -747,7 +754,9 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 		}()
 	}
 
-	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+	// I figured it out, by closing the channel after all work is sent to it.
+	go func() {
 		for fi := range fiChan {
 			fiSlice = append(fiSlice, fi)
 			if fi.Mode().IsRegular() && showGrandTotal {
