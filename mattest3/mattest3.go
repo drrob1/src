@@ -35,7 +35,7 @@ REVISION HISTORY
 26 Mar 24 -- Enhancing the equality test.  And adding possibly negative numbers.
 30 Mar 24 -- Added findMaxDiff for when the equality test fails.  Added lastAltered string, and added verboseFlag.
              And added call to mat.BelowSmallMakeZero() and belowTolMakeZero(), to be used as needed.
-31 Mar 24 -- My first use of a type assertion.  These are not called type checks, as type checks is something the compiler always does.
+31 Mar 24 -- My first use of a type assertion in belowSmallMakeZero.  These are not called type checks, as type checks is something the compiler always does.
 */
 
 import (
