@@ -12,6 +12,7 @@ package main // solve2.go, from solve.go
   21 Mar 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
   23 Mar 24 -- Increased MaxN
   26 Mar 24 -- Added checks on input matrix size, so it won't panic.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   27 Mar 24 -- Now called Solve2.  I intend to build the IM by appending to a slice so I don't need a maxN size.  And I won't display the matrix symbols on Windows.
                I'm amazed that this worked the first time.  I based the code on cal2 and cal3, and this seemed to have worked.  Wow!
   28 Mar 24 -- Adding AX -B = 0 to the gonum.org part.
