@@ -62,9 +62,10 @@ import (
                  On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
   16 Jul 23 -- Now called runx.go.  I intend to have this also allow -rex specifier.  If regex is given, that will take priority over the default or given glob expression.
   24 Sep 23 -- I have to fix a bug.  It's not working as I expect on linux.  And Doug is 35 today.  But that's not why I'm here, in the code now.
+   8 Jun 24 -- Fine tuned the error message.  I forgot how this worked.
 */
 
-const LastAltered = "25 Sep 2023" //
+const LastAltered = "8 June 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -241,7 +242,7 @@ func main() {
 				globStr = globString
 			}
 		} else {
-			fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag.  Try again.\n")
+			fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Remember that glob pattern is now set by -g flag or regex set by -rex flag.  And only 1 param is allowed.\n")
 			fmt.Printf(" cmdStr = %q, globStr = %q, globString = %q, regexStr = %q, NArg = %d", cmdStr, globStr, globString, regexStr, flag.NArg())
 			if regex != nil {
 				fmt.Printf(" regex = %s\n", regex.String())
