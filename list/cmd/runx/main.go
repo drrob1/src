@@ -62,10 +62,10 @@ import (
                  On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
   16 Jul 23 -- Now called runx.go.  I intend to have this also allow -rex specifier.  If regex is given, that will take priority over the default or given glob expression.
   24 Sep 23 -- I have to fix a bug.  It's not working as I expect on linux.  And Doug is 35 today.  But that's not why I'm here, in the code now.
-   8 Jun 24 -- Fine tuned the error message.  I forgot how this worked.
+   8 Jun 24 -- Fine-tuned the error message.  I forgot how this worked.
 */
 
-const LastAltered = "8 June 2024" //
+const LastAltered = "9 June 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -90,6 +90,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ].  Glob pattern is now set by the -g flag, and -rex is implemented.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " If have both -rex and -g, -rex is followed and -g is ignored, as is the x|w|p|a pattern.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " In this way, this program works the same on both Windows and Linux.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		flag.PrintDefaults()
 		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
@@ -241,8 +242,9 @@ func main() {
 			if globString != "" {
 				globStr = globString
 			}
-		} else {
-			fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Remember that glob pattern is now set by -g flag or regex set by -rex flag.  And only 1 param is allowed.\n")
+		} else { // Since I'm not allowing globbing on the command line, bash won't screw me up.  This is why I'm not allowing globbing on the command line.
+			fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Remember that glob pattern is now set by -g flag or regexp set by -rex flag.  And only 1 param is allowed.\n")
+			fmt.Printf(" This is so this pgm works the same on both Windows and Linux.")
 			fmt.Printf(" cmdStr = %q, globStr = %q, globString = %q, regexStr = %q, NArg = %d", cmdStr, globStr, globString, regexStr, flag.NArg())
 			if regex != nil {
 				fmt.Printf(" regex = %s\n", regex.String())

@@ -63,7 +63,7 @@ import (
    8 Jun 24 -- Updated the help message, because I forgot how this works.
 */
 
-const LastAltered = "8 June 2024" //
+const LastAltered = "9 June 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -85,6 +85,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ].  Glob pattern is now set by the -g flag, so only 1 param is allowed.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " In this way, this program works the same on both Windows and Linux.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		flag.PrintDefaults()
 	}
@@ -224,7 +225,8 @@ func main() {
 			os.Exit(1)
 		}
 	} else { // Since I'm not allowing globbing on the command line, bash won't screw me up.  This is why I'm not allowing globbing on the command line.
-		fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag.  Try again.\n")
+		fmt.Printf(" First param is not .|xl|x|w|p|a|l.  Glob pattern is now set by -g flag.  Only 1 param is allowed.\n")
+		fmt.Printf(" This is so this pgm works the same on both Windows and Linux.")
 		os.Exit(1)
 	}
 
