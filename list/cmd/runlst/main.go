@@ -226,6 +226,7 @@ func main() {
 				fmt.Printf(" Error from regexp.Compile is %s\n", err)
 				return
 			}
+			cmdStr = "" // need this to be empty for executable extensions on Windows.
 		}
 	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w
 		regex, err = regexp.Compile(flag.Arg(1))
@@ -237,6 +238,14 @@ func main() {
 	} else {
 		fmt.Printf(" Could not figure out the params.\n")
 		os.Exit(1)
+	}
+
+	if verboseFlag {
+		if regex == nil {
+			fmt.Printf(" Before call to NewFromRegexp: regex is nil\n")
+		} else {
+			fmt.Printf(" Before call to NewFromRegexp: regex is %s\n", regex.String())
+		}
 	}
 
 	if regex != nil {
@@ -251,6 +260,11 @@ func main() {
 
 	if verboseFlag {
 		fmt.Printf("\n cmdStr=%q, globStr=%q, globString=%q, len(fileList) = %d\n", cmdStr, globStr, globString, len(fileList))
+		if regex != nil {
+			fmt.Printf(" regex = %s\n\n", regex.String())
+		} else {
+			fmt.Printf(" regex is nil\n")
+		}
 	}
 
 	if veryVerboseFlag {
