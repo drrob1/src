@@ -233,6 +233,11 @@ func main() {
 			}
 		}
 	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w
+		if runtime.GOOS == "windows" { // this is a kludge for now.  I really should process these again.  By either a closure or a function.
+			cmdStr = "" // need this to be empty for executable extensions on Windows.
+		} else {
+			cmdStr = "libreoffice"
+		}
 		regex, err = regexp.Compile(flag.Arg(1))
 		if err != nil {
 			fmt.Printf(" Error from regexp.Compile is %s\n", err)
@@ -245,6 +250,7 @@ func main() {
 	}
 
 	if verboseFlag {
+		fmt.Printf(" NArgs = %d. ", flag.NArg())
 		if regex == nil {
 			fmt.Printf(" Before call to NewFromRegexp: regex is nil\n")
 		} else {
