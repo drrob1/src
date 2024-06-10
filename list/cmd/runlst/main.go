@@ -226,7 +226,11 @@ func main() {
 				fmt.Printf(" Error from regexp.Compile is %s\n", err)
 				return
 			}
-			cmdStr = "" // need this to be empty for executable extensions on Windows.
+			if runtime.GOOS == "windows" {
+				cmdStr = "" // need this to be empty for executable extensions on Windows.
+			} else {
+				cmdStr = "libreoffice"
+			}
 		}
 	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w
 		regex, err = regexp.Compile(flag.Arg(1))
