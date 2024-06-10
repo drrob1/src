@@ -250,7 +250,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Printf(" NArgs = %d. ", flag.NArg())
+		fmt.Printf(" NArgs = %d, 1st arg = %q, 2nd art = %q, cmdStr = %q. ", flag.NArg(), flag.Arg(0), flag.Arg(1), cmdStr)
 		if regex == nil {
 			fmt.Printf(" Before call to NewFromRegexp: regex is nil\n")
 		} else {
