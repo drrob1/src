@@ -177,44 +177,39 @@ func main() {
 		if globString != "" {
 			globStr = globString
 		}
-		//fileList, err = list.NewFromGlob(globStr)
-		//if err != nil {
-		//	fmt.Fprintf(os.Stderr, " Error from list.NewListGlob is %s\n", err)
-		//	os.Exit(1)
-		//}
 	} else if flag.NArg() == 1 { // use default glob string.  Or, I forgot to enter the first param letter.  I'll check.
-		cmdStr = flag.Arg(0) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
+		cmdStr = strings.ToLower(flag.Arg(0)) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
 		if cmdStr == "." {
 			cmdStr = "" // this is for windows and executable extensions.
 			globStr = "*"
 			if globString != "" {
 				globStr = globString
 			}
-		} else if strings.ToLower(cmdStr) == "xl" || strings.ToLower(cmdStr) == "x" { // These only apply to MS-Office on Windows.
+		} else if cmdStr == "xl" || cmdStr == "x" { // These only apply to MS-Office on Windows.
 			cmdStr = "excel"
 			globStr = "*.xls*"
 			if globString != "" {
 				globStr = globString
 			}
-		} else if strings.ToLower(cmdStr) == "w" {
+		} else if cmdStr == "w" {
 			cmdStr = "winword"
 			globStr = "*.doc*"
 			if globString != "" {
 				globStr = globString
 			}
-		} else if strings.ToLower(cmdStr) == "p" {
+		} else if cmdStr == "p" {
 			cmdStr = "powerpnt"
 			globStr = "*.ppt*"
 			if globString != "" {
 				globStr = globString
 			}
-		} else if strings.ToLower(cmdStr) == "a" {
+		} else if cmdStr == "a" {
 			cmdStr = "msaccess"
 			globStr = "*.mdb"
 			if globString != "" {
 				globStr = globString
 			}
-		} else if strings.ToLower(cmdStr) == "l" || runtime.GOOS == "linux" {
+		} else if cmdStr == "l" {
 			cmdStr = "libreoffice"
 			globStr = "*"
 			if globString != "" {
@@ -232,7 +227,7 @@ func main() {
 				cmdStr = "libreoffice"
 			}
 		}
-	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w
+	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w.  Wait, there's now no purpose for 2 params on cmd line.
 		if runtime.GOOS == "windows" { // this is a kludge for now.  I really should process these again.  By either a closure or a function.
 			cmdStr = "" // need this to be empty for executable extensions on Windows.
 		} else {
