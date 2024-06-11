@@ -65,9 +65,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    9 Jun 24 -- Now called runlst, so it won't conflict w/ the ancient scripts I have on linux from 2004 or so.  And it will take a param and interpret it as a regexp.
                  And will use my which find instead of someone else's findexec.
+  11 Jun 24 -- I'm going to give writing a closure function a shot.  Hey, looks like it's working.
 */
 
-const LastAltered = "9 June 2024" //
+const LastAltered = "11 June 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -167,18 +168,7 @@ func main() {
 	var fileList []list.FileInfoExType
 	var err error
 
-	if flag.NArg() == 0 {
-		if runtime.GOOS == "windows" {
-			cmdStr = ""
-		} else {
-			cmdStr = "libreoffice"
-		}
-		globStr = "*"
-		if globString != "" {
-			globStr = globString
-		}
-	} else if flag.NArg() == 1 { // use default glob string.  Or, I forgot to enter the first param letter.  I'll check.
-		cmdStr = strings.ToLower(flag.Arg(0)) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
+	processingFunction := func() {
 		if cmdStr == "." {
 			cmdStr = "" // this is for windows and executable extensions.
 			globStr = "*"
@@ -227,12 +217,29 @@ func main() {
 				cmdStr = "libreoffice"
 			}
 		}
-	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w.  Wait, there's now no purpose for 2 params on cmd line.
-		if runtime.GOOS == "windows" { // this is a kludge for now.  I really should process these again.  By either a closure or a function.
-			cmdStr = "" // need this to be empty for executable extensions on Windows.
+	} // end processingFunction
+
+	if flag.NArg() == 0 {
+		if runtime.GOOS == "windows" {
+			cmdStr = ""
 		} else {
 			cmdStr = "libreoffice"
 		}
+		globStr = "*"
+		if globString != "" {
+			globStr = globString
+		}
+	} else if flag.NArg() == 1 { // use default glob string.  Or, I forgot to enter the first param letter.  I'll check.
+		cmdStr = strings.ToLower(flag.Arg(0)) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
+		processingFunction()
+	} else if flag.NArg() == 2 { // then have a regexp on the command line after a command string like xl or w.  Wait, there's now no purpose for 2 params on cmd line.
+		//if runtime.GOOS == "windows" { // this is a kludge for now.  I really should process these again.  By either a closure or a function.  Looks like the closure is working.
+		//	cmdStr = "" // need this to be empty for executable extensions on Windows.
+		//} else {
+		//	cmdStr = "libreoffice"
+		//}
+		cmdStr = strings.ToLower(flag.Arg(0)) // this means the first param on the command line, if present.  If not present, that's ok and will mean the empty command, like an executable extension on Windows.
+		processingFunction()
 		regex, err = regexp.Compile(flag.Arg(1))
 		if err != nil {
 			fmt.Printf(" Error from regexp.Compile is %s\n", err)
