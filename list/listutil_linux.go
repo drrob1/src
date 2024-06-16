@@ -43,16 +43,17 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 
 	workingDir, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %#v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 
+	ExcludeRex = excludeMe
 	if flag.NArg() == 0 || flag.Arg(0) == "." { // the "." is the sentinel to be ignored.
 		if VerboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
 
-		fileInfoX, err = MyReadDir(workingDir, excludeMe) // excluding by regex, filesize or having an ext is done by MyReadDir.
+		// fileInfoX, err = MyReadDir(workingDir, excludeMe) // excluding by regex, filesize or having an ext is done by MyReadDir.
+		fileInfoX, err = myReadDirConcurrent(workingDir) // excluding by regex, filesize or having an ext is done by MyReadDirConcurrent.
 		if err != nil {
 			return nil, err
 		}
@@ -69,38 +70,41 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			stat, _ := fHandle.Stat()
 			if stat.IsDir() { // either a direct or symlinked directory name
 				fHandle.Close()
-				fileInfoX, err = MyReadDir(loneFilename, nil) // nil exclude regex
+				//fileInfoX, err = MyReadDir(loneFilename, nil) // nil exclude regex
+				fileInfoX, err = myReadDirConcurrent(loneFilename) // exclude regex passed by the global variable, and is now allowed to not be nil.
 				return fileInfoX, err
 			}
 
 		} else { // err must not be nil after attempting to open loneFilename.
 			loneFilename = workingDir + sep + loneFilename
 			loneFilename = filepath.Clean(loneFilename)
+			fHandle.Close()
 		}
 
 		fHandle, err = os.Open(loneFilename)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Println()
-			os.Exit(1)
+			return nil, err
 		}
+		defer fHandle.Close()
 
 		fi, _ := fHandle.Stat()
 
 		if fi.IsDir() {
-			fHandle.Close()
-			fileInfoX, err = MyReadDir(loneFilename, nil) // ExcludeMe regex is nil
+			//fHandle.Close()
+			//fileInfoX, err = MyReadDir(loneFilename, nil)
+			fileInfoX, err = myReadDirConcurrent(loneFilename) // the excludeMe regexp is passed globally above.
 			if err != nil {
 				return nil, err
 			}
 			return fileInfoX, nil
 		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return a variable of fileInfoExType fields.
+			joinedFilename := filepath.Join(workingDir, loneFilename)
 			fix := FileInfoExType{
 				FI:       fi,
 				Dir:      workingDir,
-				RelPath:  filepath.Join(workingDir, loneFilename),
-				AbsPath:  filepath.Join(workingDir, loneFilename),
-				FullPath: filepath.Join(workingDir, loneFilename),
+				RelPath:  joinedFilename,
+				AbsPath:  joinedFilename,
+				FullPath: joinedFilename,
 			}
 			fileInfoX = append(fileInfoX, fix)
 			return fileInfoX, nil

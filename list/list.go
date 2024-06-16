@@ -947,7 +947,7 @@ func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses
 
 } // end FileInfoXFromRegexp
 
-func myReadDirConcurrent(dir string) []FileInfoExType { // The entire change including use of []DirEntry happens here.  Concurrent code here is what makes this fdsrt.
+func myReadDirConcurrent(dir string) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Concurrent code here is what makes this fdsrt.
 	// Adding concurrency in returning []os.FileInfo
 
 	var wg sync.WaitGroup
@@ -1003,8 +1003,7 @@ func myReadDirConcurrent(dir string) []FileInfoExType { // The entire change inc
 
 	d, err := os.Open(dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
-		os.Exit(1)
+		return nil, err
 	}
 	defer d.Close()
 
@@ -1038,7 +1037,7 @@ func myReadDirConcurrent(dir string) []FileInfoExType { // The entire change inc
 		}
 	}
 
-	return fixSlice
+	return fixSlice, nil
 } // myReadDirConcurrent
 
 func includeThisForConcurrent(fi os.FileInfo) bool {
@@ -1056,7 +1055,7 @@ func includeThisForConcurrent(fi os.FileInfo) bool {
 	return true
 }
 
-func myReadDirConcurrentWithMatch(dir, matchPat string) []FileInfoExType { // The entire change including use of []DirEntry happens here, and now concurrent code.
+func myReadDirConcurrentWithMatch(dir, matchPat string) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here, and now concurrent code.
 	// Adding concurrency in returning []os.FileInfo
 	// This routine adds a call to filepath.Match
 
@@ -1109,8 +1108,7 @@ func myReadDirConcurrentWithMatch(dir, matchPat string) []FileInfoExType { // Th
 
 	d, err := os.Open(dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
-		os.Exit(1)
+		return nil, err
 	}
 	defer d.Close()
 
@@ -1144,7 +1142,7 @@ func myReadDirConcurrentWithMatch(dir, matchPat string) []FileInfoExType { // Th
 		}
 	}
 
-	return fixSlice
+	return fixSlice, nil
 } // myReadDirConcurrentWithMatch
 
 func includeThisWithMatchForConcurrent(fi os.FileInfo, matchPat string) bool {
