@@ -65,7 +65,7 @@ import (
                  I want to use the new concurrent directory code that's in fdsrt, but only default to that on linux.  I don't yet know how to do that.
 */
 
-const DateListAltered = "June 16, 2024"
+var LastAltered = "June 15, 2024"
 
 type DirAliasMapType map[string]string
 
@@ -95,7 +95,6 @@ var InputDir string
 var SizeFlag bool
 var DelListFlag bool
 var brightFlag bool // intended for use in the file selection routines so the brightness will alternate on and off.
-var LastAltered = "Apr 8, 2024"
 
 //var directoryAliasesMap DirAliasMapType  Not needed anymore.
 

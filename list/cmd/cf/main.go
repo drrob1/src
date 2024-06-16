@@ -84,9 +84,10 @@ import (
    6 Apr 24 -- Shortened the destination file is same or older message.
    8 Apr 24 -- Now shows the last altered dated for list.go
    9 Apr 24 -- Found an error in CopyAFile, in that I don't check for an error when I close the file.
-               Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
+               Listening to Miki Tebeka from Ardan Labs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
+  15 Jun 24 -- Changed completion message.
 */
 
 const LastAltered = "11 Apr 2024" //
@@ -353,7 +354,7 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
+	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------

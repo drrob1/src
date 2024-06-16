@@ -87,9 +87,10 @@ import (
                Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
   15 Apr 24 -- Added a multiplier for worker pools
+  15 Jun 24 -- Changed completion message.
 */
 
-const LastAltered = "15 Apr 2024" //
+const LastAltered = "15 June 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -354,7 +355,7 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines.\n", time.Since(start), goRtns)
+	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------
