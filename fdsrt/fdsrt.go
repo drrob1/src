@@ -634,7 +634,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 
 // ------------------------------- myReadDir -----------------------------------
 
-func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
+func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Concurrent code here is what makes this fdsrt.
 	// Adding concurrency in returning []os.FileInfo
 
 	var wg sync.WaitGroup
@@ -805,7 +805,7 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 	}
 
 	return fiSlice
-} // myReadDir
+} // myReadDirWithMatch
 
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
