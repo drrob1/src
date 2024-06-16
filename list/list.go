@@ -1,11 +1,13 @@
 package list
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 /*
@@ -58,7 +61,11 @@ import (
                  I'm going to alternate brightness, ie, bright is true or false, and see what happens.
                  I like it, so I'll keep it for now.  And I added it to list2.go.
   25 May 24 -- Adding doc comments for go doc.
+  15 June 24-- On linux, searching /mnt/misc takes ~8 sec, but on Windows it only takes ~800 ms.  That's a huge difference.  It sounds like Windows is caching it but linux is not.
+                 I want to use the new concurrent directory code that's in fdsrt, but only default to that on linux.  I don't yet know how to do that.
 */
+
+const DateListAltered = "June 16, 2024"
 
 type DirAliasMapType map[string]string
 
@@ -77,6 +84,9 @@ var VeryVerboseFlag bool
 var FilterFlag bool
 var ReverseFlag bool
 var GlobFlag bool
+
+// FastDebugFlag is used for debugging the concurrent routines.
+var FastDebugFlag bool
 var fileInfoX []FileInfoExType
 var clear map[string]func()
 var ExcludeRex *regexp.Regexp
@@ -94,6 +104,9 @@ const minWidth = 90
 const minHeight = 26
 const stopCode = "0"
 const sepString = string(filepath.Separator)
+const fetch = 1000    // used for the concurrency pattern in MyReadDirConccurent
+const multiplier = 10 // used for the worker pool pattern in MyReadDirConcurrent
+var numWorkers = runtime.NumCPU() * multiplier
 
 var autoWidth, autoHeight int
 
@@ -392,7 +405,7 @@ func NewFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // remember t
 
 // ------------------------------- MyReadDir -----------------------------------
 
-func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Who knew?
+func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Not concurrent.
 	dirEntries, err := os.ReadDir(dir) // this function doesn't need to be closed.
 	if err != nil {
 		return nil, err
@@ -406,12 +419,13 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 			continue
 		}
 		if includeThis(fi, excludeMe) {
+			joinedFilename := filepath.Join(dir, fi.Name())
 			fix := FileInfoExType{ // fix is a file info extended var
 				FI:       fi,
 				Dir:      dir,
-				RelPath:  filepath.Join(dir, fi.Name()), // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
-				AbsPath:  filepath.Join(dir, fi.Name()),
-				FullPath: filepath.Join(dir, fi.Name()),
+				RelPath:  joinedFilename, // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
+				AbsPath:  joinedFilename,
+				FullPath: joinedFilename,
 			}
 			fileInfoExs = append(fileInfoExs, fix)
 		}
@@ -704,15 +718,6 @@ outerLoop:
 	return outStrList, nil
 } // end FileSelectionString
 
-// ---------------------------------- min ----------------------------------
-
-//func min(i, j int) int {  I'll remove this so the std function will become visible.
-//	if i < j {
-//		return i
-//	}
-//	return j
-//}
-
 // ----------------------------- GetMagnitudeString -------------------------------
 
 func GetMagnitudeString(j int64) (string, ct.Color) {
@@ -885,12 +890,13 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 			}
 
 			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
+				joinedFilename := filepath.Join(dirName, f)
 				fix := FileInfoExType{
 					FI:       fi,
 					Dir:      dirName,
-					RelPath:  filepath.Join(dirName, f),
-					AbsPath:  filepath.Join(dirName, f),
-					FullPath: filepath.Join(dirName, f),
+					RelPath:  joinedFilename,
+					AbsPath:  joinedFilename,
+					FullPath: joinedFilename,
 				}
 				fileInfoX = append(fileInfoX, fix)
 			}
@@ -940,3 +946,240 @@ func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses
 	return fileInfoX2, nil
 
 } // end FileInfoXFromRegexp
+
+func myReadDirConcurrent(dir string) []FileInfoExType { // The entire change including use of []DirEntry happens here.  Concurrent code here is what makes this fdsrt.
+	// Adding concurrency in returning []os.FileInfo
+
+	var wg sync.WaitGroup
+
+	if VerboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers)   // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fixChan := make(chan FileInfoExType, numWorkers) // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                      // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fixSlice := make([]FileInfoExType, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+
+	// reading from deChan to get the slices of DirEntry's
+	for range numWorkers {
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThisForConcurrent(fi) {
+						joinedFilename := filepath.Join(dir, fi.Name())
+						fix := FileInfoExType{
+							FI:       fi,
+							Dir:      dir,
+							RelPath:  joinedFilename, // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
+							AbsPath:  joinedFilename,
+							FullPath: joinedFilename,
+						}
+						fixChan <- fix
+					}
+				}
+			}
+		}()
+	}
+
+	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+	// I figured it out, by closing the channel after all work is sent to it.
+	go func() {
+		for fix := range fixChan {
+			fixSlice = append(fixSlice, fix)
+			//if fi.Mode().IsRegular() && showGrandTotal {
+			//	grandTotal += fi.Size()
+			//	grandTotalCount++
+			//}
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So return the slice.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
+		deChan <- deSlice
+	}
+
+	wg.Wait()      // for the deChan
+	close(fixChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if VerboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fixSlice), dir)
+	}
+
+	if FastDebugFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fixSlice), dir, fixSlice[:5])
+		if pause() {
+			os.Exit(1)
+		}
+	}
+
+	return fixSlice
+} // myReadDirConcurrent
+
+func includeThisForConcurrent(fi os.FileInfo) bool {
+	if VeryVerboseFlag {
+		fmt.Printf(" includeThisForConcurrent, filterAmt=%d \n", filterAmt)
+	}
+	if fi.Size() < int64(filterAmt) { // don't need to first check against 0.
+		return false
+	}
+	if ExcludeRex != nil {
+		if BOOL := ExcludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
+			return false
+		}
+	}
+	return true
+}
+
+func myReadDirConcurrentWithMatch(dir, matchPat string) []FileInfoExType { // The entire change including use of []DirEntry happens here, and now concurrent code.
+	// Adding concurrency in returning []os.FileInfo
+	// This routine adds a call to filepath.Match
+
+	var wg sync.WaitGroup
+
+	if VerboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers)   // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fixChan := make(chan FileInfoExType, numWorkers) // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                      // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fixSlice := make([]FileInfoExType, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+
+	// reading from deChan to get the slices of DirEntry's
+	for range numWorkers {
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThisWithMatchForConcurrent(fi, matchPat) {
+						joinedFilename := filepath.Join(dir, fi.Name())
+						fix := FileInfoExType{
+							FI:       fi,
+							Dir:      dir,
+							RelPath:  joinedFilename, // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
+							AbsPath:  joinedFilename,
+							FullPath: joinedFilename,
+						}
+						fixChan <- fix
+					}
+				}
+			}
+		}()
+	}
+
+	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+	// I figured it out, by closing the channel after all work is sent to it.
+	go func() {
+		for fix := range fixChan {
+			fixSlice = append(fixSlice, fix)
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
+		deChan <- deSlice
+	}
+
+	wg.Wait()      // for the closing of the deChan to stop all worker goroutines.
+	close(fixChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if VerboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fixSlice), dir)
+	}
+
+	if FastDebugFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fixSlice), dir, fixSlice[:5])
+		if pause() {
+			os.Exit(1)
+		}
+	}
+
+	return fixSlice
+} // myReadDirConcurrentWithMatch
+
+func includeThisWithMatchForConcurrent(fi os.FileInfo, matchPat string) bool {
+	if VeryVerboseFlag {
+		fmt.Printf(" includeThis: filterAmt=%d, match pattern=%s \n", filterAmt, matchPat)
+	}
+	if fi.Size() < int64(filterAmt) {
+		return false
+	}
+	if ExcludeRex != nil {
+		if ExcludeRex.MatchString(strings.ToLower(fi.Name())) {
+			return false
+		}
+	}
+	matchPat = strings.ToLower(matchPat)
+	f := strings.ToLower(fi.Name())
+	match, err := filepath.Match(matchPat, f)
+	if err != nil {
+		return false
+	}
+	if !match {
+		return false
+	}
+	return true
+} // end includeThisWithMatch
+
+// ------------------------------ pause -----------------------------------------
+
+func pause() bool {
+	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
+	var ans string
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
+		return true
+	}
+	return false
+}
