@@ -63,9 +63,10 @@ import (
   25 May 24 -- Adding doc comments for go doc.
   15 June 24-- On linux, searching /mnt/misc takes ~8 sec, but on Windows it only takes ~800 ms.  That's a huge difference.  It sounds like Windows is caching it but linux is not.
                  I want to use the new concurrent directory code that's in fdsrt, but only default to that on linux.  I don't yet know how to do that.
+  18 June 24-- Fixed error message texts that have yet to be needed.
 */
 
-var LastAltered = "June 15, 2024"
+var LastAltered = "June 18, 2024"
 
 type DirAliasMapType map[string]string
 
@@ -290,7 +291,7 @@ func NewFromGlob(globExpr string) ([]FileInfoExType, error) {
 
 	fileInfoX, err = FileInfoXFromGlob(globExpr)
 	if err != nil {
-		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromCommandLine is %s.\n", err)
+		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromGlob is %s.\n", err)
 		return nil, err
 	}
 	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
@@ -354,7 +355,7 @@ func NewFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // remember t
 
 	fileInfoX, err = FileInfoXFromRegexp(rex)
 	if err != nil {
-		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromCommandLine is %s.\n", err)
+		ctfmt.Printf(ct.Red, false, " Error from getFileInfoXFromRegexp is %s.\n", err)
 		return nil, err
 	}
 	fmt.Printf(" length of fileInfoX = %d\n", len(fileInfoX))
