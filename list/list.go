@@ -792,7 +792,7 @@ func CheckDest() string {
 // FileInfoXFromGlob behaves the same on linux and Windows, so it's here and not in platform specific code file.
 func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.ExcludeRex
 	var fileInfoX []FileInfoExType
-	excludeMe := ExcludeRex
+	//excludeMe := ExcludeRex
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
@@ -813,7 +813,7 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 			//fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
 			//os.Exit(1)
 		}
-		fileInfoX, err = MyReadDir(workingDir, excludeMe)
+		fileInfoX, err = myReadDirConcurrent(workingDir)
 		if err != nil {
 			return nil, err
 		}
@@ -823,93 +823,94 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 		}
 
 		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
-		dirName, fileName := filepath.Split(pattern)
-		fileName = strings.ToLower(fileName)
-		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
-			fileInfoX, err = MyReadDir(dirName, excludeMe)
+		dirNamePattern, fileNamePattern := filepath.Split(pattern)
+		fileNamePattern = strings.ToLower(fileNamePattern)
+		if dirNamePattern != "" && fileNamePattern == "" { // then have a dir pattern without a filename pattern
+			fileInfoX, err = myReadDirConcurrent(dirNamePattern)
 			return fileInfoX, err
 		}
-		if dirName == "" {
-			dirName = "."
+		if dirNamePattern == "" {
+			dirNamePattern = "."
 		}
-		if fileName == "" { // need this to not be blank because of the call to Match below.
-			fileName = "*"
+		if fileNamePattern == "" { // need this to not be blank because of the call to Match below.
+			fileNamePattern = "*"
 		}
 
 		if VerboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+			fmt.Printf(" dirName=%s, fileName=%s \n", dirNamePattern, fileNamePattern)
 		}
 
-		var filenames []string
-		if GlobFlag {
-			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
-			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
-			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
-			filenames, err = filepath.Glob(pattern)
-			if VerboseFlag {
-				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
-			}
-			if err != nil {
-				return nil, err
-			}
+		//var filenames []string
+		//if GlobFlag {
+		//	// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
+		//	// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
+		//	// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
+		//	filenames, err = filepath.Glob(pattern)
+		//	if VerboseFlag {
+		//		fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+		//	}
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//
+		//} else {
+		//	d, err := os.Open(dirName)
+		//	if err != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
+		//		os.Exit(1)
+		//	}
+		//	defer d.Close()
+		//	filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
+		//	if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+		//		fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+		//		fileInfoX, err = MyReadDir(dirName, excludeMe)
+		//		return fileInfoX, err
+		//	}
+		//}
 
-		} else {
-			d, err := os.Open(dirName)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
-				os.Exit(1)
-			}
-			defer d.Close()
-			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
-			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfoX, err = MyReadDir(dirName, excludeMe)
-				return fileInfoX, err
-			}
-		}
-
-		fileInfoX = make([]FileInfoExType, 0, len(filenames))
-		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
-			var path string
-			if strings.Contains(f, sepString) {
-				path = f
-			} else {
-				path = filepath.Join(dirName, f)
-			}
-
-			fi, err := os.Lstat(path)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
-				continue
-			}
-
-			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, and glob is always used in this routine.
-			if er != nil {
-				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
-				continue
-			}
-
-			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
-				joinedFilename := filepath.Join(dirName, f)
-				fix := FileInfoExType{
-					FI:       fi,
-					Dir:      dirName,
-					RelPath:  joinedFilename,
-					AbsPath:  joinedFilename,
-					FullPath: joinedFilename,
-				}
-				fileInfoX = append(fileInfoX, fix)
-			}
-		} // for f ranges over filenames
+		//fileInfoX = make([]FileInfoExType, 0, len(filenames))
+		//for _, f := range filenames { // basically I do this here because of a pattern to be matched.
+		//	var path string
+		//	if strings.Contains(f, sepString) {
+		//		path = f
+		//	} else {
+		//		path = filepath.Join(dirName, f)
+		//	}
+		//
+		//	fi, err := os.Lstat(path)
+		//	if err != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
+		//		continue
+		//	}
+		//
+		//	match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, and glob is always used in this routine.
+		//	if er != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
+		//		continue
+		//	}
+		//
+		//	if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
+		//		joinedFilename := filepath.Join(dirName, f)
+		//		fix := FileInfoExType{
+		//			FI:       fi,
+		//			Dir:      dirName,
+		//			RelPath:  joinedFilename,
+		//			AbsPath:  joinedFilename,
+		//			FullPath: joinedFilename,
+		//		}
+		//		fileInfoX = append(fileInfoX, fix)
+		//	}
+		//} // for f ranges over filenames
+		fileInfoX, err = myReadDirConcurrentWithMatch(dirNamePattern, fileNamePattern)
 	} // if flag.NArgs()
 
-	return fileInfoX, nil
+	return fileInfoX, err
 
 } // end FileInfoXFromGlob
 
 func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses list.ExcludeRex, and can only be used on the current directory.
 	var fileInfoX []FileInfoExType
-	excludeMe := ExcludeRex
+	//excludeMe := ExcludeRex
 
 	if VerboseFlag {
 		if rex != nil {
@@ -923,27 +924,28 @@ func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses
 	if err != nil {
 		return nil, err
 	}
-	fileInfoX, err = MyReadDir(workingDir, excludeMe) // this already calls includeThis.
-	if err != nil {
-		return nil, err
-	}
+	fileInfoX, err = myReadDirConcurrentWithRex(workingDir, rex) // this already calls includeThis.
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	if rex == nil {
-		return fileInfoX, nil
-	}
+	//if rex == nil {
+	//	return fileInfoX, nil
+	//}
 
-	fileInfoX2 := make([]FileInfoExType, 0, len(fileInfoX))
-	for _, f := range fileInfoX { // The exclude expression has already been processed.  Now I have to process the include regexp.
-		lower := strings.ToLower(f.FI.Name()) // I first used relname here, but that includes the directory, so the ^ anchor was meaningless.  Not what I want.
-		if VeryVerboseFlag {
-			fmt.Printf(" FileInfoXFromRegexp: lower = %q, regex = %q, rex.MatchString(lower) = %t\n", lower, rex.String(), rex.MatchString(lower))
-		}
-		if rex.MatchString(lower) {
-			fileInfoX2 = append(fileInfoX2, f)
-		}
-	}
+	//fileInfoX2 := make([]FileInfoExType, 0, len(fileInfoX))
+	//for _, f := range fileInfoX { // The exclude expression has already been processed.  Now I have to process the include regexp.
+	//	lower := strings.ToLower(f.FI.Name()) // I first used relname here, but that includes the directory, so the ^ anchor was meaningless.  Not what I want.
+	//	if VeryVerboseFlag {
+	//		fmt.Printf(" FileInfoXFromRegexp: lower = %q, regex = %q, rex.MatchString(lower) = %t\n", lower, rex.String(), rex.MatchString(lower))
+	//	}
+	//	if rex.MatchString(lower) {
+	//		fileInfoX2 = append(fileInfoX2, f)
+	//	}
+	//}
 
-	return fileInfoX2, nil
+	//return fileInfoX2, nil
+	return fileInfoX, err
 
 } // end FileInfoXFromRegexp
 
@@ -1168,6 +1170,120 @@ func includeThisWithMatchForConcurrent(fi os.FileInfo, matchPat string) bool {
 	}
 	return true
 } // end includeThisWithMatch
+
+func myReadDirConcurrentWithRex(dir string, regx *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here, and now concurrent code.
+	// Adding concurrency in returning []os.FileInfo
+	// This routine adds a call to filepath.Match
+
+	var wg sync.WaitGroup
+
+	if VerboseFlag {
+		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
+	}
+	deChan := make(chan []os.DirEntry, numWorkers)   // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
+	fixChan := make(chan FileInfoExType, numWorkers) // of individual file infos to be collected and returned to the caller of this routine.
+	doneChan := make(chan bool)                      // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	fixSlice := make([]FileInfoExType, 0, fetch*multiplier*multiplier)
+	wg.Add(numWorkers)
+
+	// reading from deChan to get the slices of DirEntry's
+	for range numWorkers {
+		go func() {
+			defer wg.Done()
+			for deSlice := range deChan {
+				for _, de := range deSlice {
+					fi, err := de.Info()
+					if err != nil {
+						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+						continue
+					}
+					if includeThisWithRexForConcurrent(fi, regx) {
+						joinedFilename := filepath.Join(dir, fi.Name())
+						fix := FileInfoExType{
+							FI:       fi,
+							Dir:      dir,
+							RelPath:  joinedFilename, // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
+							AbsPath:  joinedFilename,
+							FullPath: joinedFilename,
+						}
+						fixChan <- fix
+					}
+				}
+			}
+		}()
+	}
+
+	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+	// I figured it out, by closing the channel after all work is sent to it.
+	go func() {
+		for fix := range fixChan {
+			fixSlice = append(fixSlice, fix)
+		}
+		close(doneChan)
+	}()
+
+	d, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer d.Close()
+
+	for {
+		// reading DirEntry's and sending the slices into the channel needs to happen here.
+		deSlice, err := d.ReadDir(fetch)
+		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
+			close(deChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+			continue
+		}
+		deChan <- deSlice
+	}
+
+	wg.Wait()      // for the closing of the deChan to stop all worker goroutines.
+	close(fixChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+
+	<-doneChan // block until channel is freed
+
+	if VerboseFlag {
+		fmt.Printf("Found %d files in directory %s.\n", len(fixSlice), dir)
+	}
+
+	if FastDebugFlag {
+		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fixSlice), dir, fixSlice[:5])
+		if pause() {
+			os.Exit(1)
+		}
+	}
+
+	return fixSlice, nil
+} // myReadDirConcurrentWithRex
+
+func includeThisWithRexForConcurrent(fi os.FileInfo, rex *regexp.Regexp) bool {
+	if VeryVerboseFlag {
+		fmt.Printf(" includeThis: filterAmt=%d, match pattern=%v \n", filterAmt, rex)
+	}
+	if fi.Size() < int64(filterAmt) {
+		return false
+	}
+	if ExcludeRex != nil {
+		if ExcludeRex.MatchString(strings.ToLower(fi.Name())) {
+			return false
+		}
+	}
+	//matchPat = strings.ToLower(matchPat)
+	f := strings.ToLower(fi.Name())
+	match := rex.MatchString(f)
+	//if err != nil {
+	//	return false
+	//}
+	if !match {
+		return false
+	}
+	return true
+} // end includeThisWithRex
 
 // ------------------------------ pause -----------------------------------------
 
