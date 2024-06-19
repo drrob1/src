@@ -63,10 +63,14 @@ import (
   25 May 24 -- Adding doc comments for go doc.
   15 June 24-- On linux, searching /mnt/misc takes ~8 sec, but on Windows it only takes ~800 ms.  That's a huge difference.  It sounds like Windows is caching it but linux is not.
                  I want to use the new concurrent directory code that's in fdsrt, but only default to that on linux.  I don't yet know how to do that.
-  18 June 24-- Fixed error message texts that have yet to be needed.
+  18 June 24-- Made the change that has the concurrent routines used by FileInfoXFromGlob() and FileInfoXFromRegexp(), which are called by NewFromGlob() and NewFromRegexp(), respectively.
+                 Fixed error message texts that have yet to be needed.
+  19 June 24-- Clarifying how these routines are intended to work.  Client packages are to use any routine that begins w/ New.  IE, New(), NewFromGlob() or NewFromRegexp().
+                 NewFromGlob() no longer uses filepath.Glob() routine.  That only persists in my glob and dsrt routines, as I also removed it from fdsrt and ds.  Rex never had it.
+                 Currently, only runlist, runx and runlst use NewFromGlob() and NewFromRegexp().
 */
 
-var LastAltered = "June 18, 2024"
+var LastAltered = "June 19, 2024"
 
 type DirAliasMapType map[string]string
 
@@ -840,7 +844,7 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirNamePattern, fileNamePattern)
 		}
 
-		//var filenames []string
+		//var filenames []string  removed when the concurrent code was developed for here.  That is, I removed the use of filepath.Glob().  I never used it anyway.
 		//if GlobFlag {
 		//	// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
 		//	// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
