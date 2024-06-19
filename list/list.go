@@ -1169,7 +1169,7 @@ func includeThisWithMatchForConcurrent(fi os.FileInfo, matchPat string) bool {
 		return false
 	}
 	return true
-} // end includeThisWithMatch
+} // end includeThisWithMatchForConcurrent
 
 func myReadDirConcurrentWithRex(dir string, regx *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here, and now concurrent code.
 	// Adding concurrency in returning []os.FileInfo
@@ -1283,7 +1283,7 @@ func includeThisWithRexForConcurrent(fi os.FileInfo, rex *regexp.Regexp) bool {
 		return false
 	}
 	return true
-} // end includeThisWithRex
+} // end includeThisWithRexForConcurrent
 
 // ------------------------------ pause -----------------------------------------
 
