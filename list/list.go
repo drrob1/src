@@ -51,7 +51,7 @@ import (
    2 Jul 23 -- Made the FileSelection routines use "newlines" between iterations.  This way, I can use the scroll back buffer if I want to.
    8 Jul 23 -- In _windows part, I changed how the first param is tested for being a directory.
   12 Jul 23 -- Globbing isn't working.  Nevermind, I forgot about first param must be a dot if I'm going to use globbing.
-  14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine.
+  14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine, from platform specific code.
   16 Jul 23 -- I'm thinking about adding GetFileInfoXFromRegexp.  And I'll need the corresponding rex flag for it.  And I'll need NewFromRex.
   25 Sep 23 -- There's a bug in runlist and runx in which the beginning of line anchor is not processed correctly.  I'm tracking this down now.
                  I found the bug.  I was matching against RelPath which includes the path dir info, so the ^ anchor is meaningless.
