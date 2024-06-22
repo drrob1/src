@@ -135,9 +135,10 @@ REVISION HISTORY
  4 Jul 23 -- Improved ProcessEnvironString.
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
  2 May 24 -- Added timer to compare to fdsrt.
+22 June 24-- Changed the closing message
 */
 
-const LastAltered = "3 May 2024"
+const LastAltered = "22 June 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -181,10 +182,6 @@ func main() {
 	uid := 0
 	gid := 0
 	systemStr := ""
-
-	//execName, _ := os.Executable()
-	//ExecFI, _ := os.Stat(execName)
-	//LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
 	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
 	dsrtEnviron := os.Getenv("dsrt")
@@ -452,7 +449,7 @@ func main() {
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Printf(" Elapsed time = %s, File Size total = %s, len(fileinfos)=%d", elapsed, s, len(fileInfos))
+	fmt.Printf(" %s: Elapsed time = %s, File Size total = %s, len(fileinfos)=%d", os.Args[0], elapsed, s, len(fileInfos))
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
