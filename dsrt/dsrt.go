@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"src/misc"
 	"strconv"
 	"strings"
 	"time"
@@ -136,9 +137,10 @@ REVISION HISTORY
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
  2 May 24 -- Added timer to compare to fdsrt.
 22 June 24-- Changed the closing message
+23 June 24-- Edited a comment, and added AddComasRune, first here and then to misc where it now resides after I removed it from here.
 */
 
-const LastAltered = "22 June 2024"
+const LastAltered = "23 June 2024"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -443,7 +445,7 @@ func main() {
 
 	s := fmt.Sprintf("%d", sizeTotal)
 	if sizeTotal > 100000 {
-		s = AddCommas(s)
+		s = misc.AddCommasRune(s)
 	}
 	s0 := fmt.Sprintf("%d", grandTotal)
 	if grandTotal > 100000 {
@@ -458,8 +460,9 @@ func main() {
 	}
 } // end main dsrt
 
-//-------------------------------------------------------------------- InsertByteSlice
+//-------------------------------------------------------------------- InsertIntoByteSlice
 
+// InsertIntoByteSlice will insert a byte into a slice at a designated position.  Intended to insert a comma into a number string.
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
@@ -467,7 +470,7 @@ func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 //---------------------------------------------------------------------- AddCommas
 
 func AddCommas(instr string) string {
-	//var Comma []byte = []byte{','}  Getting error that type can be omitted
+	//var Comma []byte = []byte{','}  Getting message that type can be omitted.
 	Comma := []byte{','}
 
 	BS := make([]byte, 0, 15)

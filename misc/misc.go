@@ -102,3 +102,23 @@ func CreateOrAppendWithoutBuffer(name string) (*os.File, error) {
 	f, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	return f, err
 }
+
+// AddCommasRune will use runes to add a comma into a numeric string.  Just to see if this works.  It does.
+func AddCommasRune(instr string) string {
+	//var Comma []byte = []byte{','}  Getting message that type can be omitted.
+	comma := []rune{','}
+
+	RS := []rune(instr)
+
+	i := len(RS)
+
+	for numberOfCommas := i / 3; (numberOfCommas > 0) && (i > 3); numberOfCommas-- {
+		i -= 3
+		RS = InsertIntoRuneSlice(RS, comma, i)
+	}
+	return string(RS)
+} // AddCommasRune
+
+func InsertIntoRuneSlice(slice, insertion []rune, index int) []rune {
+	return append(slice[:index], append(insertion, slice[index:]...)...)
+} // InsertIntoByteSlice
