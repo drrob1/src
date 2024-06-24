@@ -6,6 +6,8 @@ var testMisc = []struct {
 	input  string
 	output string
 }{
+	{"1", "1"},
+	{"12", "12"},
 	{"123", "123"},
 	{"1234", "1,234"},
 	{"12345", "12,345"},
