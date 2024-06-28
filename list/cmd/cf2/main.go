@@ -89,10 +89,11 @@ import (
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
   15 Jun 24 -- Changed completion message.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-  27 Jun 24 -- Now called cf2, and will truly be a fanout pattern.  If it tries to copy > 900 files, it will complain and exit.  And I changed how it tallies hits and misses.
+  27 Jun 24 -- Now called cf2, and will truly be a fanout pattern.  If it tries to copy > 900 files, it will complain but only copy 1st 900 files.
+				And I changed how it tallies hits and misses, removing the atomic add as unnecessary.
 */
 
-const LastAltered = "27 June 2024" //
+const LastAltered = "28 June 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -313,7 +314,7 @@ func main() {
 	numOfFiles := len(fileList)
 	if numOfFiles > fanoutMax {
 		fmt.Printf(" There are %d files to be copied, which exceeds the max of %d.  Bye-bye.\n", len(fileList), fanoutMax)
-		return
+		fileList = fileList[0:fanoutMax]
 	}
 
 	//cfChan = make(chan cfType, num)
