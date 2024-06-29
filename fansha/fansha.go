@@ -321,6 +321,6 @@ func main() {
 			runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
 	}
 
-	ctfmt.Printf(ct.Yellow, onWin, "\n\n %s: Elapsed time for everything was %s using %d goroutines, precounter = %d.\n\n",
-		os.Args[0], time.Since(t0), runningGoRoutines, preCounter)
+	ctfmt.Printf(ct.Yellow, onWin, "\n\n %s: Elapsed time for everything was %s using %d goroutines = %d.\n\n",
+		os.Args[0], time.Since(t0), runningGoRoutines)
 } // Main for sha.go.
