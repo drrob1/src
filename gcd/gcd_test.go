@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// No matter what I do, I don't get the randomness I hoped for from the math/rand or math/rand/v2 packages.
+// I'll try something from the crypto/rand package.
+
+var rn *rand.Rand
+
 func TestGCD(t *testing.T) {
 	for range 25 {
 		i := randRange(1, 1000)
@@ -25,7 +30,7 @@ func randRange(minP, maxP int) int { // note that this is not cryptographically 
 	if maxP < minP {
 		minP, maxP = maxP, minP
 	}
-	return minP + rand.Intn(maxP-minP)
+	return minP + rn.Intn(maxP-minP)
 }
 
 func TestHCF(t *testing.T) {
@@ -43,5 +48,5 @@ func TestHCF(t *testing.T) {
 
 func init() {
 	t := time.Now().UnixNano()
-	rand.Seed(t)
+	rn = rand.New(rand.NewSource(t))
 }
