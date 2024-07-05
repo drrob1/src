@@ -1,9 +1,12 @@
 package gcd
 
 import (
+	crypt "crypto/rand"
+	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 )
@@ -47,6 +50,20 @@ func TestHCF(t *testing.T) {
 }
 
 func init() {
-	t := time.Now().UnixNano()
-	rn = rand.New(rand.NewSource(t))
+	c := 8
+	b := make([]byte, c)
+	_, err := crypt.Read(b)
+	if err != nil {
+		fmt.Printf(" Error from crypt.Read: %s\n", err)
+		os.Exit(1)
+	}
+
+	var i64 int64
+	for _, b := range b { // convert the random bytes to a single int64
+		i64 = 256*i64 + int64(b)
+	}
+	t := time.Now().Unix()
+	i64 += t
+	fmt.Printf(" random int64 is %d, and t = %d\n", i64, t)
+	rn = rand.New(rand.NewSource(i64))
 }
