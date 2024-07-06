@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+// I found out that go test uses caching for its operations, so random numbers are repeated.  That's in GCD.go and GCD_TEST.go
+// Here in hcf.go, I wrote it as a main package w/ a main function, compiled by go install.  That's not cached and the random numbers are different w/ each run.
+// And this is my first use of crypto/rand.  I did it, first in GCD, to try to get random numbers.  That didn't work because of the caching.  But it does work here.
+// I'm not changing it to my usual use of math/rand/v2, because it's different, and it works.
+
 var rn *rand.Rand
 
 func hcf(a, b int) int {
@@ -64,10 +69,14 @@ func randRange(minP, maxP int) int { // note that this is not cryptographically 
 func main() {
 	c := 8
 	b := make([]byte, c)
-	_, err := crypt.Read(b)
+	n, err := crypt.Read(b)
 	if err != nil {
 		fmt.Printf(" Error from crypt.Read: %s\n", err)
 		os.Exit(1)
+	}
+	if n != c {
+		fmt.Printf(" Error from crypt.Read, n != c. n=%d, c=%d%s\n", n, c)
+		fmt.Printf(" Will try proceeding anyway and see what happens.\n")
 	}
 
 	var i64 int64
