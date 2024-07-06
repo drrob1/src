@@ -2,6 +2,7 @@ package main
 
 import (
 	crypt "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -10,10 +11,15 @@ import (
 	"time"
 )
 
-// I found out that go test uses caching for its random operations, so random numbers are repeated.  That's in GCD.go and GCD_TEST.go
-// Here in hcf.go, I wrote it as a main package w/ a main function, compiled by go install.  That's not cached and the random numbers are different w/ each run.
-// And this is my first use of crypto/rand.  I did it, first in GCD, to try to get random numbers.  That didn't work because of the caching.  But it does work here.
-// I'm not changing it to my usual use of math/rand/v2, because it's different, and it works.
+/*
+6 July 24 -- I found out that go test uses caching for its random operations, so random numbers are repeated.  That's in GCD.go and GCD_TEST.go
+             Here in hcf.go, I wrote it as a main package w/ a main function, compiled by go install.  That's not cached and the random numbers are different w/ each run.
+             And this is my first use of crypto/rand.  I did it, first in GCD, to try to get random numbers.  That didn't work because of the caching.  But it does work here.
+             I'm not changing it to my usual use of math/rand/v2, because it's different, and it works.
+----------------------------------------
+6 July 24 -- Now called hcf2, and I want to test a different way to get random numbers, using the crypto function.
+
+*/
 
 var rn *rand.Rand
 
@@ -66,6 +72,23 @@ func randRange(minP, maxP int) int { // note that this is not cryptographically 
 	return minP + rn.Intn(maxP-minP)
 }
 
+func cryptRand() int { // 2 bytes will have a range of 0 .. 65535
+	b := make([]byte, 2)
+	n, err := crypt.Read(b)
+
+	if err != nil {
+		fmt.Printf(" Error from crypt.Read: %s\n", err)
+		os.Exit(1)
+	}
+	if n != 2 {
+		fmt.Printf(" Error from crypt.Read, n != 2. n=%d \n", n)
+		os.Exit(1)
+	}
+
+	i64 := int64(binary.LittleEndian.Uint16(b))
+	return int(i64)
+}
+
 func main() {
 	c := 8
 	b := make([]byte, c)
@@ -75,7 +98,7 @@ func main() {
 		os.Exit(1)
 	}
 	if n != c {
-		fmt.Printf(" Error from crypt.Read, n != c. n=%d, c=%d\n", n, c)
+		fmt.Printf(" Error from crypt.Read, n != c. n=%d, c=%d%s\n", n, c)
 		fmt.Printf(" Will try proceeding anyway and see what happens.\n")
 	}
 
@@ -90,7 +113,7 @@ func main() {
 
 	for range 25 {
 		i := randRange(1, 1000)
-		j := randRange(1, 1000)
+		j := cryptRand()
 
 		if gcd(i, j) == hcf(j, i) {
 			ctfmt.Printf(ct.Green, false, "GCD(%d, %d) = %d\n", i, j, gcd(i, j))
@@ -101,7 +124,7 @@ func main() {
 
 	for i := 0; i < 1000; i++ {
 		j := randRange(1, 1000)
-		k := randRange(1, 1000)
+		k := cryptRand()
 		if hcf(j, k) == hcf(k, j) {
 			ctfmt.Printf(ct.Green, false, "GCD(%d, %d) = %d, and permutation is working.\n", k, j, gcd(k, j))
 		} else {
