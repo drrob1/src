@@ -88,9 +88,10 @@ import (
                But for CPU bound, there's no advantage to exceeding that number.
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
   15 Jun 24 -- Changed completion message.
+   6 July 24-- Changed startup message.
 */
 
-const LastAltered = "11 Apr 2024" //
+const LastAltered = "6 July 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -135,7 +136,7 @@ func main() {
 		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
 	}
 	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Printf("%s is compiled w/ %s, last altered %s, list.go last altered %s,, exec binary timestamp is %s\n",
+	fmt.Printf("%s, larger worker pool pattern, is compiled w/ %s, last altered %s, list.go last altered %s,, exec binary timestamp is %s\n",
 		os.Args[0], runtime.Version(), LastAltered, list.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
