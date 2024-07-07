@@ -99,9 +99,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    5 Jun 24 -- Now called fansha, as I want to implement a fanout pattern instead of a worker pool pattern.  As Miki Tebeka said, know your data.  I usually use this routine
                 for a few files, almost never more than 5.  So a fanout pattern should work fine.
+   7 Jul 24 -- Added timing info to matchOrNoMatch
 */
 
-const LastCompiled = "5 June 2024"
+const LastCompiled = "7 Jul 2024"
 
 const (
 	undetermined = iota
@@ -162,6 +163,7 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	}
 
 	onWin := runtime.GOOS == "windows"
+	t0 := time.Now()
 	_, er := io.Copy(hashFunc, TargetFile)
 	if er != nil {
 		ctfmt.Printf(ct.Red, onWin, " Error from io.Copy in matchOrNoMatch is %s\n", er)
@@ -171,9 +173,9 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	computedHashValStr := hex.EncodeToString(hashFunc.Sum(nil))
 
 	if strings.EqualFold(computedHashValStr, hashIn.hashValIn) { // golangci-lint found this optimization.
-		ctfmt.Printf(ct.Green, onWin, "                                       %s matched using %s hash\n", hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Green, onWin, " %s:                                      %s matched using %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
 	} else {
-		ctfmt.Printf(ct.Red, onWin, "                                       %s did not match using %s hash\n", hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Red, onWin, " %s:                                      %s did not match using %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
 	}
 } // end matchOrNoMatch
 
@@ -321,6 +323,6 @@ func main() {
 			runtime.NumGoroutine(), preCounter, postCounter) // counter = 25 is correct.
 	}
 
-	ctfmt.Printf(ct.Yellow, onWin, "\n\n %s: Elapsed time for everything was %s using %d goroutines = %d.\n\n",
+	ctfmt.Printf(ct.Yellow, onWin, "\n\n %s: Elapsed time for everything was %s using %d goroutines.\n\n",
 		os.Args[0], time.Since(t0), runningGoRoutines)
 } // Main for sha.go.
