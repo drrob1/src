@@ -325,4 +325,4 @@ func main() {
 
 	ctfmt.Printf(ct.Yellow, onWin, "\n\n %s: Elapsed time for everything was %s using %d goroutines.\n\n",
 		os.Args[0], time.Since(t0), runningGoRoutines)
-} // Main for sha.go.
+} // Main for fansha.go.
