@@ -12,7 +12,7 @@ import (
 func toClip(f float64) string {
 	comspec, ok := os.LookupEnv("ComSpec")
 	if !ok {
-		msg := fmt.Sprintf(" Environment does not have ComSpec entry.  ToClip unsuccessful")
+		msg := " Environment does not have ComSpec entry.  ToClip unsuccessful"
 		return msg
 	}
 
@@ -28,7 +28,7 @@ func toClip(f float64) string {
 func fromClip() (float64, string, error) {
 	comspec, ok := os.LookupEnv("ComSpec")
 	if !ok {
-		return 0, " Environment does not have ComSpec entry.  ToClip unsuccessful.", fmt.Errorf("ComSpec not found.")
+		return 0, " Environment does not have ComSpec entry.  ToClip unsuccessful.", fmt.Errorf("ComSpec not found")
 	}
 
 	//w := bytes.NewBufferString("")

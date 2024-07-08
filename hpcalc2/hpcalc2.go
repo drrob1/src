@@ -143,9 +143,10 @@ REVISION HISTORY
 24 Oct 23 -- Added that the prime command will prime factor if the number is not prime.
 28 Oct 23 -- Updated the message for the probably prime routine.
 17 Dec 23 -- Updating probably prime routine to report how many guesses it took to say a number is probably not prime.  And added some comments.
+ 8 Jul 24 -- Adding the gcd routine as an alternative to hcf.
 */
 
-const LastAlteredDate = "20 Dec 2023"
+const LastAlteredDate = "8 Jul 2024"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -251,7 +252,7 @@ func init() {
 	cmdMap["CEIL"] = 260
 	cmdMap["HEX"] = 270
 	cmdMap["HCF"] = 280
-	cmdMap["GCD"] = 280
+	cmdMap["GCD"] = 285
 	cmdMap["P"] = 290
 	cmdMap["X"] = 290 // ignore these
 	cmdMap["Q"] = 290
@@ -751,6 +752,7 @@ func RedoMatrixStacks() { // RollUp uperation for main stack
 
 //-------------------------------------------------------- HCF -------------------------------------
 
+// HCF means highest common factor.
 func HCF(a, b int) int {
 	// a = bt + r, then hcf(a,b) = hcf(b,r)
 	var r, a1, b1 int
@@ -774,6 +776,28 @@ func HCF(a, b int) int {
 } // HCF
 
 //------------------------------------------------------------------------
+
+// GCD means greatest common divisor, which is a synonym for HCF
+func GCD(a, b int) int {
+	// a = bt + r, then gcd(a,b) = gcd(b,r)
+
+	var r int
+
+	if a < b {
+		a, b = b, a
+	}
+
+	for {
+		r = a % b
+		if r == 0 {
+			break
+		}
+		a = b
+		b = r
+	}
+	return b
+}
+
 //------------------------------------------------------------------------- GetResults -----------
 
 func GetResult(s string) (float64, []string) {
@@ -1034,6 +1058,12 @@ outerloop:
 			c2 := int(math.Abs(Round(Stack[Y])))
 			c := HCF(c2, c1)
 			ss = append(ss, fmt.Sprintf("HCF of %d and %d is %d.", c1, c2, c))
+		case 285: // GCD
+			c1 := int(math.Abs(Round(Stack[X])))
+			c2 := int(math.Abs(Round(Stack[Y])))
+			c := GCD(c2, c1)
+			PUSHX(float64(c))
+			ss = append(ss, fmt.Sprintf("GCD of %d and %d is %d.", c1, c2, c))
 		case 290: // P, Q, X
 			//  essentially do nothing but print RESULT= line again.
 		case 300: // FRAC
