@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-// Now called the Sieve of Euler, based on Sieve of Eratosthenes for prime numbers.
-// The algorithm is to make p loop over odd numbers from 3 .. max.  For each loop, calculate the largest odd integer max / p, and then loop down from that maxQ to p.
-// If p is marked prime, then p * q is marked not prime.
-// Something I just noticed by his solution and mine.  In sieveOfEratosthenes, he does for i := 3; i < max; i += 2.  I don't go to the max, but instead I go to sqrt(max).
+// 18 Oct 2023 -- Now called the Sieve of Euler, based on Sieve of Eratosthenes for prime numbers.
+//              The algorithm is to make p loop over odd numbers from 3 .. max.  For each loop, calculate the largest odd integer max / p, and then loop down from that maxQ to p.
+// 				If p is marked prime, then p * q is marked not prime.
+// 				Something I just noticed by his solution and mine.  In sieveOfEratosthenes, he does for i := 3; i < max; i += 2.  I don't go to the max, but instead I go to sqrt(max).
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {

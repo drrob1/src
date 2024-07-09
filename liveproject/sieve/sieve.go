@@ -5,7 +5,15 @@ import (
 	"time"
 )
 
-// Sieve of Eratosthenes for prime numbers.
+/*
+  Sieve of Eratosthenes for prime numbers.
+  15 Oct 2023 -- First version written
+   9 Jul 2024 -- I'm going to try to benchmark this according to what Dave of Dave's Garage did.  IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
+*/
+
+const LastModified = "9 July 2024"
+
+var sieve []bool
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {
@@ -80,13 +88,24 @@ func sieveToPrimes(sieve []bool) []int {
 }
 
 func main() {
-	var max int
-	fmt.Printf("Max: ")
-	fmt.Scan(&max)
+	var max = 1_000_000
+	fmt.Printf(" Sieve of Greek guy, last modified %s, Max: ", LastModified)
+	n, err := fmt.Scanln(&max)
+	if err != nil || n == 0 {
+		fmt.Printf(" Using max of %d.\n", max)
+	}
 
-	start := time.Now()
-	sieve := sieveOfEratosthenes(max)
-	elapsed := time.Since(start)
+	t0 := time.Now()
+	tfinal := t0.Add(time.Duration(5) * time.Second)
+	for i := 0; ; i++ {
+		now := time.Now()
+		if now.After(tfinal) {
+			fmt.Printf("\nElapsed time: %s, i = %d, rate = %.2f per second.\n", now.Sub(t0), i, float64(i)/float64(now.Sub(t0)))
+			break
+		}
+		sieve = sieveOfEratosthenes(max)
+	}
+	elapsed := time.Since(t0)
 	fmt.Printf("Elapsed: %f seconds, %s \n", elapsed.Seconds(), elapsed.String())
 
 	primes := sieveToPrimes(sieve)
