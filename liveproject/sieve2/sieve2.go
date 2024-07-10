@@ -10,12 +10,15 @@ import (
 				The algorithm is to make p loop over odd numbers from 3 .. max.  For each loop, calculate the largest odd integer max / p, and then loop down from that maxQ to p.
 				If p is marked prime, then p * q is marked not prime.
 				Something I just noticed by his solution and mine.  In sieveOfEratosthenes, he does for i := 3; i < max; i += 2.  I don't go to the max, but instead I go to sqrt(max).
-9 Jul 2024 -- I'm going to try to benchmark this according to what Dave of Dave's Garage did.  IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
+ 9 Jul 2024 -- I'm going to try to benchmark this according to what Dave of Dave's Garage did.  IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
                    Result for Sieve of Eratosthenes is ~997/sec.
                    Result for Sieve of Euler is ~446/sec.
+10 Jul 2024 -- Tuning the sieveOfEratosthenes
+                   Result for Sieve of Eratosthenes is ~725/sec.
+                   Result for Sieve of Eratosthenes is ~1294/sec when only go to sqrt(max).  It works but I don't know why.
 */
 
-const LastModified = "9 July 2024"
+const LastModified = "10 July 2024"
 const timeForTesting = 5 * time.Second
 
 var sieve []bool
@@ -38,11 +41,11 @@ func sieveOfEratosthenes(mx int) []bool {
 
 	root := iSqrt(mx) // I have an off by one error, handled in the iSqrt routine.
 
-	for i := 4; i < mx; i += 2 { // handling the even numbers > 2
-		sieve[i] = false
-	}
+	//for i := 4; i < mx; i += 2 { // handling the even numbers > 2
+	//	sieve[i] = false
+	//}
 
-	for i := 3; i < root; i += 2 {
+	for i := 3; i < root; i += 2 { // it seems to not correct to only do this to sqrt(mx), but it does work when I do.  ???
 		if sieve[i] {
 			for j := i * i; j < mx; j += i {
 				sieve[j] = false
