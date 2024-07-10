@@ -9,6 +9,7 @@ import (
   Sieve of Eratosthenes for prime numbers.
   15 Oct 2023 -- First version written
    9 Jul 2024 -- I'm going to try to benchmark this according to what Dave of Dave's Garage did.  IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
+                   Result is ~997/sec.
 */
 
 const LastModified = "9 July 2024"
