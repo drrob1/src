@@ -96,11 +96,13 @@ func main() {
 	}
 
 	t0 := time.Now()
-	tfinal := t0.Add(time.Duration(5) * time.Second)
+	tFinal := t0.Add(time.Duration(5) * time.Second)
 	for i := 0; ; i++ {
 		now := time.Now()
-		if now.After(tfinal) {
-			fmt.Printf("\nElapsed time: %s, i = %d, rate = %.2f per second.\n", now.Sub(t0), i, float64(i)/float64(now.Sub(t0)))
+		dur := now.Sub(t0)
+		sec := dur.Seconds()
+		if now.After(tFinal) {
+			fmt.Printf("\nElapsed time: %s, i = %d, dur=%v type = %T, rate = %.2f per second.\n", now.Sub(t0), i, dur, dur, float64(i)/sec)
 			break
 		}
 		sieve = sieveOfEratosthenes(max)
