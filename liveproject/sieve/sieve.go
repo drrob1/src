@@ -10,9 +10,10 @@ import (
   15 Oct 2023 -- First version written
    9 Jul 2024 -- I'm going to try to benchmark this according to what Dave of Dave's Garage did.  IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
                    Result is ~997/sec.
+  10 Jul 2024 -- Removed a superfluous loop.
 */
 
-const LastModified = "9 July 2024"
+const LastModified = "10 July 2024"
 
 var sieve []bool
 
@@ -34,11 +35,11 @@ func sieveOfEratosthenes(mx int) []bool {
 
 	root := iSqrt(mx) // I have an off by one error, handled in the iSqrt routine.
 
-	for i := 4; i < mx; i += 2 { // handling the even numbers > 2
+	for i := 4; i < mx; i += 2 {
 		sieve[i] = false
 	}
 
-	for i := 3; i < root; i += 2 {
+	for i := 3; i < root; i += 2 { // i < sqrt(mx) works because of the next loop where j := i**2
 		if sieve[i] {
 			for j := i * i; j < mx; j += i {
 				sieve[j] = false
@@ -90,7 +91,7 @@ func sieveToPrimes(sieve []bool) []int {
 
 func main() {
 	var max = 1_000_000
-	fmt.Printf(" Sieve of Greek guy, last modified %s, Max: ", LastModified)
+	fmt.Printf(" Sieve of Eratosthenes, last modified %s, Max: ", LastModified)
 	n, err := fmt.Scanln(&max)
 	if err != nil || n == 0 {
 		fmt.Printf(" Using max of %d.\n", max)

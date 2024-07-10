@@ -15,7 +15,7 @@ import (
                    Result for Sieve of Euler is ~446/sec.
 10 Jul 2024 -- Tuning the sieveOfEratosthenes
                    Result for Sieve of Eratosthenes is ~725/sec.
-                   Result for Sieve of Eratosthenes is ~1294/sec when only go to sqrt(max).  It works but I don't know why.
+                   Result for Sieve of Eratosthenes is ~1310/sec when only go to sqrt(max).
 */
 
 const LastModified = "10 July 2024"
@@ -41,11 +41,11 @@ func sieveOfEratosthenes(mx int) []bool {
 
 	root := iSqrt(mx) // I have an off by one error, handled in the iSqrt routine.
 
-	//for i := 4; i < mx; i += 2 { // handling the even numbers > 2
+	//for i := 4; i < mx; i += 2 { // handling the even numbers > 2.  But this loop isn't needed.  So I removed it.
 	//	sieve[i] = false
 	//}
 
-	for i := 3; i < root; i += 2 { // it seems to not correct to only do this to sqrt(mx), but it does work when I do.  ???
+	for i := 3; i < root; i += 2 { // this works because of the next loop that's j := i**2
 		if sieve[i] {
 			for j := i * i; j < mx; j += i {
 				sieve[j] = false
