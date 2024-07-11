@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 )
@@ -20,7 +19,7 @@ import (
 */
 
 const LastModified = "11 July 2024"
-const iter = 2 * time.Second
+const iter = 5 * time.Second
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {
@@ -55,61 +54,6 @@ func sieveOfEratosthenes(mx int) []bool {
 	}
 
 	return sieve
-}
-
-func basicSieveWithIf(mx int) []bool {
-	if mx < 2 {
-		return nil
-	}
-
-	siev := make([]bool, mx)
-
-	siev[0] = false
-	siev[2] = true
-	for i := 3; i < mx; i += 2 {
-		siev[i] = true
-	}
-	if mx <= 100 {
-		fmt.Printf(" in basicSieveWithIf, all odd #s should be true: Sieve: %v\n", siev)
-	}
-
-	for i := 3; i < mx; i += 2 {
-		if siev[i] {
-			for j := i; j < mx; j += i {
-				siev[j] = false
-			}
-			if mx <= 100 {
-				fmt.Printf(" in basicSieveWithIf, some should be true: Sieve: %v\n", siev)
-			}
-			if pause() {
-				os.Exit(1)
-			}
-		}
-	}
-	return siev
-}
-
-func basicSieveWithOutIf(mx int) []bool {
-	if mx < 2 {
-		return nil
-	}
-
-	siev := make([]bool, mx)
-
-	for i := 3; i < mx; i += 2 {
-		siev[i] = true
-	}
-	siev[0] = false
-	siev[2] = true
-
-	for i := 3; i < mx; i += 2 {
-
-		for j := i; j < mx; j += i {
-			siev[j] = false
-		}
-
-	}
-	return siev
 }
 
 func printSieve(sieve []bool) {
@@ -173,57 +117,6 @@ func main() {
 	elapsed := time.Since(t0)
 	fmt.Printf("Elapsed Sieve of E : %f seconds, %s \n", elapsed.Seconds(), elapsed.String())
 	primes := sieveToPrimes(sieve)
-	fmt.Printf(" Found %d primes less than %d.\n", len(primes), mx)
-	if mx <= 1000 {
-		printSieve(sieve)
-		fmt.Println()
-
-		fmt.Println(primes)
-	}
-
-	t0 = time.Now()
-	tFinal = t0.Add(iter)
-	for i := 0; ; i++ {
-		now := time.Now()
-		dur := now.Sub(t0)
-		sec := dur.Seconds()
-		if now.After(tFinal) {
-			fmt.Printf("\n BasicSieveWithIf.  Elapsed time: %s, i = %d, dur=%v type = %T, rate = %.2f per second.\n", now.Sub(t0), i, dur, dur, float64(i)/sec)
-			break
-		}
-		sieve = basicSieveWithIf(mx)
-		if pause() {
-			os.Exit(1)
-		}
-	}
-	elapsed = time.Since(t0)
-	fmt.Printf("Elapsed BasicWith: %f seconds, %s \n", elapsed.Seconds(), elapsed.String())
-
-	primes = sieveToPrimes(sieve)
-	fmt.Printf(" Found %d primes less than %d.\n", len(primes), mx)
-	if mx <= 1000 {
-		printSieve(sieve)
-		fmt.Println()
-
-		fmt.Println(primes)
-	}
-
-	t0 = time.Now()
-	tFinal = t0.Add(iter)
-	for i := 0; ; i++ {
-		now := time.Now()
-		dur := now.Sub(t0)
-		sec := dur.Seconds()
-		if now.After(tFinal) {
-			fmt.Printf("\n BasicSieveWithOutIf.  Elapsed time: %s, i = %d, dur=%v type = %T, rate = %.2f per second.\n", now.Sub(t0), i, dur, dur, float64(i)/sec)
-			break
-		}
-		sieve = basicSieveWithOutIf(mx)
-	}
-	elapsed = time.Since(t0)
-	fmt.Printf("Elapsed BasicWithout: %f seconds, %s \n", elapsed.Seconds(), elapsed.String())
-
-	primes = sieveToPrimes(sieve)
 	fmt.Printf(" Found %d primes less than %d.\n", len(primes), mx)
 	if mx <= 1000 {
 		printSieve(sieve)

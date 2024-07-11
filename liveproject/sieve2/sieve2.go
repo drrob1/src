@@ -16,12 +16,11 @@ import (
 10 Jul 2024 -- Tuning the sieveOfEratosthenes
                    Result for Sieve of Eratosthenes is ~725/sec.
                    Result for Sieve of Eratosthenes is ~1310/sec when only go to sqrt(max).
+11 Jul 2024 -- Minor tweaks
 */
 
-const LastModified = "10 July 2024"
+const LastModified = "11 July 2024"
 const timeForTesting = 5 * time.Second
-
-var sieve []bool
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {
@@ -69,7 +68,7 @@ func eulerSieve(mx int) []bool {
 	}
 
 	for p := 3; p < mx; p += 2 {
-		// need largest odd divisor of max/p.
+		// need largest odd number <= divisor of max/p.
 		maxQ := mx / p
 		if maxQ%2 == 0 { // then this is even
 			maxQ-- // make the number odd
@@ -124,12 +123,12 @@ func sieveToPrimes(sieve []bool) []int {
 }
 
 func main() {
+	var sieve []bool
+
 	var max = 1_000_000
 	fmt.Printf(" First Sieve of Eratosthenes, last modified %s, Enter Max: ", LastModified)
-	n, err := fmt.Scanln(&max)
-	if err != nil || n == 0 {
-		fmt.Printf(" Using max of %d.\n", max)
-	}
+	fmt.Scanln(&max)
+	fmt.Printf(" Using max of %d.\n", max)
 
 	t0 := time.Now()
 	tFinal := t0.Add(timeForTesting)
