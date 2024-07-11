@@ -41,13 +41,9 @@ func sieveOfEratosthenes(mx int) []bool {
 
 	root := iSqrt(mx) // I have an off by one error, handled in the iSqrt routine.
 
-	//for i := 4; i < mx; i += 2 { // handling the even numbers > 2.  But this loop isn't needed.  So I removed it.
-	//	sieve[i] = false
-	//}
-
 	for i := 3; i < root; i += 2 { // this works because of the next loop that's j := i**2
 		if sieve[i] {
-			for j := i * i; j < mx; j += i {
+			for j := i * i; j < mx; j += i { // turns out that the square of an odd number is always odd. (2n + 1) **2 -> 4n^2 + 4n + 1
 				sieve[j] = false
 			}
 		}

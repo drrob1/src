@@ -41,7 +41,7 @@ func sieveOfEratosthenes(mx int) []bool {
 
 	for i := 3; i < root; i += 2 { // i < sqrt(mx) works because of the next loop where j := i**2
 		if sieve[i] {
-			for j := i * i; j < mx; j += i {
+			for j := i * i; j < mx; j += i { // the square of an odd number is always odd.  (2n+1)^2 = 4n^2 + 4n + 1
 				sieve[j] = false
 			}
 		}
