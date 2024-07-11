@@ -125,7 +125,7 @@ func sieveToPrimes(sieve []bool) []int {
 
 func main() {
 	var max = 1_000_000
-	fmt.Printf(" First Sieve of Eratosthenes, last modified %s, Max: ", LastModified)
+	fmt.Printf(" First Sieve of Eratosthenes, last modified %s, Enter Max: ", LastModified)
 	n, err := fmt.Scanln(&max)
 	if err != nil || n == 0 {
 		fmt.Printf(" Using max of %d.\n", max)
