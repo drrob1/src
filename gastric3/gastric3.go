@@ -1,4 +1,6 @@
-// GastricEmptying in Go, V 3.  (C) 2017 - 2018.  Originally on GastricEmtpying2.mod code.
+// GastricEmptying in Go, V 3.  V1 was the first version.
+// V2 added calculating errors in X and Y which were then used to determine the reported T-1/2.
+// V3 added the old iterative solution I learned about in the 80's.
 
 package main
 
@@ -42,7 +44,8 @@ REVISION HISTORY
  9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
 11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
 12 Sep 17 -- Added heading to output file.
-13 Sep 17 -- Adding code from Numerical Recipies for errors in x and y.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+13 Sep 17 -- Adding code from Numerical Recipes for errors in X and Y.  And now called gastric2.
 24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
 27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
  2 Oct 17 -- Discovered that in very normal patients, counts are low enough for stdev to be neg.  I can't allow that!
@@ -77,9 +80,10 @@ REVISION HISTORY
 19 Jul 24 -- Adding use of MultiWriter for both file and screen output.  And modified code to comply w/ new API for tknptr, ie, New instead of NewToken.
 			Decided to not add MultiWriter, as I prefer having different output to file and screen.  To the screen I'm using %.0f to simplify the output.
 			Adding color fmt routines.
+20 Jul 24 -- Writing to the file is now using %.0f instead of %.2f.  It does not make sense to report fractional minutes, not even in the results file.
 */
 
-const LastAltered = "July 19, 2024"
+const LastAltered = "July 20, 2024"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -348,9 +352,8 @@ func main() {
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
-	ctfmt.Printf(ct.Yellow, true, " Original unweighted: halflife is %.0f minutes, and exp(intercept) is %.0f counts.", stdhalflife, math.Exp(stdintercept))
-	fmt.Println()
-	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
+	ctfmt.Printf(ct.Yellow, true, " Original unweighted: halflife is %.0f minutes, and exp(intercept) is %.0f counts.\n", stdhalflife, math.Exp(stdintercept))
+	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.0f minutes, slope is %.6f cnts/min, exp(intercept) is %.0f cnts and R-squared is %.6f.",
 		stdhalflife, stdslope, math.Exp(stdintercept), stdr2)
 	writestr(s) // using the write closure
 	writerune()
@@ -359,7 +362,7 @@ func main() {
 	UnWeightedResults := fitfull(rows, false)
 	UnweightedHalfLife := -ln2 / UnWeightedResults.Slope
 	// not writing this output to screen as its redundant.
-	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.2f, StDevSlope= %.6f cnts.",
+	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.0f, StDevSlope= %.6f cnts.",
 		UnweightedHalfLife, UnWeightedResults.Slope, math.Exp(UnWeightedResults.Intercept), UnWeightedResults.StDevSlope)
 	writestr(s) // using the write closure, I hope
 	writerune()
@@ -368,7 +371,7 @@ func main() {
 	WeightedResults := fit(rows)
 	weightedHalfLife := -ln2 / WeightedResults.Slope
 	// not writing this output to screen as its redundant.
-	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, exp(Intercept)= %.2f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
+	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f, exp(Intercept)= %.0f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
 		weightedHalfLife, WeightedResults.Slope, exp(WeightedResults.Intercept), WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
 	writestr(s) // using the write closure
 	writerune()
@@ -376,9 +379,8 @@ func main() {
 
 	WeightedResults2 := fitfull(rows, true)
 	weightedHalfLife2 := -ln2 / WeightedResults2.Slope
-	ctfmt.Printf(ct.Green, true, " fitful weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", weightedHalfLife2, exp(WeightedResults2.Intercept))
-	fmt.Println()
-	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
+	ctfmt.Printf(ct.Green, true, " fitful weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.\n", weightedHalfLife2, exp(WeightedResults2.Intercept))
+	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f, fit is %.6f.",
 		weightedHalfLife2, WeightedResults2.Slope, exp(WeightedResults2.Intercept), WeightedResults2.GoodnessOfFit)
 	writestr(s)
 	writerune()
@@ -386,9 +388,9 @@ func main() {
 
 	WeightedResults3 := fitexy(rows)
 	weightedHalfLife3 := -ln2 / WeightedResults3.Slope
-	ctfmt.Printf(ct.Yellow, false, " fitexy weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", weightedHalfLife3, exp(WeightedResults3.Intercept))
-	fmt.Println()
-	s = fmt.Sprintf(" fitexy weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
+	ctfmt.Printf(ct.Yellow, false, " fitexy weighted: halflife is %.0f minutes, Y-intercept is %.0f counts.\n ", weightedHalfLife3, exp(WeightedResults3.Intercept))
+	ctfmt.Printf(ct.Cyan, true, "fitexy uses errors in X and Y to compute results.\n")
+	s = fmt.Sprintf(" fitexy (errors in X and Y used to refine results) weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, Y-intercept = %.0f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
 		weightedHalfLife3, WeightedResults3.Slope, exp(WeightedResults3.Intercept), WeightedResults3.StDevSlope, WeightedResults3.chi2, WeightedResults3.q)
 	writestr(s)
 	writerune()
@@ -397,14 +399,12 @@ func main() {
 	// Version 3 code, adding the orig weighting function
 	IteratedResults := DoOldWeightedLR(rows, stdslope, stdintercept)
 	IteratedHalfLife := -ln2 / IteratedResults.Slope
-	ctfmt.Printf(ct.Green, true, " Old iterative method: halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedHalfLife, exp(IteratedResults.Intercept))
-	fmt.Println()
+	ctfmt.Printf(ct.Green, true, " Old iterative method: halflife is %.0f minutes, exp(intercept) is %.0f.\n", IteratedHalfLife, exp(IteratedResults.Intercept))
 	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, R^2 = %.6f.",
 		IteratedHalfLife, IteratedResults.Slope, exp(IteratedResults.Intercept), IteratedResults.R2)
 	writestr(s)
 	writerune()
 	check(bufioErr)
-	//fmt.Println()
 
 	interceptStats, slopeStats := stat.LinearRegression(xvector, yvector, wtvector, false)
 	halfLifeStats := -ln2 / slopeStats
@@ -442,27 +442,27 @@ func main() {
 	PeakNonZero := peakpt > 0
 	fmt.Println()
 
-	stdpeakslope, stdpeakintercept, stdpeakr2 := StdLR(peakrows)
-	stdpeakhalflife := -ln2 / stdpeakslope
+	stdPeakSlope, stdPeakIntercept, stdPeakR2 := StdLR(peakrows)
+	stdPeakHalfLife := -ln2 / stdPeakSlope
 	unweightedPeakResults := fitfull(peakrows, false)
-	unweightedPeakHalflife := -ln2 / unweightedPeakResults.Slope
+	unweightedPeakHalfLife := -ln2 / unweightedPeakResults.Slope
 	WeightedPeakResults := fit(peakrows)
-	WeightedPeakHalflife := -ln2 / WeightedPeakResults.Slope
+	WeightedPeakHalfLife := -ln2 / WeightedPeakResults.Slope
 	WeightedPeakResults2 := fitfull(peakrows, true)
-	WeightedPeakHalflife2 := -ln2 / WeightedPeakResults2.Slope
+	WeightedPeakHalfLife2 := -ln2 / WeightedPeakResults2.Slope
 	WeightedPeakResults3 := fitexy(peakrows)
-	WeightedPeakHalflife3 := -ln2 / WeightedPeakResults3.Slope
-	IteratedPeakResults := DoOldWeightedLR(peakrows, stdpeakslope, stdpeakintercept)
-	IteratedPeakHalflife := -ln2 / IteratedPeakResults.Slope
+	WeightedPeakHalfLife3 := -ln2 / WeightedPeakResults3.Slope
+	IteratedPeakResults := DoOldWeightedLR(peakrows, stdPeakSlope, stdPeakIntercept)
+	IteratedPeakHalfLife := -ln2 / IteratedPeakResults.Slope
 
-	peakxvector := xvector[peakpt:]
-	peakyvector := yvector[peakpt:]
-	peakwtvector := wtvector[peakpt:]
-	peakunwtvector := unwtvector[peakpt:]
-	interceptPeakStats, slopePeakStats := stat.LinearRegression(peakxvector, peakyvector, peakwtvector, false)
+	peakXVector := xvector[peakpt:]
+	peakYVector := yvector[peakpt:]
+	peakWtVector := wtvector[peakpt:]
+	peakUnwtVector := unwtvector[peakpt:]
+	interceptPeakStats, slopePeakStats := stat.LinearRegression(peakXVector, peakYVector, peakWtVector, false)
 	halfLifePeakStats := -ln2 / slopePeakStats
 
-	interceptPeakUnWtStats, slopePeakUnWtStats := stat.LinearRegression(peakxvector, peakyvector, peakunwtvector, false)
+	interceptPeakUnWtStats, slopePeakUnWtStats := stat.LinearRegression(peakXVector, peakYVector, peakUnwtVector, false)
 	halfLifePeakUnWtStats := -ln2 / slopePeakUnWtStats
 
 	fmt.Println()
@@ -475,36 +475,36 @@ func main() {
 		fmt.Print(s)
 		writestr(s)
 		ctfmt.Printf(ct.Yellow, true, " Original unweighted peak halflife is %.0f minutes, and exp(intercept) is %.0f counts.\n",
-			stdpeakhalflife, exp(stdpeakintercept))
+			stdPeakHalfLife, exp(stdPeakIntercept))
 		s := fmt.Sprintf(" Original std peak unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
-			stdpeakhalflife, stdpeakslope, exp(stdpeakintercept), stdpeakr2)
+			stdPeakHalfLife, stdPeakSlope, exp(stdPeakIntercept), stdPeakR2)
 		writestr(s)
 		writerune()
 		check(bufioErr)
 		s = fmt.Sprintf(" fitful peak unweighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.2f, StDevSlope= %.6f cnts.",
-			unweightedPeakHalflife, unweightedPeakResults.Slope, exp(unweightedPeakResults.Intercept), unweightedPeakResults.StDevSlope)
+			unweightedPeakHalfLife, unweightedPeakResults.Slope, exp(unweightedPeakResults.Intercept), unweightedPeakResults.StDevSlope)
 		writestr(s)
 		writerune()
 		s = fmt.Sprintf(" fit peak weighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, exp(Intercept)= %.2f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
-			WeightedPeakHalflife, WeightedPeakResults.Slope, exp(WeightedPeakResults.Intercept), WeightedPeakResults.StDevSlope, WeightedPeakResults.GoodnessOfFit)
+			WeightedPeakHalfLife, WeightedPeakResults.Slope, exp(WeightedPeakResults.Intercept), WeightedPeakResults.StDevSlope, WeightedPeakResults.GoodnessOfFit)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, false, " fitful peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", WeightedPeakHalflife2, exp(WeightedPeakResults2.Intercept))
+		ctfmt.Printf(ct.Yellow, false, " fitful peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", WeightedPeakHalfLife2, exp(WeightedPeakResults2.Intercept))
 		fmt.Println()
 		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
-			WeightedPeakHalflife2, WeightedPeakResults2.Slope, exp(WeightedPeakResults2.Intercept), WeightedPeakResults2.GoodnessOfFit)
+			WeightedPeakHalfLife2, WeightedPeakResults2.Slope, exp(WeightedPeakResults2.Intercept), WeightedPeakResults2.GoodnessOfFit)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, true, " fitexy peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", WeightedPeakHalflife3, exp(WeightedPeakResults3.Intercept))
+		ctfmt.Printf(ct.Yellow, true, " fitexy peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", WeightedPeakHalfLife3, exp(WeightedPeakResults3.Intercept))
 		fmt.Println()
 		s = fmt.Sprintf(" fitexy peak weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
-			WeightedPeakHalflife3, WeightedPeakResults3.Slope, exp(WeightedPeakResults3.Intercept), WeightedPeakResults3.StDevSlope, WeightedPeakResults3.chi2, WeightedPeakResults3.q)
+			WeightedPeakHalfLife3, WeightedPeakResults3.Slope, exp(WeightedPeakResults3.Intercept), WeightedPeakResults3.StDevSlope, WeightedPeakResults3.chi2, WeightedPeakResults3.q)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, false, " Old iterative method: from peak halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedPeakHalflife, exp(IteratedPeakResults.Intercept))
+		ctfmt.Printf(ct.Yellow, false, " Old iterative method: from peak halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedPeakHalfLife, exp(IteratedPeakResults.Intercept))
 		fmt.Println()
 		s = fmt.Sprintf(" Old iterative method: from peak halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, R^2 = %.6f.",
-			IteratedPeakHalflife, IteratedPeakResults.Slope, exp(IteratedPeakResults.Intercept), IteratedPeakResults.R2)
+			IteratedPeakHalfLife, IteratedPeakResults.Slope, exp(IteratedPeakResults.Intercept), IteratedPeakResults.R2)
 		writestr(s)
 		writerune()
 		s1 := fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.0f minutes, exp(intercept) is %.0f. \n", halfLifePeakStats, exp(interceptPeakStats))
@@ -527,12 +527,12 @@ func main() {
 	fmt.Println()
 } // end main
 
-// -------------------------------------- SQR ---------------------------------------------
+// SQR is the squared function
 func SQR(R float64) float64 {
 	return R * R
 } // END SQR;
 
-// ------------------------------------- StdLR ----------------------------------
+// StdLR is the standard linear regression routine.  It returns the slope, intercept and correlation coefficient.
 func StdLR(rows []Point) (float64, float64, float64) {
 	/*
 	   This routine does the standard, unweighted, computation of the slope and intercept,
@@ -549,7 +549,7 @@ func StdLR(rows []Point) (float64, float64, float64) {
 		sumxy += p.x * p.y
 		sumx2 += SQR(p.x)
 		sumy2 += SQR(p.y)
-	} // ENDFOR
+	}
 	SlopeNumerator := N*sumxy - sumx*sumy
 	SlopeDenominator := N*sumx2 - SQR(sumx)
 	Slope := SlopeNumerator / SlopeDenominator
@@ -558,21 +558,20 @@ func StdLR(rows []Point) (float64, float64, float64) {
 	return Slope, Intercept, R2
 } //  END StdLR;
 
-// ===========================================================
+// check is an error check.  It panics if there's an error.
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
-// -------------------------- fit -----------------------------
+// fit does assume that X is independent and only Y is dependent.  Does a weighted fit.
 func fit(rows []Point) FittedData {
 	/*
 		subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 		   Based on Numerical Recipies code of same name on p 508-9 in Fortran, 1st ed,
 		   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
-		   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering.
-		   (C) 1986, Cambridge University Press.
+		   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering. (C) 1986, Cambridge University Press.
 		   y = a + bx.  And it returns stdeva, stdevb, and goodness of fit param q.
 	*/
 	var SumXoverSumWt, SumX, SumY, Sumt2, SumWt, chi2, a, b float64
@@ -608,15 +607,13 @@ func fit(rows []Point) FittedData {
 	return result
 } // END fit
 
-// -------------------------------- fitunwt ---------------------------------
-
+// fitfull returns slope and intercept data in the FitedData return param.
 func fitfull(row []Point, weighted bool) FittedData {
 
 	/*
 	   Based on Numerical Recipies code of same name on p 508-9 in Fortran,
 	   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
-	   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering.
-	   (C) 1986, Cambridge University Press.
+	   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering. (C) 1986, Cambridge University Press.
 	   I think the docs are wrong.  The equation is y = a + bx, ie, b is Slope.  I'll make that switch now.
 	*/
 	var wt, a, b, t, q, sxoss, sx, sy, st2, ss, sigdat, chi2 float64
@@ -678,7 +675,7 @@ func fitfull(row []Point, weighted bool) FittedData {
 	return result
 } // END fitfull
 
-// -------------------------------- gamq ----------------------------------
+// gammq is an incomplete Gamma function.
 func gammq(a, x float64) float64 {
 	// Incomplete Gamma Function, is what "Numerical Recipies" says.
 	// gln is the ln of the gamma function result
@@ -777,7 +774,7 @@ func gcf(a, x float64) (float64, float64) {
 //
 // Section 15.3 -- Straight line data with errors in both coordinates.  P 660 ff.
 
-// subroutine fitexy(x, y, sigx, sigy, a, b, siga, sigb, chi2, q float64, ndat int) {
+// subroutine fitexy(x, y, sigx, sigy, a, b, siga, sigb, chi2, q float64, ndat int) is fortran signature.  Calculates errors in X and Y.
 func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 
 	var result2 FittedData2
@@ -847,7 +844,7 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 
 	r2 = 1 / r2
 
-	bmx := BIG // find sandard errors for b as points where
+	bmx := BIG // find standard errors for b as points where
 	bmn := BIG // delta chi squared = 1.
 	offs = result2.chi2 + 1
 
@@ -888,10 +885,10 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 } // end fitexy
 
 func chixy(bang float64, row []Point) float64 {
-	// Returns the value of Chi squared - offs, for the slope b = tan(bang).
-	// scaled data and offs are communicated via the common block fitxyc
+	// Returns the value of Chi squared - offsets, for the slope b = tan(bang).
+	// scaled data and offsets are communicated via the common block fitxyc in the fortran code.
 	var Chixy, avex, avey, sumw, b float64
-	// COMMON /fitxyc/ xx,yy,sx,sy,ww,aa,offs,nn
+	// COMMON /fitxyc/ xx,yy,sx,sy,ww,aa,offs,nn    from the fortran code.
 
 	b = math.Tan(bang)
 	for j := range row { // for j = 0; j < nn; j++ {
@@ -1026,7 +1023,7 @@ func mnbrak(ax, bx float64, rows []Point) (float64, float64, float64, float64, f
 } // end mnbrak
 
 func brent(ax, bx, cx float64, rows []Point) (float64, float64) {
-	// Given a function, chixy, and given a bracketing tiplet of abscissas ax,bx,cx such that
+	// Given a function, chixy, and given a bracketing triplet of abscissas ax, bx, cx such that
 	// bx is btwn ax and cx, and chixy(bx) is less than both chixy(ax) and chixy(cx), this
 	// routine isolates the minimum to a fractional precision of about tolerance using Brent's
 	// method.  The abscissa of the minimum is returned as xmin, and the minimum function
@@ -1200,13 +1197,13 @@ func zbrent(x1, x2 float64, rows []Point) float64 {
 	return b
 } // end zbrent
 
+// fit2 is extended version of fit, now including errors in X as well as Y.
 func fit2(rows []Point) FittedData2 {
 	/*
 		subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 		   Based on Numerical Recipies code of same name on p 508-9 in Fortran, 1st ed,
 		   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
-		   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering.
-		   (C) 1986, Cambridge University Press.
+		   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering. (C) 1986, Cambridge University Press.
 		   y = a + bx.  And it returns stdeva, stdevb, and goodness of fit param q.
 		   fit2 uses the xx,yy,sx,sy,ww fields defined in fitexy.
 	*/
@@ -1258,9 +1255,9 @@ func min(a, b int) int {
 // Turns out that I don't see anything wrong, and the code is working.  Sometimes the iterated
 // result is smaller and sometimes larger than the original unweighted estimate.  That seems to
 // be as it should be.
-// Bssic algorithm is that the variances are used to calculate a weight for each point, and then
+// Basic algorithm is that the variances are used to calculate a weight for each point, and then
 // those weights are used to calculate a new slope and intercept.  Then new weights are computed
-// using the new slope and intercpt, and a new slope and intercept is computed by the new weights.
+// using the new slope and intercept, and a new slope and intercept is computed by the new weights.
 // The iteration stops at either 100 iterations or if the change is below the tolerance factor,
 // currently 1.e-5 * slope.
 
@@ -1299,7 +1296,7 @@ func min(a, b int) int {
 
 */
 
-// ---------------------------------- DoOldWeightedLR ---------------------------------
+// DoOldWeightedLR returns the results in the FittedData3 struct.
 func DoOldWeightedLR(rows []Point, slope, intercept float64) FittedData3 {
 	PrevSlope := slope
 	PrevIntrcpt := intercept
@@ -1392,7 +1389,7 @@ func exp(f float64) float64 {
 	return math.Exp(f)
 }
 
-// ------------------------------------ FindLocalCountsPeak --------------------
+// FindLocalCountsPeak  does what its name says.  I don't remember why I need this.
 func FindLocalCountsPeak(rows []Point) int {
 	var maxcounts float64
 	var pointindex int
@@ -1406,20 +1403,11 @@ func FindLocalCountsPeak(rows []Point) int {
 	return pointindex
 }
 
-// ----------------------------------------------------------
-// readLine
-
+// readLine is needed because a bytes.Reader does not have a readLine method, so I have to write one.
 func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
 		byt, err := r.ReadByte() // byte is a reserved word for a variable type.
-		/*		if verboseFlag {
-					fmt.Printf(" %c %v ", byt, err)
-					pause()
-				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
-		//	return strings.TrimSpace(sb.String()), nil
-		//} else
 		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}
@@ -1429,7 +1417,7 @@ func readLine(r *bytes.Reader) (string, error) {
 		if byt == '\r' {
 			continue
 		}
-		if byt == '#' || byt == '/' {
+		if byt == '#' || byt == '/' { // a single / is enough to mark a comment, but I still use // in the data files.
 			discardRestOfLine(r)
 			return strings.TrimSpace(sb.String()), nil
 		}
