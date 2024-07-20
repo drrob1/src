@@ -36,6 +36,7 @@ REVISION HISTORY
              But these use terminal mode.
 27 Dec 14 -- Removing unused modules so can compile in ADW.
 21 Jun 15 -- Will write out to file, and close all files before program closes.
+------------------------------------------------------------------------------------------------------------------------
 10 Aug 17 -- Converting to Go
 12 Aug 17 -- Added "Numerical Recipies" code, and removed old iterative algorithm.
 15 Aug 17 -- Added ability to show timestamp of the executable file, as a way of showing last linking timestamp.
@@ -44,7 +45,7 @@ REVISION HISTORY
  9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
 11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
 12 Sep 17 -- Added heading to output file.
-------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 13 Sep 17 -- Adding code from Numerical Recipes for errors in X and Y.  And now called gastric2.
 24 Sep 17 -- To make the new code work, I'll remove lny and use OrigY and y.
 27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
