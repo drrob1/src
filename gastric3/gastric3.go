@@ -400,7 +400,7 @@ func main() {
 	IteratedResults := DoOldWeightedLR(rows, stdslope, stdintercept)
 	IteratedHalfLife := -ln2 / IteratedResults.Slope
 	ctfmt.Printf(ct.Green, true, " Old iterative method: halflife is %.0f minutes, exp(intercept) is %.0f.\n", IteratedHalfLife, exp(IteratedResults.Intercept))
-	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, R^2 = %.6f.",
+	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, Y-intercept = %.0f counts, R^2 = %.6f.",
 		IteratedHalfLife, IteratedResults.Slope, exp(IteratedResults.Intercept), IteratedResults.R2)
 	writestr(s)
 	writerune()
@@ -408,15 +408,15 @@ func main() {
 
 	interceptStats, slopeStats := stat.LinearRegression(xvector, yvector, wtvector, false)
 	halfLifeStats := -ln2 / slopeStats
-	s0 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.0f minutes, exp(intercept) is %.0f counts. \n", halfLifeStats, exp(interceptStats))
+	s0 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.0f minutes, Y-intercept is %.0f counts. \n", halfLifeStats, exp(interceptStats))
 	fmt.Print(s0)
-	s1 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f counts. \n", halfLifeStats, exp(interceptStats))
+	s1 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.0f minutes, Y-intercept is %.0f counts. \n", halfLifeStats, exp(interceptStats))
 	writestr(s1)
 	check(bufioErr)
 
 	interceptUnWtStats, slopeUnWtStats := stat.LinearRegression(xvector, yvector, unwtvector, false)
 	halfLifeUnWtStats := -ln2 / slopeUnWtStats
-	s = fmt.Sprintf(" gonum.org unweighted LinearRegression halflife is %.2f minutes, exp(intercpt) is %.2f counts. \n", halfLifeUnWtStats, exp(interceptUnWtStats))
+	s = fmt.Sprintf(" gonum.org unweighted LinearRegression halflife is %.0f minutes, Y-intercpt is %.0f counts. \n", halfLifeUnWtStats, exp(interceptUnWtStats))
 	// fmt.Print(s)  same as original unweighted slope and intercept.  So I won't display it but I will write it to the file.
 	writestr(s)
 	writerune()
@@ -429,17 +429,18 @@ func main() {
 
 	proposedPeak := FindLocalCountsPeak(rows)
 	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "]  ")
+
 	// Will try a new way to scan and process input
-	peakpt := 0
-	n, err := fmt.Scanf("%d\n", &peakpt) // fmt.Scan functions read from os.Stdin
+	peakPt := 0
+	n, err := fmt.Scanf("%d\n", &peakPt) // fmt.Scan functions read from os.Stdin
 	if n < 1 || err != nil {
-		peakpt = proposedPeak
+		peakPt = proposedPeak
 	}
-	fmt.Print(" Will use point [", peakpt, "] as peak point.")
+	fmt.Print(" Will use point [", peakPt, "] as peak point.")
 	fmt.Println()
 
-	peakrows := rows[peakpt:] // peakrows covers the specified point to the end, usually n = 9
-	PeakNonZero := peakpt > 0
+	peakrows := rows[peakPt:] // peakrows covers the specified point to the end, usually n = 9
+	PeakNonZero := peakPt > 0
 	fmt.Println()
 
 	stdPeakSlope, stdPeakIntercept, stdPeakR2 := StdLR(peakrows)
@@ -455,10 +456,10 @@ func main() {
 	IteratedPeakResults := DoOldWeightedLR(peakrows, stdPeakSlope, stdPeakIntercept)
 	IteratedPeakHalfLife := -ln2 / IteratedPeakResults.Slope
 
-	peakXVector := xvector[peakpt:]
-	peakYVector := yvector[peakpt:]
-	peakWtVector := wtvector[peakpt:]
-	peakUnwtVector := unwtvector[peakpt:]
+	peakXVector := xvector[peakPt:]
+	peakYVector := yvector[peakPt:]
+	peakWtVector := wtvector[peakPt:]
+	peakUnwtVector := unwtvector[peakPt:]
 	interceptPeakStats, slopePeakStats := stat.LinearRegression(peakXVector, peakYVector, peakWtVector, false)
 	halfLifePeakStats := -ln2 / slopePeakStats
 
@@ -474,46 +475,43 @@ func main() {
 		s = fmt.Sprintf(" Peak point is at %.3g minutes.\n", peakrows[0].x)
 		fmt.Print(s)
 		writestr(s)
-		ctfmt.Printf(ct.Yellow, true, " Original unweighted peak halflife is %.0f minutes, and exp(intercept) is %.0f counts.\n",
+		ctfmt.Printf(ct.Yellow, true, " Original unweighted peak halflife is %.0f minutes, and Y-intercept is %.0f counts.\n",
 			stdPeakHalfLife, exp(stdPeakIntercept))
-		s := fmt.Sprintf(" Original std peak unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
+		s := fmt.Sprintf(" Original std peak unweighted: T-1/2 of Gastric Emptying is %.0f minutes, slope is %.6f cnts/min, Y-intercept is %.0f cnts and R-squared is %.6f.",
 			stdPeakHalfLife, stdPeakSlope, exp(stdPeakIntercept), stdPeakR2)
 		writestr(s)
 		writerune()
 		check(bufioErr)
-		s = fmt.Sprintf(" fitful peak unweighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.2f, StDevSlope= %.6f cnts.",
+		s = fmt.Sprintf(" fitful peak unweighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f cnts/min, Y-intercept= %.0f, StDevSlope= %.6f cnts.",
 			unweightedPeakHalfLife, unweightedPeakResults.Slope, exp(unweightedPeakResults.Intercept), unweightedPeakResults.StDevSlope)
 		writestr(s)
 		writerune()
-		s = fmt.Sprintf(" fit peak weighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, exp(Intercept)= %.2f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
+		s = fmt.Sprintf(" fit peak weighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f, Y-intercept= %.0f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
 			WeightedPeakHalfLife, WeightedPeakResults.Slope, exp(WeightedPeakResults.Intercept), WeightedPeakResults.StDevSlope, WeightedPeakResults.GoodnessOfFit)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, false, " fitful peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", WeightedPeakHalfLife2, exp(WeightedPeakResults2.Intercept))
-		fmt.Println()
-		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
+		ctfmt.Printf(ct.Yellow, false, " fitful peak weighted: halflife is %.0f minutes, Y-intercept is %.0f counts.\n", WeightedPeakHalfLife2, exp(WeightedPeakResults2.Intercept))
+		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, Y-intercept = %.0f, fit is %.6f.",
 			WeightedPeakHalfLife2, WeightedPeakResults2.Slope, exp(WeightedPeakResults2.Intercept), WeightedPeakResults2.GoodnessOfFit)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, true, " fitexy peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", WeightedPeakHalfLife3, exp(WeightedPeakResults3.Intercept))
-		fmt.Println()
-		s = fmt.Sprintf(" fitexy peak weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
+		ctfmt.Printf(ct.Yellow, true, " fitexy peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.\n ", WeightedPeakHalfLife3, exp(WeightedPeakResults3.Intercept))
+		s = fmt.Sprintf(" fitexy peak weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, Y-intercept = %.0f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
 			WeightedPeakHalfLife3, WeightedPeakResults3.Slope, exp(WeightedPeakResults3.Intercept), WeightedPeakResults3.StDevSlope, WeightedPeakResults3.chi2, WeightedPeakResults3.q)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, false, " Old iterative method: from peak halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedPeakHalfLife, exp(IteratedPeakResults.Intercept))
-		fmt.Println()
+		ctfmt.Printf(ct.Yellow, false, " Old iterative method: from peak halflife is %.0f minutes, exp(intercept) is %.0f.\n", IteratedPeakHalfLife, exp(IteratedPeakResults.Intercept))
 		s = fmt.Sprintf(" Old iterative method: from peak halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, R^2 = %.6f.",
 			IteratedPeakHalfLife, IteratedPeakResults.Slope, exp(IteratedPeakResults.Intercept), IteratedPeakResults.R2)
 		writestr(s)
 		writerune()
 		s1 := fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.0f minutes, exp(intercept) is %.0f. \n", halfLifePeakStats, exp(interceptPeakStats))
 		ctfmt.Print(ct.Green, true, s1)
-		s2 := fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.2f minutes, exp(intercept) is %.2f. \n", halfLifePeakStats, exp(interceptPeakStats))
+		s2 := fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.0f minutes, Y-intercept is %.0f. \n", halfLifePeakStats, exp(interceptPeakStats))
 		writestr(s2)
 		writerune()
 
-		s = fmt.Sprintf(" gonum.org UnWeighted LR peak halflife is %.2f minutes, exp(intrcpt) is %.2f. \n",
+		s = fmt.Sprintf(" gonum.org UnWeighted LR peak halflife is %.0f minutes, Y-intrcpt is %.0f. \n",
 			halfLifePeakUnWtStats, exp(interceptPeakUnWtStats))
 		// fmt.Print(s)  same as original unweighted slope and intercept.  So I won't display it but I will write it to the file.
 		writestr(s)
