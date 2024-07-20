@@ -6,9 +6,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"gonum.org/v1/gonum/stat"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -76,7 +75,8 @@ REVISION HISTORY
 11 Apr 22 -- Modernizing the filepicker output.  Changed from bytes.buffer to bytes.reader.  Added comment characters of # and / like for BJ strategy files.
 19 Jul 24 -- Adding use of MultiWriter for both file and screen output.  And modified code to comply w/ new API for tknptr, ie, New instead of NewToken.
 			Decided to not add MultiWriter, as I prefer having different output to file and screen.  To the screen I'm using %.0f to simplify the output.
-			Adding color fmt routines.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+19 Jul 24 -- Now called gastric3a, and I will use MultiWriter for both file and screen output.  I don't need output to a hundreth of a minute anyway, as that's silly.
 */
 
 const LastAltered = "July 19, 2024"
@@ -231,6 +231,8 @@ func main() {
 	_, err = OutBufioWriter.WriteString("------------------------------------------------------\n")
 	check(err)
 
+	multiWriter := io.MultiWriter(OutBufioWriter, os.Stdout)
+
 	for { // Main input reading loop to read all lines
 		line, e := readLine(bytesReader) // bytesbuffer.ReadString('\n')  A modernization.
 		if e != nil {
@@ -304,6 +306,14 @@ func main() {
 		_, bufioErr = OutBufioWriter.WriteString(s)
 	}
 
+	// and this is also a closure, but the multi writer doesn't have a write string routine.  So I have to use io.Copy()
+	multiWriteStr := func(s string) {
+		if bufioErr != nil {
+			return
+		}
+		_, bufioErr = io.Copy(multiWriter, strings.NewReader(s))
+	}
+
 	writerune := func() { // this is also a closure.
 		if bufioErr != nil {
 			return
@@ -334,10 +344,10 @@ func main() {
 	writerune()
 	for i, p := range rows {
 		// The last format verb has a smaller width to look more balanced when displayed, as only 1 decimal place is shown.
-		s := fmt.Sprintf("%2d %11.0f %13.2f %10.4f %10.4f %10.4f %8.1f\n",
-			i, p.x, p.OrigY, p.y, p.sigx, p.stdev, wtvector[i])
-		fmt.Print(s)
-		writestr(s) // the closure from above
+		s := fmt.Sprintf("%2d %11.0f %13.2f %10.4f %10.4f %10.4f %8.1f\n", i, p.x, p.OrigY, p.y, p.sigx, p.stdev, wtvector[i])
+		multiWriteStr(s) // the closure from above
+		//fmt.Print(s)
+		//writestr(s) // the closure from above
 	}
 	fmt.Println()
 	fmt.Println()
@@ -348,18 +358,19 @@ func main() {
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
-	ctfmt.Printf(ct.Yellow, true, " Original unweighted: halflife is %.0f minutes, and exp(intercept) is %.0f counts.", stdhalflife, math.Exp(stdintercept))
-	fmt.Println()
-	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
+	//fmt.Printf(" Original unweighted: halflife is %.0f minutes, and exp(intercept) is %.0f counts.", stdhalflife, math.Exp(stdintercept))
+	//writestr(s) // using the write closure
+	s = fmt.Sprintf(" Original std unweighted: T-1/2 of Gastric Emptying is %.0f minutes, slope is %.6f cnts/min, exp(intercept) is %.0f cnts and R-squared is %.6f.",
 		stdhalflife, stdslope, math.Exp(stdintercept), stdr2)
-	writestr(s) // using the write closure
+	multiWriteStr(s)
 	writerune()
+	fmt.Println()
 	check(bufioErr)
 
 	UnWeightedResults := fitfull(rows, false)
 	UnweightedHalfLife := -ln2 / UnWeightedResults.Slope
 	// not writing this output to screen as its redundant.
-	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.2f, StDevSlope= %.6f cnts.",
+	s = fmt.Sprintf(" fitful unweighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.0f, StDevSlope= %.6f cnts.",
 		UnweightedHalfLife, UnWeightedResults.Slope, math.Exp(UnWeightedResults.Intercept), UnWeightedResults.StDevSlope)
 	writestr(s) // using the write closure, I hope
 	writerune()
@@ -368,7 +379,7 @@ func main() {
 	WeightedResults := fit(rows)
 	weightedHalfLife := -ln2 / WeightedResults.Slope
 	// not writing this output to screen as its redundant.
-	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, exp(Intercept)= %.2f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
+	s = fmt.Sprintf(" fit weighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f, exp(Intercept)= %.0f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
 		weightedHalfLife, WeightedResults.Slope, exp(WeightedResults.Intercept), WeightedResults.StDevSlope, WeightedResults.GoodnessOfFit)
 	writestr(s) // using the write closure
 	writerune()
@@ -376,42 +387,42 @@ func main() {
 
 	WeightedResults2 := fitfull(rows, true)
 	weightedHalfLife2 := -ln2 / WeightedResults2.Slope
-	ctfmt.Printf(ct.Green, true, " fitful weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", weightedHalfLife2, exp(WeightedResults2.Intercept))
-	fmt.Println()
-	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
+	//fmt.Printf(" fitful weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", weightedHalfLife2, exp(WeightedResults2.Intercept))
+	s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f, fit is %.6f.\n",
 		weightedHalfLife2, WeightedResults2.Slope, exp(WeightedResults2.Intercept), WeightedResults2.GoodnessOfFit)
-	writestr(s)
-	writerune()
+	multiWriteStr(s)
+	//writestr(s)
+	//writerune()
+	//fmt.Println()
 	check(bufioErr)
 
 	WeightedResults3 := fitexy(rows)
 	weightedHalfLife3 := -ln2 / WeightedResults3.Slope
-	ctfmt.Printf(ct.Yellow, false, " fitexy weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", weightedHalfLife3, exp(WeightedResults3.Intercept))
-	fmt.Println()
-	s = fmt.Sprintf(" fitexy weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
+	//fmt.Printf(" fitexy weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", weightedHalfLife3, exp(WeightedResults3.Intercept))
+	s = fmt.Sprintf(" fitexy weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
 		weightedHalfLife3, WeightedResults3.Slope, exp(WeightedResults3.Intercept), WeightedResults3.StDevSlope, WeightedResults3.chi2, WeightedResults3.q)
-	writestr(s)
+	multiWriteStr(s)
+	//writestr(s)
 	writerune()
+	fmt.Println()
 	check(bufioErr)
 
 	// Version 3 code, adding the orig weighting function
 	IteratedResults := DoOldWeightedLR(rows, stdslope, stdintercept)
 	IteratedHalfLife := -ln2 / IteratedResults.Slope
-	ctfmt.Printf(ct.Green, true, " Old iterative method: halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedHalfLife, exp(IteratedResults.Intercept))
-	fmt.Println()
-	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, R^2 = %.6f.",
+	//fmt.Printf(" Old iterative method: halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedHalfLife, exp(IteratedResults.Intercept))
+	s = fmt.Sprintf(" Old iterative method: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f counts, R^2 = %.6f.\n",
 		IteratedHalfLife, IteratedResults.Slope, exp(IteratedResults.Intercept), IteratedResults.R2)
-	writestr(s)
-	writerune()
+	//writestr(s)
+	multiWriteStr(s)
 	check(bufioErr)
-	//fmt.Println()
 
 	interceptStats, slopeStats := stat.LinearRegression(xvector, yvector, wtvector, false)
 	halfLifeStats := -ln2 / slopeStats
-	s0 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.0f minutes, exp(intercept) is %.0f counts. \n", halfLifeStats, exp(interceptStats))
-	fmt.Print(s0)
-	s1 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f counts. \n", halfLifeStats, exp(interceptStats))
-	writestr(s1)
+	s = fmt.Sprintf(" gonum.org LinearRegression: halflife is %.0f minutes, exp(intercept) is %.0f counts. \n", halfLifeStats, exp(interceptStats))
+	//fmt.Print(s0)
+	//s1 := fmt.Sprintf(" gonum.org LinearRegression: halflife is %.2f minutes, exp(intercept) is %.2f counts. \n", halfLifeStats, exp(interceptStats))
+	multiWriteStr(s)
 	check(bufioErr)
 
 	interceptUnWtStats, slopeUnWtStats := stat.LinearRegression(xvector, yvector, unwtvector, false)
@@ -431,7 +442,7 @@ func main() {
 	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "]  ")
 	// Will try a new way to scan and process input
 	peakpt := 0
-	n, err := fmt.Scanf("%d\n", &peakpt) // fmt.Scan functions read from os.Stdin
+	n, err := fmt.Scanf("%d\n", &peakpt) // fmt.Scan functions read from os.Stdin.  Scanln didn't actually pause here.
 	if n < 1 || err != nil {
 		peakpt = proposedPeak
 	}
@@ -474,47 +485,43 @@ func main() {
 		s = fmt.Sprintf(" Peak point is at %.3g minutes.\n", peakrows[0].x)
 		fmt.Print(s)
 		writestr(s)
-		ctfmt.Printf(ct.Yellow, true, " Original unweighted peak halflife is %.0f minutes, and exp(intercept) is %.0f counts.\n",
-			stdpeakhalflife, exp(stdpeakintercept))
-		s := fmt.Sprintf(" Original std peak unweighted: T-1/2 of Gastric Emptying is %.2f minutes, slope is %.6f cnts/min, exp(intercept) is %.2f cnts and R-squared is %.6f.",
+		s := fmt.Sprintf(" Original std peak unweighted: T-1/2 of Gastric Emptying is %.0f minutes, slope is %.6f cnts/min, exp(intercept) is %.0f cnts and R-squared is %.6f.\n",
 			stdpeakhalflife, stdpeakslope, exp(stdpeakintercept), stdpeakr2)
-		writestr(s)
-		writerune()
+		multiWriteStr(s)
 		check(bufioErr)
-		s = fmt.Sprintf(" fitful peak unweighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.2f, StDevSlope= %.6f cnts.",
+		s = fmt.Sprintf(" fitful peak unweighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f cnts/min, exp(intercept)= %.0f, StDevSlope= %.6f cnts.",
 			unweightedPeakHalflife, unweightedPeakResults.Slope, exp(unweightedPeakResults.Intercept), unweightedPeakResults.StDevSlope)
 		writestr(s)
 		writerune()
-		s = fmt.Sprintf(" fit peak weighted: halflife of Gastric Emptying is %.2f minutes.  Slope= %.6f, exp(Intercept)= %.2f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
+		s = fmt.Sprintf(" fit peak weighted: halflife of Gastric Emptying is %.0f minutes.  Slope= %.6f, exp(Intercept)= %.0f, StDevSlope= %.6f, GoodnessOfFit= %.6f.",
 			WeightedPeakHalflife, WeightedPeakResults.Slope, exp(WeightedPeakResults.Intercept), WeightedPeakResults.StDevSlope, WeightedPeakResults.GoodnessOfFit)
 		writestr(s)
 		writerune()
-		ctfmt.Printf(ct.Yellow, false, " fitful peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", WeightedPeakHalflife2, exp(WeightedPeakResults2.Intercept))
-		fmt.Println()
-		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, fit is %.6f.",
+		//fmt.Printf(" fitful peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts.", WeightedPeakHalflife2, exp(WeightedPeakResults2.Intercept))
+		//fmt.Println()
+		s = fmt.Sprintf(" fitful weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f, fit is %.6f.\n",
 			WeightedPeakHalflife2, WeightedPeakResults2.Slope, exp(WeightedPeakResults2.Intercept), WeightedPeakResults2.GoodnessOfFit)
-		writestr(s)
-		writerune()
-		ctfmt.Printf(ct.Yellow, true, " fitexy peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", WeightedPeakHalflife3, exp(WeightedPeakResults3.Intercept))
-		fmt.Println()
-		s = fmt.Sprintf(" fitexy peak weighted: halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f counts, stdev is %.6f, chi2= %.6f, q= %.6f.",
+		multiWriteStr(s)
+		//writestr(s)
+		//writerune()
+		//fmt.Printf(" fitexy peak weighted: halflife is %.0f minutes, exp(intercept) is %.0f counts. ", WeightedPeakHalflife3, exp(WeightedPeakResults3.Intercept))
+		//fmt.Println()
+		s = fmt.Sprintf(" fitexy peak weighted: halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f counts, stdev is %.6f, chi2= %.6f, q= %.6f.\n",
 			WeightedPeakHalflife3, WeightedPeakResults3.Slope, exp(WeightedPeakResults3.Intercept), WeightedPeakResults3.StDevSlope, WeightedPeakResults3.chi2, WeightedPeakResults3.q)
-		writestr(s)
-		writerune()
-		ctfmt.Printf(ct.Yellow, false, " Old iterative method: from peak halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedPeakHalflife, exp(IteratedPeakResults.Intercept))
-		fmt.Println()
-		s = fmt.Sprintf(" Old iterative method: from peak halflife of Gastric Emptying is %.2f minutes, slope is %.6f, exp(intercept) = %.2f, R^2 = %.6f.",
+		multiWriteStr(s)
+		//writestr(s)
+		//writerune()
+		//fmt.Printf(" Old iterative method: from peak halflife is %.0f minutes, exp(intercept) is %.0f.", IteratedPeakHalflife, exp(IteratedPeakResults.Intercept))
+		//fmt.Println()
+		s = fmt.Sprintf(" Old iterative method: from peak halflife of Gastric Emptying is %.0f minutes, slope is %.6f, exp(intercept) = %.0f, R^2 = %.6f.\n",
 			IteratedPeakHalflife, IteratedPeakResults.Slope, exp(IteratedPeakResults.Intercept), IteratedPeakResults.R2)
-		writestr(s)
-		writerune()
-		s1 := fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.0f minutes, exp(intercept) is %.0f. \n", halfLifePeakStats, exp(interceptPeakStats))
-		ctfmt.Print(ct.Green, true, s1)
-		s2 := fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.2f minutes, exp(intercept) is %.2f. \n", halfLifePeakStats, exp(interceptPeakStats))
-		writestr(s2)
-		writerune()
+		multiWriteStr(s)
+		//writestr(s)
+		//writerune()
+		s = fmt.Sprintf(" gonum.org LinearRegression: peak halflife is %.0f minutes, exp(intercept) is %.0f. \n", halfLifePeakStats, exp(interceptPeakStats))
+		multiWriteStr(s)
 
-		s = fmt.Sprintf(" gonum.org UnWeighted LR peak halflife is %.2f minutes, exp(intrcpt) is %.2f. \n",
-			halfLifePeakUnWtStats, exp(interceptPeakUnWtStats))
+		s = fmt.Sprintf(" gonum.org UnWeighted LR peak halflife is %.2f minutes, exp(intrcpt) is %.2f. \n", halfLifePeakUnWtStats, exp(interceptPeakUnWtStats))
 		// fmt.Print(s)  same as original unweighted slope and intercept.  So I won't display it but I will write it to the file.
 		writestr(s)
 		writerune()
