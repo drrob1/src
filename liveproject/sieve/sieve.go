@@ -14,7 +14,7 @@ import (
   10 Jul 2024 -- Removed a superfluous loop.
   11 Jul 2024 -- Added simple code to be a baseline on the speed issue.
 				Nevermind.  I wrote code that doesn't work because the first occurrence of each factor doesn't make a number not be prime.
-				It's the next occurrence of each factor that does.  Hence, it starts w/ i^2 for the inner loop, as i^2 is the next occurrence of that factor.
+				It's the next occurrence of each factor that does.  Hence, it starts w/ i^2 for the inner loop as an optimization.  2*i would be the next occurrence of that factor.
 				I took the code out.
 */
 

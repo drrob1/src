@@ -2,6 +2,11 @@ package main
 
 import (
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -10,17 +15,27 @@ import (
 				The algorithm is to make p loop over odd numbers from 3 .. max.  For each loop, calculate the largest odd integer max / p, and then loop down from that maxQ to p.
 				If p is marked prime, then p * q is marked not prime.
 				Something I just noticed by his solution and mine.  In sieveOfEratosthenes, he does for i := 3; i < max; i += 2.  I don't go to the max, but instead I go to sqrt(max).
- 9 Jul 2024 -- I'm going to try to benchmark this according to what Dave Plumber of Dave's Garage did.  IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
+ 9 Jul 2024 -- I'm going to try to benchmark this according to what Dave Plumber of Dave's Garage did, on Win11 desktop.
+				IE, run for 5 sec and count how many runs it does per sec for the sieve of 1 million elements.
                    Result for Sieve of Eratosthenes is ~997/sec.
                    Result for Sieve of Euler is ~446/sec.
 10 Jul 2024 -- Tuning the sieveOfEratosthenes
                    Result for Sieve of Eratosthenes is ~725/sec.
                    Result for Sieve of Eratosthenes is ~1310/sec when only go to sqrt(max).
 11 Jul 2024 -- Minor tweaks
+------------------------------------------------------------------------------------------------------------------------------------------------------
+21 Jul 2024 -- Now called consieve, and I'm going to try to add concurrency to this routine to see how much faster I can get.  I removed the Euler Sieve, as it was slower.
+				Result for Sieve of Erathosthenes is ~7200/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()-1
+				Result for Sieve of Erathosthenes is ~7400/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()
+				Result for Sieve of Erathosthenes is ~7450-7480/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
 */
 
-const LastModified = "11 July 2024"
+const LastModified = "21 July 2024"
 const timeForTesting = 5 * time.Second
+
+var wg sync.WaitGroup
+var workers = runtime.NumCPU() + 1
+var total int64
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {
@@ -44,38 +59,6 @@ func sieveOfEratosthenes(mx int) []bool {
 		if sieve[i] {
 			for j := i * i; j < mx; j += i { // turns out that the square of an odd number is always odd. (2n + 1) **2 -> 4n^2 + 4n + 1
 				sieve[j] = false
-			}
-		}
-	}
-
-	return sieve
-}
-
-func eulerSieve(mx int) []bool {
-	if mx < 2 {
-		return nil
-	}
-
-	sieve := make([]bool, mx+1) // part of author's solution.  I need this here because when I tested w/ 999, I got an index out of bounds on line 77.
-
-	sieve[2] = true
-	for i := 3; i < mx; i += 2 {
-		sieve[i] = true
-	}
-
-	if mx < 4 {
-		return sieve
-	}
-
-	for p := 3; p < mx; p += 2 {
-		// need largest odd number <= divisor of max/p.
-		maxQ := mx / p
-		if maxQ%2 == 0 { // then this is even
-			maxQ-- // make the number odd
-		}
-		for q := maxQ; q >= p; q -= 2 {
-			if sieve[q] { // I misunderstood the algorithm.  I first made this if sieve[p*q], but the author uses this expression so I changed my code.
-				sieve[p*q] = false
 			}
 		}
 	}
@@ -126,61 +109,51 @@ func main() {
 	var sieve []bool
 
 	var max = 1_000_000
-	fmt.Printf(" First Sieve of Eratosthenes, last modified %s, Enter Max: ", LastModified)
+	fmt.Printf(" Concurrent Sieve of Eratosthenes, last modified %s, Enter Max: ", LastModified)
 	fmt.Scanln(&max)
 	fmt.Printf(" Using max of %d.\n", max)
 
 	t0 := time.Now()
 	tFinal := t0.Add(timeForTesting)
 
-	for i := 0; ; i++ {
-		now := time.Now()
-		dur := now.Sub(t0)
-		sec := dur.Seconds()
-		if now.After(tFinal) {
-			fmt.Printf("\nElapsed time: %s, i = %d, dur=%v type = %T, rate = %.2f per second.\n", now.Sub(t0), i, dur, dur, float64(i)/sec)
-			break
-		}
-		sieve = sieveOfEratosthenes(max)
+	if workers < 1 {
+		workers = 1
 	}
+
+	// spin up the workers
+	wg.Add(workers)
+	for j := range workers {
+		go func() {
+			var i int64
+			defer wg.Done()
+			for i = 0; ; i++ {
+				now := time.Now()
+				if now.After(tFinal) {
+					dur := now.Sub(t0)
+					sec := dur.Seconds()
+					fmt.Printf("Elapsed time: %s for worker %d, i = %d, dur=%v type = %T, rate = %.2f per second.\n",
+						now.Sub(t0), j, i, dur, dur, float64(i)/sec)
+					break
+				}
+				sieve = sieveOfEratosthenes(max)
+			}
+			atomic.AddInt64(&total, i)
+		}()
+	}
+
+	wg.Wait()
+
 	elapsed := time.Since(t0)
-	fmt.Printf(" Elapsed: %f seconds, %s \n", elapsed.Seconds(), elapsed.String())
+	ctfmt.Printf(ct.Yellow, true, "\n\n Elapsed: %f seconds, %s, total runs=%d, rate = %.2f/sec\n", elapsed.Seconds(), elapsed.String(), total, float64(total)/elapsed.Seconds())
 
 	primes := sieveToPrimes(sieve)
 	fmt.Printf(" Found %d primes less than %d.\n", len(primes), max)
 	if max <= 1000 {
 		printSieve(sieve)
 		fmt.Println()
-
 		fmt.Println(primes)
 	}
-
 	fmt.Println()
-
-	fmt.Printf(" Second Sieve of Euler.")
-	start := time.Now()
-	tFinal = start.Add(timeForTesting)
-
-	for i := 0; ; i++ {
-		now := time.Now()
-		dur := now.Sub(start)
-		sec := dur.Seconds()
-		if now.After(tFinal) {
-			fmt.Printf("\nElapsed time: %s, i = %d, dur=%v type = %T, rate = %.2f per second.\n", now.Sub(start), i, dur, dur, float64(i)/sec)
-			break
-		}
-		sieve = eulerSieve(max)
-	}
-
-	elapsed = time.Since(start)
-	fmt.Printf(" Elapsed for Euler: %f sec, %s\n", elapsed.Seconds(), elapsed.String())
-	eulerPrimes := sieveToPrimes(sieve)
-	fmt.Printf(" Found %d primes less than %d.\n", len(eulerPrimes), max)
-	if max <= 1000 {
-		printSieve(sieve)
-		fmt.Println()
-		fmt.Println(eulerPrimes)
-	}
 }
 
 func iSqrt(i int) int { // this uses dividing and averaging
