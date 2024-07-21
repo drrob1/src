@@ -28,6 +28,8 @@ import (
 				Result for Sieve of Erathosthenes is ~7200/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()-1
 				Result for Sieve of Erathosthenes is ~7400/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()
 				Result for Sieve of Erathosthenes is ~7450-7480/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
+				Result for Sieve of Erathosthenes is ~2300/sec, on leox desktop, and workers = NumCPU()+1
+				Result for Sieve of Erathosthenes is ~8700/sec, on thelio desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
 */
 
 const LastModified = "21 July 2024"
