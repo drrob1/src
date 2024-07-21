@@ -131,8 +131,8 @@ func main() {
 				if now.After(tFinal) {
 					dur := now.Sub(t0)
 					sec := dur.Seconds()
-					fmt.Printf("Elapsed time: %s for worker %d, i = %d, dur=%v type = %T, rate = %.2f per second.\n",
-						now.Sub(t0), j, i, dur, dur, float64(i)/sec)
+					fmt.Printf("Elapsed time: %.5f for worker %02d, i = %d, dur=%.5f, rate = %.0f per second.\n",
+						now.Sub(t0).Seconds(), j, i, dur.Seconds(), float64(i)/sec)
 					break
 				}
 				sieve = sieveOfEratosthenes(max)
@@ -144,7 +144,8 @@ func main() {
 	wg.Wait()
 
 	elapsed := time.Since(t0)
-	ctfmt.Printf(ct.Yellow, true, "\n\n Elapsed: %f seconds, %s, total runs=%d, rate = %.2f/sec\n", elapsed.Seconds(), elapsed.String(), total, float64(total)/elapsed.Seconds())
+	ctfmt.Printf(ct.Yellow, true, "\n\n Elapsed: %f seconds, %s, total runs=%d, rate = %.0f/sec\n",
+		elapsed.Seconds(), elapsed.String(), total, float64(total)/elapsed.Seconds())
 
 	primes := sieveToPrimes(sieve)
 	fmt.Printf(" Found %d primes less than %d.\n", len(primes), max)
