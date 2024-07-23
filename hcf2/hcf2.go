@@ -103,8 +103,8 @@ func main() {
 	}
 
 	var i64 int64
-	for _, b := range b { // convert the random bytes to a single int64
-		i64 = 256*i64 + int64(b)
+	for _, byt := range b { // convert the random bytes to a single int64
+		i64 = 256*i64 + int64(byt)
 	}
 	t := time.Now().Unix()
 	i64 += t
