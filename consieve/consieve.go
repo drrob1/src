@@ -25,11 +25,11 @@ import (
 11 Jul 2024 -- Minor tweaks
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 21 Jul 2024 -- Now called consieve, and I'm going to try to add concurrency to this routine to see how much faster I can get.  I removed the Euler Sieve, as it was slower.
-				Result for Sieve of Erathosthenes is ~7200/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()-1
-				Result for Sieve of Erathosthenes is ~7400/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()
-				Result for Sieve of Erathosthenes is ~7450-7480/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
-				Result for Sieve of Erathosthenes is ~2300/sec, on leox desktop, and workers = NumCPU()+1
-				Result for Sieve of Erathosthenes is ~8700/sec, on thelio desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
+				Result for Sieve of Eratosthenes is ~7200/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()-1
+				Result for Sieve of Eratosthenes is ~7400/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()
+				Result for Sieve of Eratosthenes is ~7450-7480/sec, on Win11 desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
+				Result for Sieve of Eratosthenes is ~2300/sec, on leox desktop, and workers = NumCPU()+1
+				Result for Sieve of Eratosthenes is ~8700/sec, on thelio desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
 22 Jul 2024 -- Result for the Sieve from work is ~4500/sec, before I started everything else, and it didn't change after I did start everything else.
 */
 
