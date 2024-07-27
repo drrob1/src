@@ -91,10 +91,11 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   27 Jun 24 -- Now called cf2, and will truly be a fanout pattern.  If it tries to copy > 900 files, it will complain but only copy 1st 900 files.
 				And I changed how it tallies hits and misses, removing the atomic add as unnecessary.
-   6 July 24-- Changed the startup message
+   6 July 24 -- Changed the startup message
+  26 July 24 -- Adding timing info from the individual goroutines that do the copying.  I have to expand the message sent on the channel to include a duration.
 */
 
-const LastAltered = "6 July 2024" //
+const LastAltered = "27 July 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -111,6 +112,7 @@ type msgType struct {
 	s        string
 	e        error
 	color    ct.Color
+	elapsed  time.Duration
 	success  bool
 	verified bool
 }
@@ -327,16 +329,16 @@ func main() {
 	//	}()
 	//}
 	//
+
+	// Start the message channel
 	msgChan = make(chan msgType, numOfFiles)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {
-				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
-				//atomic.AddInt64(&succeeded, 1)
+				ctfmt.Printf(msg.color, onWin, " elapsed:%s %s\n", msg.elapsed, msg.s)
 				succeeded++ // there is only 1 go routine, so this is not a data race
 			} else {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
-				//atomic.AddInt64(&failed, 1)
 				failed++ // there is only 1 go routine, so this is not a data race
 			}
 			wg.Done()
@@ -368,7 +370,7 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
+	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------
@@ -380,6 +382,7 @@ func copyAFile(srcFile, destDir string) {
 	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
 	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
 
+	t0 := time.Now()
 	in, err := os.Open(srcFile)
 	if err != nil {
 		msg := msgType{
@@ -421,10 +424,11 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is not newer than %s", baseFile, destDir)
+			ErrNotNew = fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
+				elapsed: time.Since(t0),
 				color:   ct.Red,
 				success: false,
 			}
@@ -445,6 +449,7 @@ func copyAFile(srcFile, destDir string) {
 	}
 	defer out.Close()
 
+	t0 = time.Now() // redefine t0 now that it's going to try to copy the file.
 	_, err = io.Copy(out, in)
 
 	if err != nil {
@@ -574,9 +579,10 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:        fmt.Sprintf("%s copied to %s and is VERIFIED", srcFile, destDir),
+				s:        fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
 				e:        nil,
 				color:    ct.Green,
+				elapsed:  time.Since(t0),
 				success:  true,
 				verified: true,
 			}
@@ -584,9 +590,10 @@ func copyAFile(srcFile, destDir string) {
 			return
 		} else {
 			msg := msgType{
-				s:        fmt.Sprintf("%s copied to %s but failed VERIFICATION", srcFile, destDir),
+				s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
 				e:        nil,
 				color:    ct.Red,
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
@@ -595,10 +602,12 @@ func copyAFile(srcFile, destDir string) {
 		}
 	}
 
+	elapsed := time.Since(t0)
 	msg := msgType{
-		s:        fmt.Sprintf("%s copied to %s", srcFile, destDir),
+		s:        fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
 		e:        nil,
 		color:    ct.Green,
+		elapsed:  elapsed,
 		success:  true,
 		verified: verifyFlag, // I already know that this flag is false if get here.
 	}
