@@ -320,22 +320,12 @@ func main() {
 		fileList = fileList[0:fanoutMax]
 	}
 
-	//cfChan = make(chan cfType, num)
-	//for i := 0; i < num; i++ {
-	//	go func() {
-	//		for c := range cfChan {
-	//			copyAFile(c.srcFile, c.destDir)
-	//		}
-	//	}()
-	//}
-	//
-
 	// Start the message channel
 	msgChan = make(chan msgType, numOfFiles)
 	go func() {
 		for msg := range msgChan {
 			if msg.success {
-				ctfmt.Printf(msg.color, onWin, " elapsed:%s %s\n", msg.elapsed, msg.s)
+				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
 				succeeded++ // there is only 1 go routine, so this is not a data race
 			} else {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
