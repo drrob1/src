@@ -351,26 +351,20 @@ func main() {
 	start := time.Now()
 	wg.Add(numOfFiles)
 	for _, f := range fileList {
-		//cf := cfType{
-		//	srcFile: f.RelPath,
-		//	destDir: destDir,
-		//}
-		//cfChan <- cf
-
 		go copyAFile(f.AbsPath, destDir) // this is the line for the true fanout pattern.
 	}
-	goRtns := runtime.NumGoroutine()
-	//close(cfChan)
+	goRtnsNum := runtime.NumGoroutine()
+
 	wg.Wait()
 	close(msgChan)
 	fmt.Printf(" \n %s:", os.Args[0])
 	if succeeded > 0 {
-		ctfmt.Printf(ct.Green, onWin, " Total files copied is %d. ", succeeded)
+		ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
 	}
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
+	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtnsNum, os.Args[0])
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------
@@ -454,13 +448,6 @@ func copyAFile(srcFile, destDir string) {
 
 	if err != nil {
 		var msg msgType
-		//msg := msgType{
-		//	s:       "",
-		//	e:       err,
-		//	color:   ct.Red,
-		//	success: false,
-		//}
-		// msgChan <- msg  Too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		if e != nil {
@@ -502,22 +489,16 @@ func copyAFile(srcFile, destDir string) {
 	err = out.Sync()
 	if err != nil {
 		var msg msgType
-		//msg := msgType{
-		//	s:       "",
-		//	e:       err,
-		//	color:   ct.Magenta,
-		//	success: false,
-		//}
-		//msgChan <- msg  too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
-					err, e, outName, outName),
+				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
+					time.Since(t0), err, e, outName, outName),
 				color:    ct.Yellow, // yellow to make sure I see it.
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
@@ -525,9 +506,10 @@ func copyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-					err, e, outName, er),
+				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					time.Since(t0), err, e, outName, er),
 				color:    ct.Yellow, // yellow to make sure I see it.
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
@@ -542,6 +524,7 @@ func copyAFile(srcFile, destDir string) {
 			s:       "",
 			e:       err,
 			color:   ct.Red,
+			elapsed: time.Since(t0),
 			success: false,
 		}
 		msgChan <- msg
@@ -558,6 +541,7 @@ func copyAFile(srcFile, destDir string) {
 			s:       "",
 			e:       err,
 			color:   ct.Red,
+			elapsed: time.Since(t0),
 			success: false,
 		}
 		msgChan <- msg
@@ -569,8 +553,9 @@ func copyAFile(srcFile, destDir string) {
 		if err != nil {
 			msg := msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from verify operation is %s", err),
+				e:        fmt.Errorf("elapsed %s: ERROR from verify operation is %s", time.Since(t0), err),
 				color:    ct.Red,
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
