@@ -78,9 +78,10 @@ import (
   10 Apr 23 -- Moved copyAFile to its own separate file.  This will make maintenance easier.
   28 Apr 23 -- It didn't make maintenance easier.  I made a change there to see if I can delete a copied file that threw an error.
    8 Apr 24 -- Added help text to remind me that this is separate because it defaults to verify on.
+  28 Jul 24 -- Corrected data race detected in cf2.  I ErrNotNew is no longer global.  It never should have been, anyway.
 */
 
-const LastAltered = "8 Apr 2024" //
+const LastAltered = "28 July 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -112,7 +113,8 @@ var msgChan chan msgType
 var verifyChan chan verifyType
 var wg sync.WaitGroup
 var succeeded, failed int64
-var ErrNotNew error
+
+// var ErrNotNew error  This fixes a data race, by not making this global.
 var verifyFlag, verFlag, noVerifyFlag bool
 
 func main() {
