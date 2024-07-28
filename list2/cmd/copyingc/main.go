@@ -84,9 +84,10 @@ import (
                Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
   11 Apr 24 -- Adding a multiplier, as I already did in cf.
+  28 Jul 24 -- Fixed a data race by ErrNotNew not being global.  It should never have been global.
 */
 
-const LastAltered = "Apr 11, 2024" //
+const LastAltered = "July 28, 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -125,7 +126,8 @@ var autoWidth, autoHeight int
 var verboseFlag, veryVerboseFlag bool
 var rex *regexp.Regexp
 var rexStr, inputStr string
-var ErrNotNew error
+
+// var ErrNotNew error This should never have been global, as this creates a data race.  Now fixed.
 var verifyFlag, verFlag bool
 
 func main() {
@@ -481,7 +483,7 @@ func CopyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is not newer %s", baseFile, destDir)
+			ErrNotNew := fmt.Errorf(" %s is not newer %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
