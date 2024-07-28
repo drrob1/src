@@ -93,20 +93,16 @@ import (
 				And I changed how it tallies hits and misses, removing the atomic add as unnecessary.
    6 July 24 -- Changed the startup message
   26 July 24 -- Adding timing info from the individual goroutines that do the copying.  I have to expand the message sent on the channel to include a duration.
+  28 July 24 -- Race detector found a data race because ErrNotNew was global and being written to by multiple goroutines.  I fixed it by not making it global.
 */
 
-const LastAltered = "27 July 2024" //
+const LastAltered = "28 July 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
 const timeFudgeFactor = 1 * time.Millisecond
 const fanoutMax = 900
-
-//type cfType struct { // copy file type, not used in this fanout pattern.
-//	srcFile string
-//	destDir string
-//}
 
 type msgType struct {
 	s        string
@@ -120,16 +116,12 @@ type msgType struct {
 var autoWidth, autoHeight int
 var onWin = runtime.GOOS == "windows"
 
-// var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
-//
 //	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
 //
-// var workerPool = runtime.NumCPU()  removed here in cf2, as this is a true fanout pattern.
-// var cfChan chan cfType  removed here in cf2, as this is a true fanout pattern.
+// var ErrNotNew error  the race detector flagged this as a data race w/ multiple goroutines writing to this one variable.  It should not have ever been global.
 var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
-var ErrNotNew error
 var verifyFlag, verFlag bool
 var multiplier int
 
@@ -371,7 +363,7 @@ func copyAFile(srcFile, destDir string) {
 	if err != nil {
 		msg := msgType{
 			s:       "",
-			e:       fmt.Errorf("%s", err),
+			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
 			color:   ct.Red,
 			success: false,
 		}
@@ -384,7 +376,7 @@ func copyAFile(srcFile, destDir string) {
 	if err != nil {
 		msg := msgType{
 			s:       "",
-			e:       err,
+			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
 			color:   ct.Red,
 			success: false,
 		}
@@ -408,7 +400,7 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir)
+			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,

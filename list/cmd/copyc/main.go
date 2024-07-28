@@ -88,9 +88,10 @@ import (
                But for CPU bound, there's no advantage to exceeding that number.
   15 Apr 24 -- Added a multiplier for worker pools
   15 Jun 24 -- Changed completion message.
+  28 Jul 24 -- Fixed a data race by not making ErrNotNew global.  Doesn't really matter because I now always use cf2, and a little cf.
 */
 
-const LastAltered = "15 June 2024" //
+const LastAltered = "28 July 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -122,7 +123,8 @@ var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
-var ErrNotNew error
+
+// var ErrNotNew error This is a data race, so it can't be global.
 var verifyFlag, verFlag bool
 
 func main() {
@@ -408,7 +410,7 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is not newer than %s", baseFile, destDir)
+			ErrNotNew := fmt.Errorf(" %s is not newer than %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,

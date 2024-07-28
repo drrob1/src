@@ -89,9 +89,10 @@ import (
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
   15 Jun 24 -- Changed completion message.
    6 July 24-- Changed startup message.
+  28 July 24-- Added timing to each goroutine.  And fixed a data race by not making ErrNotNew global.
 */
 
-const LastAltered = "6 July 2024" //
+const LastAltered = "28 July 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -117,12 +118,13 @@ var onWin = runtime.GOOS == "windows"
 // var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
 //
 //	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
+//
+// var ErrNotNew error
 var workerPool = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
 var wg sync.WaitGroup
 var succeeded, failed int64
-var ErrNotNew error
 var verifyFlag, verFlag bool
 var multiplier int
 
@@ -367,6 +369,7 @@ func copyAFile(srcFile, destDir string) {
 	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
 	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
 
+	t0 := time.Now()
 	in, err := os.Open(srcFile)
 	if err != nil {
 		msg := msgType{
@@ -408,7 +411,7 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew = fmt.Errorf(" %s is not newer than %s", baseFile, destDir)
+			ErrNotNew := fmt.Errorf("Elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
@@ -432,6 +435,7 @@ func copyAFile(srcFile, destDir string) {
 	}
 	defer out.Close()
 
+	t0 = time.Now()
 	_, err = io.Copy(out, in)
 
 	if err != nil {
@@ -460,8 +464,8 @@ func copyAFile(srcFile, destDir string) {
 		if er == nil {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
-					err, e, outName, outName),
+				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
+					time.Since(t0), err, e, outName, outName),
 				color:    ct.Yellow, // so I see it
 				success:  false,
 				verified: false,
@@ -470,8 +474,8 @@ func copyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-					err, e, outName, er),
+				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					time.Since(t0), err, e, outName, er),
 				color:    ct.Yellow, // so I see it
 				success:  false,
 				verified: false,
@@ -561,7 +565,7 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:        fmt.Sprintf("%s copied to %s and is VERIFIED", srcFile, destDir),
+				s:        fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
 				e:        nil,
 				color:    ct.Green,
 				success:  true,
@@ -571,7 +575,7 @@ func copyAFile(srcFile, destDir string) {
 			return
 		} else {
 			msg := msgType{
-				s:        fmt.Sprintf("%s copied to %s but failed VERIFICATION", srcFile, destDir),
+				s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
 				e:        nil,
 				color:    ct.Red,
 				success:  false,
@@ -583,7 +587,7 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	msg := msgType{
-		s:        fmt.Sprintf("%s copied to %s", srcFile, destDir),
+		s:        fmt.Sprintf("elapsed %s: %s copied to %s", time.Since(t0), srcFile, destDir),
 		e:        nil,
 		color:    ct.Green,
 		success:  true,
