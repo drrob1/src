@@ -1,4 +1,4 @@
-package main // fewc
+package main // fewc from fewlist from copylist
 
 import (
 	"flag"
@@ -40,21 +40,26 @@ import (
   28 Jan 23 -- Adding verify success message.
   30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).  Added timeFudgeFactor
   31 Jan 23 -- timeFudgeFactor is now a Duration.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   28 Feb 23 -- Now called fewlist, based on copylist.  I'm going to use a list to run few 32 on each of them.  I'm not going to make that a param, yet.
+------------------------------------------------------------------------------------------------------------------------------------------------------
    1 Mar 23 -- Now called fewc, based on fewlist, based on copylist.  I'm going to use a worker go routine pattern here.  And I'll use Bill Kennedy's more recent examples as reference.
    2 Mar 23 -- Abbreviated the output, as I did for the copy routines.
   26 Mar 23 -- Completed the usage info.  And added list.CheckDest.
   31 Mar 23 -- StaticCheck found a few issues.
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
    8 Apr 23 -- Changed list.New signature.
+  30 Jul 24 -- Added a multiplier, based on comments by Miki Tebeka, and implemented in the other routines like cf and cf2.
+                 I could make a true fanout version, but I don't think I need it, as I rarely use this routine anyway.  Not like cf2, which I use very often.
 */
 
-const LastAltered = "8 Apr 2023" //
+const LastAltered = "30 July 2024" //
 
 const sepString = string(filepath.Separator)
 
 var err error
 var verifyFlag bool
+var multiplier int
 
 type workersType struct {
 	fName1, fName2, destDir string
@@ -70,6 +75,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s, timestamp on binary is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
 		fmt.Fprintf(flag.CommandLine.Output(), " Concurrent few list Usage information: src-dir-or-glob dest-dir; only using IEEE32 algorithm. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " It compares files w/ the same name in source and destination directories; only using IEEE32 algorithm. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
 	}
@@ -98,6 +104,8 @@ func main() {
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation")
+
+	flag.IntVar(&multiplier, "mult", 10, "Multiplier for goroutines, default currently is 10.")
 
 	flag.Parse()
 
@@ -214,12 +222,12 @@ func main() {
 	}
 	fmt.Printf("\n\n")
 
-	// time to check the files
-	g := runtime.NumCPU()
+	// time to check the files for equivalency.
+	g := runtime.NumCPU() * multiplier
 	num := min(g, len(fileList))
 	var success, fail int64
 	onWin := runtime.GOOS == "windows"
-	workCh := make(chan workersType, g)
+	workCh := make(chan workersType, num)
 	var wg sync.WaitGroup
 
 	for i := 0; i < num; i++ { // start the lesser of NumCPU() or the number of files waiting to be processed.
@@ -234,7 +242,6 @@ func main() {
 					continue
 				}
 				if result {
-					//s := fmt.Sprintf(" IEEE 32 matched for %s and in %s", w.fName1, w.fName2)
 					s := fmt.Sprintf(" IEEE32 match succeeded for %s and in %s", w.fName1, w.destDir)
 					ctfmt.Printf(ct.Green, onWin, " %s\n", s)
 					atomic.AddInt64(&success, 1)
@@ -287,10 +294,3 @@ func main() {
 	ctfmt.Printf(ct.Green, onWin, "\n IEEE32 successfully matched %d files, ", success)
 	ctfmt.Printf(ct.Red, onWin, "and FAILED to match %d files; elapsed time is %s\n\n", fail, time.Since(start))
 } // end main
-
-func min(n1, n2 int) int {
-	if n1 < n2 {
-		return n1
-	}
-	return n2
-}
