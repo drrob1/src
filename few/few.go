@@ -63,7 +63,7 @@ import (
   27 Jan 23 -- Now called few, because that's much easier than typing feq each time I want it.  This will consist of one top level routine and a sub cmd main pgm that
                  will take the hashes to run as params.  The API will use io.Readers.  The hash types are []byte, which cannot be directly compared.  So I convert the hashes
                  to strings, which can be directly compared.
-   1 Feb 23 -- Adding API that takes filenames, not io.Reader's.
+   1 Feb 23 -- Adding wrapper that takes filenames.
    9 Apr 23 -- StaticCheck complained about when I did defer.  So I fixed them.
   30 Jul 24 -- in bbb code, replaced if er1 == io.EOF || er2 == io.EOF with errors.Is(er1, io.EOF) || errors.Is(er2, io.EOF) which is more idiomatic as it includes wrapped errors.
 */
