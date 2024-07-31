@@ -56,8 +56,10 @@ import (
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
                Now called feq64.go, and will only compute crc64 ECMA checksum, in a way that only opens 1 file at a time.  And it doesn't need a bytes.Reader.
   21 May 22 -- Since I want to be able to process huge files > 3 GB, I can't read in the entire file at once.  I'll switch to a file reader algorithm.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   26 May 22 -- Now called feq1 and will only use the sha1 algorithm
   22 Jun 22 -- Adding color to the output.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   27 Jan 23 -- Now called few, because that's much easier than typing feq each time I want it.  This will consist of one top level routine and a sub cmd main pgm that
                  will take the hashes to run as params.  The API will use io.Readers.  The hash types are []byte, which cannot be directly compared.  So I convert the hashes
                  to strings, which can be directly compared.
