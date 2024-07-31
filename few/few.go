@@ -51,7 +51,7 @@ import (
   12 Mar 22 -- Adding timing info.  For a 3.5 GB file, the results on leox are:
                   Castognoli 2.4s, IEEE 3.6s, byte-by-byte 4.7s, crc64 ECMA 11.5s, sha1 20.3s, md5 28.2s, sha512 35.7s, Koopman 46.8s, sha256 52.8s.
                Now called feqlarge.go, intended for files that are quite large.  I will only open one file at a time, calculate some of the hashes, and
-                  compare them afterwards.  When I tested feq.go on a large file (22GB, IIRC), the OS shut it down.
+                  compare them afterward.  When I tested feq.go on a large file (22GB, IIRC), the OS shut it down.
                   I'll only use Castognoli, crc64 ECMA and sha512.  I can't do byte-by-byte because this is intended for very large files that can't both be in memory.
                   I forgot that some of the above timings include 2 methods of computation, checksum and sum32.
                Now called feq64.go, and will only compute crc64 ECMA checksum, in a way that only opens 1 file at a time.  And it doesn't need a bytes.Reader.
