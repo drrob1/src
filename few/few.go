@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"hash/crc64"
@@ -62,9 +63,10 @@ import (
                  to strings, which can be directly compared.
    1 Feb 23 -- Adding API that takes filenames, not io.Reader's.
    9 Apr 23 -- StaticCheck complained about when I did defer.  So I fixed them.
+  30 Jul 24 -- in bbb code, replaced if er1 == io.EOF || er2 == io.EOF with errors.Is(er1, io.EOF) || errors.Is(er2, io.EOF) which is more idiomatic as it includes wrapped errors.
 */
 
-const LastCompiled = "9 Apr 2023"
+const LastCompiled = "30 July 2024"
 
 func Feq1withNames(fn1, fn2 string) (bool, error) {
 	fHandle1, err := os.Open(fn1)
@@ -284,7 +286,7 @@ outerForLoop:
 		n2, er2 := r2.Read(buf2)
 
 		if er1 != nil || er2 != nil {
-			if er1 == io.EOF || er2 == io.EOF {
+			if errors.Is(er1, io.EOF) || errors.Is(er2, io.EOF) {
 				break outerForLoop
 			}
 			err := fmt.Errorf(" File read errors.  file-1 err is %s, file-2 err is %s", er1, er2)
