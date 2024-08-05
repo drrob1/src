@@ -58,9 +58,10 @@ REVISION HISTORY
 19 May 24 -- Before I made changes, this routine put the filenames on the command line, got truncated on Windows.  I changed that to create an xspf file, like lv2.
                The API for the routine that writes the new xspf file was changed.
 22 May 24 -- Updated displayed messages.
+ 5 Aug 24 -- I'm going to add a regexp to match, like what I did for runlst.  Nevermind, it's already there, but I never documented it so I forgot.
 */
 
-const lastModified = "May 22, 2024"
+const lastModified = "Aug 5, 2024"
 
 const extDefault = ".xspf" // XML Sharable Playlist Format
 const outPattern = "vlc_"
@@ -68,7 +69,6 @@ const outPattern = "vlc_"
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
 
-// var includeRexString, excludeRexString, searchPath, path, vPath string
 var includeRexString, excludeRexString, vPath string
 var vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
 var numNames int
@@ -81,18 +81,17 @@ func main() {
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
 
-	//                                            path = os.Getenv("PATH")
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
-		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to insert a literal quote.  And replace the default value of vlcPath defined globally.
+		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to delete a literal quote.  And replace the default value of vlcPath defined globally.
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase in the regexp param,\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then write them to xspf file which is then fed to vlc on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> where <input-regex> should not be empty. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> --> where <input-regex> may be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
@@ -101,7 +100,7 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "", " Exclude file regexp string, which is usually empty.")
-	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.")
+	flag.IntVar(&numNames, "n", 50, " Number of file names to output on the commandline to vlc.  Now Ignored.")
 	flag.BoolVar(&noTccFlag, "not", true, " Not using tcc flag.") // Since the default is true, to make it false requires -not=false syntax.
 
 	var revFlag bool
