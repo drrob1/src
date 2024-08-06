@@ -54,11 +54,11 @@ REVISION HISTORY
 29 Apr 24 -- I finished writing whichExec, based on code from Mastering Go, 4th ed.  I'm looking at adding it here.  While I'm here, I'm editing some comments and help text.
                Much of the setup code to find vlc is unnecessary now that I have my own whichExec.
 17 May 24 -- On linux, passing "2>/dev/null" to suppress the garbage error messages.
-18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also supporess the many error messages from being seen.
+18 May 24 -- Oops.  I removed what I added yesterday, and instead removed the assignment of os.Stderr.  That will also suppress the many error messages from being seen.
 19 May 24 -- Before I made changes, this routine put the filenames on the command line, got truncated on Windows.  I changed that to create an xspf file, like lv2.
                The API for the routine that writes the new xspf file was changed.
 22 May 24 -- Updated displayed messages.
- 5 Aug 24 -- I'm going to add a regexp to match, like what I did for runlst.  Nevermind, it's already there, but I never documented it so I forgot.
+ 5 Aug 24 -- I'm going to add a regexp to match, like what I did for runlst.  Nevermind, it's already there, but I forgot.
 */
 
 const lastModified = "Aug 6, 2024"
@@ -83,7 +83,7 @@ func main() {
 
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
-		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to delete a literal quote.  And replace the default value of vlcPath defined globally.
+		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to delete a literal quote from the input string.
 	}
 
 	flag.Usage = func() {
@@ -92,7 +92,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then write them to xspf file which is then fed to vlc on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
+		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of searching the PATH to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
 	}
@@ -134,7 +134,7 @@ func main() {
 	smartCaseRegex := regexp.MustCompile("[A-Z]")
 	smartCaseFlag := smartCaseRegex.MatchString(includeRexString)
 	if smartCaseFlag {
-		includeRegex, err = regexp.Compile(includeRexString) // an empty regex compiles and will include everything.
+		includeRegex, err = regexp.Compile(includeRexString) // an empty regex compiles and will match everything.
 	} else {
 		includeRegex, err = regexp.Compile(strings.ToLower(includeRexString)) // an empty regex compiles and will include everything.
 	}
