@@ -59,12 +59,13 @@ REVISION HISTORY
                The API for the routine that writes the new xspf file was changed.
 22 May 24 -- Updated displayed messages.
  5 Aug 24 -- I'm going to add a regexp to match, like what I did for runlst.  Nevermind, it's already there, but I forgot.
+ 6 Aug 24 -- Handled outPattern more cleanly.
 */
 
 const lastModified = "Aug 6, 2024"
 
 const extDefault = ".xspf" // XML Sharable Playlist Format
-const outPattern = "vlc_"
+const outPattern = "vlc_" + "*" + extDefault
 
 var includeRegex, excludeRegex *regexp.Regexp
 var verboseFlag, veryVerboseFlag, noTccFlag, ok bool
@@ -83,7 +84,7 @@ func main() {
 
 	vPath, ok = os.LookupEnv("VLCPATH")
 	if ok {
-		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to delete a literal quote from the input string.
+		vlcPath = strings.ReplaceAll(vPath, `"`, "") // Here I use back quotes to delete a literal quote from the input string.  And this gets appended to the whichexec search.
 	}
 
 	flag.Usage = func() {
@@ -209,7 +210,7 @@ func main() {
 
 	// Create an xspf file
 
-	outFile, err := os.CreateTemp(workingDir, outPattern) // outPattern is likely still vlc_
+	outFile, err := os.CreateTemp(workingDir, outPattern)
 	if err != nil {
 		fmt.Printf(" Tried to createTemp xspf file but got ERROR: %s.  Bye-bye.\n", err)
 		os.Exit(1)
@@ -234,16 +235,9 @@ func main() {
 		return
 	}
 
-	newFilename := outFile.Name() + extDefault
-	err = os.Rename(outFile.Name(), newFilename)
+	fullOutFilename, err := filepath.Abs(outFile.Name())
 	if err != nil {
-		fmt.Printf(" Rename to %s failed w/ ERROR: %s.  Bye.\n", extDefault, err)
-		return
-	}
-
-	fullOutFilename, err := filepath.Abs(newFilename)
-	if err != nil {
-		fmt.Printf(" filepath.Abs(%s) = ERROR is %s.  Exiting\n", newFilename, err)
+		fmt.Printf(" filepath.Abs(%s) = ERROR is %s.  Exiting\n", outFile.Name(), err)
 		return
 	}
 	if verboseFlag {
@@ -290,7 +284,7 @@ func main() {
 
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
-	//execCmd.Stderr = os.Stderr  commenting this out is enough to suppress the many error messages.
+	//execCmd.Stderr = os.Stderr  commenting this out is enough to suppress the many error messages that I see on linux.
 	e := execCmd.Start()
 	if e != nil {
 		fmt.Printf(" Error returned by running vlc %s is %v\n", fullOutFilename, e)
