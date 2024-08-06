@@ -61,7 +61,7 @@ REVISION HISTORY
  5 Aug 24 -- I'm going to add a regexp to match, like what I did for runlst.  Nevermind, it's already there, but I never documented it so I forgot.
 */
 
-const lastModified = "Aug 5, 2024"
+const lastModified = "Aug 6, 2024"
 
 const extDefault = ".xspf" // XML Sharable Playlist Format
 const outPattern = "vlc_"
@@ -87,11 +87,11 @@ func main() {
 	}
 
 	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> --> where <input-regex> may be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " This pgm will make a list of matching filenames in the current directory, supporting SmartCase in the regexp param,\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " shuffle them, and then write them to xspf file which is then fed to vlc on the command line.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " %s has timestamp of %s, working directory is %s, full name of executable is %s and vlcPath is %s.\n",
 			ExecFI.Name(), LastLinkedTimeStamp, workingDir, execName, vlcPath)
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage: listvlc <options> <input-regex> --> where <input-regex> may be empty. \n")
 		fmt.Fprintf(flag.CommandLine.Output(), " It checks environment variable VLCPATH to use instead of default path to VLC. \n")
 		fmt.Fprintln(flag.CommandLine.Output())
 		flag.PrintDefaults()
