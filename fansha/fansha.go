@@ -100,9 +100,10 @@ import (
    5 Jun 24 -- Now called fansha, as I want to implement a fanout pattern instead of a worker pool pattern.  As Miki Tebeka said, know your data.  I usually use this routine
                 for a few files, almost never more than 5.  So a fanout pattern should work fine.
    7 Jul 24 -- Added timing info to matchOrNoMatch
+  13 Aug 24 -- Updated timing into in matchOrNoMatch to include file not found.
 */
 
-const LastCompiled = "7 Jul 2024"
+const LastCompiled = "13 Aug 2024"
 
 const (
 	undetermined = iota
@@ -125,14 +126,15 @@ var hashName = [...]string{"undetermined", "md5", "sha1", "sha256", "sha384", "s
 var onWin bool
 
 func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, matched, error.  Input and output via a channel
+	t0 := time.Now()
 	TargetFile, err := os.Open(hashIn.fName)
 	defer wg1.Done()
 	defer atomic.AddInt64(&postCounter, 1)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			ctfmt.Printf(ct.Red, onWin, " ERROR from matchOrNoMatch: %s not found, skipping. \n", hashIn.fName)
+			ctfmt.Printf(ct.Red, onWin, " %s:  ERROR from matchOrNoMatch: %s not found, skipping. \n", time.Since(t0), hashIn.fName)
 		} else {
-			ctfmt.Printf(ct.Red, onWin, " Error from matchOrNoMatch is %s\n", err)
+			ctfmt.Printf(ct.Red, onWin, " %s:  Error from matchOrNoMatch is %s\n", time.Since(t0), err)
 		}
 		return
 	}
@@ -163,7 +165,7 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	}
 
 	onWin := runtime.GOOS == "windows"
-	t0 := time.Now()
+	t0 = time.Now()
 	_, er := io.Copy(hashFunc, TargetFile)
 	if er != nil {
 		ctfmt.Printf(ct.Red, onWin, " Error from io.Copy in matchOrNoMatch is %s\n", er)
