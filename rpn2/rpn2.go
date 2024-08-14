@@ -1,4 +1,4 @@
-// (C) 1990-2020.  Robert W Solomon.  All rights reserved.
+// (C) 1990-2024.  Robert W Solomon.  All rights reserved.
 // rpn2.go, testing hpcalc2.go
 package main
 
@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -70,13 +71,15 @@ REVISION HISTORY
                It's fine, as I made that change 2 years ago.  I changed some comments here, and I have to recompile because I changed hpcalc2.
  8 Jul 23 -- I coded a simpler TokenReal(), to replace GETTKNREAL().  I'm testing it here in production.  The rtn already passed in tknptr_test.go.
  9 Jul 23 -- Added modification of tknptr to the about cmd.
+14 Aug 24 -- Added verbose flag for debugging new code for undo and redo.
 */
 
-const LastCompiled = "July 9, 2023"
+const LastCompiled = "Aug 14, 2024"
 
 var suppressDump map[string]bool
 
 var windowsFlag bool
+var verbose = flag.Bool("v", false, "Verbose mode for debugging.")
 
 func main() {
 	var R float64
@@ -86,6 +89,8 @@ func main() {
 
 	var Stk hpcalc2.StackType // used when time to write out the stack upon exit.
 	var err error
+
+	flag.Parse()
 
 	execname, _ := os.Executable()
 	ExecFI, _ := os.Stat(execname)
@@ -130,6 +135,9 @@ func main() {
 	} // stackfileexists
 
 	hpcalc2.PushMatrixStacks()
+	if *verbose {
+		fmt.Printf("\n len, cap of undo redo stack = (%d, %d) \n", len(hpcalc2.StackUndoMatrix), cap(hpcalc2.StackUndoMatrix))
+	}
 
 	fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ", LastCompiled, "using", runtime.Version())
 	fmt.Println()
@@ -156,6 +164,7 @@ func main() {
 
 	hpcalc2.PushMatrixStacks()
 
+	// main loop for reading operations and commands.
 	for len(INBUF) > 0 {
 		R, stringslice = hpcalc2.GetResult(INBUF)
 		sigfig := hpcalc2.SigFig()
@@ -205,6 +214,11 @@ func main() {
 		//INBUF = makesubst.MakeSubst(INBUF)
 		INBUF = strings.ReplaceAll(INBUF, ";", "*")
 		allowDumpFlag = true
+
+		if *verbose {
+			fmt.Printf("\n len, cap of undo redo stack = (%d, %d), current index = %d \n", len(hpcalc2.StackUndoMatrix), cap(hpcalc2.StackUndoMatrix), hpcalc2.CurUndoRedoIdx)
+		}
+
 	}
 
 	// Now that I've got this working, I'm taking notes.  The binary.Write appends to the buf after each call,

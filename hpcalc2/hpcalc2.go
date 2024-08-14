@@ -144,9 +144,10 @@ REVISION HISTORY
 28 Oct 23 -- Updated the message for the probably prime routine.
 17 Dec 23 -- Updating probably prime routine to report how many guesses it took to say a number is probably not prime.  And added some comments.
  8 Jul 24 -- Adding the gcd routine as an alternative to hcf.
+14 Aug 24 -- For the undo/redo, the matrix stack will be dynamically managed.
 */
 
-const LastAlteredDate = "8 Jul 2024"
+const LastAlteredDate = "14 Aug 2024"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -184,7 +185,9 @@ type mappedRegStructType struct { // so the mapsho items can be sorted.
 
 var mappedReg map[string]float64
 var Stack StackType
-var StackUndoMatrix [StackSize]StackType
+
+// var StackUndoMatrix [StackSize]StackType
+var StackUndoMatrix []StackType
 var fullMappedRegFilename = homedir + string(os.PathSeparator) + mappedRegFilename
 
 const PI = math.Pi // 3.141592653589793;
@@ -192,6 +195,7 @@ var LastX, MemReg float64
 var sigfig = -1 // default significant figures of -1 for the strconv.FormatFloat call.
 var homedir string
 var mappedRegExists bool
+var CurUndoRedoIdx int
 
 const lb2g = 453.59238
 const oz2g = 28.34952
@@ -203,6 +207,7 @@ const verySmallNumber = 1e-10
 
 // -----------------------------------------------------------------------------------------------------------------------------
 func init() {
+	StackUndoMatrix = make([]StackType, 0, StackSize) // initial capacity of this is the same as it used to be.
 	var err error
 	cmdMap = make(map[string]int, 100)
 	cmdMap["DUMP"] = 10
@@ -707,48 +712,55 @@ func PWRI(R float64, I int) float64 {
 
 //-------------------------------------------------------- StacksMatrixUp
 
-func StacksMatrixUp() {
-	for i := T2; i >= X; i-- {
-		StackUndoMatrix[i+1] = StackUndoMatrix[i]
-	} // FOR i
-} // StacksMatrixUp
+//func StacksMatrixUp() {
+//	for i := T2; i >= X; i-- {
+//		StackUndoMatrix[i+1] = StackUndoMatrix[i]
+//	}
+//} // StacksMatrixUp
 
 //-------------------------------------------------------- StacksMatrixDown
 
-func StacksMatrixDown() {
-	for i := Y; i <= T1; i++ {
-		StackUndoMatrix[i-1] = StackUndoMatrix[i]
-	} // FOR i
-} // StacksMatrixDown
+//func StacksMatrixDown() {
+//	for i := Y; i <= T1; i++ {
+//		StackUndoMatrix[i-1] = StackUndoMatrix[i]
+//	}
+//} // StacksMatrixDown
 
 //-------------------------------------------------------- PushMatrixStacks
 
-func PushMatrixStacks() {
-	StacksMatrixUp()
-	StackUndoMatrix[Bottom] = Stack
-} // PushMatrixStacks
+func PushMatrixStacks() { // this is called from GetResult before an operation that would change the stack.
+	//StacksMatrixUp()
+	//StackUndoMatrix[Bottom] = Stack
+	StackUndoMatrix = append(StackUndoMatrix, Stack)
+	CurUndoRedoIdx = len(StackUndoMatrix) - 1
+}
 
 //-------------------------------------------------------- UndoMatrixStacks
 
-func UndoMatrixStacks() { // RollDown operation for main stack
-	TempStack := Stack
-	Stack = StackUndoMatrix[Bottom]
-
-	StacksMatrixDown()
-
-	StackUndoMatrix[Top] = TempStack
-} // UndoMatrixStacks  IE RollDown
+func UndoMatrixStacks() {
+	//TempStack := Stack
+	//Stack = StackUndoMatrix[Bottom]
+	//StacksMatrixDown()
+	//StackUndoMatrix[Top] = TempStack
+	if CurUndoRedoIdx <= len(StackUndoMatrix) && CurUndoRedoIdx > 0 {
+		CurUndoRedoIdx--
+		Stack = StackUndoMatrix[CurUndoRedoIdx]
+	}
+}
 
 //-------------------------------------------------------- RedoMatrixStacks
 
-func RedoMatrixStacks() { // RollUp uperation for main stack
-	TempStack := Stack
-	Stack = StackUndoMatrix[Top]
+func RedoMatrixStacks() {
+	//TempStack := Stack
+	//Stack = StackUndoMatrix[Top]
+	//StacksMatrixUp()
+	//StackUndoMatrix[Bottom] = TempStack
 
-	StacksMatrixUp()
-
-	StackUndoMatrix[Bottom] = TempStack
-} // RedoMatrixStacks  IE RollUp
+	if CurUndoRedoIdx >= 0 && CurUndoRedoIdx < len(StackUndoMatrix)-1 {
+		CurUndoRedoIdx++
+		Stack = StackUndoMatrix[CurUndoRedoIdx]
+	}
+}
 
 //-------------------------------------------------------- HCF -------------------------------------
 
