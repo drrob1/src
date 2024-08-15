@@ -743,7 +743,9 @@ func UndoMatrixStacks() {
 	//StacksMatrixDown()
 	//StackUndoMatrix[Top] = TempStack
 
-	StackUndoMatrix = append(StackUndoMatrix, Stack)
+	if CurUndoRedoIdx == len(StackUndoMatrix)-1 { // only push the current state if it's not already been pushed.  IE, first undo for this stack state.
+		StackUndoMatrix = append(StackUndoMatrix, Stack)
+	}
 	if CurUndoRedoIdx <= len(StackUndoMatrix) && CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
 		Stack = StackUndoMatrix[CurUndoRedoIdx]

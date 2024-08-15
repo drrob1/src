@@ -128,7 +128,7 @@ func main() {
 			if err != nil {
 				fmt.Printf(" binary.Read failed with error of %v \n", err)
 				StackFileExists = false
-				break
+				//break
 			}
 			hpcalc2.PUSHX(R)
 		} // loop to read each 8 byte chunk to convert to a longreal (float64) and push onto the hpcalc stack.
@@ -136,7 +136,7 @@ func main() {
 
 	hpcalc2.PushMatrixStacks()
 	if *verbose {
-		fmt.Printf("\n len, cap of undo redo stack = (%d, %d) \n", len(hpcalc2.StackUndoMatrix), cap(hpcalc2.StackUndoMatrix))
+		fmt.Printf("\n len, cap of undo redo stack = (%d, %d), current index = %d \n", len(hpcalc2.StackUndoMatrix), cap(hpcalc2.StackUndoMatrix), hpcalc2.CurUndoRedoIdx)
 	}
 
 	fmt.Println(" HP-type RPN calculator written in Go.  Last compiled ", LastCompiled, "using", runtime.Version())
@@ -167,6 +167,11 @@ func main() {
 	// main loop for reading operations and commands.
 	for len(INBUF) > 0 {
 		R, stringslice = hpcalc2.GetResult(INBUF)
+
+		if *verbose {
+			fmt.Printf("\n len, cap of undo redo stack = (%d, %d), current index = %d \n", len(hpcalc2.StackUndoMatrix), cap(hpcalc2.StackUndoMatrix), hpcalc2.CurUndoRedoIdx)
+		}
+
 		sigfig := hpcalc2.SigFig()
 		ans = strconv.FormatFloat(R, 'g', sigfig, 64)
 		ans = hpcalc2.CropNStr(ans)
@@ -214,11 +219,6 @@ func main() {
 		//INBUF = makesubst.MakeSubst(INBUF)
 		INBUF = strings.ReplaceAll(INBUF, ";", "*")
 		allowDumpFlag = true
-
-		if *verbose {
-			fmt.Printf("\n len, cap of undo redo stack = (%d, %d), current index = %d \n", len(hpcalc2.StackUndoMatrix), cap(hpcalc2.StackUndoMatrix), hpcalc2.CurUndoRedoIdx)
-		}
-
 	}
 
 	// Now that I've got this working, I'm taking notes.  The binary.Write appends to the buf after each call,
