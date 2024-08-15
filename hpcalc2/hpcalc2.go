@@ -742,6 +742,8 @@ func UndoMatrixStacks() {
 	//Stack = StackUndoMatrix[Bottom]
 	//StacksMatrixDown()
 	//StackUndoMatrix[Top] = TempStack
+
+	StackUndoMatrix = append(StackUndoMatrix, Stack)
 	if CurUndoRedoIdx <= len(StackUndoMatrix) && CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
 		Stack = StackUndoMatrix[CurUndoRedoIdx]
