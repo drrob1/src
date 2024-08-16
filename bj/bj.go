@@ -9,16 +9,16 @@ package main // bj.go
   Each row begins w/ a hand total, and means what strategy to follow when your hand totals that hand total.
   These are the integers from 5 .. 21, then S2 .. S10, meaning soft 2 thru soft 10.  Soft 2 would be 2 aces, but since that's a pair,
   this row is ignored.  Then we have the pairs AA thru 99 and 1010.
-  Since I'm dealing w/ integers, I'll ignore row indicies that are not convenient.  IE, ignore Strategy rows < 5, etc.
+  Since I'm dealing w/ integers, I'll ignore row indices that are not convenient.  IE, ignore Strategy rows < 5, etc.
 
-  The input file now will have a .strat extension, just to be clear.  And the output file will have same basefilename with .results extension.
+  The input file now will have a .strat extension, just to be clear.  And the output file will have same base filename with .results extension.
 
-  I changed the underslying logic a lot from what I wrote 25 years ago in Modula-2.  Now I use recursion to solve the problem of splitting.
+  I changed the underlying logic a lot from what I wrote 25 years ago in Modula-2.  Now I use recursion to solve the problem of splitting.
 
   Now, when PairStrategy says to hit, it gets passed to Strategy which has to have an entry for it.  This was a problem for deuces.
 
   Getting it right when player pulls an Ace is hard.
-  I added the clearscreen logic from rpng to help me w/ the debugging screen.
+  I added the clear screen logic from rpng to help me w/ the debugging screen.
 
   I have to make sure that double only happens on first 2 cards.
 
@@ -33,8 +33,8 @@ package main // bj.go
   The 2 flags in the strategy file are dealer17 and resplit.
   Looks like these work as intended.
 
-  I forgot to compute the maxruns, and output the slices of runs.
-  And for tomorrow, I'll create and output ratio matricies, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
+  I forgot to compute the max runs, and output the slices of runs.
+  And for tomorrow, I'll create and output ratio matrices, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio matrices.
 
   Looks like my original classic strategy is almost correct.  But if surrender is allowed, sur1516.strat is optimal.
 
@@ -45,7 +45,7 @@ package main // bj.go
 
 Mar 31, 2022
 A comment about the StrategyMatrix.  Ace is the first column, also called column zero.  Ten value cards are the last position.
-I think I have to correct the indexing from Ace = 1 to a zero origin system.  Column index is dealear card1 - 1 to do this correction.  Row index is the hand total.
+I think I have to correct the indexing from Ace = 1 to a zero origin system.  Column index is dealer card1 - 1 to do this correction.  Row index is the hand total.
 So the .strat files have one format, and my takeaway cheat sheet has a different format.
 I sometimes forget that.
 
@@ -54,6 +54,7 @@ I sometimes forget that.
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -83,12 +84,12 @@ import (
    9 Jun 20 -- I believe the logic is correct.  I'm going to start coding the statistics.
   11 Jun 20 -- Fixing computation of runs if surrender is allowed.  Can't have only 2 states for last hand.
   12 Jun 20 -- Working as needed.  I'll consider this the first fully working version.
-  15 Jun 20 -- Now to putput some more stats.
+  15 Jun 20 -- Now to output some more stats.
   29 Mar 22 -- Fix it to compile under Go 1.18.
                  I added bytes.Reader instead of bytes.Buffer for reading in the strategy matrix.
                  I added use of a strings.Builder instead of my += construct for building the output line.
   30 Mar 22 -- Will allow comments to start w/ '#' as in bash, and '/' as almost like C-ish.  The change is in readLine.
-  31 Mar 22 -- Now checks against maxnumofplayers.
+  31 Mar 22 -- Now checks against max num of players.
    2 Apr 22 -- Adding a progress bar.  And changed doTheShuffle to actually shuffle.  It only did 1 pass thru the deck before.  That was silly.
   20 Apr 22 -- Backporting the bytes.Reader code from bj2, that allows comments and such in the strategy file.  Nevermind, it's already there.
   23 Apr 22 -- Will use idiomatic Go in Split a hand.
@@ -99,9 +100,13 @@ import (
                  And changed for loop syntax from for i:=0; i < shuffleAmount; i++ {} to for range shuffleAmount {}
   17 Apr 24 -- Adding filepicker for the strategy matrix, using -n flag to set number of players.  And added colored output for ratioScore.
   18 Apr 24 -- Adding interactiveFlag.
+  16 Aug 24 -- Starting to think about adding a flag or option to allow either random play or a reproducible random sequence.  I can have that as an option in the strategy
+                matrix, and call it random or nonrandom.  It will default to random, but if nonrandom I can use a seed of like 123456789012345.  I'll call it nonrandom.
+                I think it would work better if I don't doTheShuffle, and maybe just reset the current card pointer each time.
+                My new code basically only changes ReadStrategyMatrix and doTheShuffle.
 */
 
-const lastAltered = "Apr 18, 2024"
+const lastAltered = "Aug 17, 2024"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -160,7 +165,7 @@ type handType struct {
 	result                                                                                      int
 }
 
-var displayRound, resplitAcesFlag, dealerHitsSoft17 bool
+var displayRound, resplitAcesFlag, dealerHitsSoft17, nonrandom bool
 var playerHand []handType
 var hand handType
 var dealerHand handType
@@ -248,45 +253,43 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 	if verboseFlag {
 		fmt.Printf(" Entering ReadStrategyMatrix\n")
 	}
-	for {
-		//rowbuf, err := buf.ReadString('\n')
+	for { // reading multiple lines
 		rowbuf, err := readLine(buf)
 		if verboseFlag {
 			fmt.Printf(" read a line using readLine.  rowbuf=%q, len(rowbuf)=%d, err= %v\n", rowbuf, len(rowbuf), err)
 			pause()
 		}
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			fmt.Println(" Error from readLine is", err)
 			os.Exit(1)
 		}
-		//rowbuf = strings.TrimSpace(rowbuf)  redundant as this is done by readLine now.
 		if len(rowbuf) == 0 { // ignore blank lines
 			continue
 		}
 		tknbuf := tknptr.New(rowbuf)
-		rowID, EOL := tknbuf.GetToken(true) // force upper case token.
+		rowID, EOL := tknbuf.GetToken(true) // force upper case token for the first token on the line, which indicates which row in the strategy matrix to fill w/ this line.
 		if EOL {
 			return
 		}
 		row := make([]int, 0, 10) // a single StrategyMatrix row.
-		for {
+		for {                     // This is reading a single lines worth of tokens after the first one, which are H, D, S, SP or SUR.  This loop is validating to make sure all tokens on the line are valid.
 			token, eol := tknbuf.GetToken(true) // force upper case token
 			if eol {
 				break
 			}
-			if token.State != tknptr.ALLELSE {
-				return
+			//if token.State != tknptr.ALLELSE { // all lines should be ALLELSE.  So this line validates the token to make sure it's ALLELSE.  If not, don't append the line to row slice.
+			//	return                         // Not needed, as the GetOption test will catch this also.  I'm going to remove it.
+			//}
+			i := GetOption(token) // this converts H, D, S, SP or SUR to a number, and I'm validating the line to be entirely BJ hand codes.
+			if i == ErrorValue {  // allow for comments after the StrategyMatrix codes on same line.  Then don't append the token to the row slice, and
+				break // abort this line and go onto the next line
 			}
-			i := GetOption(token)
-			if i == ErrorValue { // allow for comments after the StrategyMatrix codes on same line.
-				return
-			}
-			row = append(row, i)
+			row = append(row, i) // this is building up the line after validating each token.
 		}
 
-		if rowID.Isum >= 4 && rowID.Isum <= 21 { // assign StrategyMatrix codes to proper row in StrategyMatrix Decision Matrix
+		if rowID.Isum >= 4 && rowID.Isum <= 21 { // assign StrategyMatrix codes to proper row in StrategyMatrix Decision Matrix, handling pairs and soft hands.
 			StrategyMatrix[rowID.Isum] = row
 		} else if rowID.State == tknptr.DGT {
 			switch rowID.Isum {
@@ -322,7 +325,7 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 				}
 			} // end switch-case for pairs.
 
-		} else if rowID.State == tknptr.ALLELSE {
+		} else if rowID.State == tknptr.ALLELSE { // soft hands
 			if rowID.Str == "AA" {
 				PairStrategyMatrix[1] = row
 			} else if rowID.Str[0] == 'S' { // soft hand
@@ -357,6 +360,8 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 				dealerHitsSoft17 = true
 			} else if rowID.Str == "RESPLIT" {
 				resplitAcesFlag = true
+			} else if rowID.Str == "NONRANDOM" {
+				nonrandom = true
 
 			} else {
 				fmt.Println(" Invalid Row value:", rowID) // rowID is a struct, so all of it will be output.
@@ -370,7 +375,6 @@ func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 				}
 			}
 		}
-
 	}
 	if verboseFlag {
 		fmt.Printf(" Leaving ReadStrategyMatrix.\n\n")
@@ -428,18 +432,15 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 		if i < 1 { // ignore row 0 as it is not a valid blackjack hand
 			continue
 		}
-		outputline := fmt.Sprintf(" %2d-%2d: ", i, i)
+		outputLine := fmt.Sprintf(" %2d-%2d: ", i, i)
 		sb.Reset()
-		sb.WriteString(outputline)
+		sb.WriteString(outputLine)
 		for _, j := range row {
 			s := fmt.Sprintf("%s  ", OptionName[j])
 			sb.WriteString(s)
-			//outputline += s
 		}
 		sb.WriteRune('\n')
-		//filehandle.WriteString(outputline)
 		filehandle.WriteString(sb.String())
-		//filehandle.WriteRune('\n')
 	}
 
 	filehandle.WriteRune('\n')
@@ -460,16 +461,19 @@ func InitDeck() { // Initalize the deck of cards.
 	}
 }
 
-// ------------------------------------------------------- doTheShuffle -----------------------------------
+// doTheShuffle -- role is in the title
 func doTheShuffle() {
 	currentCard = 0
+	if nonrandom {
+		return
+	}
 	now := time.Now()
-	//shuffleAmount := now.Nanosecond() / 1e6 // + now.Second() + now.Minute() + now.Day() + now.Hour() + now.Year().  This took too long every time.  Former 10 sec run -> 9 hrs.  That's nuts.
+	//shuffleAmount := now.Nanosecond() / 1e6 //  This took too long every time.  From 10 sec run -> 9 hrs.  That's nuts.
 	shuffleAmount := misc.RandRange(1000, 2000)
 	swapfnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
-	//for i := 0; i < shuffleAmount; i++ {
+
 	for range shuffleAmount {
 		rand.Shuffle(len(deck), swapfnt)
 	}
@@ -1442,7 +1446,6 @@ func wrStatsToFile() {
 } // wrStatsToFile
 
 // ------------------------------------------------------- main -----------------------------------
-// ------------------------------------------------------- main -----------------------------------
 func main() {
 	fmt.Printf("BlackJack Simulation Prgram, written in Go.  Last altered %s, compiled by %s.  Use -n for num of players and -i for interactive mode. \n",
 		lastAltered, runtime.Version())
@@ -1455,21 +1458,6 @@ func main() {
 	const InputExtDefault = ".strat"
 	const OutputExtDefault = ".results"
 
-	//if flag.NArg() < 1 {  Now uses file picker.
-	//	fmt.Printf(" Usage:  bj <strategy-file.%s> \n", InputExtDefault)
-	//	os.Exit(1)
-	//}
-
-	/* now handled by interactive flag
-	       fmt.Print(" Display each round? Y/n ")
-	   	ans := ""
-	   	_, e := fmt.Scanln(&ans)
-	   	if e != nil {
-	   		displayRound = false
-	   	} else if ans == "y" {
-	   		displayRound = true
-	   	}
-	*/
 	displayRound = interactiveFlag
 	deck = make([]int, 0, NumOfCards)
 
@@ -1547,7 +1535,7 @@ func main() {
 
 	ReadStrategyMatrix(strategyReader)
 	if verboseFlag {
-		fmt.Printf(" StrategyMatrix read and processed successfully.\n")
+		fmt.Printf(" StrategyMatrix read and processed successfully.  ResplitAces = %t, DealerHitsSoft17 = %t, nonrandom= %t\n", resplitAcesFlag, dealerHitsSoft17, nonrandom)
 	}
 
 	// Construct results filename to receive the results.
@@ -1825,7 +1813,7 @@ func readLine(r *bytes.Reader) (string, error) {
 		}
 		if byt == '#' || byt == '/' {
 			discardRestOfLine(r)
-			return strings.TrimSpace(sb.String()), nil
+			return strings.TrimSpace(sb.String()), nil // ignores any part of a line after # or / (intended for //)
 		}
 		err = sb.WriteByte(byt)
 		if err != nil {
