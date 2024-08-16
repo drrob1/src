@@ -445,8 +445,7 @@ func WriteStrategyMatrix(filehandle *bufio.Writer) {
 	filehandle.WriteRune('\n')
 } // WriteStrategyMatrix
 
-// ------------------------------------------------------- InitDeck -----------------------------------
-
+// InitDeck -- does just that.
 func InitDeck() { // Initalize the deck of cards.
 	for i := 0; i < 4*numOfDecks; i++ {
 		for j := 1; j <= 10; j++ { // There is no card Zero
@@ -1597,18 +1596,18 @@ func main() {
 
 	//rand.Seed(int64(date.Nanosecond()))
 
-	//       need to shuffle here
+	//       need to do first shuffle here
 	swapFnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
 	milliSec := date.Nanosecond() / 1e6
-	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year() + misc.RandRange(5000, 10_000)
+	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year() + misc.RandRange(10_000, 50_000)
 	shuffleStartTime := time.Now()
 	for i := 0; i < shuffleAmount; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
 		rand.Shuffle(len(deck), swapFnt)
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	if displayRound || veryVerboseFlag {
+	if displayRound || verboseFlag {
 		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  shuffleAmount=", shuffleAmount, ".")
 		fmt.Println()
 		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
