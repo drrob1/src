@@ -197,7 +197,7 @@ var ratioWon, ratioDoubleWon, ratioSoftWon, ratioSoftDoubleWon [22]ratioRowType
 var OutputFilename string
 var OutputHandle *os.File
 var bufOutputFileWriter *bufio.Writer
-var verboseFlag, interactiveFlag bool
+var verboseFlag, veryVerboseFlag, interactiveFlag bool
 var Filename string
 
 // ------------------------------------------------------- init -----------------------------------
@@ -245,17 +245,14 @@ func GetOption(tkn tknptr.TokenType) int {
 	}
 }
 
-// ------------------------------------------------------- ReadStrategyMatrix -----------------------------------
-
-//func ReadStrategyMatrix(buf *bytes.Buffer) {
-
+// ReadStrategyMatrix takes a pointer to a bytes reader
 func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
 	if verboseFlag {
 		fmt.Printf(" Entering ReadStrategyMatrix\n")
 	}
 	for { // reading multiple lines
 		rowbuf, err := readLine(buf)
-		if verboseFlag {
+		if veryVerboseFlag {
 			fmt.Printf(" read a line using readLine.  rowbuf=%q, len(rowbuf)=%d, err= %v\n", rowbuf, len(rowbuf), err)
 			pause()
 		}
@@ -477,7 +474,7 @@ func doTheShuffle() {
 	for range shuffleAmount {
 		rand.Shuffle(len(deck), swapfnt)
 	}
-	if verboseFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" Shuffled %d times, which took %s.\n", shuffleAmount, time.Since(now))
 	}
 }
@@ -1451,9 +1448,13 @@ func main() {
 		lastAltered, runtime.Version())
 
 	flag.BoolVar(&verboseFlag, "v", false, "Verbose mode")
+	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very Verbose mode")
 	flag.BoolVar(&interactiveFlag, "i", false, "Interactive mode flag")
 	flag.IntVar(&numOfPlayers, "n", 1, "Number of players to simulate")
 	flag.Parse()
+	if veryVerboseFlag {
+		verboseFlag = true
+	}
 
 	const InputExtDefault = ".strat"
 	const OutputExtDefault = ".results"
@@ -1537,6 +1538,9 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" StrategyMatrix read and processed successfully.  ResplitAces = %t, DealerHitsSoft17 = %t, nonrandom= %t\n", resplitAcesFlag, dealerHitsSoft17, nonrandom)
 	}
+	if verboseFlag {
+		pause()
+	}
 
 	// Construct results filename to receive the results.
 	OutputFilename = BaseFilename + OutputExtDefault
@@ -1604,7 +1608,7 @@ func main() {
 		rand.Shuffle(len(deck), swapFnt)
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
-	if displayRound || verboseFlag {
+	if displayRound || veryVerboseFlag {
 		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  shuffleAmount=", shuffleAmount, ".")
 		fmt.Println()
 		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
