@@ -106,6 +106,8 @@ import (
                 My new code basically only changes ReadStrategyMatrix and doTheShuffle.
                 Because the deck still has to be shuffled after creation, and that's still random, this is not as reproducible as I hoped.  Looks like I still need bj2 to
                 really determine which is the best strategy in a given scenario.
+  17 Aug 24 -- Thinking about the nonrandom code, it was wrong-headed.  Running thru a deck without changing anything will always get the same statistics.  That's not helpful.
+                And it turns out that the card playing occurs very quickly.  It's the shuffling that takes most of the time.  So it goes.  There's no purpose to the nonrandom stuff.
 */
 
 const lastAltered = "Aug 16, 2024"
@@ -250,6 +252,9 @@ func GetOption(tkn tknptr.TokenType) int {
 
 // ReadStrategyMatrix takes a pointer to a bytes reader
 func ReadStrategyMatrix(buf *bytes.Reader) { // the StrategyMatrix is global.
+	// I forgot how this works.  The strategy input data has the first column as a hand as a row indicator, to define the strategy for that hand.  The hand is mostly numbers
+	// but there are some non-numeric cases like soft hands and AA for a pair of aces.  The rest of each line consists of only H, S, D, SP or SUR.  Anything else is a comment and
+	// not part of the matrix.  This routine processes and validates the input using these constraints.
 	if verboseFlag {
 		fmt.Printf(" Entering ReadStrategyMatrix\n")
 	}
