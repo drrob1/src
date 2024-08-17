@@ -9,11 +9,11 @@ package main // bj2.go
   Each row begins w/ a hand total, and means what strategy to follow when your hand totals that hand total.
   These are the integers from 5 .. 21, then S2 .. S10, meaning soft 2 thru soft 10.  Soft 2 would be 2 aces, but since that's a pair,
   this row is ignored.  Then we have the pairs AA thru 99 and 1010.
-  Since I'm dealing w/ integers, I'll ignore row indicies that are not convenient.  IE, ignore Strategy rows < 5, etc.
+  Since I'm dealing w/ integers, I'll ignore row indices that are not convenient.  IE, ignore Strategy rows < 5, etc.
 
-  The input file now will have a .strat extension, just to be clear.  And the output file will have same basefilename with .results extension.
+  The input file now will have a .strat extension, just to be clear.  And the output file will have same base filename with .results extension.
 
-  I changed the underslying logic a lot from what I wrote 25 years ago in Modula-2.  Now I use recursion to solve the problem of splitting.
+  I changed the underlying logic a lot from what I wrote 25 years ago in Modula-2.  Now I use recursion to solve the problem of splitting.
 
   Now, when PairStrategy says to hit, it gets passed to Strategy which has to have an entry for it.  This was a problem for deuces.
 
@@ -34,7 +34,7 @@ package main // bj2.go
   Looks like these work as intended.
 
   I forgot to compute the maxruns, and output the slices of runs.
-  And for tomorrow, I'll create and output ratio matricies, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
+  And for tomorrow, I'll create and output ratio matrices, where each entry is wins/(wins+losses).  I don't have to also construct loss ratio mactrices.
 
   Looks like my original classic strategy is almost correct.  But if surrender is allowed, sur1516.strat is optimal.
 
@@ -45,8 +45,8 @@ package main // bj2.go
 
 Mar 31, 2022
 A comment about the StrategyMatrix.  Ace is the first column, also called column zero.  Ten value cards are the last position.
-I think I have to correct the indexing from Ace = 1 to a zero origin system.  Column index is dealear card1 - 1 to do this correction.  Row index is the hand total.
-So the .strat files have one format, and my take away cheat sheet has a different format.
+I think I have to correct the indexing from Ace = 1 to a zero origin system.  Column index is dealer card1 - 1 to do this correction.  Row index is the hand total.
+So the .strat files have one format, and my takeaway cheat sheet has a different format.
 I sometimes forget that.
 
 Apr 10, 2022
