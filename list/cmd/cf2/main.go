@@ -94,9 +94,10 @@ import (
    6 July 24 -- Changed the startup message
   26 July 24 -- Adding timing info from the individual goroutines that do the copying.  I have to expand the message sent on the channel to include a duration.
   28 July 24 -- Race detector found a data race because ErrNotNew was global and being written to by multiple goroutines.  I fixed it by not making it global.
+  17 Aug 24  -- Changed start message to make it clearer that globbing is used here, not regexp to match included files.  A regexp is used to exclude files.
 */
 
-const LastAltered = "28 July 2024" //
+const LastAltered = "17 Aug 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -135,7 +136,7 @@ func main() {
 		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
 	}
 	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Printf("%s using a true fanout pattern, is compiled w/ %s, last altered %s, list.go last altered %s, exec binary timestamp is %s\n",
+	fmt.Printf("%s using globbing and a true fanout pattern, is compiled w/ %s, last altered %s, list.go last altered %s, exec binary timestamp is %s\n",
 		os.Args[0], runtime.Version(), LastAltered, list.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
