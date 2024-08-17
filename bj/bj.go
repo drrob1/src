@@ -106,7 +106,7 @@ import (
                 My new code basically only changes ReadStrategyMatrix and doTheShuffle.
 */
 
-const lastAltered = "Aug 17, 2024"
+const lastAltered = "Aug 16, 2024"
 
 var OptionName = []string{"Stnd", "Hit ", "Dbl ", "SP  ", "Sur "} // Stand, Hit, Double, Split, Surrender
 
@@ -145,7 +145,8 @@ var PairStrategyMatrix [11]OptionRowType // Modula-2 ARRAY [1..10] of OptionRowT
 
 var SurrenderStrategyMatrix [17]OptionRowType // This can be hard coded because I only consider surrendering 14, 15, 16.
 
-const numOfDecks = 8
+// const numOfDecks = 8
+const numOfDecks = 50
 
 const maxNumOfPlayers = 10 // used for the make function on playerHand.
 const sizeOfSlices = 100
@@ -1594,13 +1595,11 @@ func main() {
 		fmt.Println()
 	}
 
-	//rand.Seed(int64(date.Nanosecond()))
-
 	//       need to do first shuffle here
 	swapFnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
-	milliSec := date.Nanosecond() / 1e6
+	milliSec := date.Nanosecond() / 1e4 // not really millisecond anymore, but so be it.  It's closer to microseconds.  I"m changing it because nonrandom was too fast when it did this first shuffle.
 	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year() + misc.RandRange(10_000, 50_000)
 	shuffleStartTime := time.Now()
 	for i := 0; i < shuffleAmount; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
