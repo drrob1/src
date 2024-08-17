@@ -104,6 +104,8 @@ import (
                 matrix, and call it random or nonrandom.  It will default to random, but if nonrandom I can use a seed of like 123456789012345.  I'll call it nonrandom.
                 I think it would work better if I don't doTheShuffle, and maybe just reset the current card pointer each time.
                 My new code basically only changes ReadStrategyMatrix and doTheShuffle.
+                Because the deck still has to be shuffled after creation, and that's still random, this is not as reproducible as I hoped.  Looks like I still need bj2 to
+                really determine which is the best strategy in a given scenario.
 */
 
 const lastAltered = "Aug 16, 2024"
@@ -1599,15 +1601,16 @@ func main() {
 	swapFnt := func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]
 	}
-	milliSec := date.Nanosecond() / 1e4 // not really millisecond anymore, but so be it.  It's closer to microseconds.  I"m changing it because nonrandom was too fast when it did this first shuffle.
-	shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year() + misc.RandRange(10_000, 50_000)
+	//milliSec := date.Nanosecond() / 1e3 // not really millisecond anymore, but so be it.  It's microseconds.  I'm changing it because nonrandom was too fast when it did this first shuffle.
+	//shuffleAmount := milliSec + date.Second() + date.Minute() + date.Day() + date.Hour() + date.Year() + misc.RandRange(10_000, 50_000)
+	shuffleAmount := misc.RandRange(100_000, 500_000)
 	shuffleStartTime := time.Now()
 	for i := 0; i < shuffleAmount; i++ { // increase the shuffling, since it's not so good, esp noticable when I'm using only 1 deck for testing of this.
 		rand.Shuffle(len(deck), swapFnt)
 	}
 	timeToShuffle := time.Since(shuffleStartTime) // timeToShuffle is a Duration type, which is an int64 but has methods.
+	fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  shuffleAmount=", shuffleAmount, ".")
 	if displayRound || verboseFlag {
-		fmt.Println(" It took ", timeToShuffle.String(), " to shuffle this file.  shuffleAmount=", shuffleAmount, ".")
 		fmt.Println()
 		fmt.Println(" Shuffled deck still has", len(deck), "cards.")
 		fmt.Println(deck)
