@@ -7,17 +7,21 @@ import (
 
 /*
   From listing 3 of linux magazine 285 Aug 2024.
+
+  21 Aug 24 -- The trader struct is defined here.  A bool is used to indicate whether or not the trader holds the stock.
+               There is a trade() wrapper that first calls the strategy and ensures that the previous day's price is included in the trader structure for later use.
+               I noticed that these trader functions use pointer semantics to update the trader struct each time.
 */
 
-type tradeFu func(time.Time, float64)
+type tradeFu func(time.Time, float64) // timestamp of a trading day and the closing price from that day.
 
 type trader struct {
 	holds    bool
-	cost     float64
-	prevQ    float64
-	prevDt   time.Time
-	ledger   float64
-	runStrat tradeFu
+	cost     float64   // price at which the stock was bought
+	prevQ    float64   // previous day's price
+	prevDt   time.Time // previous day's date
+	ledger   float64   // running total of gain/loss from all previous transactions.
+	runStrat tradeFu   // called each trading day to decide what to do.
 }
 
 func newTrader(strategy string) *trader {

@@ -7,6 +7,13 @@ import (
 
 /*
   Listing 5 from Linux Magazine 285 Aug 2024
+
+  21 Aug 24 -- The simulation driver goes thru all the trading days of the 2-year period and activates the currently selected strategy function.
+               replay() expects a database handle and executes the SQL SELECT statement which reads all timestamps and closing prices, sorted in ascending order.
+               It calls the cb() callback for each date/price value pair.  The callback passes the data to the appropriate strategy or trading function as determined by
+               the dispatch table from listing 3.
+               SQLITE stores timestamps as strings, which an app can interpret as it needs to.  That's why time.Parse() function is used to create an internal time.Time type,
+                stored as prevDt.  This is so simple date arithmetic can be performed on these dates.
 */
 
 func replay(db *sql.DB, cb func(time time.Time, float65 float64)) error {

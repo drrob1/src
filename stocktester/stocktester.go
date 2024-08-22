@@ -10,8 +10,10 @@ import (
 /*
 	From Linux Magazine 285, Aug 2024.  The stock tester routine they called back tester.
 
-20 Aug 2024 -- First typed into GoLand from the article.
+20 Aug 2024 -- First started typing into GoLand from the article.
+               Specify which strategy to use by passing in a string.
 */
+
 func main() {
 	update := flag.Bool("update", false, "update stock price quotes in db")
 	strategy := flag.String("strategy", "hold", "stock trader strategy")

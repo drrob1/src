@@ -11,6 +11,13 @@ import (
 
 /*
   From listing 2 of Linux Magazine 285 Aug 2024 for the stock trading program.
+
+  21 Aug 24 -- The updater() function uses the Twelvedata API to retrieve the daily prices from Jan 1, 2022 to today, at once.
+               The SQLite engine inserts the daily quotes into a database table, quotes.db.
+               The actual API request is sent by fetchQ().  If successful, Twelvedata sends a json response from which the gjson library extracts the trading days and
+                 closing prices as arrays using the values.*.datetime and values.#.close queries.
+               The exec command uses INSERT OR REPLACE to insert the closing prices for each date into the database table.  The replace option is needed to avoid duplicates if an
+                 entry already exists for a given date.
 */
 
 func updater(db *sql.DB, ticker string) error {
