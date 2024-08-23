@@ -18,6 +18,7 @@ import (
   22 Aug 2024 -- Going to try to build a stock table using twelvedata.com that I learned about from Linux Magazine 285 Aug 2024.
                  Then I played a bit on its website and I registered for a free account.
                  I'll store the opening and closing prices in the database, not just the closing prices that the article code did.
+  23 Aug 2024 -- It works.  I used SQLiteStudio to check.
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
