@@ -3,12 +3,14 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 )
 
@@ -19,6 +21,14 @@ import (
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
+const lastModified = "Aug 23, 2024"
+
+var verbose = flag.Bool("v", false, "Verbose mode")
+var veryVerbose = flag.Bool("vv", false, "Very Verbose mode for output within a loop")
+
+const jsonExt = ".json"
+
+var jsonFilename string
 
 /*
 https://api.twelvedata.com/time_series?apikey=demo&symbol=qqq&interval=4h
@@ -53,32 +63,57 @@ https://api.twelvedata.com/time_series?apikey=demo&symbol=qqq&interval=4h
 */
 
 func fetchQ(symbols string) ([]gjson.Result, []gjson.Result, []gjson.Result, error) {
-	dates := make([]gjson.Result, 0, 500)      // dates := []gjson.Result{} was original code in the article.  There are ~500 trading days in 2 yrs.
-	openQuotes := make([]gjson.Result, 0, 500) // quotes := []gjson.Result{} was original code in the article.
-	closeQuotes := make([]gjson.Result, 0, 500)
+	dates := []gjson.Result{}
+	openQuotes := []gjson.Result{}
+	closeQuotes := []gjson.Result{}
 
 	u := url.URL{Scheme: "https", Host: "api.twelvedata.com", Path: "time_series"}
 
 	q := u.Query()
-	q.Set("symbols", symbols)
+	q.Set("symbol", symbols)
 	q.Set("interval", "1day")
-	q.Set("Start_date", "2022-01-01")
-	q.Set("apikey", APIKEY) // here is where the login key goes.
+	q.Set("start_date", "2022-01-02") // these keys are case sensitive.  I initially had this as Start_date, which did not give an error but it did not work.
+	q.Set("apikey", APIKEY)           // here is where the login key goes.
 
 	u.RawQuery = q.Encode()
+	if *verbose {
+		fmt.Printf(" in fetchQ: GET %s\n", u.String())
+	}
 	resp, err := http.Get(u.String())
 	if err != nil {
 		return dates, openQuotes, closeQuotes, err
 	}
+	defer resp.Body.Close()
+
+	//js, err := json.Marshal(resp.Body)
+	//if err != nil {
+	//	fmt.Printf(" Error from json marshal is %v.\n", err)
+	//	os.Exit(1)
+	//}
+	//err = os.WriteFile(jsonFilename, js, 0666)
+	//if err != nil {
+	//	fmt.Printf(" Error from json WriteFile is %v.\n", err)
+	//}
+	//
+	//if *veryVerbose {
+	//	return dates, openQuotes, closeQuotes, err
+	//}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return dates, openQuotes, closeQuotes, err
 	}
+	if *verbose {
+		fmt.Printf("fetchQ: len(body) = %d, err = %s\n response body = %v\n body = %v\n", len(body), err, resp.Body, body)
+	}
 
 	dates = gjson.Get(string(body), "values.#.datetime").Array()
 	openQuotes = gjson.Get(string(body), "values.#.open").Array()
 	closeQuotes = gjson.Get(string(body), "values.#.close").Array()
+
+	if *verbose {
+		fmt.Printf("fetchQ: Len of dates = %d, Open quotes = %d, Close quotes = %d\n", len(dates), openQuotes, closeQuotes)
+	}
 
 	return dates, openQuotes, closeQuotes, nil
 }
@@ -88,6 +123,7 @@ func updater(db *sql.DB, ticker string) error {
         "date" DATE NOT NULL,
         "openquote" REAL NOT NULL,
         "closequote" REAL NOT NULL,
+        "symbol" TEXT NOT NULL,
         UNIQUE(date, openquote, closequote)
     );`
 	_, err := db.Exec(createTableSQL)
@@ -100,7 +136,11 @@ func updater(db *sql.DB, ticker string) error {
 		return err
 	}
 
-	insertSQL := `INSERT OR REPLACE INTO stockquotes (date, openquote, closequote) VALUES (?, ?, ?)`
+	if *verbose {
+		fmt.Printf(" updater: len(dates) = %d, len(openingquotes) = %q, len(closingquotes) = %d\n", len(dates), len(openingQuotes), len(closingQuotes))
+	}
+
+	insertSQL := `INSERT OR REPLACE INTO stockquotes (date, openquote, closequote, symbol) VALUES (?, ?, ?, ?)`
 	statement, err := db.Prepare(insertSQL)
 	if err != nil {
 		return err
@@ -111,7 +151,10 @@ func updater(db *sql.DB, ticker string) error {
 	for i, date := range dates {
 		openingquote := openingQuotes[i]
 		closingquote := closingQuotes[i]
-		_, err := statement.Exec(date.String(), openingquote.String(), closingquote.String())
+		if *veryVerbose {
+			fmt.Printf(" updater date loop: date = %v, openingquote=%v, closingquote=%v\n", date, openingquote, closingquote)
+		}
+		_, err := statement.Exec(date.String(), openingquote.String(), closingquote.String(), ticker)
 		if err != nil {
 			return err
 		}
@@ -159,9 +202,28 @@ func replay(db *sql.DB, cb func(time.Time, float64, float64)) error {
 }
 
 func main() {
-
-	update := flag.Bool("update", false, "update stock price quotes in db")
 	flag.Parse()
+	if *veryVerbose {
+		*verbose = true
+	}
+
+	fmt.Printf(" StockTable routine using sqlite3 database format, last modified %s.\n", lastModified)
+	if *verbose {
+		execName, _ := os.Executable()
+		ExecFI, _ := os.Stat(execName)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Printf("%s timestamp is %s, full exec is %s\n", execName, ExecTimeStamp, execName)
+	}
+
+	if flag.NArg() < 1 {
+		fmt.Printf(" Need ticker symbol for the query.\n")
+		return
+	}
+	tickerSymbol := flag.Arg(0)
+	fmt.Printf(" Ticker symbol: %s\n", tickerSymbol)
+
+	jsonFilename = tickerSymbol + jsonExt
+	fmt.Printf(" json filename = %s\n", jsonFilename)
 
 	db, err := sql.Open("sqlite3", "./stockquotes.db")
 	if err != nil {
@@ -169,11 +231,8 @@ func main() {
 	}
 	defer db.Close()
 
-	if *update {
-		err := updater(db, "qqq")
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
+	err = updater(db, tickerSymbol)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

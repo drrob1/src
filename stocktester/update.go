@@ -63,9 +63,9 @@ func fetchQ(symbols string) ([]gjson.Result, []gjson.Result, error) {
 	u := url.URL{Scheme: "https", Host: "api.twelvedata.com", Path: "time_series"}
 
 	q := u.Query()
-	q.Set("symbols", symbols)
+	q.Set("symbol", symbols)
 	q.Set("interval", "1day")
-	q.Set("Start_date", "2022-01-01")
+	q.Set("start_date", "2022-01-01")
 	q.Set("apikey", APIKEY) // here is where the login key goes.
 
 	u.RawQuery = q.Encode()
