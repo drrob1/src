@@ -20,6 +20,8 @@ import (
                  entry already exists for a given date.
 */
 
+const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
+
 func updater(db *sql.DB, ticker string) error {
 	createTableSQL := `CREATE TABLE IF NOT EXISTS quotes (
         "date" DATE NOT NULL,
@@ -56,15 +58,15 @@ func updater(db *sql.DB, ticker string) error {
 }
 
 func fetchQ(symbols string) ([]gjson.Result, []gjson.Result, error) {
-	dates := []gjson.Result{}
-	quotes := []gjson.Result{}
+	dates := make([]gjson.Result, 0, 500)  // dates := []gjson.Result{} was original code in the article.  There are ~500 trading days in 2 yrs.
+	quotes := make([]gjson.Result, 0, 500) // quotes := []gjson.Result{} was original code in the article.
 	u := url.URL{Scheme: "https", Host: "api.twelvedata.com", Path: "time_series"}
 
 	q := u.Query()
 	q.Set("symbols", symbols)
 	q.Set("interval", "1day")
 	q.Set("Start_date", "2022-01-01")
-	q.Set("apikey", "") // here is where the login key goes.
+	q.Set("apikey", APIKEY) // here is where the login key goes.
 
 	u.RawQuery = q.Encode()
 	resp, err := http.Get(u.String())

@@ -16,7 +16,7 @@ import (
                 stored as prevDt.  This is so simple date arithmetic can be performed on these dates.
 */
 
-func replay(db *sql.DB, cb func(time time.Time, float65 float64)) error {
+func replay(db *sql.DB, cb func(time.Time, float64)) error { // this function handles the strategy part of the code, by using this callback function.
 	query := `SELECT date, quote FROM quotes ORDER BY date ASC`
 	rows, err := db.Query(query)
 	if err != nil {
