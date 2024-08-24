@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"src/misc"
 	"time"
 )
 
@@ -19,10 +20,12 @@ import (
                  Then I played a bit on its website and I registered for a free account.
                  I'll store the opening and closing prices in the database, not just the closing prices that the article code did.
   23 Aug 2024 -- It works.  I used SQLiteStudio to check.
+  24 Aug 2024 -- Now to test reading from the sqlite database by writing to a text file.
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
-const lastModified = "Aug 23, 2024"
+const lastModified = "Aug 24, 2024"
+const stockFilename = "stocktable.txt"
 
 var verbose = flag.Bool("v", false, "Verbose mode")
 var veryVerbose = flag.Bool("vv", false, "Very Verbose mode for output within a loop")
@@ -30,6 +33,13 @@ var veryVerbose = flag.Bool("vv", false, "Very Verbose mode for output within a 
 const jsonExt = ".json"
 
 var jsonFilename string
+
+type stockFileType struct {
+	date         time.Time
+	openingQuote float64
+	closingQuote float64
+	tickerSymbol string
+}
 
 /*
 https://api.twelvedata.com/time_series?apikey=demo&symbol=qqq&interval=4h
@@ -64,9 +74,12 @@ https://api.twelvedata.com/time_series?apikey=demo&symbol=qqq&interval=4h
 */
 
 func fetchQ(symbols string) ([]gjson.Result, []gjson.Result, []gjson.Result, error) {
-	dates := []gjson.Result{}
-	openQuotes := []gjson.Result{}
-	closeQuotes := []gjson.Result{}
+	//dates := []gjson.Result{}  From the original code.  I want to pre-allocate some memory so I'm using make below.
+	//openQuotes := []gjson.Result{}
+	//closeQuotes := []gjson.Result{}
+	dates := make([]gjson.Result, 0, 500)
+	openQuotes := make([]gjson.Result, 0, 500)
+	closeQuotes := make([]gjson.Result, 0, 500)
 
 	u := url.URL{Scheme: "https", Host: "api.twelvedata.com", Path: "time_series"}
 
@@ -166,40 +179,49 @@ func updater(db *sql.DB, ticker string) error {
 
 /*
    This is the function that handles the strategy part of the code from the article.
-   replay() expects a database handle and executes the SQL SELECT statement which reads all timestamps and closing prices, sorted in ascending order.
+   replay() expects a database handle and executes the SQL SELECT statement which reads all fields and sorts in ascending order.
    It calls the cb() callback for each date/price value pair.  The callback passes the data to the appropriate strategy or trading function as determined by
    the dispatch table from listing 3.
    SQLITE stores timestamps as strings, which an app can interpret as it needs to.  That's why time.Parse() function is used to create an internal time.Time type,
    stored as prevDt.  This is so simple date arithmetic can be performed on these dates.
 */
 
-func replay(db *sql.DB, cb func(time.Time, float64, float64)) error {
-	query := `SELECT date, openquote, closequote FROM stockquotes ORDER BY date ASC`
+func replay(db *sql.DB) ([]stockFileType, error) {
+	query := `SELECT date, openquote, closequote, symbol FROM stockquotes ORDER BY symbol, date ASC`
 	rows, err := db.Query(query)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 
+	stockSlice := make([]stockFileType, 0, 500) // just guessing the initial size of the slice I'll need
+
 	for rows.Next() {
-		var date string
+		var date, symbol string
 		var openQuote, closeQuote float64
-		err := rows.Scan(&date, &openQuote, &closeQuote)
+		err := rows.Scan(&date, &openQuote, &closeQuote, &symbol)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		dt, err := time.Parse("2006-01-02T15:04:05Z07:00", date)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		cb(dt, openQuote, closeQuote)
+
+		slice := stockFileType{
+			date:         dt,
+			openingQuote: openQuote,
+			closingQuote: closeQuote,
+			tickerSymbol: symbol,
+		}
+		stockSlice = append(stockSlice, slice)
 	}
 
 	if err = rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return stockSlice, nil
 }
 
 func main() {
@@ -236,4 +258,27 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// creating and writing to the database works, now to retrieve the elements and write to a text file.
+	stockSlice, err := replay(db)
+	if err != nil {
+		fmt.Printf(" replay error: %s\n", err)
+		return // return is better than os.Exit because of all the defer statements.
+	}
+
+	stockFile, stockBuf, err := misc.CreateOrAppendWithBuffer(stockFilename)
+	layout := "Jan 02 2006"
+	defer stockFile.Close()
+	defer stockBuf.Flush()
+	for _, stock := range stockSlice {
+		_, err := stockBuf.WriteString(fmt.Sprintf("%s, %.2f, %.2f, %s\n",
+			stock.date.Format(layout), stock.openingQuote, stock.closingQuote, stock.tickerSymbol))
+		if err != nil {
+			fmt.Printf(" stock file write error: %s\n", err)
+			return
+		}
+	}
+
+	fmt.Printf(" Stock file written with %d lines.\n", len(stockSlice))
+
 }
