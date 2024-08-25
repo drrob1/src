@@ -34,9 +34,10 @@ import (
    5 Apr 23 -- Updated the usage message.
    8 Apr 23 -- Changed list.New signature.
   22 Apr 23 -- This doesn't work on linux.  I'm chasing this down.  I found the bug.  I needed flag.NArg() but had flag.NFlags() instead.  I hate when that happens.
+  24 Aug 24 -- Fixed an error in the message that is seen if I say "n" at the end.
 */
 
-const LastAltered = "22 Apr 2023" //
+const LastAltered = "24 Aug 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -192,7 +193,7 @@ func main() {
 	}
 	ans = strings.ToLower(ans)
 	if !strings.HasPrefix(ans, "y") { // ans doesn't begin w/ y, so abort
-		fmt.Printf("\n ans = %s, which does not begin with y.  Aborting.", ans)
+		fmt.Printf("\n ans = %s, which does not begin with y.  Aborting.\n", ans)
 		os.Exit(1)
 	}
 
