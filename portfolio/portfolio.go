@@ -6,11 +6,14 @@ package main
 */
 
 import (
+	"flag"
 	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"strconv"
 	"time"
 )
+
+var verboseFlag = flag.Bool("v", false, "Verbose mode")
 
 func mkChart(symbol string, reslt qMap) *widgets.BarChart {
 	bc := widgets.NewBarChart()
@@ -57,6 +60,7 @@ func weekday(date string) string {
 }
 
 func main() {
+	flag.Parse()
 	symbols := "aapl,nflx,meta,amzn,tsla,goog"
 
 	result, err := fetchQ(symbols)

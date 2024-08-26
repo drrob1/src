@@ -12,9 +12,9 @@ func parse(data string) qMap {
 	reslt := qMap{}
 
 	for tickerSymbol := range everything {
-		dates := gjson.Get(string(data), tickerSymbol+".values.#.datetime").Array()
-		openingPrice := gjson.Get(string(data), tickerSymbol+".values.#.openingPrice").Array()
-		closingPrice := gjson.Get(string(data), tickerSymbol+".values.#.closingPrice").Array()
+		dates := gjson.Get(data, tickerSymbol+".values.#.datetime").Array()
+		openingPrice := gjson.Get(data, tickerSymbol+".values.#.openingPrice").Array()
+		closingPrice := gjson.Get(data, tickerSymbol+".values.#.closingPrice").Array()
 		series := []dateVal{}
 
 		for i, date := range dates {

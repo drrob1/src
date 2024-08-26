@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -36,6 +37,10 @@ func fetchQ(symbols string) (qMap, error) {
 	u.RawQuery = q.Encode()
 
 	reslt := qMap{}
+
+	if *verboseFlag {
+		fmt.Printf("Fetching %s\n", u.String())
+	}
 
 	resp, err := http.Get(u.String())
 	if err != nil {
