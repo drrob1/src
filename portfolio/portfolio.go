@@ -5,7 +5,8 @@ package main
   25 Aug 2024 -- From listing 3
   26 Aug 2024 -- Added a multi writer and multiWriteString.  But I think I found why this code didn't work -- I failed to exactly match the json field names where I needed to.
                  The graphing code does not work, but the retrieval and parsing code does.
-  27 Aug 2024 -- It does work, but I have to get it to stop before it resets the screen.  Calling pause() doesn't let it process the <enter> for some reason.  I'll try a timer.
+  27 Aug 2024 -- It does work, but I have to get it to stop before it resets the screen.  Calling pause() doesn't let it process the <enter> for some reason.
+                 I'll try a timer.  On second thought, needing ctrl-C to exit isn't so bad.  I hit "." and it exited.  So it is working after all, just not w/ <enter>.
 */
 
 import (
