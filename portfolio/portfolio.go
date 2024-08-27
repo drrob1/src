@@ -3,15 +3,23 @@ package main
 /*
   From Linux Magazine 277 Dec 2023
   25 Aug 2024 -- From listing 3
+  26 Aug 2024 -- Added a multi writer and multiWriteString.  But I think I found why this code didn't work -- I failed to exactly match the json field names where I needed to.
+                 The graphing code does not work, but the retrieval and parsing code does.
 */
 
 import (
 	"flag"
+	"fmt"
 	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"io"
+	"os"
+	"src/misc"
 	"strconv"
 	"time"
 )
+
+const fileName = "portfolio.txt"
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
 
@@ -59,11 +67,38 @@ func weekday(date string) string {
 	return string(dt.Weekday().String()[0])
 }
 
+func multiWriteString(w io.Writer, str string) error {
+	_, err := w.Write([]byte(str))
+	if err != nil {
+		return err
+	}
+	w.Write([]byte("\n"))
+	pause()
+	return nil
+}
+
 func main() {
 	flag.Parse()
 	symbols := "aapl,nflx,meta,amzn,tsla,goog"
 
-	result, err := fetchQ(symbols)
+	file, buf, err := misc.CreateOrAppendWithBuffer(fileName)
+	if err != nil {
+		fmt.Printf("Error creating file: %v\n", err)
+		return
+	}
+	defer file.Close()
+	defer buf.Flush()
+	w := io.MultiWriter(buf, os.Stdout)
+
+	if *verboseFlag {
+		S := fmt.Sprintf(" symbols: %s\n", symbols)
+		err := multiWriteString(w, S)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	result, err := fetchQ(w, symbols)
 	if err != nil {
 		panic(err)
 	}
@@ -97,4 +132,9 @@ func main() {
 
 	termui.Render(grid)
 	<-termui.PollEvents()
+}
+
+func pause() {
+	fmt.Printf(" ... pausing ... until hit <enter>")
+	fmt.Scanln()
 }

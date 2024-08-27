@@ -23,7 +23,7 @@ type dateVal struct {
 }
 type qMap map[string][]dateVal
 
-func fetchQ(symbols string) (qMap, error) {
+func fetchQ(w io.Writer, symbols string) (qMap, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "api.twelvedata.com",
@@ -39,7 +39,11 @@ func fetchQ(symbols string) (qMap, error) {
 	reslt := qMap{}
 
 	if *verboseFlag {
-		fmt.Printf("Fetching %s\n", u.String())
+		S := fmt.Sprintf("Fetching %s\n", u.String())
+		err := multiWriteString(w, S)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	resp, err := http.Get(u.String())
@@ -53,6 +57,6 @@ func fetchQ(symbols string) (qMap, error) {
 		return reslt, err
 	}
 
-	reslt = parse(string(body))
+	reslt = parse(w, string(body))
 	return reslt, nil
 }
