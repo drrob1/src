@@ -134,7 +134,7 @@ func main() {
 
 	termui.Render(grid)
 
-	pause()
+	fmt.Scanln()
 
 	<-termui.PollEvents()
 }
