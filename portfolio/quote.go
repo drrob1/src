@@ -34,6 +34,7 @@ func fetchQ(w io.Writer, symbols string) (qMap, error) {
 	q.Set("symbol", symbols)
 	q.Set("interval", "1day")
 	q.Set("apikey", APIKEY)
+	q.Set("start_date", "2024-05-15") // these keys are case sensitive.  I initially had this as Start_date, which did not give an error but it did not work.
 	u.RawQuery = q.Encode()
 
 	reslt := qMap{}

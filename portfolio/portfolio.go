@@ -85,7 +85,7 @@ func multiWriteString(w io.Writer, str string) error {
 
 func main() {
 	flag.Parse()
-	symbols := "aapl,nflx,meta,amzn,tsla,goog"
+	symbols := "amzn,goog,blk,glw,jpm,qqq"
 
 	file, buf, err := misc.CreateOrAppendWithBuffer(fileName)
 	if err != nil {

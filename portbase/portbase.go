@@ -23,22 +23,31 @@ import (
                  updater will construct SQL CREATE TABLE if needed, and then call fetchQ.
                  fetchQ uses the twelvedata API and calls parse to construct the qMap that is returned to main.
                  parse populates and returns the qMap to fetchQ.
+  29 Aug 2024 -- Adding the replay func.
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
-const dateModified = "28 Aug 2024"
-const debugFilename = "portbase.txt"
+const dateModified = "29 Aug 2024"
+const debugFilename = "portbaseDebug.txt"
 const portfolioDatabase = "portbase.db"
+const outputTextFilename = "portbaseOutput.txt"
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
 var veryVerbose = flag.Bool("vv", false, "Very Verbose mode for output within a loop")
 
-type dateVal struct {
+type dateVal struct { // for creating the SQLite database
 	date         string
 	tdate        time.Time
 	openingPrice string
 	closingPrice string
 	symbol       string
+}
+
+type stockFileType struct { // for reading from the SQLite database
+	date         time.Time
+	openingQuote float64
+	closingQuote float64
+	tickerSymbol string
 }
 
 type qMap map[string][]dateVal
@@ -94,9 +103,14 @@ func fetchQ(w io.Writer, symbols string) (qMap, error) { // from portfolio
 		Path:   "time_series",
 	}
 
+	now := time.Now()
+	threeMonthsAgo := now.AddDate(0, -4, -7)
+	threeMonthsAgoStr := threeMonthsAgo.Format("2006-01-02")
+
 	q := u.Query()
 	q.Set("symbol", symbols)
 	q.Set("interval", "1day")
+	q.Set("start_date", threeMonthsAgoStr) // these keys are case sensitive.  I initially had this as Start_date, which did not give an error but it did not work.
 	q.Set("apikey", APIKEY)
 	u.RawQuery = q.Encode()
 
@@ -183,7 +197,6 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 			}
 		}
 
-		//series := []dateVal{}
 		series := make([]dateVal, 0, 100) // pre-allocate some space.  I don't know if this will be enough, but it's better than nothing.
 
 		for i, date := range dates {
@@ -216,11 +229,51 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 	return result
 }
 
+func replay(db *sql.DB) ([]stockFileType, error) {
+	query := `SELECT date, openquote, closequote, symbol FROM stockquotes ORDER BY symbol, date ASC`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stockSlice := make([]stockFileType, 0, 500) // just guessing the initial size of the slice I'll need
+
+	for rows.Next() {
+		var date, symbol string
+		var openQuote, closeQuote float64
+		err := rows.Scan(&date, &openQuote, &closeQuote, &symbol)
+		if err != nil {
+			return nil, err
+		}
+		dt, err := time.Parse("2006-01-02T15:04:05Z07:00", date)
+		if err != nil {
+			return nil, err
+		}
+
+		slice := stockFileType{
+			date:         dt,
+			openingQuote: openQuote,
+			closingQuote: closeQuote,
+			tickerSymbol: symbol,
+		}
+		stockSlice = append(stockSlice, slice)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return stockSlice, nil
+}
+
 func main() {
 	flag.Parse()
 	fmt.Printf(" Portfolio Base, using SQLite3 to create a stock portfolio database.  Last modified %s\n", dateModified)
 
-	symbols := "aapl,nflx,meta,amzn,tsla,goog"
+	//symbols := "aapl,nflx,meta,amzn,tsla,goog"
+	//symbols := "amzn,goog,blk,glw,jpm,qqq"
+	symbols := "rsp,vmc,lyg,glw,lamr,midd"
 
 	file, buf, err := misc.CreateOrAppendWithBuffer(debugFilename)
 	if err != nil {
@@ -230,6 +283,15 @@ func main() {
 	defer file.Close()
 	defer buf.Flush()
 	w := io.MultiWriter(buf, os.Stdout)
+
+	now := time.Now()
+	threeMonthsAgo := now.AddDate(0, -4, -7)
+	threeMonthsAgoStr := threeMonthsAgo.Format("2006-01-02")
+	threeMonthsAgoOutput := fmt.Sprintf("three months ago: %s", threeMonthsAgoStr)
+	err = multiWriteString(w, threeMonthsAgoOutput)
+	if err != nil {
+		fmt.Printf("Error writing threeMonthsAgo: %v\n", err)
+	}
 
 	if *verboseFlag {
 		S := fmt.Sprintf(" symbols: %s\n", symbols)
@@ -259,6 +321,33 @@ func main() {
 		fmt.Printf(" Error updating %s: %v\n", portfolioDatabase, err)
 		return
 	}
+
+	completionMessage := fmt.Sprintf("Portfolio database %s updated successfully!\n", portfolioDatabase)
+	multiWriteString(w, completionMessage)
+
+	// Now will read back the SQLite database.
+
+	outputSlice, err := replay(db)
+	if err != nil {
+		fmt.Printf(" replay error: %s\n", err)
+		return // return is better than os.Exit because of all the defer statements.
+	}
+
+	outputFile, outputBuf, err := misc.CreateOrAppendWithBuffer(outputTextFilename)
+	layout := "Jan 02 2006"
+	defer outputFile.Close()
+	defer outputBuf.Flush()
+	for _, stock := range outputSlice {
+		_, err := outputBuf.WriteString(fmt.Sprintf("%s, %.2f, %.2f, %s\n",
+			stock.date.Format(layout), stock.openingQuote, stock.closingQuote, stock.tickerSymbol))
+		if err != nil {
+			fmt.Printf(" output text file write error: %s\n", err)
+			return
+		}
+	}
+
+	fmt.Printf(" Stock file written with %d lines.\n", len(outputSlice))
+
 }
 
 func multiWriteString(w io.Writer, str string) error {
