@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
 	"io"
 	"net/http"
@@ -186,7 +187,7 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 		series := make([]dateVal, 0, 100) // pre-allocate some space.  I don't know if this will be enough, but it's better than nothing.
 
 		for i, date := range dates {
-			dt, err := time.Parse("2006-01-02T15:04:05Z07:00", date.String())
+			dt, err := time.Parse("2006-01-02", date.String())
 			if err != nil {
 				panic(err)
 			}
