@@ -21,6 +21,10 @@ import (
                  I'll store the opening and closing prices in the database, not just the closing prices that the article code did.
   23 Aug 2024 -- It works.  I used SQLiteStudio to check.
   24 Aug 2024 -- Now to test reading from the sqlite database by writing to a text file.
+  28 Aug 2024 -- Summary of the logic here: main calls sql.Open, then it calls updater, then it calls replay to retrieve from the database just written.
+                 updater constructs the SQL CREATE TABLE if needed, then calls fetchQ.
+                 fetchQ uses the twelvedata API and then uses gjson to populate the slices that will be returned to updater.
+                 updater takes these slices and uses them in the SQL INSERT OR REPLACE statement.
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"

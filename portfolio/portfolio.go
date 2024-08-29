@@ -7,6 +7,10 @@ package main
                  The graphing code does not work, but the retrieval and parsing code does.
   27 Aug 2024 -- It does work, but I have to get it to stop before it resets the screen.  Calling pause() doesn't let it process the <enter> for some reason.
                  I'll try a timer.  On second thought, needing ctrl-C to exit isn't so bad.  I hit "." and it exited.  So it is working after all, just not w/ <enter>.
+  28 Aug 2024 -- Summary of the logic here: Main calls fetchQ, and then makes the graphs when fetchQ returns.
+                 fetchQ uses the twelvedata API to fetch the stock quotes, then calls parse to populate the qMap as its result, and returns the qMap to main.
+                 parse uses gjson to populate the qMap, which is returned to fetchQ.
+
 */
 
 import (
