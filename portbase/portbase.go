@@ -163,7 +163,7 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 	result := make(map[string][]dateVal, 500) // I want to pre-allocate the memory.
 
 	for tickerSymbol := range everything {
-		if *verboseFlag {
+		if *veryVerbose {
 			S := fmt.Sprintf(" tickerSymbol = %s, everything[%s]=%v\n", tickerSymbol, tickerSymbol, everything[tickerSymbol])
 			err := multiWriteString(w, S)
 			if err != nil {
@@ -171,7 +171,7 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 			}
 		}
 		dates := gjson.Get(data, tickerSymbol+".values.#.datetime").Array() // the last field here has to exactly match the field name in the json input
-		if *verboseFlag {
+		if *veryVerbose {
 			S := fmt.Sprintf("dates = %v\n", dates)
 			err := multiWriteString(w, S)
 			if err != nil {
@@ -180,7 +180,7 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 		}
 
 		openingPrice := gjson.Get(data, tickerSymbol+".values.#.open").Array() // the last field here has to exactly match the field name in the json input
-		if *verboseFlag {
+		if *veryVerbose {
 			S := fmt.Sprintf("openingPrice = %v\n", openingPrice)
 			err := multiWriteString(w, S)
 			if err != nil {
@@ -189,7 +189,7 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 		}
 
 		closingPrice := gjson.Get(data, tickerSymbol+".values.#.close").Array() // the last field here has to match what's in the json input
-		if *verboseFlag {
+		if *veryVerbose {
 			S := fmt.Sprintf("closingPrice = %v\n", closingPrice)
 			err := multiWriteString(w, S)
 			if err != nil {
@@ -205,7 +205,7 @@ func parse(w io.Writer, data string) qMap { // from portfolio
 				panic(err)
 			}
 
-			if *verboseFlag {
+			if *veryVerbose {
 				S := fmt.Sprintf("date = %s, and %s\n", date.String(), dt.Format("2006-01-02T15:04:05Z07:00"))
 				err := multiWriteString(w, S)
 				if err != nil {
