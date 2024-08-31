@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -358,7 +359,13 @@ func main() {
 		return // return is better than os.Exit because of all the defer statements.
 	}
 
-	outputFile, outputBuf, err := misc.CreateOrAppendWithBuffer(outputTextFilename)
+	//outputFile, outputBuf, err := misc.CreateOrAppendWithBuffer(outputTextFilename)  I don't want the file to be continually appended to.
+	outputFile, err := os.Create(outputTextFilename)
+	if err != nil {
+		fmt.Printf("Error creating output text file: %v\n", err)
+		return
+	}
+	outputBuf := bufio.NewWriter(outputFile)
 	layout := "Jan 02 2006"
 	defer outputFile.Close()
 	defer outputBuf.Flush()
