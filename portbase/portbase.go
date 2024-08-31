@@ -26,6 +26,7 @@ import (
                  parse populates and returns the qMap to fetchQ.
   29 Aug 2024 -- Adding the replay func.
   31 Aug 2024 -- Adding options 1 and 2, and allow entering stock tickers on command line.  If either option1 or option2 are true, then the program will ignore the command line.
+                 The command line can have the stock ticker symbols comma separated, comma-space separated, or just space separated.
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
@@ -291,7 +292,11 @@ func main() {
 		symbols = flag.Arg(0)
 	} else if flag.NArg() > 1 {
 		stringSlice := flag.Args()
-		symbols = strings.Join(stringSlice, "")
+		if strings.Contains(stringSlice[0], ",") {
+			symbols = strings.Join(stringSlice, "")
+		} else {
+			symbols = strings.Join(stringSlice, ",")
+		}
 		symbols = removeAllSpaces(symbols) // this may be overkill, as the above statements may already achieve this goal
 	}
 
