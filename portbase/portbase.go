@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"src/misc"
+	"strings"
 	"time"
 )
 
@@ -24,16 +25,21 @@ import (
                  fetchQ uses the twelvedata API and calls parse to construct the qMap that is returned to main.
                  parse populates and returns the qMap to fetchQ.
   29 Aug 2024 -- Adding the replay func.
+  31 Aug 2024 -- Adding options 1 and 2, and allow entering stock tickers on command line.  If either option1 or option2 are true, then the program will ignore the command line.
 */
 
 const APIKEY = "0f6e5638d2b742509cf234f1956abcac"
-const dateModified = "29 Aug 2024"
+const dateModified = "31 Aug 2024"
 const debugFilename = "portbaseDebug.txt"
 const portfolioDatabase = "portbase.db"
 const outputTextFilename = "portbaseOutput.txt"
+const firstGrouping = "amzn,goog,blk,glw,jpm,qqq"
+const secondGrouping = "rsp,vmc,lyg,glw,lamr,txn"
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
 var veryVerbose = flag.Bool("vv", false, "Very Verbose mode for output within a loop")
+var option1 = flag.Bool("1", false, "Will get amzn,goog,blk,glw,jpm,qqq")
+var option2 = flag.Bool("2", false, "Will get rsp,vmc,lyg,glw,lamr,txn")
 
 type dateVal struct { // for creating the SQLite database
 	date         string
@@ -141,7 +147,7 @@ func fetchQ(w io.Writer, symbols string) (qMap, error) { // from portfolio
 
 func parse(w io.Writer, data string) qMap { // from portfolio
 	everything := gjson.Get(data, "@this").Map()
-	if *verboseFlag {
+	if *veryVerbose {
 		S := fmt.Sprintf("len(everything)= %d, everything: \n%v\n", len(everything), everything)
 		err := multiWriteString(w, S)
 		if err != nil {
@@ -269,11 +275,25 @@ func replay(db *sql.DB) ([]stockFileType, error) {
 
 func main() {
 	flag.Parse()
+	if *veryVerbose {
+		*verboseFlag = true
+	}
 	fmt.Printf(" Portfolio Base, using SQLite3 to create a stock portfolio database.  Last modified %s\n", dateModified)
 
-	//symbols := "aapl,nflx,meta,amzn,tsla,goog"
-	//symbols := "amzn,goog,blk,glw,jpm,qqq"
-	symbols := "rsp,vmc,lyg,glw,lamr,midd"
+	var symbols string
+	if *option1 {
+		symbols = firstGrouping // firstGrouping = "amzn,goog,blk,glw,jpm,qqq"
+	} else if *option2 {
+		symbols = secondGrouping // secondGrouping = "rsp,vmc,lyg,glw,lamr,txn"
+	} else if flag.NArg() == 0 {
+		fmt.Printf("Usage: portbase [options] tickerSymbols in a comma separated format without spaces.\n")
+	} else if flag.NArg() == 1 {
+		symbols = flag.Arg(0)
+	} else if flag.NArg() > 1 {
+		stringSlice := flag.Args()
+		symbols = strings.Join(stringSlice, "")
+		symbols = removeAllSpaces(symbols) // this may be overkill, as the above statements may already achieve this goal
+	}
 
 	file, buf, err := misc.CreateOrAppendWithBuffer(debugFilename)
 	if err != nil {
@@ -363,4 +383,11 @@ func multiWriteString(w io.Writer, str string) error {
 func pause() {
 	fmt.Printf(" ... pausing ... until hit <enter>")
 	fmt.Scanln()
+}
+
+func removeAllSpaces(str string) string {
+	if !strings.Contains(str, " ") {
+		return str
+	}
+	return strings.ReplaceAll(str, " ", "")
 }
