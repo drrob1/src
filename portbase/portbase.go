@@ -26,7 +26,7 @@ import (
                  fetchQ uses the twelvedata API and calls parse to construct the qMap that is returned to main.
                  parse populates and returns the qMap to fetchQ.
   29 Aug 2024 -- Adding the replay func.
-  31 Aug 2024 -- Adding options 1 and 2, and allow entering stock tickers on command line.  If either option1 or option2 are true, then the program will ignore the command line.
+  31 Aug 2024 -- Adding options 1, 2 and 3, and allow entering stock tickers on command line.  If option1, option2 or option3 are true, then the program will ignore the command line.
                  The command line can have the stock ticker symbols comma separated, comma-space separated, or just space separated.
 */
 
@@ -36,12 +36,14 @@ const debugFilename = "portbaseDebug.txt"
 const portfolioDatabase = "portbase.db"
 const outputTextFilename = "portbaseOutput.txt"
 const firstGrouping = "amzn,goog,blk,glw,jpm,qqq"
-const secondGrouping = "rsp,vmc,lyg,glw,lamr,txn"
+const secondGrouping = "rsp,vmc,lyg,glw,lamr,txn,vti"
+const thirdGrouping = "ebay,duk,sbux,ko,apd,nee,wfc"
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
 var veryVerbose = flag.Bool("vv", false, "Very Verbose mode for output within a loop")
 var option1 = flag.Bool("1", false, "Will get amzn,goog,blk,glw,jpm,qqq")
-var option2 = flag.Bool("2", false, "Will get rsp,vmc,lyg,glw,lamr,txn")
+var option2 = flag.Bool("2", false, "Will get rsp,vmc,lyg,glw,lamr,txn,vti")
+var option3 = flag.Bool("3", false, "Will get ebay,duk,sbux,ko,apd,nee,wfc")
 
 type dateVal struct { // for creating the SQLite database
 	date         string
@@ -286,7 +288,9 @@ func main() {
 	if *option1 {
 		symbols = firstGrouping // firstGrouping = "amzn,goog,blk,glw,jpm,qqq"
 	} else if *option2 {
-		symbols = secondGrouping // secondGrouping = "rsp,vmc,lyg,glw,lamr,txn"
+		symbols = secondGrouping // secondGrouping = "rsp,vmc,lyg,glw,lamr,txn,vti"
+	} else if *option3 {
+		symbols = thirdGrouping // ebay,duk,sbux,ko,apd,nee,wfc
 	} else if flag.NArg() == 0 {
 		fmt.Printf("Usage: portbase [options] tickerSymbols in a comma separated format without spaces.\n")
 	} else if flag.NArg() == 1 {
@@ -311,9 +315,10 @@ func main() {
 	w := io.MultiWriter(buf, os.Stdout)
 
 	now := time.Now()
+	todayStr := now.Format("2006-01-02")
 	threeMonthsAgo := now.AddDate(0, -4, -7)
 	threeMonthsAgoStr := threeMonthsAgo.Format("2006-01-02")
-	threeMonthsAgoOutput := fmt.Sprintf("three months ago: %s", threeMonthsAgoStr)
+	threeMonthsAgoOutput := fmt.Sprintf(" Today is %s, three months ago was %s", todayStr, threeMonthsAgoStr)
 	err = multiWriteString(w, threeMonthsAgoOutput)
 	if err != nil {
 		fmt.Printf("Error writing threeMonthsAgo: %v\n", err)
