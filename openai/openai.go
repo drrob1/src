@@ -14,6 +14,12 @@ import (
    1 Sep 2024 -- Separated out the apikey because it seems that github won't allow the key to be committed.
                  I emailed mschilli@perlmeister.com for help.  Admittedly, he wrote this article ~1.5 yrs ago.  The openAI API clearly changed since then.
                  Mike Schilli
+   3 Sep 2024 -- He answered me and provided a working routine.  He wrote that the API changed.  He also said I have to
+     1) create a new project in openAI's settings.  Top left it says personal / default project.  Clicking on the arrows by default project lets me create a new project.
+                    I called it "using API"
+     2) create a new secret api key for this project.  Left column -> Your Profile -> center User API Keys -> named the key "using API" and generated it and copied it to a .bat file.
+     3) in the project's settings (gear icon top right) go to limits and set the project's budget to whatever you prepaid
+     4) use the updated openai.go (below), as the API has changed since the article was published.
 */
 
 type OpenAI struct {
@@ -32,34 +38,20 @@ func (ai *OpenAI) Init() {
 	}
 	ai.Ctx = context.Background()
 	ai.Cli = gpt3.NewClient(apikey)
-	// ai.Cli = gpt3.NewClient(apikey, gpt3.WithBaseURL("https://api.openai.com/v1/chat/completions"))  Invalid request error
 }
 
 func (ai *OpenAI) PrintResp(prompt string) {
-	req := gpt3.CompletionRequest{
-		Prompt:      []string{prompt},
-		MaxTokens:   gpt3.IntPtr(1000),
-		Temperature: gpt3.Float32Ptr(0), // allowed values are 0, 1 and 2.  But article says that setting this to 2 makes it hallucinate.
-		Stop:        []string{"."},
-		Echo:        true,
+	req := gpt3.ChatCompletionRequest{
+		Model: gpt3.GPT3Dot5Turbo,
+		Messages: []gpt3.ChatCompletionRequestMessage{
+			{Role: "user", Content: prompt},
+		},
+		MaxTokens:   1000,
+		Temperature: gpt3.Float32Ptr(0),
 	}
-	ondata := func(resp *gpt3.CompletionResponse) {
-		fmt.Print(resp.Choices[0].Text)
-	}
-	//turboInstruct := gpt3.GPT3Dot5Turbo + "-instruct"  doesn't work, I'm getting an exceeding free tier message
-	//turboInstruct := gpt3.GPT3Dot5Turbo  doesn't work, I'm getting an exceeding free tier message
-	//turboInstruct := "gpt-4o-mini" // doesn't work, giving an exceeding free tier message
-	//turboInstruct := "gpt-4o" // doesn't work, giving an exceeding free tier message
-	// err := ai.Cli.CompletionStreamWithEngine(ai.Ctx, "", req, ondata)  Not allow to post on v1/engings/completions
-
-	turboInstruct := gpt3.GPT3Dot5Turbo
-	err := ai.Cli.CompletionStreamWithEngine(ai.Ctx, turboInstruct, req, ondata)
+	resp, err := ai.Cli.ChatCompletion(ai.Ctx, req)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("")
-}
-
-func main() {
-	fmt.Printf(" not done yet.\n")
+	fmt.Printf("%s\n", resp.Choices[0].Message.Content)
 }

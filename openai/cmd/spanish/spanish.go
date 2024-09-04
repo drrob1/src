@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"src/openai"
 )
@@ -15,10 +16,14 @@ func main() {
 	ai.Init()
 	scanner := bufio.NewScanner(os.Stdin)
 
-	var text string
+	//var text string
 
-	for scanner.Scan() {
-		text += scanner.Text()
+	for {
+		fmt.Printf(" Ask: ")
+		if !scanner.Scan() {
+			break
+		}
+		ai.PrintResp("Translate to Spanish: " + scanner.Text())
 	}
-	ai.PrintResp("Translate to Spanish:\n" + text)
+	//ai.PrintResp("Translate to Spanish:\n" + text)
 }
