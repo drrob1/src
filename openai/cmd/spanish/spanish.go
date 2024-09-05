@@ -9,6 +9,7 @@ import (
 
 /*
   31 Aug 2024 -- From Linux Magazine 270 May 2023
+   5 Sep 2024 -- Added stop or exit when the text is too short, ie, len < 5 char.  Intended to include stop, exit and any other 4-letter word.
 */
 
 func main() {
@@ -23,7 +24,11 @@ func main() {
 		if !scanner.Scan() {
 			break
 		}
-		ai.PrintResp("Translate to Spanish: " + scanner.Text())
+		text := scanner.Text()
+		if len(text) < 5 {
+			break
+		}
+		ai.PrintResp("Translate to Spanish: " + text)
 	}
 	//ai.PrintResp("Translate to Spanish:\n" + text)
 }
