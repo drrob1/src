@@ -34,7 +34,7 @@ func NewAI() *OpenAI {
 func (ai *OpenAI) Init() {
 	apikey, ok := os.LookupEnv("chatgptkey")
 	if !ok {
-		panic("apikey is required")
+		panic("/n/n apikey is required \n\n")
 	}
 	ai.Ctx = context.Background()
 	ai.Cli = gpt3.NewClient(apikey)
