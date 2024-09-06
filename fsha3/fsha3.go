@@ -180,9 +180,9 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	computedHashValStr := hex.EncodeToString(hashFunc.Sum(nil))
 
 	if strings.EqualFold(computedHashValStr, hashIn.hashValIn) { // golangci-lint found this optimization.
-		ctfmt.Printf(ct.Green, onWin, " %s:                                      %s matched using %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Green, onWin, " %s:                                  %s matched using sha3 %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
 	} else {
-		ctfmt.Printf(ct.Red, onWin, " %s:                                      %s did not match using %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Red, onWin, " %s:                                  %s did not match using sha3 %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
 	}
 } // end matchOrNoMatch
 

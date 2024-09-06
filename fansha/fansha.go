@@ -101,9 +101,10 @@ import (
                 for a few files, almost never more than 5.  So a fanout pattern should work fine.
    7 Jul 24 -- Added timing info to matchOrNoMatch
   13 Aug 24 -- Updated timing into in matchOrNoMatch to include file not found.
+   6 Sep 24 -- tweaked the output message in matchOrNoMatch.
 */
 
-const LastCompiled = "13 Aug 2024"
+const LastCompiled = "6 Sep 2024"
 
 const (
 	undetermined = iota
@@ -175,9 +176,9 @@ func matchOrNoMatch(hashIn hashType) { // returning filename, hash number, match
 	computedHashValStr := hex.EncodeToString(hashFunc.Sum(nil))
 
 	if strings.EqualFold(computedHashValStr, hashIn.hashValIn) { // golangci-lint found this optimization.
-		ctfmt.Printf(ct.Green, onWin, " %s:                                      %s matched using %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Green, onWin, " %s:                                  %s matched using sha2 %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
 	} else {
-		ctfmt.Printf(ct.Red, onWin, " %s:                                      %s did not match using %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
+		ctfmt.Printf(ct.Red, onWin, " %s:                                  %s did not match using sha2 %s hash\n", time.Since(t0), hashIn.fName, hashName[hashInt])
 	}
 } // end matchOrNoMatch
 
