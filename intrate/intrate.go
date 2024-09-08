@@ -7,8 +7,8 @@ import (
 
 /*
   7 Sep 2024 -- First writing of intrate based on the compound amount formulas I first read in 1975 from the HP-25 calculator book.  These are:
-                n = number of periods.  i = periodic interest rate.  PV, FV are present and future values, I = total accrued interest, in dollars.
-                Today, I want to know i given PV, FV and n.
+        n = number of periods.  i = periodic interest rate.  PV, FV are present and future values, I = total accrued interest, in dollars, like total finance charges.
+        Today, I want to know i given PV, FV and n.
 
                          1/n
     ln(FV/PV)        (FV)                         -n               n                     n
