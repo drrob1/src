@@ -32,5 +32,5 @@ func main() {
 	valueRatio := FV / PV
 	inverseN := 1 / n
 	i := math.Pow(valueRatio, inverseN) - 1
-	fmt.Printf(" PV = %.0f, FV = %.0f, n = %.0f, and i = %.2f %%\n", PV, FV, n, i*12*100)
+	fmt.Printf(" PV = %.0f, FV = %.0f, n = %.0f, and annual interest rate is %.2f %%\n", PV, FV, n, i*12*100)
 }
