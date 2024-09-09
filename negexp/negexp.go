@@ -5,8 +5,14 @@ import (
 	"math"
 )
 
-/*                                                                                                  -n      n
+/*                                                                                                -n      n
 This is to see if math.Pow works as I expected that 1/n is same as -n.  Nope, I got that wrong.  a   = 1/a , ie, the reciprocal is not in the exponent but the entire expression.
+
+ -n    1
+a   = ----
+       n
+      a
+
 9 Sep 24 -- First version.
 */
 
