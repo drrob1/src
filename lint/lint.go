@@ -10,6 +10,7 @@ import (
 	"os"
 	"src/filepicker"
 	"src/misc"
+	"src/tknptr"
 	"src/whichexec"
 	"strconv"
 	"strings"
@@ -78,7 +79,7 @@ var home string
 var config string
 var err error
 var workingDir string
-var docMap = make(map[string]bool)
+var dayOff = make(map[string]bool)
 
 // Next I will code the check against the vacation people to make sure they're not assigned to anything else.  I'll need a vacationMap = map[string]bool where the string will
 // be the names of everyone, and true/false for on vacation.  I'll need a doctor names list, I think.
@@ -95,10 +96,6 @@ func findAndReadConfIni() error {
 			return fmt.Errorf("%s or %s not found", conf, ini)
 		}
 	}
-	f, err := os.Open(fullFile)
-	if err != nil {
-		return err
-	}
 
 	// now need to process the config file using code from fansha.
 	fileByteSlice, err := os.ReadFile(fullFile)
@@ -112,8 +109,22 @@ func findAndReadConfIni() error {
 	}
 
 	// will use my tknptr stuff here.
+	tokenslice := tknptr.TokenSlice(inputLine)
+	lower := strings.ToLower(tokenslice[0].Str)
+	if !strings.Contains(lower, "off") {
+		return fmt.Errorf("%s is not off", tokenslice[0].Str)
+	}
+	for _, token := range tokenslice[1:] {
+		lower = strings.ToLower(token.Str)
+		dayOff[lower] = false
+	}
+	if *verboseFlag {
+		fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
+		for doc, vacay := range dayOff {
+			fmt.Printf(" dayOff[%s]: %t\n", doc, vacay)
+		}
+	}
 
-	fmt.Printf("findAndReadConfIni not done yet\n")
 	return nil
 }
 
@@ -124,13 +135,23 @@ func readDay(idx int) error {
 func main() {
 	flag.Parse()
 
-	var filename string
+	var filename, ans string
 
 	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
 
+	err := findAndReadConfIni()
+	if err != nil {
+		fmt.Printf(" Error from findAndReadConfINI: %s\n", err)
+		fmt.Printf(" Continue? (Y/n)")
+		fmt.Scanln(&ans)
+		ans = strings.ToLower(ans)
+		if strings.Contains(ans, "n") {
+			return
+		}
+	}
+
 	// filepicker stuff.
 
-	var ans string
 	if flag.NArg() == 0 {
 		filenames, err := filepicker.GetRegexFilenames("week.*xlsx$")
 		if err != nil {
@@ -179,7 +200,6 @@ func main() {
 	for i, sh := range workBook.Sheets {
 		fmt.Println(i, sh.Name)
 	}
-	fmt.Println("----")
 
 	sheets := workBook.Sheets
 	fmt.Printf(" sheet contains %d sheets, and len(sheets) = %d\n", len(workBook.Sheets), len(sheets))
