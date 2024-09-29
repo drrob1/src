@@ -1,6 +1,7 @@
 package main // lint.go
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -8,6 +9,8 @@ import (
 	"github.com/tealeg/xlsx/v3"
 	"os"
 	"src/filepicker"
+	"src/misc"
+	"src/whichexec"
 	"strconv"
 	"strings"
 )
@@ -41,7 +44,7 @@ import (
 
 const lastModified = "30 Sep 2024"
 const conf = "lint.conf"
-const ini = "ini.conf"
+const ini = "lint.ini"
 
 type list struct {
 	category string
@@ -75,13 +78,40 @@ var home string
 var config string
 var err error
 var workingDir string
+var docMap = make(map[string]bool)
 
 // Next I will code the check against the vacation people to make sure they're not assigned to anything else.  I'll need a vacationMap = map[string]bool where the string will
 // be the names of everyone, and true/false for on vacation.  I'll need a doctor names list, I think.
+// The doc names list will be in the .conf/.ini file.  Line will begin w/ "docnames", and then list all the names as they appear on the schedule.  Doctors by last name, Payal, Murina, etc.
+// This can use code from fromfx, I think.  Or maybe just fansha, etc.
 
 func findAndReadConfIni() error {
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
 	// It will populate the dictionary, dict.
+	fullFile, found := whichexec.FindConfig(conf)
+	if !found {
+		fullFile, found = whichexec.FindConfig(ini)
+		if !found {
+			return fmt.Errorf("%s or %s not found", conf, ini)
+		}
+	}
+	f, err := os.Open(fullFile)
+	if err != nil {
+		return err
+	}
+
+	// now need to process the config file using code from fansha.
+	fileByteSlice, err := os.ReadFile(fullFile)
+	if err != nil {
+		return err
+	}
+	bytesReader := bytes.NewReader(fileByteSlice)
+	inputLine, err := misc.ReadLine(bytesReader)
+	if err != nil {
+		return err
+	}
+
+	// will use my tknptr stuff here.
 
 	fmt.Printf("findAndReadConfIni not done yet\n")
 	return nil
@@ -98,33 +128,11 @@ func main() {
 
 	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
 
-	home, err = os.UserHomeDir()
-	if err != nil {
-		fmt.Printf("Error getting user home directory: %s\n", err)
-		return
-	}
-	config, err = os.UserConfigDir()
-	if err != nil {
-		fmt.Printf("Error getting user config dir: %s\n", err)
-		return
-	}
-	workingDir, err = os.Getwd()
-	if err != nil {
-		fmt.Printf("Error getting current directory: %s\n", err)
-		return
-	}
-
-	err = findAndReadConfIni()
-	if err != nil {
-		fmt.Printf("Error reading config file: %s\n", err)
-		return
-	}
-
 	// filepicker stuff.
 
 	var ans string
 	if flag.NArg() == 0 {
-		filenames, err := filepicker.GetFilenames("*.xlsx")
+		filenames, err := filepicker.GetRegexFilenames("week.*xlsx$")
 		if err != nil {
 			ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
 			return

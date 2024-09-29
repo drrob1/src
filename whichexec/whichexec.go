@@ -20,17 +20,16 @@ REVISION HISTORY
 28 Apr 24 -- First started writing this
 29 Apr 24 -- Added option to search more directories.  IE, more directories option is appended to the system path for the search.  This is different from findExec.
              And the format of the more string is that it's parsed like a PATH string, so it can contain multiple directories to be searched, separated by the appropriate character for that OS.
-
+29 Sep 24 -- Added FindConfig
 */
 
-const LastAltered = "30 Apr 2024"
+const LastAltered = "29 Sep 2024"
 
 var onWin = runtime.GOOS == "windows"
 
 var VerboseFlag bool
 
 func Find(file, morePath string) string {
-
 	if VerboseFlag {
 		fmt.Printf("In Find: Finding file %s\n", file)
 	}
@@ -77,4 +76,47 @@ func Find(file, morePath string) string {
 		}
 	}
 	return ""
+}
+
+// FindConfig searches current working directory, homedir, homedir/.config/, configdir in that order, and returns first match.
+func FindConfig(file string) (string, bool) {
+	// build the search path
+	path := make([]string, 0, 4)
+	workingDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	fullPath := filepath.Join(workingDir, file)
+	path = append(path, fullPath)
+
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	fullPath = filepath.Join(homedir, file)
+	path = append(path, fullPath)
+
+	fullPath = filepath.Join(homedir, ".config", file)
+	path = append(path, fullPath)
+
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		panic(err)
+	}
+	fullPath = filepath.Join(configDir, file)
+	path = append(path, fullPath)
+
+	// find it
+	for _, dir := range path {
+		fileinfo, err := os.Stat(dir)
+		if err != nil {
+			continue
+		}
+
+		mode := fileinfo.Mode()
+		if mode.IsRegular() {
+			return dir, true
+		}
+	}
+	return "", false
 }
