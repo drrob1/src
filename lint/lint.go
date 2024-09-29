@@ -8,6 +8,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/tealeg/xlsx/v3"
 	"os"
+	"sort"
 	"src/filepicker"
 	"src/misc"
 	"src/tknptr"
@@ -55,31 +56,39 @@ type list struct {
 var dict map[string]list // dictionary of categories and doc names that belong in the list of that category.
 
 type dayType struct {
-	neuro       string
-	body        string
-	er          string
-	xrays       string
-	ir          string
-	nuclear     string
-	us          string
-	peds        string
-	fluoroJH    string
-	fluoroFH    string
-	msk         string
-	mammo       string
-	boneDensity string
-	late        string
+	weekdayOncall string
+	neuro         string
+	body          string
+	er            string
+	xrays         string
+	ir            string
+	nuclear       string
+	us            string
+	peds          string
+	fluoroJH      string
+	fluoroFH      string
+	msk           string
+	mammo         string
+	boneDensity   string
+	late          string
+	moonlighters  string
+	weekendJH     string
+	weekendFH     string
+	weekendIR     string
+	mdOff         string
 }
 
-var week []dayType
-var categoryNamesList = []string{"md's off", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late"}
-var day dayType
+// var week []dayType
+// var day dayType  I'll not make this global and see what happens.
+var categoryNamesList = []string{"WeekdayOnCall", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo",
+	"bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"}
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
 var home string
 var config string
 var err error
 var workingDir string
 var dayOff = make(map[string]bool)
+var names = make([]string, 0, 25)
 
 // Next I will code the check against the vacation people to make sure they're not assigned to anything else.  I'll need a vacationMap = map[string]bool where the string will
 // be the names of everyone, and true/false for on vacation.  I'll need a doctor names list, I think.
@@ -108,6 +117,9 @@ func findAndReadConfIni() error {
 		return err
 	}
 
+	// remove any commas
+	inputLine = strings.ReplaceAll(inputLine, ",", "")
+
 	// will use my tknptr stuff here.
 	tokenslice := tknptr.TokenSlice(inputLine)
 	lower := strings.ToLower(tokenslice[0].Str)
@@ -117,19 +129,82 @@ func findAndReadConfIni() error {
 	for _, token := range tokenslice[1:] {
 		lower = strings.ToLower(token.Str)
 		dayOff[lower] = false
+		names = append(names, lower)
 	}
 	if *verboseFlag {
 		fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
 		for doc, vacay := range dayOff {
-			fmt.Printf(" dayOff[%s]: %t\n", doc, vacay)
+			fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
 		}
+		fmt.Println()
+		fmt.Printf(" Names unsorted: %#v\n", names)
+	}
+
+	sort.Strings(names)
+
+	if *verboseFlag {
+		fmt.Printf(" Sorted Names: %#v\n\n", names)
 	}
 
 	return nil
 }
 
-func readDay(idx int) error {
-	panic("not done yet")
+func readDay(wb *xlsx.File, col int) (dayType, error) {
+	var day dayType
+	sheets := wb.Sheets
+
+	for i := 3; i < 22; i++ {
+		cell, err := sheets[0].Cell(i, col) // always sheet[0]
+		if err != nil {
+			return dayType{}, err
+		}
+		switch i {
+		case 3:
+			day.weekdayOncall = cell.String()
+		case 4:
+			day.neuro = cell.String()
+		case 5:
+			day.body = cell.String()
+		case 6:
+			day.er = cell.String()
+			day.xrays = cell.String()
+		case 7:
+			day.ir = cell.String()
+		case 8:
+			day.nuclear = cell.String()
+		case 9:
+			day.us = cell.String()
+		case 10:
+			day.peds = cell.String()
+		case 11:
+			day.fluoroJH = cell.String()
+		case 12:
+			day.fluoroFH = cell.String()
+		case 13:
+			day.msk = cell.String()
+		case 14:
+			day.mammo = cell.String()
+		case 15:
+			day.boneDensity = cell.String()
+		case 16:
+			day.late = cell.String()
+		case 17:
+			day.moonlighters = cell.String()
+		case 18:
+			day.weekendJH = cell.String()
+		case 19:
+			day.weekendFH = cell.String()
+		case 20:
+			day.weekendIR = cell.String()
+		case 21:
+			day.mdOff = cell.String()
+
+		default:
+			return dayType{}, fmt.Errorf("unknown day type %d", i)
+
+		}
+	}
+	return day, nil
 }
 
 func main() {
@@ -196,30 +271,45 @@ func main() {
 	}
 
 	// this is for demo purposes.  I need to understand this better.
-	fmt.Println("Sheets in this file:")
-	for i, sh := range workBook.Sheets {
-		fmt.Println(i, sh.Name)
+	//fmt.Println("Sheets in this file:")
+	//for i, sh := range workBook.Sheets {
+	//	fmt.Println(i, sh.Name)
+	//}
+	//
+	//sheets := workBook.Sheets
+	//fmt.Printf(" sheet contains %d sheets, and len(sheets) = %d\n", len(workBook.Sheets), len(sheets))
+	//row, err := sheets[0].Row(21)
+	//if err != nil {
+	//	fmt.Printf("Error getting row 0: %s\n", err)
+	//	return
+	//}
+	//cellr21c0 := row.GetCell(0)
+	//cellr21c1 := row.GetCell(1)
+	//cellr21c2 := row.GetCell(2)
+	//fmt.Printf(" row 21 c0 = %q, maxrow = %d, row 21 c1 = %q, row 21 c 2 = %q\n", cellr21c0, sheets[0].MaxRow, cellr21c1, cellr21c2)
+	//cell021, _ := sheets[0].Cell(0, 21)
+	//cell121, _ := sheets[0].Cell(1, 21)
+	//cell210, _ := sheets[0].Cell(21, 0)
+	//fmt.Printf(" Cell r0 c21 = %q, cell r1 c21 = %q, cell r21 c0 = %q\n", cell021, cell121, cell210)
+	//
+	//irCellr7c0, _ := sheets[0].Cell(7, 0)
+	//irCellr7c0lower := strings.ToLower(irCellr7c0.String())
+	//irCellr7c1, _ := sheets[0].Cell(7, 1)
+	//irCellr7c1lower := strings.ToLower(irCellr7c1.String())
+	//fmt.Printf(" IR Cell r7 c0 = %q, IR Cell r7 c1 = %q \n r7 c0 lower = %q, r7 c1 lower = %q\n", irCellr7c0, irCellr7c1, irCellr7c0lower, irCellr7c1lower)
+
+	week := make([]dayType, 7) // some padding here.  Only need 5 workdays.
+	for i := 1; i < 6; i++ {   // Monday = 1, Friday = 5
+		week[i], err = readDay(workBook, i)
+		if err != nil {
+			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
+			continue
+		}
 	}
 
-	sheets := workBook.Sheets
-	fmt.Printf(" sheet contains %d sheets, and len(sheets) = %d\n", len(workBook.Sheets), len(sheets))
-	row, err := sheets[0].Row(21)
-	if err != nil {
-		fmt.Printf("Error getting row 0: %s\n", err)
-		return
+	if *verboseFlag {
+		for i, day := range week {
+			fmt.Printf("Day %d: %#v \n", i, day)
+		}
 	}
-	cellr21c0 := row.GetCell(0)
-	cellr21c1 := row.GetCell(1)
-	cellr21c2 := row.GetCell(2)
-	fmt.Printf(" row 21 c0 = %q, maxrow = %d, row 21 c1 = %q, row 21 c 2 = %q\n", cellr21c0, sheets[0].MaxRow, cellr21c1, cellr21c2)
-	cell021, _ := sheets[0].Cell(0, 21)
-	cell121, _ := sheets[0].Cell(1, 21)
-	cell210, _ := sheets[0].Cell(21, 0)
-	fmt.Printf(" Cell r0 c21 = %q, cell r1 c21 = %q, cell r21 c0 = %q\n", cell021, cell121, cell210)
-
-	irCellr7c0, _ := sheets[0].Cell(7, 0)
-	irCellr7c0lower := strings.ToLower(irCellr7c0.String())
-	irCellr7c1, _ := sheets[0].Cell(7, 1)
-	irCellr7c1lower := strings.ToLower(irCellr7c1.String())
-	fmt.Printf(" IR Cell r7 c0 = %q, IR Cell r7 c1 = %q \n r7 c0 lower = %q, r7 c1 lower = %q\n", irCellr7c0, irCellr7c1, irCellr7c0lower, irCellr7c1lower)
 }
