@@ -87,7 +87,7 @@ var home string
 var config string
 var err error
 var workingDir string
-var dayOff = make(map[string]bool)
+var dayOff = make(map[string]bool) // not sure if I need this, but here it is.
 var names = make([]string, 0, 25)
 
 // Next I will code the check against the vacation people to make sure they're not assigned to anything else.  I'll need a vacationMap = map[string]bool where the string will
@@ -207,6 +207,28 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
+func whosOnVacationToday(wb *xlsx.File, dayCol int) ([]string, error) {
+	// this function is to return a slice of names that are on vacation for this day
+	sheets := wb.Sheets
+	vacationCell, err := sheets[0].Cell(21, dayCol) // row 21 is the MD's Off row.
+	if err != nil {
+		return nil, err
+	}
+	vacationString := vacationCell.String()
+	vacationString = strings.ToLower(vacationString)
+
+	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
+	// search for matching names
+	for _, vacationName := range names {
+		dayOff[vacationName] = false
+		if strings.Contains(vacationString, vacationName) {
+			dayOff[vacationName] = true
+			mdsOff = append(mdsOff, vacationName)
+		}
+	}
+	return mdsOff, nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -298,9 +320,10 @@ func main() {
 	//irCellr7c1lower := strings.ToLower(irCellr7c1.String())
 	//fmt.Printf(" IR Cell r7 c0 = %q, IR Cell r7 c1 = %q \n r7 c0 lower = %q, r7 c1 lower = %q\n", irCellr7c0, irCellr7c1, irCellr7c0lower, irCellr7c1lower)
 
-	week := make([]dayType, 7) // some padding here.  Only need 5 workdays.
+	// Populate the week's schedule
+	week := make([]dayType, 6) // some padding here.  Only need 5 workdays.
 	for i := 1; i < 6; i++ {   // Monday = 1, Friday = 5
-		week[i], err = readDay(workBook, i)
+		week[i], err = readDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
 			continue
@@ -312,4 +335,42 @@ func main() {
 			fmt.Printf("Day %d: %#v \n", i, day)
 		}
 	}
+
+	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
+	for dayCol := range week { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
+		if dayCol == 0 { // skip dayCol 0, as it's empty.
+			continue
+		}
+		mdsOffToday, err := whosOnVacationToday(workBook, dayCol)
+		if err != nil {
+			fmt.Printf(" Error from whosOnVacationToday: %s\n", err)
+			return
+		}
+		if *verboseFlag {
+			fmt.Printf(" mdsOffToday on day %d is/are %#v\n", dayCol, mdsOffToday)
+			i := 0
+			for doc, vacay := range dayOff {
+				if i%10 == 9 {
+					fmt.Printf("\n")
+				}
+				fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
+				i++
+			}
+			fmt.Printf("\n")
+			pause()
+		}
+
+	}
+
+}
+
+func pause() bool {
+	var ans string
+	fmt.Printf(" Pausing.  Stop [y/N]: ")
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	if strings.HasPrefix(ans, "n") {
+		return false
+	}
+	return true
 }
