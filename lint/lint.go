@@ -207,9 +207,8 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
-func whosOnVacationToday(week []dayType, dayCol int) ([]string, error) {
+func whosOnVacationToday(week []dayType, dayCol int) []string {
 	// this function is to return a slice of names that are on vacation for this day
-	//sheets := wb.Sheets
 	vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.
 	vacationString := vacationCell
 	vacationString = strings.ToLower(vacationString)
@@ -223,7 +222,7 @@ func whosOnVacationToday(week []dayType, dayCol int) ([]string, error) {
 			mdsOff = append(mdsOff, vacationName)
 		}
 	}
-	return mdsOff, nil
+	return mdsOff
 }
 
 //func whosOnVacationToday(wb *xlsx.File, dayCol int) ([]string, error) { // I decided to use the week
@@ -355,16 +354,16 @@ func main() {
 		}
 	}
 
+	// I don't see how to close the workbook file.
+
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
 	for dayCol := range week { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
 		if dayCol == 0 { // skip dayCol 0, as it's empty.
 			continue
 		}
-		mdsOffToday, err := whosOnVacationToday(week, dayCol)
-		if err != nil {
-			fmt.Printf(" Error from whosOnVacationToday: %s\n", err)
-			return
-		}
+
+		mdsOffToday := whosOnVacationToday(week, dayCol)
+
 		if *verboseFlag {
 			fmt.Printf(" mdsOffToday on day %d is/are %#v\n", dayCol, mdsOffToday)
 			i := 0
