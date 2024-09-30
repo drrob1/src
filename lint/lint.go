@@ -48,12 +48,12 @@ const lastModified = "30 Sep 2024"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
-type list struct {
-	category string
-	docs     []string
-}
-
-var dict map[string]list // dictionary of categories and doc names that belong in the list of that category.
+//type list struct {  Not needed so far.
+//	category string
+//	docs     []string
+//}
+//
+//var dict map[string]list // dictionary of categories and doc names that belong in the list of that category.  Definately not needed.
 
 type dayType struct {
 	weekdayOncall string
@@ -78,14 +78,8 @@ type dayType struct {
 	mdOff         string
 }
 
-// var week []dayType
-// var day dayType  I'll not make this global and see what happens.
-var categoryNamesList = []string{"WeekdayOnCall", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"}
+// var categoryNamesList = []string{"WeekdayOnCall", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"}
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
-var home string
-var config string
-var err error
 var workingDir string
 var dayOff = make(map[string]bool) // not sure if I need this, but here it is.
 var names = make([]string, 0, 25)
@@ -97,7 +91,7 @@ var names = make([]string, 0, 25)
 
 func findAndReadConfIni() error {
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
-	// It will populate the dictionary, dict.
+	// It will populate the dictionary, dict.  Nope, I took that out.  Turned out that I don't need this.
 	fullFile, found := whichexec.FindConfig(conf)
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
@@ -354,7 +348,9 @@ func main() {
 		}
 	}
 
-	// I don't see how to close the workbook file.
+	// Time to close the xlsx file, but I can't figure out how.
+	// sheet := workBook.Sheets
+	// sheet.Close()
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
 	for dayCol := range week { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
@@ -375,11 +371,69 @@ func main() {
 				i++
 			}
 			fmt.Printf("\n")
-			pause()
+			if pause() {
+				return
+			}
 		}
 
+		// Now, mdsOffToday is a slice of several names of who is off today.
+		for _, name := range mdsOffToday {
+			if lower := strings.ToLower(week[dayCol].weekdayOncall); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on weekday On call\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].neuro); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on neuro\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].body); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on body\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].er); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on ER Xrays\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].ir); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on IR\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].nuclear); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on Nuclear\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].us); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on US\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].peds); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on peds\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].fluoroJH); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on fluoro JH\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].fluoroFH); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on fluoro FH\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].msk); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on MSK\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].mammo); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on mammo\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].boneDensity); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on bone density\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].late); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on late\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].moonlighters); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on weekend moonlighters\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].weekendJH); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on weekend JH\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].weekendFH); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on weekend FH\n", name, dayCol)
+			}
+			if lower := strings.ToLower(week[dayCol].weekendIR); strings.Contains(lower, name) {
+				fmt.Printf(" %s is off on day number %d, but is on weekend IR\n", name, dayCol)
+			}
+		}
 	}
-
 }
 
 func pause() bool {
@@ -387,8 +441,5 @@ func pause() bool {
 	fmt.Printf(" Pausing.  Stop [y/N]: ")
 	fmt.Scanln(&ans)
 	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") {
-		return false
-	}
-	return true
+	return strings.HasPrefix(ans, "y") // suggested by staticcheck.
 }
