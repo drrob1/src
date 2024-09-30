@@ -207,14 +207,11 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
-func whosOnVacationToday(wb *xlsx.File, dayCol int) ([]string, error) {
+func whosOnVacationToday(week []dayType, dayCol int) ([]string, error) {
 	// this function is to return a slice of names that are on vacation for this day
-	sheets := wb.Sheets
-	vacationCell, err := sheets[0].Cell(21, dayCol) // row 21 is the MD's Off row.
-	if err != nil {
-		return nil, err
-	}
-	vacationString := vacationCell.String()
+	//sheets := wb.Sheets
+	vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.
+	vacationString := vacationCell
 	vacationString = strings.ToLower(vacationString)
 
 	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
@@ -228,6 +225,28 @@ func whosOnVacationToday(wb *xlsx.File, dayCol int) ([]string, error) {
 	}
 	return mdsOff, nil
 }
+
+//func whosOnVacationToday(wb *xlsx.File, dayCol int) ([]string, error) { // I decided to use the week
+//	// this function is to return a slice of names that are on vacation for this day
+//	sheets := wb.Sheets
+//	vacationCell, err := sheets[0].Cell(21, dayCol) // row 21 is the MD's Off row.
+//	if err != nil {
+//		return nil, err
+//	}
+//	vacationString := vacationCell.String()
+//	vacationString = strings.ToLower(vacationString)
+//
+//	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
+//	// search for matching names
+//	for _, vacationName := range names {
+//		dayOff[vacationName] = false
+//		if strings.Contains(vacationString, vacationName) {
+//			dayOff[vacationName] = true
+//			mdsOff = append(mdsOff, vacationName)
+//		}
+//	}
+//	return mdsOff, nil
+//}
 
 func main() {
 	flag.Parse()
@@ -341,7 +360,7 @@ func main() {
 		if dayCol == 0 { // skip dayCol 0, as it's empty.
 			continue
 		}
-		mdsOffToday, err := whosOnVacationToday(workBook, dayCol)
+		mdsOffToday, err := whosOnVacationToday(week, dayCol)
 		if err != nil {
 			fmt.Printf(" Error from whosOnVacationToday: %s\n", err)
 			return
