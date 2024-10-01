@@ -6,6 +6,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
 	"os"
 	"sort"
@@ -380,58 +381,58 @@ func main() {
 		// Now, mdsOffToday is a slice of several names of who is off today.
 		for _, name := range mdsOffToday {
 			if lower := strings.ToLower(week[dayCol].weekdayOncall); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekday On call\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on weekday On call\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].neuro); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on neuro\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on neuro\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].body); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on body\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on body\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].er); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on ER Xrays\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on ER Xrays\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].ir); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on IR\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].nuclear); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on Nuclear\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on Nuclear\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].us); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on US\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on US\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].peds); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on peds\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on peds\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].fluoroJH); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on fluoro JH\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].fluoroFH); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on fluoro FH\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].msk); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on MSK\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on MSK\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].mammo); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on mammo\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on mammo\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].boneDensity); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on bone density\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on bone density\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].late); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on late\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on late\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].moonlighters); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend moonlighters\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on weekend moonlighters\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].weekendJH); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend JH\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on weekend JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].weekendFH); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend FH\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on weekend FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol].weekendIR); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend IR\n", name, dayNames[dayCol])
+				fmt.Printf(" %s is off on %s, but is on weekend IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
 	}
