@@ -1,5 +1,22 @@
 package main // mattest3 from mattest2a from mattest2 from mattest.  Both test mat.  Duh!
 
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	gonum "gonum.org/v1/gonum/mat"
+	"math"
+	"math/rand/v2"
+	"os"
+	"runtime"
+	"src/mat"
+	"src/misc"
+	"strconv"
+	"strings"
+)
+
 /**********************************************************)
   (*                                                      *)
   (*              Test of Matrices module                 *)
@@ -8,8 +25,8 @@ package main // mattest3 from mattest2a from mattest2 from mattest.  Both test m
   (*  Last edited:        15 August 1996                  *)
   (*  Status:             Working                         *)
   (*                                                      *)
-  (********************************************************/
-
+  (********************************************************)
+*/
 /*
 REVISION HISTORY
 ================
@@ -36,27 +53,11 @@ REVISION HISTORY
 30 Mar 24 -- Added findMaxDiff for when the equality test fails.  Added lastAltered string, and added verboseFlag.
              And added call to mat.BelowSmallMakeZero() and belowTolMakeZero(), to be used as needed.
 31 Mar 24 -- My first use of a type assertion in belowSmallMakeZero.  These are not called type checks, as type checks is something the compiler always does.
+ 8 Oct 24 -- Rewriting my use of a type assertion into a type switch.
 */
 
-import (
-	"bufio"
-	"flag"
-	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	gomat "gonum.org/v1/gonum/mat"
-	"math"
-	"math/rand/v2"
-	"os"
-	"runtime"
-	"src/mat"
-	"src/misc"
-	"strconv"
-	"strings"
-)
-
+const lastAltered = "Oct 8, 2024"
 const small = 1e-10
-const lastAltered = "Apr 1, 2024"
 
 var n int
 var negFlag bool
@@ -286,9 +287,9 @@ func goNumMatTest() {
 		}
 	}
 
-	X := gomat.NewVecDense(bRows, initX)
+	X := gonum.NewVecDense(bRows, initX)
 	if verboseFlag {
-		str := fmt.Sprintf("%.5g\n", gomat.Formatted(X, gomat.Squeeze()))
+		str := fmt.Sprintf("%.5g\n", gonum.Formatted(X, gonum.Squeeze()))
 		fmt.Printf("not cleaned X=\n%s\n\n", str)
 		str = cleanString(str)
 		fmt.Printf("cleaned X=\n%s\n\n", str)
@@ -304,9 +305,9 @@ func goNumMatTest() {
 		}
 	}
 
-	A := gomat.NewDense(aRows, aCols, initA)
+	A := gonum.NewDense(aRows, aCols, initA)
 	if verboseFlag {
-		fmt.Printf(" A:\n%.5g\n", gomat.Formatted(A, gomat.Squeeze()))
+		fmt.Printf(" A:\n%.5g\n", gonum.Formatted(A, gonum.Squeeze()))
 		aMatrix := extractDense(A)
 		mat.WriteZeroln(aMatrix, 5)
 	}
@@ -318,14 +319,14 @@ func goNumMatTest() {
 			initB[i] += product
 		}
 	}
-	Bvec := gomat.NewVecDense(bRows, initB)
+	Bvec := gonum.NewVecDense(bRows, initB)
 
 	if verboseFlag {
-		fmt.Printf(" Bvec:\n%.6g\n\n", gomat.Formatted(Bvec, gomat.Squeeze()))
+		fmt.Printf(" Bvec:\n%.6g\n\n", gonum.Formatted(Bvec, gonum.Squeeze()))
 	}
 
 	// Will try w/ inversion
-	var inverseA, invSoln, invSolnVec gomat.Dense
+	var inverseA, invSoln, invSolnVec gonum.Dense
 	err := inverseA.Inverse(A)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
@@ -334,12 +335,12 @@ func goNumMatTest() {
 	invSolnVec.Mul(&inverseA, Bvec) // this works.  So far, it's the only method that does work.
 	belowSmallMakeZero(&invSolnVec, small)
 	if verboseFlag {
-		fmt.Printf(" Solution by GoNum inversion and Bvec is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(&invSolnVec, gomat.Squeeze()))
+		fmt.Printf(" Solution by GoNum inversion and Bvec is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gonum.Formatted(&invSolnVec, gonum.Squeeze()))
 	}
 
-	B := gomat.NewDense(bRows, bCols, initB)
+	B := gonum.NewDense(bRows, bCols, initB)
 	if verboseFlag {
-		fmt.Printf(" B:\n%.5g\n\n", gomat.Formatted(B, gomat.Squeeze()))
+		fmt.Printf(" B:\n%.5g\n\n", gonum.Formatted(B, gonum.Squeeze()))
 	}
 	bMatrix := extractDense(B)
 	if verboseFlag {
@@ -348,11 +349,11 @@ func goNumMatTest() {
 
 	invSoln.Mul(&inverseA, B)
 	belowSmallMakeZero(&invSoln, small)
-	fmt.Printf(" Solution by GoNum inversion and B is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
+	fmt.Printf(" Solution by GoNum inversion and B is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gonum.Formatted(&invSoln, gonum.Squeeze()))
 
 	// Try LU stuff
-	var lu gomat.LU
-	luSoln := gomat.NewDense(bRows, bCols, nil)
+	var lu gonum.LU
+	luSoln := gonum.NewDense(bRows, bCols, nil)
 
 	lu.Factorize(A)
 	err = lu.SolveTo(luSoln, false, B)
@@ -362,12 +363,12 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(luSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Soluton by gonum LU factorization is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
+		fmt.Printf(" Soluton by gonum LU factorization is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gonum.Formatted(luSoln, gonum.Squeeze()))
 	}
 
 	// try w/ QR stuff
-	var qr gomat.QR
-	qrSoln := gomat.NewDense(bRows, bCols, nil)
+	var qr gonum.QR
+	qrSoln := gonum.NewDense(bRows, bCols, nil)
 	qr.Factorize(A)
 	err = qr.SolveTo(qrSoln, false, Bvec)
 	if err != nil {
@@ -376,12 +377,12 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(qrSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Soluton by gonum QR factorization is (after calling belowSmallMakeZero on *Dense:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
+		fmt.Printf(" Soluton by gonum QR factorization is (after calling belowSmallMakeZero on *Dense:\n%.5g\n\n", gonum.Formatted(qrSoln, gonum.Squeeze()))
 	}
 
 	// Try Solve stuff
 	bR, bC := B.Dims()
-	solvSoln := gomat.NewDense(bR, bC, nil) // just to see if this works.
+	solvSoln := gonum.NewDense(bR, bC, nil) // just to see if this works.
 	err = solvSoln.Solve(A, B)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
@@ -389,12 +390,12 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(solvSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Solution by gonum Solve is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+		fmt.Printf(" Solution by gonum Solve is (after calling belowSmallMakeZero on *Dense):\n%.5g\n\n", gonum.Formatted(solvSoln, gonum.Squeeze()))
 	}
 
 	// Try Vec Solve
 	bRV, _ := Bvec.Dims() // just to see if this works.
-	vecSolveSoln := gomat.NewVecDense(bRV, nil)
+	vecSolveSoln := gonum.NewVecDense(bRV, nil)
 	err = vecSolveSoln.SolveVec(A, Bvec)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from VecSolve is %s.  Bye-bye\n", err)
@@ -402,35 +403,35 @@ func goNumMatTest() {
 	}
 	belowSmallMakeZero(vecSolveSoln, small)
 	if verboseFlag {
-		fmt.Printf(" Solution by gonum VecSolve is (after calling belowSmallMakeZero on *VecDense):\n%.5g\n\n", gomat.Formatted(vecSolveSoln, gomat.Squeeze()))
+		fmt.Printf(" Solution by gonum VecSolve is (after calling belowSmallMakeZero on *VecDense):\n%.5g\n\n", gonum.Formatted(vecSolveSoln, gonum.Squeeze()))
 	}
 
-	if gomat.EqualApprox(X, &invSoln, small) {
+	if gonum.EqualApprox(X, &invSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are approx equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " X and inversion solution are not approx equal.\n")
 	}
-	if gomat.EqualApprox(X, luSoln, small) {
+	if gonum.EqualApprox(X, luSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and LU solution are approx equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and LU solution are not approx equal.\n")
 	}
-	if gomat.EqualApprox(X, &invSolnVec, small) {
+	if gonum.EqualApprox(X, &invSolnVec, small) {
 		ctfmt.Printf(ct.Green, false, " X and vector inversion solution are approx equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " X and vector inversion solution are not approx equal.\n")
 	}
-	if gomat.EqualApprox(X, qrSoln, small) {
+	if gonum.EqualApprox(X, qrSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and QR solution are approx equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and QR solution are not approx equal.\n")
 	}
-	if gomat.EqualApprox(X, solvSoln, small) {
+	if gonum.EqualApprox(X, solvSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and Solve solution are approx equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and Solve solution are not approx equal.\n")
 	}
-	if gomat.EqualApprox(X, vecSolveSoln, small) {
+	if gonum.EqualApprox(X, vecSolveSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and Vec Solve solution are approx equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and Vec Solve solution are not approx equal.\n")
@@ -455,7 +456,7 @@ func cleanString(s string) string {
 	return sb.String()
 }
 
-func extractDense(m *gomat.Dense) [][]float64 {
+func extractDense(m *gonum.Dense) [][]float64 {
 	r, c := m.Dims()
 	matrix := mat.NewMatrix(r, c)
 	for i := range matrix { // different than in mattest2
@@ -532,17 +533,25 @@ func findMaxDiff(a, b mat.Matrix2D) float64 {
 	return maxVal
 }
 
-func belowSmallMakeZero(m gomat.Matrix, small float64) {
-	if matrx, ok := m.(*gomat.Dense); ok {
-		belowTolMakeZero(matrx, small)
-	} else if matrx, ok := m.(*gomat.VecDense); ok {
-		belowTolMakeZeroVector(matrx, small)
-	} else {
+func belowSmallMakeZero(m gonum.Matrix, small float64) {
+	//if matrx, ok := m.(*gonum.Dense); ok { // this is my first use of a type assertion.  I decided to rewrite it as a type switch, below.
+	//	belowTolMakeZero(matrx, small)
+	//} else if matrx, ok := m.(*gonum.VecDense); ok {
+	//	belowTolMakeZeroVector(matrx, small)
+	//} else {
+	//	fmt.Printf(" Invalid type (%T) for use of belowSmallMakZero.  Skipped.\n", m)
+	//}
+	switch m.(type) { // this is my first use of a type switch
+	case *gonum.Dense:
+		belowTolMakeZero(m.(*gonum.Dense), small) // m is using an interface, so I have to define which concrete type to pass to the next function.
+	case *gonum.VecDense:
+		belowTolMakeZeroVector(m.(*gonum.VecDense), small) // m is using an interface, so I have to define which concrete type to pass to the next function.
+	default:
 		fmt.Printf(" Invalid type (%T) for use of belowSmallMakZero.  Skipped.\n", m)
 	}
 }
 
-func belowTolMakeZero(m *gomat.Dense, tol float64) {
+func belowTolMakeZero(m *gonum.Dense, tol float64) {
 	r, c := m.Dims()
 	for i := range r {
 		for j := range c {
@@ -553,7 +562,7 @@ func belowTolMakeZero(m *gomat.Dense, tol float64) {
 	}
 }
 
-func belowTolMakeZeroVector(vec *gomat.VecDense, tol float64) {
+func belowTolMakeZeroVector(vec *gonum.VecDense, tol float64) {
 	r, c := vec.Dims()
 	for i := range r {
 		for j := range c {
