@@ -459,7 +459,7 @@ func cleanString(s string) string {
 func extractDense(m *gonum.Dense) [][]float64 {
 	r, c := m.Dims()
 	matrix := mat.NewMatrix(r, c)
-	for i := range matrix { // different than in mattest2
+	for i := range matrix { // different from in mattest2
 		for j := range matrix[i] { // to see if this works, too.
 			matrix[i][j] = m.At(i, j)
 		}
