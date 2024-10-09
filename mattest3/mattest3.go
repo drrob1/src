@@ -56,7 +56,7 @@ REVISION HISTORY
  8 Oct 24 -- Rewriting my use of a type assertion into a type switch.
 */
 
-const lastAltered = "Oct 8, 2024"
+const lastAltered = "Oct 9, 2024"
 const small = 1e-10
 
 var n int
@@ -152,6 +152,7 @@ func solveTest(fn string) {
 	mat.Writeln(D, 3)
 
 	if verboseFlag {
+		ctfmt.Printf(ct.Yellow, false, " After calling mat.WriteZeroln\n")
 		mat.WriteZeroln(D, 3)
 	}
 
