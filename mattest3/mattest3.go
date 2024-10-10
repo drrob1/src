@@ -77,6 +77,12 @@ var bCols int
 func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	fmt.Printf("---------------------------------------------------------------------------")
 	fmt.Printf(" my mat Test ---------------------------------------------------------------------------\n\n")
+	s := "--------------------------------------------------------------------------- my mat Test ---------------------------------------------------------------------------\n\n"
+	_, err := outfilebuf.WriteString(s)
+	if err != nil {
+		return err
+	}
+
 	var A, B, X mat.Matrix2D
 
 	A = mat.NewMatrix(aRows, aCols)
@@ -95,7 +101,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 			X[i][0] -= float64(rand.N(50))
 		}
 	}
-	_, err := outfilebuf.WriteString("Solution Vector X:\n")
+	_, err = outfilebuf.WriteString("Solution Vector X:\n")
 	if err != nil {
 		return err
 	}
@@ -321,14 +327,13 @@ func WriteMatrices(A, B mat.Matrix2D, name string) {
 	//                                                                       fmt.Printf(" Finished writing matrices.\n")
 }
 
-func goNumMatTest(outputFileBuf *bufio.Writer) {
+func goNumMatTest(outputFileBuf *bufio.Writer) error {
 	// Will look to solve AX = B, for X
 
 	s := "--------------------------------------------------------------------------- gonum Test ---------------------------------------------------------------------------\n\n"
 	_, err := outputFileBuf.WriteString(s)
 	if err != nil {
-		fmt.Printf(" In goNumMatTest and error from %s is %s\n", outputName, err)
-		return
+		return err
 	}
 	fmt.Printf("%s", s)
 
@@ -348,11 +353,10 @@ func goNumMatTest(outputFileBuf *bufio.Writer) {
 	strClean := cleanString(str)
 	outputFileBuf.WriteString("Not cleaned X:\n")
 	outputFileBuf.WriteString(str)
-	outputFileBuf.WriteString("Cleaned X:\n")
+	outputFileBuf.WriteString("\nCleaned X:\n")
 	_, err = outputFileBuf.WriteString(strClean)
 	if err != nil {
-		fmt.Printf(" In goNumMatTest and error from %s is %s\n", outputName, err)
-		return
+		return err
 	}
 	outputFileBuf.WriteString("\n\n")
 
@@ -377,6 +381,19 @@ func goNumMatTest(outputFileBuf *bufio.Writer) {
 		aMatrix := extractDense(A)
 		mat.WriteZeroln(aMatrix, 5)
 	}
+	str = fmt.Sprintf("%.5g\n", gonum.Formatted(A, gonum.Squeeze()))
+	strClean = cleanString(str)
+	outputFileBuf.WriteString("Not cleaned A:\n")
+	_, err = outputFileBuf.WriteString(str)
+	if err != nil {
+		return err
+	}
+	outputFileBuf.WriteString("\nCleaned A:\n")
+	_, err = outputFileBuf.WriteString(strClean)
+	if err != nil {
+		return err
+	}
+	outputFileBuf.WriteString("\n\n")
 
 	initB := make([]float64, bRows) // col vec
 	for i := range aRows {
@@ -386,6 +403,20 @@ func goNumMatTest(outputFileBuf *bufio.Writer) {
 		}
 	}
 	Bvec := gonum.NewVecDense(bRows, initB)
+
+	str = fmt.Sprintf("%.5g\n", gonum.Formatted(Bvec, gonum.Squeeze()))
+	strClean = cleanString(str)
+	outputFileBuf.WriteString("Not cleaned B:\n")
+	_, err = outputFileBuf.WriteString(str)
+	if err != nil {
+		return err
+	}
+	outputFileBuf.WriteString("\nCleaned B:\n")
+	_, err = outputFileBuf.WriteString(strClean)
+	if err != nil {
+		return err
+	}
+	outputFileBuf.WriteString("\n\n")
 
 	if verboseFlag {
 		fmt.Printf(" Bvec:\n%.6g\n\n", gonum.Formatted(Bvec, gonum.Squeeze()))
@@ -503,6 +534,8 @@ func goNumMatTest(outputFileBuf *bufio.Writer) {
 		ctfmt.Printf(ct.Red, false, " X and Vec Solve solution are not approx equal.\n")
 	}
 
+	return nil
+
 } // end goNumMatTest
 
 func showRunes(s string) { // the unidentified runes turned out to be matrix symbols 0x23a1 .. 0x23a6, or 9121 .. 9126
@@ -557,17 +590,27 @@ func main() {
 		fmt.Printf("Error creating output file %s: %s\n", outputName, err)
 		return
 	}
+	outputFileBuf.WriteString("------------------------------------------------------------------------------------\n")
 	nowStr := time.Now().Format(time.ANSIC)
 	_, err = outputFileBuf.WriteString(nowStr)
 	if err != nil {
 		fmt.Printf("Error writing time to output file %s: %s\n", outputName, err)
 		return
 	}
+	outputFileBuf.WriteRune('\n')
+	outputFileBuf.WriteRune('\n')
 
 	newPause()
-	goNumMatTest(outputFileBuf)
+	err = goNumMatTest(outputFileBuf)
+	if err != nil {
+		fmt.Printf("Error writing goNumMatTest to output file %s: %s\n", outputName, err)
+	}
 	pause()
-	solveTest(outFilename, outputFileBuf)
+
+	err = solveTest(outFilename, outputFileBuf)
+	if err != nil {
+		fmt.Printf("Error writing solveTest to output file %s: %s\n", outputName, err)
+	}
 
 	err = outputFileBuf.Flush()
 	if err != nil {
@@ -629,11 +672,13 @@ func belowSmallMakeZero(m gonum.Matrix, small float64) {
 	//} else {
 	//	fmt.Printf(" Invalid type (%T) for use of belowSmallMakZero.  Skipped.\n", m)
 	//}
-	switch m.(type) { // this is my first use of a type switch
+	switch m := m.(type) { // this is my first use of a type switch
 	case *gonum.Dense:
-		belowTolMakeZero(m.(*gonum.Dense), small) // m is using an interface, so I have to define which concrete type to pass to the next function.
+		belowTolMakeZero(m, small) // m is now an assigned type assertion so I don't need to use the type assertion in a switch case
+		//belowTolMakeZero(m.(*gonum.Dense), small) // m is using an interface, so I have to define which concrete type to pass to the next function.
 	case *gonum.VecDense:
-		belowTolMakeZeroVector(m.(*gonum.VecDense), small) // m is using an interface, so I have to define which concrete type to pass to the next function.
+		belowTolMakeZeroVector(m, small) // m is now an assigned type assertion so I don't need to use the type assertion in a switch case
+		//belowTolMakeZeroVector(m.(*gonum.VecDense), small) // m is using an interface, so I have to define which concrete type to pass to the next function.
 	default:
 		fmt.Printf(" Invalid type (%T) for use of belowSmallMakZero.  Skipped.\n", m)
 	}
