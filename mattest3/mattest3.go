@@ -15,6 +15,7 @@ import (
 	"src/misc"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /**********************************************************)
@@ -54,10 +55,16 @@ REVISION HISTORY
              And added call to mat.BelowSmallMakeZero() and belowTolMakeZero(), to be used as needed.
 31 Mar 24 -- My first use of a type assertion in belowSmallMakeZero.  These are not called type checks, as type checks is something the compiler always does.
  8 Oct 24 -- Rewriting my use of a type assertion into a type switch.
+ 9 Oct 24 -- I'm going to add writing the A and B matrices to a file, and also the X solution vector.  I'm not going to use the multi-output because I want colorized screen output.
+               I may need to write more routines for this.  I'll add routines to my mat package to take io.Writer, or maybe just add file writing routines.  I have to look into this.
+				Debugging on leox is easier on the eyes because the matrix output symbols are displayed correctly.  On Windows, only when running on Win11 desktop on cmd does that.
+                The mat-size-...txt file is meant to be fed into solve or solve2, as a debugging step for the solve routines.
+                I want more info output now.
 */
 
-const lastAltered = "Oct 9, 2024"
+const lastAltered = "Oct 10, 2024"
 const small = 1e-10
+const outputName = "mattest3-output.txt"
 
 var n int
 var negFlag bool
@@ -67,7 +74,7 @@ var aCols int
 var bRows int
 var bCols int
 
-func solveTest(fn string) {
+func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	fmt.Printf("---------------------------------------------------------------------------")
 	fmt.Printf(" my mat Test ---------------------------------------------------------------------------\n\n")
 	var A, B, X mat.Matrix2D
@@ -88,6 +95,18 @@ func solveTest(fn string) {
 			X[i][0] -= float64(rand.N(50))
 		}
 	}
+	_, err := outfilebuf.WriteString("Solution Vector X:\n")
+	if err != nil {
+		return err
+	}
+	ss := mat.Write(X, 3)
+	for _, line := range ss {
+		outfilebuf.WriteString(line)
+	}
+	_, err = outfilebuf.WriteString("\n\n")
+	if err != nil {
+		return err
+	}
 
 	// Now need to assign coefficients in matrix A
 	for i := range A {
@@ -99,9 +118,22 @@ func solveTest(fn string) {
 		}
 	}
 
+	ss = mat.Write(A, 3)
+
+	_, err = outfilebuf.WriteString("Coeffecient Matrix A:\n")
+	if err != nil {
+		return err
+	}
+	for _, line := range ss {
+		outfilebuf.WriteString(line)
+	}
+	_, err = outfilebuf.WriteString("\n\n")
+	if err != nil {
+		return err
+	}
+
 	if verboseFlag {
 		fmt.Printf(" Coefficient matrix A is:\n")
-		ss := mat.Write(A, 3)
 		printString(ss)
 		fmt.Println()
 	}
@@ -114,8 +146,21 @@ func solveTest(fn string) {
 		}
 	}
 
+	_, err = outfilebuf.WriteString("RHS Vector B:\n")
+	if err != nil {
+		return err
+	}
+	ss = mat.Write(B, 4)
+	for _, line := range ss {
+		outfilebuf.WriteString(line)
+	}
+	_, err = outfilebuf.WriteString("\n\n")
+	if err != nil {
+		return err
+	}
+
 	fmt.Printf("\n Column vectors X and B are:\n")
-	ss := mat.WriteZeroPair(X, B, 4)
+	ss = mat.WriteZeroPair(X, B, 4)
 	printString(ss)
 	fmt.Println()
 	fmt.Printf("\n\n")
@@ -219,6 +264,7 @@ func solveTest(fn string) {
 
 	fmt.Println()
 
+	return nil
 } // end SolveTest
 
 func printString(s []string) {
@@ -275,11 +321,20 @@ func WriteMatrices(A, B mat.Matrix2D, name string) {
 	//                                                                       fmt.Printf(" Finished writing matrices.\n")
 }
 
-func goNumMatTest() {
+func goNumMatTest(outputFileBuf *bufio.Writer) {
 	// Will look to solve AX = B, for X
 
-	fmt.Printf("---------------------------------------------------------------------------")
-	fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
+	s := "--------------------------------------------------------------------------- gonum Test ---------------------------------------------------------------------------\n\n"
+	_, err := outputFileBuf.WriteString(s)
+	if err != nil {
+		fmt.Printf(" In goNumMatTest and error from %s is %s\n", outputName, err)
+		return
+	}
+	fmt.Printf("%s", s)
+
+	//fmt.Printf("---------------------------------------------------------------------------")
+	//fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
+
 	initX := make([]float64, aCols)
 	for i := range aCols {
 		initX[i] = float64(misc.RandRange(1, 50))
@@ -289,11 +344,21 @@ func goNumMatTest() {
 	}
 
 	X := gonum.NewVecDense(bRows, initX)
+	str := fmt.Sprintf("%.5g\n", gonum.Formatted(X, gonum.Squeeze()))
+	strClean := cleanString(str)
+	outputFileBuf.WriteString("Not cleaned X:\n")
+	outputFileBuf.WriteString(str)
+	outputFileBuf.WriteString("Cleaned X:\n")
+	_, err = outputFileBuf.WriteString(strClean)
+	if err != nil {
+		fmt.Printf(" In goNumMatTest and error from %s is %s\n", outputName, err)
+		return
+	}
+	outputFileBuf.WriteString("\n\n")
+
 	if verboseFlag {
-		str := fmt.Sprintf("%.5g\n", gonum.Formatted(X, gonum.Squeeze()))
 		fmt.Printf("not cleaned X=\n%s\n\n", str)
-		str = cleanString(str)
-		fmt.Printf("cleaned X=\n%s\n\n", str)
+		fmt.Printf("cleaned X=\n%s\n\n", strClean)
 	}
 
 	// Now need to assign coefficients in matrix A
@@ -328,7 +393,7 @@ func goNumMatTest() {
 
 	// Will try w/ inversion
 	var inverseA, invSoln, invSolnVec gonum.Dense
-	err := inverseA.Inverse(A)
+	err = inverseA.Inverse(A)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
 		os.Exit(1)
@@ -487,10 +552,32 @@ func main() {
 
 	outFilename := "mat-" + strconv.Itoa(n) + "-*.txt"
 
+	outputFile, outputFileBuf, err := misc.CreateOrAppendWithBuffer(outputName)
+	if err != nil {
+		fmt.Printf("Error creating output file %s: %s\n", outputName, err)
+		return
+	}
+	nowStr := time.Now().Format(time.ANSIC)
+	_, err = outputFileBuf.WriteString(nowStr)
+	if err != nil {
+		fmt.Printf("Error writing time to output file %s: %s\n", outputName, err)
+		return
+	}
+
 	newPause()
-	goNumMatTest()
+	goNumMatTest(outputFileBuf)
 	pause()
-	solveTest(outFilename)
+	solveTest(outFilename, outputFileBuf)
+
+	err = outputFileBuf.Flush()
+	if err != nil {
+		fmt.Printf("Error flushing output file %s: %s\n", outputName, err)
+	}
+	err = outputFile.Close()
+	if err != nil {
+		fmt.Printf("Error closing output file %s: %s\n", outputName, err)
+	}
+
 }
 
 func pause() { // written a long time ago, probably my first stab at this.
