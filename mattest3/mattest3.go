@@ -77,7 +77,7 @@ var bCols int
 func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	fmt.Printf("---------------------------------------------------------------------------")
 	fmt.Printf(" my mat Test ---------------------------------------------------------------------------\n\n")
-	s := "--------------------------------------------------------------------------- my mat Test ---------------------------------------------------------------------------\n\n"
+	s := "--------- my mat Test -----------------\n\n"
 	_, err := outfilebuf.WriteString(s)
 	if err != nil {
 		return err
@@ -197,9 +197,11 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 
 	if mat.IsZeroApprox(D) {
 		ctfmt.Printf(ct.Green, false, " As a check, AX-B is approx zero, and evaluates to:\n")
+		mat.WriteZeroln(D, 3)
 	} else {
 		ctfmt.Printf(ct.Red, true, "AX-B is not approx zero, but is:\n")
 	}
+	ctfmt.Printf(ct.Yellow, false, "\n\n AX - B raw result:\n")
 	mat.Writeln(D, 3)
 
 	if verboseFlag {
@@ -330,15 +332,14 @@ func WriteMatrices(A, B mat.Matrix2D, name string) {
 func goNumMatTest(outputFileBuf *bufio.Writer) error {
 	// Will look to solve AX = B, for X
 
-	s := "--------------------------------------------------------------------------- gonum Test ---------------------------------------------------------------------------\n\n"
+	s := "----------- gonum Test ---------\n\n"
 	_, err := outputFileBuf.WriteString(s)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s", s)
 
-	//fmt.Printf("---------------------------------------------------------------------------")
-	//fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
+	fmt.Printf("---------------------------------------------------------------------------")
+	fmt.Printf(" gonum Test ---------------------------------------------------------------------------\n\n")
 
 	initX := make([]float64, aCols)
 	for i := range aCols {
