@@ -14,6 +14,7 @@ MODULE Solve;
   21 Mar 24 -- Adding use of gonum routines.  And removing min procedure as that's part of the std lib as of Go 1.22.
   23 Mar 24 -- Increased MaxN
   26 Mar 24 -- Added checks on input matrix size, so it won't panic.
+  11 Oct 24 -- Fixed a typo in a message, and changed import name from gomat to gonum.
 */
 
 import (
@@ -22,7 +23,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	gomat "gonum.org/v1/gonum/mat"
+	gonum "gonum.org/v1/gonum/mat"
 	"io"
 	"os"
 	"runtime"
@@ -33,7 +34,7 @@ import (
 	"strings"
 )
 
-const LastCompiled = "26 Mar 24"
+const LastCompiled = "11 Oct 24"
 const MaxN = 99
 const small = 1e-10
 
@@ -42,7 +43,7 @@ var verboseFlag = flag.Bool("v", false, "Verbose mode.")
 //                          MaxRealArray is not square because the B column vector is in last column of IM
 //                          type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
 
-func makeDense(matrix mat.Matrix2D) *gomat.Dense {
+func makeDense(matrix mat.Matrix2D) *gonum.Dense {
 	var idx int
 	r := len(matrix)
 	c := len(matrix[0])
@@ -53,16 +54,16 @@ func makeDense(matrix mat.Matrix2D) *gomat.Dense {
 			idx++
 		}
 	}
-	dense := gomat.NewDense(r, c, initDense)
+	dense := gonum.NewDense(r, c, initDense)
 	return dense
 }
 
-func makeDense2(matrix mat.Matrix2D) *gomat.Dense {
+func makeDense2(matrix mat.Matrix2D) *gonum.Dense {
 	// Just to see if this works too.  It does.
 	var idx int
 	r := len(matrix)
 	c := len(matrix[0])
-	dense := gomat.NewDense(r, c, nil)
+	dense := gonum.NewDense(r, c, nil)
 	for i := range matrix {
 		for j := range matrix[i] {
 			dense.Set(i, j, matrix[i][j])
@@ -73,7 +74,7 @@ func makeDense2(matrix mat.Matrix2D) *gomat.Dense {
 	return dense
 }
 
-//func extractDense(m *gomat.Dense) [][]float64 {
+//func extractDense(m *gonum.Dense) [][]float64 {
 //	r, c := m.Dims()
 //	matrix := mat.NewMatrix(r, c)
 //	for i := range matrix { // different from in mattest2
@@ -145,7 +146,7 @@ func main() {
 	infile, err := os.Open(filename)
 	if err != nil {
 		if err == os.ErrNotExist {
-			fmt.Fprintf(os.Stderr, " %s does not exit.  Exiting.", filename)
+			fmt.Fprintf(os.Stderr, " %s does not exist.  Exiting.", filename)
 		} else {
 			fmt.Fprintf(os.Stderr, " Error while opening %s is %v.  Exiting.\n ", filename, err)
 		}
@@ -271,66 +272,66 @@ CountLinesLoop:
 	denseA := makeDense(A)
 	denseB := makeDense(B)
 	denseX := makeDense(X) // used below for validation checks.
-	fmt.Printf("A:\n%.5g\n\n", gomat.Formatted(denseA, gomat.Squeeze()))
-	fmt.Printf("B:\n%.5g\n\n", gomat.Formatted(denseB, gomat.Squeeze()))
+	fmt.Printf("A:\n%.5g\n\n", gonum.Formatted(denseA, gonum.Squeeze()))
+	fmt.Printf("B:\n%.5g\n\n", gonum.Formatted(denseB, gonum.Squeeze()))
 
 	// Will try w/ inversion
-	var inverseA, invSoln gomat.Dense
+	var inverseA, invSoln gonum.Dense
 	err = inverseA.Inverse(denseA)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
 	invSoln.Mul(&inverseA, denseB)
-	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))
+	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gonum.Formatted(&invSoln, gonum.Squeeze()))
 
 	// Try LU stuff
-	var lu gomat.LU
-	luSoln := gomat.NewDense(N, 1, nil)
+	var lu gonum.LU
+	luSoln := gonum.NewDense(N, 1, nil)
 	lu.Factorize(denseA)
 	err = lu.SolveTo(luSoln, false, denseB)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from lu Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gomat.Formatted(luSoln, gomat.Squeeze()))
+	fmt.Printf(" Soluton by gonum LU factorization is:\n%.5g\n\n", gonum.Formatted(luSoln, gonum.Squeeze()))
 
 	// try w/ QR stuff
-	var qr gomat.QR
-	qrSoln := gomat.NewDense(N, 1, nil)
+	var qr gonum.QR
+	qrSoln := gonum.NewDense(N, 1, nil)
 	qr.Factorize(denseA)
 	err = qr.SolveTo(qrSoln, false, denseB)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from qr Solve To is %s.  Bye-Bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gomat.Formatted(qrSoln, gomat.Squeeze()))
+	fmt.Printf(" Soluton by gonum QR factorization is:\n%.5g\n\n", gonum.Formatted(qrSoln, gonum.Squeeze()))
 
 	// Try Solve stuff
-	solvSoln := gomat.NewDense(N, 1, nil) // just to see if this works.
+	solvSoln := gonum.NewDense(N, 1, nil) // just to see if this works.
 	err = solvSoln.Solve(denseA, denseB)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gomat.Formatted(solvSoln, gomat.Squeeze()))
+	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gonum.Formatted(solvSoln, gonum.Squeeze()))
 
-	if gomat.EqualApprox(denseX, &invSoln, small) {
+	if gonum.EqualApprox(denseX, &invSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal.\n")
 	}
-	if gomat.EqualApprox(denseX, luSoln, small) {
+	if gonum.EqualApprox(denseX, luSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and LU solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and LU solution are not equal.\n")
 	}
-	if gomat.EqualApprox(denseX, qrSoln, small) {
+	if gonum.EqualApprox(denseX, qrSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and QR solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and QR solution are not equal.\n")
 	}
-	if gomat.EqualApprox(denseX, solvSoln, small) {
+	if gonum.EqualApprox(denseX, solvSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
@@ -339,7 +340,7 @@ CountLinesLoop:
 	denseA2 := makeDense2(A)
 	denseB2 := makeDense2(B)
 	denseX2 := makeDense2(X) // used below for validation checks.
-	if gomat.Equal(denseX, denseX2) && gomat.Equal(denseA, denseA2) && gomat.Equal(denseB2, denseB) {
+	if gonum.Equal(denseX, denseX2) && gonum.Equal(denseA, denseA2) && gonum.Equal(denseB2, denseB) {
 		ctfmt.Printf(ct.Green, false, " makeDense and makeDense2 matrices are exactly equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " makeDense and makeDense2 matrices are NOT exactly equal.\n")

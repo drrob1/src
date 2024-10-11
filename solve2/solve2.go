@@ -18,6 +18,7 @@ package main // solve2.go, from solve.go
   28 Mar 24 -- Adding AX -B = 0 to the gonum.org part.
   29 Mar 24 -- Will make it succeed quietly, and fail noisily.
   30 Mar 24 -- Added belowTolMakeSmall -- needed because sometimes a value of X should be zero, but it comes out very small.  So I have to make it zero, if needed.
+  11 Oct 24 -- Made gomat -> gonum, and fixed a typo in an error message.
 */
 
 import (
@@ -27,7 +28,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	gomat "gonum.org/v1/gonum/mat"
+	gonum "gonum.org/v1/gonum/mat"
 	"io"
 	"math"
 	"os"
@@ -39,7 +40,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "30 Mar 2024"
+const LastAltered = "11 Oct 2024"
 const small = 1e-10
 
 type rows []float64
@@ -51,7 +52,7 @@ var notEqualFlag bool
 //                          InputMatrix (IM) is not square because the B column vector is in last column of IM
 //                          type Matrix2D [][]float64  It is defined in and used by mat.
 
-func makeDense(matrix mat.Matrix2D) *gomat.Dense {
+func makeDense(matrix mat.Matrix2D) *gonum.Dense {
 	var idx int
 	r := len(matrix)
 	c := len(matrix[0])
@@ -62,16 +63,16 @@ func makeDense(matrix mat.Matrix2D) *gomat.Dense {
 			idx++
 		}
 	}
-	dense := gomat.NewDense(r, c, initDense)
+	dense := gonum.NewDense(r, c, initDense)
 	return dense
 }
 
-func makeDense2(matrix mat.Matrix2D) *gomat.Dense {
+func makeDense2(matrix mat.Matrix2D) *gonum.Dense {
 	// Just to see if this works too.  It does.
 	var idx int
 	r := len(matrix)
 	c := len(matrix[0])
-	dense := gomat.NewDense(r, c, nil)
+	dense := gonum.NewDense(r, c, nil)
 	for i := range matrix {
 		for j := range matrix[i] {
 			dense.Set(i, j, matrix[i][j])
@@ -82,8 +83,8 @@ func makeDense2(matrix mat.Matrix2D) *gomat.Dense {
 	return dense
 }
 
-func outputDense(m *gomat.Dense) {
-	s := fmt.Sprintf("%.6g\n", gomat.Formatted(m, gomat.Squeeze()))
+func outputDense(m *gonum.Dense) {
+	s := fmt.Sprintf("%.6g\n", gonum.Formatted(m, gonum.Squeeze()))
 	if onWin {
 		s = cleanString(s)
 	}
@@ -164,7 +165,7 @@ func main() {
 	infile, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			fmt.Fprintf(os.Stderr, " %s does not exit.  Exiting.", filename)
+			fmt.Fprintf(os.Stderr, " %s does not exist.  Exiting.", filename)
 		} else {
 			fmt.Fprintf(os.Stderr, " Error while opening %s is %v.  Exiting.\n ", filename, err)
 		}
@@ -294,7 +295,7 @@ func main() {
 	denseX := makeDense(X) // used below for validation checks.
 
 	// Will try w/ inversion
-	var inverseA, invSoln gomat.Dense
+	var inverseA, invSoln gonum.Dense
 	err = inverseA.Inverse(denseA)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from inverting A: %s.  Bye-Bye\n", err)
@@ -304,8 +305,8 @@ func main() {
 	belowTolMakeZero(&invSoln, small)
 
 	// Try LU stuff
-	var lu gomat.LU
-	luSoln := gomat.NewDense(N, 1, nil)
+	var lu gonum.LU
+	luSoln := gonum.NewDense(N, 1, nil)
 	lu.Factorize(denseA)
 	err = lu.SolveTo(luSoln, false, denseB)
 	if err != nil {
@@ -315,8 +316,8 @@ func main() {
 	belowTolMakeZero(luSoln, small)
 
 	// try w/ QR stuff
-	var qr gomat.QR
-	qrSoln := gomat.NewDense(N, 1, nil)
+	var qr gonum.QR
+	qrSoln := gonum.NewDense(N, 1, nil)
 	qr.Factorize(denseA)
 	err = qr.SolveTo(qrSoln, false, denseB)
 	if err != nil {
@@ -326,7 +327,7 @@ func main() {
 	belowTolMakeZero(qrSoln, small)
 
 	// Try Solve stuff
-	solvSoln := gomat.NewDense(N, 1, nil) // just to see if this works.
+	solvSoln := gonum.NewDense(N, 1, nil) // just to see if this works.
 	err = solvSoln.Solve(denseA, denseB)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error from Solve is %s.  Bye-bye\n", err)
@@ -334,11 +335,11 @@ func main() {
 	}
 	belowTolMakeZero(solvSoln, small)
 
-	if gomat.EqualApprox(denseX, &invSoln, small) {
+	if gonum.EqualApprox(denseX, &invSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal.\n")
-		if gomat.EqualApprox(denseX, &invSoln, small*10) {
+		if gonum.EqualApprox(denseX, &invSoln, small*10) {
 			ctfmt.Printf(ct.Green, false, " X and inversion solution are approx equal using 10*small tolerance factor.\n")
 		} else {
 			ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal, even when using 10*small tolerance factor.\n")
@@ -348,11 +349,11 @@ func main() {
 			notEqualFlag = true
 		}
 	}
-	if gomat.EqualApprox(denseX, luSoln, small) {
+	if gonum.EqualApprox(denseX, luSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and LU solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and LU solution are not equal.\n")
-		if gomat.EqualApprox(denseX, luSoln, small*10) {
+		if gonum.EqualApprox(denseX, luSoln, small*10) {
 			ctfmt.Printf(ct.Green, false, " X and LU solution are approx equal using 10*small tolerance factor.\n")
 		} else {
 			ctfmt.Printf(ct.Red, true, " X and LU solution are not equal, even when using 10*small tolerance factor.\n")
@@ -362,11 +363,11 @@ func main() {
 			notEqualFlag = true
 		}
 	}
-	if gomat.EqualApprox(denseX, qrSoln, small) {
+	if gonum.EqualApprox(denseX, qrSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and QR solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and QR solution are not equal.\n")
-		if gomat.EqualApprox(denseX, qrSoln, small*10) {
+		if gonum.EqualApprox(denseX, qrSoln, small*10) {
 			ctfmt.Printf(ct.Green, false, " X and QR solution are approx equal using 10*small tolerance factor.\n")
 		} else {
 			ctfmt.Printf(ct.Red, true, " X and QR solution are not equal, even when using 10*small tolerance factor.\n")
@@ -376,11 +377,11 @@ func main() {
 			notEqualFlag = true
 		}
 	}
-	if gomat.EqualApprox(denseX, solvSoln, small) {
+	if gonum.EqualApprox(denseX, solvSoln, small) {
 		ctfmt.Printf(ct.Green, false, " X and gonum Solve solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and gonum Solve solution are not equal.\n")
-		if gomat.EqualApprox(denseX, solvSoln, small*10) {
+		if gonum.EqualApprox(denseX, solvSoln, small*10) {
 			ctfmt.Printf(ct.Green, false, " X and gonum solve solution are approx equal using 10*small tolerance factor.\n")
 		} else {
 			ctfmt.Printf(ct.Red, true, " X and gonum solve solution are not equal, even when using 10*small tolerance factor.\n")
@@ -404,7 +405,7 @@ func main() {
 	denseA2 := makeDense2(A)
 	denseB2 := makeDense2(B)
 	denseX2 := makeDense2(X) // used below for validation checks.
-	if gomat.Equal(denseX, denseX2) && gomat.Equal(denseA, denseA2) && gomat.Equal(denseB2, denseB) {
+	if gonum.Equal(denseX, denseX2) && gonum.Equal(denseA, denseA2) && gonum.Equal(denseB2, denseB) {
 		ctfmt.Printf(ct.Green, false, " makeDense and makeDense2 matrices are exactly equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " makeDense and makeDense2 matrices are NOT exactly equal.\n")
@@ -412,17 +413,17 @@ func main() {
 
 	rA, _ := denseA.Dims()
 	_, cB := denseB.Dims()
-	shouldBeZeroMatrix := gomat.NewDense(rA, cB, nil)
-	intermResult := gomat.NewDense(rA, cB, nil)
+	shouldBeZeroMatrix := gonum.NewDense(rA, cB, nil)
+	intermResult := gonum.NewDense(rA, cB, nil)
 	intermResult.Mul(denseA, denseX)
 	shouldBeZeroMatrix.Sub(intermResult, denseB)
-	allZeros := gomat.NewDense(rA, cB, nil)
+	allZeros := gonum.NewDense(rA, cB, nil)
 	allZeros.Zero()
-	if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small) {
+	if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, small) {
 		ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal.\n\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, "AX-B: shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
-		if gomat.EqualApprox(shouldBeZeroMatrix, allZeros, small*10) {
+		if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, small*10) {
 			ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using small*10.\n\n")
 		} else {
 			ctfmt.Printf(ct.Red, true, "AX-B is not zero matrix, even using small*10 as tolerance factor.  result is:\n")
@@ -457,7 +458,7 @@ func newPause() {
 		os.Exit(1)
 	}
 }
-func belowTolMakeZero(m *gomat.Dense, tol float64) {
+func belowTolMakeZero(m *gonum.Dense, tol float64) {
 	r, c := m.Dims()
 	for i := range r {
 		for j := range c {
