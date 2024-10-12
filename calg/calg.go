@@ -14,10 +14,11 @@ package main
    2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small enough to make the expression evaluate to a negative value.
   20 Jan 92 -- First page now does not begin with a FF.
   9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
-                A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
+                A 1-page calendar meant for printing out, and a 12-page calendar meant for importing into Excel.
  10 Nov 16 -- First working version, based on Modula-2 code from 92.
  11 Nov 16 -- Code from January 2009 to import into Excel is working.
  12 Nov 16 -- Fixed bug in DATEASSIGN caused by not porting my own Modula-2 code correctly.
+----------------------------------------------------------------------------------------------------
   3 Mar 17 -- Now calgo, and will use termbox to try to do what CALm2 does.
   3 Apr 17 -- Came back to this, after going thru Book of R.
   4 Apr 17 -- Will only write the calendar output files if they do not already exist.
@@ -38,7 +39,7 @@ package main
  20 Feb 21 -- Experimenting w/ allowing reverse colors using ColorText.
  21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
  22 Feb 21 -- Removing text for Columbus and Veteran Days as these are not hospital holidays.
- 23 Mar 21 -- Will allow years from 1800 - 2100.  This came up while reading about Apr 14, 1865, which was a Friday.
+ 23 Mar 21 -- Will allow years from 1800 to 2100.  This came up while reading about Apr 14, 1865, which was a Friday.
                 And discovered a bug when a 4 digit year is entered.
  18 Jun 21 -- Juneteenth added, as it became a legal federal holiday yesterday, signed into law by Biden.
                 And converted to modules.
@@ -46,6 +47,7 @@ package main
   2 Aug 22 -- Now outputing the cal files requires use of an option flag.  I mostly didn't want them output whenever I started the pgm.
                 And I'll remove the nofiles flags.  Both of them.
  20 Nov 22 -- Linter reports a few issues.  I'm addressing them now.
+ 12 Oct 24 -- Fixing some comments.
 */
 
 import (
@@ -154,7 +156,7 @@ func init() {
 	}
 }
 
-// ---------------------------------------------------- ClearScreen ------------------------------------
+// ClearScreen ------------------------------------
 func ClearScreen() {
 	clearfunc, ok := clear[runtime.GOOS]
 	if ok {
@@ -164,7 +166,7 @@ func ClearScreen() {
 	}
 }
 
-// ------------------------------------------------------- DAY2STR  -------------------------------------
+// DAY2STR  -------------------------------------
 func DAY2STR(DAY int) (string, rune, rune) {
 	/*
 	   DAY TO STRing conversion.
@@ -188,9 +190,9 @@ func DAY2STR(DAY int) (string, rune, rune) {
 	return string(bs), rune(bs[1]), rune(bs[2])
 } //END DAY2STR
 
+// DATEASSIGN -------------------------------------------
 func DATEASSIGN(MN int) {
 	/*
-	   --------------------------------------------------------- DATEASSIGN -------------------------------------------
 	   DATE ASSIGNment for month.
 	   This routine will assign the dates for an entire month.  It will put the char representations of the date in the first 2 bytes.
 
@@ -219,11 +221,9 @@ func DATEASSIGN(MN int) {
 	}
 } // END DATEASSIGN
 
-// ----------------------------------------------------------- WrMonthForXL --------------------------------------
+// WrMonthForXL --------------------------------------
 // Intended to print in a format that can be read by Excel as a call schedule template.
-
 func WrMonthForXL(MN int) {
-
 	//s0 := fmt.Sprintf("%s", MONNAMSHORT[MN])  // linter reports that this argument is already a string, so sprintf is not needed.
 	s0 := MONNAMSHORT[MN]
 	s1 := fmt.Sprintf("\t%6s", YEARSTR) // I like the effect here of adding <tab>
@@ -277,7 +277,7 @@ func WrMonthForXL(MN int) {
 
 func WrOnePageYear() { // Each column must be exactly 25 characters for the spacing to work.
 
-	// Write one page calendar
+	// Write one-page calendar
 
 	var err error
 
@@ -349,8 +349,7 @@ func WrOnePageYear() { // Each column must be exactly 25 characters for the spac
 
 } // WrOnePageYear
 
-// -------------------------------------- Show3MonthRow ----------------------------------
-
+// Show3MonthRow ----------------------------------
 func Show3MonthRow(mn int) { // Modified from WrOnePageYear.  main() makes sure mn is in range.
 	// Display 3 months per row for 2 rows on the terminal using ColorText.
 	s := fmt.Sprintf("%40s", YEARSTR)
@@ -420,8 +419,7 @@ func Show3MonthRow(mn int) { // Modified from WrOnePageYear.  main() makes sure 
 	fmt.Println()
 } // Show3MonthRow
 
-// ----------------------------- HolidayAssign ---------------------------------
-
+// HolidayAssign ---------------------------------
 func HolidayAssign(year int) {
 
 	//var Holiday holidaycalc.HolType // linter reports that I should merge variable declaration w/ assignment on the next line.  Ok.
@@ -660,8 +658,7 @@ XmasLoop:
 
 } // END HolidayAssign
 
-// ----------------------------- SetMonthNumber ----------------------------------
-
+// SetMonthNumber ----------------------------------
 func SetMonthNumber(s string) int { // returns -1 if there was an error
 	var month int
 
@@ -678,8 +675,7 @@ func SetMonthNumber(s string) int { // returns -1 if there was an error
 	return month
 }
 
-// ----------------------------------- AssignYear ----------------------------------------------------
-
+// AssignYear ----------------------------------------------------
 func AssignYear(y int) {
 
 	if y < 1800 || y > 2100 {
@@ -720,9 +716,7 @@ func AssignYear(y int) {
 	}
 } // END AssignYear
 
-/*
---------------------- MAIN ---------------------------------------------
-*/
+// --------------------- MAIN ---------------------------------------------
 func main() {
 	var Cal1FilenameFlag, Cal12FilenameFlag bool
 	windowsFlag = runtime.GOOS == "windows" // intended for bold color on windows, not on linux
