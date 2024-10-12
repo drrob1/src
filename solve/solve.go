@@ -15,10 +15,12 @@ MODULE Solve;
   23 Mar 24 -- Increased MaxN
   26 Mar 24 -- Added checks on input matrix size, so it won't panic.
   11 Oct 24 -- Fixed a typo in a message, and changed import name from gomat to gonum.
+  12 Oct 24 -- Copied getInputMatrix from solve2 to here, as it uses append and doesn't need maxN
 */
 
 import (
-	"bufio"
+	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -29,19 +31,20 @@ import (
 	"runtime"
 	"src/filepicker"
 	"src/mat"
-	"src/tokenize"
+	"src/misc"
+	"src/tknptr"
 	"strconv"
 	"strings"
 )
 
-const LastCompiled = "11 Oct 24"
+const LastCompiled = "12 Oct 24"
 const MaxN = 99
 const small = 1e-10
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode.")
 
-//                          MaxRealArray is not square because the B column vector is in last column of IM
-//                          type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
+// MaxRealArray is not square because the B column vector is in last column of the inputMatrix
+// type Matrix2D [][]float64  Not used here.  But it is defined in and used by mat.
 
 func makeDense(matrix mat.Matrix2D) *gonum.Dense {
 	var idx int
@@ -143,80 +146,92 @@ func main() {
 		}
 	}
 
-	infile, err := os.Open(filename)
+	inputMatrix, err := getInputMatrix(filename)
 	if err != nil {
-		if err == os.ErrNotExist {
-			fmt.Fprintf(os.Stderr, " %s does not exist.  Exiting.", filename)
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Printf(" File %s does not exist.\n", filename)
+			return
 		} else {
-			fmt.Fprintf(os.Stderr, " Error while opening %s is %v.  Exiting.\n ", filename, err)
+			ctfmt.Printf(ct.Red, true, " Error while opening %s is %s.\n", filename, err)
+			return
 		}
-		os.Exit(1)
 	}
 
-	defer infile.Close()
+	//	infile, err := os.Open(filename)
+	//	if err != nil {
+	//		if err == os.ErrNotExist {
+	//			fmt.Fprintf(os.Stderr, " %s does not exist.  Exiting.", filename)
+	//		} else {
+	//			fmt.Fprintf(os.Stderr, " Error while opening %s is %v.  Exiting.\n ", filename, err)
+	//		}
+	//		os.Exit(1)
+	//	}
+	//
+	//	defer infile.Close()
+	//	if *verboseFlag {
+	//		fmt.Printf(" Opened filename is %s\n", infile.Name())
+	//	}
+	//	scanner := bufio.NewScanner(infile)
+	//
+	//	IM := mat.NewMatrix(MaxN, MaxN+1) // IM is input matrix
+	//	IM = mat.Zero(IM)
+	//
+	//	lines := 0
+	//CountLinesLoop:
+	//	for { // read, count and process lines
+	//		for n := 0; n < MaxN; n++ {
+	//			readSuccess := scanner.Scan()
+	//			if !readSuccess {
+	//				if readErr := scanner.Err(); readErr != nil {
+	//					if *verboseFlag {
+	//						fmt.Printf(" readErr is %s, n = %d, lines = %d\n", readErr, n, lines)
+	//					}
+	//					if readErr == io.EOF {
+	//						break CountLinesLoop
+	//					} else { // this may be redundant because of the readSuccess test
+	//						ctfmt.Printf(ct.Red, true, " ERROR while reading from %s at line %d is %s.\n", filename, lines, readErr)
+	//						break CountLinesLoop
+	//					}
+	//				}
+	//				break CountLinesLoop
+	//			}
+	//			inputline := scanner.Text()
+	//
+	//			tokenize.INITKN(inputline)
+	//			col := 0
+	//			var EOL bool
+	//			var token tokenize.TokenType
+	//			for !EOL && (n <= MaxN) { // linter says to not do (EOL == false), but to change it to what's there now.
+	//				token, EOL = tokenize.GETTKNREAL()
+	//				if EOL {
+	//					break
+	//				}
+	//				if token.State == tokenize.DGT {
+	//					if col >= MaxN {
+	//						ctfmt.Printf(ct.Red, true, " ERROR: number of columns exceeds the current max of %d.  Aborting.\n", MaxN)
+	//						return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
+	//					}
+	//					IM[lines][col] = token.Rsum // remember that IM is Input Matrix
+	//					col++
+	//				} // ENDIF token.state=DGT
+	//			} //  UNTIL (EOL is true) OR (col > MaxN);
+	//			if col > 0 { // text only or null lines do not increment the row counter.
+	//				lines++
+	//				if lines >= MaxN {
+	//					ctfmt.Printf(ct.Red, true, " ERROR: number of lines exceeds the current max of %d.  Aborting.\n", MaxN)
+	//					return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
+	//				}
+	//			}
+	//			if *verboseFlag {
+	//				fmt.Printf(" at bottom of file reading loop.  lines = %d, n = %d, col = %d, token.Str = %s\n", lines, n, col, token.Str)
+	//			}
+	//		} // END for n
+	//	} // END reading loop
+	//	N := lines // Note: lines is 0 origin
+
+	N := len(inputMatrix)
 	if *verboseFlag {
-		fmt.Printf(" Opened filename is %s\n", infile.Name())
-	}
-	scanner := bufio.NewScanner(infile)
-
-	IM := mat.NewMatrix(MaxN, MaxN+1) // IM is input matrix
-	IM = mat.Zero(IM)
-
-	lines := 0
-CountLinesLoop:
-	for { // read, count and process lines
-		for n := 0; n < MaxN; n++ {
-			readSuccess := scanner.Scan()
-			if !readSuccess {
-				if readErr := scanner.Err(); readErr != nil {
-					if *verboseFlag {
-						fmt.Printf(" readErr is %s, n = %d, lines = %d\n", readErr, n, lines)
-					}
-					if readErr == io.EOF {
-						break CountLinesLoop
-					} else { // this may be redundant because of the readSuccess test
-						ctfmt.Printf(ct.Red, true, " ERROR while reading from %s at line %d is %s.\n", filename, lines, readErr)
-						break CountLinesLoop
-					}
-				}
-				break CountLinesLoop
-			}
-			inputline := scanner.Text()
-
-			tokenize.INITKN(inputline)
-			col := 0
-			var EOL bool
-			var token tokenize.TokenType
-			for !EOL && (n <= MaxN) { // linter says to not do (EOL == false), but to change it to what's there now.
-				token, EOL = tokenize.GETTKNREAL()
-				if EOL {
-					break
-				}
-				if token.State == tokenize.DGT {
-					if col >= MaxN {
-						ctfmt.Printf(ct.Red, true, " ERROR: number of columns exceeds the current max of %d.  Aborting.\n", MaxN)
-						return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
-					}
-					IM[lines][col] = token.Rsum // remember that IM is Input Matrix
-					col++
-				} // ENDIF token.state=DGT
-			} //  UNTIL (EOL is true) OR (col > MaxN);
-			if col > 0 { // text only or null lines do not increment the row counter.
-				lines++
-				if lines >= MaxN {
-					ctfmt.Printf(ct.Red, true, " ERROR: number of lines exceeds the current max of %d.  Aborting.\n", MaxN)
-					return // after all, main() is a function that can be returned.  I want to trigger the defer statement.  os.Exit() doesn't execute the deferred statements.
-				}
-			}
-			if *verboseFlag {
-				fmt.Printf(" at bottom of file reading loop.  lines = %d, n = %d, col = %d, token.Str = %s\n", lines, n, col, token.Str)
-			}
-		} // END for n
-	} // END reading loop
-	N := lines // Note: lines is 0 origin
-
-	if *verboseFlag {
-		fmt.Printf(" Number of lines read is %d, and N = %d\n", lines, N)
+		fmt.Printf(" Number of lines read is %d\n", N)
 	}
 
 	// Now need to create A and B matrices
@@ -225,9 +240,9 @@ CountLinesLoop:
 	B := mat.NewMatrix(N, 1)
 	for row := range A {
 		for col := range A[row] {
-			A[row][col] = IM[row][col]
+			A[row][col] = inputMatrix[row][col]
 		}
-		B[row][0] = IM[row][N]
+		B[row][0] = inputMatrix[row][N]
 	}
 
 	fmt.Println(" coef matrix A is:")
@@ -355,6 +370,35 @@ func newPause() {
 	if strings.ToLower(ans) == "x" {
 		os.Exit(1)
 	}
+}
+
+func getInputMatrix(fn string) ([][]float64, error) {
+	matrix := [][]float64{}
+	fileBytes, err := os.ReadFile(fn)
+	if err != nil {
+		return nil, err
+	}
+	reader := bytes.NewReader(fileBytes)
+	for { // read all lines
+		line, err := misc.ReadLine(reader)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			} else {
+				return nil, err
+			}
+		}
+		tokens := tknptr.TokenRealSlice(line)
+		row := make([]float64, 0, len(tokens))
+		for _, tkn := range tokens {
+			if tkn.State != tknptr.DGT { // allow for comment lines
+				continue
+			}
+			row = append(row, tkn.Rsum)
+		}
+		matrix = append(matrix, row)
+	}
+	return matrix, nil
 }
 
 //// -------------------------------------------- min ---------------------------------------------
