@@ -38,8 +38,9 @@ import (
 )
 
 const LastCompiled = "12 Oct 24"
-const MaxN = 99
 const small = 1e-10
+
+//const MaxN = 99  No longer needed when I added getInputMatrix and removed the old code that needed it.
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode.")
 
