@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "30 Jan 22"
+const LastAltered = "12 Oct 2024"
 
 /*
 Revision History
@@ -27,6 +27,7 @@ Revision History
                matching against that, and then sorting by file timestamp (newest first).
 30 Jan 22 -- Commented out a debugging print statement that I forgot to do before.
 24 May 24 -- Added comments that would be displayed by go doc.
+12 Oct 24 -- Added code to exclude directory names for the returned list.  And changed behavior of GetRegexFilenames so that an error doesn't bail out of the function.
 */
 
 type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
@@ -80,6 +81,9 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 			L, err := os.Lstat(name)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error from os.Lstat is %v \n", err)
+				continue
+			}
+			if L.Mode().IsDir() { // It was showing directories until I did this on 10/12/24.
 				continue
 			}
 			filesDate = append(filesDate, L)
@@ -136,7 +140,11 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 		if regex.MatchString(name) {
 			L, err := os.Lstat(name)
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "Error from os.Lstat is %v \n", err)
+				continue
+			}
+			if L.Mode().IsDir() { // Want to not return directory names.  Added 10/12/24.
+				continue
 			}
 			filesDate = append(filesDate, L)
 		}
