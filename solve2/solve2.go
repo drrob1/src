@@ -18,11 +18,12 @@ package main // solve2.go, from solve.go
   28 Mar 24 -- Adding AX -B = 0 to the gonum.org part.
   29 Mar 24 -- Will make it succeed quietly, and fail noisily.
   30 Mar 24 -- Added belowTolMakeSmall -- needed because sometimes a value of X should be zero, but it comes out very small.  So I have to make it zero, if needed.
-  11 Oct 24 -- Made gomat -> gonum, and fixed a typo in an error message.
+  11 Oct 24 -- Made gomat -> gonum, and fixed a typo in an error message.  Added getInputMatrix using a style I learned after 2016.  And added compareMatrices.
 */
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -35,6 +36,7 @@ import (
 	"runtime"
 	"src/filepicker"
 	"src/mat"
+	"src/misc"
 	"src/tknptr"
 	"strconv"
 	"strings"
@@ -162,7 +164,12 @@ func main() {
 		}
 	}
 
-	infile, err := os.Open(filename)
+	inputMatrix, err := getInputMatrix(filename)
+	if err != nil {
+		fmt.Printf(" Error reading input file %s from getInputMatrix is %s.  Ignored\n", filename, err)
+	}
+
+	infile, err := os.Open(filename) // this code is from 2016.
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintf(os.Stderr, " %s does not exist.  Exiting.", filename)
@@ -176,7 +183,7 @@ func main() {
 	if *verboseFlag {
 		fmt.Printf(" Opened filename is %s\n", infile.Name())
 	}
-	scanner := bufio.NewScanner(infile)
+	scanner := bufio.NewScanner(infile) // this code is from 2016.
 
 	IM := make([]rows, 0, 20)
 
@@ -215,6 +222,16 @@ func main() {
 			fmt.Printf(" at bottom of line reading loop.  lines so far = %d, len(row) = %d, len(token) = %d\n", len(IM), len(row), len(token))
 		}
 	} // END file reading loop, ie, all lines in the file are to have been read by now.
+
+	if compareMatrices(inputMatrix, IM) {
+		ctfmt.Printf(ct.Green, false, " Both the inputMatrix and IM are the same.\n")
+	} else {
+		ctfmt.Printf(ct.Red, true, " Both the inputMatrix and IM are NOT the same.\n")
+		ctfmt.Printf(ct.Red, true, "inputMatrix:\n")
+		mat.Writeln(inputMatrix, 4)
+		fmt.Println()
+	}
+
 	N := len(IM)
 
 	if *verboseFlag {
@@ -467,4 +484,50 @@ func belowTolMakeZero(m *gonum.Dense, tol float64) {
 			}
 		}
 	}
+}
+
+func getInputMatrix(fn string) ([][]float64, error) {
+	matrix := [][]float64{}
+	fileBytes, err := os.ReadFile(fn)
+	if err != nil {
+		return nil, err
+	}
+	reader := bytes.NewReader(fileBytes)
+	for { // read all lines
+		line, err := misc.ReadLine(reader)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			} else {
+				return nil, err
+			}
+		}
+		tokens := tknptr.TokenRealSlice(line)
+		row := make([]float64, 0, len(tokens))
+		for _, tkn := range tokens {
+			if tkn.State != tknptr.DGT {
+				continue
+			}
+			row = append(row, tkn.Rsum)
+		}
+		matrix = append(matrix, row)
+	}
+	return matrix, nil
+}
+
+func compareMatrices(a [][]float64, b []rows) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a[0]) != len(b[0]) {
+		return false
+	}
+	for i := range a {
+		for j := range a[i] {
+			if a[i][j] != b[i][j] {
+				return false
+			}
+		}
+	}
+	return true
 }
