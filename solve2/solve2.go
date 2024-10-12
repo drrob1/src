@@ -505,7 +505,7 @@ func getInputMatrix(fn string) ([][]float64, error) {
 		tokens := tknptr.TokenRealSlice(line)
 		row := make([]float64, 0, len(tokens))
 		for _, tkn := range tokens {
-			if tkn.State != tknptr.DGT {
+			if tkn.State != tknptr.DGT { // allow for comment lines
 				continue
 			}
 			row = append(row, tkn.Rsum)
