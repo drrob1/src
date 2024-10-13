@@ -1026,7 +1026,7 @@ func WriteZero(M Matrix2D, places int) []string {
 	if smallValue == 0. {
 		smallValue = Small
 	}
-	fmt.Printf(" In WriteZero and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
+	//fmt.Printf(" In WriteZero and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
 
 	OutputStringSlice := make([]string, 0, 500)
 	for i := range M {
@@ -1072,7 +1072,7 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 	if smallValue == 0. {
 		smallValue = Small
 	}
-	fmt.Printf(" In write zero pair and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
+	//fmt.Printf(" In write zero pair and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
 
 	for i := range m1 {
 		var line []string
