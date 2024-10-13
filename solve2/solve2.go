@@ -42,7 +42,7 @@ import (
 	"strings"
 )
 
-const LastAltered = "11 Oct 2024"
+const LastAltered = "13 Oct 2024"
 const small = 1e-10
 
 type rows []float64
@@ -294,7 +294,7 @@ func main() {
 			fmt.Println("As a check, AX-B should be 0, and evaluates to")
 			mat.Writeln(D, 5)
 			fmt.Println("After calling WriteZeroln:")
-			mat.WriteZeroln(D, 5)
+			mat.WriteZeroln(D, 5, small)
 			fmt.Println()
 			fmt.Println()
 		}

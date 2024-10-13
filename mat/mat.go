@@ -518,8 +518,7 @@ func SolveInvert(a, b Matrix2D) Matrix2D {
 	return x
 }
 
-// ---------------------------------- EqualApprox --------------------------------------
-
+// EqualApprox -- Does not take a tolerance facter, but uses Small.
 func EqualApprox(a, b Matrix2D) bool {
 	if len(a) != len(b) {
 		return false
@@ -537,6 +536,7 @@ func EqualApprox(a, b Matrix2D) bool {
 	return true
 }
 
+// EqualApproximately -- Does take a tolerance factor
 func EqualApproximately(a, b Matrix2D, tol float64) bool {
 	if len(a) != len(b) {
 		return false
