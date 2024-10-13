@@ -17,6 +17,8 @@ MODULE Solve;
   11 Oct 24 -- Fixed a typo in a message, and changed import name from gomat to gonum.
   12 Oct 24 -- Copied getInputMatrix from solve2 to here, as it uses append and doesn't need maxN
                  Experimenting w/ the concept of making small relative to the smallest value of |X|, ie absolute value.
+  13 Oct 24 -- Sometimes the abs() result in X can be very small, ie, 1e-13, 1e-14, 1e-15.  And other times Small is too small to catch when it should be zero, so I need it larger.
+                 Instead of using min value, I'll use the average value of |X|.
 */
 
 import (
@@ -82,20 +84,33 @@ func makeDense2(matrix mat.Matrix2D) *gonum.Dense {
 	return dense
 }
 
-func minMatrix(m mat.Matrix2D) float64 {
-	// Will determine the smallest absolute value in the matrix.  The intended matrix is the solution column vector, X, so it's not square.
-
-	minVal := 1.e9
+func aveMatrix(m mat.Matrix2D) float64 {
+	var aveVal, sum float64
 
 	for r := range m {
 		for c := range m[r] {
-			if math.Abs(m[r][c]) < minVal {
-				minVal = math.Abs(m[r][c])
-			}
+			sum += math.Abs(m[r][c])
 		}
 	}
-	return minVal
+
+	aveVal = sum / float64(len(m))
+	return aveVal
 }
+
+//func minMatrix(m mat.Matrix2D) float64 {
+//	// Will determine the smallest absolute value in the matrix.  The intended matrix is the solution column vector, X, so it's not square.
+//
+//	minVal := 1.e9
+//
+//	for r := range m {
+//		for c := range m[r] {
+//			if math.Abs(m[r][c]) < minVal {
+//				minVal = math.Abs(m[r][c])
+//			}
+//		}
+//	}
+//	return minVal
+//}
 
 //func extractDense(m *gonum.Dense) [][]float64 {
 //	r, c := m.Dims()
@@ -109,9 +124,11 @@ func minMatrix(m mat.Matrix2D) float64 {
 //}
 
 func main() {
-	/************************************************************************)
-	  (*                              MAIN PROGRAM                            *)
-	  (************************************************************************/
+	/*
+	   ------------------------------------------------------------------------------------------
+	   	                                MAIN PROGRAM
+	   ------------------------------------------------------------------------------------------
+	*/
 
 	fmt.Printf(" Equation solver written in Go.  Last altered %s, compiled with %s\n", LastCompiled, runtime.Version())
 	fmt.Println()
@@ -273,32 +290,34 @@ func main() {
 	fmt.Println()
 
 	X := mat.Solve(A, B)
-	fmt.Println("The solution X to AX = B using Solve is")
-	mat.Writeln(X, 5)
-	minX := minMatrix(X)
-	smallValue = minX * small
+	//fmt.Println("The solution X to AX = B using Solve is")
+	//mat.Writeln(X, 5)
+	aveX := aveMatrix(X)
+	smallValue = aveX * small
 	if smallValue < small { // turns out that sometimes X is zero, or very small in the order of 1e-15.  Then smallValue is in order of 1e-25, which is much too small.
 		smallValue = small
 	}
 	if *verboseFlag {
-		ctfmt.Printf(ct.Green, true, " Min value of the X matrix, accounting for math.Abs(), is %.4G, and small value is %.4G\n\n", minX, smallValue)
+		ctfmt.Printf(ct.Green, true, " Ave value of abs() of the X matrix is %.4G, and small value is %.4G\n\n", aveX, smallValue)
 	}
 
 	ans2 := mat.GaussJ(A, B)
-	fmt.Println("The solution X to AX = B using GaussJ is")
-	mat.Writeln(ans2, 5)
+	fmt.Println(" The solution X to A*X = B\n using Solve is              using GaussJ is")
+	mat.WritePairln(X, ans2, 5)
 	fmt.Println()
 
 	// Check that the solution looks right.
 
 	C := mat.Mul(A, X) // Mul (ra1, ans, N, N, 1, ra3);
 	D := mat.Sub(B, C) // Sub (ra3, ra2, N, 1, ra4);
+	E := mat.BelowSmallMakeZero(D)
 
-	fmt.Println("As a check, AX-B should be 0, and evaluates to")
-	mat.Writeln(D, 5) //    Write (ra4, N, 1, 4);
+	fmt.Println("As a check, AX-B \nshould be 0, and evaluates to After making very small numbers zeros ")
+	//mat.Writeln(D, 5) //    Write (ra4, N, 1, 4);
 
-	fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to")
-	mat.WriteZeroln(D, 5, smallValue)
+	//fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to")
+	//mat.WriteZeroln(D, 5, smallValue)
+	mat.WritePairln(D, E, 4)
 	fmt.Println()
 	fmt.Println()
 
@@ -386,6 +405,27 @@ func main() {
 		ctfmt.Printf(ct.Red, false, " makeDense and makeDense2 matrices are NOT exactly equal.\n")
 	}
 
+	rA, _ := denseA.Dims()
+	_, cB := denseB.Dims()
+	shouldBeZeroMatrix := gonum.NewDense(rA, cB, nil)
+	intermResult := gonum.NewDense(rA, cB, nil)
+	intermResult.Mul(denseA, denseX)
+	shouldBeZeroMatrix.Sub(intermResult, denseB)
+	allZeros := gonum.NewDense(rA, cB, nil)
+	allZeros.Zero()
+	if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, smallValue) {
+		ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using tol of %.4g.\n\n", smallValue)
+	} else {
+		ctfmt.Printf(ct.Red, true, "AX-B: shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
+		if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, small*10) {
+			ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using small*10.\n\n")
+		} else {
+			ctfmt.Printf(ct.Red, true, "AX-B is not zero matrix, even using small*10 as tolerance factor.  result is:\n")
+			outputDense(shouldBeZeroMatrix)
+			fmt.Println()
+		}
+	}
+
 } // END Solve.
 
 func newPause() {
@@ -424,6 +464,26 @@ func getInputMatrix(fn string) ([][]float64, error) {
 		matrix = append(matrix, row)
 	}
 	return matrix, nil
+}
+
+func outputDense(m *gonum.Dense) {
+	s := fmt.Sprintf("%.6g\n", gonum.Formatted(m, gonum.Squeeze()))
+	if runtime.GOOS == "windows" {
+		s = cleanString(s)
+	}
+	fmt.Printf("%s", s)
+	fmt.Println()
+}
+
+func cleanString(s string) string {
+	var sb strings.Builder
+
+	for _, r := range s {
+		if r < 128 {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
 }
 
 //// -------------------------------------------- min ---------------------------------------------

@@ -60,9 +60,10 @@ REVISION HISTORY
 				Debugging on leox is easier on the eyes because the matrix output symbols are displayed correctly.  On Windows, only when running on Win11 desktop on cmd does that.
                 The mat-size-...txt file is meant to be fed into solve or solve2, as a debugging step for the solve routines.
                 I want more info output now.
+13 Oct 24 -- Changed code to match the change in the mat API.
 */
 
-const lastAltered = "Oct 10, 2024"
+const lastAltered = "Oct 13, 2024"
 const small = 1e-10
 const outputName = "mattest3-output.txt"
 
@@ -166,7 +167,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	}
 
 	fmt.Printf("\n Column vectors X and B are:\n")
-	ss = mat.WriteZeroPair(X, B, 4)
+	ss = mat.MakeZeroPair(X, B, 4, small)
 	printString(ss)
 	fmt.Println()
 	fmt.Printf("\n\n")
@@ -174,7 +175,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	// Another way to find the B column vector is to just do A*X.  It works.
 	newB := mat.Mul(A, X)
 	fmt.Printf(" Column vector newB is:\n")
-	mat.WriteZeroln(newB, 6)
+	mat.WriteZeroln(newB, 6, small)
 
 	// Generate file to be read in by Solve(2).
 	WriteMatrices(A, B, fn)
@@ -187,7 +188,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	}
 
 	fmt.Printf("The solution X to AX = B\n using Solve       and then      GaussJ are:\n")
-	ss = mat.WriteZeroPair(solveSoln, gaussSoln, 3)
+	ss = mat.MakeZeroPair(solveSoln, gaussSoln, 3, small)
 	printString(ss)
 	fmt.Println()
 
@@ -197,7 +198,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 
 	if mat.IsZeroApprox(D) {
 		ctfmt.Printf(ct.Green, false, " As a check, AX-B is approx zero, and evaluates to:\n")
-		mat.WriteZeroln(D, 3)
+		mat.WriteZeroln(D, 3, small)
 	} else {
 		ctfmt.Printf(ct.Red, true, "AX-B is not approx zero, but is:\n")
 	}
@@ -206,7 +207,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 
 	if verboseFlag {
 		ctfmt.Printf(ct.Yellow, false, " After calling mat.WriteZeroln\n")
-		mat.WriteZeroln(D, 3)
+		mat.WriteZeroln(D, 3, small)
 	}
 
 	fmt.Printf("\n Will now use matrix inversion as a solution method.  Result is:\n")
@@ -218,7 +219,7 @@ func solveTest(fn string, outfilebuf *bufio.Writer) error {
 	}
 
 	if verboseFlag {
-		mat.WriteZeroln(inverseSoln, 3)
+		mat.WriteZeroln(inverseSoln, 3, small)
 	}
 
 	solveInvert := mat.SolveInvert(A, B)
@@ -380,7 +381,7 @@ func goNumMatTest(outputFileBuf *bufio.Writer) error {
 	if verboseFlag {
 		fmt.Printf(" A:\n%.5g\n", gonum.Formatted(A, gonum.Squeeze()))
 		aMatrix := extractDense(A)
-		mat.WriteZeroln(aMatrix, 5)
+		mat.WriteZeroln(aMatrix, 5, small)
 	}
 	str = fmt.Sprintf("%.5g\n", gonum.Formatted(A, gonum.Squeeze()))
 	strClean = cleanString(str)
@@ -442,7 +443,7 @@ func goNumMatTest(outputFileBuf *bufio.Writer) error {
 	}
 	bMatrix := extractDense(B)
 	if verboseFlag {
-		mat.WriteZeroln(bMatrix, 4)
+		mat.WriteZeroln(bMatrix, 4, small)
 	}
 
 	invSoln.Mul(&inverseA, B)

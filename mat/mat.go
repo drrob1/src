@@ -36,6 +36,7 @@ import (
  28 Mar 24 -- Added IsZeroApproximately, and IsZeroApprox.
  12 Oct 24 -- Making the small tolerance value dependent on the absolute value smallest value in the input matrix.
  13 Oct 24 -- My first approach to scale the tolerance factor was wrong-headed.  I'll make the tolerance factor a param.
+                And I fixed a bug in BelowSmallMakeZero.
 */
 
 const LastAltered = "13 Oct 2024"
@@ -76,9 +77,10 @@ func Zero(matrix Matrix2D) Matrix2D {
 	return matrix
 }
 
-func BelowSmallMakeZero(matrix Matrix2D) Matrix2D {
-	for r := range matrix {
-		for c := range matrix[r] {
+func BelowSmallMakeZero(m Matrix2D) Matrix2D { // I fixed a bug here.  The input param is passed by ref, so assigning to it returns that back to m and matrix.  Now they're separate.
+	matrix := Copy(m)
+	for r := range m {
+		for c := range m[r] {
 			if math.Abs(matrix[r][c]) < Small {
 				matrix[r][c] = 0
 			}
@@ -1114,7 +1116,73 @@ func MakeZeroPair(m1, m2 Matrix2D, places int, tol float64) []string {
 
 func WriteZeroPairln(m1, m2 Matrix2D, places int) {
 	ss := MakeZeroPair(m1, m2, places, Small)
-	println(ss)
+	//println(ss)  I think this is not what I intended.
+	PrintStringInYellow(ss)
+}
+
+func MakePair(m1, m2 Matrix2D, places int) []string { // tol isn't needed here, as I'm not making below tol into zero.
+	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
+	const padding = "               |"
+
+	OutputStringSlice := make([]string, 0, 500)
+	OutputStringSlice1 := make([]string, 0, 500)
+	OutputStringSlice2 := make([]string, 0, 500)
+
+	for i := range m1 {
+		var line []string
+		for j := range m1[i] {
+			v := m1[i][j]
+			//if math.Abs(v) < tol {
+			//	v = 0
+			//}
+			ss := strconv.FormatFloat(v, 'G', places, 64)
+
+			line = append(line, fmt.Sprintf("%10s", ss))
+		} // END FOR j
+		s := strings.Join(line, "")
+		OutputStringSlice1 = append(OutputStringSlice1, s)
+		OutputStringSlice1 = append(OutputStringSlice1, "\n")
+	} // END FOR i
+	OutputStringSlice1 = append(OutputStringSlice1, "\n")
+
+	for i := range m2 {
+		var line []string
+		for j := range m2[i] {
+			v := m2[i][j]
+			//if math.Abs(v) < tol {
+			//	v = 0
+			//}
+			ss := strconv.FormatFloat(v, 'G', places, 64)
+
+			line = append(line, fmt.Sprintf("%10s", ss))
+			//WriteLongReal (M[i,j], places);
+		} // END FOR j
+		s := strings.Join(line, "")
+		OutputStringSlice2 = append(OutputStringSlice2, s)
+		OutputStringSlice2 = append(OutputStringSlice2, "\n")
+	} // END FOR i
+	OutputStringSlice2 = append(OutputStringSlice2, "\n")
+
+	//fmt.Printf(" output string slice 2:\n")
+	//for _, s := range OutputStringSlice2 {
+	//	fmt.Print(s)
+	//}
+	//fmt.Println("-------------------------- stringslice2")
+
+	for i := range OutputStringSlice1 {
+		ss := OutputStringSlice1[i]
+		if ss != "\n" {
+			ss = ss + padding + OutputStringSlice2[i]
+		}
+		OutputStringSlice = append(OutputStringSlice, ss)
+	}
+
+	return OutputStringSlice
+} // END WriteZeroPair
+
+func WritePairln(m1, m2 Matrix2D, places int) {
+	ss := MakePair(m1, m2, places)
+	PrintStringInYellow(ss)
 }
 
 /*
