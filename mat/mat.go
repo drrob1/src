@@ -35,9 +35,10 @@ import (
  25 Mar 24 -- Added EqualApproximately.
  28 Mar 24 -- Added IsZeroApproximately, and IsZeroApprox.
  12 Oct 24 -- Making the small tolerance value dependent on the absolute value smallest value in the input matrix.
+ 13 Oct 24 -- My first approach to scale the tolerance factor was wrong-headed.  I'll make the tolerance factor a param.
 */
 
-const LastAltered = "12 Oct 2024"
+const LastAltered = "13 Oct 2024"
 const Small = 1.0e-10
 const SubscriptDim = 8192
 
@@ -114,7 +115,6 @@ func Copy(Src Matrix2D) Matrix2D {
 
 	Dest := NewMatrix(SrcRows, SrcCols)
 
-	//copy(Dest, Src) //  Doesn't work so I did it wrong.
 	for r := range Src {
 		copy(Dest[r], Src[r]) // this works.
 		//for c := range Src[r] { // golangci-lint recommended I use the copy() built in.
@@ -987,8 +987,7 @@ func Eigenvalues(A Matrix2D) LongComplexSlice {
 
 //   OUTPUT
 
-// ------------------------------------------------------------------------------ Write ----------------------------
-
+// Write -- Converts the matrix to a string using FormatFloat with a G verb and places number of digits.
 func Write(M Matrix2D, places int) []string {
 	// Writes the r x c matrix M to a string slice, where each column occupies a field "places" characters wide.
 
@@ -1007,32 +1006,31 @@ func Write(M Matrix2D, places int) []string {
 
 func Writeln(M Matrix2D, places int) {
 	ss := Write(M, places)
-	printString(ss)
+	PrintStringInYellow(ss)
 }
 
-func printString(s []string) { // not exported, at the moment.
+func PrintStringInYellow(s []string) { // not exported, at the moment.
 	for _, line := range s {
 		ctfmt.Print(ct.Yellow, true, line)
 	}
 }
 
-// ------------------------------------------------------------------------------ WriteZero ----------------------------
-
-func WriteZero(M Matrix2D, places int) []string {
+// MakeZeroWithTol -- Just as it's name says, it take a tolerance factor as its last param.
+func MakeZeroWithTol(M Matrix2D, places int, tolerance float64) []string {
 	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
 
-	smallest := minMatrix(M)
-	smallValue := smallest * Small
-	if smallValue == 0. {
-		smallValue = Small
-	}
-	//fmt.Printf(" In WriteZero and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
+	//smallest := minMatrix(M)
+	//smallValue := smallest * Small
+	//if smallValue == 0. {
+	//	smallValue = Small
+	//}
+	tolerance = math.Abs(tolerance)
 
 	OutputStringSlice := make([]string, 0, 500)
 	for i := range M {
 		for j := range M[i] {
 			v := M[i][j]
-			if math.Abs(v) < smallValue {
+			if math.Abs(v) < tolerance {
 				v = 0
 			}
 			ss := strconv.FormatFloat(v, 'G', places, 64)
@@ -1045,14 +1043,14 @@ func WriteZero(M Matrix2D, places int) []string {
 	return OutputStringSlice
 } // END WriteZero
 
-func WriteZeroln(M Matrix2D, places int) {
-	ss := WriteZero(M, places)
-	printString(ss)
+// WriteZeroln -- outputs the matrix after setting values below tolerance factor to zero.
+func WriteZeroln(M Matrix2D, places int, tol float64) {
+	ss := MakeZeroWithTol(M, places, tol)
+	PrintStringInYellow(ss)
 }
 
-// ------------------------------------------------------------------------------ WriteZeroPair ----------------------------
-
-func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
+// MakeZeroPair -- now has the tolerance factor as its last param
+func MakeZeroPair(m1, m2 Matrix2D, places int, tol float64) []string {
 	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
 	const padding = "               |"
 
@@ -1060,25 +1058,13 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 	OutputStringSlice1 := make([]string, 0, 500)
 	OutputStringSlice2 := make([]string, 0, 500)
 
-	smallest1 := minMatrix(m1)
-	smallest2 := minMatrix(m2)
-	var smallest float64
-	if smallest1 < smallest2 {
-		smallest = smallest1
-	} else {
-		smallest = smallest2
-	}
-	smallValue := smallest * Small
-	if smallValue == 0. {
-		smallValue = Small
-	}
-	//fmt.Printf(" In write zero pair and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
+	tol = math.Abs(tol)
 
 	for i := range m1 {
 		var line []string
 		for j := range m1[i] {
 			v := m1[i][j]
-			if math.Abs(v) < smallValue {
+			if math.Abs(v) < tol {
 				v = 0
 			}
 			ss := strconv.FormatFloat(v, 'G', places, 64)
@@ -1095,7 +1081,7 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 		var line []string
 		for j := range m2[i] {
 			v := m2[i][j]
-			if math.Abs(v) < Small {
+			if math.Abs(v) < tol {
 				v = 0
 			}
 			ss := strconv.FormatFloat(v, 'G', places, 64)
@@ -1127,26 +1113,9 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 } // END WriteZeroPair
 
 func WriteZeroPairln(m1, m2 Matrix2D, places int) {
-	ss := WriteZeroPair(m1, m2, places)
+	ss := MakeZeroPair(m1, m2, places, Small)
 	println(ss)
 }
-
-func minMatrix(m Matrix2D) float64 {
-	// Will determine the smallest absolute value in the matrix.  The intended matrix is the solution column vector, X, so it's not square.
-
-	minVal := 1.e9 // needs to be big.
-
-	for r := range m {
-		for c := range m[r] {
-			if math.Abs(m[r][c]) < minVal {
-				minVal = math.Abs(m[r][c])
-			}
-		}
-	}
-	return minVal
-}
-
-// END Mat.
 
 /*
 From https://www.developer.com/languages/matrix-go-golang/, added Oct 8, 2023.

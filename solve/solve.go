@@ -39,7 +39,7 @@ import (
 	"strings"
 )
 
-const LastCompiled = "12 Oct 24"
+const LastCompiled = "13 Oct 24"
 const small = 1e-10
 
 var smallValue float64
@@ -297,10 +297,8 @@ func main() {
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	mat.Writeln(D, 5) //    Write (ra4, N, 1, 4);
 
-	//D = mat.BelowSmallMakeZero(D)
-
 	fmt.Println("As a check, AX-B should be all zeros after calling BelowSmall.  It evaluates to")
-	mat.WriteZeroln(D, 5)
+	mat.WriteZeroln(D, 5, smallValue)
 	fmt.Println()
 	fmt.Println()
 
