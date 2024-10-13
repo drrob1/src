@@ -34,9 +34,10 @@ import (
  18 Mar 24 -- Adding WriteZeroln and WriteZeroPairLn, which just does the screen writes without returning anything.
  25 Mar 24 -- Added EqualApproximately.
  28 Mar 24 -- Added IsZeroApproximately, and IsZeroApprox.
+ 12 Oct 24 -- Making the small tolerance value dependent on the absolute value smallest value in the input matrix.
 */
 
-const LastAltered = "28 Mar 2024"
+const LastAltered = "12 Oct 2024"
 const Small = 1.0e-10
 const SubscriptDim = 8192
 
@@ -1020,11 +1021,18 @@ func printString(s []string) { // not exported, at the moment.
 func WriteZero(M Matrix2D, places int) []string {
 	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
 
+	smallest := minMatrix(M)
+	smallValue := smallest * Small
+	if smallValue == 0. {
+		smallValue = Small
+	}
+	fmt.Printf(" In WriteZero and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
+
 	OutputStringSlice := make([]string, 0, 500)
 	for i := range M {
 		for j := range M[i] {
 			v := M[i][j]
-			if math.Abs(v) < Small {
+			if math.Abs(v) < smallValue {
 				v = 0
 			}
 			ss := strconv.FormatFloat(v, 'G', places, 64)
@@ -1052,11 +1060,25 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 	OutputStringSlice1 := make([]string, 0, 500)
 	OutputStringSlice2 := make([]string, 0, 500)
 
+	smallest1 := minMatrix(m1)
+	smallest2 := minMatrix(m2)
+	var smallest float64
+	if smallest1 < smallest2 {
+		smallest = smallest1
+	} else {
+		smallest = smallest2
+	}
+	smallValue := smallest * Small
+	if smallValue == 0. {
+		smallValue = Small
+	}
+	fmt.Printf(" In write zero pair and smallest = %.4G and smallValue = %.4G\n", smallest, smallValue)
+
 	for i := range m1 {
 		var line []string
 		for j := range m1[i] {
 			v := m1[i][j]
-			if math.Abs(v) < Small {
+			if math.Abs(v) < smallValue {
 				v = 0
 			}
 			ss := strconv.FormatFloat(v, 'G', places, 64)
@@ -1068,12 +1090,6 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 		OutputStringSlice1 = append(OutputStringSlice1, "\n")
 	} // END FOR i
 	OutputStringSlice1 = append(OutputStringSlice1, "\n")
-
-	//fmt.Printf(" output string slice 1:\n")
-	//for _, s := range OutputStringSlice1 {
-	//	fmt.Print(s)
-	//}
-	//fmt.Println("--------------------- stringslice1")
 
 	for i := range m2 {
 		var line []string
@@ -1113,6 +1129,21 @@ func WriteZeroPair(m1, m2 Matrix2D, places int) []string {
 func WriteZeroPairln(m1, m2 Matrix2D, places int) {
 	ss := WriteZeroPair(m1, m2, places)
 	println(ss)
+}
+
+func minMatrix(m Matrix2D) float64 {
+	// Will determine the smallest absolute value in the matrix.  The intended matrix is the solution column vector, X, so it's not square.
+
+	minVal := 1.e9 // needs to be big.
+
+	for r := range m {
+		for c := range m[r] {
+			if math.Abs(m[r][c]) < minVal {
+				minVal = math.Abs(m[r][c])
+			}
+		}
+	}
+	return minVal
 }
 
 // END Mat.

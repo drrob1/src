@@ -16,6 +16,7 @@ MODULE Solve;
   26 Mar 24 -- Added checks on input matrix size, so it won't panic.
   11 Oct 24 -- Fixed a typo in a message, and changed import name from gomat to gonum.
   12 Oct 24 -- Copied getInputMatrix from solve2 to here, as it uses append and doesn't need maxN
+                 Experimenting w/ the concept of making small relative to the smallest value of |X|, ie absolute value.
 */
 
 import (
@@ -27,6 +28,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	gonum "gonum.org/v1/gonum/mat"
 	"io"
+	"math"
 	"os"
 	"runtime"
 	"src/filepicker"
@@ -39,6 +41,8 @@ import (
 
 const LastCompiled = "12 Oct 24"
 const small = 1e-10
+
+var smallValue float64
 
 //const MaxN = 99  No longer needed when I added getInputMatrix and removed the old code that needed it.
 
@@ -76,6 +80,21 @@ func makeDense2(matrix mat.Matrix2D) *gonum.Dense {
 	}
 
 	return dense
+}
+
+func minMatrix(m mat.Matrix2D) float64 {
+	// Will determine the smallest absolute value in the matrix.  The intended matrix is the solution column vector, X, so it's not square.
+
+	minVal := 1.e9
+
+	for r := range m {
+		for c := range m[r] {
+			if math.Abs(m[r][c]) < minVal {
+				minVal = math.Abs(m[r][c])
+			}
+		}
+	}
+	return minVal
 }
 
 //func extractDense(m *gonum.Dense) [][]float64 {
@@ -256,9 +275,16 @@ func main() {
 	X := mat.Solve(A, B)
 	fmt.Println("The solution X to AX = B using Solve is")
 	mat.Writeln(X, 5)
+	minX := minMatrix(X)
+	smallValue = minX * small
+	if smallValue == 0. {
+		smallValue = small
+	}
+	if *verboseFlag {
+		ctfmt.Printf(ct.Green, true, " Min value of the X matrix, accounting for math.Abs(), is %.4G, and small value is %.4G\n\n", minX, smallValue)
+	}
 
-	//ans2 := mat.NewMatrix(N, N)
-	ans2 := mat.GaussJ(A, B) // Solve (ra1, ra2, ans, N, 1);
+	ans2 := mat.GaussJ(A, B)
 	fmt.Println("The solution X to AX = B using GaussJ is")
 	mat.Writeln(ans2, 5)
 	fmt.Println()
@@ -266,7 +292,7 @@ func main() {
 	// Check that the solution looks right.
 
 	C := mat.Mul(A, X) // Mul (ra1, ans, N, N, 1, ra3);
-	D := mat.Sub(B, C) //  Sub (ra3, ra2, N, 1, ra4);
+	D := mat.Sub(B, C) // Sub (ra3, ra2, N, 1, ra4);
 
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	mat.Writeln(D, 5) //    Write (ra4, N, 1, 4);
@@ -332,22 +358,22 @@ func main() {
 	}
 	fmt.Printf(" Solution by gonum Solve is:\n%.5g\n\n", gonum.Formatted(solvSoln, gonum.Squeeze()))
 
-	if gonum.EqualApprox(denseX, &invSoln, small) {
+	if gonum.EqualApprox(denseX, &invSoln, smallValue) {
 		ctfmt.Printf(ct.Green, false, " X and inversion solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, true, " X and inversion solution are not equal.\n")
 	}
-	if gonum.EqualApprox(denseX, luSoln, small) {
+	if gonum.EqualApprox(denseX, luSoln, smallValue) {
 		ctfmt.Printf(ct.Green, false, " X and LU solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and LU solution are not equal.\n")
 	}
-	if gonum.EqualApprox(denseX, qrSoln, small) {
+	if gonum.EqualApprox(denseX, qrSoln, smallValue) {
 		ctfmt.Printf(ct.Green, false, " X and QR solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and QR solution are not equal.\n")
 	}
-	if gonum.EqualApprox(denseX, solvSoln, small) {
+	if gonum.EqualApprox(denseX, solvSoln, smallValue) {
 		ctfmt.Printf(ct.Green, false, " X and Solve solution are equal.\n")
 	} else {
 		ctfmt.Printf(ct.Red, false, " X and Solve solution are not equal.\n")
