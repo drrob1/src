@@ -277,7 +277,7 @@ func main() {
 	mat.Writeln(X, 5)
 	minX := minMatrix(X)
 	smallValue = minX * small
-	if smallValue == 0. {
+	if smallValue < small { // turns out that sometimes X is zero, or very small in the order of 1e-15.  Then smallValue is in order of 1e-25, which is much too small.
 		smallValue = small
 	}
 	if *verboseFlag {
