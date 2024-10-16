@@ -37,9 +37,9 @@ import (
  12 Oct 24 -- Making the small tolerance value dependent on the absolute value smallest value in the input matrix.
  13 Oct 24 -- My first approach to scale the tolerance factor was wrong-headed.  I'll make the tolerance factor a param.
                 And I fixed a bug in BelowSmallMakeZero.
- 15 Oct 24 -- Found that other routines have the same bug, in that some routines write to the input param as if it's Modula-2 and that's not copied back.  Here
-                slices are passed by ref so I need to define a temp variable to return from the function.
-                Conclusion is that I can't copy a 2D matrix using the copy built-in.  However, the pre-defined copy does work to copy the 2D matrix row-by-row.
+ 15 Oct 24 -- Found that other routines have the same bug, in that some routines write to the input param as if it's Modula-2 that's not copied back.
+                Here slices are passed by ref so I need to define a temp variable to return from the function.  Or just use the pointers to return the result like in Zero, Unit and Random.
+                Conclusion is that I can't copy a 2D matrix using the copy built-in.  However, the pre-defined copy does work to copy the 2D matrix row-by-row, as I do in Copy, below.
 */
 
 const LastAltered = "15 Oct 2024"
@@ -96,7 +96,6 @@ func Zero(m Matrix2D) {
 }
 
 func BelowSmallMakeZero(m Matrix2D) Matrix2D { // I fixed a bug here.  The input param is passed by ref, so assigning to it returns that back to m and matrix.  Now they're separate.
-	//matrix := Copy(m)  doesn't work for a 2D matrix
 	//var matrix Matrix2D
 	//copy(matrix, m) // this doesn't work
 	matrix := Copy(m)
@@ -121,7 +120,7 @@ func Unit(m Matrix2D) {
 }
 
 func Random(m Matrix2D) {
-	// Changes matrix so that its elements are random integers from 0..100
+	// Changes matrix so that its elements are random integers from 0..100, using the pointers to return the result back.
 	// copy(m, matrix)
 	for r := range m {
 		for c := range m[r] {
@@ -131,7 +130,7 @@ func Random(m Matrix2D) {
 }
 
 func Copy(Src Matrix2D) Matrix2D {
-	// Copies an r x c matrix A to B, by doing an element by element copy.  I don't think just copying pointers is correct.
+	// Copies an r x c matrix A to B, by doing an element by element copy, ie, a deep copy.  I don't think just copying pointers is correct, which would be a shallow copy.
 
 	//var Dest Matrix2D
 	//copy(Dest, Src)  This doesn't work.  I'll restore the previous code.
