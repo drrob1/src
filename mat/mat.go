@@ -430,8 +430,8 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 	W := Copy(A)
 	X = Copy(B)
 
-	fmt.Printf(" W is a copy of A.  W is\n%v\n\n", W)
-	fmt.Printf(" X is a copy of B.  X is\n%v\n\n", X)
+	//fmt.Printf(" W is a copy of A.  W is\n%v\n\n", W)
+	//fmt.Printf(" X is a copy of B.  X is\n%v\n\n", X)
 
 	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
 	// bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
