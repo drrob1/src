@@ -416,11 +416,11 @@ func main() {
 	if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, smallValue) {
 		ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using tol of %.4g.\n\n", smallValue)
 	} else {
-		ctfmt.Printf(ct.Red, true, "AX-B: shouldbeZeroMatrix and allZeros matrices are NOT approximately equal.\n")
-		if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, small*10) {
-			ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using small*10.\n\n")
+		ctfmt.Printf(ct.Red, true, "AX-B: shouldbeZeroMatrix and allZeros matrices are NOT approximately equal using tol of %.4g.\n", smallValue)
+		if gonum.EqualApprox(shouldBeZeroMatrix, allZeros, smallValue*10) {
+			ctfmt.Printf(ct.Green, false, " AX-B: shouldbeZeroMatrix and allZeros matrix are approximately equal using smallValue*10, %.4g\n\n", smallValue*10)
 		} else {
-			ctfmt.Printf(ct.Red, true, "AX-B is not zero matrix, even using small*10 as tolerance factor.  result is:\n")
+			ctfmt.Printf(ct.Red, true, "AX-B is not zero matrix, even using smallValue*10, %.4g, as tolerance factor.  result is:\n", smallValue*10)
 			outputDense(shouldBeZeroMatrix)
 			fmt.Println()
 		}

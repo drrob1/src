@@ -1,4 +1,4 @@
-package mat
+package matold
 
 import (
 	"fmt"
@@ -37,12 +37,11 @@ import (
  12 Oct 24 -- Making the small tolerance value dependent on the absolute value smallest value in the input matrix.
  13 Oct 24 -- My first approach to scale the tolerance factor was wrong-headed.  I'll make the tolerance factor a param.
                 And I fixed a bug in BelowSmallMakeZero.
- 15 Oct 24 -- Found that other routines have the same bug, in that some routines write to the input param as if it's Modula-2 and that's not copied back.  Here
-                slices are passed by ref so I need to define a temp variable to return from the function.
-                Conclusion is that I can't copy a 2D matrix using the copy built-in.  However, the pre-defined copy does work to copy the 2D matrix row-by-row.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ 15 Oct 24 -- Since I'm playing w/ the mat package, I'm preserving this as matold.
 */
 
-const LastAltered = "15 Oct 2024"
+const LastAltered = "13 Oct 2024"
 const Small = 1.0e-10
 const SubscriptDim = 8192
 
@@ -52,20 +51,6 @@ type Permutation []int
 type LongComplexSlice []complex128 //
 
 //   Creating matrices
-
-func New(R, C int) Matrix2D { // I think row, column makes more sense than N x M
-	// Creates an NxM matrix as a slice of slices.  So it's a pointer that gets passed around.
-	// old code basically did this: NEW (result, N-1, M-1); RETURN result;
-
-	if (R > SubscriptDim) || (C > SubscriptDim) || R < 1 || C < 1 {
-		return nil
-	}
-	matrix := make(Matrix2D, R)
-	for i := range matrix {
-		matrix[i] = make([]float64, C)
-	}
-	return matrix
-}
 
 func NewMatrix(R, C int) Matrix2D { // I think row, column makes more sense than N x M
 	// Creates an NxM matrix as a slice of slices.  So it's a pointer that gets passed around.
@@ -83,22 +68,19 @@ func NewMatrix(R, C int) Matrix2D { // I think row, column makes more sense than
 
 //  ASSIGNMENTS
 
-func Zero(m Matrix2D) {
+func Zero(matrix Matrix2D) Matrix2D {
 	// It zeros an already defined r by c matrix.  I'm not sure this is needed in Go, but here it is.
-	// As the input param is passed by reference, I did not intend to zero in place.  I need a temp variable to be returned.
 	// I just changed this to use the pass by ref param to return the zero result.  It no longer uses a separate return statement.
 
-	for r := range m {
-		for c := range m[r] {
-			m[r][c] = 0
+	for r := range matrix {
+		for c := range matrix[r] {
+			matrix[r][c] = 0
 		}
 	}
+	return matrix
 }
 
 func BelowSmallMakeZero(m Matrix2D) Matrix2D { // I fixed a bug here.  The input param is passed by ref, so assigning to it returns that back to m and matrix.  Now they're separate.
-	//matrix := Copy(m)  doesn't work for a 2D matrix
-	//var matrix Matrix2D
-	//copy(matrix, m) // this doesn't work
 	matrix := Copy(m)
 	for r := range m {
 		for c := range m[r] {
@@ -110,37 +92,35 @@ func BelowSmallMakeZero(m Matrix2D) Matrix2D { // I fixed a bug here.  The input
 	return matrix
 }
 
-func Unit(m Matrix2D) {
-	// Changes an N by N identity matrix to one with all zeros except along the main diagonal.  It uses the pass by reference to return the result.
-	Zero(m)
-	//fmt.Printf(" in mat.Unit, len(m)=%d, and this should be all zeros:\n%v\n\n", len(m), m)
-	for diag := range m {
-		m[diag][diag] = 1
+func Unit(matrix Matrix2D) Matrix2D {
+	// Creates an N by N identity matrix, with all zeros except along the main diagonal.
+	matrix = Zero(matrix)
+	for diag := range matrix {
+		matrix[diag][diag] = 1
 	}
-	//fmt.Printf(" in mat.Unit, len(m)=%d, and this should be a unit matrix:\n%v\n\n", len(m), m)
+	return matrix
 }
 
-func Random(m Matrix2D) {
-	// Changes matrix so that its elements are random integers from 0..100
-	// copy(m, matrix)
-	for r := range m {
-		for c := range m[r] {
-			m[r][c] = float64(rand.IntN(100))
+func Random(matrix Matrix2D) Matrix2D {
+	// Creates matrix with random integers from 0..100
+
+	for r := range matrix {
+		for c := range matrix[r] {
+			matrix[r][c] = float64(rand.IntN(100))
 		}
 	}
+	return matrix
 }
 
 func Copy(Src Matrix2D) Matrix2D {
 	// Copies an r x c matrix A to B, by doing an element by element copy.  I don't think just copying pointers is correct.
 
-	//var Dest Matrix2D
-	//copy(Dest, Src)  This doesn't work.  I'll restore the previous code.
-
 	SrcRows := len(Src)
 	SrcCols := len(Src[0])
 
 	Dest := NewMatrix(SrcRows, SrcCols)
-	for r := range Src { // it occurred to me that I don't need a for loop, that the pre-defined copy will work.  And the pre-defined copy does a deep copy.
+
+	for r := range Src {
 		copy(Dest[r], Src[r]) // this works.
 		//for c := range Src[r] { // golangci-lint recommended I use the copy() built in.
 		//	Dest[r][c] = Src[r][c]
@@ -430,9 +410,6 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 	W := Copy(A)
 	X = Copy(B)
 
-	fmt.Printf(" W is a copy of A.  W is\n%v\n\n", W)
-	fmt.Printf(" X is a copy of B.  X is\n%v\n\n", X)
-
 	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
 	// bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
 	// We simply base our calculations on the assumption that those values have been stored.
@@ -533,7 +510,7 @@ func Solve(A, B Matrix2D) Matrix2D {
 func Invert(A Matrix2D) Matrix2D {
 	N := len(A)
 	u := NewMatrix(N, N)
-	Unit(u)
+	u = Unit(u)
 	inv := Solve(A, u)
 	return inv
 } // END Invert;
@@ -1013,7 +990,7 @@ func Eigenvalues(A Matrix2D) LongComplexSlice {
 	return W
 } // END Eigenvalues;
 
-// ---------------------------------------- OUTPUT
+//   OUTPUT
 
 // Write -- Converts the matrix to a string using FormatFloat with a G verb and places number of digits.
 func Write(M Matrix2D, places int) []string {

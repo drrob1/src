@@ -30,6 +30,7 @@ REVISION HISTORY
              handle a VecDense type.  I could, but I won't bother now that I've figured it out.  I could either run the tests from cmd, or use cleanString before outputting them.
 
 			 Last thing today I added was VecDense solution, to see if that also worked.  It does.
+15 Oct 24 -- Updated the code so that it would compile after I changed the API of my mat package.
 */
 
 import (
@@ -94,22 +95,24 @@ func solveTest2() {
 	}
 
 	fmt.Printf("\n Column vectors X and B are:\n")
-	ss = mat.WriteZeroPair(X, B, 4)
-	printString(ss)
+	mat.WriteZeroPairln(X, B, 4)
+	//ss = mat.WriteZeroPair(X, B, 4)
+	//printString(ss)
 	fmt.Println()
 	fmt.Printf("\n\n")
 
 	// Another way to find the B column vector is to just do A*X.  It works.
 	newB := mat.Mul(A, X)
 	fmt.Printf(" Column vector newB is:\n")
-	mat.WriteZeroln(newB, 6)
+	mat.WriteZeroln(newB, 6, mat.Small)
 
 	solveSoln := mat.Solve(A, B)
 	gaussSoln := mat.GaussJ(A, B)
 
 	fmt.Printf("The solution X to AX = B\n using Solve       and then      GaussJ are:\n")
-	ss = mat.WriteZeroPair(solveSoln, gaussSoln, 3)
-	printString(ss)
+	mat.WriteZeroPairln(solveSoln, gaussSoln, 3)
+	//ss = mat.WriteZeroPair(solveSoln, gaussSoln, 3)
+	//printString(ss)
 	fmt.Println()
 
 	if mat.EqualApprox(solveSoln, gaussSoln) {
@@ -133,14 +136,16 @@ func solveTest2() {
 	fmt.Println("As a check, AX-B should be 0, and evaluates to")
 	ss = mat.Write(D, 3)
 	printString(ss)
-	ss = mat.WriteZero(D, 3)
-	printString(ss)
+	mat.WriteZeroln(D, 3, mat.Small)
+	//ss = mat.WriteZero(D, 3)
+	//printString(ss)
 
 	fmt.Printf("\n Will now use matrix inversion as a solution method.  Result is:\n")
 	inverseA := mat.Invert(A)
 	inverseSoln := mat.Mul(inverseA, B)
-	ss = mat.WriteZero(inverseSoln, 3)
-	printString(ss)
+	mat.WriteZeroln(inverseSoln, 3, mat.Small)
+	//ss = mat.WriteZero(inverseSoln, 3)
+	//printString(ss)
 
 	solveInvert := mat.SolveInvert(A, B)
 
@@ -195,7 +200,7 @@ func goNumMatTest() {
 	A := gomat.NewDense(aRows, aCols, initA)
 	fmt.Printf(" A:\n%.5g\n", gomat.Formatted(A, gomat.Squeeze()))
 	aMatrix := extractDense(A)
-	mat.WriteZeroln(aMatrix, 5)
+	mat.WriteZeroln(aMatrix, 5, mat.Small)
 	newPause()
 
 	initB := make([]float64, bRows) // col vec
@@ -221,7 +226,7 @@ func goNumMatTest() {
 	B := gomat.NewDense(bRows, bCols, initB)
 	fmt.Printf(" B:\n%.5g\n\n", gomat.Formatted(B, gomat.Squeeze()))
 	bMatrix := extractDense(B)
-	mat.WriteZeroln(bMatrix, 4)
+	mat.WriteZeroln(bMatrix, 4, mat.Small)
 
 	invSoln.Mul(&inverseA, B)
 	fmt.Printf(" Solution by GoNum inversion and B is:\n%.5g\n\n", gomat.Formatted(&invSoln, gomat.Squeeze()))

@@ -20,6 +20,7 @@ REVISION HISTORY
 21 Nov 22 -- static linter found issues.  Now addressed.
  1 Apr 23 -- Since I'm here because of StaticCheck, I'll fix some of the messages and update the code.
 10 Mar 24 -- Added test of ScalarMult
+15 Oct 24 -- Updated the code so that it would compile after I changed the API of my mat package.
 */
 
 import (
@@ -57,7 +58,7 @@ func BasicTest() {
 	for i := range B {
 		B[i] = make([]float64, bCols)
 	}
-	F = mat.NewMatrix(aRows, aCols)  //  testing NewMatrix, not in original code
+	F = mat.New(aRows, aCols)        //  testing NewMatrix, not in original code
 	G := mat.NewMatrix(bRows, bCols) // testing NewMatrix, not in original code
 	fmt.Printf("ARows = %d, ACols = %d, bRows = %d and bCols = %d\n", aRows, aCols, bRows, bCols)
 	fmt.Printf(" NewMatrix F has %d rows and %d columns.  NewMatrix G has %d rows and %d columns.\n", len(F), len(F[0]), len(G), len(G[0]))
@@ -68,31 +69,36 @@ func BasicTest() {
 
 	//      Give a value to the A matrix.
 
-	A = mat.Random(A)
-	fmt.Println(" Matrix A is:")
-	ss := mat.Write(A, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	// A = mat.Random(A)
+	mat.Random(A)
+	fmt.Println(" Matrix A should be random numbers from 0..100, it is:")
+	mat.Writeln(A, 5)
+	//ss := mat.Write(A, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	//      Give a value to the B matrix.
 
-	B = mat.Random(B) // Random (B, Brows, Bcols);
-	fmt.Println(" Matrix B is:")
-	ss = mat.Write(B, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//B = mat.Random(B) // Random (B, Brows, Bcols);
+	mat.Random(B) // Random (B, Brows, Bcols);
+	fmt.Println(" Matrix B should be random numbers from 0..100, it is:")
+	mat.Writeln(B, 5)
+	//ss = mat.Write(B, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	// Test scalar multiply
 	A5 := mat.ScalarMul(5, A)
 	fmt.Printf(" 5 dot A, or scalar multiply of A, is:\n")
-	ss = mat.Write(A5, 3)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(A5, 4)
+	//ss = mat.Write(A5, 3)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	//      Try an addition (it will fail).
@@ -101,10 +107,11 @@ func BasicTest() {
 		fmt.Println("We can't compute A+B because the dimensions don't match, as expected.")
 	} else {
 		fmt.Println(" Trying to add A+B, which should have failed.  It seems to have worked.  C is:")
-		ss = mat.Write(C, 5)
-		for _, s := range ss {
-			fmt.Print(s)
-		}
+		mat.Writeln(C, 5)
+		//ss = mat.Write(C, 5)
+		//for _, s := range ss {
+		//	fmt.Print(s)
+		//}
 		fmt.Println()
 	}
 
@@ -112,79 +119,90 @@ func BasicTest() {
 
 	C = mat.Mul(A, B)
 	fmt.Println("C = A*B is")
-	ss = mat.Write(C, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(C, 5)
+	//ss = mat.Write(C, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	// Give a value to the D matrix.
 
-	D = mat.Random(D)
-	fmt.Println("Matrix D is")
-	ss = mat.Write(D, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//D = mat.Random(D)
+	mat.Random(D)
+	fmt.Println("Matrix D should be random containing 0..100, it is")
+	mat.Writeln(D, 5)
+	//ss = mat.Write(D, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	// Try another addition (this one should work).
 
 	E = mat.Add(A, D)
 	fmt.Println("E = A+D works because their dimensions match.  Result is")
-	ss = mat.Write(E, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.Writeln(E, 5)
+	//ss = mat.Write(E, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 
 	// My new test code
 	F = mat.Add(D, E)
 	fmt.Println(" F = D + E should succeed, which is same as F = D + A + D.")
 	if F != nil {
-		ss = mat.Write(F, 5)
-		for _, s := range ss {
-			fmt.Print(s)
-		}
+		mat.Writeln(F, 5)
+		//ss = mat.Write(F, 5)
+		//for _, s := range ss {
+		//	fmt.Print(s)
+		//}
 		fmt.Println()
 	} else {
 		fmt.Println(" F = D + E failed because the dimensions don't match.")
-		F = mat.Random(F)
+		//F = mat.Random(F)
+		mat.Random(F)
 	}
 
 	G = mat.Sub(F, E) //   should fail
 	fmt.Println(" G = F - E failed because the dimensions don't match, as expected.")
 	if G != nil {
-		ss = mat.Write(G, 5)
-		for _, s := range ss {
-			fmt.Print(s)
-		}
+		//ss = mat.Write(G, 5)
+		mat.Writeln(G, 5)
+		//for _, s := range ss {
+		//	fmt.Print(s)
+		//}
 		fmt.Println()
 	} else {
-		fmt.Print(" E - F should have failed because the dimensions don't match, but it succeeded for some reason.")
-		G = mat.Random(G)
-		ss = mat.Write(G, 4)
+		fmt.Printf(" E - F should have failed because the dimensions don't match, but it succeeded for some reason.  \n")
+		//G = mat.Random(G)
+		mat.Random(G)
+		//ss = mat.Write(G, 4)
 		fmt.Println(" Random G after E - F failed.")
-		for _, s := range ss {
-			fmt.Print(s)
-		}
+		mat.Writeln(G, 4)
+		//for _, s := range ss {
+		//	fmt.Print(s)
+		//}
 		fmt.Println()
 	}
 
 	fmt.Println(" Matrix D is                     Matrix E:")
-	ss = mat.WriteZeroPair(D, E, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
-	fmt.Println()
+	mat.WriteZeroPairln(D, E, 4)
+	//ss = mat.WriteZeroPair(D, E, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
+	//fmt.Println()
 
 	newPause()
 
-	ss = mat.Write(E, 4)
 	fmt.Println(" Matrix E is:")
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//ss = mat.Write(E, 4)
+	mat.Writeln(E, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 
 	H := mat.Mul(D, B) // should work
 	fmt.Println("H =  D*B:")
@@ -202,36 +220,41 @@ func BasicTest() {
 	Q := mat.Sub(A, A)
 	fmt.Println(" Q = A - A")
 	if Q != nil {
-		ss = mat.Write(Q, 4)
-		for _, s := range ss {
-			fmt.Print(s)
-		}
+		mat.Writeln(Q, 5)
+		//ss = mat.Write(Q, 4)
+		//for _, s := range ss {
+		//	fmt.Print(s)
+		//}
 		fmt.Println()
 	} else {
 		fmt.Println(" Q = A - A did not work but should have.")
 	}
 
 	K := mat.NewMatrix(2, 2)
-	K = mat.Random(K)
+	//K = mat.Random(K)
+	mat.Random(K)
 	L := mat.NewMatrix(2, 2)
-	L = mat.Random(L)
+	mat.Random(L)
 	fmt.Println()
-	fmt.Println(" K and then L, and then K*L")
-	ss = mat.Write(K, 6)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
-	ss = mat.Write(L, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	fmt.Println(" random K and then L, and then K*L")
+	mat.Writeln(K, 6)
+	mat.Writeln(L, 6)
+	//ss = mat.Write(K, 6)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
+	//ss = mat.Write(L, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 
 	L = mat.Mul(K, L)
+	mat.Writeln(L, 6)
 
-	ss = mat.Write(L, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//ss = mat.Write(L, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 } //    END BasicTest;
 
 //************************************************************************
@@ -267,7 +290,8 @@ func SolveTest() {
 
 	// Give a value to the A matrix.
 
-	A = mat.Random(A)
+	//A = mat.Random(A)
+	mat.Random(A)
 	fmt.Println("Matrix A is random:")
 	ss := mat.Write(A, 4)
 	for _, s := range ss {
@@ -276,7 +300,8 @@ func SolveTest() {
 
 	// Give a value to the B matrix.
 
-	B = mat.Random(B)
+	//B = mat.Random(B)
+	mat.Random(B)
 	fmt.Println("Matrix B is random:")
 	ss = mat.Write(B, 4)
 	for _, s := range ss {
@@ -292,18 +317,20 @@ func SolveTest() {
 	// Write the solution.
 
 	fmt.Println("Using mat.Solve, the solution X to A * X = B is         Using mat.GaussJ:")
+	mat.WriteZeroPairln(X, Y, 5)
 	//ss = mat.Write(X, 4)
-	ss = mat.WriteZeroPair(X, Y, 5)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//ss = mat.WriteZeroPair(X, Y, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 
 	fmt.Println("Using mat.GaussJ, the solution X to A * X = B is:          Using mat.SolveInvert")
+	mat.WriteZeroPairln(Y, z, 4)
 	//ss = mat.Write(Y, 4)
-	ss = mat.WriteZeroPair(Y, z, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	//ss = mat.WriteZeroPair(Y, z, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 
 	// Check that the solution looks right from mat.Solve.
 
@@ -311,10 +338,11 @@ func SolveTest() {
 	D = mat.Sub(B, C)
 	d := mat.BelowSmallMakeZero(D)
 	fmt.Println("As a check, A * X - B evaluates to zero from mat.Solve, before and after mat.BelowSmallMakeZero")
-	ss = mat.WriteZeroPair(D, d, 4) // Write (D, Brows, Bcols, 4);
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.WriteZeroPairln(D, d, 4)
+	//ss = mat.WriteZeroPair(D, d, 4) // Write (D, Brows, Bcols, 4);
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	//fmt.Println()
 	//fmt.Println("As a check, AX-B evaluates to zero after running mat.BelowSmallMakeZero")
 	//ss = mat.Write(D, 4)
@@ -329,12 +357,12 @@ func SolveTest() {
 	D = mat.Sub(B, C)
 	d = mat.Mul(A, z)
 	e := mat.Sub(B, d)
-	ss = mat.WriteZeroPair(D, e, 5)
 	fmt.Println("As a check, AX-B evaluates to zero from mat.GaussJ and mat.SolveInvertafter.")
-	//ss = mat.WriteZeroPair(D, d, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.WriteZeroPairln(D, e, 5)
+	//ss = mat.WriteZeroPair(D, e, 5)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 } //    END SolveTest;
 
@@ -375,7 +403,8 @@ func SingularTest() {
 
 	// Give a value to the B matrix.
 
-	B = mat.Random(B)
+	//B = mat.Random(B)
+	mat.Random(B)
 	fmt.Println("Matrix B is random:")
 	ss = mat.Write(B, 4)
 	for _, s := range ss {
@@ -407,7 +436,8 @@ func InversionTest() {
 
 	// Give a random value to the A matrix.
 
-	A = mat.Random(A) // Random (A, N, N);
+	//A = mat.Random(A) // Random (A, N, N);
+	mat.Random(A) // Random (A, N, N);
 	fmt.Println(" Random Matrix A is")
 	ss := mat.Write(A, 4)
 	for _, s := range ss {
@@ -441,11 +471,11 @@ func InversionTest() {
 	fmt.Println()
 	fmt.Println()
 	fmt.Println("As a check, the product evaluates to the identity matrix after using mat.WriteZero.")
-	//B = mat.BelowSmallMakeZero(B)
-	ss = mat.WriteZero(B, 4)
-	for _, s := range ss {
-		fmt.Print(s)
-	}
+	mat.WriteZeroln(B, 4, mat.Small)
+	//ss = mat.WriteZero(B, 4)
+	//for _, s := range ss {
+	//	fmt.Print(s)
+	//}
 	fmt.Println()
 	fmt.Println()
 
