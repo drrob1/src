@@ -83,9 +83,10 @@ import (
    8 Jan 22 -- Converted to modules; it shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
                  Added verbose flag to control the display of pauses.  Removed use of ioutil that was depracated as of Go 1.16
   21 Jan 24 -- Expanded stop code to include "," and "."
+  16 Oct 24 -- Got the idea that this program place the title row for all .xls files, ie, Date, Amt, Description, Comment, delimited as it has to be to be processed correctly.
 */
 
-const lastModified = "21 Jan 24"
+const lastModified = "17 Oct 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -208,8 +209,6 @@ func main() {
 		fmt.Println(" Picked filename is", InFilename)
 		BaseFilename = InFilename
 	} else {
-		//                                                                inbuf := getcommandline.GetCommandLineString()
-		//                                                      inbuf := os.Args[1] // os.Args[0] is binary exe cmd name
 		inBuf := flag.Arg(0)
 		BaseFilename = filepath.Clean(inBuf)
 
@@ -248,15 +247,12 @@ func main() {
 		CSVOutFilename = sqliteoutfile
 		TXTOutFilename = accessoutfile
 	} else {
-		//                                                       CSVOutFilename = strings.ToLower(BaseFilename + ".csv")
-		//                                                       TXTOutFilename = strings.ToLower(BaseFilename + ".xls")
 		CSVOutFilename = BaseFilename + ".csv"
 		TXTOutFilename = BaseFilename + ".xls"
 	}
 
 	fmt.Println()
 
-	//filebyteslice = make([]byte, 0, MB) // 1 MB as initial capacity.  Which is not needed and was removed Jan 2022.
 	filebyteslice, e = os.ReadFile(InFilename) // ioutil has been depracated as of Go 1.16
 	if e != nil {
 		fmt.Println(" Error from ReadFile is ", e)
@@ -303,6 +299,16 @@ func main() {
 	} else {
 		txtwriter = bufio.NewWriter(OutputFile)
 		defer txtwriter.Flush()
+	}
+
+	// Output excel column headings only if not in citibank checking mode.
+	if inputstate != citichecking { // not processing a CHK file to be imported into CitibankXP.mdb
+		str := "Date \t Amt \t Description \t Comment\n"
+		_, err = txtwriter.WriteString(str)
+		if err != nil {
+			fmt.Printf(" Error from txtwriter.WriteString for %s is %v\n", OutFilename, err)
+			return
+		}
 	}
 
 	for ctr, t := range Transactions {
