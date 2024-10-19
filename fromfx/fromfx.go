@@ -462,7 +462,7 @@ func main() {
 
 func writeOutExcelFile(fn string, base string, transactions []generalTransactionType) error {
 
-	const excelFormat = "$#,##0.0_);[Red](-$#,##0.0.00)"
+	const excelFormat = `$#,##0.00_);[Red](-$#,##0.00)`
 	workbook := xlsx.NewFile()
 
 	comment := base
@@ -473,6 +473,8 @@ func writeOutExcelFile(fn string, base string, transactions []generalTransaction
 	if err != nil {
 		return err
 	}
+
+	xlsx.SetDefaultFont(12., "Arial")
 
 	// write out heading names
 	// "Date \t Amt \t Description \t Comment"
