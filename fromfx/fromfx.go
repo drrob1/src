@@ -203,7 +203,7 @@ func main() {
 		i, err := strconv.Atoi(ans)
 		if err == nil {
 			InFilename = filenames[i]
-		} else { // allow entering 'a' .. 'z' for 0 to 25.  However, it seems I never use it.
+		} else { // allow entering 'a' .. 'z' for 0 to 25.
 			s := strings.ToUpper(ans)
 			s = strings.TrimSpace(s)
 			s0 := s[0]
