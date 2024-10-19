@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"github.com/tealeg/xlsx/v3"
 	"log"
 	"os"
 	"path/filepath"
@@ -84,9 +85,10 @@ import (
                  Added verbose flag to control the display of pauses.  Removed use of ioutil that was depracated as of Go 1.16
   21 Jan 24 -- Expanded stop code to include "," and "."
   16 Oct 24 -- Got the idea that this program place the title row for all .xls files, ie, Date, Amt, Description, Comment, delimited as it has to be to be processed correctly.
+               Will do this by adding a func instead of adding it to main.  It'll be easier to debug as a func.
 */
 
-const lastModified = "17 Oct 24"
+const lastModified = "19 Oct 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -122,9 +124,11 @@ type ofxCharType struct {
 // var err error  unused according to Goland, so I removed it.
 
 const KB = 1024
-const MB = KB * KB
+
+// const MB = KB * KB  unused, so I removed it
 const ofxext = ".OFX"
 const qfxext = ".QFX"
+const xlsxext = ".xlsx"
 const sqliteoutfile = "citifile.csv"
 const accessoutfile = "citifile.txt"
 
@@ -171,7 +175,7 @@ var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pa
 func main() {
 	var e error
 	var filebyteslice []byte
-	var BaseFilename, ans, InFilename, CSVOutFilename, TXTOutFilename string
+	var BaseFilename, ans, InFilename, CSVOutFilename, TXTOutFilename, XLoutFilename string
 
 	flag.Parse()
 
@@ -248,7 +252,7 @@ func main() {
 		TXTOutFilename = accessoutfile
 	} else {
 		CSVOutFilename = BaseFilename + ".csv"
-		TXTOutFilename = BaseFilename + ".xls"
+		TXTOutFilename = BaseFilename + ".xls" // note that the file w/ ext of .xls is really a text file.  Excel convertes this correctly.
 	}
 
 	fmt.Println()
@@ -284,6 +288,7 @@ func main() {
 
 	// Output to txt format file section for Excel or Access.
 
+	XLoutFilename = BaseFilename + xlsxext
 	OutFilename := TXTOutFilename
 	OutputFile, err := os.Create(OutFilename)
 	check(err)
@@ -313,8 +318,7 @@ func main() {
 
 	for ctr, t := range Transactions {
 		/*
-			fmt.Println(" TRNTYPE; DTPOSTEDtxt; DTPOSTEDcsv; TRNAMT; TRNAMTfloat; FITID; CHECKNUM; CHECKNUMint; ",
-				"NAME: MEMO; Descript; Juldate")
+			fmt.Println(" TRNTYPE; DTPOSTEDtxt; DTPOSTEDcsv; TRNAMT; TRNAMTfloat; FITID; CHECKNUM; CHECKNUMint; ", "NAME: MEMO; Descript; Juldate")
 			fmt.Println("transaction is:", t, ".  Hit any key to continue.")
 			var ans string
 			fmt.Print(" e, q, n will exit : ")
@@ -420,7 +424,7 @@ func main() {
 				log.Fatalln(e)
 			}
 		}
-		if ctr%40 == 0 && ctr > 0 && *verboseFlag {
+		if ctr%40 == 39 && *verboseFlag {
 			Pause()
 		}
 	}
@@ -446,9 +450,58 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// Write out the excel file in xlsx format
+	err = writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
+	if err != nil {
+		fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
+	}
+
 } // end main
 
 //---------------------------------------------------------------------------------------------------
+
+func writeOutExcelFile(fn string, base string, transactions []generalTransactionType) error {
+
+	const excelFormat = "$#,##0.0_);[Red](-$#,##0.0.00)"
+	workbook := xlsx.NewFile()
+
+	comment := base
+	if len(base) > 31 { // this limit is set by Excel
+		base = base[:10]
+	}
+	sheet, err := workbook.AddSheet(base)
+	if err != nil {
+		return err
+	}
+
+	// write out heading names
+	// "Date \t Amt \t Description \t Comment"
+	firstRow := sheet.AddRow()
+	cellFirst := firstRow.AddCell()
+	cellFirst.SetString("Date")
+	cellSecond := firstRow.AddCell()
+	cellSecond.SetString("Amt")
+	cellThird := firstRow.AddCell()
+	cellThird.SetString("Description")
+	cellFourth := firstRow.AddCell()
+	cellFourth.SetString("Comment")
+
+	for _, t := range transactions {
+		row := sheet.AddRow()
+		cell0 := row.AddCell()
+		cell0.SetString(t.DTPOSTEDtxt)
+		cell1 := row.AddCell()
+		//cell1.SetString(t.TRNAMT)
+		cell1.SetFloatWithFormat(t.TRNAMTfloat, excelFormat)
+		cell2 := row.AddCell()
+		cell2.SetString(t.Descript)
+		cell3 := row.AddCell()
+		cell3.SetString(comment)
+	}
+
+	err = workbook.Save(fn)
+	return err
+}
 
 func DateFieldReformatAccess(datein string) (string, int) {
 	//                                                                0123456789     01234567
