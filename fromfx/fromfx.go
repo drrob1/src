@@ -188,14 +188,14 @@ func main() {
 			fmt.Fprintf(os.Stderr, " Error from GetRegexFilenames is %v, exiting\n", err)
 			os.Exit(1)
 		}
-		for i := 0; i < min(len(filenames), 30); i++ {
+		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Printf("filename[%d, %c] is %s \n", i, i+'a', filenames[i])
 		}
-		fmt.Print(" Enter filename choice (stop code=999) : ")
+		fmt.Print(" Enter filename choice (stop code=999 . , / ;) : ")
 		n, err := fmt.Scanln(&ans)
 		if len(ans) == 0 || err != nil || n == 0 { // these are redundant.  I'm playing now.
 			ans = "0"
-		} else if ans == "999" || ans == "." || ans == "," || ans == "/" {
+		} else if ans == "999" || ans == "." || ans == "," || ans == "/" || ans == ";" {
 			fmt.Println(" Stop code entered.")
 			os.Exit(0)
 		}
@@ -208,6 +208,10 @@ func main() {
 			s = strings.TrimSpace(s)
 			s0 := s[0]
 			i = int(s0 - 'A')
+			if i > 25 {
+				fmt.Printf(" Index out of bounds.  It is %d.\n", i)
+				return
+			}
 			InFilename = filenames[i]
 		}
 		fmt.Println(" Picked filename is", InFilename)
@@ -474,7 +478,7 @@ func writeOutExcelFile(fn string, base string, transactions []generalTransaction
 		return err
 	}
 
-	xlsx.SetDefaultFont(12., "Arial")
+	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in excel.
 
 	// write out heading names
 	// "Date \t Amt \t Description \t Comment"
@@ -485,8 +489,7 @@ func writeOutExcelFile(fn string, base string, transactions []generalTransaction
 	cellSecond.SetString("Amt")
 	cellThird := firstRow.AddCell()
 	cellThird.SetString("Description")
-	cellFourth := firstRow.AddCell()
-	cellFourth.SetString("Comment")
+	firstRow.AddCell().SetString("Comment") // just trying this syntax to see if it works.  It does.
 
 	for _, t := range transactions {
 		row := sheet.AddRow()
