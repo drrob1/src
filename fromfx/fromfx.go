@@ -466,6 +466,8 @@ func main() {
 
 func writeOutExcelFile(fn string, base string, transactions []generalTransactionType) error {
 
+	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
+
 	const excelFormat = `$#,##0.00_);[Red](-$#,##0.00)`
 	workbook := xlsx.NewFile()
 
@@ -477,8 +479,6 @@ func writeOutExcelFile(fn string, base string, transactions []generalTransaction
 	if err != nil {
 		return err
 	}
-
-	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in excel.
 
 	// write out heading names
 	// "Date \t Amt \t Description \t Comment"
