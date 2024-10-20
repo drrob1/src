@@ -454,7 +454,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// Write out the excel file in xlsx format
+	// Write out the Excel file in xlsx format
 	err = writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
 	if err != nil {
 		fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
