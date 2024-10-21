@@ -86,6 +86,9 @@ import (
   21 Jan 24 -- Expanded stop code to include "," and "."
   16 Oct 24 -- Got the idea that this program place the title row for all .xls files, ie, Date, Amt, Description, Comment, delimited as it has to be to be processed correctly.
                Will do this by adding a func instead of adding it to main.  It'll be easier to debug as a func.
+  21 Oct 24 -- Since I forgot, I'll summarize how this works.  First it reads in all the transactions and parses them into a slice of generalTransactionType, then
+                 it writes out this slice to 3 files: a csv to be read by sqlite3 database, a txt file named as xls for Excel,
+                 and now .xlsx file directly for Excel using the github code I recently learned about.
 */
 
 const lastModified = "19 Oct 24"
