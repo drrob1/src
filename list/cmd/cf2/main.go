@@ -95,9 +95,10 @@ import (
   26 July 24 -- Adding timing info from the individual goroutines that do the copying.  I have to expand the message sent on the channel to include a duration.
   28 July 24 -- Race detector found a data race because ErrNotNew was global and being written to by multiple goroutines.  I fixed it by not making it global.
   17 Aug 24  -- Changed start message to make it clearer that globbing is used here, not regexp to match included files.  A regexp is used to exclude files.
+  22 Oct 24 -- Will now check to make sure params are present.
 */
 
-const LastAltered = "17 Aug 2024" //
+const LastAltered = "22 Oct 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -188,6 +189,11 @@ func main() {
 	flag.IntVar(&multiplier, "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
 	flag.Parse()
+
+	if flag.NArg() < 2 {
+		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", flag.NArg())
+		return
+	}
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
 		verboseFlag = true

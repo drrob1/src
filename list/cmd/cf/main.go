@@ -1,25 +1,22 @@
-package main // cf, for copy fanout
+package main // cf, for copy fanout.  It's not a true fanout pattern, but merely a worker pool pattern w/ larger limits.
 
 import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io"
-	"src/few"
-	"sync"
-	"sync/atomic"
-	"time"
-
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/few"
 	"src/list"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 /*
@@ -89,10 +86,11 @@ import (
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
   15 Jun 24 -- Changed completion message.
    6 July 24-- Changed startup message.
-  28 July 24-- Added timing to each goroutine.  And fixed a data race by not making ErrNotNew global.
+  28 July 24-- Added timing to each goroutine.  And fixed a data race by no longer making ErrNotNew global.
+  22 Oct 24 -- Will now check to make sure params are present.
 */
 
-const LastAltered = "28 July 2024" //
+const LastAltered = "22 Oct 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -118,8 +116,6 @@ var onWin = runtime.GOOS == "windows"
 // var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
 //
 //	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
-//
-// var ErrNotNew error
 var workerPool = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
@@ -190,6 +186,11 @@ func main() {
 	flag.IntVar(&multiplier, "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
 	flag.Parse()
+
+	if flag.NArg() < 2 {
+		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", flag.NArg())
+		return
+	}
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
 		verboseFlag = true
