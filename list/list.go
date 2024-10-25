@@ -68,6 +68,7 @@ import (
   19 June 24-- Clarifying how these routines are intended to work.  Client packages are to use any routine that begins w/ New.  IE, New(), NewFromGlob() or NewFromRegexp().
                  NewFromGlob() no longer uses filepath.Glob() routine.  That only persists in my glob and dsrt routines, as I also removed it from fdsrt and ds.  Rex never had it.
                  Currently, only runlist, runx and runlst use NewFromGlob() and NewFromRegexp().
+  25 Oct 24 -- Fixed bug in CheckDest so that it will catch if no params are on the line.
 */
 
 var LastAltered = "June 19, 2024"
@@ -755,7 +756,7 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 // ------------------------------------------------ CheckDest ------------------------------------------------------
 
 func CheckDest() string {
-	if flag.NArg() == 1 {
+	if flag.NArg() <= 1 {
 		return ""
 	}
 	d := flag.Arg(flag.NArg() - 1)
