@@ -71,7 +71,7 @@ import (
   25 Oct 24 -- Fixed bug in CheckDest so that it will catch if no params are on the line.
 */
 
-var LastAltered = "June 19, 2024"
+var LastAltered = "Oct 25, 2024"
 
 type DirAliasMapType map[string]string
 
