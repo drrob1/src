@@ -126,8 +126,8 @@ func main() {
 	var amtstr string
 	n, err = fmt.Scanln(&amtstr)
 	if n != 1 || err != nil {
-		fmt.Printf(" Entered amount is in error.  Exiting\n")
-		return
+		fmt.Printf(" Entered amount is in error.  Assuming zero\n")
+		amtstr = "0"
 	}
 	amt, err = strconv.ParseFloat(amtstr, 64)
 	if err != nil {
@@ -139,22 +139,23 @@ func main() {
 	fmt.Print(" Enter description as text (can't have spaces) : ")
 	n, err = fmt.Scanln(&description)
 	if n != 1 || err != nil {
-		fmt.Printf(" Entered description is in error.  Exiting\n")
-		return
+		fmt.Printf(" Entered description is in error.  Assuming void\n")
+		description = "void"
 	}
-	if description == "" {
-		fmt.Printf(" Warning: entered description is empty.\n")
-	}
+	//if description == "" {
+	//	fmt.Printf(" Warning: entered description is empty.\n")
+	//}
 
 	var accountName string
 	fmt.Print(" Enter AccountName as text (can't have spaces) : ")
 	n, err = fmt.Scanln(&accountName)
 	if n != 1 || err != nil {
-		fmt.Printf(" Entered accountName is in error.  Exiting\n")
+		fmt.Printf(" Entered accountName is in error.  Assuming checking\n")
+		accountName = "checking"
 	}
-	if accountName == "" {
-		fmt.Printf(" Warning: entered accountName is empty.\n")
-	}
+	//if accountName == "" {
+	//	fmt.Printf(" Warning: entered accountName is empty.\n")
+	//}
 
 	record := transaction{ // whatever I don't enter will be that type's zero value.
 		Date:           date,
