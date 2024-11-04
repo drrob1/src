@@ -105,7 +105,7 @@ func main() {
 	preDefinedRegexp := []string{
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
-		//"^\b+\b",  This doesn't work
+		//"^\b+\b",  This doesn't work.  I eventually learned why, because the \ characters have to be escaped, ie, doubled, to be present in a quoted string.  Or I could have used back ticks to mark a string that is not processed.
 		"^[0-9]+[0-9]",
 		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair",
 		"spandex|camel|yoga|miamix|^AMG|^sporty|balle|dancerb",

@@ -1,6 +1,7 @@
 package main // allcc.go
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"flag"
@@ -82,10 +83,13 @@ func AddRecord(record transaction) error {
 func checkDate(date string) bool {
 	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
 	regex2 := regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+	regex3 := regexp.MustCompile("^\\d{4}-\\d{2}-\\d{2}$")
 	result1 := regex.MatchString(date)
 	result2 := regex2.MatchString(date)
-	fmt.Printf(" Result1 using backslash d is %t, result2 using 0-9 is %t\n", result1, result2)
-	return result1 || result2
+	result3 := regex3.MatchString(date)
+	fmt.Printf(" Result1 using raw string backslash d is %t, result2 using 0-9 is %t, and result 3 using double backslash is %t\n",
+		result1, result2, result3)
+	return result1 || result2 || result3
 }
 
 func main() {
@@ -133,21 +137,26 @@ func main() {
 		return
 	}
 	var description string
-	fmt.Print(" Enter description as text (can't have spaces) : ")
-	n, err = fmt.Scanln(&description)
-	if n != 1 || err != nil {
-		fmt.Printf(" Entered description is in error.  Exiting\n")
-		return
-	}
+	fmt.Print(" Enter description as text (can't have spaces -- just kidding as I fixed this.) : ")
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	description = scanner.Text()
+	// n, err = fmt.Scanln(&description) spaces in the input causes this input to fail.
+	//if n != 1 || err != nil {
+	//	fmt.Printf(" Entered description is in error.  Exiting\n")
+	//	return
+	//}
 	if description == "" {
 		fmt.Printf(" Warning: entered description is empty.\n")
 	}
 	var comment string
-	fmt.Print(" Enter comment as text (can't have spaces) : ")
-	n, err = fmt.Scanln(&comment)
-	if n != 1 || err != nil {
-		fmt.Printf(" Entered comment is in error.  Exiting\n")
-	}
+	fmt.Print(" Enter comment as text (can't have spaces) -- I fixed this : ")
+	scanner.Scan()
+	comment = scanner.Text()
+	//n, err = fmt.Scanln(&comment) spaces in the input causes this input to fail.
+	//if n != 1 || err != nil {
+	//	fmt.Printf(" Entered comment is in error.  Exiting\n")
+	//}
 	if comment == "" {
 		fmt.Printf(" Warning: entered comment is empty.\n")
 	}

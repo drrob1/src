@@ -1,6 +1,7 @@
 package main // citidb.go, first developed as allcc.go
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"flag"
@@ -8,8 +9,9 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
+	"regexp"
 	"strconv"
-	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,6 +19,7 @@ import (
 /*
    3 Nov 24 -- First version of citidb.go.  This will allow me to insert single records when I'm finished developing it.
 				This is primary intended to enter voided checks into Citibank.db.
+   4 Nov 24 -- Added checkDate, and using a scanner to read in text from the terminal, so spaces are allowed now.
 */
 
 const lastAltered = "3 Nov 24"
@@ -32,7 +35,7 @@ type transaction struct {
 	UnknownNumber  string // I never found out why this is there.
 }
 
-// Filename is the name of the database file, to be set by the client.
+// Filename is the global name of the database file, to be set by the client.
 var (
 	Filename = "" // name of the database file, to be set by the client.
 )
@@ -92,19 +95,25 @@ func main() {
 	//Filename = "Citi-test.db" // the db routines above need this to be defined.
 	Filename = "Citibank.db" // the db routines above need this to be defined.
 	var date string
-	fmt.Print(" Enter date as yyyy-mm-dd : ")
+	fmt.Print(" Enter date as yyyy-mm-dd (default is today) : ")
 	n, err := fmt.Scanln(&date)
 	if n != 1 || err != nil {
-		fmt.Printf(" Entered date is in error.  Exiting\n")
-		return
+		fmt.Printf(" Entered date is in error.  Will use today.\n")
+		date = time.Now().Format(time.DateOnly)
 	}
-	if !strings.Contains(date, "-") {
-		fmt.Printf(" Entered date is in error as it's missing the '-'.  Exiting\n")
-		return
-	}
-	if len(date) != 10 {
-		fmt.Printf(" Entered date is in wrong format as it's length is wrong.  %q was entered.  Exiting\n", date)
-		return
+	//if !strings.Contains(date, "-") {
+	//	fmt.Printf(" Entered date is in error as it's missing the '-'.  Exiting\n")
+	//	return
+	//}
+	//if len(date) != 10 {
+	//	fmt.Printf(" Entered date is in wrong format as it's length is wrong.  %q was entered.  Exiting\n", date)
+	//	return
+	//}
+	if checkDate(date) {
+		fmt.Printf(" Entered date is valid.  Great.\n")
+	} else {
+		fmt.Printf(" Entered date is NOT valid.  Using today.\n")
+		date = time.Now().Format(time.DateOnly)
 	}
 
 	var transactionNumStr string
@@ -121,41 +130,38 @@ func main() {
 		return
 	}
 
-	fmt.Print(" Enter amount : ")
+	fmt.Print(" Enter amount (default is zero) : ")
 	var amt float64
 	var amtstr string
 	n, err = fmt.Scanln(&amtstr)
 	if n != 1 || err != nil {
-		fmt.Printf(" Entered amount is in error.  Assuming zero\n")
+		fmt.Printf(" Entered amount returned an error.  Assuming zero\n")
 		amtstr = "0"
 	}
 	amt, err = strconv.ParseFloat(amtstr, 64)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, "Error from parsing %s to float is %s\n", amtstr, err)
-		return
+		amt = 0.0
 	}
 
 	var description string
-	fmt.Print(" Enter description as text (can't have spaces) : ")
-	n, err = fmt.Scanln(&description)
-	if n != 1 || err != nil {
-		fmt.Printf(" Entered description is in error.  Assuming void\n")
+	fmt.Print(" Enter description as text (default is void) : ")
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	description = scanner.Text()
+	if description == "" {
+		fmt.Printf(" Entered description is empty.  Using void.\n")
 		description = "void"
 	}
-	//if description == "" {
-	//	fmt.Printf(" Warning: entered description is empty.\n")
-	//}
 
 	var accountName string
-	fmt.Print(" Enter AccountName as text (can't have spaces) : ")
-	n, err = fmt.Scanln(&accountName)
-	if n != 1 || err != nil {
-		fmt.Printf(" Entered accountName is in error.  Assuming checking\n")
+	fmt.Print(" Enter AccountName as text : ")
+	scanner.Scan()
+	accountName = scanner.Text()
+	if accountName == "" {
+		fmt.Printf(" Warning: entered accountName is empty.  Assuming checking\n")
 		accountName = "checking"
 	}
-	//if accountName == "" {
-	//	fmt.Printf(" Warning: entered accountName is empty.\n")
-	//}
 
 	record := transaction{ // whatever I don't enter will be that type's zero value.
 		Date:           date,
@@ -169,4 +175,10 @@ func main() {
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error from AddRecord is %s\n", err.Error())
 	}
+}
+
+func checkDate(date string) bool {
+	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
+	result := regex.MatchString(date)
+	return result
 }
