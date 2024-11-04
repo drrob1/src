@@ -8,8 +8,10 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,9 +19,10 @@ import (
 /*
    3 Nov 24 -- First version of allcc.go.  This will allow me to insert single records into allcc-sqlite.db.  At least when I'm finished developing it.
 				Then I'll write this for Citibank.db.
+   4 Nov 24 -- Writing date validation routine using regexp.
 */
 
-const lastAltered = "3 Nov 24"
+const lastAltered = "4 Nov 24"
 
 type transaction struct {
 	Date        string
@@ -76,6 +79,15 @@ func AddRecord(record transaction) error {
 	return nil
 }
 
+func checkDate(date string) bool {
+	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
+	regex2 := regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+	result1 := regex.MatchString(date)
+	result2 := regex2.MatchString(date)
+	fmt.Printf(" Result1 using backslash d is %t, result2 using 0-9 is %t\n", result1, result2)
+	return result1 || result2
+}
+
 func main() {
 	flag.Parse()
 
@@ -93,13 +105,20 @@ func main() {
 		return
 	}
 	if !strings.Contains(date, "-") {
-		fmt.Printf(" Entered date is in error as it's missing the '-'.  Exiting\n")
-		return
+		fmt.Printf(" Entered date is in error as it's missing the '-'.  Using today.\n")
+		date = time.Now().Format(time.DateOnly)
 	}
 	if len(date) != 10 {
-		fmt.Printf(" Entered date is in wrong format as it's length is wrong.  %q was entered.  Exiting\n", date)
-		return
+		fmt.Printf(" Entered date is in wrong format as it's length is wrong.  %q was entered.  Using today.\n", date)
+		date = time.Now().Format(time.DateOnly)
 	}
+	if checkDate(date) {
+		fmt.Printf(" Entered date is valid.  Great.\n")
+	} else {
+		fmt.Printf(" Entered date is NOT valid.  Using today.\n")
+		date = time.Now().Format(time.DateOnly)
+	}
+
 	fmt.Print(" Enter amount as float : ")
 	var amt float64
 	var amtstr string
