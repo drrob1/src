@@ -100,7 +100,8 @@ func main() {
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 	fmt.Printf(" %s last altered %s, timestamp is %s, full exec name is %s\n\n", os.Args[0], lastAltered, ExecTimeStamp, execName)
 
-	Filename = "allcc-test.db" // the db routines above need this to be defined.
+	//Filename = "allcc-test.db" // the db routines above need this to be defined.
+	Filename = "allcc-sqlite.db" // the db routines above need this to be defined.
 	var date string
 	fmt.Print(" Enter date as yyyy-mm-dd : ")
 	n, err := fmt.Scanln(&date)
