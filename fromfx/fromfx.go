@@ -4,19 +4,25 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"encoding/csv"
+	"errors"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/tealeg/xlsx/v3"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"src/filepicker"
-	//"src/getcommandline"
 	"src/timlibg"
 	"src/tokenize"
 	"strconv"
 	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 /*
@@ -89,9 +95,14 @@ import (
   21 Oct 24 -- Since I forgot, I'll summarize how this works.  First it reads in all the transactions and parses them into a slice of generalTransactionType, then
                  it writes out this slice to 3 files: a csv to be read by sqlite3 database, a txt file named as xls for Excel,
                  and now .xlsx file directly for Excel using the github code I recently learned about.
+   5 Nov 24 -- Today's Election Day, but that's not important right now.
+                 I got the idea to have this routine directly update the sqlite3 databases I use, ie, allcc-sqlite.db and citibank.db.  I'd need a separate routine to update taxes.db.
+                 This routine handles 2 different kinds of input files, the CHK_6861_Current_View.qfx, and one of the several credit card files in qfx or ofx format.
+                 I have to make sure that the input state is consistent throughout the code.  Then send the slice of transactions to the rtn that will update the correct .db file.
+					As far as I can tell, it worked on the first compile and run.  I'm going to change the database filenames to the real ones instead of the test ones.
 */
 
-const lastModified = "19 Oct 24"
+const lastModified = "5 Nov 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -174,6 +185,8 @@ var inputstate int
 var bankTranListEnd bool
 var EOF bool
 var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
+
+var SQliteDBname = "" // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
 
 func main() {
 	var e error
@@ -457,10 +470,29 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// Write out the Excel file in xlsx format
-	err = writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
-	if err != nil {
-		fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
+	// Write out the Excel file in xlsx format only for credit card transactions.
+	if inputstate == cc {
+		err = writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
+		if err != nil {
+			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
+		}
+	}
+
+	// Update the SQLite files for either Allcc-sqlite.db or Citibank.db
+	if inputstate == citichecking {
+		SQliteDBname = "Citibank.db"
+		err = CitiAddRecords(header.ACCTTYPE, Transactions)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
+		}
+	} else if inputstate == cc {
+		SQliteDBname = "Allcc-Sqlite.db"
+		err = AllccAddRecords(BaseFilename, Transactions)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
+		}
+	} else {
+		ctfmt.Printf(ct.Red, true, " inputstate is not a valid value of %d or %d.  It is %d\n\n", citichecking, cc, inputstate)
 	}
 
 } // end main
@@ -966,13 +998,13 @@ func check(err error) {
 }
 
 // -------------------------------------------------------
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
+//func min(a, b int) int {  A built-in function as of Go 1.20 or so.
+//	if a < b {
+//		return a
+//	} else {
+//		return b
+//	}
+//}
 
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
@@ -992,5 +1024,93 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
+
+// openConnection() function is private and only accessed within the scope of the package
+func openConnection() (*sql.DB, error) {
+	if SQliteDBname == "" {
+		return nil, errors.New("database name is empty")
+	}
+	db, err := sql.Open("sqlite3", SQliteDBname) // SQLite3 does not require a username or a password and does not operate over a TCP/IP network.
+	// Therefore, sql.Open() requires just a single parameter, which is the filename of the database.
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// AllccAddRecords -- base means the base input filename and records is obvious.
+func AllccAddRecords(base string, records []generalTransactionType) error {
+	db, err := openConnection()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	for _, record := range records {
+		if record.DTPOSTEDcsv == "" {
+			return errors.New("DTPOSTEDcsv is empty")
+		}
+		if !checkSQLiteDate(record.DTPOSTEDcsv) {
+			s := fmt.Sprintf("DTPOSTEDcsv is not in a valid format.  It is %s", record.DTPOSTEDcsv)
+			return errors.New(s)
+		}
+
+		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
+		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
+		insertStatement := `INSERT INTO Allcc values (?,?,?,?)`
+		_, err = db.Exec(insertStatement, record.DTPOSTEDcsv, record.TRNAMTfloat, record.Descript, base)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CitiAddRecords -- acntType is from header.ACCTTYPE and records is obvious.
+func CitiAddRecords(acntType string, records []generalTransactionType) error {
+	db, err := openConnection()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	for _, record := range records {
+		if record.DTPOSTEDcsv == "" {
+			return errors.New("DTPOSTEDcsv is empty")
+		}
+		if !checkSQLiteDate(record.DTPOSTEDcsv) {
+			s := fmt.Sprintf("DTPOSTEDcsv is not YYYY-MM-DD.  It is %s", record.DTPOSTEDcsv)
+			return errors.New(s)
+		}
+
+		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
+		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
+		insertStatement := `INSERT INTO Citibank values (?,?,?,?,?,?,?,?)`
+		_, err = db.Exec(insertStatement, record.TRNTYPE, record.DTPOSTEDcsv, record.CHECKNUMint, record.Descript, record.TRNAMTfloat,
+			acntType, "", "")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkSQLiteDate(date string) bool {
+	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
+	result := regex.MatchString(date)
+	return result
+}
+
 //---------------------------------------------------------------------------------------------------
 // END fromfx.go based on ofx2csv.go based on qfx2xls.mod
