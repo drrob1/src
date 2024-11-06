@@ -44,3 +44,9 @@ few/testdata/
 detox/testdata/
 duf/
 
+[user]
+	name = rob
+	email =
+
+[safe]
+	directory = *
