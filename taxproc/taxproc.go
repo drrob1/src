@@ -7,6 +7,7 @@ import (
 	"github.com/tealeg/xlsx/v3"
 	"os"
 	"src/filepicker"
+	"src/misc"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +43,7 @@ import (
 */
 
 const lastModified = "7 Nov 24"
+const tempFilename = "debugTaxes.txt"
 
 type taxType struct {
 	Date        string
@@ -66,7 +68,7 @@ func readTaxes(xl string) ([]taxType, error) {
 	sheets := workBook.Sheets
 	taxSlice := make([]taxType, 300)
 
-	for i := range 1000 {
+	for i := 4; i < 100; i++ { // start at row 5 in Excel, which is row 4 here in a 0-origin system.  Excel is a 1-origin system.
 		row, err := sheets[0].Row(i)
 		if err != nil {
 			return nil, err
@@ -166,4 +168,47 @@ func main() {
 	}
 	fmt.Println()
 
+	taxes, err := readTaxes(filename)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from readTaxes(%s) is %s.  Exiting \n", filename, err)
+		return
+	}
+
+	gasPrices, err := gasData(taxes)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from gasData(%s) is %s.  Exiting \n", filename, err)
+		return
+	}
+
+	showStuff(taxes, gasPrices)
+
+}
+
+func showStuff(taxes []taxType, gas []gasType) {
+	debugFile, debugBuf, err := misc.CreateOrAppendWithBuffer(tempFilename)
+	defer func() {
+		err = debugBuf.Flush()
+		if err != nil {
+			panic(err)
+		}
+		err := debugFile.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	debugBuf.WriteString("------------------------------------------------------------------------\n")
+	now := time.Now()
+	debugBuf.WriteString(now.Format(time.ANSIC))
+	debugFile.WriteString(" Taxes:\n")
+	for _, tax := range taxes {
+		s := fmt.Sprintf("Date = %s, Description = %s, Amount = %.2f, Comment = %s\n", tax.Date, tax.Description, tax.Amount, tax.Comment)
+		debugBuf.WriteString(s)
+	}
+	debugBuf.WriteString("\n Gas:\n")
+	for _, g := range gas {
+		s := fmt.Sprintf(" Date = %s, Amount = %.2f\n", g.Date, g.Amount)
+		debugBuf.WriteString(s)
+	}
+	debugBuf.WriteString("\n\n")
 }
