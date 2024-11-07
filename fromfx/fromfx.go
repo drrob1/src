@@ -1063,7 +1063,7 @@ func AllccAddRecords(base string, records []generalTransactionType) error {
 		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
 		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
 		insertStatement := `INSERT INTO Allcc values (?,?,?,?)`
-		_, err = db.Exec(insertStatement, record.DTPOSTEDcsv, record.TRNAMTfloat, record.Descript, base)
+		_, err = db.Exec(insertStatement, record.DTPOSTEDcsv, record.TRNAMTfloat, record.Descript, base) // date, amount, description and comment for Allcc-Sqlite.db
 		if err != nil {
 			return err
 		}
@@ -1096,6 +1096,7 @@ func CitiAddRecords(acntType string, records []generalTransactionType) error {
 
 		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
 		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
+		// transaction type, date, check or transaction number, description, amount, account type(checking), and 2 empty entries for acnt number and unknown number.
 		insertStatement := `INSERT INTO Citibank values (?,?,?,?,?,?,?,?)`
 		_, err = db.Exec(insertStatement, record.TRNTYPE, record.DTPOSTEDcsv, record.CHECKNUMint, record.Descript, record.TRNAMTfloat,
 			acntType, "", "")
