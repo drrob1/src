@@ -8,6 +8,7 @@ import (
 	"os"
 	"src/filepicker"
 	"src/misc"
+	"src/timlibg"
 	"strconv"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ import (
 
 				First, I'll focus on debugging the reading in the data and creating the slices for the taxesyy entries and for the gas price points.
 				Then I'll write out the 2 different .xlsx files and debug that.
-
+   7 Nov 24 -- The reading in the data to the taxType and gasType slices now works.
 */
 
 const lastModified = "7 Nov 24"
@@ -50,6 +51,8 @@ type taxType struct {
 	Description string
 	Amount      float64
 	Comment     string
+	XLdateStr   string
+	XLdateNum   int
 }
 
 type gasType struct {
@@ -66,22 +69,24 @@ func readTaxes(xl string) ([]taxType, error) {
 	}
 
 	sheets := workBook.Sheets
-	taxSlice := make([]taxType, 300)
+	taxSlice := make([]taxType, 0, 300)
 
-	for i := 4; i < 100; i++ { // start at row 5 in Excel, which is row 4 here in a 0-origin system.  Excel is a 1-origin system.
+	for i := 4; i < 300; i++ { // start at row 5 in Excel, which is row 4 here in a 0-origin system.  Excel is a 1-origin system, as origin is cell A1.
 		row, err := sheets[0].Row(i)
 		if err != nil {
 			return nil, err
 		}
-		dateStr := row.GetCell(0).Value
-		if dateStr == "" {
+		XLdateStr := row.GetCell(0).Value
+		if XLdateStr == "" {
 			break
 		}
-		dateTime, err := time.Parse(time.DateOnly, dateStr)
+		//dateTime, err := time.Parse(time.DateOnly, XLdateStr)  This errored out as it contains a string representation of the excel date number.
+		//dateFormat := dateTime.Format("2006-01-02")
+		XLdateNum, err := strconv.Atoi(XLdateStr)
 		if err != nil {
 			return nil, err
 		}
-		dateFormat := dateTime.Format("2006-01-02")
+		dateOnly := timlibg.FromExcelToDateOnly(XLdateNum)
 
 		amountStr := row.GetCell(2).Value
 		amountFloat, err := strconv.ParseFloat(amountStr, 64)
@@ -89,23 +94,38 @@ func readTaxes(xl string) ([]taxType, error) {
 			return nil, err
 		}
 		taxEntry := taxType{
-			Date:        dateFormat,
+			Date:        dateOnly,
 			Description: row.GetCell(1).Value,
 			Amount:      amountFloat,
-			Comment:     row.GetCell(3).Value,
+			Comment:     row.GetCell(4).Value, // column number 3 is Account1, to be skipped.
+			XLdateStr:   XLdateStr,
+			XLdateNum:   XLdateNum,
 		}
 		taxSlice = append(taxSlice, taxEntry)
 	}
 	return taxSlice, nil
 }
 
+// gasStrToNum converts the description of a gas entry that looks like "gas  3.009" or "gas @3.009".  It may or may not have '@'
+func gasStrToNum(str string) (float64, error) {
+	var s string
+	idx := strings.Index(str, "@")
+	if idx == -1 { // no '@' found
+		s = str[3:] // I'm skipping over the 3 char's "gas"
+	} else {
+		s = str[idx+1:]
+	}
+	s = strings.TrimSpace(s)
+	price, err := strconv.ParseFloat(s, 64)
+	return price, err
+}
+
 func gasData(taxes []taxType) ([]gasType, error) {
-	gasSlice := make([]gasType, 100)
+	gasSlice := make([]gasType, 0, 100)
 	for _, tax := range taxes {
 		descr := strings.ToLower(strings.TrimSpace(tax.Description))
 		if strings.Contains(descr, "gas ") {
-			idx := strings.Index(descr, "@")
-			price, err := strconv.ParseFloat(descr[idx+1:], 64)
+			price, err := gasStrToNum(descr)
 			if err != nil {
 				return nil, err
 			}
@@ -200,14 +220,15 @@ func showStuff(taxes []taxType, gas []gasType) {
 	debugBuf.WriteString("------------------------------------------------------------------------\n")
 	now := time.Now()
 	debugBuf.WriteString(now.Format(time.ANSIC))
-	debugFile.WriteString(" Taxes:\n")
+	debugBuf.WriteString("\n Taxes:\n")
 	for _, tax := range taxes {
-		s := fmt.Sprintf("Date = %s, Description = %s, Amount = %.2f, Comment = %s\n", tax.Date, tax.Description, tax.Amount, tax.Comment)
+		s := fmt.Sprintf("Date = %s, Description = %s, Amount = %.3f, Comment = %s, Excel Date as a string = %s, Excel date as an int = %d\n",
+			tax.Date, tax.Description, tax.Amount, tax.Comment, tax.XLdateStr, tax.XLdateNum)
 		debugBuf.WriteString(s)
 	}
 	debugBuf.WriteString("\n Gas:\n")
 	for _, g := range gas {
-		s := fmt.Sprintf(" Date = %s, Amount = %.2f\n", g.Date, g.Amount)
+		s := fmt.Sprintf(" Date = %s, Amount = %.3f\n", g.Date, g.Amount)
 		debugBuf.WriteString(s)
 	}
 	debugBuf.WriteString("\n\n")
