@@ -40,10 +40,10 @@ import (
 
 				First, I'll focus on debugging the reading in the data and creating the slices for the taxesyy entries and for the gas price points.
 				Then I'll write out the 2 different .xlsx files and debug that.
-   7 Nov 24 -- The reading in the data to the taxType and gasType slices now works.
+   7 Nov 24 -- The reading in the data to the taxType and gasType slices now works.  I think I'll come back to this tomorrow.
 */
 
-const lastModified = "7 Nov 24"
+const lastModified = "8 Nov 24"
 const tempFilename = "debugTaxes.txt"
 
 type taxType struct {
