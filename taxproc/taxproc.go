@@ -41,6 +41,10 @@ import (
 				First, I'll focus on debugging the reading in the data and creating the slices for the taxesyy entries and for the gas price points.
 				Then I'll write out the 2 different .xlsx files and debug that.
    7 Nov 24 -- The reading in the data to the taxType and gasType slices now works.  I think I'll come back to this tomorrow.
+                 The problems I had was first that Excel uses a julian date number w/ day 1 being 1/1/1900.  I used a fudge factor to adjust that to my julian date number system.
+                 The other problem I had was parsing the gas price field.  I forgot that I stopped using the '@' and had to just remove the 3 characters of "gas" and then TrimSpaces the result.
+                 Tomorrow I'll start writing the code to write the Excel file to be read into Access, and then directly updating the taxes.db file.
+                 I can use code from fromfx.go for both of these tasks, as I just wrote that for fromfx.go.
 */
 
 const lastModified = "8 Nov 24"
