@@ -18,6 +18,7 @@ All of my go code as of Nov 9, 2024.
 15. rex -- uses regular expressions to match the file names.
 16. ofx2csv -- takes open financial exchange datafile and writes in csv format.
 17. fromfx, fromfx2, queuefx -- takes qfx, ofx or qbo bank file and writes xls, csv, xlsx and directly to sqlite3 .db formats.
+18. taxproc -- takes the taxesyy file I create every year and processes the file for my taxes.mdb and taxes.db files.
 18. eols -- counts end of line characters.
 19. nocr, nocr2 -- removes CR characters.
 20. gastricgo, gastric2, gastric3 -- computes gastric emptying T-1/2 given a text inputfile of the times and counts.
