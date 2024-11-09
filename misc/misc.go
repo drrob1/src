@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"math"
 	"math/rand/v2"
 	"os"
 	"strings"
@@ -18,6 +19,7 @@ REVISION HISTORY
 30 Jun 23 -- Back in the 80's when I was using Modula-2, there was a module called MiscM2, and then StdMiscM2, or something like that.
                I'm doing that now in Go.  This module is now called misc, based on makesubst
 24 May 24 -- Adding comments that can be processed by go doc.
+ 9 Nov 24 -- Added Floor function to automatically correct small floating point errors.  It works in hpcalc2, so I copied it here, too.
 */
 
 // MakeSubst -- input a string, output a string that substitutes '=' -> '+' and ';' -> '*'
@@ -122,3 +124,20 @@ func AddCommasRune(instr string) string {
 func InsertIntoRuneSlice(slice, insertion []rune, index int) []rune {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
+
+// Floor -- To automatically fix the small floating point errors introduced by the conversions
+func Floor(real, places float64) float64 {
+	negFlag := real < 0
+	result := real
+	if negFlag {
+		result *= -1
+	}
+	factor := math.Pow(10, places)
+	result *= factor
+	result = math.Floor(result + 0.5)
+	result /= factor
+	if negFlag {
+		result *= -1
+	}
+	return result
+}

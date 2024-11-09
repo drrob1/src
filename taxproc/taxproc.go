@@ -53,11 +53,11 @@ import (
                  I can use code from fromfx.go for both of these tasks, as I just wrote that for fromfx.go.
    8 Nov 24 -- Taxes.mdb fields are Date (mm/dd/yyyy), Description, Amount, Comment.
                taxes.db fields are Date (DATETIME), Descr (TEXT), Amount (REAL), Comment (TEXT).
+   9 Nov 24 -- Added Floor to correct small floating point errors automatically
 */
 
-const lastModified = "8 Nov 24"
+const lastModified = "9 Nov 24"
 const tempFilename = "debugTaxes.txt"
-const ExcelTaxesFilename = "xltaxes.xlsx"
 
 type taxType struct {
 	Date        string
@@ -369,8 +369,9 @@ func TaxesAddRecords(base string, taxes []taxType) error {
 
 		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
 		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
+		amount := misc.Floor(t.Amount, 4)
 		insertStatement := `INSERT INTO taxes values (?,?,?,?)`
-		_, err = db.Exec(insertStatement, t.Date, t.Description, t.Amount, t.Comment) // Date, Description, Amount and Comment for taxes.db
+		_, err = db.Exec(insertStatement, t.Date, t.Description, amount, t.Comment) // Date, Description, Amount and Comment for taxes.db.  Amount is automatically corrected by Floor.
 		if err != nil {
 			return err
 		}
