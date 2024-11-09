@@ -1,17 +1,23 @@
 package main // taxproc.go
 import (
+	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/tealeg/xlsx/v3"
 	"os"
+	"path/filepath"
+	"regexp"
 	"src/filepicker"
 	"src/misc"
 	"src/timlibg"
 	"strconv"
 	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 /*
@@ -45,10 +51,13 @@ import (
                  The other problem I had was parsing the gas price field.  I forgot that I stopped using the '@' and had to just remove the 3 characters of "gas" and then TrimSpaces the result.
                  Tomorrow I'll start writing the code to write the Excel file to be read into Access, and then directly updating the taxes.db file.
                  I can use code from fromfx.go for both of these tasks, as I just wrote that for fromfx.go.
+   8 Nov 24 -- Taxes.mdb fields are Date (mm/dd/yyyy), Description, Amount, Comment.
+               taxes.db fields are Date (DATETIME), Descr (TEXT), Amount (REAL), Comment (TEXT).
 */
 
 const lastModified = "8 Nov 24"
 const tempFilename = "debugTaxes.txt"
+const ExcelTaxesFilename = "xltaxes.xlsx"
 
 type taxType struct {
 	Date        string
@@ -60,11 +69,13 @@ type taxType struct {
 }
 
 type gasType struct {
-	Date   string
-	Amount float64
+	Date  string
+	Price float64
 }
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
+
+var SQliteDBname = "" // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
 
 func readTaxes(xl string) ([]taxType, error) {
 	workBook, err := xlsx.OpenFile(xl)
@@ -134,8 +145,8 @@ func gasData(taxes []taxType) ([]gasType, error) {
 				return nil, err
 			}
 			gas := gasType{
-				Date:   tax.Date,
-				Amount: price,
+				Date:  tax.Date,
+				Price: price,
 			}
 			gasSlice = append(gasSlice, gas)
 		}
@@ -204,10 +215,44 @@ func main() {
 		return
 	}
 
+	fmt.Printf("Found %d tax items, and %d gas price points.\n", len(taxes), len(gasPrices))
 	showStuff(taxes, gasPrices)
 
+	SQliteDBname = "taxes-test.db"
+
+	// constructing the output file names from the input taxesyy.xlsm file.
+	base := filepath.Base(filename)
+	idx := strings.Index(base, ".")
+
+	if idx > -1 { // there's an extension here so need to trim that off
+		base = base[:idx]
+	}
+	outTaxesFilename := "processed" + filename
+	outGasFilename := "gas" + filename
+
+	if *verboseFlag {
+		fmt.Printf(" outTaxesFilename is %s, base = %s, idx = %d, outGasFilename = %s\n", outTaxesFilename, base, idx, outGasFilename)
+	}
+
+	err = writeOutExcelTaxesFile(outTaxesFilename, base, taxes)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from writeOutExcelTaxesFile(%s) is %s.  Exiting \n", filename, err)
+	}
+
+	err = TaxesAddRecords(base, taxes)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from TaxesAddRecords(%s) is %s.  Exiting \n", SQliteDBname, err)
+	}
+
+	err = writeOutGasFile(outGasFilename, base, gasPrices)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from writeOutGasFile(%s) is %s.  Exiting \n", outGasFilename, err)
+	}
+
+	ctfmt.Printf(ct.Green, true, "Taxes and Gas files created successfully.  \n")
 }
 
+// showStuff writes the contents of the taxes and gas slices to the tempFilename, which is now debugTaxes.txt
 func showStuff(taxes []taxType, gas []gasType) {
 	debugFile, debugBuf, err := misc.CreateOrAppendWithBuffer(tempFilename)
 	defer func() {
@@ -232,8 +277,151 @@ func showStuff(taxes []taxType, gas []gasType) {
 	}
 	debugBuf.WriteString("\n Gas:\n")
 	for _, g := range gas {
-		s := fmt.Sprintf(" Date = %s, Amount = %.3f\n", g.Date, g.Amount)
+		s := fmt.Sprintf(" Date = %s, Price = %.3f\n", g.Date, g.Price)
 		debugBuf.WriteString(s)
 	}
 	debugBuf.WriteString("\n\n")
+}
+
+// writeOutExcelFile writes the file to be read into Excel (ExcelTaxesFilename) and then for Taxes.mdb, fields are Date (mm/dd/yyyy), Description, Amount, Comment.
+func writeOutExcelTaxesFile(fn string, base string, taxes []taxType) error {
+
+	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
+
+	const excelFormat = `$#,##0.00_);[Red](-$#,##0.00)`
+
+	// Need to make sure that the extension is .xlsx and not .xlsm
+	lastChar := len(fn)
+	fn = fn[:lastChar-1]
+	fn = fn + "x"
+
+	workbook := xlsx.NewFile()
+
+	if len(base) > 31 { // this limit is set by Excel
+		base = base[:10]
+	}
+	sheet, err := workbook.AddSheet(base)
+	if err != nil {
+		return err
+	}
+
+	firstRow := sheet.AddRow()
+	cellFirst := firstRow.AddCell()
+	cellFirst.SetString("Date")
+	cellSecond := firstRow.AddCell()
+	cellSecond.SetString("Description")
+	cellThird := firstRow.AddCell()
+	cellThird.SetString("Amount")
+	firstRow.AddCell().SetString("Comment") // just trying this syntax to see if it works for the 4th column.  It does.
+
+	//  fields are Date (mm/dd/yyyy), Description, Amount, Comment.
+	for _, t := range taxes {
+		row := sheet.AddRow()
+		cell0 := row.AddCell()
+		cell0.SetString(t.Date)
+		cell1 := row.AddCell()
+		cell1.SetString(t.Description)
+		cell2 := row.AddCell()
+		cell2.SetFloatWithFormat(t.Amount, excelFormat)
+		cell3 := row.AddCell()
+		cell3.SetString(t.Comment)
+	}
+
+	err = workbook.Save(fn)
+	return err
+}
+
+// openConnection() function is private and only accessed within the scope of the package
+func openConnection() (*sql.DB, error) {
+	if SQliteDBname == "" {
+		return nil, errors.New("database name is empty")
+	}
+	db, err := sql.Open("sqlite3", SQliteDBname) // SQLite3 does not require a username or a password and does not operate over a TCP/IP network.
+	// Therefore, sql.Open() requires just a single parameter, which is the filename of the database.
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// TaxesAddRecords -- base means the base input filename and records is obvious.
+func TaxesAddRecords(base string, taxes []taxType) error {
+	db, err := openConnection()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	// taxes.db fields are Date (DATETIME), Descr (TEXT), Amount (REAL), Comment (TEXT).
+	for _, t := range taxes {
+		if t.Date == "" {
+			return errors.New("taxes.Date is empty")
+		}
+		if !checkSQLiteDate(t.Date) {
+			s := fmt.Sprintf("taxes.Date is not in a valid format.  It is %s", t.Date)
+			return errors.New(s)
+		}
+
+		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
+		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
+		insertStatement := `INSERT INTO taxes values (?,?,?,?)`
+		_, err = db.Exec(insertStatement, t.Date, t.Description, t.Amount, t.Comment) // Date, Description, Amount and Comment for taxes.db
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkSQLiteDate(date string) bool {
+	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
+	result := regex.MatchString(date)
+	return result
+}
+
+// writeOutGasFile -- fn is the filename that's written.  base is the sheet name that's created.
+func writeOutGasFile(fn string, base string, gas []gasType) error {
+
+	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
+
+	const excelFormat = `$#,##0.00_);[Red](-$#,##0.00)`
+
+	// Need to make sure that the extension is .xlsx and not .xlsm
+	lastChar := len(fn)
+	fn = fn[:lastChar-1]
+	fn = fn + "x"
+
+	workbook := xlsx.NewFile()
+
+	if len(base) > 31 { // this limit is set by Excel
+		base = base[:10]
+	}
+	sheet, err := workbook.AddSheet(base)
+	if err != nil {
+		return err
+	}
+
+	firstRow := sheet.AddRow()
+	cellFirst := firstRow.AddCell()
+	cellFirst.SetString("Date")
+	cellSecond := firstRow.AddCell()
+	cellSecond.SetString("Price")
+
+	//  fields are Date (mm/dd/yyyy), Description, Amount, Comment.
+	for _, g := range gas {
+		row := sheet.AddRow()
+		cell0 := row.AddCell()
+		cell0.SetString(g.Date)
+		cell1 := row.AddCell()
+		cell1.SetFloat(g.Price)
+	}
+
+	err = workbook.Save(fn)
+	return err
 }
