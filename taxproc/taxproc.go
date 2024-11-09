@@ -218,7 +218,7 @@ func main() {
 	fmt.Printf("Found %d tax items, and %d gas price points.\n", len(taxes), len(gasPrices))
 	showStuff(taxes, gasPrices)
 
-	SQliteDBname = "taxes-test.db"
+	SQliteDBname = "taxes.db"
 
 	// constructing the output file names from the input taxesyy.xlsm file.
 	base := filepath.Base(filename)
