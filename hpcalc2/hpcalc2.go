@@ -15,7 +15,7 @@ import (
 	"src/tknptr"
 )
 
-/* (C) 1990-2023.  Robert W Solomon.  All rights reserved.
+/* (C) 1990-2024.  Robert W Solomon.  All rights reserved.
 REVISION HISTORY
 ----------------
  1 Dec 89 -- Added the help command.
@@ -145,9 +145,10 @@ REVISION HISTORY
 17 Dec 23 -- Updating probably prime routine to report how many guesses it took to say a number is probably not prime.  And added some comments.
  8 Jul 24 -- Adding the gcd routine as an alternative to hcf.
 14 Aug 24 -- For the undo/redo, the matrix stack will be dynamically managed.
+ 9 Nov 24 -- Trying to figure out how to correct the small floating point errors that I see.  Next and Prev are manual.  I'm going to try using math.Floor.
 */
 
-const LastAlteredDate = "14 Aug 2024"
+const LastAlteredDate = "9 Nov 2024"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -304,6 +305,9 @@ func init() {
 	cmdMap["C2F"] = 633
 	cmdMap["F2C"] = 636
 	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
+	cmdMap["CLEAN"] = 650
+	cmdMap["CLEAN4"] = 650
+	cmdMap["CLEAN5"] = 660
 
 	/* commented out 6/16/21
 	if runtime.GOOS == "linux" {
@@ -518,8 +522,7 @@ func DumpStackFixed() []string {
 	return ss
 } // DumpStackFixed
 
-// ************************************************* DumpStackFloat **************************
-
+// DumpStackFloat -- returns a slice of strings that were converted from float64 to string using FormatFloat.
 func DumpStackFloat() []string {
 	var SRN int
 	var str string
@@ -752,6 +755,23 @@ func UndoMatrixStacks() {
 	}
 }
 
+// Floor -- To automatically fix the small floating point errors introduced by the conversions
+func Floor(real, places float64) float64 {
+	negFlag := real < 0
+	result := real
+	if negFlag {
+		result *= -1
+	}
+	factor := math.Pow(10, places)
+	result *= factor
+	result = math.Floor(result + 0.5)
+	result /= factor
+	if negFlag {
+		result *= -1
+	}
+	return result
+}
+
 //-------------------------------------------------------- RedoMatrixStacks
 
 func RedoMatrixStacks() {
@@ -814,8 +834,7 @@ func GCD(a, b int) int {
 	return b
 }
 
-//------------------------------------------------------------------------- GetResults -----------
-
+// GetResult -- Input a string of commands and operations, return the result as a float64 and a message as a slice of strings.
 func GetResult(s string) (float64, []string) {
 	var token tknptr.TokenType
 	var EOL bool
@@ -965,6 +984,7 @@ outerloop:
 			ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
 			ss = append(ss, " Adjust -- X reg *100, Round, /100")
 			ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
+			ss = append(ss, " clean, clean4, clean5 -- Automatically correct the small floating point errors to 4 or 5 decimal places.")
 			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 			ss = append(ss, " substitutions: = for +, ; for *.")
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
@@ -1521,6 +1541,17 @@ outerloop:
 				ss = append(ss, stringresult...)
 
 			}
+
+		case 650: // CLEAN and CLEAN4
+			PushMatrixStacks()
+			LastX = Stack[X]
+			x := Floor(Stack[X], 4) // this is to correct the small floating point errors, to 4 decimal places.
+			Stack[X] = x
+		case 660: // CLEAN5
+			PushMatrixStacks()
+			LastX = Stack[X]
+			x := Floor(Stack[X], 5) // this is to correct the small floating point errors, to 5 decimal places.
+			Stack[X] = x
 
 		case 999: // do nothing, ignore me but don't generate an error message.
 
