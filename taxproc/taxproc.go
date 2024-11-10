@@ -54,13 +54,17 @@ import (
    8 Nov 24 -- Taxes.mdb fields are Date (mm/dd/yyyy), Description, Amount, Comment.
                taxes.db fields are Date (DATETIME), Descr (TEXT), Amount (REAL), Comment (TEXT).
    9 Nov 24 -- Added Floor to correct small floating point errors automatically
+  10 Nov 24 -- Now that it works, I'm going to see if I can get it to work using the xlsx methods instead of my own timlibg mehtods to convert to/from Excel date julian numbers.
+                 And I'm using strings.TrimSpaces on the description and comment fields.  This is so that the HasPrefix looking for "gas" will succeed if I have a stray " " in the beginning of the cell.
 */
 
-const lastModified = "9 Nov 24"
+const lastModified = "10 Nov 24"
 const tempFilename = "debugTaxes.txt"
 
 type taxType struct {
 	Date        string
+	TimeDate    time.Time
+	DateOnly    string
 	Description string
 	Amount      float64
 	Comment     string
@@ -69,8 +73,9 @@ type taxType struct {
 }
 
 type gasType struct {
-	Date  string
-	Price float64
+	Date     string
+	TimeDate time.Time
+	Price    float64
 }
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
@@ -95,8 +100,17 @@ func readTaxes(xl string) ([]taxType, error) {
 		if XLdateStr == "" {
 			break
 		}
-		//dateTime, err := time.Parse(time.DateOnly, XLdateStr)  This errored out as it contains a string representation of the excel date number.
-		//dateFormat := dateTime.Format("2006-01-02")
+		//dateTime, err := time.Parse(time.DateOnly, XLdateStr)  This errored out as it contains a string representation of the Excel date number.
+		timedate, err := row.GetCell(0).GetTime(false)
+		if err != nil {
+			return nil, err
+		}
+		dateFormat := timedate.Format("2006-01-02")
+		if dateFormat != timedate.Format(time.DateOnly) { // just to make sure I'm right that these are equivalent.
+			ctfmt.Printf(ct.Red, false, "These 2 different ways to achieve the same format should be equal.  They're not.  first = %s, second = %s\n",
+				dateFormat, timedate.Format(time.DateOnly))
+		}
+
 		XLdateNum, err := strconv.Atoi(XLdateStr)
 		if err != nil {
 			return nil, err
@@ -110,9 +124,11 @@ func readTaxes(xl string) ([]taxType, error) {
 		}
 		taxEntry := taxType{
 			Date:        dateOnly,
-			Description: row.GetCell(1).Value,
+			TimeDate:    timedate,
+			DateOnly:    dateFormat,
+			Description: strings.TrimSpace(row.GetCell(1).Value),
 			Amount:      amountFloat,
-			Comment:     row.GetCell(4).Value, // column number 3 is Account1, to be skipped.
+			Comment:     strings.TrimSpace(row.GetCell(4).Value), // column number 3 is Account1, to be skipped.
 			XLdateStr:   XLdateStr,
 			XLdateNum:   XLdateNum,
 		}
@@ -139,14 +155,15 @@ func gasData(taxes []taxType) ([]gasType, error) {
 	gasSlice := make([]gasType, 0, 100)
 	for _, tax := range taxes {
 		descr := strings.ToLower(strings.TrimSpace(tax.Description))
-		if strings.Contains(descr, "gas ") {
+		if strings.HasPrefix(descr, "gas ") { // this choked on the gas range line for 2024.  So I made it look for a prefix of "gas ", and this is working.
 			price, err := gasStrToNum(descr)
 			if err != nil {
 				return nil, err
 			}
 			gas := gasType{
-				Date:  tax.Date,
-				Price: price,
+				Date:     tax.Date,
+				TimeDate: tax.TimeDate,
+				Price:    price,
 			}
 			gasSlice = append(gasSlice, gas)
 		}
@@ -158,7 +175,9 @@ func main() {
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Printf(" Tax Proc, last modified %s, exec binary time stamp is %s\n", lastModified, ExecTimeStamp)
+	SQliteDBname = "taxes.db"
+
+	fmt.Printf(" Tax Proc, last modified %s, exec binary time stamp is %s, SQLiteDBname = %s\n", lastModified, ExecTimeStamp, SQliteDBname)
 
 	var filename, ans string
 
@@ -218,8 +237,6 @@ func main() {
 	fmt.Printf("Found %d tax items, and %d gas price points.\n", len(taxes), len(gasPrices))
 	showStuff(taxes, gasPrices)
 
-	SQliteDBname = "taxes.db"
-
 	// constructing the output file names from the input taxesyy.xlsm file.
 	base := filepath.Base(filename)
 	idx := strings.Index(base, ".")
@@ -244,7 +261,7 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " Error from TaxesAddRecords(%s) is %s.  Exiting \n", SQliteDBname, err)
 	}
 
-	err = writeOutGasFile(outGasFilename, base, gasPrices)
+	err = writeOutGasExcelFile(outGasFilename, base, gasPrices)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error from writeOutGasFile(%s) is %s.  Exiting \n", outGasFilename, err)
 	}
@@ -271,8 +288,8 @@ func showStuff(taxes []taxType, gas []gasType) {
 	debugBuf.WriteString(now.Format(time.ANSIC))
 	debugBuf.WriteString("\n Taxes:\n")
 	for _, tax := range taxes {
-		s := fmt.Sprintf("Date = %s, Description = %s, Amount = %.3f, Comment = %s, Excel Date as a string = %s, Excel date as an int = %d\n",
-			tax.Date, tax.Description, tax.Amount, tax.Comment, tax.XLdateStr, tax.XLdateNum)
+		s := fmt.Sprintf("Date=%s, Description=%s, Amount=%.3f, Comment=%s, Excel Date as string=%s, Excel date as int=%d, TimeDate=%s, DateOnly=%s\n",
+			tax.Date, tax.Description, tax.Amount, tax.Comment, tax.XLdateStr, tax.XLdateNum, tax.TimeDate.String(), tax.DateOnly)
 		debugBuf.WriteString(s)
 	}
 	debugBuf.WriteString("\n Gas:\n")
@@ -288,7 +305,8 @@ func writeOutExcelTaxesFile(fn string, base string, taxes []taxType) error {
 
 	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
 
-	const excelFormat = `$#,##0.00_);[Red](-$#,##0.00)`
+	const excelMoneyFormat = `$#,##0.00_);[Red](-$#,##0.00)`
+	const excelDateFormat = "*3/14/2012"
 
 	// Need to make sure that the extension is .xlsx and not .xlsm
 	lastChar := len(fn)
@@ -314,15 +332,22 @@ func writeOutExcelTaxesFile(fn string, base string, taxes []taxType) error {
 	cellThird.SetString("Amount")
 	firstRow.AddCell().SetString("Comment") // just trying this syntax to see if it works for the 4th column.  It does.
 
+	//dateOptions := xlsx.DateTimeOptions{  This didn't work.  It panicked.  See updated comments in writeOutGasExcelFile below
+	//	Location:        nil,
+	//	ExcelTimeFormat: excelDateFormat,
+	//}
+
 	//  fields are Date (mm/dd/yyyy), Description, Amount, Comment.
 	for _, t := range taxes {
 		row := sheet.AddRow()
 		cell0 := row.AddCell()
-		cell0.SetString(t.Date)
+		//                                           cell0.SetString(t.Date) // now I don't want to set this as a string.  Excel thinks it's a string type this way.  But it does work.
+		//                                           cell0.SetDateWithOptions(t.TimeDate, dateOptions)  This panicked
+		cell0.SetDate(t.TimeDate)
 		cell1 := row.AddCell()
 		cell1.SetString(t.Description)
 		cell2 := row.AddCell()
-		cell2.SetFloatWithFormat(t.Amount, excelFormat)
+		cell2.SetFloatWithFormat(t.Amount, excelMoneyFormat)
 		cell3 := row.AddCell()
 		cell3.SetString(t.Comment)
 	}
@@ -386,12 +411,21 @@ func checkSQLiteDate(date string) bool {
 	return result
 }
 
-// writeOutGasFile -- fn is the filename that's written.  base is the sheet name that's created.
-func writeOutGasFile(fn string, base string, gas []gasType) error {
+// writeOutGasExcelFile -- fn is the filename that's written.  base is the sheet name that's created.
+func writeOutGasExcelFile(fn string, base string, gas []gasType) error {
 
 	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
 
-	const excelFormat = `$#,##0.00_);[Red](-$#,##0.00)`
+	const excelMoneyFormat = `$#,##0.00_);[Red](-$#,##0.00)`
+	const excelDateFormat = "*3/14/2012"
+	//newYork, err := time.LoadLocation("America/New_York")
+	//if err != nil {
+	//	return err
+	//}
+	//dateOptions := xlsx.DateTimeOptions{ //This panicked when I tried to use this, when I made Location nil.  Now it doesn't panic, but Excel complained about bad data when opened in Excel.
+	//	Location:        newYork,
+	//	ExcelTimeFormat: excelDateFormat,
+	//}
 
 	// Need to make sure that the extension is .xlsx and not .xlsm
 	lastChar := len(fn)
@@ -418,9 +452,11 @@ func writeOutGasFile(fn string, base string, gas []gasType) error {
 	for _, g := range gas {
 		row := sheet.AddRow()
 		cell0 := row.AddCell()
-		cell0.SetString(g.Date)
+		// cell0.SetString(g.Date)  This sets the cell as a string type, not a datetime type.  But it does work.
+		// cell0.SetDateWithOptions(g.TimeDate, dateOptions) // This panicked before I made Loccation not nil.  Now it doesn't panic, but Excel complains about bad data when opened in Excel.
+		cell0.SetDate(g.TimeDate)
 		cell1 := row.AddCell()
-		cell1.SetFloat(g.Price)
+		cell1.SetFloatWithFormat(g.Price, excelMoneyFormat)
 	}
 
 	err = workbook.Save(fn)
