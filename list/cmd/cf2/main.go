@@ -524,7 +524,7 @@ func copyAFile(srcFile, destDir string) {
 		t = t.Add(timeFudgeFactor)
 	}
 
-	err = os.Chtimes(outName, t, t)
+	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time
 	if err != nil {
 		msg := msgType{
 			s:       "",
