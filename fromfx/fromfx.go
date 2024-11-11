@@ -21,6 +21,7 @@ import (
 	"src/tokenize"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -100,9 +101,11 @@ import (
                  This routine handles 2 different kinds of input files, the CHK_6861_Current_View.qfx, and one of the several credit card files in qfx or ofx format.
                  I have to make sure that the input state is consistent throughout the code.  Then send the slice of transactions to the rtn that will update the correct .db file.
 					As far as I can tell, it worked on the first compile and run.  I'm going to change the database filenames to the real ones instead of the test ones.
+  10 Nov 24 -- I'm going to port the new code I wrote in taxproc.go to more correctly write the Excel file.
+               I added a field to generalTransactionType, added code to the getTransactionDate to populate the new DateTime field, and then added code to write it to the Excel file.
 */
 
-const lastModified = "5 Nov 24"
+const lastModified = "10 Nov 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -172,6 +175,7 @@ type generalTransactionType struct {
 	MEMO        string
 	Descript    string
 	Juldate     int
+	DateTime    time.Time
 }
 
 type generalFooterType struct {
@@ -529,14 +533,15 @@ func writeOutExcelFile(fn string, base string, transactions []generalTransaction
 	for _, t := range transactions {
 		row := sheet.AddRow()
 		cell0 := row.AddCell()
-		cell0.SetString(t.DTPOSTEDtxt)
+		cell0.SetDate(t.DateTime)
 		cell1 := row.AddCell()
-		//cell1.SetString(t.TRNAMT)
 		cell1.SetFloatWithFormat(t.TRNAMTfloat, excelFormat)
 		cell2 := row.AddCell()
 		cell2.SetString(t.Descript)
 		cell3 := row.AddCell()
 		cell3.SetString(comment)
+		//                                      cell0.SetString(t.DTPOSTEDtxt)  I want this field to have a date time type, not string type in Excel.
+		//                                      cell1.SetString(t.TRNAMT)
 	}
 
 	err = workbook.Save(fn)
@@ -716,7 +721,7 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 		}
 
 		if false {
-			// do nothing but it allows the rest of the conditions to be in the else if form
+			// do nothing, but it allows the rest of the conditions to be in the else if form
 
 		} else if OFXtoken.State == openinghtml && OFXtoken.Str == "TRNTYPE" {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
@@ -728,15 +733,20 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "DTPOSTED") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			if OFXtoken.State == empty || OFXtoken.State != strng {
 				fmt.Println(" after DTPOSTED got token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
 			transaction.DTPOSTEDtxt, transaction.Juldate = DateFieldReformatAccess(OFXtoken.Str)
 			transaction.DTPOSTEDcsv = DateFieldAccessToSQlite(transaction.DTPOSTEDtxt)
+			var err error
+			transaction.DateTime, err = time.Parse("20060102", OFXtoken.Str[:8]) // substring this to chop off everything after the desired content
+			if err != nil {
+				ctfmt.Printf(ct.Red, true, " Error from time.Parse of %s is %s\n", OFXtoken.Str, err.Error())
+			}
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "TRNAMT") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			if OFXtoken.State == empty || OFXtoken.State != strng {
 				fmt.Println(" after TRNAMT got unexpedted token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
@@ -762,7 +772,7 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "NAME") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			if OFXtoken.State == empty || (OFXtoken.State != strng) {
+			if OFXtoken.State == empty || OFXtoken.State != strng {
 				fmt.Println(" after NAME got unexpedted token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
