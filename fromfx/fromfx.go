@@ -103,6 +103,7 @@ import (
 					As far as I can tell, it worked on the first compile and run.  I'm going to change the database filenames to the real ones instead of the test ones.
   10 Nov 24 -- I'm going to port the new code I wrote in taxproc.go to more correctly write the Excel file.
                I added a field to generalTransactionType, added code to the getTransactionDate to populate the new DateTime field, and then added code to write it to the Excel file.
+  11 Nov 24 -- I considered adding the sheet to Allcc.xlsx in code, but that doesn't work because the sheet gets added as the last one, and not the first one.
 */
 
 const lastModified = "10 Nov 24"
