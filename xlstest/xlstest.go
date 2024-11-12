@@ -7,6 +7,7 @@ import (
 	"github.com/tealeg/xlsx/v3"
 	"os"
 	"src/filepicker"
+	"src/misc"
 	"strconv"
 	"strings"
 )
@@ -67,7 +68,9 @@ func main() {
 
 	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
 
-	base := "I am first"
+	n := misc.RandRange(1000, 100_000)
+
+	base := strconv.Itoa(n)
 	sheet, err := workBook.AddSheet(base)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error adding sheet %s to workbook: %s\n", base, err)
@@ -79,7 +82,7 @@ func main() {
 		fmt.Println(i, sh.Name)
 	}
 
-	cell021, err := sheet.Cell(0, 21)
+	cell021, err := sheet.Cell(0, 21) // getting contents of cells before they're allocated actually allocates them.
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error getting cell 0,21. %s\n", err)
 	}
@@ -91,7 +94,7 @@ func main() {
 	}
 	fmt.Printf(" cell 121 is %s\n", cell121.String())
 
-	//cell210, err := workBook.Sheets[1].Cell(21, 0)
+	//cell210, err := workBook.Sheets[1].Cell(21, 0) // getting the contents here actually allocated all rows before, too.  So the AddRow call below added after this row.
 	//if err != nil {
 	//	ctfmt.Printf(ct.Red, false, " Error getting cell 21,1 in sheet 2. %s\n", err)
 	//}
