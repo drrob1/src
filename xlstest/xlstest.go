@@ -86,13 +86,13 @@ func main() {
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error getting cell 0,21. %s\n", err)
 	}
-	fmt.Printf(" cell 021 is %s\n", cell021.String())
+	fmt.Printf(" cell 021 is %q\n", cell021.String())
 
 	cell121, err := workBook.Sheets[0].Cell(1, 21)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error getting cell 1,21. %s\n", err)
 	}
-	fmt.Printf(" cell 121 is %s\n", cell121.String())
+	fmt.Printf(" cell 121 is %q\n", cell121.String())
 
 	//cell210, err := workBook.Sheets[1].Cell(21, 0) // getting the contents here actually allocated all rows before, too.  So the AddRow call below added after this row.
 	//if err != nil {
@@ -112,15 +112,16 @@ func main() {
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error getting cell 0,0. %s\n", err)
 	}
-	fmt.Printf(" cell00 should be this is at 0,0, and is %s\n\n", cell100.String()) // this works
+	fmt.Printf(" cell00 should be this is at 0,0, and is %q\n\n", cell100.String()) // this works
+
+	cell210, err := workBook.Sheets[1].Cell(1, 0)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error getting cell 1,0. %s\n", err)
+	}
+	fmt.Printf(" cel210 should be First Cell and is %q\n\n", cell210.String()) // this works
 
 	err = workBook.Save(filename)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error saving file %s to %s\n", filename, err)
 	}
-	cell210, err := workBook.Sheets[1].Cell(1, 0)
-	if err != nil {
-		ctfmt.Printf(ct.Red, false, " Error getting cell 1,0. %s\n", err)
-	}
-	fmt.Printf(" cel210 should be First Cell and is %s\n\n", cell210.String()) // this works
 }
