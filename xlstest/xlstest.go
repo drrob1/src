@@ -56,7 +56,6 @@ func main() {
 		filename = flag.Arg(0)
 	}
 
-	fmt.Printf(" spreadsheet picked is %s\n", filename)
 	fmt.Println()
 
 	workingDir, _ := os.Getwd()
@@ -98,17 +97,27 @@ func main() {
 	//}
 	//fmt.Printf(" cell 210 in sheet 2 is %s\n", cell210.String())
 
-	row := sheet.AddRow()
-	firstCell := row.AddCell()
-	firstCell.SetString("First cell")
-	cell00, err := workBook.Sheets[0].Cell(0, 0)
+	originCell, err := workBook.Sheets[1].Cell(0, 0)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error getting cell 0,0. %s\n", err)
 	}
-	fmt.Printf(" cell00 is %s\n\n", cell00.String())
+	originCell.SetString("this is at 0,0")
+	row := sheet.AddRow()
+	firstCell := row.AddCell()
+	firstCell.SetString("First cell")
+	cell100, err := workBook.Sheets[1].Cell(0, 0)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error getting cell 0,0. %s\n", err)
+	}
+	fmt.Printf(" cell00 should be this is at 0,0, and is %s\n\n", cell100.String()) // this works
 
 	err = workBook.Save(filename)
 	if err != nil {
 		ctfmt.Printf(ct.Red, false, " Error saving file %s to %s\n", filename, err)
 	}
+	cell210, err := workBook.Sheets[1].Cell(1, 0)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error getting cell 1,0. %s\n", err)
+	}
+	fmt.Printf(" cel210 should be First Cell and is %s\n\n", cell210.String()) // this works
 }
