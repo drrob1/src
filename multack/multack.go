@@ -74,6 +74,7 @@ import (
                  But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
    6 May 24 -- Wait groups are for the goroutines themselves, not the items processed by the goroutines.  I'm making that change now.
   10 May 24 -- Made sliceSize 50_000, as this can return ~20K matches when run in src directory.
+  20 Nov 24 -- Will now exclude OneDrive.  This crashes Windows, so I have to exclude it.
 */
 
 const lastAltered = "10 May 2024"
@@ -247,6 +248,11 @@ func main() {
 				return filepath.SkipDir
 			}
 
+			lower := strings.ToLower(fPath)
+			if strings.Contains(lower, "onedrive") {
+				return filepath.SkipDir
+			}
+		
 			info, _ := d.Info()
 			deviceID := getDeviceID(info)
 			if startDeviceID != deviceID {
