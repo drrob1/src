@@ -83,6 +83,7 @@ REVISION HISTORY
 17 May 24 -- On linux, will pass "2>/dev/nul" to suppress garbage error messages.  Nevermind, not needed.  See comments.
 20 May 24 -- Refactored the writeOutputFile routine.
 22 May 24 -- Fixed some displayed messages.
+21 Nov 24 -- Added '\' as a character to be removed when constructing the output filename.
 */
 
 /*
@@ -274,7 +275,8 @@ func main() {
 	// The file names slice is ready.  Now to create the output file.  Part of the filename will be the regexp used to create this file.
 
 	regexpStr := includeRegex.String()
-	rplcPattern := strings.NewReplacer("=", "", "+", "", ".", "", "?", "", "*", "", "|", "_", " ", "", "[", "", "]", "", "^", "", "$", "")
+	rplcPattern := strings.NewReplacer("=", "", "+", "", ".", "", "?", "", "*", "", "|", "_", " ", "", "[", "",
+		"]", "", "^", "", "$", "", "\\", "")
 	replacedStr := rplcPattern.Replace(regexpStr)
 	outFilename := "vlc" + "_" + replacedStr + "_" + strconv.Itoa(len(fileNames)) + "-" + strconv.Itoa(shuffleAmount) + extDefault
 	outputFile, err := os.Create(outFilename)
