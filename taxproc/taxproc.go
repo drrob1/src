@@ -54,7 +54,7 @@ import (
    8 Nov 24 -- Taxes.mdb fields are Date (mm/dd/yyyy), Description, Amount, Comment.
                taxes.db fields are Date (DATETIME), Descr (TEXT), Amount (REAL), Comment (TEXT).
    9 Nov 24 -- Added Floor to correct small floating point errors automatically
-  10 Nov 24 -- Now that it works, I'm going to see if I can get it to work using the xlsx methods instead of my own timlibg mehtods to convert to/from Excel date julian numbers.
+  10 Nov 24 -- Now that it works, I'm going to see if I can get it to work using the xlsx methods instead of my own timlibg methods to convert to/from Excel date julian numbers.
                  And I'm using strings.TrimSpaces on the description and comment fields.  This is so that the HasPrefix looking for "gas" will succeed if I have a stray " " in the beginning of the cell.
 */
 

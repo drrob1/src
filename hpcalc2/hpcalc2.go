@@ -146,7 +146,8 @@ REVISION HISTORY
  8 Jul 24 -- Adding the gcd routine as an alternative to hcf.
 14 Aug 24 -- For the undo/redo, the matrix stack will be dynamically managed.
  9 Nov 24 -- Trying to figure out how to correct the small floating point errors that I see.  Next and Prev are manual.  I'm going to try using math.Floor.
-23 Nov 24 -- Clean command was added several weeks ago.  It works.  I'm expanding it to allow a number, like fix.
+23 Nov 24 -- Clean command was added several weeks ago.  It works.  I'm expanding it to allow a number, like fix does.
+24 Nov 24 -- Improved some comments to make them clearer, and added more doc comments to the functions here
 */
 
 const LastAlteredDate = "24 Nov 2024"
@@ -498,14 +499,13 @@ func CropNStr(instr string) string {
 	return strings.TrimSpace(outstr)
 } // CropNStr
 
-//------------------------------------------------------------------ DumpStackFixed -----------------------------------------------------------
-
+// DumpStackFixed -- Returns a slice of stack strings in fixed point format.
 func DumpStackFixed() []string {
 	//                                       var SRN int   I would never do this now, so I'm removing it
 	var str string
 
 	ss := make([]string, 0, StackSize+2)
-	ss = append(ss, HeaderDivider) // I had an unneeded call to Sprintf here.
+	ss = append(ss, HeaderDivider)
 	for SRN := T1; SRN >= X; SRN-- {
 		if math.Abs(Stack[SRN]) < verySmallNumber || math.Abs(Stack[SRN]) > veryLargeNumber {
 			str = strconv.FormatFloat(Stack[SRN], 'g', sigfig, 64)
@@ -543,9 +543,8 @@ func DumpStackFloat() []string {
 	return ss
 } // DumpStackFloat
 
-//************************************************* OutputFixedOrFloat *******************************
-
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+// OutputFixedOrFloat -- Tries to output a number without an exponent, if possible.  Will output an exponent if it has to.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -555,8 +554,7 @@ func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) 
 	}
 } // OutputFixedOrFloat
 
-//************************************************** DumpStackGeneral ***************************
-
+// DumpStackGeneral -- Dumps the stack using a general format verb.
 func DumpStackGeneral() []string {
 	var SRN int
 	var str string
@@ -571,9 +569,7 @@ func DumpStackGeneral() []string {
 	return ss
 } // DumpStackGeneral
 
-//------------------------------------------------- ToHex ------------------
-// The new algorithm is elegantly simple.
-
+// ToHex -- Uses an elegant algorithm I recently read about.
 func ToHex(L float64) string {
 	const hexDigits = "0123456789abcdef"
 
@@ -586,9 +582,9 @@ func ToHex(L float64) string {
 	str := ""
 
 	for h := int(math.Trunc(Round(L))); h > 0; h = h / 16 {
-		d := h % 16 // % is MOD op
-		str = string(hexDigits[d]) + str
-	} // until L = 0
+		d := h % 16                      // % is MOD op
+		str = string(hexDigits[d]) + str // this line prepends the new digit with each iteration, so the result does not need to be reversed.
+	}
 
 	if IsNeg {
 		return "Negative " + str + "H"
@@ -596,8 +592,7 @@ func ToHex(L float64) string {
 	return str + "H"
 } // ToHex
 
-// ------------------------------------------------- IsPrime -----------------
-
+// IsPrime -- Just what its name says.
 func IsPrime(real float64) bool { // The real input is to allow from stack.
 
 	var t uint64 = 3
@@ -625,8 +620,7 @@ func IsPrime(real float64) bool { // The real input is to allow from stack.
 	return true
 } // IsPrime
 
-// --------------------------------------- PrimeFactorMemoized -------------------
-
+// PrimeFactorMemoized -- returns a slice of uint prime factors using a memoization algorithm.
 func PrimeFactorMemoized(U uint) []uint {
 
 	if U == 0 {
@@ -652,8 +646,7 @@ func PrimeFactorMemoized(U uint) []uint {
 	return PrimeUfactors
 }
 
-// ------------------------------------------------- NextPrimeFac -----------------
-
+// NextPrimeFac -- Returns the next prime factor after the given one.  Supports the memoization algorithm.  Returns true when returning a prime factor.  False means there are no more prime factors.
 func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reverse of IsPrime
 	// This returns a prime factor or zero, and a bool which is true when the function returns a prime factor.
 	// It will return false when there are no more prime factors.
@@ -675,8 +668,7 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 	return 0, false
 } // IsPrime
 
-//----------------------------------------------- usqrt ---------------------------
-
+// usqrt -- estimates a sqrt by dividing and averaging using a uint.
 func usqrt(u uint) uint {
 
 	sqrt := u / 2
@@ -691,10 +683,9 @@ func usqrt(u uint) uint {
 	return sqrt + 1 // to fix an off by 1 issue I discovered by writing the Sieve code.
 }
 
-// ---------------------------------------- PWRI -------------------------------------------------
-//POWER OF I.
-// This is a power function with a real base and integer exponent, using the optimized algorithm as discussed in PIM-2, V.  2.
-
+// PWRI -- Power function that multiplies the minimum number of times.  Exponent is an int that can be negative.
+// Power Of I.
+// This is a power function with a real base and integer exponent, using the optimized algorithm as discussed in PIM-2, V 2.
 func PWRI(R float64, I int) float64 {
 	Z := 1.0
 	NEGFLAG := false
@@ -715,24 +706,7 @@ func PWRI(R float64, I int) float64 {
 	return Z
 } // PWRI
 
-//-------------------------------------------------------- StacksMatrixUp
-
-//func StacksMatrixUp() {
-//	for i := T2; i >= X; i-- {
-//		StackUndoMatrix[i+1] = StackUndoMatrix[i]
-//	}
-//} // StacksMatrixUp
-
-//-------------------------------------------------------- StacksMatrixDown
-
-//func StacksMatrixDown() {
-//	for i := Y; i <= T1; i++ {
-//		StackUndoMatrix[i-1] = StackUndoMatrix[i]
-//	}
-//} // StacksMatrixDown
-
-//-------------------------------------------------------- PushMatrixStacks
-
+// PushMatrixStacks -- Saves the stack state prior to an operation that will change the stack state.
 func PushMatrixStacks() { // this is called from GetResult before an operation that would change the stack.
 	//StacksMatrixUp()
 	//StackUndoMatrix[Bottom] = Stack
@@ -740,14 +714,8 @@ func PushMatrixStacks() { // this is called from GetResult before an operation t
 	CurUndoRedoIdx = len(StackUndoMatrix) - 1
 }
 
-//-------------------------------------------------------- UndoMatrixStacks
-
+// UndoMatrixStacks -- performs an undo operation by reverting to a previous stack state.
 func UndoMatrixStacks() {
-	//TempStack := Stack
-	//Stack = StackUndoMatrix[Bottom]
-	//StacksMatrixDown()
-	//StackUndoMatrix[Top] = TempStack
-
 	if CurUndoRedoIdx == len(StackUndoMatrix)-1 { // only push the current state if it's not already been pushed.  IE, first undo for this stack state.
 		StackUndoMatrix = append(StackUndoMatrix, Stack)
 	}
@@ -757,8 +725,8 @@ func UndoMatrixStacks() {
 	}
 }
 
-// Floor -- To automatically fix the small floating point errors introduced by the conversions
-func Floor(real, places float64) float64 {
+// Floor -- To automatically fix the small floating point errors introduced by the conversions.  Real can be negative, places cannot be negative or > 10.
+func Floor(real, places float64) float64 { // written and debugged here before I put a copy if this in the misc package for the SQLite3 program to use.
 	if places < 0 || places > 10 {
 		places = 10
 	}
@@ -778,14 +746,8 @@ func Floor(real, places float64) float64 {
 	return result
 }
 
-//-------------------------------------------------------- RedoMatrixStacks
-
+// RedoMatrixStacks -- Redoes the stack matrix, that is, undoes the undo by reverting to a later stack state.
 func RedoMatrixStacks() {
-	//TempStack := Stack
-	//Stack = StackUndoMatrix[Top]
-	//StacksMatrixUp()
-	//StackUndoMatrix[Bottom] = TempStack
-
 	if CurUndoRedoIdx >= 0 && CurUndoRedoIdx < len(StackUndoMatrix)-1 {
 		CurUndoRedoIdx++
 		Stack = StackUndoMatrix[CurUndoRedoIdx]
