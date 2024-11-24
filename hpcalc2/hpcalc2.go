@@ -146,9 +146,10 @@ REVISION HISTORY
  8 Jul 24 -- Adding the gcd routine as an alternative to hcf.
 14 Aug 24 -- For the undo/redo, the matrix stack will be dynamically managed.
  9 Nov 24 -- Trying to figure out how to correct the small floating point errors that I see.  Next and Prev are manual.  I'm going to try using math.Floor.
+23 Nov 24 -- Clean command was added several weeks ago.  It works.  I'm expanding it to allow a number, like fix.
 */
 
-const LastAlteredDate = "9 Nov 2024"
+const LastAlteredDate = "23 Nov 2024"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -305,6 +306,7 @@ func init() {
 	cmdMap["C2F"] = 633
 	cmdMap["F2C"] = 636
 	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
+	cmdMap["CLE"] = 650 // So I can process cleanN.  The code below is written for STO and RCL, so it uses the first 3 characters.
 	cmdMap["CLEAN"] = 650
 	cmdMap["CLEAN4"] = 650
 	cmdMap["CLEAN5"] = 660
@@ -543,7 +545,7 @@ func DumpStackFloat() []string {
 
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -984,7 +986,7 @@ outerloop:
 			ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
 			ss = append(ss, " Adjust -- X reg *100, Round, /100")
 			ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
-			ss = append(ss, " clean, clean4, clean5 -- Automatically correct the small floating point errors to 4 or 5 decimal places.")
+			ss = append(ss, " clean, clean4, clean5, cleanN -- Automatically correct the small floating point errors to 4, 5 or N decimal places.")
 			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 			ss = append(ss, " substitutions: = for +, ; for *.")
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
@@ -1542,12 +1544,19 @@ outerloop:
 
 			}
 
-		case 650: // CLEAN and CLEAN4
+		case 650: // CLEAN and CLEAN4.  As of 11/23/24, it's really just all CLEAN now.  More precisely, CLE followed by last character determines value of N.
 			PushMatrixStacks()
 			LastX = Stack[X]
-			x := Floor(Stack[X], 4) // this is to correct the small floating point errors, to 4 decimal places.
+			ch := tkn.Str[len(tkn.Str)-1] // ie, the last character.
+			places := GetRegIdx(ch)
+			var placesReal float64
+			placesReal = float64(places)
+			if places > 8 { // If greater than this max value, make it 4, ie default is 4.
+				placesReal = float64(4)
+			}
+			x := Floor(Stack[X], placesReal) // this is to correct the small floating point errors, to 4 decimal places.
 			Stack[X] = x
-		case 660: // CLEAN5
+		case 660: // CLEAN5  this is redundant now.  I'm not deleting it.
 			PushMatrixStacks()
 			LastX = Stack[X]
 			x := Floor(Stack[X], 5) // this is to correct the small floating point errors, to 5 decimal places.
