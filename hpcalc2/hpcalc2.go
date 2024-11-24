@@ -545,7 +545,7 @@ func DumpStackFloat() []string {
 
 //************************************************* OutputFixedOrFloat *******************************
 
-func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -759,6 +759,10 @@ func UndoMatrixStacks() {
 
 // Floor -- To automatically fix the small floating point errors introduced by the conversions
 func Floor(real, places float64) float64 {
+	if places < 0 || places > 10 {
+		places = 10
+	}
+
 	negFlag := real < 0
 	result := real
 	if negFlag {

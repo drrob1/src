@@ -20,6 +20,7 @@ REVISION HISTORY
                I'm doing that now in Go.  This module is now called misc, based on makesubst
 24 May 24 -- Adding comments that can be processed by go doc.
  9 Nov 24 -- Added Floor function to automatically correct small floating point errors.  It works in hpcalc2, so I copied it here, too.
+24 Nov 24 -- Enhanced Floor function to validate the places param.
 */
 
 // MakeSubst -- input a string, output a string that substitutes '=' -> '+' and ';' -> '*'
@@ -125,8 +126,12 @@ func InsertIntoRuneSlice(slice, insertion []rune, index int) []rune {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 } // InsertIntoByteSlice
 
-// Floor -- To automatically fix the small floating point errors introduced by the conversions
+// Floor -- To automatically fix the small floating point errors introduced by the conversions.  Max value for places is 10.
 func Floor(real, places float64) float64 {
+	if places < 0 || places > 10 {
+		places = 10
+	}
+
 	negFlag := real < 0
 	result := real
 	if negFlag {
