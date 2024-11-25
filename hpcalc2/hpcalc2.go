@@ -1521,7 +1521,7 @@ outerloop:
 			}
 			x := Floor(Stack[X], placesReal) // this is to correct the small floating point errors, to 4 decimal places.  Floor is my function, defined above.
 			Stack[X] = x
-			s := fmt.Sprintf("clean(x, %d) done", places)
+			s := fmt.Sprintf("clean(x, %.0f) done", placesReal)
 			ss = append(ss, s)
 		case 660: // CLEAN5  this is redundant now.  I'm not deleting it.
 			PushMatrixStacks()
