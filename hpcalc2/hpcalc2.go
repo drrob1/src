@@ -150,7 +150,7 @@ REVISION HISTORY
 24 Nov 24 -- Improved some comments to make them clearer, and added more doc comments to the functions here
 */
 
-const LastAlteredDate = "24 Nov 2024"
+const LastAlteredDate = "25 Nov 2024"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -1516,16 +1516,20 @@ outerloop:
 			ch := tkn.Str[len(tkn.Str)-1] // ie, the last character.
 			places := GetRegIdx(ch)
 			placesReal := float64(places)
-			if places > 8 { // If greater than this max value, make it 4, ie default is 4.
-				placesReal = float64(4)
+			if places > 10 { // If greater than this max value, make it 10, ie default is 10.
+				placesReal = float64(10)
 			}
 			x := Floor(Stack[X], placesReal) // this is to correct the small floating point errors, to 4 decimal places.  Floor is my function, defined above.
 			Stack[X] = x
+			s := fmt.Sprintf("clean(x, %d) done", places)
+			ss = append(ss, s)
 		case 660: // CLEAN5  this is redundant now.  I'm not deleting it.
 			PushMatrixStacks()
 			LastX = Stack[X]
 			x := Floor(Stack[X], 5) // this is to correct the small floating point errors, to 5 decimal places.  Floor is my function that's defined above.
 			Stack[X] = x
+			s := "clean5 done"
+			ss = append(ss, s)
 
 		case 999: // do nothing, ignore me but don't generate an error message.
 
