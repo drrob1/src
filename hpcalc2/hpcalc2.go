@@ -1519,7 +1519,7 @@ outerloop:
 			if places > 10 { // If greater than this max value, make it 10, ie default is 10.
 				placesReal = float64(10)
 			}
-			x := Floor(Stack[X], placesReal) // this is to correct the small floating point errors, to 4 decimal places.  Floor is my function, defined above.
+			x := Floor(Stack[X], placesReal) // this is to correct the small floating point errors, to the specified number of decimal places.  Floor is my function, defined above.
 			Stack[X] = x
 			s := fmt.Sprintf("clean(x, %.0f) done", placesReal)
 			ss = append(ss, s)
