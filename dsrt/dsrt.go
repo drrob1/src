@@ -138,14 +138,17 @@ REVISION HISTORY
  2 May 24 -- Added timer to compare to fdsrt.
 22 June 24-- Changed the closing message
 23 June 24-- Edited a comment, and added AddComasRune, first here and then to misc where it now resides after I removed it from here.
+27 Nov 24 -- Edited some comments here and in dsrtutil_windows.go
 */
 
 const LastAltered = "23 June 2024"
 
+// Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
 // but does not sort the slice before returning it, due to difficulty in passing the sort function.
 // The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
+// displayFileInfos is in platform specific code because Windows does not have uid:gid.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
 
 type dirAliasMapType map[string]string
@@ -465,7 +468,7 @@ func main() {
 // InsertIntoByteSlice will insert a byte into a slice at a designated position.  Intended to insert a comma into a number string.
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
-} // InsertIntoByteSlice
+}
 
 //---------------------------------------------------------------------- AddCommas
 
@@ -483,7 +486,7 @@ func AddCommas(instr string) string {
 		BS = InsertIntoByteSlice(BS, Comma, i)
 	}
 	return string(BS)
-} // AddCommas
+}
 
 // ------------------------------ IsSymlink ---------------------------
 
@@ -491,7 +494,7 @@ func IsSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
 	result := intermed != 0
 	return result
-} // IsSymlink
+}
 
 // ---------------------------- GetIDname -----------------------------------------------------------
 
@@ -505,7 +508,7 @@ func idName(uidStr string) string {
 		return "----" // this line fixes the bug if user.LookupId failed, as it does in a docker image.
 	}
 	return ptrToUser.Username
-} // idName, formerly GetIDname
+}
 
 // ------------------------------------ ProcessEnvironString ---------------------------------------
 
