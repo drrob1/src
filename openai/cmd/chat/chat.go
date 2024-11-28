@@ -10,6 +10,7 @@ import (
 /*
   31 Aug 2024 -- From Linux Magazine 270 May 2023.
    5 Sep 2024 -- Added stop or exit when the text is too short, ie, len < 5 char.  Intended to include stop, exit and any other 4-letter word.
+  27 Nov 2024 -- I added some blank lines at the end of the loop.
 */
 
 func main() {
@@ -27,5 +28,6 @@ func main() {
 			break
 		}
 		ai.PrintResp(text)
+		fmt.Printf("\n\n\n\n")
 	}
 }
