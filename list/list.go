@@ -69,9 +69,10 @@ import (
                  NewFromGlob() no longer uses filepath.Glob() routine.  That only persists in my glob and dsrt routines, as I also removed it from fdsrt and ds.  Rex never had it.
                  Currently, only runlist, runx and runlst use NewFromGlob() and NewFromRegexp().
   25 Oct 24 -- Fixed bug in CheckDest so that it will catch if no params are on the line.
+  28 Nov 24 -- Will now display the size in the same color as the filename.
 */
 
-var LastAltered = "Oct 25, 2024"
+var LastAltered = "Nov 28, 2024"
 
 type DirAliasMapType map[string]string
 
@@ -575,8 +576,7 @@ func ExpandAllDashes(in string) (string, error) {
 	return workingStr, nil
 }
 
-// -------------------------------------------- FileSelection -------------------------------------------------------
-
+// FileSelection -- This displays the files on screen and creates the list from what's entered by the user.
 func FileSelection(inList []FileInfoExType) ([]FileInfoExType, error) {
 	outList := make([]FileInfoExType, 0, len(inList))
 	numOfLines := min(autoHeight, minHeight)
@@ -605,7 +605,8 @@ outerLoop:
 				clr = ct.Yellow
 			}
 			ctfmt.Printf(clr, brightFlag, " -- %s", t)
-			ctfmt.Printf(ct.Cyan, brightFlag, " %s\n", s)
+			//             ctfmt.Printf(ct.Cyan, brightFlag, " %s\n", s)  Removed 11/28/24
+			ctfmt.Printf(colr, brightFlag, " %s\n", s) // added 11/28/24
 		}
 
 		fmt.Print(" Enter selections: ")
