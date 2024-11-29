@@ -40,9 +40,10 @@ REVISION HISTORY
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 14 May 24 -- Have both configDir and HomeDir, which are separate.  I changed to userConfigDir badly last year by blurring these two.
 15 May 24 -- Changed all the references to os.Arg[] to flag.Arg() and flag.NArgs.  Not yet fully tested.
+28 Nov 24 -- Fixed config entry.
 */
 
-const LastAltered = "May 15, 2024"
+const LastAltered = "Nov 28, 2024"
 
 const bookmarkFilename = "bookmarkfile.gob"
 
@@ -125,7 +126,7 @@ func main() {
 	} else { // need to init bookmarkfile
 		bookmark = make(map[string]string, 15)
 
-		bookmark["config"] = target + configDir
+		bookmark["config"] = configDir // this is an exception, as the full path is already in configDir
 		bookmark["docs"] = target + "Documents"
 		bookmark["doc"] = target + "Documents"
 		bookmark["inet"] = target + "Downloads"

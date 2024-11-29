@@ -33,9 +33,10 @@ const bookmarkfilename = "bookmarkfile.gob"
   18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
   14 May 24 -- Need to have both a config dir and home dir.
   16 May 24 -- Removing references to os.Args[] and replacing it w/ flag.Arg() and flag.NArg
+  28 Nov 24 -- Added a sep character in the target.
 */
 
-const LastAltered = "May 14, 2024"
+const LastAltered = "Nov 28, 2024"
 
 func main() {
 	var bookmark map[string]string
@@ -62,9 +63,8 @@ func main() {
 		return
 	}
 
-	target := "cdd" + " " + homeDir
+	target := "cdd " + homeDir + sep
 	fullBookmarkFilename := filepath.Join(configDir, bookmarkfilename) // this is more idiomatic for Go
-	//fullBookmarkFilename := configDir + sep + bookmarkfilename
 
 	if flag.NArg() == 0 { // No destination dir found on cmd line.
 		io.WriteString(os.Stdout, target)
@@ -98,7 +98,7 @@ func main() {
 	} else { // need to init bookmarkfile
 		bookmark = make(map[string]string, 15)
 
-		bookmark["config"] = target + configDir
+		bookmark["config"] = configDir // an exception, as the full path is already in configDir.
 		bookmark["docs"] = target + "Documents"
 		bookmark["doc"] = target + "Documents"
 		bookmark["inet"] = target + "Downloads"
