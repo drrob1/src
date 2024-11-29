@@ -34,9 +34,10 @@ const bookmarkfilename = "bookmarkfile.gob"
   14 May 24 -- Need to have both a config dir and home dir.
   16 May 24 -- Removing references to os.Args[] and replacing it w/ flag.Arg() and flag.NArg
   28 Nov 24 -- Added a sep character in the target.
+  29 Nov 24 -- added a message to print if -v is used.
 */
 
-const LastAltered = "Nov 28, 2024"
+const LastAltered = "Nov 29, 2024"
 
 func main() {
 	var bookmark map[string]string
@@ -49,8 +50,8 @@ func main() {
 		ExecFI, _ := os.Stat(execName)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Printf(" %s last compiled %s by %s.  Full binary is %s with timestamp of %s.\n", os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
-		os.Exit(0)
 	}
+
 	sep := string(os.PathSeparator)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -65,6 +66,10 @@ func main() {
 
 	target := "cdd " + homeDir + sep
 	fullBookmarkFilename := filepath.Join(configDir, bookmarkfilename) // this is more idiomatic for Go
+
+	if *verboseFlag {
+		fmt.Printf("target: %q, fullBookmarkFilename: %q\n", target, fullBookmarkFilename)
+	}
 
 	if flag.NArg() == 0 { // No destination dir found on cmd line.
 		io.WriteString(os.Stdout, target)

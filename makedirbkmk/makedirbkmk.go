@@ -41,9 +41,10 @@ REVISION HISTORY
 14 May 24 -- Have both configDir and HomeDir, which are separate.  I changed to userConfigDir badly last year by blurring these two.
 15 May 24 -- Changed all the references to os.Arg[] to flag.Arg() and flag.NArgs.  Not yet fully tested.
 28 Nov 24 -- Fixed config entry.
+29 Nov 24 -- Added a message to display when -v is used.
 */
 
-const LastAltered = "Nov 28, 2024"
+const LastAltered = "Nov 29, 2024"
 
 const bookmarkFilename = "bookmarkfile.gob"
 
@@ -68,7 +69,6 @@ func main() {
 
 	if *verboseFlag {
 		fmt.Printf(" %s last compiled %s by %s.  Full binary is %s with timestamp of %s.\n", os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
-		os.Exit(0)
 	}
 
 	sep := string(os.PathSeparator)
@@ -82,9 +82,13 @@ func main() {
 		fmt.Println(err, "Exiting")
 		os.Exit(1)
 	}
-	target := "cdd" + " " + HomeDir + sep
+	target := "cdd " + HomeDir + sep
 	fullBookmarkFilename := filepath.Join(configDir, bookmarkFilename)
 	//fullBookmarkFilename := configDir + sep + bookmarkFilename // old way before I learned a better way
+
+	if *verboseFlag { // added 11/29/24
+		fmt.Printf(" target: %q, fullBookmarkFilename: %q\n", target, fullBookmarkFilename)
+	}
 
 	help := func() {
 		fmt.Println(" HomeDir is", HomeDir, ", ", ExecFI.Name(), "timestamp is", ExecTimeStamp, ". ")
