@@ -41,7 +41,8 @@ REVISION HISTORY
 14 May 24 -- Have both configDir and HomeDir, which are separate.  I changed to userConfigDir badly last year by blurring these two.
 15 May 24 -- Changed all the references to os.Arg[] to flag.Arg() and flag.NArgs.  Not yet fully tested.
 28 Nov 24 -- Fixed config entry.
-29 Nov 24 -- Added a message to display when -v is used.
+29 Nov 24 -- Added a message to display when -v is used.  And I'm going to use filepath.Join more.
+				It's become obvious to me that I should not store the "cdd " part in the map[string]string.  That will be added by dirb.
 */
 
 const LastAltered = "Nov 29, 2024"
@@ -71,7 +72,7 @@ func main() {
 		fmt.Printf(" %s last compiled %s by %s.  Full binary is %s with timestamp of %s.\n", os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
 	}
 
-	sep := string(os.PathSeparator)
+	// sep := string(os.PathSeparator)  Not used anymore.  A single backslash on Windows was giving me a lot of trouble because it would not show up in the cdd command.
 	HomeDir, err = os.UserHomeDir() // this routine became available in Go 1.12
 	if err != nil {
 		fmt.Println(err, "Exiting")
@@ -82,12 +83,12 @@ func main() {
 		fmt.Println(err, "Exiting")
 		os.Exit(1)
 	}
-	target := "cdd " + HomeDir + sep
-	fullBookmarkFilename := filepath.Join(configDir, bookmarkFilename)
+	// target := "cdd " + HomeDir + sep  removed 11/29/24, as I don't want to store the "cdd " part.  That's too complex because a single backslash is not being interpretted correctly.
 	//fullBookmarkFilename := configDir + sep + bookmarkFilename // old way before I learned a better way
+	fullBookmarkFilename := filepath.Join(configDir, bookmarkFilename)
 
 	if *verboseFlag { // added 11/29/24
-		fmt.Printf(" target: %q, fullBookmarkFilename: %q\n", target, fullBookmarkFilename)
+		fmt.Printf(" HomeDir: %q, fullBookmarkFilename: %q\n", HomeDir, fullBookmarkFilename)
 	}
 
 	help := func() {
@@ -106,7 +107,7 @@ func main() {
 	}
 	if *helpFlag {
 		help()
-		os.Exit(0)
+		return
 	}
 
 	// read or init directory bookmark file
@@ -130,18 +131,18 @@ func main() {
 	} else { // need to init bookmarkfile
 		bookmark = make(map[string]string, 15)
 
-		bookmark["config"] = configDir // this is an exception, as the full path is already in configDir
-		bookmark["docs"] = target + "Documents"
-		bookmark["doc"] = target + "Documents"
-		bookmark["inet"] = target + "Downloads"
-		bookmark["inetdnld"] = target + "Downloads"
-		bookmark["vid"] = target + "Videos"
-		bookmark["go"] = target + "go"
-		bookmark["src"] = target + "go" + sep + "src"
-		bookmark["pic"] = target + "Pictures"
-		bookmark["pics"] = target + "Pictures"
-		bookmark["winx"] = target + "Videos" + sep + "winxvideos"
-		bookmark["bin"] = target + "go" + sep + "bin"
+		bookmark["config"] = configDir                                  // Join was called above.
+		bookmark["docs"] = filepath.Join(HomeDir, "Documents")          // target + "Documents"
+		bookmark["doc"] = filepath.Join(HomeDir, "Documents")           // target + "Documents"
+		bookmark["inet"] = filepath.Join(HomeDir, "Downloads")          // target + "Downloads"
+		bookmark["inetdnld"] = filepath.Join(HomeDir, "Downloads")      // target + "Downloads"
+		bookmark["vid"] = filepath.Join(HomeDir, "Videos")              // target + "Videos"
+		bookmark["go"] = filepath.Join(HomeDir, "go")                   // target + "go"
+		bookmark["src"] = filepath.Join(bookmark["go"], "src")          // target + "go" + sep + "src"
+		bookmark["bin"] = filepath.Join(bookmark["go"], "bin")          // target + "go" + sep + "bin"
+		bookmark["pic"] = filepath.Join(HomeDir, "Pictures")            // target + "Pictures"
+		bookmark["pics"] = filepath.Join(HomeDir, "Pictures")           // target + "Pictures"
+		bookmark["winx"] = filepath.Join(bookmark["vid"], "winxvideos") // target + "Videos" + sep + "winxvideos"
 
 		fmt.Println("Bookmark's initialized.")
 		fmt.Println()
@@ -155,9 +156,6 @@ func main() {
 	} else {
 		ch = strings.ToLower(os.Args[1])
 		ch = strings.TrimPrefix(ch, "-") // recommended by static linter
-		//if strings.HasPrefix(ch, "-") { // removed as recommended by static linter
-		//	ch = ch[1:]
-		//}
 	}
 
 	switch ch {
@@ -232,13 +230,14 @@ func dirSave() { // implement s (save) command
 			fmt.Scanln(&ans)
 			ans = strings.ToLower(ans)
 			if strings.HasPrefix(ans, "y") {
-				bookmark[bkmkName] = "cdd " + workingDir
+				bookmark[bkmkName] = workingDir
 				fmt.Printf(" created bookmark[%s] = %s \n", os.Args[2], bookmark[os.Args[2]])
 			} else {
 				fmt.Println(" save bookmark command ignored.")
 			}
 		} else { // bookmark name is not already in the map.
-			bookmark[bkmkName] = "cdd " + workingDir
+			// bookmark[bkmkName] = "cdd " + workingDir
+			bookmark[bkmkName] = workingDir
 			fmt.Printf(" created bookmark[%s] = %s \n", bkmkName, bookmark[bkmkName])
 		}
 	} else if flag.NArg() == 3 { // have potential directory target on command line
@@ -258,18 +257,18 @@ func dirSave() { // implement s (save) command
 				fmt.Scanln(&ans)
 				ans = strings.ToLower(ans)
 				if strings.HasPrefix(ans, "y") {
-					bookmark[bkmkName] = "cdd " + target
+					bookmark[bkmkName] = target
 					fmt.Printf(" created bookmark[%s] = %s \n", bkmkName, bookmark[bkmkName])
 				} else {
 					fmt.Println(" save bookmark command ignored.")
 				}
 			} else { // bookmark name is not already in the map
-				bookmark[bkmkName] = "cdd " + target
+				bookmark[bkmkName] = target
 				fmt.Printf(" created bookmark[%s] = %s \n", bkmkName, bookmark[bkmkName])
 			}
 		} else {
 			log.Println(" Lstat call for", target, "failed with error of", err)
-			os.Exit(1)
+			return
 		}
 	}
 

@@ -34,7 +34,8 @@ const bookmarkfilename = "bookmarkfile.gob"
   14 May 24 -- Need to have both a config dir and home dir.
   16 May 24 -- Removing references to os.Args[] and replacing it w/ flag.Arg() and flag.NArg
   28 Nov 24 -- Added a sep character in the target.
-  29 Nov 24 -- added a message to print if -v is used.
+  29 Nov 24 -- added a message to print if -v is used.  And I'm going to use filepath.Join more.
+				It's become obvious to me that I should not store the "cdd " part in the map[string]string.  That will be added here.
 */
 
 const LastAltered = "Nov 29, 2024"
@@ -52,7 +53,7 @@ func main() {
 		fmt.Printf(" %s last compiled %s by %s.  Full binary is %s with timestamp of %s.\n", os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
 	}
 
-	sep := string(os.PathSeparator)
+	// sep := string(os.PathSeparator)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Printf(" os.UserHomeDir returned error of: %s.  Exiting...\n", err)
@@ -64,14 +65,15 @@ func main() {
 		return
 	}
 
-	target := "cdd " + homeDir + sep
+	// target := "cdd " + homeDir + sep
 	fullBookmarkFilename := filepath.Join(configDir, bookmarkfilename) // this is more idiomatic for Go
 
 	if *verboseFlag {
-		fmt.Printf("target: %q, fullBookmarkFilename: %q\n", target, fullBookmarkFilename)
+		fmt.Printf("homeDir: %q, fullBookmarkFilename: %q\n", homeDir, fullBookmarkFilename)
 	}
 
 	if flag.NArg() == 0 { // No destination dir found on cmd line.
+		target := "cdd " + homeDir
 		io.WriteString(os.Stdout, target)
 		return
 	}
@@ -103,18 +105,18 @@ func main() {
 	} else { // need to init bookmarkfile
 		bookmark = make(map[string]string, 15)
 
-		bookmark["config"] = configDir // an exception, as the full path is already in configDir.
-		bookmark["docs"] = target + "Documents"
-		bookmark["doc"] = target + "Documents"
-		bookmark["inet"] = target + "Downloads"
-		bookmark["inetdnld"] = target + "Downloads"
-		bookmark["vid"] = target + "Videos"
-		bookmark["go"] = target + "go"
-		bookmark["src"] = target + "go" + sep + "src"
-		bookmark["pic"] = target + "Pictures"
-		bookmark["pics"] = target + "Pictures"
-		bookmark["winx"] = target + "Videos" + sep + "winxvideos"
-		bookmark["bin"] = target + "go" + sep + "bin"
+		bookmark["config"] = configDir                                  // Join was called above.
+		bookmark["docs"] = filepath.Join(homeDir, "Documents")          // target + "Documents"
+		bookmark["doc"] = filepath.Join(homeDir, "Documents")           // target + "Documents"
+		bookmark["inet"] = filepath.Join(homeDir, "Downloads")          // target + "Downloads"
+		bookmark["inetdnld"] = filepath.Join(homeDir, "Downloads")      // target + "Downloads"
+		bookmark["vid"] = filepath.Join(homeDir, "Videos")              // target + "Videos"
+		bookmark["go"] = filepath.Join(homeDir, "go")                   // target + "go"
+		bookmark["src"] = filepath.Join(bookmark["go"], "src")          // target + "go" + sep + "src"
+		bookmark["bin"] = filepath.Join(bookmark["go"], "bin")          // target + "go" + sep + "bin"
+		bookmark["pic"] = filepath.Join(homeDir, "Pictures")            // target + "Pictures"
+		bookmark["pics"] = filepath.Join(homeDir, "Pictures")           // target + "Pictures"
+		bookmark["winx"] = filepath.Join(bookmark["vid"], "winxvideos") // target + "Videos" + sep + "winxvideos"
 
 		//		fmt.Println("Bookmark's initialized.")
 	}
@@ -127,9 +129,9 @@ func main() {
 		fmt.Printf(" %s, a Directory Bookmark Program written in Go, last compiled %s by %s.\n  Full binary is %s with timestamp of %s.\n",
 			os.Args[0], LastAltered, runtime.Version(), execName, ExecTimeStamp)
 
-		fmt.Printf(" HomeDir is %s, %s timestamp is %s.\n", homeDir, ExecFI.Name(), ExecTimeStamp)
-		fmt.Printf(" Bookmark file is %s, configDir is %s, target is %s,\n bookmark file has %d entries, which are:\n",
-			fullBookmarkFilename, configDir, target, len(bookmark))
+		fmt.Printf(" HomeDir is %s, %s timestamp is %s, bookmark file is %s and configDir is %s.\n",
+			homeDir, ExecFI.Name(), ExecTimeStamp, fullBookmarkFilename, configDir)
+		fmt.Printf(" bookmark file has %d entries, which are:\n", len(bookmark))
 		fmt.Println()
 		for idx, valu := range bookmark {
 			fmt.Printf(" bookmark[%s] = %s \n", idx, valu)
@@ -138,16 +140,15 @@ func main() {
 		return
 	}
 
-	var ok bool
-
-	target, ok = bookmark[flag.Arg(0)]
-	if !ok {
+	target, ok := bookmark[flag.Arg(0)]
+	if ok {
+		target = "cdd " + target + "\n"
+	} else {
 		destination := flag.Arg(0)
 		if strings.HasPrefix(destination, "~") {
 			destination = strings.Replace(destination, "~", homeDir, 1)
 		}
-		target = "cdd " + destination
+		target = "cdd " + destination + "\n"
 	}
-	target = target + "\n"
 	io.WriteString(os.Stdout, target)
 }
