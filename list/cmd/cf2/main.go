@@ -91,14 +91,15 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   27 Jun 24 -- Now called cf2, and will truly be a fanout pattern.  If it tries to copy > 900 files, it will complain but only copy 1st 900 files.
 				And I changed how it tallies hits and misses, removing the atomic add as unnecessary.
-   6 July 24 -- Changed the startup message
-  26 July 24 -- Adding timing info from the individual goroutines that do the copying.  I have to expand the message sent on the channel to include a duration.
-  28 July 24 -- Race detector found a data race because ErrNotNew was global and being written to by multiple goroutines.  I fixed it by not making it global.
-  17 Aug 24  -- Changed start message to make it clearer that globbing is used here, not regexp to match included files.  A regexp is used to exclude files.
+   6 July 24-- Changed the startup message
+  26 July 24-- Adding timing info from the individual goroutines that do the copying.  I have to expand the message sent on the channel to include a duration.
+  28 July 24-- Race detector found a data race because ErrNotNew was global and being written to by multiple goroutines.  I fixed it by not making it global.
+  17 Aug 24 -- Changed start message to make it clearer that globbing is used here, not regexp to match included files.  A regexp is used to exclude files.
   22 Oct 24 -- Will now check to make sure params are present.
+  30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
 */
 
-const LastAltered = "22 Oct 2024" //
+const LastAltered = "30 Nov 2024" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -354,6 +355,10 @@ func main() {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
 	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtnsNum, os.Args[0])
+
+	if onWin { // because tcc can get confused about it's color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
+		ctfmt.Printf(ct.White, onWin, " Total files processed is %d\n", succeeded+failed)
+	}
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------
