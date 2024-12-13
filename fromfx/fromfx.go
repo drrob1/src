@@ -104,9 +104,11 @@ import (
   10 Nov 24 -- I'm going to port the new code I wrote in taxproc.go to more correctly write the Excel file.
                I added a field to generalTransactionType, added code to the getTransactionDate to populate the new DateTime field, and then added code to write it to the Excel file.
   11 Nov 24 -- I considered adding the sheet to Allcc.xlsx in code, but that doesn't work because the sheet gets added as the last one, and not the first one.
+  12 Dec 24 -- Now that writing .xlsx works, I find that outputting .xls (really a txt file) is confusing me.  So I'll stop writing the files that aren't needed anymore.
+				I'll use an output flag to write the xls and csv files, like most of the linux tools, I'll use -o.
 */
 
-const lastModified = "10 Nov 24"
+const lastModified = "13 Dec 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -190,6 +192,7 @@ var inputstate int
 var bankTranListEnd bool
 var EOF bool
 var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
+var outputFlag = flag.Bool("o", false, "Set output mode, currently controls writing the .xls and .csv output files.")
 
 var SQliteDBname = "" // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
 
@@ -311,147 +314,150 @@ func main() {
 		}
 	}
 
-	// Output to txt format file section for Excel or Access.
+	// Output to txt format file section for Excel or Access.  Now only if the -o flag is used.
 
-	XLoutFilename = BaseFilename + xlsxext
-	OutFilename := TXTOutFilename
-	OutputFile, err := os.Create(OutFilename)
-	check(err)
-	defer OutputFile.Close()
+	if *outputFlag {
+		XLoutFilename = BaseFilename + xlsxext
+		OutFilename := TXTOutFilename
+		OutputFile, err := os.Create(OutFilename)
+		check(err)
+		defer OutputFile.Close()
 
-	var outputstringslice []string
-	var csvwriter *csv.Writer
-	var txtwriter *bufio.Writer
-	if inputstate == citichecking {
-		outputstringslice = make([]string, 6, 10)
-		csvwriter = csv.NewWriter(OutputFile)
-		defer csvwriter.Flush()
-	} else {
-		txtwriter = bufio.NewWriter(OutputFile)
-		defer txtwriter.Flush()
-	}
-
-	// Output excel column headings only if not in citibank checking mode.
-	if inputstate != citichecking { // not processing a CHK file to be imported into CitibankXP.mdb
-		str := "Date \t Amt \t Description \t Comment\n"
-		_, err = txtwriter.WriteString(str)
-		if err != nil {
-			fmt.Printf(" Error from txtwriter.WriteString for %s is %v\n", OutFilename, err)
-			return
+		var outputstringslice []string
+		var csvwriter *csv.Writer
+		var txtwriter *bufio.Writer
+		if inputstate == citichecking {
+			outputstringslice = make([]string, 6, 10)
+			csvwriter = csv.NewWriter(OutputFile)
+			defer csvwriter.Flush()
+		} else {
+			txtwriter = bufio.NewWriter(OutputFile)
+			defer txtwriter.Flush()
 		}
-	}
 
-	for ctr, t := range Transactions {
-		/*
-			fmt.Println(" TRNTYPE; DTPOSTEDtxt; DTPOSTEDcsv; TRNAMT; TRNAMTfloat; FITID; CHECKNUM; CHECKNUMint; ", "NAME: MEMO; Descript; Juldate")
-			fmt.Println("transaction is:", t, ".  Hit any key to continue.")
-			var ans string
-			fmt.Print(" e, q, n will exit : ")
-			fmt.Scanln(&ans)
-			ans = strings.ToLower(ans)
-			if ans == "e" || ans == "q" || ans == "n" {
-				os.Exit(0)
+		// Output excel column headings only if not in citibank checking mode.
+		if inputstate != citichecking { // not processing a CHK file to be imported into CitibankXP.mdb
+			str := "Date \t Amt \t Description \t Comment\n"
+			_, err = txtwriter.WriteString(str)
+			if err != nil {
+				fmt.Printf(" Error from txtwriter.WriteString for %s is %v\n", OutFilename, err)
+				return
 			}
-		*/
+		}
+
+		for ctr, t := range Transactions {
+			if inputstate == citichecking {
+				outputstringslice[0] = t.TRNTYPE
+				outputstringslice[1] = t.DTPOSTEDtxt
+				outputstringslice[2] = t.CHECKNUM
+				outputstringslice[3] = t.Descript
+				outputstringslice[4] = t.TRNAMT
+				outputstringslice[5] = header.ACCTTYPE
+				if *verboseFlag {
+					fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+						outputstringslice[3], outputstringslice[4], outputstringslice[5])
+				}
+				if e = csvwriter.Write(outputstringslice); e != nil {
+					log.Fatalln(" Error writing record to", OutFilename, e)
+				}
+			} else {
+				str := fmt.Sprintf("%s \t %s \t %s \t %s \n", t.DTPOSTEDtxt, t.TRNAMT, t.Descript, BaseFilename)
+				if _, e = txtwriter.WriteString(str); e != nil {
+					log.Fatalln(" Error writing record to", OutFilename, e)
+				}
+				if *verboseFlag {
+					fmt.Print(str)
+				}
+			}
+
+			if ctr%40 == 0 && ctr > 0 && *verboseFlag {
+				Pause()
+			}
+		}
 
 		if inputstate == citichecking {
-			outputstringslice[0] = t.TRNTYPE
-			outputstringslice[1] = t.DTPOSTEDtxt
-			outputstringslice[2] = t.CHECKNUM
-			outputstringslice[3] = t.Descript
-			outputstringslice[4] = t.TRNAMT
-			outputstringslice[5] = header.ACCTTYPE
-			if *verboseFlag {
-				fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-					outputstringslice[3], outputstringslice[4], outputstringslice[5])
-			}
-			if e = csvwriter.Write(outputstringslice); e != nil {
-				log.Fatalln(" Error writing record to", OutFilename, e)
+			csvwriter.Flush()
+			if err := csvwriter.Error(); err != nil {
+				log.Fatalln(err)
 			}
 		} else {
-			str := fmt.Sprintf("%s \t %s \t %s \t %s \n", t.DTPOSTEDtxt, t.TRNAMT, t.Descript, BaseFilename)
-			if _, e = txtwriter.WriteString(str); e != nil {
-				log.Fatalln(" Error writing record to", OutFilename, e)
-			}
-			if *verboseFlag {
-				fmt.Print(str)
+			if err := txtwriter.Flush(); err != nil {
+				log.Fatalln(err)
 			}
 		}
 
-		if ctr%40 == 0 && ctr > 0 && *verboseFlag {
-			Pause()
-		}
-	}
-	//	if footer.BalAmtFloat != 0 {  Don't need this output twice.
-	//		fmt.Printf(" Footer balance amount is $%s. \n", footer.BalAmt)
-	//	}
-
-	if inputstate == citichecking {
-		csvwriter.Flush()
-		if err := csvwriter.Error(); err != nil {
+		if err := OutputFile.Close(); err != nil {
 			log.Fatalln(err)
 		}
-	} else {
-		if err := txtwriter.Flush(); err != nil {
-			log.Fatalln(err)
-		}
-	}
 
-	if err := OutputFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
+		// Output for SQlite format.
+		OutFilename = CSVOutFilename
 
-	// Output for SQlite format.
-	OutFilename = CSVOutFilename
+		OutputFile, err = os.Create(OutFilename)
+		check(err)
+		defer OutputFile.Close()
 
-	OutputFile, err = os.Create(OutFilename)
-	check(err)
-	defer OutputFile.Close()
-
-	if inputstate == citichecking {
-		outputstringslice = make([]string, 8, 10) // need to add 2 empty fields at the end of each line.
-		csvwriter = csv.NewWriter(OutputFile)
-		defer csvwriter.Flush()
-	} else {
-		outputstringslice = make([]string, 4, 10)
-		txtwriter = bufio.NewWriter(OutputFile)
-	}
-
-	for ctr, t := range Transactions {
 		if inputstate == citichecking {
-			outputstringslice[0] = t.TRNTYPE
-			outputstringslice[1] = t.DTPOSTEDcsv
-			outputstringslice[2] = t.CHECKNUM
-			outputstringslice[3] = t.Descript
-			outputstringslice[4] = t.TRNAMT
-			outputstringslice[5] = header.ACCTTYPE
-			outputstringslice[6] = ""
-			outputstringslice[7] = ""
-			if *verboseFlag {
-				fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
-					outputstringslice[3], outputstringslice[4], outputstringslice[5])
-			}
-			if e = csvwriter.Write(outputstringslice); e != nil {
-				log.Fatalln(" Error writing record to", OutFilename, ":", e)
-			}
-		} else { // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
-			outputstringslice[0] = t.DTPOSTEDcsv
-			outputstringslice[1] = t.TRNAMT
-			outputstringslice[2] = t.Descript
-			outputstringslice[3] = BaseFilename
-			if *verboseFlag {
-				fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+			outputstringslice = make([]string, 8, 10) // need to add 2 empty fields at the end of each line.
+			csvwriter = csv.NewWriter(OutputFile)
+			defer csvwriter.Flush()
+		} else {
+			outputstringslice = make([]string, 4, 10)
+			txtwriter = bufio.NewWriter(OutputFile)
+		}
+
+		for ctr, t := range Transactions {
+			if inputstate == citichecking {
+				outputstringslice[0] = t.TRNTYPE
+				outputstringslice[1] = t.DTPOSTEDcsv
+				outputstringslice[2] = t.CHECKNUM
+				outputstringslice[3] = t.Descript
+				outputstringslice[4] = t.TRNAMT
+				outputstringslice[5] = header.ACCTTYPE
+				outputstringslice[6] = ""
+				outputstringslice[7] = ""
+				if *verboseFlag {
+					fmt.Printf(" %3d: %q,%q,%q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+						outputstringslice[3], outputstringslice[4], outputstringslice[5])
+				}
+				if e = csvwriter.Write(outputstringslice); e != nil {
+					log.Fatalln(" Error writing record to", OutFilename, ":", e)
+				}
+			} else { // I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
+				outputstringslice[0] = t.DTPOSTEDcsv
+				outputstringslice[1] = t.TRNAMT
+				outputstringslice[2] = t.Descript
+				outputstringslice[3] = BaseFilename
+				if *verboseFlag {
+					fmt.Printf(" %3d: %q,%q,%q,%q \n", ctr, outputstringslice[0], outputstringslice[1], outputstringslice[2],
+						outputstringslice[3])
+				}
+				s := fmt.Sprintf("%q, %q, %q, %q \r\n", outputstringslice[0], outputstringslice[1], outputstringslice[2],
 					outputstringslice[3])
+				if _, e = txtwriter.WriteString(s); e != nil {
+					log.Fatalln(e)
+				}
 			}
-			s := fmt.Sprintf("%q, %q, %q, %q \r\n", outputstringslice[0], outputstringslice[1], outputstringslice[2],
-				outputstringslice[3])
-			if _, e = txtwriter.WriteString(s); e != nil {
-				log.Fatalln(e)
+			if ctr%40 == 39 && *verboseFlag {
+				Pause()
 			}
 		}
-		if ctr%40 == 39 && *verboseFlag {
-			Pause()
+
+		if inputstate == citichecking {
+			csvwriter.Flush()
+			if err := csvwriter.Error(); err != nil {
+				log.Fatalln(err)
+			}
+		} else {
+			if err := txtwriter.Flush(); err != nil {
+				log.Fatalln(err)
+			}
 		}
+
+		if err := OutputFile.Close(); err != nil {
+			log.Fatalln(err)
+		}
+
 	}
 
 	fmt.Println() // always display the footer.
@@ -460,24 +466,9 @@ func main() {
 	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
 		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
 
-	if inputstate == citichecking {
-		csvwriter.Flush()
-		if err := csvwriter.Error(); err != nil {
-			log.Fatalln(err)
-		}
-	} else {
-		if err := txtwriter.Flush(); err != nil {
-			log.Fatalln(err)
-		}
-	}
-
-	if err := OutputFile.Close(); err != nil {
-		log.Fatalln(err)
-	}
-
 	// Write out the Excel file in xlsx format only for credit card transactions.
 	if inputstate == cc {
-		err = writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
+		err := writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
 		if err != nil {
 			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
 		}
@@ -486,13 +477,13 @@ func main() {
 	// Update the SQLite files for either Allcc-sqlite.db or Citibank.db
 	if inputstate == citichecking {
 		SQliteDBname = "Citibank.db"
-		err = CitiAddRecords(header.ACCTTYPE, Transactions)
+		err := CitiAddRecords(header.ACCTTYPE, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
 		}
 	} else if inputstate == cc {
 		SQliteDBname = "Allcc-Sqlite.db"
-		err = AllccAddRecords(BaseFilename, Transactions)
+		err := AllccAddRecords(BaseFilename, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
 		}
