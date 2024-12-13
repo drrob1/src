@@ -317,7 +317,6 @@ func main() {
 	// Output to txt format file section for Excel or Access.  Now only if the -o flag is used.
 
 	if *outputFlag {
-		XLoutFilename = BaseFilename + xlsxext
 		OutFilename := TXTOutFilename
 		OutputFile, err := os.Create(OutFilename)
 		check(err)
@@ -467,7 +466,10 @@ func main() {
 		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
 
 	// Write out the Excel file in xlsx format only for credit card transactions.
+	// this doesn't work now.  I'm going to check out if the XLoutFilename and BaseFilename are defined correctly.
+	// And I have to make sure it writes what I need for citibank files.
 	if inputstate == cc {
+		XLoutFilename = BaseFilename + xlsxext
 		err := writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
 		if err != nil {
 			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
@@ -476,13 +478,15 @@ func main() {
 
 	// Update the SQLite files for either Allcc-sqlite.db or Citibank.db
 	if inputstate == citichecking {
-		SQliteDBname = "Citibank.db"
+		//SQliteDBname = "Citibank.db"
+		SQliteDBname = "Citi-test.db"
 		err := CitiAddRecords(header.ACCTTYPE, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
 		}
 	} else if inputstate == cc {
-		SQliteDBname = "Allcc-Sqlite.db"
+		//SQliteDBname = "Allcc-Sqlite.db"
+		SQliteDBname = "Allcc-test.db"
 		err := AllccAddRecords(BaseFilename, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
