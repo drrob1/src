@@ -115,7 +115,8 @@ import (
 					always: output for allcc the xlsx file and update the .db, and for citi always output the citifile.txt and update the .db
 					if output flag set: also output for allcc the .csv and .xls (in txt format) files, and for citi output the citifile.csv.
 					Need filenames for allcc.csv, allcc.xls, allcc.xlsx, and citifile.txt and citifile.csv.
-
+					The correct formating of the date for Sqlite and Access or Excel is handled by the different fields in the transaction struct.
+  14 Dec 24 -- I'm happy w/ the result of the refactoring.  The code is much easier to read.
 */
 
 const lastModified = "14 Dec 24"
@@ -289,14 +290,6 @@ func main() {
 		inputstate = cc
 	}
 
-	//if inputstate == citichecking {  I think the code is clearer without these.  I'll remove these lines when I confirm this.
-	//	CSVOutFilename = citiSqliteOutfile
-	//	TXTOutFilename = citiAccessOutfile
-	//} else {
-	//	CSVOutFilename = BaseFilename + CSVext
-	//	TXTOutFilename = BaseFilename + XLSext // note that the file w/ ext of .xls is really a text file.  Excel convertes this correctly.
-	//}
-
 	fmt.Println()
 
 	// Read the input file
@@ -337,7 +330,7 @@ func main() {
 		}
 	}
 
-	if *outputFlag {
+	if *outputFlag { // conditionally write these files
 		if inputstate == citichecking {
 			err := writeCitiFile4Sqlite(citiSqliteOutfile, header, Transactions)
 			if err != nil {
@@ -348,7 +341,11 @@ func main() {
 			if err != nil {
 				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 			}
+
 			err = writeCreditCardFileCSV4Sqlite(BaseFilename, Transactions)
+			if err != nil {
+				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
+			}
 		}
 	}
 
@@ -361,7 +358,7 @@ func main() {
 	// Write out the Excel file in xlsx format only for credit card transactions.
 	// this doesn't work now.  I'm going to check out if the XLoutFilename and BaseFilename are defined correctly.
 	// And I have to make sure it writes what I need for citibank files.
-	if inputstate == cc {
+	if inputstate == cc { // always write this file if the input state is for a credit card file.
 		XLoutFilename = BaseFilename + xlsxext
 		err := writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
 		if err != nil {
@@ -371,15 +368,15 @@ func main() {
 
 	// Update the SQLite files for either Allcc-sqlite.db or Citibank.db
 	if inputstate == citichecking {
-		//SQliteDBname = "Citibank.db"
-		SQliteDBname = "Citi-test.db"
+		SQliteDBname = "Citibank.db"
+		//SQliteDBname = "Citi-test.db"
 		err := CitiAddRecords(header.ACCTTYPE, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
 		}
 	} else if inputstate == cc {
-		//SQliteDBname = "Allcc-Sqlite.db"
-		SQliteDBname = "Allcc-test.db"
+		SQliteDBname = "Allcc-Sqlite.db"
+		//SQliteDBname = "Allcc-test.db"
 		err := AllccAddRecords(BaseFilename, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
@@ -519,7 +516,7 @@ func writeCitiFile4Sqlite(fn string, header generalHeaderType, transactions []ge
 
 	for ctr, t := range transactions {
 		outputstringslice[0] = t.TRNTYPE
-		outputstringslice[1] = t.DTPOSTEDtxt
+		outputstringslice[1] = t.DTPOSTEDcsv
 		outputstringslice[2] = t.CHECKNUM
 		outputstringslice[3] = t.Descript
 		outputstringslice[4] = t.TRNAMT
@@ -549,8 +546,8 @@ func writeCreditCardFileTXT4XLS(base string, transactions []generalTransactionTy
 	check(err)
 	//defer OutputFile.Close()  old way ignores errors
 
-	var txtwriter *bufio.Writer
-	txtwriter = bufio.NewWriter(OutputFile)
+	// var txtwriter *bufio.Writer  Removing this and using the gopher operator was recommended by staticcheck
+	txtwriter := bufio.NewWriter(OutputFile)
 	//defer txtwriter.Flush()  old way ignores errors
 	defer func() { // new way shows me the error, but in the panic message.
 		err = txtwriter.Flush()
@@ -585,6 +582,7 @@ func writeCreditCardFileTXT4XLS(base string, transactions []generalTransactionTy
 }
 
 func writeCreditCardFileCSV4Sqlite(base string, transactions []generalTransactionType) error {
+	// This code basicly replicates a CSV output format using txt methods.
 	if base == "" {
 		return fmt.Errorf("writeOutExcelFile: no base name given")
 	}
@@ -594,8 +592,8 @@ func writeCreditCardFileCSV4Sqlite(base string, transactions []generalTransactio
 	check(err)
 	//defer OutputFile.Close()  old way ignores errors
 
-	var txtwriter *bufio.Writer
-	txtwriter = bufio.NewWriter(OutputFile)
+	// var txtwriter *bufio.Writer  Using the gopher operator in the next line was recommended by staticcheck
+	txtwriter := bufio.NewWriter(OutputFile)
 	//defer txtwriter.Flush()  old way ignores errors
 	defer func() { // new way shows me the error, but in the panic message.
 		err = txtwriter.Flush()
@@ -608,7 +606,7 @@ func writeCreditCardFileCSV4Sqlite(base string, transactions []generalTransactio
 		}
 	}()
 
-	// Don't want the field headings for the file to be imported into Allcc-sqlite.db
+	// Don't want the field headings for the file to be imported into Allcc-sqlite.db, so we don't write them to the file.
 	// write out individual records
 	// I discovered by trial and error that SQLiteStudio on Windows needs windows line terminators.  Hence the \r\n below.
 	for ctr, t := range transactions {
