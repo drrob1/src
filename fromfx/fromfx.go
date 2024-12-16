@@ -117,6 +117,7 @@ import (
 					Need filenames for allcc.csv, allcc.xls, allcc.xlsx, and citifile.txt and citifile.csv.
 					The correct formating of the date for Sqlite and Access or Excel is handled by the different fields in the transaction struct.
   14 Dec 24 -- I'm happy w/ the result of the refactoring.  The code is much easier to read.
+  16 Dec 24 -- Ok, now that it works, I'm going to clean up the output section of main, so that it has one check of inputmode, instead of the speghetti structure it is not.
 */
 
 const lastModified = "14 Dec 24"
@@ -323,11 +324,39 @@ func main() {
 
 	// Output Section
 
-	if inputstate == citichecking { // always write this file
+	// always display the footer
+	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
+		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
+	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
+		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
+
+	if inputstate == citichecking {
 		err := writeCitiFileTXT4Access(citiAccessOutfile, header, Transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 		}
+
+		SQliteDBname = "Citibank.db"
+		//SQliteDBname = "Citi-test.db"
+		err = CitiAddRecords(header.ACCTTYPE, Transactions)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
+		}
+	} else if inputstate == cc {
+		XLoutFilename = BaseFilename + xlsxext
+		err := writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
+		if err != nil {
+			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
+		}
+
+		SQliteDBname = "Allcc-Sqlite.db"
+		//SQliteDBname = "Allcc-test.db"
+		err = AllccAddRecords(BaseFilename, Transactions)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
+		}
+	} else {
+		ctfmt.Printf(ct.Red, true, " inputstate is not a valid value of %d or %d.  It is %d\n\n", citichecking, cc, inputstate)
 	}
 
 	if *outputFlag { // conditionally write these files
@@ -349,12 +378,7 @@ func main() {
 		}
 	}
 
-	fmt.Println() // always display the footer.
-	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
-		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
-	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
-		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
-
+	fmt.Println()
 	// Write out the Excel file in xlsx format only for credit card transactions.
 	// this doesn't work now.  I'm going to check out if the XLoutFilename and BaseFilename are defined correctly.
 	// And I have to make sure it writes what I need for citibank files.
