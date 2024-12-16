@@ -116,11 +116,11 @@ import (
 					if output flag set: also output for allcc the .csv and .xls (in txt format) files, and for citi output the citifile.csv.
 					Need filenames for allcc.csv, allcc.xls, allcc.xlsx, and citifile.txt and citifile.csv.
 					The correct formating of the date for Sqlite and Access or Excel is handled by the different fields in the transaction struct.
-  14 Dec 24 -- I'm happy w/ the result of the refactoring.  The code is much easier to read.
-  16 Dec 24 -- Ok, now that it works, I'm going to clean up the output section of main, so that it has one check of inputmode, instead of the speghetti structure it is not.
+  14 Dec 24 -- The code is much easier to read.
+  16 Dec 24 -- Ok, now that it works, I'm going to clean up the output section of main, so that it has one check of inputmode, instead of the speghetti structure it used to be.
 */
 
-const lastModified = "14 Dec 24"
+const lastModified = "16 Dec 24"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -201,7 +201,7 @@ type generalFooterType struct {
 	DTasof      string
 }
 
-var Transactions []generalTransactionType
+// var Transactions []generalTransactionType
 var inputstate int
 var bankTranListEnd bool
 var EOF bool
@@ -303,21 +303,20 @@ func main() {
 	bytesbuffer := bytes.NewBuffer(filebyteslice)
 
 	// Process the input file
-	Transactions = make([]generalTransactionType, 0, 200)
 
-	header, footer := processOFXFile(bytesbuffer) // Transactions slice is passed and returned globally.
-	fmt.Println(" Number of transactions is ", len(Transactions))
+	header, footer, transactions := processOFXFile(bytesbuffer)
+	fmt.Println(" Number of transactions is ", len(transactions))
 
 	// assign Descript and CHECKNUMs fields
-	for ctr, t := range Transactions {
-		Transactions[ctr].Descript = strings.Trim(Transactions[ctr].NAME, " ") + " " + strings.Trim(Transactions[ctr].MEMO, " ") +
-			" : " + Transactions[ctr].FITID
+	for ctr, t := range transactions {
+		transactions[ctr].Descript = strings.Trim(transactions[ctr].NAME, " ") + " " + strings.Trim(transactions[ctr].MEMO, " ") +
+			" : " + transactions[ctr].FITID
 		if inputstate == citichecking && t.CHECKNUMint == 0 {
 			if strings.Contains(t.NAME, "Bill Payment") {
-				Transactions[ctr].CHECKNUM, Transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
+				transactions[ctr].CHECKNUM, transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
 			} else {
-				Transactions[ctr].CHECKNUM = t.FITID[8:]
-				Transactions[ctr].CHECKNUMint, _ = strconv.Atoi(t.FITID[8:])
+				transactions[ctr].CHECKNUM = t.FITID[8:]
+				transactions[ctr].CHECKNUMint, _ = strconv.Atoi(t.FITID[8:])
 			}
 		}
 	}
@@ -331,83 +330,54 @@ func main() {
 		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
 
 	if inputstate == citichecking {
-		err := writeCitiFileTXT4Access(citiAccessOutfile, header, Transactions)
+		err := writeCitiFileTXT4Access(citiAccessOutfile, header, transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 		}
 
-		SQliteDBname = "Citibank.db"
-		//SQliteDBname = "Citi-test.db"
-		err = CitiAddRecords(header.ACCTTYPE, Transactions)
+		//SQliteDBname = "Citibank.db"
+		SQliteDBname = "Citi-test.db"
+		err = CitiAddRecords(header.ACCTTYPE, transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
 		}
+
+		if *outputFlag {
+			err := writeCitiFile4Sqlite(citiSqliteOutfile, header, transactions)
+			if err != nil {
+				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
+			}
+		}
 	} else if inputstate == cc {
 		XLoutFilename = BaseFilename + xlsxext
-		err := writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
+		err := writeOutExcelFile(XLoutFilename, BaseFilename, transactions)
 		if err != nil {
 			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
 		}
 
-		SQliteDBname = "Allcc-Sqlite.db"
-		//SQliteDBname = "Allcc-test.db"
-		err = AllccAddRecords(BaseFilename, Transactions)
+		//SQliteDBname = "Allcc-Sqlite.db"
+		SQliteDBname = "Allcc-test.db"
+		err = AllccAddRecords(BaseFilename, transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
 		}
-	} else {
-		ctfmt.Printf(ct.Red, true, " inputstate is not a valid value of %d or %d.  It is %d\n\n", citichecking, cc, inputstate)
-	}
 
-	if *outputFlag { // conditionally write these files
-		if inputstate == citichecking {
-			err := writeCitiFile4Sqlite(citiSqliteOutfile, header, Transactions)
-			if err != nil {
-				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
-			}
-		} else { // credit card file
-			err := writeCreditCardFileTXT4XLS(BaseFilename, Transactions)
+		if *outputFlag {
+			err := writeCreditCardFileTXT4XLS(BaseFilename, transactions)
 			if err != nil {
 				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 			}
 
-			err = writeCreditCardFileCSV4Sqlite(BaseFilename, Transactions)
+			err = writeCreditCardFileCSV4Sqlite(BaseFilename, transactions)
 			if err != nil {
 				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 			}
 		}
+	} else {
+		ctfmt.Printf(ct.Red, true, " inputstate is not a valid value of %d or %d.  It is %d\n\n", citichecking, cc, inputstate)
 	}
 
 	fmt.Println()
-	// Write out the Excel file in xlsx format only for credit card transactions.
-	// this doesn't work now.  I'm going to check out if the XLoutFilename and BaseFilename are defined correctly.
-	// And I have to make sure it writes what I need for citibank files.
-	if inputstate == cc { // always write this file if the input state is for a credit card file.
-		XLoutFilename = BaseFilename + xlsxext
-		err := writeOutExcelFile(XLoutFilename, BaseFilename, Transactions)
-		if err != nil {
-			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
-		}
-	}
-
-	// Update the SQLite files for either Allcc-sqlite.db or Citibank.db
-	if inputstate == citichecking {
-		SQliteDBname = "Citibank.db"
-		//SQliteDBname = "Citi-test.db"
-		err := CitiAddRecords(header.ACCTTYPE, Transactions)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
-		}
-	} else if inputstate == cc {
-		SQliteDBname = "Allcc-Sqlite.db"
-		//SQliteDBname = "Allcc-test.db"
-		err := AllccAddRecords(BaseFilename, Transactions)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
-		}
-	} else {
-		ctfmt.Printf(ct.Red, true, " inputstate is not a valid value of %d or %d.  It is %d\n\n", citichecking, cc, inputstate)
-	}
 
 } // end main
 
@@ -902,13 +872,14 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 } // END getTransactionData
 
 // --------------------------------------------------------------------------------------------
-func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
-	// transactions slice is passed as a global
+func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType, []generalTransactionType) {
+	// transactions slice is passed as a global used to be passed as a global, now it's returned as a param.
 
 	var header generalHeaderType
 	var token ofxTokenType
 	var transaction generalTransactionType
 	var footer generalFooterType
+	var transactions []generalTransactionType
 
 	for { // loop to read the header
 		token = getOfxToken(buf, false) // get tagname, as in <tagname>
@@ -1004,6 +975,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 		} // END if token.State AND token.Str
 	} // END loop for header info
 
+	transactions = make([]generalTransactionType, 0, 200)
 	for { // LOOP to read multiple transactions
 		transaction = getTransactionData(buf)
 
@@ -1011,7 +983,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 			break // either at EOF or there was an error from getTransactionData
 		}
 
-		Transactions = append(Transactions, transaction)
+		transactions = append(transactions, transaction)
 
 	} // END LOOP for multiple transactions
 
@@ -1027,7 +999,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 		//fmt.Println(" footer loop")
 		if token.State == empty || EOF {
 			fmt.Println(" Trying to get footer info and got EOF condition.")
-			return header, footer
+			return header, footer, transactions
 		}
 
 		if false {
@@ -1068,7 +1040,7 @@ func processOFXFile(buf *bytes.Buffer) (generalHeaderType, generalFooterType) {
 		} // END if token.State
 	} // END loop for footer info
 
-	return header, footer
+	return header, footer, transactions
 } // END processOFXFile
 
 func Pause() {
