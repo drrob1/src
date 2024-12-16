@@ -335,8 +335,8 @@ func main() {
 			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 		}
 
-		//SQliteDBname = "Citibank.db"
-		SQliteDBname = "Citi-test.db"
+		SQliteDBname = "Citibank.db"
+		//SQliteDBname = "Citi-test.db"
 		err = CitiAddRecords(header.ACCTTYPE, transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
@@ -355,8 +355,8 @@ func main() {
 			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
 		}
 
-		//SQliteDBname = "Allcc-Sqlite.db"
-		SQliteDBname = "Allcc-test.db"
+		SQliteDBname = "Allcc-Sqlite.db"
+		//SQliteDBname = "Allcc-test.db"
 		err = AllccAddRecords(BaseFilename, transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
