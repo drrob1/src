@@ -33,6 +33,7 @@ package main
  22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
  25 Dec 19 -- Fixed termbox, I hope.
  10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
+----------------------------------------------------------------------------------------------------
  19 Jan 20 -- Now moved to tcell as terminal interface.  Mostly copied code from rpntcell.go.
  20 Jan 20 -- Removed deleol call from puts, as it's not needed when scrn is written only once.
  18 Feb 21 -- Back to cal.go.  And will convert to colortext calls, removing all tcell stuff as that won't run correctly in tcc.
@@ -48,34 +49,31 @@ package main
                 And I'll remove the nofiles flags.  Both of them.
  20 Nov 22 -- Linter reports a few issues.  I'm addressing them now.
  12 Oct 24 -- Fixing some comments.
+ 22 Dec 24 -- Adding output of xlsx file, intended for making a call schedule.  Needs -o flag to be written.  It will alsways be written when that flag is used, overwriting an old file if present.
 */
 
 import (
 	"bufio"
 	"flag"
 	"fmt"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/tealeg/xlsx/v3"
 	"log"
 	"os"
-	"os/exec" // for the clear screen functions.
-
+	"os/exec" // for the Clear screen functions.
 	"runtime"
+	"src/holidaycalc"
+	"src/timlibg"
 	"strconv"
 	"strings"
 	"unicode"
-
-	"src/holidaycalc"
-	"src/timlibg"
-	//"tokenize"  I don't use tokenization to parse the params anymore.
-
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Nov 20, 2022"
+const LastCompiled = "Dec 22, 2024"
 
 // BLANKCHR is used in DAY2STR.
-
 const BLANKCHR = ' '
 
 // HorizTab needs comment according to golint
@@ -104,12 +102,15 @@ const (
 // DCM is now a synonym for December Month Number = 11, as Jan = 0.
 const DCM = DEC
 
-var OutCal1file, OutCal12file *bufio.Writer // must be global
-var PROMPT = " Enter Year : "               // not currently used.
-var ExtDefault, YEARSTR string
-var BLANKSTR2 = "  "
+var outCal1File, outCal12File *bufio.Writer // must be global
+//                                             var PROMPT = " Enter Year : "               not currently used.
+
+var YEARSTR string
+
+//                                             var BLANKSTR2 = "  "
+
 var BLANKSTR3 = "   "
-var Cal1Filename, Cal12Filename string
+var cal1Filename, cal12Filename, xlCal12Filename string
 var MN, MN2, MN3 int //  MNEnum Month Number Vars
 
 // DateCell structure was added for termbox code.  Subscripts are [MN] [W] [DOW].  It was adapted for tcell, and now for colortext
@@ -127,42 +128,43 @@ type AllMonthsArray [NumOfMonthsInYear]MonthMatrix
 var EntireYear AllMonthsArray
 var windowsFlag, outputFlag bool
 
-var (
-	WIM                                                                          [NumOfMonthsInYear]int
-	DIM                                                                          = []int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-	MONNAMSHORT                                                                  = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
-	MONNAMLONG                                                                   [NumOfMonthsInYear]string
-	clear                                                                        map[string]func()
-	DOW, W                                                                       int // these are global so the date assign can do their jobs correctly
-	year, CurrentMonthNumber, RequestedMonthNumber, TodaysDayNumber, CurrentYear int
-	DAYSNAMLONG                                                                  = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"
-	DayNamesWithTabs                                                             = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"
-	DAYSNAMSHORT                                                                 = "  S  M  T  W TH  F  S    "
-)
+var WIM [NumOfMonthsInYear]int
+var DIM = []int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+var MONNAMSHORT = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
+var MONNAMLONG [NumOfMonthsInYear]string
+var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+var Clear map[string]func()
+var DOW, W int // these are global so the date assign can do their jobs correctly
+var year, CurrentMonthNumber, RequestedMonthNumber, TodaysDayNumber, CurrentYear int
+
+//                                                           var DAYSNAMLONG = "SUNDAY    MONDAY      TUESDAY     WEDNESDAY   THURSDAY    FRIDAY      SATURDAY"
+
+var DayNamesWithTabs = "SUNDAY \t MONDAY \t TUESDAY \t WEDNESDAY \t THURSDAY \t FRIDAY \t SATURDAY"
+var DAYSNAMSHORT = "  S  M  T  W TH  F  S    "
 
 // ------------------------------------------------------- init -----------------------------------
 func init() {
-	clear = make(map[string]func())
-	clear["linux"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("clear")
+	Clear = make(map[string]func())
+	Clear["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("Clear")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 
-	clear["windows"] = func() { // this is a closure, or an anonymous function
+	Clear["windows"] = func() { // this is a closure, or an anonymous function
 		cmd := exec.Command("cmd", "/c", "cls")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 }
 
-// ClearScreen ------------------------------------
-func ClearScreen() {
-	clearfunc, ok := clear[runtime.GOOS]
+// clearScreen ------------------------------------
+func clearScreen() {
+	clearfunc, ok := Clear[runtime.GOOS]
 	if ok {
 		clearfunc()
 	} else { // unsupported platform
-		panic(" The ClearScreen platform is only supported on linux or windows, at the moment")
+		panic(" The clearScreen platform is only supported on linux or windows, at the moment")
 	}
 }
 
@@ -227,51 +229,97 @@ func WrMonthForXL(MN int) {
 	//s0 := fmt.Sprintf("%s", MONNAMSHORT[MN])  // linter reports that this argument is already a string, so sprintf is not needed.
 	s0 := MONNAMSHORT[MN]
 	s1 := fmt.Sprintf("\t%6s", YEARSTR) // I like the effect here of adding <tab>
-	_, err := OutCal12file.WriteString(s0)
+	_, err := outCal12File.WriteString(s0)
 	check(err, "Error while writing month name short for big calendar")
-	_, err = OutCal12file.WriteString(s1)
+	_, err = outCal12File.WriteString(s1)
 	check(err, "Error while writing yearstr for big calendar")
-	_, err = OutCal12file.WriteRune('\n')
+	_, err = outCal12File.WriteRune('\n')
 	check(err, "")
-	_, err = OutCal12file.WriteString(DayNamesWithTabs)
+	_, err = outCal12File.WriteString(DayNamesWithTabs)
 	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
+	_, err = outCal12File.WriteRune('\n')
 	check(err, "")
 
 	for wk := 0; wk <= WIM[MN]; wk++ { // so won't shadow the global W
 		s := fmt.Sprintf("%s  %s", EntireYear[MN][wk][0].comment, EntireYear[MN][wk][0].DateStr)
-		_, err = OutCal12file.WriteString(s) // write out Sunday
+		_, err = outCal12File.WriteString(s) // write out Sunday
 		check(err, "")
-		err = OutCal12file.WriteByte(HorizTab) // <tab>, or horizontal tab <HT>, to confirm that this does work
+		err = outCal12File.WriteByte(HorizTab) // <tab>, or horizontal tab <HT>, to confirm that this does work
 		check(err, "")
 
 		for I := 1; I < 6; I++ { // write out Monday ..  Friday
 			s = fmt.Sprintf("%s  %s", EntireYear[MN][wk][I].comment, EntireYear[MN][wk][I].DateStr)
-			_, err = OutCal12file.WriteString(s)
+			_, err = outCal12File.WriteString(s)
 			check(err, "")
-			_, err = OutCal12file.WriteRune('\t') // <tab>, or horizontal tab <HT>, to see if this works
+			_, err = outCal12File.WriteRune('\t') // <tab>, or horizontal tab <HT>, to see if this works
 			check(err, "")
 		}
 
 		s = fmt.Sprintf("%s  %s", EntireYear[MN][wk][6].comment, EntireYear[MN][wk][6].DateStr)
-		_, err = OutCal12file.WriteString(s) // write out Saturday
+		_, err = outCal12File.WriteString(s) // write out Saturday
 		check(err, "")
-		_, err = OutCal12file.WriteRune('\n')
+		_, err = outCal12File.WriteRune('\n')
 		check(err, "")
-		_, err = OutCal12file.WriteString(BlankLineWithTabs)
+		_, err = outCal12File.WriteString(BlankLineWithTabs)
 		check(err, "")
-		_, err = OutCal12file.WriteRune('\n')
+		_, err = outCal12File.WriteRune('\n')
 		check(err, "")
-		_, err = OutCal12file.WriteString(BlankLineWithTabs)
+		_, err = outCal12File.WriteString(BlankLineWithTabs)
 		check(err, "")
-		_, err = OutCal12file.WriteRune('\n')
+		_, err = outCal12File.WriteRune('\n')
 		check(err, "")
 	}
-	_, err = OutCal12file.WriteRune('\n')
+	_, err = outCal12File.WriteRune('\n')
 	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
+	_, err = outCal12File.WriteRune('\n')
 	check(err, "")
 } // END WrMonthForXL
+
+func writeYearXLSX(fn string) error {
+	if fn == "" {
+		return fmt.Errorf("no file name given")
+	}
+
+	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
+	workbook := xlsx.NewFile()
+	sheet, err := workbook.AddSheet(YEARSTR)
+	if err != nil {
+		return err
+	}
+
+	for mn := range NumOfMonthsInYear {
+		firstrow := sheet.AddRow()
+		monthName := firstrow.AddCell()
+		monthName.SetString(MONNAMSHORT[mn])  // first cell on the first row is the month name
+		firstrow.AddCell().SetString(YEARSTR) // 2nd cell on the first row is the year
+		secondrow := sheet.AddRow()
+		for i := range 7 {
+			secondrow.AddCell().SetString(dayNames[i])
+		}
+
+		for wk := 0; wk <= WIM[mn]; wk++ { // so won't shadow the global W
+			row := sheet.AddRow()
+			for d := range 7 {
+				s := fmt.Sprintf("%s  %s", EntireYear[mn][wk][d].comment, EntireYear[mn][wk][d].DateStr)
+				row.AddCell().SetString(s) // add a week of days and dates with comments
+
+			}
+
+			// create an empty row
+			emptyrow := sheet.AddRow()
+			for range 7 {
+				emptyrow.AddCell().SetString("")
+			}
+			// create another empty row
+			emptyrow2 := sheet.AddRow()
+			for range 7 {
+				emptyrow2.AddCell().SetString("")
+			}
+		}
+	}
+
+	return workbook.Save(fn) // the save returns an error, which is then returned to the caller
+} // END writeYearXLSX
 
 // -------------------------------------- WrOnePageYear ----------------------------------
 
@@ -288,63 +336,63 @@ func WrOnePageYear() { // Each column must be exactly 25 characters for the spac
 		MN3 = MN + 2
 
 		if MN > JAN { // have fewer blank lines after year heading than btwn rows of months.
-			_, err = OutCal1file.WriteRune('\n')
+			_, err = outCal1File.WriteRune('\n')
 			check(err, "Error while writing newline rune to Cal 1 file")
-			_, err = OutCal1file.WriteRune('\n')
+			_, err = outCal1File.WriteRune('\n')
 			check(err, "Error while writing newline rune to Cal 1 file")
 		}
-		_, err := OutCal1file.WriteString(s)
+		_, err := outCal1File.WriteString(s)
 		check(err, "Error while writing YEARSTR to Cal 1 file")
-		_, err = OutCal1file.WriteRune('\n')
+		_, err = outCal1File.WriteRune('\n')
 		check(err, "Error while writing a newline rune to Cal 1 file")
-		_, err = OutCal1file.WriteRune('\n')
+		_, err = outCal1File.WriteRune('\n')
 		check(err, "Error while writing a newline rune to Cal 1 file")
-		_, err = OutCal1file.WriteString(MONNAMLONG[MN])
+		_, err = outCal1File.WriteString(MONNAMLONG[MN])
 		check(err, "Error writing first long month name to cal 1 file")
-		_, err = OutCal1file.WriteString(MONNAMLONG[MN2])
+		_, err = outCal1File.WriteString(MONNAMLONG[MN2])
 		check(err, "")
-		_, err = OutCal1file.WriteString(MONNAMLONG[MN3])
+		_, err = outCal1File.WriteString(MONNAMLONG[MN3])
 		check(err, "")
-		_, err = OutCal1file.WriteRune('\n')
+		_, err = outCal1File.WriteRune('\n')
 		check(err, "Error while writing newline rune to Cal 1 file")
-		_, err = OutCal1file.WriteRune('\n')
+		_, err = outCal1File.WriteRune('\n')
 		check(err, "Error while writing newline rune to Cal 1 file")
-		//    _, err = OutCal1file.WriteRune('\n');                         too many blank lines
+		//    _, err = outCal1File.WriteRune('\n');                         too many blank lines
 		//    check(err,"Error while writing newline rune to Cal 1 file");
-		_, err = OutCal1file.WriteString(DAYSNAMSHORT)
+		_, err = outCal1File.WriteString(DAYSNAMSHORT)
 		check(err, "Error while writing day names to cal 1 file")
-		_, err = OutCal1file.WriteString(DAYSNAMSHORT)
+		_, err = outCal1File.WriteString(DAYSNAMSHORT)
 		check(err, "Error while writing day names to cal 1 file")
-		_, err = OutCal1file.WriteString(DAYSNAMSHORT)
+		_, err = outCal1File.WriteString(DAYSNAMSHORT)
 		check(err, "Error while writing day names to cal 1 file")
-		_, err = OutCal1file.WriteRune('\n')
+		_, err = outCal1File.WriteRune('\n')
 		check(err, "Error while writing newline rune to Cal 1 file")
 		for W = 0; W < 6; W++ { // week number
 			for I := 0; I < 7; I++ { // day of week positions for 1st month
-				_, err = OutCal1file.WriteString(EntireYear[MN][W][I].DateStr)
+				_, err = outCal1File.WriteString(EntireYear[MN][W][I].DateStr)
 				check(err, "Error while writing date string to cal 1 file")
 			} // ENDFOR I
-			_, err = OutCal1file.WriteString("    ")
+			_, err = outCal1File.WriteString("    ")
 			check(err, "")
 			for I := 0; I < 7; I++ { // day of week positions for 2nd month
-				_, err = OutCal1file.WriteString(EntireYear[MN2][W][I].DateStr)
+				_, err = outCal1File.WriteString(EntireYear[MN2][W][I].DateStr)
 				check(err, "Error while writing date string to cal 1 file")
 			} // ENDFOR I
-			_, err = OutCal1file.WriteString("    ")
+			_, err = outCal1File.WriteString("    ")
 			check(err, "")
 			for I := 0; I < 7; I++ { // day of week position for 3rd month
-				_, err = OutCal1file.WriteString(EntireYear[MN3][W][I].DateStr)
+				_, err = outCal1File.WriteString(EntireYear[MN3][W][I].DateStr)
 				check(err, "Error while writing date string to cal 1 file")
 			} // ENDFOR I
-			_, err = OutCal1file.WriteRune('\n')
+			_, err = outCal1File.WriteRune('\n')
 			check(err, "Error while writing newline rune to Cal 1 file")
 		} // ENDFOR W
 	} // ENDFOR MN;
-	_, err = OutCal1file.WriteRune('\n')
+	_, err = outCal1File.WriteRune('\n')
 	check(err, "Error while writing newline rune to Cal 1 file")
-	_, err = OutCal1file.WriteString(s)
+	_, err = outCal1File.WriteString(s)
 	check(err, "Error while writing YEARSTR to Cal 1 file")
-	_, err = OutCal1file.WriteRune('\n')
+	_, err = outCal1File.WriteRune('\n')
 	check(err, "Error while writing a newline rune to Cal 1 file")
 
 } // WrOnePageYear
@@ -736,9 +784,10 @@ func main() {
 
 	Ext1Default := ".out"
 	Ext12Default := ".xls"
+	xlDefault := ".xlsx"
 	CurrentMonthNumber, TodaysDayNumber, CurrentYear = timlibg.TIME2MDY()
 
-	ClearScreen()
+	clearScreen()
 
 	// flag definitions and processing
 
@@ -831,29 +880,30 @@ func main() {
 	AssignYear(year)
 	HolidayAssign(year)
 
-	Cal1FilenameFlag = false  // default value
-	Cal12FilenameFlag = false // default value
+	Cal1FilenameFlag = false  // used to only write the file if it doesn't already exist.
+	Cal12FilenameFlag = false // used to only write the file if it doesn't already exist.
 	if outputFlag {
 		BaseFilename := YEARSTR
-		Cal1Filename = BaseFilename + "_cal1" + Ext1Default
-		Cal12Filename = BaseFilename + "_cal12" + Ext12Default
+		cal1Filename = BaseFilename + "_cal1" + Ext1Default
+		cal12Filename = BaseFilename + "_cal12" + Ext12Default
+		xlCal12Filename = BaseFilename + "_cal12" + xlDefault
 
-		FI, err := os.Stat(Cal1Filename)
+		FI, err := os.Stat(cal1Filename)
 		if err == nil {
 			fmt.Printf(" %s already exists.  From stat call file created %s, filesize is %d.\n",
-				Cal1Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
+				cal1Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
 		} else {
 			Cal1FilenameFlag = true
-			fmt.Printf(" %s does not already exist.\n", Cal1Filename)
+			fmt.Printf(" %s does not already exist.\n", cal1Filename)
 		}
 
-		FI, err = os.Stat(Cal12Filename)
+		FI, err = os.Stat(cal12Filename)
 		if err == nil {
 			fmt.Printf(" %s already exists.  From stat call file created %s, filesize is %d.\n",
-				Cal12Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
+				cal12Filename, FI.ModTime().Format("Jan-02-2006 15:04:05"), FI.Size())
 		} else {
 			Cal12FilenameFlag = true
-			fmt.Printf(" %s does not already exist.\n", Cal12Filename)
+			fmt.Printf(" %s does not already exist.\n", cal12Filename)
 		}
 	}
 
@@ -862,7 +912,7 @@ func main() {
 		fmt.Println(" Completed year matrix.  outputFlag is", outputFlag, ".")
 		fmt.Print(" pausing.  Hit <enter> to contiue.")
 		ans := ""
-		fmt.Scanln(&ans)
+		fmt.Scanln(&ans) // just used as a pause.
 		fmt.Println()
 	}
 
@@ -879,52 +929,48 @@ func main() {
 
 	var OutCal1, OutCal12 *os.File
 	if Cal1FilenameFlag {
-		OutCal1, err = os.Create(Cal1Filename)
+		OutCal1, err = os.Create(cal1Filename)
 		check(err, " Trying to create Cal1 output file")
 		defer OutCal1.Close()
-		OutCal1file = bufio.NewWriter(OutCal1)
-		defer OutCal1file.Flush()
+		outCal1File = bufio.NewWriter(OutCal1)
+		defer outCal1File.Flush()
 	}
 
 	if Cal12FilenameFlag {
-		OutCal12, err = os.Create(Cal12Filename)
+		OutCal12, err = os.Create(cal12Filename)
 		check(err, " Trying to create Cal12 output file")
 		defer OutCal12.Close()
-		OutCal12file = bufio.NewWriter(OutCal12)
-		defer OutCal12file.Flush()
+		outCal12File = bufio.NewWriter(OutCal12)
+		defer outCal12File.Flush()
 	}
 
-	// write to file 12 page calendar, one month/page
+	// write to file 12-page calendar, one month/page
 	if Cal12FilenameFlag {
 		for MN := JAN; MN <= DCM; MN++ {
 			WrMonthForXL(MN)
-		} // ENDFOR
-		OutCal12file.Flush()
+		}
+		outCal12File.Flush()
 		OutCal12.Close()
 	}
 
-	// Write to file One Page Calendar
+	// Write to file One-Page Calendar
 	if Cal1FilenameFlag {
 		WrOnePageYear()
-		OutCal1file.Flush()
+		outCal1File.Flush()
 		OutCal1.Close()
+	}
+
+	if outputFlag {
+		err := writeYearXLSX(xlCal12Filename)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from writing xlsx file is: %s\n", err.Error())
+		}
 	}
 
 	fmt.Println()
 	fmt.Println()
 
 	Show3MonthRow(RequestedMonthNumber)
-
-	/*
-			// Now disploy next year.  No file writing.  Min 10 lines/calendar.  Nevermind.
-		    year++
-		    YEARSTR = strconv.Itoa(year)
-		    AssignYear(year)
-		    HolidayAssign(year)
-		    RequestedMonthNumber = 0
-		    Show3MonthRow(RequestedMonthNumber)
-
-	*/
 
 } // end main func
 
