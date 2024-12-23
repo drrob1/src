@@ -50,6 +50,7 @@ package main
  20 Nov 22 -- Linter reports a few issues.  I'm addressing them now.
  12 Oct 24 -- Fixing some comments.
  22 Dec 24 -- Adding output of xlsx file, intended for making a call schedule.  Needs -o flag to be written.  It will alsways be written when that flag is used, overwriting an old file if present.
+ 23 Dec 24 -- Experimenting with adding the countif formulas.
 */
 
 import (
@@ -71,7 +72,7 @@ import (
 )
 
 // LastCompiled needs a comment according to golint
-const LastCompiled = "Dec 22, 2024"
+const LastCompiled = "Dec 23, 2024"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -112,6 +113,7 @@ var YEARSTR string
 var BLANKSTR3 = "   "
 var cal1Filename, cal12Filename, xlCal12Filename string
 var MN, MN2, MN3 int //  MNEnum Month Number Vars
+var testFlag bool
 
 // DateCell structure was added for termbox code.  Subscripts are [MN] [W] [DOW].  It was adapted for tcell, and now for colortext
 type DateCell struct {
@@ -316,6 +318,13 @@ func writeYearXLSX(fn string) error {
 				emptyrow2.AddCell().SetString("")
 			}
 		}
+	}
+
+	lastRow := sheet.AddRow()
+	lastCell := lastRow.AddCell()
+	x, y := lastCell.GetCoordinates()
+	if testFlag {
+		fmt.Printf(" The coordinates of the last cell are (%d,%d), ie, row: %d, col: %d\n", y, x, y, x)
 	}
 
 	return workbook.Save(fn) // the save returns an error, which is then returned to the caller
@@ -795,7 +804,6 @@ func main() {
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "help", false, "print help message.")
 
-	var testFlag bool
 	flag.BoolVar(&testFlag, "test", false, "test mode flag.")
 	flag.BoolVar(&testFlag, "v", false, "Verbose (test) mode.")
 
