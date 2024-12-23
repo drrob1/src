@@ -1,5 +1,5 @@
 // calg.go, derived from caltcell.go, which was derived from  calgo.go.  This version uses colortext
-// Copyright (C) 1987-2021  Robert Solomon MD.  All rights reserved.
+// Copyright (C) 1987-2025  Robert Solomon MD.  All rights reserved.
 
 package main
 
@@ -71,8 +71,7 @@ import (
 	"unicode"
 )
 
-// LastCompiled needs a comment according to golint
-const LastCompiled = "Dec 23, 2024"
+const lastCompiled = "Dec 23, 2024"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -113,7 +112,7 @@ var YEARSTR string
 var BLANKSTR3 = "   "
 var cal1Filename, cal12Filename, xlCal12Filename string
 var MN, MN2, MN3 int //  MNEnum Month Number Vars
-var testFlag bool
+var verboseFlag bool
 
 // DateCell structure was added for termbox code.  Subscripts are [MN] [W] [DOW].  It was adapted for tcell, and now for colortext
 type DateCell struct {
@@ -134,7 +133,8 @@ var WIM [NumOfMonthsInYear]int
 var DIM = []int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 var MONNAMSHORT = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
 var MONNAMLONG [NumOfMonthsInYear]string
-var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}              // used for creating the xlsx file
+var shortMonthNames = []string{"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"} // used for creating the COUNTIF formula in the xlsx file
 var Clear map[string]func()
 var DOW, W int // these are global so the date assign can do their jobs correctly
 var year, CurrentMonthNumber, RequestedMonthNumber, TodaysDayNumber, CurrentYear int
@@ -318,13 +318,51 @@ func writeYearXLSX(fn string) error {
 				emptyrow2.AddCell().SetString("")
 			}
 		}
+		// create another empty row after the month
+		emptyrow := sheet.AddRow()
+		for range 7 {
+			emptyrow.AddCell().SetString("")
+		}
+		// create another empty row after the month
+		emptyrow2 := sheet.AddRow()
+		for range 7 {
+			emptyrow2.AddCell().SetString("")
+		}
 	}
 
-	lastRow := sheet.AddRow()
-	lastCell := lastRow.AddCell()
-	x, y := lastCell.GetCoordinates()
-	if testFlag {
-		fmt.Printf(" The coordinates of the last cell are (%d,%d), ie, row: %d, col: %d\n", y, x, y, x)
+	// adding the countif formulas.
+	const countif = "=COUNTIF("
+	formulaHeadingRow := sheet.AddRow()
+	forumlaHeadingFirstCell := formulaHeadingRow.AddCell()
+	x, y := forumlaHeadingFirstCell.GetCoordinates()
+	rowWithNames := y + 1 // because of 1-origin system of Excel
+	if verboseFlag {
+		fmt.Printf(" The (x,y) coordinates of the formula heading first cell are (%d,%d), ie, %c%d\n", y, x, x+'A', rowWithNames)
+	}
+
+	// formula rows
+	for i := range NumOfMonthsInYear {
+		row := sheet.AddRow()
+		firstCell := row.AddCell()
+		firstCell.SetString(shortMonthNames[i])
+		secondCell := row.AddCell()
+		formula := fmt.Sprintf("%s%s, B%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, B212) etc
+		secondCell.SetFormula(formula)
+		if verboseFlag {
+			fmt.Printf(" The first formula is %s, Column letter should be A: %c\n", formula)
+		}
+		thirdCell := row.AddCell()
+		formula = fmt.Sprintf("%s%s, C%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, C212) etc
+		thirdCell.SetFormula(formula)
+		if verboseFlag {
+			fmt.Printf(" The 2nd formula is %s\n", formula)
+		}
+		fourthCell := row.AddCell()
+		formula = fmt.Sprintf("%s%s, D%d)", countif, MONNAMSHORT[i], rowWithNames)
+		fourthCell.SetFormula(formula)
+		if verboseFlag {
+			fmt.Printf(" The 3rd formula is %s\n", formula)
+		}
 	}
 
 	return workbook.Save(fn) // the save returns an error, which is then returned to the caller
@@ -804,22 +842,22 @@ func main() {
 	var HelpFlag bool
 	flag.BoolVar(&HelpFlag, "help", false, "print help message.")
 
-	flag.BoolVar(&testFlag, "test", false, "test mode flag.")
-	flag.BoolVar(&testFlag, "v", false, "Verbose (test) mode.")
+	flag.BoolVar(&verboseFlag, "test", false, "test mode flag.")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose (test) mode.")
 
 	flag.BoolVar(&outputFlag, "o", false, "output the cal files, which now needs this flag to be output.")
 	flag.Parse()
 
 	if *helpflag || HelpFlag {
 		fmt.Println()
-		fmt.Println(" Calendar Printing Program, last altered", LastCompiled)
+		fmt.Println(" Calendar Printing Program, last altered", lastCompiled)
 		fmt.Println(" Usage: calg [flags] year month or month year, where month must be a month name string.")
 		fmt.Println()
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
-	fmt.Printf(" Calg, a calendar display program written in Go.  Last altered %s, using %s.\n", LastCompiled, runtime.Version())
+	fmt.Printf(" Calg, a calendar display program written in Go.  Last altered %s, using %s.\n", lastCompiled, runtime.Version())
 
 	// process command line parameters
 	RequestedMonthNumber = CurrentMonthNumber - 1 // default value converted to a zero origin reference.
@@ -875,7 +913,7 @@ func main() {
 		RequestedMonthNumber = 6
 	}
 
-	if testFlag {
+	if verboseFlag {
 		fmt.Println()
 		fmt.Println(" using year", year, ", using month", MONNAMSHORT[RequestedMonthNumber])
 		fmt.Println()
@@ -915,7 +953,7 @@ func main() {
 		}
 	}
 
-	if testFlag {
+	if verboseFlag {
 		fmt.Println()
 		fmt.Println(" Completed year matrix.  outputFlag is", outputFlag, ".")
 		fmt.Print(" pausing.  Hit <enter> to contiue.")
@@ -930,7 +968,7 @@ func main() {
 	execname, _ := os.Executable() // from memory, check at home
 	ExecFI, _ := os.Stat(execname)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	if testFlag {
+	if verboseFlag {
 		fmt.Printf(" %s was last linked on %s.  Working directory is %s. \n", ExecFI.Name(), LastLinkedTimeStamp, workingdir)
 		fmt.Printf(" Full name of executable file is %s \n", execname)
 	}
