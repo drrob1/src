@@ -135,6 +135,7 @@ var MONNAMSHORT = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE
 var MONNAMLONG [NumOfMonthsInYear]string
 var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}              // used for creating the xlsx file
 var shortMonthNames = []string{"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"} // used for creating the COUNTIF formula in the xlsx file
+var docNames = []string{"*friedman*", "*azimov*", "*smith*", "*gohari*", "*ahmed*"}
 var Clear map[string]func()
 var DOW, W int // these are global so the date assign can do their jobs correctly
 var year, CurrentMonthNumber, RequestedMonthNumber, TodaysDayNumber, CurrentYear int
@@ -332,24 +333,31 @@ func writeYearXLSX(fn string) error {
 
 	// adding the countif formulas.
 	const countif = "=COUNTIF("
-	formulaHeadingRow := sheet.AddRow()
-	forumlaHeadingFirstCell := formulaHeadingRow.AddCell()
+	headingRow := sheet.AddRow()
+	forumlaHeadingFirstCell := headingRow.AddCell() // this cell is intentionally blank
 	x, y := forumlaHeadingFirstCell.GetCoordinates()
 	rowWithNames := y + 1 // because of 1-origin system of Excel
 	if verboseFlag {
 		fmt.Printf(" The (x,y) coordinates of the formula heading first cell are (%d,%d), ie, %c%d\n", y, x, x+'A', rowWithNames)
 	}
+	for i := range docNames {
+		headingRow.AddCell().SetString(docNames[i])
+	}
+	firstRowWithTotals := rowWithNames + 1
+
+	var lastRow *xlsx.Row
 
 	// formula rows
 	for i := range NumOfMonthsInYear {
 		row := sheet.AddRow()
+		lastRow = row
 		firstCell := row.AddCell()
 		firstCell.SetString(shortMonthNames[i])
 		secondCell := row.AddCell()
 		formula := fmt.Sprintf("%s%s, B%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, B212) etc
 		secondCell.SetFormula(formula)
 		if verboseFlag {
-			fmt.Printf(" The first formula is %s, Column letter should be A: %c\n", formula)
+			fmt.Printf(" The first formula is %s \n", formula)
 		}
 		thirdCell := row.AddCell()
 		formula = fmt.Sprintf("%s%s, C%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, C212) etc
@@ -363,7 +371,64 @@ func writeYearXLSX(fn string) error {
 		if verboseFlag {
 			fmt.Printf(" The 3rd formula is %s\n", formula)
 		}
+
+		fifthCell := row.AddCell()
+		formula = fmt.Sprintf("%s%s, E%d)", countif, MONNAMSHORT[i], rowWithNames)
+		fifthCell.SetFormula(formula)
+		if verboseFlag {
+			fmt.Printf(" The 4th formula is %s\n", formula)
+		}
+
+		sixthCell := row.AddCell()
+		formula = fmt.Sprintf("%s%s, F%d)", countif, MONNAMSHORT[i], rowWithNames)
+		sixthCell.SetFormula(formula)
+		if verboseFlag {
+			fmt.Printf(" The 5th formula is %s\n", formula)
+		}
+
 	}
+
+	// sum row
+	_, lastRowNum := lastRow.AddCell().GetCoordinates()
+	lastRowNum++ // correct for 1-origin system for Excel
+
+	sumRow := sheet.AddRow()
+	_ = sumRow.AddCell() // ignore col A
+
+	firstSumCell := sumRow.AddCell()
+	formula := fmt.Sprintf("=SUM(B%d:B%d)", firstRowWithTotals, lastRowNum)
+	if verboseFlag {
+		fmt.Printf(" The sum cell formula is %s\n", formula)
+	}
+	firstSumCell.SetFormula(formula)
+
+	secondSumCell := sumRow.AddCell()
+	formula = fmt.Sprintf("=SUM(C%d:C%d)", firstRowWithTotals, lastRowNum)
+	if verboseFlag {
+		fmt.Printf(" The sum cell formula is %s\n", formula)
+	}
+	secondSumCell.SetFormula(formula)
+
+	thirdSumCell := sumRow.AddCell()
+	formula = fmt.Sprintf("=SUM(D%d:D%d)", firstRowWithTotals, lastRowNum)
+	if verboseFlag {
+		fmt.Printf(" The sum cell formula is %s\n", formula)
+	}
+	thirdSumCell.SetFormula(formula)
+
+	fourthSumCell := sumRow.AddCell()
+	formula = fmt.Sprintf("=SUM(E%d:E%d)", firstRowWithTotals, lastRowNum)
+	if verboseFlag {
+		fmt.Printf(" The sum cell formula is %s\n", formula)
+	}
+	fourthSumCell.SetFormula(formula)
+
+	fifthSumCell := sumRow.AddCell()
+	formula = fmt.Sprintf("=SUM(F%d:F%d)", firstRowWithTotals, lastRowNum)
+	if verboseFlag {
+		fmt.Printf(" The sum cell formula is %s\n", formula)
+	}
+	fifthSumCell.SetFormula(formula)
 
 	return workbook.Save(fn) // the save returns an error, which is then returned to the caller
 } // END writeYearXLSX
@@ -932,7 +997,7 @@ func main() {
 		BaseFilename := YEARSTR
 		cal1Filename = BaseFilename + "_cal1" + Ext1Default
 		cal12Filename = BaseFilename + "_cal12" + Ext12Default
-		xlCal12Filename = BaseFilename + "_cal12" + xlDefault
+		xlCal12Filename = BaseFilename + "-IR-call" + xlDefault
 
 		FI, err := os.Stat(cal1Filename)
 		if err == nil {
