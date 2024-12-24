@@ -51,6 +51,7 @@ package main
  12 Oct 24 -- Fixing some comments.
  22 Dec 24 -- Adding output of xlsx file, intended for making a call schedule.  Needs -o flag to be written.  It will alsways be written when that flag is used, overwriting an old file if present.
  23 Dec 24 -- Experimenting with adding the countif formulas.
+ 24 Dec 24 -- When I'm done, only need to ammend the docNames slice of strings to get the correct number of columns for the statistics.
 */
 
 import (
@@ -71,7 +72,7 @@ import (
 	"unicode"
 )
 
-const lastCompiled = "Dec 23, 2024"
+const lastCompiled = "Dec 24, 2024"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -340,6 +341,7 @@ func writeYearXLSX(fn string) error {
 	if verboseFlag {
 		fmt.Printf(" The (x,y) coordinates of the formula heading first cell are (%d,%d), ie, %c%d\n", y, x, x+'A', rowWithNames)
 	}
+	// set doc names on the row, not including the first column.
 	for i := range docNames {
 		headingRow.AddCell().SetString(docNames[i])
 	}
@@ -352,39 +354,47 @@ func writeYearXLSX(fn string) error {
 		row := sheet.AddRow()
 		lastRow = row
 		firstCell := row.AddCell()
-		firstCell.SetString(shortMonthNames[i])
-		secondCell := row.AddCell()
-		formula := fmt.Sprintf("%s%s, B%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, B212) etc
-		secondCell.SetFormula(formula)
-		if verboseFlag {
-			fmt.Printf(" The first formula is %s \n", formula)
-		}
-		thirdCell := row.AddCell()
-		formula = fmt.Sprintf("%s%s, C%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, C212) etc
-		thirdCell.SetFormula(formula)
-		if verboseFlag {
-			fmt.Printf(" The 2nd formula is %s\n", formula)
-		}
-		fourthCell := row.AddCell()
-		formula = fmt.Sprintf("%s%s, D%d)", countif, MONNAMSHORT[i], rowWithNames)
-		fourthCell.SetFormula(formula)
-		if verboseFlag {
-			fmt.Printf(" The 3rd formula is %s\n", formula)
-		}
+		firstCell.SetString(shortMonthNames[i]) // first column is the month name for that row.
 
-		fifthCell := row.AddCell()
-		formula = fmt.Sprintf("%s%s, E%d)", countif, MONNAMSHORT[i], rowWithNames)
-		fifthCell.SetFormula(formula)
-		if verboseFlag {
-			fmt.Printf(" The 4th formula is %s\n", formula)
+		// need a cell for each doc in the docNames slice
+		for j := range docNames {
+			newCell := row.AddCell()
+			formula := fmt.Sprintf("%s%s, %c%d)", countif, MONNAMSHORT[i], j+'B', rowWithNames)
+			newCell.SetFormula(formula)
+			if verboseFlag {
+				fmt.Printf(" The formula is %s \n", formula)
+			}
 		}
+		//secondCell := row.AddCell()
+		//formula := fmt.Sprintf("%s%s, B%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, B212) etc
+		//secondCell.SetFormula(formula)
 
-		sixthCell := row.AddCell()
-		formula = fmt.Sprintf("%s%s, F%d)", countif, MONNAMSHORT[i], rowWithNames)
-		sixthCell.SetFormula(formula)
-		if verboseFlag {
-			fmt.Printf(" The 5th formula is %s\n", formula)
-		}
+		//thirdCell := row.AddCell()
+		//formula = fmt.Sprintf("%s%s, C%d)", countif, MONNAMSHORT[i], rowWithNames) // When finished, will be =COUNTIF(JAN, C212) etc
+		//thirdCell.SetFormula(formula)
+		//if verboseFlag {
+		//	fmt.Printf(" The 2nd formula is %s\n", formula)
+		//}
+		//fourthCell := row.AddCell()
+		//formula = fmt.Sprintf("%s%s, D%d)", countif, MONNAMSHORT[i], rowWithNames)
+		//fourthCell.SetFormula(formula)
+		//if verboseFlag {
+		//	fmt.Printf(" The 3rd formula is %s\n", formula)
+		//}
+		//
+		//fifthCell := row.AddCell()
+		//formula = fmt.Sprintf("%s%s, E%d)", countif, MONNAMSHORT[i], rowWithNames)
+		//fifthCell.SetFormula(formula)
+		//if verboseFlag {
+		//	fmt.Printf(" The 4th formula is %s\n", formula)
+		//}
+		//
+		//sixthCell := row.AddCell()
+		//formula = fmt.Sprintf("%s%s, F%d)", countif, MONNAMSHORT[i], rowWithNames)
+		//sixthCell.SetFormula(formula)
+		//if verboseFlag {
+		//	fmt.Printf(" The 5th formula is %s\n", formula)
+		//}
 
 	}
 
@@ -395,42 +405,49 @@ func writeYearXLSX(fn string) error {
 	sumRow := sheet.AddRow()
 	_ = sumRow.AddCell() // ignore col A
 
-	firstSumCell := sumRow.AddCell()
-	formula := fmt.Sprintf("=SUM(B%d:B%d)", firstRowWithTotals, lastRowNum)
-	if verboseFlag {
-		fmt.Printf(" The sum cell formula is %s\n", formula)
-	}
-	firstSumCell.SetFormula(formula)
+	for i := range docNames {
+		anotherCell := sumRow.AddCell()
+		formula := fmt.Sprintf("=SUM(%c%d:%c%d)", i+'B', firstRowWithTotals, i+'B', lastRowNum)
+		anotherCell.SetFormula(formula)
+		if verboseFlag {
+			fmt.Printf(" The cell sum formula is %s\n", formula)
+		}
 
-	secondSumCell := sumRow.AddCell()
-	formula = fmt.Sprintf("=SUM(C%d:C%d)", firstRowWithTotals, lastRowNum)
-	if verboseFlag {
-		fmt.Printf(" The sum cell formula is %s\n", formula)
 	}
-	secondSumCell.SetFormula(formula)
 
-	thirdSumCell := sumRow.AddCell()
-	formula = fmt.Sprintf("=SUM(D%d:D%d)", firstRowWithTotals, lastRowNum)
-	if verboseFlag {
-		fmt.Printf(" The sum cell formula is %s\n", formula)
-	}
-	thirdSumCell.SetFormula(formula)
+	//firstSumCell := sumRow.AddCell()
+	//formula := fmt.Sprintf("=SUM(B%d:B%d)", firstRowWithTotals, lastRowNum)
+	//firstSumCell.SetFormula(formula)
+	//
+	//secondSumCell := sumRow.AddCell()
+	//formula = fmt.Sprintf("=SUM(C%d:C%d)", firstRowWithTotals, lastRowNum)
+	//if verboseFlag {
+	//	fmt.Printf(" The sum cell formula is %s\n", formula)
+	//}
+	//secondSumCell.SetFormula(formula)
+	//
+	//thirdSumCell := sumRow.AddCell()
+	//formula = fmt.Sprintf("=SUM(D%d:D%d)", firstRowWithTotals, lastRowNum)
+	//if verboseFlag {
+	//	fmt.Printf(" The sum cell formula is %s\n", formula)
+	//}
+	//thirdSumCell.SetFormula(formula)
+	//
+	//fourthSumCell := sumRow.AddCell()
+	//formula = fmt.Sprintf("=SUM(E%d:E%d)", firstRowWithTotals, lastRowNum)
+	//if verboseFlag {
+	//	fmt.Printf(" The sum cell formula is %s\n", formula)
+	//}
+	//fourthSumCell.SetFormula(formula)
+	//
+	//fifthSumCell := sumRow.AddCell()
+	//formula = fmt.Sprintf("=SUM(F%d:F%d)", firstRowWithTotals, lastRowNum)
+	//if verboseFlag {
+	//	fmt.Printf(" The sum cell formula is %s\n", formula)
+	//}
+	//fifthSumCell.SetFormula(formula)
 
-	fourthSumCell := sumRow.AddCell()
-	formula = fmt.Sprintf("=SUM(E%d:E%d)", firstRowWithTotals, lastRowNum)
-	if verboseFlag {
-		fmt.Printf(" The sum cell formula is %s\n", formula)
-	}
-	fourthSumCell.SetFormula(formula)
-
-	fifthSumCell := sumRow.AddCell()
-	formula = fmt.Sprintf("=SUM(F%d:F%d)", firstRowWithTotals, lastRowNum)
-	if verboseFlag {
-		fmt.Printf(" The sum cell formula is %s\n", formula)
-	}
-	fifthSumCell.SetFormula(formula)
-
-	return workbook.Save(fn) // the save returns an error, which is then returned to the caller
+	return workbook.Save(fn) // the save func returns an error, which is then returned to the caller
 } // END writeYearXLSX
 
 // -------------------------------------- WrOnePageYear ----------------------------------
