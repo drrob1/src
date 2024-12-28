@@ -112,7 +112,7 @@ var YEARSTR string
 
 var BLANKSTR3 = "   "
 var cal1Filename, cal12Filename, xlCal12Filename string
-var MN, MN2, MN3 int //  MNEnum Month Number Vars
+var MN, MN2, MN3 int //  Month Numbers for the 3 columns of months
 var verboseFlag bool
 
 // DateCell structure was added for termbox code.  Subscripts are [MN] [W] [DOW].  It was adapted for tcell, and now for colortext
@@ -933,7 +933,7 @@ func main() {
 	if *helpflag || HelpFlag {
 		fmt.Println()
 		fmt.Println(" Calendar Printing Program, last altered", lastCompiled)
-		fmt.Println(" Usage: calg [flags] year month or month year, where month must be a month name string.")
+		fmt.Println(" Usage: calg [flags] year month or month year, where month must be a month name string.  docNames are hard coded.")
 		fmt.Println()
 		flag.PrintDefaults()
 		os.Exit(0)
@@ -1008,8 +1008,8 @@ func main() {
 	AssignYear(year)
 	HolidayAssign(year)
 
-	Cal1FilenameFlag = false  // used to only write the file if it doesn't already exist.
-	Cal12FilenameFlag = false // used to only write the file if it doesn't already exist.
+	Cal1FilenameFlag = false  // used to only write the file if it doesn't already exist.  And if outputFlag is not set, it can't become true.
+	Cal12FilenameFlag = false // used to only write the file if it doesn't already exist.  And if outputFlag is not set, it can't become true.
 	if outputFlag {
 		BaseFilename := YEARSTR
 		cal1Filename = BaseFilename + "_cal1" + Ext1Default
