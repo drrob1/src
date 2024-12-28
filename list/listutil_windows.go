@@ -12,6 +12,7 @@ import (
 /*
    8 Jul 23 -- I changed how the first param is tested for being a directory.
   28 Dec 24 -- Going to add concurrency to the reading of directory entries, like I did in fdsrt and rex.
+				Nevermind, it's already here.  I don't use it on Windows because my testing did not find it to be faster.  It is much faster on linux.
 */
 
 const sepStr = string(os.PathSeparator)
@@ -42,7 +43,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			//fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
 			//os.Exit(1)
 		}
-		fileInfoX, err = MyReadDir(workingDir, excludeMe)
+		fileInfoX, err = MyReadDir(workingDir, excludeMe) // this is not concurrent here on Windows.
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +78,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
 			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
 			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
-			fileInfoX, err = FileInfoXFromGlob(pattern)
+			fileInfoX, err = FileInfoXFromGlob(pattern) // this is concurrent
 			return fileInfoX, err
 
 			//   removed Dec 28, 2024, as I'm adding more uses of my concurrent code.
