@@ -1,5 +1,5 @@
-// calgo.go
-// Copyright (C) 1987-2016  Robert Solomon MD.  All rights reserved.
+// oldcalgo.go from calgo.go of Nov 14, 2022
+// Copyright (C) 1987-2022  Robert Solomon MD.  All rights reserved.
 
 package main
 
@@ -8,19 +8,18 @@ package main
   ----------------
    6 Apr 88 -- 1) Converted to M2 V3.03.
                2) Response to 12 page question is now echoed to the terminal.
-               3) Module name changed to CAL so not to conflict with the
-                   Logitech's CALENDAR library module.
-   4 Nov 90 -- Updated the UTILLIB references to UL2, and recompiled under
-               V3.4.
+               3) Module name changed to CAL so not to conflict with the Logitech's CALENDAR library module.
+   4 Nov 90 -- Updated the UTILLIB references to UL2, and recompiled under V3.4.
   28 Oct 91 -- Added FSA parse and indiv month printing abilities.
-   2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small
-                enough to make the expression evaluate to a negative value.
+   2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small enough to make the expression evaluate to a negative value.
   20 Jan 92 -- First page now does not begin with a FF.
+----------------------------------------------------------------------------------------------------
   9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
-                A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into Excel.
+                A 1-page calendar meant for printing out, and a 12-page calendar meant for importing into Excel.
  10 Nov 16 -- First working version, based on Modula-2 code from 92.
  11 Nov 16 -- Code from January 2009 to import into Excel is working.
  12 Nov 16 -- Fixed bug in DATEASSIGN caused by not porting my own Modula-2 code correctly.
+----------------------------------------------------------------------------------------------------
   3 Mar 17 -- Now calgo, and will use termbox to try to do what CALm2 does.
   3 Apr 17 -- Came back to this, after going thru Book of R.
   4 Apr 17 -- Will only write the calendar output files if they do not already exist.
@@ -42,34 +41,23 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/nsf/termbox-go"
 	"log"
 	"os"
 	"os/exec" // for the clear screen functions.
-
-	//"path/filepath"
-	"runtime"
+	"src/holidaycalc"
+	"src/timlibg"
 	"strconv"
 	"strings"
 	"unicode"
-
-	//
-	//"getcommandline"
-	"src/holidaycalc"
-	"src/timlibg"
-
-	//"tokenize"
-
-	"github.com/nsf/termbox-go"
 )
 
-// LastCompiled needs a comment according to golint
-const LastCompiled = "Jan 10, 2020"
+const lastCompiled = "Jan 10, 2020"
 
 // BLANKCHR is probably not used much anymore, but golint needs a comment
 const BLANKCHR = ' '
 
-// HorizTab needs comment according to golint
-const HorizTab = 9
+const horizTab = 9
 
 // BlankLineWithTabs -- There are embedded <tab> chars here.
 const BlankLineWithTabs = "  	  	  	  	  	  	  "
@@ -119,7 +107,7 @@ var (
 	DIM                                          = []int{31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 	MONNAMSHORT                                  = []string{"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"}
 	MONNAMLONG                                   [NumOfMonthsInYear]string
-	clear                                        map[string]func()
+	Clear                                        map[string]func()
 	BrightYellow, BrightCyan, BrightGreen, Black termbox.Attribute
 	year, DOW, W, CurrentMonthNumber, RequestedMonthNumber, LineNum, TodaysDayNumber, CurrentYear,
 	StartCol, StartRow, sigfig, MaxRow, MaxCol, TitleRow, StackRow, RegRow, OutputRow, DisplayCol,
@@ -138,27 +126,27 @@ var (
 
 // ------------------------------------------------------- init -----------------------------------
 func init() { // start termbox in the init code doesn't work.  Don't know why.  But this init does work.
-	clear = make(map[string]func())
-	clear["linux"] = func() { // this is a closure, or an anonymous function
+	Clear = make(map[string]func())
+	Clear["linux"] = func() { // this is a closure, or an anonymous function
 		cmd := exec.Command("clear")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 
-	clear["windows"] = func() { // this is a closure, or an anonymous function
+	Clear["windows"] = func() { // this is a closure, or an anonymous function
 		cmd := exec.Command("cmd", "/c", "cls")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 }
 
-// --------------------------------------------------- Cap -----------------------------------------
+// Cap -- Uses UnquoteChar to return a capitalized letter
 func Cap(c rune) rune {
 	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
 	return r
 } // Cap
 
-// --------------------------------------------------- Print_tb -----------------------------------
+// Print_tb -- helper function for termbox output.
 func Print_tb(x, y int, fg, bg termbox.Attribute, msg string) {
 	for _, c := range msg {
 		termbox.SetCell(x, y, c, fg, bg)
@@ -171,36 +159,36 @@ func Print_tb(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
-//----------------------------------------------------- Printf_tb ---------------------------------
+// Printf_tb -- helper function for termbox output.
 func Printf_tb(x, y int, fg, bg termbox.Attribute, format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	Print_tb(x, y, fg, bg, s)
 }
 
-// ----------------------------------------------------- ClearLine -----------------------------------
-func ClearLine(y int) {
-	if y > MaxRow {
-		y = MaxRow
-	}
-	for x := StartCol; x <= MaxCol; x++ {
-		termbox.SetCell(x, y, 0, Black, Black) // Don't know if it matters if the char is ' ' or nil.
-	}
-	err := termbox.Flush()
-	check(err, "")
-} // end ClearLine
+// ClearLine -- clears the rest of the line so unwanted characters already there don't pollute the display.  Not used now.
+//func ClearLine(y int) {
+//	if y > MaxRow {
+//		y = MaxRow
+//	}
+//	for x := StartCol; x <= MaxCol; x++ {
+//		termbox.SetCell(x, y, 0, Black, Black) // Don't know if it matters if the char is ' ' or nil.
+//	}
+//	err := termbox.Flush()
+//	check(err, "")
+//} // end ClearLine
 
-// ----------------------------------------------------- HardClearScreen -----------------------------
-func HardClearScreen() {
-	err := termbox.Clear(Black, Black)
-	check(err, "")
-	for row := StartRow; row <= MaxRow; row++ {
-		ClearLine(row)
-	}
-	err = termbox.Flush()
-	check(err, "")
-}
+// HardClearScreen -- a way to deal w/ an issue where the Clear function didn't seem to work.  Not needed now.
+//func HardClearScreen() {
+//	err := termbox.Clear(Black, Black)
+//	check(err, "")
+//	for row := StartRow; row <= MaxRow; row++ {
+//		ClearLine(row)
+//	}
+//	err = termbox.Flush()
+//	check(err, "")
+//}
 
-// ------------------------------------------------------ ClearEOL -----------------------------------
+// ClearEOL -- clears the rest of the line to not pollute the output.
 func ClearEOL(x, y int) {
 	if y > MaxRow {
 		y = MaxRow
@@ -215,17 +203,17 @@ func ClearEOL(x, y int) {
 	check(err, "")
 }
 
-// ---------------------------------------------------- ClearScreen ------------------------------------
-func ClearScreen() {
-	clearfunc, ok := clear[runtime.GOOS]
-	if ok {
-		clearfunc()
-	} else { // unsupported platform
-		panic(" The ClearScreen platform is only supported on linux or windows, at the moment")
-	}
-}
+// ClearScreen -- uses the correct function to achieve this purpose.  Not used now.
+//func ClearScreen() {
+//	clearfunc, ok := Clear[runtime.GOOS]
+//	if ok {
+//		clearfunc()
+//	} else { // unsupported platform
+//		panic(" The ClearScreen platform is only supported on linux or windows, at the moment")
+//	}
+//}
 
-// ------------------------------------------------------- DAY2STR  -------------------------------------
+// DAY2STR -- Could have been handled w/ a Sprintf call now, but I'm keeping this legacy func.
 func DAY2STR(DAY int) (string, rune, rune) {
 	/*
 	   DAY TO STRING CONVERSION.
@@ -284,48 +272,47 @@ func DATEASSIGN(MN int) {
 	} // if DOW > 6
 } // END DATEASSIGN
 
-// ----------------------------------------------------------- PRMONTH --------------------------------------
-func PRMONTH(MN int) { // Originally intended to print one month per page.  Not currently used.
+// PRMONTH -- Prints one month per page.  Not currently used.
+//func PRMONTH(MN int) { // Originally intended to print one month per page.  Not currently used.
+//	s0 := fmt.Sprintf("%40s", MONNAMSHORT[MN])
+//	s1 := fmt.Sprintf("%6s", YEARSTR)
+//	_, err := OutCal12file.WriteString(s0)
+//	check(err, "Error while writing month name short for big calendar")
+//	_, err = OutCal12file.WriteString(s1)
+//	check(err, "Error while writing yearstr for big calendar")
+//	_, err = OutCal12file.WriteRune('\n')
+//	check(err, "")
+//	_, err = OutCal12file.WriteRune('\n')
+//	check(err, "")
+//	_, err = OutCal12file.WriteString(DAYSNAMLONG)
+//	check(err, "")
+//	_, err = OutCal12file.WriteRune('\n')
+//	check(err, "")
+//	_, err = OutCal12file.WriteRune('\n')
+//	check(err, "")
+//	for W := 0; W <= WIM[MN]; W++ {
+//		_, err = OutCal12file.WriteString(" ")
+//		check(err, "")
+//		_, err = OutCal12file.WriteString(EntireYear[MN][W][0].DateStr) // write out Sunday
+//		check(err, "")
+//		_, err = OutCal12file.WriteString("      ")
+//		check(err, "")
+//		for I := 1; I < 6; I++ { // write out Monday ..  Friday
+//			_, err = OutCal12file.WriteString(" ")
+//			check(err, "")
+//			_, err = OutCal12file.WriteString(EntireYear[MN][W][I].DateStr)
+//			_, err = OutCal12file.WriteString("        ") // FWRBL(OUTUN1,8);
+//			check(err, "")
+//		}
+//		_, err = OutCal12file.WriteString(" ")
+//		check(err, "")
+//		_, err = OutCal12file.WriteString(EntireYear[MN][W][6].DateStr) // write out Saturday
+//		_, err = OutCal12file.WriteRune('\n')
+//		check(err, "")
+//	}
+//} // END PRMONTH
 
-	s0 := fmt.Sprintf("%40s", MONNAMSHORT[MN])
-	s1 := fmt.Sprintf("%6s", YEARSTR)
-	_, err := OutCal12file.WriteString(s0)
-	check(err, "Error while writing month name short for big calendar")
-	_, err = OutCal12file.WriteString(s1)
-	check(err, "Error while writing yearstr for big calendar")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	_, err = OutCal12file.WriteString(DAYSNAMLONG)
-	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	_, err = OutCal12file.WriteRune('\n')
-	check(err, "")
-	for W := 0; W <= WIM[MN]; W++ {
-		_, err = OutCal12file.WriteString(" ")
-		check(err, "")
-		_, err = OutCal12file.WriteString(EntireYear[MN][W][0].DateStr) // write out Sunday
-		check(err, "")
-		_, err = OutCal12file.WriteString("      ")
-		check(err, "")
-		for I := 1; I < 6; I++ { // write out Monday ..  Friday
-			_, err = OutCal12file.WriteString(" ")
-			check(err, "")
-			_, err = OutCal12file.WriteString(EntireYear[MN][W][I].DateStr)
-			_, err = OutCal12file.WriteString("        ") // FWRBL(OUTUN1,8);
-			check(err, "")
-		} // ENDFOR I
-		_, err = OutCal12file.WriteString(" ")
-		check(err, "")
-		_, err = OutCal12file.WriteString(EntireYear[MN][W][6].DateStr) // write out Saturday
-		_, err = OutCal12file.WriteRune('\n')
-		check(err, "")
-	} // ENDFOR W;
-} // END PRMONTH
-
-// ----------------------------------------------------------- WrMonthForXL --------------------------------------
+// WrMonthForXL
 // Intended to print in a format that can be read by Excel as a call schedule template.
 
 func WrMonthForXL(MN int) {
@@ -346,7 +333,7 @@ func WrMonthForXL(MN int) {
 	for W := 0; W <= WIM[MN]; W++ {
 		_, err = OutCal12file.WriteString(EntireYear[MN][W][0].DateStr) // write out Sunday
 		check(err, "")
-		err = OutCal12file.WriteByte(HorizTab) // <tab>, or horizontal tab <HT>, to confirm that this does work
+		err = OutCal12file.WriteByte(horizTab) // <tab>, or horizontal tab <HT>, to confirm that this does work
 		check(err, "")
 
 		for I := 1; I < 6; I++ { // write out Monday ..  Friday
@@ -783,7 +770,7 @@ func main() {
 	BrightCyan = termbox.ColorCyan | termbox.AttrBold
 	BrightGreen = termbox.ColorGreen | termbox.AttrBold
 	Black = termbox.ColorBlack
-	//	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", LastCompiled)
+	//	fmt.Println(" Calendar Printing Program written in Go.  Last altered ", lastCompiled)
 	//	fmt.Println()
 	MONNAMLONG[JAN] = "    J A N U A R Y        "
 	MONNAMLONG[FEB] = "   F E B R U A R Y       "
@@ -817,7 +804,7 @@ func main() {
 
 	if *helpflag || HelpFlag {
 		fmt.Println()
-		fmt.Println(" Calgo Calendar Printing Program, last altered", LastCompiled)
+		fmt.Println(" Calgo Calendar Printing Program, last altered", lastCompiled)
 		fmt.Println(" Usage: calgo <flags> year month or month year, where month must be a month name string.")
 		fmt.Println()
 		flag.PrintDefaults()
@@ -827,7 +814,7 @@ func main() {
 	if *testFlag {
 		fmt.Println()
 		fmt.Println()
-		fmt.Println(" calgo, a calendar printing program written in Go.  Last altered", LastCompiled)
+		fmt.Println(" calgo, a calendar printing program written in Go.  Last altered", lastCompiled)
 		fmt.Println()
 		//ans := ""
 		//fmt.Print(" pausing, hit <enter> to resume")
@@ -956,7 +943,7 @@ func main() {
 	e = termbox.Flush()
 	check(e, "")
 
-	Printf_tb(0, LineNum, BrightCyan, Black, " Calendar Printing Program written in Go.  Last altered %s", LastCompiled)
+	Printf_tb(0, LineNum, BrightCyan, Black, " Calendar Printing Program written in Go.  Last altered %s", lastCompiled)
 	LineNum++
 
 	workingdir, _ := os.Getwd()
