@@ -70,9 +70,10 @@ import (
                  Currently, only runlist, runx and runlst use NewFromGlob() and NewFromRegexp().
   25 Oct 24 -- Fixed bug in CheckDest so that it will catch if no params are on the line.
   28 Nov 24 -- Will now display the size in the same color as the filename.
+  28 Dec 24 -- While investigating to make changes to use concurreny, I see that I've already done this to populate the slice of dirEntries.
 */
 
-var LastAltered = "Nov 28, 2024"
+var LastAltered = "Dec 28, 2024"
 
 type DirAliasMapType map[string]string
 
@@ -95,7 +96,7 @@ var GlobFlag bool
 // FastDebugFlag is used for debugging the concurrent routines.
 var FastDebugFlag bool
 var fileInfoX []FileInfoExType
-var clear map[string]func()
+var clearMapOfFunc map[string]func()
 var ExcludeRex *regexp.Regexp
 var IncludeRex *regexp.Regexp
 var InputDir string
@@ -124,21 +125,21 @@ func init() {
 		autoWidth = minWidth
 	}
 	_ = autoWidth
-	clear = make(map[string]func(), 2)
-	clear["linux"] = func() { // this is a closure, or an anonymous function
-		cmd := exec.Command("clear")
+	clearMapOfFunc = make(map[string]func(), 2)
+	clearMapOfFunc["linux"] = func() { // this is a closure, or an anonymous function
+		cmd := exec.Command("clearMapOfFunc")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 
-	clear["windows"] = func() { // this is a closure, or an anonymous function
+	clearMapOfFunc["windows"] = func() { // this is a closure, or an anonymous function
 		comspec := os.Getenv("ComSpec")
 		cmd := exec.Command(comspec, "/c", "cls") // this was calling cmd, but I'm trying to preserve the scrollback buffer.
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 
-	clear["newlines"] = func() {
+	clearMapOfFunc["newlines"] = func() {
 		fmt.Printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 	}
 
@@ -409,8 +410,7 @@ func NewFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // remember t
 	return fileInfoX, nil
 } // end NewFromRex
 
-// ------------------------------- MyReadDir -----------------------------------
-
+// MyReadDir -- single routine version
 func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) { // The entire change including use of []DirEntry happens here.  Not concurrent.
 	dirEntries, err := os.ReadDir(dir) // this function doesn't need to be closed.
 	if err != nil {
@@ -439,8 +439,7 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	return fileInfoExs, nil
 } // myReadDir
 
-// ---------------------------------------------------- includeThis ----------------------------------------
-
+// includeThis -- Using the excludeRex, FilterFlag and if a regular file, determines of this FileInfo is to be included in the slice that's being built.
 func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool { // this already has matched the include expression
 	if VeryVerboseFlag {
 		fmt.Printf(" includeThis.  FI=%#v, FilterFlag=%t\n", fi, FilterFlag)
@@ -643,8 +642,8 @@ outerLoop:
 		}
 		beg = end
 
-		//clearFunc := clear[runtime.GOOS]
-		clearFunc := clear["newlines"]
+		//clearFunc := clearMapOfFunc[runtime.GOOS]
+		clearFunc := clearMapOfFunc["newlines"]
 		clearFunc()
 	}
 
@@ -716,8 +715,8 @@ outerLoop:
 		}
 		beg = end
 
-		//clearFunc := clear[runtime.GOOS]
-		clearFunc := clear["newlines"]
+		//clearFunc := clearMapOfFunc[runtime.GOOS]
+		clearFunc := clearMapOfFunc["newlines"]
 		clearFunc()
 	}
 
@@ -795,7 +794,7 @@ func CheckDest() string {
 
 // ----------------------------------------------------------------------------------------------------
 
-// FileInfoXFromGlob behaves the same on linux and Windows, so it's here and not in platform specific code file.
+// FileInfoXFromGlob behaves the same on linux and Windows, so it's here and not in platform specific code file.  Uses concurrent code to read the disk.
 func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.ExcludeRex
 	var fileInfoX []FileInfoExType
 	//excludeMe := ExcludeRex
@@ -914,7 +913,7 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 
 } // end FileInfoXFromGlob
 
-func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses list.ExcludeRex, and can only be used on the current directory.
+func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses list.ExcludeRex, and can only be used on the current directory.  Uses concurrent code to read the disk.
 	var fileInfoX []FileInfoExType
 	//excludeMe := ExcludeRex
 
@@ -1282,13 +1281,13 @@ func includeThisWithRexForConcurrent(fi os.FileInfo, rex *regexp.Regexp) bool {
 	//matchPat = strings.ToLower(matchPat)
 	f := strings.ToLower(fi.Name())
 	match := rex.MatchString(f)
-	//if err != nil {
+	return match
+
+	// flagged Dec 28, 2024 by staticcheck, as redundant code.  I replaced it with return match, above.
+	//if !match {
 	//	return false
 	//}
-	if !match {
-		return false
-	}
-	return true
+	//return true
 } // end includeThisWithRexForConcurrent
 
 // ------------------------------ pause -----------------------------------------

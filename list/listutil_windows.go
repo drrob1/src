@@ -11,6 +11,7 @@ import (
 
 /*
    8 Jul 23 -- I changed how the first param is tested for being a directory.
+  28 Dec 24 -- Going to add concurrency to the reading of directory entries, like I did in fdsrt and rex.
 */
 
 const sepStr = string(os.PathSeparator)
@@ -70,70 +71,80 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
-		var filenames []string
+		//var filenames []string  not used as I'm having the actual work done in my concurrent code.
+
 		if GlobFlag {
 			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
 			// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
 			// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
-			filenames, err = filepath.Glob(pattern)
-			if VerboseFlag {
-				fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
-			}
-			if err != nil {
-				return nil, err
-			}
+			fileInfoX, err = FileInfoXFromGlob(dirName)
+			return fileInfoX, err
 
-		} else {
-			d, err := os.Open(dirName)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
-				os.Exit(1)
-			}
-			defer d.Close()
-			filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
-			if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-				fileInfoX, err = MyReadDir(dirName, excludeMe)
-				return fileInfoX, err
-			}
-		}
-
-		fileInfoX = make([]FileInfoExType, 0, len(filenames))
-		const sepStr = string(os.PathSeparator)
-		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
-			var path string
-			if strings.Contains(f, sepStr) {
-				path = f
-			} else {
-				path = filepath.Join(dirName, f)
-			}
-
-			fi, err := os.Lstat(path)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
-				continue
-			}
-			//if !fi.Mode().IsRegular() { // skip anything that is not a regular file.  Too bad it doesn't work.  It does work in IncludeThis, though
-			//	continue
+			//   removed Dec 28, 2024, as I'm adding more uses of my concurrent code.
+			//filenames, err = filepath.Glob(pattern)
+			//if VerboseFlag {
+			//	fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+			//}
+			//if err != nil {
+			//	return nil, err
 			//}
 
-			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
-			if er != nil {
-				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
-				continue
-			}
+		} else {
+			fileInfoX, err = myReadDirConcurrent(dirName) // now uses concurrent code, and gets the excludeMe globally.
+			return fileInfoX, err
 
-			if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
-				fix := FileInfoExType{
-					FI:       fi,
-					Dir:      dirName,
-					RelPath:  filepath.Join(dirName, f),
-					AbsPath:  filepath.Join(dirName, f),
-					FullPath: filepath.Join(dirName, f),
-				}
-				fileInfoX = append(fileInfoX, fix)
-			}
-		} // for f ranges over filenames
+			// Removed Dec 28, 2024 as I'm adding more uses of my concurrent code.
+			//d, err := os.Open(dirName)
+			//if err != nil {
+			//	fmt.Fprintf(os.Stderr, " Error from os.Open is %v\n", err)
+			//	return nil, err
+			//}
+			//defer d.Close()
+			//filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
+			//if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
+			//	fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
+			//	// fileInfoX, err = MyReadDir(dirName, excludeMe)
+			//	fileInfoX, err = myReadDirConcurrent(dirName)  // now uses concurrent code, and gets the excludeMe globally.
+			//	return fileInfoX, err
+			//}
+		}
+
+		//fileInfoX = make([]FileInfoExType, 0, len(filenames))
+		//const sepStr = string(os.PathSeparator)
+		//for _, f := range filenames { // basically I do this here because of a pattern to be matched.
+		//	var path string
+		//	if strings.Contains(f, sepStr) {
+		//		path = f
+		//	} else {
+		//		path = filepath.Join(dirName, f)
+		//	}
+		//
+		//	fi, err := os.Lstat(path)
+		//	if err != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
+		//		continue
+		//	}
+		//	//if !fi.Mode().IsRegular() { // skip anything that is not a regular file.  Too bad it doesn't work.  It does work in IncludeThis, though
+		//	//	continue
+		//	//}
+		//
+		//	match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
+		//	if er != nil {
+		//		fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
+		//		continue
+		//	}
+		//
+		//	if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
+		//		fix := FileInfoExType{
+		//			FI:       fi,
+		//			Dir:      dirName,
+		//			RelPath:  filepath.Join(dirName, f),
+		//			AbsPath:  filepath.Join(dirName, f),
+		//			FullPath: filepath.Join(dirName, f),
+		//		}
+		//		fileInfoX = append(fileInfoX, fix)
+		//	}
+		//} // for f ranges over filenames
 	} // if flag.NArgs()
 
 	return fileInfoX, nil

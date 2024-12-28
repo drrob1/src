@@ -25,10 +25,11 @@ import (
   14 Jan 23 -- I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
                  from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
    1 Feb 23 -- Fixing how command line arguments are opened when there are > 1 on the line, ie, a source dir and destination dir.
-  24 Mar 23 -- While in florida I figured out how to handle a glob pattern on the bash command line.  I have to use the length of os.Args or equivalent.
+  24 Mar 23 -- While in Florida I figured out how to handle a glob pattern on the bash command line.  I have to use the length of os.Args or equivalent.
    4 Apr 23 -- Added use of list.DelListFlag
   22 Apr 23 -- Found bug.  I again used flag.NFlag where I meant to use flag.NArg.  I HATE WHEN THAT HAPPENS.
   27 May 23 -- Added getFileInfoXSkipFirstOnCommandLine, for use of runlist.
+  28 Dec 24 -- Adding concurrency to the reading of directory entries, like I did in fdsrt and rex.  Nevermind, it's already here.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
