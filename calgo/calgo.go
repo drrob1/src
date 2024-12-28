@@ -81,6 +81,7 @@ import (
 				The screen output is currently handled in Show3MonthRow.
                 I'm going to add a config file, called calgo.conf or calgo.ini, that will list the doc names and will be used for the docNames slice.
 				At the moment, the only difference btwn calg and calgo is that calg hard codes the names, and calgo uses a config file to get the names.
+				I did git tag calgo-tcell for the old code, and git tag calgo-new for this code.  I preserved the old version as oldcalgo.exe
 */
 
 const lastCompiled = "Dec 25, 2024"
