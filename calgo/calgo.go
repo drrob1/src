@@ -76,7 +76,8 @@ import (
  24 Dec 24 -- When I'm done, only need to ammend the docNames slice of strings to get the correct number of columns for the statistics.
 ----------------------------------------------------------------------------------------------------
  25 Dec 24 -- Now called calgo again.  I deleted the old calgo and copyied the current state of calg to calgo.
-				Previous version of calgo used tcell to control the output.  Now the code uses ctfmt and all the tcell code was removed by overwriting calgo w/ calg.
+				Previous version of calgo used tcell to control the output, and used the ShowMonth func.
+				Now the code uses ctfmt and all the tcell code was removed by overwriting calgo w/ calg.
 				The screen output is currently handled in Show3MonthRow.
                 I'm going to add a config file, called calgo.conf or calgo.ini, that will list the doc names and will be used for the docNames slice.
 				At the moment, the only difference btwn calg and calgo is that calg hard codes the names, and calgo uses a config file to get the names.
