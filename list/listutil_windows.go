@@ -69,7 +69,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		}
 
 		if VerboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+			fmt.Printf(" dirName=%s, fileName=%s, pattern=%s \n", dirName, fileName, pattern)
 		}
 
 		//var filenames []string  not used as I'm having the actual work done in my concurrent code.
