@@ -844,7 +844,7 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 		}
 
 		if VerboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirNamePattern, fileNamePattern)
+			fmt.Printf(" dirName=%s, fileName=%s, pattern=%s \n", dirNamePattern, fileNamePattern, pattern)
 		}
 
 		//var filenames []string  removed when the concurrent code was developed for here.  That is, I removed the use of filepath.Glob().  I never used it anyway.
