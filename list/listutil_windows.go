@@ -91,7 +91,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			//}
 
 		} else {
-			fileInfoX, err = myReadDirConcurrentWithMatch(dirName, pattern) // now uses concurrent code, and gets the excludeMe globally.
+			fileInfoX, err = myReadDirConcurrentWithMatch(dirName, fileName) // now uses concurrent code, and gets the excludeMe globally.
 			return fileInfoX, err
 
 			// Removed Dec 28, 2024 as I'm adding more uses of my concurrent code.
