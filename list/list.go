@@ -797,7 +797,7 @@ func CheckDest() string {
 // ----------------------------------------------------------------------------------------------------
 
 // FileInfoXFromGlob behaves the same on linux and Windows, so it's here and not in platform specific code file.  Uses concurrent code to read the disk.
-func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.ExcludeRex
+func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.ExcludeRex, does NOT use filepath.Glob
 	var fileInfoX []FileInfoExType
 	//excludeMe := ExcludeRex
 
