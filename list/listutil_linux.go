@@ -71,8 +71,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			stat, _ := fHandle.Stat()
 			if stat.IsDir() { // either a direct or symlinked directory name
 				fHandle.Close()
-				//fileInfoX, err = MyReadDir(loneFilename, nil) // nil exclude regex
-				fileInfoX, err = myReadDirConcurrent(loneFilename) // exclude regex passed by the global variable, and is now allowed to not be nil.
+				fileInfoX, err = myReadDirConcurrent(loneFilename) // exclude regex passed by the global variable, and is not allowed to not be nil.
 				return fileInfoX, err
 			}
 
@@ -91,8 +90,6 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		fi, _ := fHandle.Stat()
 
 		if fi.IsDir() {
-			//fHandle.Close()
-			//fileInfoX, err = MyReadDir(loneFilename, nil)
 			fileInfoX, err = myReadDirConcurrent(loneFilename) // the excludeMe regexp is passed globally above.
 			if err != nil {
 				return nil, err
