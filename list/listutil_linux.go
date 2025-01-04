@@ -73,14 +73,17 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 				fHandle.Close()
 				fileInfoX, err = myReadDirConcurrent(loneFilename) // exclude regex passed by the global variable, and is not allowed to not be nil.
 				return fileInfoX, err
+			} else {
+				return nil, fmt.Errorf("%s is not a directory", loneFilename)
 			}
 
 		} else { // err must not be nil after attempting to open loneFilename.
 			loneFilename = workingDir + sep + loneFilename
 			loneFilename = filepath.Clean(loneFilename)
-			fHandle.Close()
+			// fHandle.Close()  not needed as the handle would be nil when there's an error.
 		}
 
+		// try to open workingDir + loneFilename
 		fHandle, err = os.Open(loneFilename)
 		if err != nil {
 			return nil, err
