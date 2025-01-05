@@ -306,7 +306,7 @@ func writeOutExcelTaxesFile(fn string, base string, taxes []taxType) error {
 	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
 
 	const excelMoneyFormat = `$#,##0.00_);[Red](-$#,##0.00)`
-	const excelDateFormat = "*3/14/2012"
+	// const excelDateFormat = "*3/14/2012"  not used now that I'm outputting a TimeDate directly.
 
 	// Need to make sure that the extension is .xlsx and not .xlsm
 	lastChar := len(fn)
@@ -349,7 +349,11 @@ func writeOutExcelTaxesFile(fn string, base string, taxes []taxType) error {
 		cell2 := row.AddCell()
 		cell2.SetFloatWithFormat(t.Amount, excelMoneyFormat)
 		cell3 := row.AddCell()
-		cell3.SetString(t.Comment)
+		// I want to only write the comment if this is not a gas line because the comment would just be a number and is not wanted in the taxes.mdb file.
+		descr := strings.ToLower(strings.TrimSpace(t.Description))
+		if !strings.HasPrefix(descr, "gas ") { // only write out this comment if it's NOT a gas item, which would just be a number that I don't want in the databases.
+			cell3.SetString(t.Comment)
+		}
 	}
 
 	err = workbook.Save(fn)
@@ -417,7 +421,7 @@ func writeOutGasExcelFile(fn string, base string, gas []gasType) error {
 	xlsx.SetDefaultFont(13, "Arial") // the size number doesn't work.  I'm finding it set to 11 when I open the sheet in Excel.
 
 	const excelMoneyFormat = `$#,##0.00_);[Red](-$#,##0.00)`
-	const excelDateFormat = "*3/14/2012"
+	//const excelDateFormat = "*3/14/2012"  Not used now that I'm outputting a TimDate directly.
 	//newYork, err := time.LoadLocation("America/New_York")
 	//if err != nil {
 	//	return err
