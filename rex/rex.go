@@ -130,14 +130,16 @@ Revision History
 20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
  4 May 24 -- Adding concurrent code from fdsrt.
  3 Jun 24 -- Removed commented out code and edited a few comments.
+ 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
+				I decided to separate the environ variables, so this now uses rex instead of dsrt.
 */
 
-const LastAltered = "May 4, 2024"
+const LastAltered = "Jan 5, 2025"
 
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numscreens, w                                                             int
+	paramNum, w                                                               int
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalFlag, halfFlag bool
 }
 
@@ -180,7 +182,7 @@ func main() {
 	var numOfCols int
 
 	// environment variable processing.  If present, these will be the defaults.
-	dsrtEnviron := os.Getenv("dsrt")
+	dsrtEnviron := os.Getenv("rex")
 	dswEnviron := os.Getenv("dsw")
 	dsrtParam = ProcessEnvironString(dsrtEnviron, dswEnviron) // This is a function below.
 	//fmt.Printf(" dsrtEnviron = %s, dswEnviron = %s\n dsrtParam = %v\n", dsrtEnviron, dswEnviron, dsrtParam)
@@ -347,9 +349,9 @@ func main() {
 	if *helpflag || HelpFlag {
 		fmt.Println()
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Printf(" Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Printf(" dsrt environ values are: numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
-			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
+		fmt.Printf(" Reads from rex and dsw environment variables before processing commandline switches.\n")
+		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
+			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
 		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
@@ -372,14 +374,12 @@ func main() {
 
 	if NLines > 0 { // priority is -N option
 		numOfLines = NLines
+	} else if dsrtParam.paramNum > 0 && !maxDimFlag { // Use dsrt environ value if the -m or -M not used on command line.  Added Jan 5, 2025
+		numOfLines = dsrtParam.paramNum
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like if the display is redirected
 		numOfLines = defaultHeight
-	}
-
-	if dsrtParam.numscreens > 0 {
-		allScreens = dsrtParam.numscreens
 	}
 
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
@@ -547,8 +547,8 @@ func main() {
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
 		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, numOfLines)
-		fmt.Printf(" dsrtparam numscreens=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t",
-			dsrtParam.numscreens, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
+		fmt.Printf(" dsrtparam paramNum=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t",
+			dsrtParam.paramNum, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Printf(" Dirname is %s, smartCase = %t\n", workingDir, smartCase)
 		fmt.Println()
 	}
@@ -671,9 +671,9 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 		} else if s == 'h' {
 			dsrtparam.halfFlag = true
 		} else if unicode.IsDigit(rune(s)) {
-			dsrtparam.numscreens = int(s) - int('0')
+			dsrtparam.paramNum = int(s) - int('0')
 			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-				dsrtparam.numscreens = 10*dsrtparam.numscreens + int(indiv[j+1][0]) - int('0')
+				dsrtparam.paramNum = 10*dsrtparam.paramNum + int(indiv[j+1][0]) - int('0')
 				break // if have a 2-digit number, it ends processing of the indiv string
 			}
 		}

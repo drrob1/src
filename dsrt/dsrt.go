@@ -139,9 +139,10 @@ REVISION HISTORY
 22 June 24-- Changed the closing message
 23 June 24-- Edited a comment, and added AddComasRune, first here and then to misc where it now resides after I removed it from here.
 27 Nov 24 -- Edited some comments here and in dsrtutil_windows.go
+ 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
 */
 
-const LastAltered = "23 June 2024"
+const LastAltered = "5 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -154,7 +155,7 @@ const LastAltered = "23 June 2024"
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numscreens                                                                            int // set by dsrt environ var.
+	paramNum                                                                              int // set by dsrt environ var.
 	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
 }
 
@@ -222,8 +223,8 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
-			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
+		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
+			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
 
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
@@ -280,23 +281,20 @@ func main() {
 
 	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
-	if NLines > 0 { // priority
+	if NLines > 0 { // priority to command line param
 		numOfLines = NLines
-		//                       } else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
-		//                 	         numOfLines = dsrtParam.numlines  These lines removed when I added allFlag and dsrtparam.numScreens
+	} else if dsrtParam.paramNum > 0 && !maxDimFlag { // Use dsrt environ value if the -m or -M not used on command line.  Added Jan 5, 2025
+		numOfLines = dsrtParam.paramNum
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like of the output is being redirected.
 		numOfLines = defaultHeight
 	}
 
-	if dsrtParam.numscreens > 0 {
-		allScreens = dsrtParam.numscreens
-	}
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
-		*nscreens = allScreens
+		*nscreens = allScreens // allScreens is defined above w/ a default, non-zero value of 50 as of this writing.
 	}
-	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
+	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1 which is the default
 
 	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
@@ -316,8 +314,8 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
-		fmt.Printf(" dsrtparam numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
-			dsrtParam.numscreens, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
+		fmt.Printf(" dsrtparam paramNum =%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
+			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag, dsrtParam.halfFlag)
 		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t. \n", autoHeight, autoWidth, excludeFlag)
 	}
@@ -329,8 +327,8 @@ func main() {
 	DateSort := !SizeSort // convenience variable
 
 	if verboseFlag {
-		fmt.Printf(" dsrtParam.numscreens=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
-			dsrtParam.numscreens, NLines, autoHeight, defaultHeight, numOfLines)
+		fmt.Printf(" dsrtParam.paramNum=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
+			dsrtParam.paramNum, NLines, autoHeight, defaultHeight, numOfLines)
 	}
 	noExtensionFlag = *extensionflag || *extflag
 
@@ -510,12 +508,12 @@ func idName(uidStr string) string {
 	return ptrToUser.Username
 }
 
-// ------------------------------------ ProcessEnvironString ---------------------------------------
-
+// ProcessEnvironString -- returns a DsrtParamType struct.
 func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
 	// 4 Jul 23 -- the use of strings.Split is redundant.  I removed it here.  When I wrote that code, I probably forgot
 	//             that I can iterate over a string and will get out individual runes.
 	//             I may have done that so I can look at the next digit.  Not needed now.
+	// 5 Jan 25 -- Added paramNum to accept the number in the environment variable.  The main routine will then use it as appropriate.
 
 	var dsrtParam DsrtParamType
 
@@ -542,7 +540,7 @@ func ProcessEnvironString(envStr string) DsrtParamType { // use system utils whe
 			dsrtParam.halfFlag = true
 		} else if unicode.IsDigit(s) {
 			d := s - '0'
-			dsrtParam.numscreens = 10*dsrtParam.numscreens + int(d)
+			dsrtParam.paramNum = 10*dsrtParam.paramNum + int(d)
 		}
 	}
 	return dsrtParam
