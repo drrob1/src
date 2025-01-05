@@ -131,7 +131,8 @@ Revision History
  4 May 24 -- Adding concurrent code from fdsrt.
  3 Jun 24 -- Removed commented out code and edited a few comments.
  5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
-				I decided to separate the environ variables, so this now uses rex instead of dsrt.
+				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
+				I decided to separate the environ variables, so this now uses rex instead of dsrt as the environ var name it uses to set its defaults.
 */
 
 const LastAltered = "Jan 5, 2025"

@@ -140,6 +140,7 @@ REVISION HISTORY
 23 June 24-- Edited a comment, and added AddComasRune, first here and then to misc where it now resides after I removed it from here.
 27 Nov 24 -- Edited some comments here and in dsrtutil_windows.go
  5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
+				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 */
 
 const LastAltered = "5 Jan 2025"

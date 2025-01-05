@@ -136,6 +136,7 @@ Revision History
  4 May 24 -- I was able to add concurrency to speed up dsrt by writing fast dsrt (fdsrt).  I'll add that code here too.
               I'm removing -g, glob switch.  I never used it, and it overly complicates the code.  It remains in dsrt, but not in fdsrt or here.
  5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
+				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 */
 
 const LastAltered = "5 Jan 2025"
