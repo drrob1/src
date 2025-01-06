@@ -137,9 +137,12 @@ Revision History
               I'm removing -g, glob switch.  I never used it, and it overly complicates the code.  It remains in dsrt, but not in fdsrt or here.
  5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
+ 6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
+				I want the base amount to be the full screen.  I have to think about this for a bit.
+				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
 */
 
-const LastAltered = "5 Jan 2025"
+const LastAltered = "6 Jan 2025"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -307,7 +310,10 @@ func main() {
 		verboseFlag = true
 	}
 
-	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
+	maxDimFlag = *mFlag || *maxFlag           // either m or max options will set this flag and suppress use of halfFlag.
+	if halfFlag || allFlag || *nscreens > 1 { // To make sure that a full screen of lines is the base for subsequent calculations when these conditions are met.
+		maxDimFlag = true // The need arose for this when I'm using the environment to reduce the # of lines displayed routinesly.
+	} // Added Jan 6, 2025.
 
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
