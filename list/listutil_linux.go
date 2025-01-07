@@ -29,7 +29,7 @@ import (
    4 Apr 23 -- Added use of list.DelListFlag
   22 Apr 23 -- Found bug.  I again used flag.NFlag where I meant to use flag.NArg.  I HATE WHEN THAT HAPPENS.
   27 May 23 -- Added getFileInfoXSkipFirstOnCommandLine, for use of runlist.
-  28 Dec 24 -- Adding concurrency to the reading of directory entries, like I did in fdsrt and rex.  Nevermind, it's already here.
+  28 Dec 24 -- Adding concurrency to the reading of directory entries, like I did in fdsrt and rex.  Nevermind, it's already here.  Doesn't apply to when bash populates the command line.
 */
 
 // getFileInfoXFromCommandLine will return a slice of FileInfoExType after the filter and exclude expression are processed.
@@ -111,7 +111,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			return fileInfoX, nil
 		}
 
-	} else { // bash must have populated sources on command line.  Will process all but the last, which would be a destination directory.
+	} else { // bash must have populated sources on command line.  Will process all but the last, which would be a destination directory.  This code is not concurrent, but it works.
 		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
 		for i := 0; i < flag.NArg()-1; i++ { // don't process the last command line item, as that would be the destination directory.
 			fn := flag.Arg(i)
