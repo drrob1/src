@@ -153,9 +153,11 @@ REVISION HISTORY
              I'm going to continue development after all.  On windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
              And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
  7 Jun 24 -- Edited some comments and changed the final message.
+ 8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head).
+				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 */
 
-const LastAltered = "7 June 2024"
+const LastAltered = "8 Jan 2025"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -166,7 +168,7 @@ const LastAltered = "7 June 2024"
 type dirAliasMapType map[string]string
 
 type DsrtParamType struct {
-	numScreens                                                                            int // set by dsrt environ var.
+	paramNum                                                                              int // set by dsrt environ var.
 	reverseFlag, sizeFlag, dirListFlag, filenameListFlag, totalFlag, filterflag, halfFlag bool
 }
 
@@ -241,8 +243,8 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
-			dsrtParam.numScreens, dsrtParam.reverseFlag, dsrtParam.sizeFlag, dsrtParam.dirListFlag, dsrtParam.filenameListFlag, dsrtParam.totalFlag, dsrtParam.halfFlag)
+		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
+			dsrtParam.paramNum, dsrtParam.reverseFlag, dsrtParam.sizeFlag, dsrtParam.dirListFlag, dsrtParam.filenameListFlag, dsrtParam.totalFlag, dsrtParam.halfFlag)
 
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 		flag.PrintDefaults()
@@ -303,20 +305,18 @@ func main() {
 
 	if NLines > 0 { // priority
 		numOfLines = NLines
-		//                       } else if dsrtParam.numlines > 0 && !maxDimFlag { // then check this, but only if maxDimFlag is not set.
-		//                 	         numOfLines = dsrtParam.numlines  These lines removed when I added allFlag and dsrtparam.numScreens
+	} else if dsrtParam.paramNum > 0 && !maxDimFlag { // Use dsrt environ value if the -m or -M not used on command line.  Added Jan 5, 2025
+		numOfLines = dsrtParam.paramNum
 	} else if autoHeight > 0 { // finally use autoHeight.
 		numOfLines = autoHeight - 7
 	} else { // intended if autoHeight fails, like of the output is being redirected.
 		numOfLines = defaultHeight
 	}
 
-	if dsrtParam.numScreens > 0 {
-		allScreens = dsrtParam.numScreens
-	}
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
 		*nscreens = allScreens
 	}
+
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1
 
 	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
@@ -337,8 +337,8 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
-		fmt.Printf(" dsrtparam numscreens=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
-			dsrtParam.numScreens, dsrtParam.reverseFlag, dsrtParam.sizeFlag, dsrtParam.dirListFlag, dsrtParam.filenameListFlag,
+		fmt.Printf(" dsrtparam paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
+			dsrtParam.paramNum, dsrtParam.reverseFlag, dsrtParam.sizeFlag, dsrtParam.dirListFlag, dsrtParam.filenameListFlag,
 			dsrtParam.totalFlag, dsrtParam.halfFlag)
 		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t. \n", autoHeight, autoWidth, excludeFlag)
 	}
@@ -350,8 +350,8 @@ func main() {
 	DateSort := !SizeSort // convenience variable
 
 	if verboseFlag {
-		fmt.Printf(" dsrtParam.numscreens=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
-			dsrtParam.numScreens, NLines, autoHeight, defaultHeight, numOfLines)
+		fmt.Printf(" dsrtParam.paramNum=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
+			dsrtParam.paramNum, NLines, autoHeight, defaultHeight, numOfLines)
 	}
 	noExtensionFlag = *extensionflag || *extflag
 
@@ -567,7 +567,7 @@ func ProcessEnvironString(envStr string) DsrtParamType { // use system utils whe
 			dsrtParam.halfFlag = true
 		} else if unicode.IsDigit(s) {
 			d := s - '0'
-			dsrtParam.numScreens = 10*dsrtParam.numScreens + int(d)
+			dsrtParam.paramNum = 10*dsrtParam.paramNum + int(d)
 		}
 	}
 	return dsrtParam
