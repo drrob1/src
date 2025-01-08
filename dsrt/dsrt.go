@@ -144,9 +144,13 @@ REVISION HISTORY
  6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
 				I want the base amount to be the full screen.  I have to think about this for a bit.
 				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
+ 7 Jan 25 -- Nope, I have to rethink this.  I can't have halfFlag set maxDimFlag; halfFlag won't work then.  It's too late now, I'll have to do this tomorrow.
+				I figured out why it seemed to work, the alias asdf calls fdsrt, not dsrt.  So I have to rethink this.
+				My choices are: let halfFlag apply to whatever dsrt environ var is, or create another variable to hold the full value.
+				For now, I'll let halfFlag apply to whatever dsrt environ var is.
 */
 
-const LastAltered = "7 Jan 2025"
+const LastAltered = "8 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -283,10 +287,7 @@ func main() {
 		verboseFlag = true
 	}
 
-	maxDimFlag = *mFlag || *maxFlag || halfFlag || allFlag || *nscreens > 1 // To make sure that a full screen of lines is the base for subsequent calculations when these conditions are met.
-	//if halfFlag || allFlag || *nscreens > 1 { // Trying a different way to get this to do what I want.
-	//	maxDimFlag = true // The need arose for this when I'm using the environment to reduce the # of lines displayed routinesly.
-	//} // Added Jan 6, 2025.
+	maxDimFlag = *mFlag || *maxFlag
 
 	if NLines > 0 { // priority to command line param
 		numOfLines = NLines
@@ -324,7 +325,7 @@ func main() {
 		fmt.Printf(" dsrtparam paramNum =%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
 			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag, dsrtParam.halfFlag)
-		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t. \n", autoHeight, autoWidth, excludeFlag)
+		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t. \n", autoHeight, autoWidth, excludeFlag, halfFlag)
 	}
 
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag

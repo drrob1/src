@@ -136,9 +136,10 @@ Revision History
  6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
 				I want the base amount to be the full screen.  I have to think about this for a bit.
 				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
+ 8 Jan 25 -- Using maxFlag is not a good idea, as it just prevents halfFlag from ever working.  See top comments in dsrt.go
 */
 
-const LastAltered = "Jan 6, 2025"
+const LastAltered = "Jan 8, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -313,10 +314,7 @@ func main() {
 		verboseFlag = true
 	}
 
-	maxDimFlag = *mFlag || *maxFlag           // either m or max options will set this flag and suppress use of halfFlag.
-	if halfFlag || allFlag || *nscreens > 1 { // To make sure that a full screen of lines is the base for subsequent calculations when these conditions are met.
-		maxDimFlag = true // The need arose for this when I'm using the environment to reduce the # of lines displayed routinesly.
-	} // Added Jan 6, 2025.
+	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
 	ctfmt.Print(ct.Magenta, winFlag, " rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version())
 	if dsrtEnviron != "" {
