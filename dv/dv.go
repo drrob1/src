@@ -278,7 +278,7 @@ func main() {
 	pflag.StringVarP(&excludeRegexPattern, "exclude", "x", "", "regex to be excluded from output.")
 
 	//flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	pflag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
+	pflag.BoolVarP(&filterFlag, "filter", "f", false, "filter value to suppress listing individual size below 1 MB.")
 	noFilterFlag := pflag.BoolP("nofilter", "F", false, "Flag to undo an environment var with f set.")
 
 	pflag.BoolVarP(&globFlag, "glob", "g", false, "Use glob function on Windows.")
@@ -301,10 +301,15 @@ func main() {
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(fullConfigFileName)
 	fmt.Printf("Config file name: %s\n", fullConfigFileName)
-	err = viper.BindEnv("DSRT", "NLines", "N_LINES", "dsrt") // if I read this right, DSRT is the key name, and NLINES, N_LINES and dsrt are alternative environment variables for it.
-	if err != nil {
-		ctfmt.Printf(ct.Red, winflag, "Error binding NLines environment var is %s.  Ignored.\n", err.Error())
-	}
+
+	//err = viper.BindEnv("DSRT", "NLines", "N_LINES", "dsrt") // if I read this right, DSRT is the key name, and NLINES, N_LINES and dsrt are alternative environment variables for it.  Nope, doesn't work.
+	//if err != nil {
+	//	ctfmt.Printf(ct.Red, winflag, "Error binding NLines environment var is %s.  Ignored.\n", err.Error())
+	//}
+
+	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
+	viper.AutomaticEnv()
+
 	err = viper.ReadInConfig()
 	if err != nil {
 		ctfmt.Printf(ct.Red, winflag, " %s.  Ignored\n", err.Error())
