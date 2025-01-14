@@ -3,16 +3,15 @@
 package main
 
 import (
-	"flag"
-	//"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package, so it recommends doing this.
+	"github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package
 	"github.com/spf13/viper"
 	"golang.org/x/term"
 	"os"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -193,7 +192,7 @@ var allFlag bool
 //var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
 func main() {
-	var dsrtParam DsrtParamType
+	//var dsrtParam DsrtParamType  the purpose of this variable has been replaced by viper Jan 13, 2025.
 	var userPtr *user.User // from os/user
 	var autoWidth, autoHeight int
 	var excludeRegexPattern string
@@ -205,22 +204,22 @@ func main() {
 	systemStr := ""
 
 	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
-	dsrtEnviron := os.Getenv("dsrt")
-	dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
-	winflag := runtime.GOOS == "windows"          // this is needed because I use it in the color statements, so the colors are bolded only on windows.
+	//dsrtEnviron := os.Getenv("dsrt")
+	//dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
+	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		ctfmt.Printf(ct.Red, winflag, "Error getting user home directory is %s\n", err.Error())
 		return
 	}
-	fullConfigFileName := homeDir + configFilename
-	ctfmt.Printf(ct.Magenta, winflag, "dsrt will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s",
+	fullConfigFileName := filepath.Join(homeDir, configFilename)
+	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s\n",
 		LastAltered, runtime.Version())
-	if dsrtEnviron == "" {
-		ctfmt.Printf(ct.Magenta, winflag, "\n")
-	} else {
-		ctfmt.Printf(ct.Green, winflag, ", dsrt env = %s \n", dsrtEnviron)
-	}
+	//if dsrtEnviron == "" {
+	//	ctfmt.Printf(ct.Magenta, winflag, "\n")
+	//} else {
+	//	ctfmt.Printf(ct.Green, winflag, ", dsrt env = %s \n", dsrtEnviron)
+	//}
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -245,8 +244,7 @@ func main() {
 		fmt.Printf(" Usage information:\n")
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Reads from dsrt environment variable before processing commandline switches.\n")
-		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
-			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
+		//fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n", dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
 
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
 		pflag.PrintDefaults()
@@ -309,7 +307,7 @@ func main() {
 	}
 	err = viper.ReadInConfig()
 	if err != nil {
-		ctfmt.Printf(ct.Red, winflag, "Error reading viper config file %s is %s.  Ignored\n", fullConfigFileName, err.Error())
+		ctfmt.Printf(ct.Red, winflag, " %s.  Ignored\n", err.Error())
 	}
 
 	verboseFlag = viper.GetBool("verbose")
@@ -334,6 +332,7 @@ func main() {
 	//	numOfLines = defaultHeight
 	//}
 
+	*nscreens = viper.GetInt("nscreens")
 	allFlag = viper.GetBool("all")
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
 		*nscreens = allScreens // allScreens is defined above w/ a default, non-zero value of 50 as of this writing.
@@ -362,10 +361,10 @@ func main() {
 	SizeSort := *sizeflag
 	DateSort := !SizeSort // convenience variable
 
-	if verboseFlag {
-		fmt.Printf(" dsrtParam.paramNum=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
-			dsrtParam.paramNum, NLines, autoHeight, defaultHeight, numOfLines)
-	}
+	//if verboseFlag {
+	//	fmt.Printf(" dsrtParam.paramNum=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
+	//		dsrtParam.paramNum, NLines, autoHeight, defaultHeight, numOfLines)
+	//}
 
 	*extflag = viper.GetBool("noext")
 	*extensionflag = viper.GetBool("binary")
@@ -400,10 +399,16 @@ func main() {
 	//	}
 	//}
 
-	dirList = *DirListFlag || FilenameListFlag || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // if -D entered then this expression also needs to be true.
-	filenameToBeListedFlag = !(FilenameListFlag || dsrtParam.filenamelistflag)                        // need to reverse the flag because D means suppress the output of filenames.
+	*DirListFlag = viper.GetBool("dirlist")
+	FilenameListFlag = viper.GetBool("onlydir")
+	*TotalFlag = viper.GetBool("totals")
+	*longflag = viper.GetBool("long")
+
+	dirList = *DirListFlag || FilenameListFlag // || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // if -D entered then this expression also needs to be true.
+	//filenameToBeListedFlag = !(FilenameListFlag || dsrtParam.filenamelistflag)                        // need to reverse the flag because D means suppress the output of filenames.
+	filenameToBeListedFlag = !FilenameListFlag // need to reverse the flag because D means suppress the output of filenames.
 	longFileSizeListFlag = *longflag
-	showGrandTotal = *TotalFlag || dsrtParam.totalflag // added 09/12/2018 12:32:23 PM
+	showGrandTotal = *TotalFlag // || dsrtParam.totalflag // added 09/12/2018 12:32:23 PM
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -415,10 +420,12 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
-		fmt.Printf(" dsrtparam paramNum =%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
-			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
-			dsrtParam.totalflag, dsrtParam.halfFlag)
+		//fmt.Printf(" dsrtparam paramNum =%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n", dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
 		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t. \n", autoHeight, autoWidth, excludeFlag, halfFlag)
+		fmt.Printf(" NLines=%d, Reverse=%t, ncreens=%d, sizeflag=%t, DirListFlag=%t, FilenameListFlag=%t, TotalFlag=%t, longflag=%t \n",
+			NLines, Reverse, *nscreens, *sizeflag, *DirListFlag, FilenameListFlag, *TotalFlag, *longflag)
+		fmt.Printf(" extflag=%t, extensionflag=%t, filterFlag=%t, noFilterFlag=%t, globFlag=%t, mFlag=%t, allFlag=%t \n",
+			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag)
 	}
 
 	// set which sort function will be in the sortfcn var
@@ -481,17 +488,17 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" *** Here I am in main() on or about line 427 ***")
+		fmt.Println(" *** Here I am in main() on or about line 493 ***")
 		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
-		fmt.Printf(" nscreens=%d, numLines=%d, flag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
-			*nscreens, numLines, flag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
+		fmt.Printf(" nscreens=%d, pflag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
+			*nscreens, pflag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}
 
 	t0 := time.Now()
 
 	fileInfos = getFileInfosFromCommandLine()
 	if verboseFlag {
-		fmt.Printf(" After call to getFileInfosFromCommandLine.  flag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", flag.NArg(), len(fileInfos), numOfLines)
+		fmt.Printf(" After call to getFileInfosFromCommandLine.  pflag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", pflag.NArg(), len(fileInfos), numOfLines)
 	}
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn) // must be sorted here for sortfcn to work correctly, because the slice name it uses must be correct.  Better if that name is not global.
@@ -565,43 +572,43 @@ func idName(uidStr string) string {
 	return ptrToUser.Username
 }
 
-// ProcessEnvironString -- returns a DsrtParamType struct.
-func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
-	// 4 Jul 23 -- the use of strings.Split is redundant.  I removed it here.  When I wrote that code, I probably forgot
-	//             that I can iterate over a string and will get out individual runes.
-	//             I may have done that so I can look at the next digit.  Not needed now.
-	// 5 Jan 25 -- Added paramNum to accept the number in the environment variable.  The main routine will then use it as appropriate.
-
-	var dsrtParam DsrtParamType
-
-	if envStr == "" {
-		return dsrtParam
-	} // empty dsrtparam is returned
-
-	// The strings.Split creates slices of individual character strings.  But it's redundant now that I look at it 7/4/23.
-
-	for _, s := range envStr {
-		if s == 'r' || s == 'R' {
-			dsrtParam.reverseflag = true
-		} else if s == 's' || s == 'S' {
-			dsrtParam.sizeflag = true
-		} else if s == 'd' {
-			dsrtParam.dirlistflag = true
-		} else if s == 'D' {
-			dsrtParam.filenamelistflag = true
-		} else if s == 't' { // added 09/12/2018 12:26:01 PM
-			dsrtParam.totalflag = true // for the grand total operation
-		} else if s == 'f' {
-			dsrtParam.filterflag = true
-		} else if s == 'h' {
-			dsrtParam.halfFlag = true
-		} else if unicode.IsDigit(s) {
-			d := s - '0'
-			dsrtParam.paramNum = 10*dsrtParam.paramNum + int(d)
-		}
-	}
-	return dsrtParam
-}
+// ProcessEnvironString -- returns a DsrtParamType struct.  Now not needed because viper is supposed to perform this fcn.
+//func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
+//	// 4 Jul 23 -- the use of strings.Split is redundant.  I removed it here.  When I wrote that code, I probably forgot
+//	//             that I can iterate over a string and will get out individual runes.
+//	//             I may have done that so I can look at the next digit.  Not needed now.
+//	// 5 Jan 25 -- Added paramNum to accept the number in the environment variable.  The main routine will then use it as appropriate.
+//
+//	var dsrtParam DsrtParamType
+//
+//	if envStr == "" {
+//		return dsrtParam
+//	} // empty dsrtparam is returned
+//
+//	// The strings.Split creates slices of individual character strings.  But it's redundant now that I look at it 7/4/23.
+//
+//	for _, s := range envStr {
+//		if s == 'r' || s == 'R' {
+//			dsrtParam.reverseflag = true
+//		} else if s == 's' || s == 'S' {
+//			dsrtParam.sizeflag = true
+//		} else if s == 'd' {
+//			dsrtParam.dirlistflag = true
+//		} else if s == 'D' {
+//			dsrtParam.filenamelistflag = true
+//		} else if s == 't' { // added 09/12/2018 12:26:01 PM
+//			dsrtParam.totalflag = true // for the grand total operation
+//		} else if s == 'f' {
+//			dsrtParam.filterflag = true
+//		} else if s == 'h' {
+//			dsrtParam.halfFlag = true
+//		} else if unicode.IsDigit(s) {
+//			d := s - '0'
+//			dsrtParam.paramNum = 10*dsrtParam.paramNum + int(d)
+//		}
+//	}
+//	return dsrtParam
+//}
 
 // --------------------------- MakeSubst -------------------------------------------
 
