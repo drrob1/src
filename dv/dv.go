@@ -174,7 +174,7 @@ type DsrtParamType struct {
 
 const defaultHeight = 40
 const minWidth = 90
-const configFilename = "dsrt.yaml"
+const configFilename = "dv.yaml"
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
@@ -243,7 +243,7 @@ func main() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Printf(" Usage information:\n")
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Printf(" Reads from dsrt environment variable before processing commandline switches.\n")
+		fmt.Printf(" Config file is dv.yaml.\n")
 		//fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n", dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
 
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
