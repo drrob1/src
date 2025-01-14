@@ -494,8 +494,8 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" *** Here I am in main() on or about line 493 ***")
-		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
+		fmt.Println(" *** Here I am in main() on or about line 497 ***")
+		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag, "veryverboseFlag =", veryVerboseFlag)
 		fmt.Printf(" nscreens=%d, pflag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
 			*nscreens, pflag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}

@@ -71,7 +71,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			fileName = "*"
 		}
 		if verboseFlag {
-			fmt.Printf(" dirName=%s, fileName=%s \n", dirName, fileName)
+			fmt.Printf(" In getFileInfosFromComandLine: dirName=%s, fileName=%s \n", dirName, fileName)
 		}
 
 		var filenames []string
@@ -104,7 +104,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			}
 		} // if globFlag
 
-		if verboseFlag {
+		if veryVerboseFlag {
 			fmt.Printf(" len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
 		}
 		fileInfos = make([]os.FileInfo, 0, len(filenames))
