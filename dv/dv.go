@@ -303,6 +303,7 @@ func main() {
 	fmt.Printf("Config file name: %s\n", fullConfigFileName)
 
 	//err = viper.BindEnv("DSRT", "NLines", "N_LINES", "dsrt") // if I read this right, DSRT is the key name, and NLINES, N_LINES and dsrt are alternative environment variables for it.  Nope, doesn't work.
+	//             I think this is supposed to be a pair in that first is the key name and 2nd is the environ key bound to that keyname.  I don't plan on using this since the config file is easier.
 	//if err != nil {
 	//	ctfmt.Printf(ct.Red, winflag, "Error binding NLines environment var is %s.  Ignored.\n", err.Error())
 	//}
