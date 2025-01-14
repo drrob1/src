@@ -4,6 +4,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"runtime"
