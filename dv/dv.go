@@ -267,7 +267,7 @@ func main() {
 
 	//pflag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")  I'm removing the -test param.  I never use it now that verbose is defined anyway.
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
-	pflag.BoolVarP(&veryVerboseFlag, "veryverbose", "vv", false, "Very verbose option for when I really want it.")
+	pflag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose option for when I really want it.")
 
 	longflag := pflag.BoolP("long", "l", false, "long file size format.") // Ptr
 

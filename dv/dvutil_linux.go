@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -37,7 +36,7 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
 	if verboseFlag {
-		fmt.Printf(" Entering getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
+		fmt.Printf(" Entering getFileInfosFromCommandLine.  pflag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", pflag.NArg(), len(pflag.Args()), len(fileInfos))
 	}
 
 	workingDir, er := os.Getwd()
@@ -46,7 +45,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		os.Exit(1)
 	}
 
-	if flag.NArg() == 0 {
+	if pflag.NArg() == 0 {
 		if verboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
@@ -57,12 +56,11 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 		return fileInfos
 
-	} else if flag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
+	} else if pflag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
 		const sep = string(filepath.Separator)
 		fileInfos = make([]os.FileInfo, 0, 1)
-		//firstChar := rune(flag.Arg(0)[0])  I'm changing this 1/14/23
 
-		loneFilename := flag.Arg(0)
+		loneFilename := pflag.Arg(0)
 		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
 		if err == nil {
 			stat, _ := fHandle.Stat()
@@ -96,8 +94,8 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			return fileInfos
 		}
 	} else { // must have more than one filename on the command line, populated by bash.
-		fileInfos = make([]os.FileInfo, 0, flag.NArg())
-		for _, f := range flag.Args() {
+		fileInfos = make([]os.FileInfo, 0, pflag.NArg())
+		for _, f := range pflag.Args() {
 			fi, err := os.Lstat(f)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
@@ -116,7 +114,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 	}
 	if verboseFlag {
-		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
+		fmt.Printf(" Leaving getFileInfosFromCommandLine.  pflag.Nargs=%d, len(pflag.Args)=%d, len(fileinfos)=%d\n", pflag.NArg(), len(pflag.Args()), len(fileInfos))
 	}
 	return fileInfos
 }

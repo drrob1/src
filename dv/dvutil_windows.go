@@ -1,10 +1,10 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,7 +43,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 	}
 	HomeDirStr = HomeDirStr + string(filepath.Separator)
 
-	if flag.NArg() == 0 {
+	if pflag.NArg() == 0 {
 		workingDir, er := os.Getwd()
 		if er != nil {
 			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
@@ -51,7 +51,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 		fileInfos = myReadDir(workingDir)
 	} else { // Must have a pattern on the command line, ie, NArg > 0
-		pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
+		pattern := pflag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
 
 		if strings.ContainsRune(pattern, ':') {
 			//directoryAliasesMap = getDirectoryAliases()  this is redundant, AFAICT
@@ -137,7 +137,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 				grandTotalCount++
 			}
 		} // for f ranges over filenames
-	} // if flag.NArgs()
+	} // if pflag.NArgs()
 
 	return fileInfos
 
