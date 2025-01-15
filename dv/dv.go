@@ -171,10 +171,10 @@ const LastAltered = "15 Jan 2025"
 
 type dirAliasMapType map[string]string
 
-type DsrtParamType struct {
-	paramNum                                                                              int // set by dsrt environ var.
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
-}
+//type DsrtParamType struct {  Not used in this code that uses viper to configure these variables.
+//	paramNum                                                                              int // set by dsrt environ var.
+//	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
+//}
 
 const defaultHeight = 40
 const minWidth = 90
@@ -182,7 +182,7 @@ const configFilename = "dv.yaml"
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
-var filterAmt, numLines, numOfLines, grandTotalCount int
+var filterAmt, numOfLines, grandTotalCount int // numLines removed from this list
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
@@ -290,7 +290,6 @@ func main() {
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(fullConfigFileName)
-	fmt.Printf("Config file name: %s\n", fullConfigFileName)
 
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
 	// This seems to be working.
@@ -305,6 +304,10 @@ func main() {
 	veryVerboseFlag = viper.GetBool("vv")
 	if veryVerboseFlag { // setting veryVerbose flag will automatically set verboseFlag
 		verboseFlag = true
+	}
+
+	if verboseFlag {
+		fmt.Printf("Config file name: %s\n", fullConfigFileName)
 	}
 
 	*mFlag = viper.GetBool("max")
