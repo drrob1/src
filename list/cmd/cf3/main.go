@@ -1,10 +1,11 @@
 package main // cf3, from cf2, from cf, for copy fanout.  This one is truly a fanout pattern, and now adds viper.
 
 import (
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	flag "github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package
+	"github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package
 	"github.com/spf13/viper"
 	"golang.org/x/term"
 	"io"
@@ -97,6 +98,7 @@ import (
   30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   14 Jan 25 -- Now called cf3, based on cf2 but adds viper for config stuff.  And adds filterStr code from dsrt family of rtns.
+				Because list uses flag.NArgs, I'll use both pflag and flag here.
 */
 
 const LastAltered = "16 Jan 2025" //
@@ -142,7 +144,6 @@ func main() {
 		os.Args[0], runtime.Version(), LastAltered, list.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
@@ -153,54 +154,55 @@ func main() {
 		return
 	}
 	fullConfigFileName := filepath.Join(homeDir, configFilename)
-	flag.Usage = func() {
+	pflag.Usage = func() {
 		fmt.Printf(" %s last altered %s, compiled with %s and exec binary timestamp is %s. \n", os.Args[0], LastAltered, runtime.Version(), execTimeStamp)
 		fmt.Printf(" Usage information: %s [flags] src-files dest-dir\n", os.Args[0])
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Now uses viper config file of cf3.yaml\n")
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
-		flag.PrintDefaults()
+		pflag.PrintDefaults()
 	}
 
 	var revFlag bool
-	flag.BoolVarP(&revFlag, "reverse", "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
+	pflag.BoolVarP(&revFlag, "reverse", "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var sizeFlag bool
-	flag.BoolVarP(&sizeFlag, "size", "s", false, "sort by size instead of by date")
+	pflag.BoolVarP(&sizeFlag, "size", "s", false, "sort by size instead of by date")
 
 	var verboseFlag, veryVerboseFlag bool
 
-	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
-	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
+	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
+	pflag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
 
-	var excludeFlag bool
+	//var excludeFlag bool  not used anymore, now I can test exclude regex against nil.
+	//pflag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
 	var excludeRegex *regexp.Regexp
 	var excludeRegexPattern string
-	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
+	pflag.StringVarP(&excludeRegexPattern, "exclude", "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
-	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
-	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
+	pflag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
+	pflag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
+	pflag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
 	var globFlag bool
-	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
+	pflag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
 
-	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
-	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
-	flag.IntVarP(&multiplier, "multiplier", "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
+	pflag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
+	pflag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
+	pflag.IntVarP(&multiplier, "multiplier", "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
-	flag.Parse() // remember that this is really pflag now.
+	pflag.Parse()
+	flag.Parse() //  this is here because list checkDest needs it, so I'm initializing both.  And this seems to be working.
 
-	if flag.NArg() < 2 {
-		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", flag.NArg())
+	if pflag.NArg() < 2 {
+		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", pflag.NArg())
 		return
 	}
 
 	// viper stuff
-	err = viper.BindPFlags(flag.CommandLine)
+	err = viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
 		ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
 	}
@@ -222,15 +224,11 @@ func main() {
 	veryVerboseFlag = viper.GetBool("vv")
 	if veryVerboseFlag { // setting veryVerbose flag will automatically set verboseFlag
 		verboseFlag = true
+		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
 
 	revFlag = viper.GetBool("reverse")
 	sizeFlag = viper.GetBool("size")
-
-	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
-		verboseFlag = true
-		list.VeryVerboseFlag, list.VerboseFlag = true, true
-	}
 
 	filterStr = viper.GetString("filterstr")
 	filterFlag = viper.GetBool("filter")
@@ -253,22 +251,22 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", ExecFI.Name(), ExecTimeStamp, execName)
 		fmt.Println()
+		fmt.Printf(" globFlag=%t, verifyFlag=%t, verFlag=%t, multiplier=%d, revFlag=%t, sizeFlag=%t, filterStr=%q, filterFlag=%t, noFilterFlag=%t \n",
+			globFlag, verifyFlag, verFlag, multiplier, revFlag, sizeFlag, filterStr, filterFlag, noFilterFlag)
 	}
 
 	excludeRegexPattern = viper.GetString("exclude")
 	if len(excludeRegexPattern) > 0 {
-		if verboseFlag {
-			fmt.Printf(" excludeRegexPattern found and is %d runes. \n", len(excludeRegexPattern))
-		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
-			excludeFlag = false
 		}
-		excludeFlag = true
-		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
+		if verboseFlag {
+			fmt.Printf(" excludeRegexPattern found and is %d runes. ", len(excludeRegexPattern))
+			fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q (these should be equal)\n", excludeRegexPattern, excludeRegex.String())
+		}
 	}
 
 	list.VerboseFlag = verboseFlag
