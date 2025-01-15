@@ -153,6 +153,7 @@ REVISION HISTORY
 ----------------------------------------------------------------------
 12 Jan 25 -- Now called dv, for dsrt viper.
              Will use viper to replace all my own logic.  Viper handles priorities among command line, environment, config file and default value.
+14 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 */
 
 const LastAltered = "14 Jan 2025"
@@ -164,6 +165,9 @@ const LastAltered = "14 Jan 2025"
 // The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
 // displayFileInfos is in platform specific code because Windows does not have uid:gid.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
+//
+// Jan 14, 2025, I basically finished converting to the use of pflag and viper, which does provide me more flexibility and much less code for me to maintain.
+// 				There may be some tweaking for a while, but the core functions seem to work.
 
 type dirAliasMapType map[string]string
 
@@ -183,29 +187,22 @@ var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
 
-// allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
+// allScreens is the number of screens to be used for the allFlag switch.
 var allScreens = 50
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
 
-//var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
-
 func main() {
-	//var dsrtParam DsrtParamType  the purpose of this variable has been replaced by viper Jan 13, 2025.
 	var userPtr *user.User // from os/user
 	var autoWidth, autoHeight int
 	var excludeRegexPattern string
 	var fileInfos []os.FileInfo
-	//var err error
 
 	uid := 0
 	gid := 0
 	systemStr := ""
 
-	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
-	//dsrtEnviron := os.Getenv("dsrt")
-	//dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -215,11 +212,6 @@ func main() {
 	fullConfigFileName := filepath.Join(homeDir, configFilename)
 	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s\n",
 		LastAltered, runtime.Version())
-	//if dsrtEnviron == "" {
-	//	ctfmt.Printf(ct.Magenta, winflag, "\n")
-	//} else {
-	//	ctfmt.Printf(ct.Green, winflag, ", dsrt env = %s \n", dsrtEnviron)
-	//}
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -238,7 +230,7 @@ func main() {
 		}
 	}
 
-	// flag definitions and processing
+	// pflag definitions and processing, which are almost the same as for the std lib flag package
 	pflag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Printf(" Usage information:\n")
@@ -265,7 +257,6 @@ func main() {
 
 	TotalFlag := pflag.BoolP("totals", "t", false, "include grand total of directory, makes most sense when no pattern is given on command line.")
 
-	//pflag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")  I'm removing the -test param.  I never use it now that verbose is defined anyway.
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
 	pflag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose option for when I really want it.")
 
@@ -274,10 +265,9 @@ func main() {
 	extflag := pflag.BoolP("noext", "e", false, "only print if there is no extension, like a binary file")
 	extensionflag := pflag.BoolP("binary", "b", false, "only print if there is no extension, like a binary file")
 
-	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
 	pflag.StringVarP(&excludeRegexPattern, "exclude", "x", "", "regex to be excluded from output.")
 
-	//flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
+	pflag.StringVar(&filterStr, "filterstr", "", "individual size filter value below which listing is suppressed.  k, m, g are currently implemented.")
 	pflag.BoolVarP(&filterFlag, "filter", "f", false, "filter value to suppress listing individual size below 1 MB.")
 	noFilterFlag := pflag.BoolP("nofilter", "F", false, "Flag to undo an environment var with f set.")
 
@@ -286,9 +276,9 @@ func main() {
 	pflag.BoolVarP(&halfFlag, "half", "1", false, "display 1/2 of the screen.")
 
 	mFlag := pflag.BoolP("max", "m", false, "Set maximum height, usually 50 lines")
-	//maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
 
 	pflag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
+	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.")
 
 	pflag.Parse()
 
@@ -302,13 +292,8 @@ func main() {
 	viper.SetConfigFile(fullConfigFileName)
 	fmt.Printf("Config file name: %s\n", fullConfigFileName)
 
-	//err = viper.BindEnv("DSRT", "NLines", "N_LINES", "dsrt") // if I read this right, DSRT is the key name, and NLINES, N_LINES and dsrt are alternative environment variables for it.  Nope, doesn't work.
-	//             I think this is supposed to be a pair in that first is the key name and 2nd is the environ key bound to that keyname.  I don't plan on using this since the config file is easier.
-	//if err != nil {
-	//	ctfmt.Printf(ct.Red, winflag, "Error binding NLines environment var is %s.  Ignored.\n", err.Error())
-	//}
-
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
+	// This seems to be working.
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
@@ -328,16 +313,6 @@ func main() {
 	NLines = viper.GetInt("NLines")
 	numOfLines = NLines
 
-	//if NLines > 0 { // priority to command line param
-	//	numOfLines = NLines
-	//} else if dsrtParam.paramNum > 0 && !maxDimFlag { // Use dsrt environ value if the -m or -M not used on command line.  Added Jan 5, 2025
-	//	numOfLines = dsrtParam.paramNum
-	//} else if autoHeight > 0 { // finally use autoHeight.
-	//	numOfLines = autoHeight - 7
-	//} else { // intended if autoHeight fails, like of the output is being redirected.
-	//	numOfLines = defaultHeight
-	//}
-
 	*nscreens = viper.GetInt("nscreens")
 	allFlag = viper.GetBool("all")
 	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
@@ -350,10 +325,8 @@ func main() {
 		numOfLines /= 2
 	}
 
+	filterStr = viper.GetString("filterstr")
 	filterFlag = viper.GetBool("filter")
-	//if dsrtParam.filterflag && !*noFilterFlag {
-	//	filterFlag = true
-	//}
 	*noFilterFlag = viper.GetBool("nofilter") // the noFilterFlag takes priority.
 	if *noFilterFlag {
 		filterFlag = false
@@ -366,11 +339,6 @@ func main() {
 	*sizeflag = viper.GetBool("size")
 	SizeSort := *sizeflag
 	DateSort := !SizeSort // convenience variable
-
-	//if verboseFlag {
-	//	fmt.Printf(" dsrtParam.paramNum=%d, NLines=%d, autoheight=%d, defaultHeight=%d, and finally numOfLines = %d  \n",
-	//		dsrtParam.paramNum, NLines, autoHeight, defaultHeight, numOfLines)
-	//}
 
 	*extflag = viper.GetBool("noext")
 	*extensionflag = viper.GetBool("binary")
@@ -393,28 +361,16 @@ func main() {
 			fmt.Printf(" Regex condition: excludeFlag=%t, excludeRegex=%v\n", excludeFlag, excludeRegex.String())
 		}
 	}
-	//else if excludeFlag {  excludeFlag is removed
-	//	ctfmt.Print(ct.Yellow, winflag, " Enter regex pattern to be excluded: ")
-	//	fmt.Scanln(&excludeRegexPattern)
-	//	excludeRegexPattern = strings.ToLower(excludeRegexPattern)
-	//	excludeRegex, err = regexp.Compile(excludeRegexPattern)
-	//	if err != nil {
-	//		fmt.Println(err)
-	//		fmt.Println(" ignoring exclude regular expression.")
-	//		excludeFlag = false
-	//	}
-	//}
 
 	*DirListFlag = viper.GetBool("dirlist")
 	FilenameListFlag = viper.GetBool("onlydir")
 	*TotalFlag = viper.GetBool("totals")
 	*longflag = viper.GetBool("long")
 
-	dirList = *DirListFlag || FilenameListFlag // || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // if -D entered then this expression also needs to be true.
-	//filenameToBeListedFlag = !(FilenameListFlag || dsrtParam.filenamelistflag)                        // need to reverse the flag because D means suppress the output of filenames.
+	dirList = *DirListFlag || FilenameListFlag // if -D entered then this expression also needs to be true.
 	filenameToBeListedFlag = !FilenameListFlag // need to reverse the flag because D means suppress the output of filenames.
 	longFileSizeListFlag = *longflag
-	showGrandTotal = *TotalFlag // || dsrtParam.totalflag // added 09/12/2018 12:32:23 PM
+	showGrandTotal = *TotalFlag // added 09/12/2018 12:32:23 PM
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -472,12 +428,12 @@ func main() {
 	if filterFlag {
 		filterAmt = 1_000_000
 	} else if filterStr != "" {
-		if len(filterStr) > 1 {
+		if len(filterStr) > 1 { // if more than 1 character then this could be a number in string form
 			filterAmt, err = strconv.Atoi(filterStr)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "converting filterStr:", err)
 			}
-		} else if unicode.IsLetter(rune(filterStr[0])) {
+		} else if unicode.IsLetter(rune(filterStr[0])) { // only evaluate the first rune, just in case there are more.
 			filterStr = strings.ToLower(filterStr)
 			if filterStr == "k" {
 				filterAmt = 1000
@@ -577,44 +533,6 @@ func idName(uidStr string) string {
 	}
 	return ptrToUser.Username
 }
-
-// ProcessEnvironString -- returns a DsrtParamType struct.  Now not needed because viper is supposed to perform this fcn.
-//func ProcessEnvironString(envStr string) DsrtParamType { // use system utils when can because they tend to be faster
-//	// 4 Jul 23 -- the use of strings.Split is redundant.  I removed it here.  When I wrote that code, I probably forgot
-//	//             that I can iterate over a string and will get out individual runes.
-//	//             I may have done that so I can look at the next digit.  Not needed now.
-//	// 5 Jan 25 -- Added paramNum to accept the number in the environment variable.  The main routine will then use it as appropriate.
-//
-//	var dsrtParam DsrtParamType
-//
-//	if envStr == "" {
-//		return dsrtParam
-//	} // empty dsrtparam is returned
-//
-//	// The strings.Split creates slices of individual character strings.  But it's redundant now that I look at it 7/4/23.
-//
-//	for _, s := range envStr {
-//		if s == 'r' || s == 'R' {
-//			dsrtParam.reverseflag = true
-//		} else if s == 's' || s == 'S' {
-//			dsrtParam.sizeflag = true
-//		} else if s == 'd' {
-//			dsrtParam.dirlistflag = true
-//		} else if s == 'D' {
-//			dsrtParam.filenamelistflag = true
-//		} else if s == 't' { // added 09/12/2018 12:26:01 PM
-//			dsrtParam.totalflag = true // for the grand total operation
-//		} else if s == 'f' {
-//			dsrtParam.filterflag = true
-//		} else if s == 'h' {
-//			dsrtParam.halfFlag = true
-//		} else if unicode.IsDigit(s) {
-//			d := s - '0'
-//			dsrtParam.paramNum = 10*dsrtParam.paramNum + int(d)
-//		}
-//	}
-//	return dsrtParam
-//}
 
 // --------------------------- MakeSubst -------------------------------------------
 
