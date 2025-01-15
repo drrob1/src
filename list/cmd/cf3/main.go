@@ -96,7 +96,7 @@ import (
   22 Oct 24 -- Will now check to make sure params are present.
   30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-  14 Jan 25 -- Now called cf3, based on cf2 but adds viper for config stuff.
+  14 Jan 25 -- Now called cf3, based on cf2 but adds viper for config stuff.  And adds filterStr code from dsrt family of rtns.
 */
 
 const LastAltered = "16 Jan 2025" //
@@ -194,6 +194,11 @@ func main() {
 
 	flag.Parse() // remember that this is really pflag now.
 
+	if flag.NArg() < 2 {
+		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", flag.NArg())
+		return
+	}
+
 	// viper stuff
 	err = viper.BindPFlags(flag.CommandLine)
 	if err != nil {
@@ -213,17 +218,34 @@ func main() {
 		ctfmt.Printf(ct.Red, winflag, " %s.  Ignored\n", err.Error())
 	}
 
-	if flag.NArg() < 2 {
-		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", flag.NArg())
-		return
+	verboseFlag = viper.GetBool("verbose")
+	veryVerboseFlag = viper.GetBool("vv")
+	if veryVerboseFlag { // setting veryVerbose flag will automatically set verboseFlag
+		verboseFlag = true
 	}
+
+	revFlag = viper.GetBool("reverse")
+	sizeFlag = viper.GetBool("size")
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
 		verboseFlag = true
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
 
+	filterStr = viper.GetString("filterstr")
+	filterFlag = viper.GetBool("filter")
+	noFilterFlag = viper.GetBool("nofilter") // the noFilterFlag takes priority.
+	if noFilterFlag {
+		filterFlag = false
+	}
+
+	globFlag = viper.GetBool("glob")
+
+	verifyFlag = viper.GetBool("verify")
+	verFlag = viper.GetBool("ver")
 	verifyFlag = verifyFlag || verFlag
+
+	multiplier = viper.GetInt("multiplier")
 
 	if verboseFlag {
 		execName, _ := os.Executable()
@@ -233,6 +255,7 @@ func main() {
 		fmt.Println()
 	}
 
+	excludeRegexPattern = viper.GetString("exclude")
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
 			fmt.Printf(" excludeRegexPattern found and is %d runes. \n", len(excludeRegexPattern))
@@ -252,6 +275,7 @@ func main() {
 	list.VeryVerboseFlag = veryVerboseFlag
 	list.ReverseFlag = revFlag
 	list.FilterFlag = filterFlag
+	list.FilterStr = filterStr
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag

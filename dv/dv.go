@@ -156,7 +156,7 @@ REVISION HISTORY
 14 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 */
 
-const LastAltered = "14 Jan 2025"
+const LastAltered = "15 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -343,6 +343,8 @@ func main() {
 	*extflag = viper.GetBool("noext")
 	*extensionflag = viper.GetBool("binary")
 	noExtensionFlag = *extensionflag || *extflag
+
+	globFlag = viper.GetBool("glob")
 
 	excludeRegexPattern = viper.GetString("exclude")
 	if len(excludeRegexPattern) > 0 {

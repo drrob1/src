@@ -14,8 +14,10 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 /*
@@ -73,13 +75,14 @@ import (
   28 Dec 24 -- While investigating to make changes to use concurreny, I see that I've already done this to populate the slice of dirEntries, mostly on linux.
 				My testing did not find it to be faster on Windows.  Concurrency was slightly faster when a pattern had to be matched, but otherwise not.
 				Hence, the concurrent routines are primarily used on linux.
+  15 Jan 25 -- Adding filterStr here by copying the code already in the dsrt family of routines (dsrt, ds, rex, dv).
 */
 
-var LastAltered = "Dec 31, 2024"
+var LastAltered = "Jan 15, 2025"
 
 type DirAliasMapType map[string]string
 
-// FileInfoExType is what is returned by all of the routines here.  Fields are file info, Dir, RelPath, AbsPath and FullPath.  Some may be redundant, but this is what it is.
+// FileInfoExType is what is returned by all the routines here.  Fields are file info, Dir, RelPath, AbsPath and FullPath.  Some may be redundant, but this is what it is.
 type FileInfoExType struct {
 	FI       os.FileInfo
 	Dir      string
@@ -88,10 +91,11 @@ type FileInfoExType struct {
 	FullPath string // probably not needed, but I really do want to be complete.
 }
 
-var filterAmt int64 // not exported
+var filterAmt int64 // not exported.  Don't remember why this is an int64 instead of just an int.
 var VerboseFlag bool
 var VeryVerboseFlag bool
 var FilterFlag bool
+var FilterStr string
 var ReverseFlag bool
 var GlobFlag bool
 
@@ -165,9 +169,36 @@ func MakeList(excludeRegex *regexp.Regexp, sizeSort, reverse bool) ([]FileInfoEx
 
 	if FilterFlag {
 		filterAmt = 1_000_000
+	} else if FilterStr != "" {
+		if len(FilterStr) > 1 { // If the character is a letter, it has to be k, m or g.  Or it's a number, but not both.  For now.
+			amt, err := strconv.Atoi(FilterStr)
+			filterAmt = int64(amt)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "converting filterStr:", err)
+			}
+		} else if unicode.IsLetter(rune(FilterStr[0])) {
+			FilterStr = strings.ToLower(FilterStr)
+			if FilterStr == "k" {
+				filterAmt = 1000
+			} else if FilterStr == "m" {
+				filterAmt = 1_000_000
+			} else if FilterStr == "g" {
+				filterAmt = 1_000_000_000
+			} else {
+				fmt.Fprintln(os.Stderr, "filterStr is not valid and was ignored.  filterStr=", FilterStr)
+			}
+			FilterFlag = true
+		} else {
+			fmt.Fprintln(os.Stderr, "filterStr not valid.  filterStr =", FilterStr)
+		}
 	}
+
 	if VeryVerboseFlag {
 		VerboseFlag = true
+	}
+
+	if VerboseFlag {
+		fmt.Printf(" in MakeList.  FilterFlag=%t, FilterStr=%s, filterAmt=%d\n", FilterFlag, FilterStr, filterAmt)
 	}
 
 	fileInfoX, err = GetFileInfoXFromCommandLine(excludeRegex)

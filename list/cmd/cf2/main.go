@@ -97,9 +97,10 @@ import (
   17 Aug 24 -- Changed start message to make it clearer that globbing is used here, not regexp to match included files.  A regexp is used to exclude files.
   22 Oct 24 -- Will now check to make sure params are present.
   30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
+  15 Jan 25 -- Adding filterStr capability.
 */
 
-const LastAltered = "30 Nov 2024" //
+const LastAltered = "15 Jan 2025"
 
 const defaultHeight = 40
 const minWidth = 90
@@ -230,6 +231,7 @@ func main() {
 	list.VeryVerboseFlag = veryVerboseFlag
 	list.ReverseFlag = revFlag
 	list.FilterFlag = filterFlag
+	list.FilterStr = filterStr
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
