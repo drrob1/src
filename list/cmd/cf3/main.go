@@ -182,9 +182,9 @@ func main() {
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
-	pflag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	pflag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
-	pflag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
+	pflag.StringVar(&filterStr, "filterstr", "", "individual size filter value below which listing is suppressed.")
+	pflag.BoolVarP(&filterFlag, "filter", "f", false, "filter value to suppress listing individual size below 1 MB.")
+	pflag.BoolVarP(&noFilterFlag, "nofilter", "F", false, "Flag to undo an environment var with f set.")
 
 	var globFlag bool
 	pflag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
