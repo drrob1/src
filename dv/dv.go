@@ -172,7 +172,7 @@ const LastAltered = "15 Jan 2025"
 type dirAliasMapType map[string]string
 
 //type DsrtParamType struct {  Not used in this code that uses viper to configure these variables.
-//	paramNum                                                                              int // set by dsrt environ var.
+//	paramNum int // set by dsrt environ var.
 //	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
 //}
 
