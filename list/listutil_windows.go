@@ -3,6 +3,7 @@ package list
 import (
 	"flag"
 	"fmt"
+	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,11 +33,24 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 	}
 	HomeDirStr = HomeDirStr + sepStr
 
-	pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
-	if VerboseFlag {
-		fmt.Printf(" file pattern is %s\n", pattern)
+	var pattern string // this only gets the first non flag argument and is all I want on Windows.
+	var narg int
+	if flag.Parsed() {
+		narg = flag.NArg()
+		pattern = flag.Arg(0) // doesn't panic if there are no args
+	} else if pflag.Parsed() {
+		narg = pflag.NArg()
+		pattern = pflag.Arg(0) // doesn't panic if there are no args
+	} else {
+		fmt.Printf(" Neither flag.Parsed nor pflag.Parsed is true.  WTF?\n")
+		return nil, fmt.Errorf("neither flag.Parsed() nor pflag.Parsed() is true -- WTF")
 	}
-	if flag.NArg() == 0 || pattern == "." {
+	//pattern := flag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.
+	if VerboseFlag {
+		fmt.Printf(" narg is %d, file pattern is %s\n", narg, pattern)
+	}
+	//if flag.NArg() == 0 || pattern == "." {
+	if narg == 0 || pattern == "." {
 		workingDir, er := os.Getwd()
 		if er != nil {
 			return nil, er
@@ -71,8 +85,6 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		if VerboseFlag {
 			fmt.Printf(" dirName=%s, fileName=%s, pattern=%s \n", dirName, fileName, pattern)
 		}
-
-		//var filenames []string  not used as I'm having the actual work done in my concurrent code.
 
 		if GlobFlag {
 			// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
@@ -146,7 +158,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		//		fileInfoX = append(fileInfoX, fix)
 		//	}
 		//} // for f ranges over filenames
-	} // if flag.NArgs()
+	} // if narg == 0 or pattern == "."
 
 	return fileInfoX, nil
 
@@ -164,7 +176,17 @@ func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) { // Uses li
 	}
 	HomeDirStr = HomeDirStr + sepStr
 
-	pattern := flag.Arg(1) // this gets the 2nd non flag argument and is all I want on Windows.  And it doesn't panic if it's not there.
+	var pattern string // this only gets the first non flag argument and is all I want on Windows.
+	if flag.Parsed() {
+		pattern = flag.Arg(1) // doesn't panic if there are no args
+	} else if pflag.Parsed() {
+		pattern = pflag.Arg(1) // doesn't panic if there are no args
+	} else {
+		fmt.Printf(" Neither flag.Parsed nor pflag.Parsed is true.  WTF?\n")
+		return nil, fmt.Errorf("neither flag.Parsed() nor pflag.Parsed() is true -- WTF")
+	}
+	//pattern := flag.Arg(1) // this gets the 2nd non flag argument and is all I want on Windows.  And it doesn't panic if it's not there.
+
 	if VerboseFlag {
 		fmt.Printf(" file pattern is %s\n", pattern)
 	}
@@ -262,7 +284,7 @@ func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) { // Uses li
 				fileInfoX = append(fileInfoX, fix)
 			}
 		} // for f ranges over filenames
-	} // if flag.NArgs()
+	} // if pattern is empty or not.
 
 	return fileInfoX, nil
 

@@ -79,6 +79,7 @@ import (
   15 Jan 25 -- Adding filterStr here by copying the code already in the dsrt family of routines (dsrt, ds, rex, dv).
 				Since I'm starting to use pflag and viper, I'm going to have to remove the use of flag.NArgs here.  I'll make it global?  Then I'll have to change lots of other code.
 				I'll have to use both flag and pflag.
+				The only way for flag and pflag to not clobber each other is to use the Parsed() function to determine which is active.
 */
 
 var LastAltered = "Jan 15, 2025"
