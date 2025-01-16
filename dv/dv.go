@@ -159,10 +159,10 @@ REVISION HISTORY
 ----------------------------------------------------------------------
 16 Jan 25 -- Now called dv, for dsrt viper.
              Will use viper to replace all my own logic.  Viper handles priorities among command line, environment, config file and default value.
-17 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
+16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 */
 
-const LastAltered = "17 Jan 2025"
+const LastAltered = "16 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
