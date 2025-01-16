@@ -1,7 +1,6 @@
 package main // cf3, from cf2, from cf, for copy fanout.  This one is truly a fanout pattern, and now adds viper.
 
 import (
-	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -193,8 +192,8 @@ func main() {
 	pflag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 	pflag.IntVarP(&multiplier, "multiplier", "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
+	//flag.Parse()  //  this is here because list checkDest needs it, so I'm initializing both.  Nevermind, as these seem to be clashing.
 	pflag.Parse()
-	flag.Parse() //  this is here because list checkDest needs it, so I'm initializing both.  And this seems to be working.
 
 	if pflag.NArg() < 2 {
 		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", pflag.NArg())

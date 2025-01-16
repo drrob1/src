@@ -6,6 +6,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
 	"golang.org/x/term"
 	"io"
 	"os"
@@ -791,10 +792,24 @@ func GetMagnitudeString(j int64) (string, ct.Color) {
 // ------------------------------------------------ CheckDest ------------------------------------------------------
 
 func CheckDest() string {
-	if flag.NArg() <= 1 {
+	var nargs int
+	var args []string
+	if flag.Parsed() {
+		nargs = flag.NArg()
+		args = flag.Args()
+	} else if pflag.Parsed() {
+		nargs = pflag.NArg()
+		args = pflag.Args()
+	} else {
+		fmt.Printf(" Error: neither flag.Parsed nor pflag.Parsed are true.  WTF?\n")
 		return ""
 	}
-	d := flag.Arg(flag.NArg() - 1)
+
+	if len(args) <= 1 {
+		return ""
+	}
+	//d := flag.Arg(flag.NArg() - 1)
+	d := args[nargs-1] // this is the last command line argument, which is intended as the destination for the commands that need this.
 	if runtime.GOOS == "windows" {
 		if strings.ContainsRune(d, ':') {
 			//directoryAliasesMap := GetDirectoryAliases()  Doesn't belong here.  It's initialized in ProcessDirectoryAliases where it belongs.
