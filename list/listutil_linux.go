@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,6 +42,21 @@ const sep = string(filepath.Separator)
 
 func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
+	var narg int
+	var args []string
+	var arg0 string
+
+	if flag.Parsed() {
+		narg = flag.NArg()
+		args = flag.Args()
+		arg0 = flag.Arg(0)
+	} else if pflag.Parsed() {
+		narg = pflag.NArg()
+		args = pflag.Args()
+		arg0 = pflag.Arg(0)
+	} else {
+		return nil, fmt.Errorf("Neither flag.Parsed nor pflag.Parsed is true -- WTF")
+	}
 
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -48,7 +64,7 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 	}
 
 	ExcludeRex = excludeMe
-	if flag.NArg() == 0 || flag.Arg(0) == "." { // the "." is the sentinel to be ignored.
+	if narg == 0 || arg0 == "." { // the "." is the sentinel to be ignored.
 		if VerboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
@@ -62,9 +78,9 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
 		}
 
-	} else if flag.NArg() == 1 || flag.NArg() == 2 { // First param should be a directory.  If there's a 2nd param, that would also have to be a directory, but that's not handled here.
+	} else if narg == 1 || narg == 2 { // First param should be a directory.  If there's a 2nd param, that would have to be destination directory, but that's not handled here.
 		fileInfoX = make([]FileInfoExType, 0, 1)
-		loneFilename := flag.Arg(0)
+		loneFilename := arg0
 
 		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
 		if err == nil {
@@ -112,9 +128,10 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		}
 
 	} else { // bash must have populated sources on command line.  Will process all but the last, which would be a destination directory.  This code is not concurrent, but it works.
-		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
-		for i := 0; i < flag.NArg()-1; i++ { // don't process the last command line item, as that would be the destination directory.
-			fn := flag.Arg(i)
+		fileInfoX = make([]FileInfoExType, 0, narg)
+		for i := 0; i < narg-1; i++ { // don't process the last command line item, as that would be the destination directory.
+			//fn := flag.Arg(i)  fn means filename
+			fn := args[i]
 			fHandle, err := os.Open(fn)
 			if err != nil {
 				ctfmt.Printf(ct.Red, false, " Error from os.Open(%s) is %s\n", fn, err)
@@ -138,7 +155,8 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 			if VerboseFlag {
 				fmt.Printf("In DelListFlag section before processing last item.  len(fileInfoX) = %d\n", len(fileInfoX))
 			}
-			fn := flag.Arg(flag.NArg() - 1) // last item
+			//fn := flag.Arg(flag.NArg() - 1) // last item
+			fn := args[narg-1] // last item
 			fHandle, err := os.Open(fn)
 			if err != nil {
 				ctfmt.Printf(ct.Red, false, " Error from os.Open(%s) is %s\n", fn, err)
@@ -161,13 +179,26 @@ func GetFileInfoXFromCommandLine(excludeMe *regexp.Regexp) ([]FileInfoExType, er
 		return fileInfoX, nil
 	}
 	if VerboseFlag {
-		fmt.Printf(" Leaving getFileInfoXFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfoX))
+		fmt.Printf(" Leaving getFileInfoXFromCommandLine.  nargs=%d, len(args)=%d, len(fileinfos)=%d\n", narg, len(args), len(fileInfoX))
 	}
 	return fileInfoX, nil
 }
 
 func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) {
 	var fileInfoX []FileInfoExType
+	var narg int
+	var args []string
+	//var arg0 string  not needed in this rtn
+
+	if flag.Parsed() {
+		narg = flag.NArg()
+		args = flag.Args()
+	} else if pflag.Parsed() {
+		narg = pflag.NArg()
+		args = pflag.Args()
+	} else {
+		return nil, fmt.Errorf("Neither flag.Parsed nor pflag.Parsed is true -- WTF")
+	}
 
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -175,7 +206,7 @@ func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) {
 		os.Exit(1)
 	}
 
-	if flag.NArg() < 2 { // First param is the command to be run.  This condition when TRUE there are no files on the command line.
+	if narg < 2 { // First param is the command to be run.  This condition when TRUE there are no files on the command line.
 		if VerboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
@@ -188,9 +219,10 @@ func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) {
 			fmt.Printf(" after call to Myreaddir.  Len(fileInfoX)=%d\n", len(fileInfoX))
 		}
 
-	} else if flag.NArg() == 2 { // First param would be the cmd to run.
+	} else if narg == 2 { // First param would be the cmd to run.
 		fileInfoX = make([]FileInfoExType, 0, 1)
-		loneFilename := flag.Arg(1)
+		//loneFilename := flag.Arg(1)
+		loneFilename := args[1]
 
 		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink or a directory.
 		if err == nil {
@@ -236,9 +268,10 @@ func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) {
 		}
 
 	} else { // bash must have populated sources on command line.  Will process all but the last, which would be a destination directory.
-		fileInfoX = make([]FileInfoExType, 0, flag.NArg())
-		for i := 1; i < flag.NArg(); i++ { // don't process the first command line item, as that would be the command to be run.
-			fn := flag.Arg(i)
+		fileInfoX = make([]FileInfoExType, 0, narg)
+		for i := 1; i < narg; i++ { // don't process the first command line item, as that would be the command to be run.
+			//fn := flag.Arg(i)
+			fn := args[i]
 			fHandle, err := os.Open(fn)
 			if err != nil {
 				ctfmt.Printf(ct.Red, false, " Error from os.Open(%s) is %s\n", fn, err)
@@ -264,8 +297,8 @@ func getFileInfoXSkipFirstOnCommandLine() ([]FileInfoExType, error) {
 		return fileInfoX, nil
 	}
 	if VerboseFlag {
-		fmt.Printf(" Leaving getFileInfoXSkipFirstOnCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n",
-			flag.NArg(), len(flag.Args()), len(fileInfoX))
+		fmt.Printf(" Leaving getFileInfoXSkipFirstOnCommandLine.  nargs=%d, len(args)=%d, len(fileinfos)=%d\n",
+			narg, len(args), len(fileInfoX))
 	}
 	return fileInfoX, nil
 }
