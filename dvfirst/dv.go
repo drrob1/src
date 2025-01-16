@@ -1,25 +1,23 @@
-// dv.go adding viper, based on fdsrt.go -- fast directory sort
+// dv.go from dsrt.go -- directory sort
 
 package main
 
 import (
-	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/spf13/pflag"
+	"github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package
 	"github.com/spf13/viper"
 	"golang.org/x/term"
-	"io"
 	"os"
 	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
+	"src/misc"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 )
@@ -139,87 +137,82 @@ REVISION HISTORY
  3 Jul 23 -- Added environment var h to mean halfFlag.
  4 Jul 23 -- Improved ProcessEnvironString.
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
-------------------------------------------------------------------------------------------------------------------------------------------------------
- 1 May 24 -- Now called fdsrt, for fast directory sort.  I'm going to see if I can use a worker pool here for collecting the []FileInfos to be returned.  I'm playing on Windows now.
-             First I have to create the sending and receiving go routines, and then I write the code to send the data into the first channel.  This occurs all within MyReadDir, for now.
-             That's done.  Now I have to check the other routines.
- 2 May 24 -- I decided to debug what I have before writing more.  Just goes to show you that not everything can be sped up by concurrency.
-             The coordination with a wait group and the done channel works, but is slightly slower than dsrt.  This is w/ fetch = 1000.  It's worse when fetch=100.  And maybe also
-             slightly worse when fetch = 2000.  I'll leave it at 1000, and stop working on this.
-             At least I got it to work.
-             When run in jpg1 w/ 23000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
-             When run on thelio and logged into the /mnt/misc dir w/ 23000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
-             So this is more complicated after all.
- 3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where it belongs.  Now the timing may be slightly faster than dsrt, here on Win11
-             I'm going to continue development after all.  On windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
-             And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
- 7 Jun 24 -- Edited some comments and changed the final message.
- 8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head).
+ 2 May 24 -- Added timer to compare to fdsrt.
+22 June 24-- Changed the closing message
+23 June 24-- Edited a comment, and added AddComasRune, first here and then to misc where it now resides after I removed it from here.
+27 Nov 24 -- Edited some comments here and in dsrtutil_windows.go
+ 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
+ 6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
+				I want the base amount to be the full screen.  I have to think about this for a bit.
+				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
+ 7 Jan 25 -- Nope, I have to rethink this.  I can't have halfFlag set maxDimFlag; halfFlag won't work then.  It's too late now, I'll have to do this tomorrow.
+				I figured out why it seemed to work, the alias asdf calls fdsrt, not dsrt.  So I have to rethink this.
+				My choices are: let halfFlag apply to whatever dsrt environ var is, or create another variable to hold the full value.
+				For now, I'll let halfFlag apply to whatever dsrt environ var is.
 ----------------------------------------------------------------------
-16 Jan 25 -- Now called dv, for dsrt viper.
+12 Jan 25 -- Now called dv, for dsrt viper.
              Will use viper to replace all my own logic.  Viper handles priorities among command line, environment, config file and default value.
-17 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
+14 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 */
 
-const LastAltered = "17 Jan 2025"
+const LastAltered = "15 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
 // but does not sort the slice before returning it, due to difficulty in passing the sort function.
 // The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
+// displayFileInfos is in platform specific code because Windows does not have uid:gid.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
+//
+// Jan 14, 2025, I basically finished converting to the use of pflag and viper, which does provide me more flexibility and much less code for me to maintain.
+// 				There may be some tweaking for a while, but the core functions seem to work.
 
 type dirAliasMapType map[string]string
 
-//type DsrtParamType struct { replaced by viper
-//	paramNum                                                                              int // set by dsrt environ var.
-//	reverseFlag, sizeFlag, dirListFlag, filenameListFlag, totalFlag, filterflag, halfFlag bool
+//type DsrtParamType struct {  Not used in this code that uses viper to configure these variables.
+//	paramNum int // set by dsrt environ var.
+//	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalflag, filterflag, halfFlag bool
 //}
 
 const defaultHeight = 40
 const minWidth = 90
-const multiplier = 10 // used for the worker pool pattern in MyReadDir
-const fetch = 1000    // used for the concurrency pattern in MyReadDir
-var numWorkers = runtime.NumCPU() * multiplier
-
 const configFilename = "dv.yaml"
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
-var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag, fastFlag bool
-var filterAmt, numLines, numOfLines, grandTotalCount int
+var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag bool
+var filterAmt, numOfLines, grandTotalCount int // numLines removed from this list
 var sizeTotal, grandTotal int64
 var filterStr string
 var excludeRegex *regexp.Regexp
 
-// allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
+// allScreens is the number of screens to be used for the allFlag switch.
 var allScreens = 50
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
 
-//var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
-
 func main() {
+	//var dsrtParam DsrtParamType  replaced by viper
 	var userPtr *user.User // from os/user
-	var err error
 	var autoWidth, autoHeight int
 	var excludeRegexPattern string
 	var fileInfos []os.FileInfo
 
-	var uid, gid int
-	var systemStr string
+	uid := 0
+	gid := 0
+	systemStr := ""
 
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
-	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size, using concurrent code.  LastAltered %s, compiled with %s",
-		LastAltered, runtime.Version())
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		ctfmt.Printf(ct.Red, winflag, "Error getting user home directory is %s\n", err.Error())
 		return
 	}
 	fullConfigFileName := filepath.Join(homeDir, configFilename)
+	ctfmt.Printf(ct.Magenta, winflag, "dvfirst will display Directory SoRTed by date or size.  LastAltered %s, compiled with %s.  Not concurrent.\n",
+		LastAltered, runtime.Version())
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -238,12 +231,14 @@ func main() {
 		}
 	}
 
-	// flag definitions and processing
+	// pflag definitions and processing, which are almost the same as for the std lib flag package
 	pflag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Printf(" Usage information:\n")
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Config file is dv.yaml.\n")
+		//fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n", dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
+
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
 		pflag.PrintDefaults()
 	}
@@ -286,8 +281,6 @@ func main() {
 	pflag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
 	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.")
 
-	pflag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
-
 	pflag.Parse()
 
 	// viper stuff
@@ -310,12 +303,16 @@ func main() {
 
 	verboseFlag = viper.GetBool("verbose")
 	veryVerboseFlag = viper.GetBool("vv")
-	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
+	if veryVerboseFlag { // setting veryVerbose flag will automatically set verboseFlag
 		verboseFlag = true
 	}
 
+	if verboseFlag {
+		fmt.Printf("Config file name: %s\n", fullConfigFileName)
+	}
+
 	*mFlag = viper.GetBool("max")
-	maxDimFlag = *mFlag //  I removed maxFlag for this version.
+	maxDimFlag = *mFlag // used to use || maxFlag.  I removed maxFlag for this version.
 
 	NLines = viper.GetInt("NLines")
 	numOfLines = NLines
@@ -352,15 +349,11 @@ func main() {
 	noExtensionFlag = *extensionflag || *extflag
 
 	globFlag = viper.GetBool("glob")
-	if globFlag {
-		fmt.Printf(" Glob flag has been removed from fdsrt.  This flag is now ignored.\n")
-		globFlag = false
-	}
 
 	excludeRegexPattern = viper.GetString("exclude")
 	if len(excludeRegexPattern) > 0 {
 		if verboseFlag {
-			fmt.Printf(" excludeRegexPattern is longer than 0 runes.  It is %d runes. \n", len(excludeRegexPattern))
+			fmt.Printf(" excludeRegexPattern is longer than 0.  It is %d runes. \n", len(excludeRegexPattern))
 		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
@@ -379,6 +372,7 @@ func main() {
 	FilenameListFlag = viper.GetBool("onlydir")
 	*TotalFlag = viper.GetBool("totals")
 	*longflag = viper.GetBool("long")
+
 	dirList = *DirListFlag || FilenameListFlag // if -D entered then this expression also needs to be true.
 	filenameToBeListedFlag = !FilenameListFlag // need to reverse the flag because D means suppress the output of filenames.
 	longFileSizeListFlag = *longflag
@@ -394,14 +388,13 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
+		//fmt.Printf(" dsrtparam paramNum =%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n", dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag, dsrtParam.totalflag, dsrtParam.halfFlag)
 		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t. \n", autoHeight, autoWidth, excludeFlag, halfFlag)
 		fmt.Printf(" NLines=%d, Reverse=%t, ncreens=%d, sizeflag=%t, DirListFlag=%t, FilenameListFlag=%t, TotalFlag=%t, longflag=%t \n",
 			NLines, Reverse, *nscreens, *sizeflag, *DirListFlag, FilenameListFlag, *TotalFlag, *longflag)
 		fmt.Printf(" extflag=%t, extensionflag=%t, filterFlag=%t, noFilterFlag=%t, globFlag=%t, mFlag=%t, allFlag=%t \n",
 			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag)
 	}
-
-	// from here down, the code is essentially the same as before.  Config section is finished.
 
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
@@ -441,12 +434,12 @@ func main() {
 	if filterFlag {
 		filterAmt = 1_000_000
 	} else if filterStr != "" {
-		if len(filterStr) > 1 {
+		if len(filterStr) > 1 { // if more than 1 character then this could be a number in string form
 			filterAmt, err = strconv.Atoi(filterStr)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "converting filterStr:", err)
 			}
-		} else if unicode.IsLetter(rune(filterStr[0])) {
+		} else if unicode.IsLetter(rune(filterStr[0])) { // only evaluate the first rune, just in case there are more.
 			filterStr = strings.ToLower(filterStr)
 			if filterStr == "k" {
 				filterAmt = 1000
@@ -463,10 +456,10 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" *** Here I am at or about line 467 ***")
-		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
-		fmt.Printf(" nscreens=%d, numLines=%d, pflag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
-			*nscreens, numLines, pflag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
+		fmt.Println(" *** Here I am in main() on or about line 497 ***")
+		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag, "veryverboseFlag =", veryVerboseFlag)
+		fmt.Printf(" nscreens=%d, pflag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
+			*nscreens, pflag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
 	}
 
 	t0 := time.Now()
@@ -485,13 +478,13 @@ func main() {
 
 	s := fmt.Sprintf("%d", sizeTotal)
 	if sizeTotal > 100000 {
-		s = AddCommas(s)
+		s = misc.AddCommasRune(s)
 	}
 	s0 := fmt.Sprintf("%d", grandTotal)
 	if grandTotal > 100000 {
 		s0 = AddCommas(s0)
 	}
-	fmt.Printf(" %s: Elapsed time = %s, File Size total = %s, len(fileInfos)=%d", os.Args[0], elapsed, s, len(fileInfos))
+	fmt.Printf(" %s: Elapsed time = %s, File Size total = %s, len(fileinfos)=%d", os.Args[0], elapsed, s, len(fileInfos))
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
 		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
@@ -500,16 +493,17 @@ func main() {
 	}
 } // end main dsrt
 
-//-------------------------------------------------------------------- InsertByteSlice
+//-------------------------------------------------------------------- InsertIntoByteSlice
 
+// InsertIntoByteSlice will insert a byte into a slice at a designated position.  Intended to insert a comma into a number string.
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
-} // InsertIntoByteSlice
+}
 
 //---------------------------------------------------------------------- AddCommas
 
 func AddCommas(instr string) string {
-	//var Comma []byte = []byte{','}  Getting error that type can be omitted
+	//var Comma []byte = []byte{','}  Getting message that type can be omitted.
 	Comma := []byte{','}
 
 	BS := make([]byte, 0, 15)
@@ -522,7 +516,7 @@ func AddCommas(instr string) string {
 		BS = InsertIntoByteSlice(BS, Comma, i)
 	}
 	return string(BS)
-} // AddCommas
+}
 
 // ------------------------------ IsSymlink ---------------------------
 
@@ -530,7 +524,7 @@ func IsSymlink(m os.FileMode) bool {
 	intermed := m & os.ModeSymlink
 	result := intermed != 0
 	return result
-} // IsSymlink
+}
 
 // ---------------------------- GetIDname -----------------------------------------------------------
 
@@ -544,9 +538,10 @@ func idName(uidStr string) string {
 		return "----" // this line fixes the bug if user.LookupId failed, as it does in a docker image.
 	}
 	return ptrToUser.Username
-} // idName, formerly GetIDname
+}
 
-// MakeSubst -- substitutes characters.  Written before I knew about strings.replacer.
+// --------------------------- MakeSubst -------------------------------------------
+
 func MakeSubst(instr string, r1, r2 rune) string {
 	inRune := make([]rune, len(instr))
 	if !strings.ContainsRune(instr, r1) {
@@ -562,7 +557,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 	return string(inRune)
 } // makesubst
 
-// GetDirectoryAliases -- used on Windows systems
+// ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
 	s, ok := os.LookupEnv("diraliases")
 	if !ok {
@@ -606,178 +601,30 @@ func ProcessDirectoryAliases(cmdline string) string {
 
 // ------------------------------- myReadDir -----------------------------------
 
-func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Concurrent code here is what makes this fdsrt.
-	// Adding concurrency in returning []os.FileInfo
-
-	var wg sync.WaitGroup
-
-	if verboseFlag {
-		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
-	}
-	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
-	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
-	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
-	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
-	wg.Add(numWorkers)
-
-	// reading from deChan to get the slices of DirEntry's
-	for range numWorkers {
-		go func() {
-			defer wg.Done()
-			for deSlice := range deChan {
-				for _, de := range deSlice {
-					fi, err := de.Info()
-					if err != nil {
-						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
-						continue
-					}
-					if includeThis(fi) {
-						fiChan <- fi
-					}
-				}
-			}
-		}()
-	}
-
-	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
-	// I figured it out, by closing the channel after all work is sent to it.
-	go func() {
-		for fi := range fiChan {
-			fiSlice = append(fiSlice, fi)
-			if fi.Mode().IsRegular() && showGrandTotal {
-				grandTotal += fi.Size()
-				grandTotalCount++
-			}
-		}
-		close(doneChan)
-	}()
-
-	d, err := os.Open(dir)
+func myReadDir(dir string) []os.FileInfo { // The entire change including use of []DirEntry happens here.  Who knew?
+	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
-		os.Exit(1)
+		fmt.Printf("ERROR: %s\n", err)
+		return nil
 	}
-	defer d.Close()
 
-	for {
-		// reading DirEntry's and sending the slices into the channel needs to happen here.
-		deSlice, err := d.ReadDir(fetch)
-		if errors.Is(err, io.EOF) { // finished.  So return the slice.
-			close(deChan)
-			break
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
+	for _, d := range dirEntries {
+		fi, e := d.Info()
+		if e != nil {
+			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
 			continue
 		}
-		deChan <- deSlice
-	}
-
-	wg.Wait()     // for the deChan
-	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
-
-	<-doneChan // block until channel is freed
-
-	if verboseFlag {
-		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
-	}
-
-	if fastFlag {
-		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
-		if pause() {
-			os.Exit(1)
+		if includeThis(fi) {
+			fileInfos = append(fileInfos, fi)
+		}
+		if fi.Mode().IsRegular() && showGrandTotal {
+			grandTotal += fi.Size()
+			grandTotalCount++
 		}
 	}
-
-	return fiSlice
+	return fileInfos
 } // myReadDir
-
-func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
-	// Adding concurrency in returning []os.FileInfo
-	// This routine adds a call to filepath.Match
-
-	var wg sync.WaitGroup
-
-	if verboseFlag {
-		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
-	}
-	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
-	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
-	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
-	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
-	wg.Add(numWorkers)
-
-	// reading from deChan to get the slices of DirEntry's
-	for range numWorkers {
-		go func() {
-			defer wg.Done()
-			for deSlice := range deChan {
-				for _, de := range deSlice {
-					fi, err := de.Info()
-					if err != nil {
-						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
-						continue
-					}
-					if includeThisWithMatch(fi, matchPat) {
-						fiChan <- fi
-					}
-				}
-			}
-		}()
-	}
-
-	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
-	// I figured it out, by closing the channel after all work is sent to it.
-	go func() {
-		for fi := range fiChan {
-			fiSlice = append(fiSlice, fi)
-			if fi.Mode().IsRegular() && showGrandTotal {
-				grandTotal += fi.Size()
-				grandTotalCount++
-			}
-		}
-		close(doneChan)
-	}()
-
-	d, err := os.Open(dir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
-		os.Exit(1)
-	}
-	defer d.Close()
-
-	for {
-		// reading DirEntry's and sending the slices into the channel needs to happen here.
-		deSlice, err := d.ReadDir(fetch)
-		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
-			close(deChan)
-			break
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
-			continue
-		}
-		deChan <- deSlice
-	}
-
-	wg.Wait()     // for the closing of the deChan to stop all worker goroutines.
-	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
-
-	<-doneChan // block until channel is freed
-
-	if verboseFlag {
-		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
-	}
-
-	if fastFlag {
-		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
-		if pause() {
-			os.Exit(1)
-		}
-	}
-
-	return fiSlice
-} // myReadDirWithMatch
 
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
@@ -851,45 +698,4 @@ func includeThis(fi os.FileInfo) bool {
 		}
 	}
 	return true
-}
-
-func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
-	if veryVerboseFlag {
-		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, match pattern=%s \n", noExtensionFlag, excludeFlag, filterAmt, matchPat)
-	}
-	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
-		return false
-	} else if filterAmt > 0 {
-		if fi.Size() < int64(filterAmt) {
-			return false
-		}
-	}
-	if excludeFlag {
-		if excludeRegex.MatchString(strings.ToLower(fi.Name())) {
-			return false
-		}
-	}
-	matchPat = strings.ToLower(matchPat)
-	f := strings.ToLower(fi.Name())
-	match, err := filepath.Match(matchPat, f)
-	if err != nil {
-		return false
-	}
-	if !match {
-		return false
-	}
-	return true
-}
-
-// ------------------------------ pause -----------------------------------------
-
-func pause() bool {
-	fmt.Print(" Pausing the loop.  Hit <enter> to continue; 'n' or 'x' to exit  ")
-	var ans string
-	fmt.Scanln(&ans)
-	ans = strings.ToLower(ans)
-	if strings.HasPrefix(ans, "n") || strings.HasPrefix(ans, "x") {
-		return true
-	}
-	return false
 }
