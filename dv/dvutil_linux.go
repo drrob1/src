@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -36,8 +37,24 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 
 func getFileInfosFromCommandLine() []os.FileInfo {
 	var fileInfos []os.FileInfo
+	var narg int
+	var args []string
+	var arg0 string
+
+	if flag.Parsed() {
+		args = flag.Args()
+		narg = flag.NArg()
+		arg0 = flag.Arg(0)
+	} else if pflag.Parsed() {
+		args = pflag.Args()
+		narg = pflag.NArg()
+		arg0 = pflag.Arg(0)
+	} else {
+		ctfmt.Printf(ct.Red, false, " Neither flag.Parsed() nor pflag.Parsed() is true.  WTF?\n")
+		return nil
+	}
 	if verboseFlag {
-		fmt.Printf(" Entering getFileInfosFromCommandLine.  pflag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", pflag.NArg(), len(pflag.Args()), len(fileInfos))
+		fmt.Printf(" Entering getFileInfosFromCommandLine.  Nargs=%d, len(Args)=%d, len(fileinfos)=%d\n", narg, len(args), len(fileInfos))
 	}
 
 	workingDir, er := os.Getwd()
@@ -46,7 +63,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		os.Exit(1)
 	}
 
-	if pflag.NArg() == 0 {
+	if narg == 0 {
 		if verboseFlag {
 			fmt.Printf(" workingDir=%s\n", workingDir)
 		}
@@ -57,11 +74,11 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 		return fileInfos
 
-	} else if pflag.NArg() == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
+	} else if narg == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
 		const sep = string(filepath.Separator)
 		fileInfos = make([]os.FileInfo, 0, 1)
 
-		loneFilename := pflag.Arg(0)
+		loneFilename := arg0
 		fHandle, err := os.Open(loneFilename) // just try to open it, as it may be a symlink.
 		if err == nil {
 			stat, _ := fHandle.Stat()
@@ -95,8 +112,8 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			return fileInfos
 		}
 	} else { // must have more than one filename on the command line, populated by bash.
-		fileInfos = make([]os.FileInfo, 0, pflag.NArg())
-		for _, f := range pflag.Args() {
+		fileInfos = make([]os.FileInfo, 0, narg)
+		for _, f := range args {
 			fi, err := os.Lstat(f)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
@@ -115,7 +132,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		}
 	}
 	if verboseFlag {
-		fmt.Printf(" Leaving getFileInfosFromCommandLine.  pflag.Nargs=%d, len(pflag.Args)=%d, len(fileinfos)=%d\n", pflag.NArg(), len(pflag.Args()), len(fileInfos))
+		fmt.Printf(" Leaving getFileInfosFromCommandLine.  narg=%d, len(args)=%d, len(fileinfos)=%d\n", narg, len(args), len(fileInfos))
 	}
 	return fileInfos
 }
