@@ -209,7 +209,6 @@ func main() {
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(fullConfigFileName)
-	fmt.Printf("Config file name: %s\n", fullConfigFileName)
 
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
 	// This seems to be working.
@@ -229,6 +228,9 @@ func main() {
 		}
 	}
 
+	if verboseFlag {
+		fmt.Printf("Config file name: %s\n", fullConfigFileName)
+	}
 	revFlag = viper.GetBool("reverse")
 	sizeFlag = viper.GetBool("size")
 
