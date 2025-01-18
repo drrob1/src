@@ -162,7 +162,7 @@ REVISION HISTORY
 16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 */
 
-const LastAltered = "17 Jan 2025"
+const LastAltered = "18 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -185,6 +185,7 @@ const fetch = 1000    // used for the concurrency pattern in MyReadDir
 var numWorkers = runtime.NumCPU() * multiplier
 
 const configFilename = "dv.yaml"
+const configShortName = "dv"
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
 var filterFlag, globFlag, veryVerboseFlag, halfFlag, maxDimFlag, fastFlag bool
@@ -220,6 +221,7 @@ func main() {
 		return
 	}
 	fullConfigFileName := filepath.Join(homeDir, configFilename)
+	_ = fullConfigFileName // this is a kludge so this var is marked as needed when it's not
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
@@ -293,11 +295,15 @@ func main() {
 	// viper stuff
 	err = viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
-		ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
+		if verboseFlag {
+			ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
+		}
 	}
 
 	viper.SetConfigType("yaml")
-	viper.SetConfigFile(fullConfigFileName)
+	//viper.SetConfigFile(fullConfigFileName) // This works but I'm experimenting.
+	viper.SetConfigName(configShortName) // from an online source
+	viper.AddConfigPath(homeDir)
 
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
 	// This seems to be working.
@@ -305,7 +311,16 @@ func main() {
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		ctfmt.Printf(ct.Red, winflag, " %s.  Ignored\n", err.Error())
+		if verboseFlag {
+			ctfmt.Printf(ct.Red, winflag, " %s.  Will try local dir\n", err.Error())
+		}
+		viper.AddConfigPath(".")
+		err = viper.ReadInConfig()
+		if err != nil {
+			if verboseFlag {
+				ctfmt.Printf(ct.Red, winflag, "Error reading config file from local dir. Using defaults.  Err is %s\n", err.Error())
+			}
+		}
 	}
 
 	verboseFlag = viper.GetBool("verbose")
