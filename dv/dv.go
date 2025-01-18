@@ -293,16 +293,14 @@ func main() {
 	pflag.Parse()
 
 	// viper stuff
-	err = viper.BindPFlags(pflag.CommandLine)
+	err = viper.BindPFlags(pflag.CommandLine) // remember, verbose and veryverbose flags are not init'd yet
 	if err != nil {
-		if verboseFlag {
-			ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
-		}
+		ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
 	}
 
 	viper.SetConfigType("yaml")
 	//viper.SetConfigFile(fullConfigFileName) // This works but I'm experimenting.
-	viper.SetConfigName(configShortName) // from an online source
+	viper.SetConfigName(configShortName) // from an online source.  This works too.  Great.
 	viper.AddConfigPath(homeDir)
 
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
@@ -310,7 +308,13 @@ func main() {
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
-	if err != nil {
+	verboseFlag = viper.GetBool("verbose")
+	veryVerboseFlag = viper.GetBool("vv")
+	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
+		verboseFlag = true
+	}
+
+	if err != nil { // this err is from ReadInConfig, but I first had to init the verbose and veryVerbose flag before I checked the err from ReadInConfig.
 		if verboseFlag {
 			ctfmt.Printf(ct.Red, winflag, " %s.  Will try local dir\n", err.Error())
 		}
@@ -321,12 +325,6 @@ func main() {
 				ctfmt.Printf(ct.Red, winflag, "Error reading config file from local dir. Using defaults.  Err is %s\n", err.Error())
 			}
 		}
-	}
-
-	verboseFlag = viper.GetBool("verbose")
-	veryVerboseFlag = viper.GetBool("vv")
-	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
-		verboseFlag = true
 	}
 
 	*mFlag = viper.GetBool("max")

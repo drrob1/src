@@ -97,10 +97,11 @@ import (
   30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   14 Jan 25 -- Now called cf3, based on cf2 but adds viper for config stuff.  And adds filterStr code from dsrt family of rtns.
-				Because list uses flag.NArgs, I'll use both pflag and flag here.
+				Because list uses flag.NArgs, I had to get creative in the list code to determine which flag package is in use.  They conflict, so both can't be used in the same package.
+				See list.go and listutil_windows.go and listutil_linux.go for more details.
 */
 
-const LastAltered = "16 Jan 2025" //
+const LastAltered = "18 Jan 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -215,15 +216,17 @@ func main() {
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
-	if err != nil {
-		ctfmt.Printf(ct.Red, winflag, " %s.  Ignored\n", err.Error())
-	}
-
 	verboseFlag = viper.GetBool("verbose")
 	veryVerboseFlag = viper.GetBool("vv")
 	if veryVerboseFlag { // setting veryVerbose flag will automatically set verboseFlag
 		verboseFlag = true
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
+	}
+
+	if err != nil { // err from ReadInConfig is checked now that verboseFlag is init'd
+		if verboseFlag {
+			ctfmt.Printf(ct.Red, winflag, " %s.  Ignored\n", err.Error())
+		}
 	}
 
 	revFlag = viper.GetBool("reverse")
