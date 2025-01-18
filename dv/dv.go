@@ -162,7 +162,7 @@ REVISION HISTORY
 16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 */
 
-const LastAltered = "16 Jan 2025"
+const LastAltered = "17 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -212,7 +212,7 @@ func main() {
 	var systemStr string
 
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
-	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size, using concurrent code.  LastAltered %s, compiled with %s",
+	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size, using concurrent code.  LastAltered %s, compiled with %s\n",
 		LastAltered, runtime.Version())
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
