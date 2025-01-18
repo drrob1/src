@@ -160,6 +160,7 @@ REVISION HISTORY
 16 Jan 25 -- Now called dv, for dsrt viper.
              Will use viper to replace all my own logic.  Viper handles priorities among command line, environment, config file and default value.
 16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
+18 Jan 25 -- It will now check the current directory for a config file.  If not found, it will check the home directory.  This allows different directories to have different defaults.
 */
 
 const LastAltered = "18 Jan 2025"
@@ -301,29 +302,30 @@ func main() {
 	viper.SetConfigType("yaml")
 	//viper.SetConfigFile(fullConfigFileName) // This works but I'm experimenting.
 	viper.SetConfigName(configShortName) // from an online source.  This works too.  Great.
-	viper.AddConfigPath(homeDir)
+	viper.AddConfigPath(".")
 
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
 	// This seems to be working.
 	viper.AutomaticEnv()
 
-	err = viper.ReadInConfig()
-	verboseFlag = viper.GetBool("verbose")
-	veryVerboseFlag = viper.GetBool("vv")
-	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
-		verboseFlag = true
+	var errconfig1, errconfig2 error
+	errconfig1 = viper.ReadInConfig()
+	if errconfig1 != nil {
+		viper.AddConfigPath(homeDir)
+		errconfig2 = viper.ReadInConfig()
 	}
 
-	if err != nil { // this err is from ReadInConfig, but I first had to init the verbose and veryVerbose flag before I checked the err from ReadInConfig.
-		if verboseFlag {
-			ctfmt.Printf(ct.Red, winflag, " %s.  Will try local dir\n", err.Error())
+	verboseFlag = viper.GetBool("verbose")
+	veryVerboseFlag = viper.GetBool("vv")
+	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag
+		verboseFlag = true
+	}
+	if verboseFlag {
+		if errconfig1 != nil {
+			ctfmt.Printf(ct.Red, winflag, "Error reading config file 1, from current directory  Err: %s. \n", errconfig1.Error())
 		}
-		viper.AddConfigPath(".")
-		err = viper.ReadInConfig()
-		if err != nil {
-			if verboseFlag {
-				ctfmt.Printf(ct.Red, winflag, "Error reading config file from local dir. Using defaults.  Err is %s\n", err.Error())
-			}
+		if errconfig2 != nil {
+			ctfmt.Printf(ct.Red, winflag, "Error reading config file 2, from current directory  Err: %s. \n", errconfig2.Error())
 		}
 	}
 
