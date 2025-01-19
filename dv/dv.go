@@ -295,7 +295,7 @@ func main() {
 	pflag.Parse()
 
 	// viper stuff
-	err = viper.BindPFlags(pflag.CommandLine) // remember, verbose and veryverbose flags are not init'd yet
+	err = viper.BindPFlags(pflag.CommandLine) // this statement passes control of all the flags to viper from the pflag package.  Remember, verbose and veryverbose flags are not init'd yet
 	if err != nil {
 		ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
 	}
