@@ -301,11 +301,11 @@ func main() {
 
 	viper.SetConfigType("yaml")
 	//viper.SetConfigFile(fullConfigFileName) // This works but I'm experimenting.
-	viper.SetConfigName(configShortName) // from an online source.  This works too.  Great.
+	viper.SetConfigName(configShortName) // From an online source.  This works too.  Great.
 	viper.AddConfigPath(".")
 
 	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
-	// This seems to be working.
+	// This seems to be working.  But I don't intend to use it much.  I like having directory specific config files.  I removed the config file from homeDir and put it in Documents on Win11.
 	viper.AutomaticEnv()
 
 	var errconfig1, errconfig2 error
