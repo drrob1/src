@@ -161,9 +161,10 @@ REVISION HISTORY
              Will use viper to replace all my own logic.  Viper handles priorities among command line, environment, config file and default value.
 16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 18 Jan 25 -- It will now check the current directory for a config file.  If not found, it will check the home directory.  This allows different directories to have different defaults.
+19 Jan 25 -- Added -w as a single letter meaning --vv.  The use of -w comes from a play on its name.
 */
 
-const LastAltered = "18 Jan 2025"
+const LastAltered = "19 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -267,7 +268,7 @@ func main() {
 	TotalFlag := pflag.BoolP("totals", "t", false, "include grand total of directory, makes most sense when no pattern is given on command line.")
 
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
-	pflag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose option for when I really want it.")
+	pflag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "Very verbose option for when I really want it.") // short for vv is w, kind of a play on letter names.
 
 	longflag := pflag.BoolP("long", "l", false, "long file size format.") // Ptr
 
