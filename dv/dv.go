@@ -162,9 +162,10 @@ REVISION HISTORY
 16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
 18 Jan 25 -- It will now check the current directory for a config file.  If not found, it will check the home directory.  This allows different directories to have different defaults.
 19 Jan 25 -- Added -w as a single letter meaning --vv.  The use of -w comes from a play on its name.
+20 Jan 25 -- Added timing info for startup code.
 */
 
-const LastAltered = "19 Jan 2025"
+const LastAltered = "20 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -214,6 +215,7 @@ func main() {
 	var uid, gid int
 	var systemStr string
 
+	t1 := time.Now()
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size, using concurrent code.  LastAltered %s, compiled with %s\n",
 		LastAltered, runtime.Version())
@@ -417,6 +419,7 @@ func main() {
 			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag)
 	}
 
+	ctfmt.Printf(ct.Green, winflag, "%50s Finished startup code, which took %s\n", " ", time.Since(t1))
 	// from here down, the code is essentially the same as before.  Config section is finished.
 
 	// set which sort function will be in the sortfcn var

@@ -148,9 +148,10 @@ REVISION HISTORY
 				I figured out why it seemed to work, the alias asdf calls fdsrt, not dsrt.  So I have to rethink this.
 				My choices are: let halfFlag apply to whatever dsrt environ var is, or create another variable to hold the full value.
 				For now, I'll let halfFlag apply to whatever dsrt environ var is.
+20 Jan 25 -- Added timing for startup code
 */
 
-const LastAltered = "8 Jan 2025"
+const LastAltered = "20 Jan 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -197,6 +198,7 @@ func main() {
 	gid := 0
 	systemStr := ""
 
+	t1 := time.Now()
 	// environment variable processing.  If present, these will be the defaults.  Processed before the flags so the flags will override these, if provided on the command line.
 	dsrtEnviron := os.Getenv("dsrt")
 	dsrtParam = ProcessEnvironString(dsrtEnviron) // This is a function below.
@@ -372,6 +374,7 @@ func main() {
 	longFileSizeListFlag = *longflag
 	showGrandTotal = *TotalFlag || dsrtParam.totalflag // added 09/12/2018 12:32:23 PM
 
+	ctfmt.Printf(ct.Green, winflag, "%50s Finished startup code which took %s \n", " ", time.Since(t1))
 	// set which sort function will be in the sortfcn var
 	sortfcn := func(i, j int) bool { return false } // became available as of Go 1.8
 	if SizeSort && Forward {                        // set the value of sortfcn so only a single line is needed to execute the sort.
