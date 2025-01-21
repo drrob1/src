@@ -99,9 +99,10 @@ import (
   14 Jan 25 -- Now called cf3, based on cf2 but adds viper for config stuff.  And adds filterStr code from dsrt family of rtns.
 				Because list uses flag.NArgs, I had to get creative in the list code to determine which flag package is in use.  They conflict, so both can't be used in the same package.
 				See list.go and listutil_windows.go and listutil_linux.go for more details.
+  20 Jan 25 -- Added set up timing display.
 */
 
-const LastAltered = "18 Jan 2025" //
+const LastAltered = "20 Jan 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -130,6 +131,7 @@ var verifyFlag, verFlag bool
 var multiplier int
 
 func main() {
+	t1 := time.Now()
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	execName, err := os.Executable()
 	if err != nil {
@@ -281,6 +283,8 @@ func main() {
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
+
+	ctfmt.Printf(ct.Green, winflag, "%50s Set up time is %s \n", " ", time.Since(t1))
 
 	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {

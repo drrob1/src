@@ -98,9 +98,10 @@ import (
   22 Oct 24 -- Will now check to make sure params are present.
   30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
   15 Jan 25 -- Adding filterStr capability.
+  20 Jan 25 -- Added set up timing display.
 */
 
-const LastAltered = "15 Jan 2025"
+const LastAltered = "20 Jan 2025"
 
 const defaultHeight = 40
 const minWidth = 90
@@ -130,6 +131,7 @@ var verifyFlag, verFlag bool
 var multiplier int
 
 func main() {
+	t1 := time.Now()
 	execName, err := os.Executable()
 	if err != nil {
 		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
@@ -143,7 +145,6 @@ func main() {
 		os.Args[0], runtime.Version(), LastAltered, list.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
-		//autoDefaults = false
 		autoHeight = defaultHeight
 		autoWidth = minWidth
 	}
@@ -235,6 +236,8 @@ func main() {
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
+
+	ctfmt.Printf(ct.Green, onWin, "%50s Set up time took %s \n", " ", time.Since(t1))
 
 	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
