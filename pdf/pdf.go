@@ -50,7 +50,14 @@ func main() {
 	//	return
 	//}
 
-	content, err := readPdf3(filename)
+	//content, err := readPdfByRow(filename)
+	//if err != nil {
+	//	ctfmt.Printf(ct.Red, true, err.Error())
+	//	return
+	//}
+	//fmt.Printf("\npdf content length: %d\n", len(content))
+
+	content, err := readPdfByCol(filename)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, err.Error())
 		return
@@ -110,7 +117,53 @@ func isSameSentence(sentence, style pdf.Text) bool {
 	return false
 }
 
-func readPdf3(path string) (string, error) {
+func readPdfByCol(path string) (string, error) {
+	f, r, err := pdf.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+	totalPage := r.NumPage()
+	fmt.Printf(" totalPage: %d\n", totalPage)
+
+	debug, err := os.Create(debugFilename)
+	if err != nil {
+		return "", err
+	}
+	defer debug.Close()
+
+	debugBuf := bufio.NewWriter(debug)
+	defer debugBuf.Flush()
+
+	for pageIndex := range totalPage {
+		p := r.Page(pageIndex + 1) // there is no page zero
+		if p.V.IsNull() {
+			continue
+		}
+
+		cols, _ := p.GetTextByColumn()
+		for i, col := range cols {
+			var bldr strings.Builder
+			fmt.Printf(">>>> col#: %d; col.Position: %d\n", i, col.Position)
+			s := fmt.Sprintf(">>>> col#: %d; col.Position: %d\n", i, col.Position)
+			debugBuf.WriteString(s)
+			for row, word := range col.Content {
+				fmt.Println(word.S, "|")
+				s1 := fmt.Sprintf("%s: row #%d in col# %d:X=%f:Y=%f:W=%f ... ", word.S, row, i, word.X, word.Y, word.W)
+				debugBuf.WriteString(s1)
+				bldr.WriteString(word.S)
+			}
+			s = fmt.Sprintf("\nword: %q\n", bldr.String())
+			debugBuf.WriteString(s)
+			debugBuf.WriteRune('\n')
+		}
+	}
+	return "", nil
+}
+
+func readPdfByRow(path string) (string, error) {
 	f, r, err := pdf.Open(path)
 	if err != nil {
 		return "", err
