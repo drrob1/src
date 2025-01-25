@@ -160,7 +160,7 @@ func readPdfByCol(path string) (string, error) {
 			debugBuf.WriteString(s)
 			for row, word := range col.Content {
 				fmt.Println(word.S, "|")
-				s1 := fmt.Sprintf("%s: row #%d in col# %d:X=%.3f:Y=%.3f:W=%.3f /// ", word.S, row, i, word.X, word.Y, word.W)
+				s1 := fmt.Sprintf("%s: row #%d in col# %d;(%.3f,Y=%.3f);W=%.3f --> ", word.S, row, i, word.X, word.Y, word.W)
 				debugBuf.WriteString(s1)
 				bldr.WriteString(word.S)
 			}
