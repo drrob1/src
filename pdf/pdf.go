@@ -140,7 +140,10 @@ func readPdfByCol(path string) (string, error) {
 	debugBuf := bufio.NewWriter(debug)
 	defer debugBuf.Flush()
 
-	s2 := fmt.Sprintf(" pdf reading program for %s, last modified %s\n\n", path, lastModified)
+	execName, _ := os.Executable()
+	ExecFI, _ := os.Stat(execName)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+	s2 := fmt.Sprintf(" pdf reading program for %s, last modified %s, timpstamp %s\n\n", path, lastModified, ExecTimeStamp)
 	debugBuf.WriteString(s2)
 
 	for pageIndex := range totalPage {
@@ -157,7 +160,7 @@ func readPdfByCol(path string) (string, error) {
 			debugBuf.WriteString(s)
 			for row, word := range col.Content {
 				fmt.Println(word.S, "|")
-				s1 := fmt.Sprintf("%s: row #%d in col# %d:X=%.3f:Y=%.3f:W=%.3f ... ", word.S, row, i, word.X, word.Y, word.W)
+				s1 := fmt.Sprintf("%s: row #%d in col# %d:X=%.3f:Y=%.3f:W=%.3f /// ", word.S, row, i, word.X, word.Y, word.W)
 				debugBuf.WriteString(s1)
 				bldr.WriteString(word.S)
 			}
