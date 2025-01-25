@@ -143,7 +143,7 @@ func readPdfByCol(path string) (string, error) {
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	s2 := fmt.Sprintf(" pdf reading program for %s, last modified %s, timpstamp %s\n\n", path, lastModified, ExecTimeStamp)
+	s2 := fmt.Sprintf(" pdf reading program for %s, last modified %s, timestamp %s\n\n", path, lastModified, ExecTimeStamp)
 	debugBuf.WriteString(s2)
 
 	for pageIndex := range totalPage {
