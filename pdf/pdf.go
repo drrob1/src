@@ -15,8 +15,8 @@ import (
   23 Jan 25 -- First started working on this
 */
 
-const lastModified = "24 Jan 2025"
-const debugFilename = "debug.txt"
+const lastModified = "25 Jan 2025"
+const debugFilename = "debugPDF.txt"
 
 func main() {
 
