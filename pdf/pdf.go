@@ -25,7 +25,9 @@ func main() {
 		return
 	}
 	filename := os.Args[1]
-	fmt.Printf(" pdf reading program for %s, last modified = %s.\n", filename, lastModified)
+	s2 := fmt.Sprintf(" pdf reading program for %s, last modified %s", filename, lastModified)
+	fmt.Println(s2)
+	//fmt.Printf(" pdf reading program for %s, last modified = %s.\n", filename, lastModified)
 
 	//pdf.DebugOn = true
 	//content, err := readPdf(filename)
@@ -119,6 +121,7 @@ func isSameSentence(sentence, style pdf.Text) bool {
 
 func readPdfByCol(path string) (string, error) {
 	f, r, err := pdf.Open(path)
+
 	if err != nil {
 		return "", err
 	}
@@ -136,6 +139,9 @@ func readPdfByCol(path string) (string, error) {
 
 	debugBuf := bufio.NewWriter(debug)
 	defer debugBuf.Flush()
+
+	s2 := fmt.Sprintf(" pdf reading program for %s, last modified %s\n\n", path, lastModified)
+	debugBuf.WriteString(s2)
 
 	for pageIndex := range totalPage {
 		p := r.Page(pageIndex + 1) // there is no page zero
