@@ -158,13 +158,17 @@ func readPdfByCol(path string) (string, error) {
 			fmt.Printf(">>>> col#: %d; col.Position: %d\n", i, col.Position)
 			s := fmt.Sprintf(">>>> col#: %d; col.Position: %d\n", i, col.Position)
 			debugBuf.WriteString(s)
+			var x, y, width float64
 			for row, word := range col.Content {
-				fmt.Println(word.S, "|")
-				s1 := fmt.Sprintf("%s: row #%d in col# %d;(%.3f,Y=%.3f);W=%.3f --> ", word.S, row, i, word.X, word.Y, word.W)
+				x = word.X
+				y = word.Y
+				width = word.W
+				s1 := fmt.Sprintf("%s: row #%d in col# %d;(%.3f,%.3f);W=%.3f --> ", word.S, row, i, word.X, word.Y, word.W)
 				debugBuf.WriteString(s1)
+				fmt.Println(word.S, "|")
 				bldr.WriteString(word.S)
 			}
-			s = fmt.Sprintf("\nword: %q\n", bldr.String())
+			s = fmt.Sprintf("\nword: %q @ (%.3f,%.3f) and width = %.3f\n", bldr.String(), x, y, width)
 			debugBuf.WriteString(s)
 			debugBuf.WriteRune('\n')
 		}
