@@ -43,18 +43,15 @@ import (
                 I have to read the weekly schedule into an appropriate data structure, as also the .conf/.ini file.
 
  xlsx (github.com/tealeg/xlsx/v3)
+
+  28 Jan 25 -- I want to add detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
+				I think I can do it without much difficulity.
+  29 Jan 25 -- Copied lint2 code onto lint.go.
 */
 
-const lastModified = "30 Sep 2024"
+const lastModified = "29 Jan 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
-
-//type list struct {  Not needed so far.
-//	category string
-//	docs     []string
-//}
-//
-//var dict map[string]list // dictionary of categories and doc names that belong in the list of that category.  Definately not needed.
 
 type dayType struct {
 	weekdayOncall string
@@ -81,19 +78,16 @@ type dayType struct {
 
 // var categoryNamesList = []string{"WeekdayOnCall", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"}
 var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-var verboseFlag = flag.Bool("v", false, "Verbose mode")
 var workingDir string
 var dayOff = make(map[string]bool) // not sure if I need this, but here it is.
-var names = make([]string, 0, 25)
+var names = make([]string, 0, 25)  // a list of all the doc's last names as read from the config file.
 
-// Next I will code the check against the vacation people to make sure they're not assigned to anything else.  I'll need a vacationMap = map[string]bool where the string will
-// be the names of everyone, and true/false for on vacation.  I'll need a doctor names list, I think.
-// The doc names list will be in the .conf/.ini file.  Line will begin w/ "docnames", and then list all the names as they appear on the schedule.  Doctors by last name, Payal, Murina, etc.
-// This can use code from fromfx, I think.  Or maybe just fansha, etc.
+var verboseFlag = flag.Bool("v", false, "Verbose mode")
+
+// Next I will code the check against the vacation people to make sure they're not assigned to anything else.
 
 func findAndReadConfIni() error {
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
-	// It will populate the dictionary, dict.  Nope, I took that out.  Turned out that I don't need this.
 	fullFile, found := whichexec.FindConfig(conf)
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
@@ -203,15 +197,15 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
-func whosOnVacationToday(week []dayType, dayCol int) []string {
+func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on vacation for this day
-	vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.
+	vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.  It is a string containing multiple names.  I don't need to divide them into separate strings
 	vacationString := vacationCell
 	vacationString = strings.ToLower(vacationString)
 
 	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
 	// search for matching names
-	for _, vacationName := range names {
+	for _, vacationName := range names { // names is a global
 		dayOff[vacationName] = false
 		if strings.Contains(vacationString, vacationName) {
 			dayOff[vacationName] = true
@@ -221,34 +215,28 @@ func whosOnVacationToday(week []dayType, dayCol int) []string {
 	return mdsOff
 }
 
-//func whosOnVacationToday(wb *xlsx.File, dayCol int) ([]string, error) { // I decided to use the week
-//	// this function is to return a slice of names that are on vacation for this day
-//	sheets := wb.Sheets
-//	vacationCell, err := sheets[0].Cell(21, dayCol) // row 21 is the MD's Off row.
-//	if err != nil {
-//		return nil, err
-//	}
-//	vacationString := vacationCell.String()
-//	vacationString = strings.ToLower(vacationString)
-//
-//	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
-//	// search for matching names
-//	for _, vacationName := range names {
-//		dayOff[vacationName] = false
-//		if strings.Contains(vacationString, vacationName) {
-//			dayOff[vacationName] = true
-//			mdsOff = append(mdsOff, vacationName)
-//		}
-//	}
-//	return mdsOff, nil
-//}
+func whosLateToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+	// this function is to return a slice of names that are on the late shift for today.  Only 2 per day are late.
+	lateCell := week[dayCol].late // row 16 is the late doc's row.  It is a string containing the 2 names that are late that day
+	lateString := lateCell
+	lateString = strings.ToLower(lateString)
+
+	lateDocs := make([]string, 0, 2)
+	// search for matching names
+	for _, lateName := range names { // names is a global
+		if strings.Contains(lateString, lateName) {
+			lateDocs = append(lateDocs, lateName)
+		}
+	}
+	return lateDocs
+}
 
 func main() {
-	flag.Parse()
+	flag.Parse() // need this because of use of flag.NArg() below
 
 	var filename, ans string
 
-	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
+	fmt.Printf(" lint2 for the weekly schedule last modified %s\n", lastModified)
 
 	err := findAndReadConfIni()
 	if err != nil {
@@ -306,37 +294,9 @@ func main() {
 		return
 	}
 
-	// this is for demo purposes.  I need to understand this better.
-	//fmt.Println("Sheets in this file:")
-	//for i, sh := range workBook.Sheets {
-	//	fmt.Println(i, sh.Name)
-	//}
-	//
-	//sheets := workBook.Sheets
-	//fmt.Printf(" sheet contains %d sheets, and len(sheets) = %d\n", len(workBook.Sheets), len(sheets))
-	//row, err := sheets[0].Row(21)
-	//if err != nil {
-	//	fmt.Printf("Error getting row 0: %s\n", err)
-	//	return
-	//}
-	//cellr21c0 := row.GetCell(0)
-	//cellr21c1 := row.GetCell(1)
-	//cellr21c2 := row.GetCell(2)
-	//fmt.Printf(" row 21 c0 = %q, maxrow = %d, row 21 c1 = %q, row 21 c 2 = %q\n", cellr21c0, sheets[0].MaxRow, cellr21c1, cellr21c2)
-	//cell021, _ := sheets[0].Cell(0, 21)
-	//cell121, _ := sheets[0].Cell(1, 21)
-	//cell210, _ := sheets[0].Cell(21, 0)
-	//fmt.Printf(" Cell r0 c21 = %q, cell r1 c21 = %q, cell r21 c0 = %q\n", cell021, cell121, cell210)
-	//
-	//irCellr7c0, _ := sheets[0].Cell(7, 0)
-	//irCellr7c0lower := strings.ToLower(irCellr7c0.String())
-	//irCellr7c1, _ := sheets[0].Cell(7, 1)
-	//irCellr7c1lower := strings.ToLower(irCellr7c1.String())
-	//fmt.Printf(" IR Cell r7 c0 = %q, IR Cell r7 c1 = %q \n r7 c0 lower = %q, r7 c1 lower = %q\n", irCellr7c0, irCellr7c1, irCellr7c0lower, irCellr7c1lower)
-
 	// Populate the week's schedule
-	week := make([]dayType, 6) // some padding here.  Only need 5 workdays.
-	for i := 1; i < 6; i++ {   // Monday = 1, Friday = 5
+	var week [6]dayType      // Only need 5 workdays.  Element 0 is not used.
+	for i := 1; i < 6; i++ { // Monday = 1, Friday = 5
 		week[i], err = readDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
@@ -350,17 +310,10 @@ func main() {
 		}
 	}
 
-	// Time to close the xlsx file, but I can't figure out how.
-	// sheet := workBook.Sheets
-	// sheet.Close()
-
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
-	for dayCol := range week { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
-		if dayCol == 0 { // skip dayCol 0, as it's empty.
-			continue
-		}
-
+	for dayCol := 1; dayCol < len(week); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
 		mdsOffToday := whosOnVacationToday(week, dayCol)
+		lateDocsToday := whosLateToday(week, dayCol)
 
 		if *verboseFlag {
 			fmt.Printf(" mdsOffToday on day %d is/are %#v\n", dayCol, mdsOffToday)
@@ -376,6 +329,8 @@ func main() {
 			if pause() {
 				return
 			}
+
+			fmt.Printf("\n Late shift docs on day %d are %#v\n", dayCol, lateDocsToday)
 		}
 
 		// Now, mdsOffToday is a slice of several names of who is off today.
@@ -435,6 +390,17 @@ func main() {
 				fmt.Printf(" %s is off on %s, but is on weekend IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
+
+		// Now, lateDocsToday is a slice of two names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
+		for _, name := range lateDocsToday {
+			if lower := strings.ToLower(week[dayCol].fluoroJH); strings.Contains(lower, name) {
+				fmt.Printf(" %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+			}
+			if lower := strings.ToLower(week[dayCol].fluoroFH); strings.Contains(lower, name) {
+				fmt.Printf(" %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+			}
+		}
+
 	}
 }
 

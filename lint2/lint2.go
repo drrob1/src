@@ -44,7 +44,7 @@ import (
 
  xlsx (github.com/tealeg/xlsx/v3)
 ----------------------------------------------------------------------------------------------------
-  28 Jan 25 -- I want to add detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
+  28 Jan 25 -- Now called lint2, and added detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
 				I think I can do it without much difficulity.
 */
 
