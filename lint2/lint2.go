@@ -9,6 +9,7 @@ import (
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
 	"os"
+	"slices"
 	"sort"
 	"src/filepicker"
 	"src/misc"
@@ -252,18 +253,26 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 	// this function is to return a slice of names that are working remotely today.
 	const remoteMarkerString = "(*R)"
 
-	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but names can be duplicated.  Not worth de-duplicating them, yet.
+	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but names can be duplicated.
 	// search for matching names
 	for _, cell := range week[dayCol] {
+		cell = strings.ReplaceAll(cell, "   ", " ")
+		cell = strings.ReplaceAll(cell, "  ", " ")
+		cell = strings.ReplaceAll(cell, "  ", " ")
+		cell = strings.ReplaceAll(cell, "  ", " ")
 		fields := strings.Split(cell, " ")
+
 		for i, field := range fields {
+			field = strings.TrimSpace(field)
 			if strings.Contains(field, remoteMarkerString) {
-				j := int(i) - 1
+				j := i - 1
 				prevField := strings.ToLower(fields[j])
 				remoteDocs = append(remoteDocs, prevField)
 			}
 		}
 	}
+	sort.Strings(remoteDocs)
+	remoteDocs = slices.Compact(remoteDocs) //  De-duplicating w/ the new slices package.  And make sure there are no empty strings.
 	return remoteDocs
 }
 
