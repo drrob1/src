@@ -50,7 +50,7 @@ import (
 
 */
 
-const lastModified = "29 Jan 2025"
+const lastModified = "30 Jan 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -237,7 +237,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint2 for the weekly schedule last modified %s\n", lastModified)
+	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
 
 	err := findAndReadConfIni()
 	if err != nil {

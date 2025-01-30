@@ -259,7 +259,7 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 		for i, field := range fields {
 			if strings.Contains(field, remoteMarkerString) {
 				j := int(i) - 1
-				prevField := fields[j]
+				prevField := strings.ToLower(fields[j])
 				remoteDocs = append(remoteDocs, prevField)
 			}
 		}
@@ -449,21 +449,31 @@ func main() {
 		// Now, lateDocsToday is a slice of two names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
 		for _, name := range lateDocsToday {
 			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
 
 		// Determine if the fluoro doc for today is remote
 		remoteNames := whosRemoteToday(week, dayCol)
 		for _, name := range remoteNames {
-			fmt.Printf(" Remote docs for today are: %s\n", name)
+			if *verboseFlag {
+				fmt.Printf(" Remote doc for today: %s, FluoroJH: %s, FluoroFH: %s\n", name, week[dayCol][fluoroJH], week[dayCol][fluoroFH])
+			}
+			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
+				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+			}
+			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
+				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+			}
 		}
 
-		if pause() {
-			return
+		if *verboseFlag {
+			if pause() {
+				return
+			}
 		}
 	}
 }
