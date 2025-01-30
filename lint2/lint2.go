@@ -56,7 +56,7 @@ import (
 				I think I can do it without much difficulity.
   29 Jan 25 -- I'm going to make the week a 2D array, and use a map to get the names from the row #.  Just to see if it will work.  It does.
 				Now I'm going to try to see if a remote doc is on fluoro, like there was today.
-
+  30 Jan 25 -- And I shortened the main loop looking for vacation docs assigned to clinical work.
 */
 
 const lastModified = "30 Jan 2025"
@@ -88,7 +88,8 @@ const (
 
 type dayType [23]string // there are a few unused entries here.  This goes from 0 .. 22.  Indices 0..2 are not used.
 
-//var categoryNamesList = []string{"0", "1", "2", "3","weekdayOnCall", "neuro", "body", "ER/Xrays", "IR", "Nuclear Medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"} // 0, 1, 2 and 3 are unused
+var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
+	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
 
 var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var workingDir string
@@ -215,13 +216,10 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 
 func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on vacation for this day
-	//vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.  It is a string containing multiple names.  I don't need to divide them into separate strings
-	//daySchedule := week[dayCol] // row 21 is the MD's Off row.  It is a string containing multiple names.  I don't need to divide them into separate strings
-	//vacationCell := daySchedule[mdOff]
-	//vacationCell := week[dayCol][mdOff]
 	vacationString := strings.ToLower(week[dayCol][mdOff])
 
 	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
+
 	// search for matching names
 	for _, vacationName := range names { // names is a global
 		dayOff[vacationName] = false
@@ -235,8 +233,7 @@ func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an a
 
 func whosLateToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on the late shift for today.  Only 2 per day are late.
-	//lateCell := week[dayCol].late // row 16 is the late doc's row.  It is a string containing the 2 names that are late that day
-	//lateCell := week[dayCol][late]
+
 	lateString := strings.ToLower(week[dayCol][late])
 
 	lateDocs := make([]string, 0, 2)
@@ -259,7 +256,7 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 		cell = strings.ReplaceAll(cell, "   ", " ")
 		cell = strings.ReplaceAll(cell, "  ", " ")
 		cell = strings.ReplaceAll(cell, "  ", " ")
-		cell = strings.ReplaceAll(cell, "  ", " ")
+		cell = strings.ReplaceAll(cell, "  ", " ") // really really really make sure that extra spaces are removed.
 		fields := strings.Split(cell, " ")
 
 		for i, field := range fields {
@@ -398,60 +395,12 @@ func main() {
 		}
 
 		// Now, mdsOffToday is a slice of several names of who is off today.
+	
 		for _, name := range mdsOffToday {
-			if lower := strings.ToLower(week[dayCol][weekdayOncall]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekday On call\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][neuro]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on neuro\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][body]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on body\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][erXrays]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on ER Xrays\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][ir]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][nuclear]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on Nuclear\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][us]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on US\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][peds]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on peds\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][msk]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on MSK\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][mammo]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on mammo\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][boneDensity]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on bone density\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][late]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on late\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][moonlighters]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend moonlighters\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][weekendJH]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][weekendFH]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
-			}
-			if lower := strings.ToLower(week[dayCol][weekendIR]); strings.Contains(lower, name) {
-				fmt.Printf(" %s is off on %s, but is on weekend IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+			for i := weekdayOncall; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
+				if lower := strings.ToLower(week[dayCol][i]); strings.Contains(lower, name) {
+					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), dayNames[dayCol], categoryNamesList[i])
+				}
 			}
 		}
 
