@@ -46,7 +46,8 @@ import (
 
   28 Jan 25 -- I want to add detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
 				I think I can do it without much difficulity.
-  29 Jan 25 -- Copied lint2 code onto lint.go.
+  29 Jan 25 -- Copied lint2 code onto lint.go.  Preserved old version of lint.go as lint-2Oct24.go
+
 */
 
 const lastModified = "29 Jan 2025"

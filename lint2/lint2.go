@@ -53,10 +53,12 @@ import (
 ----------------------------------------------------------------------------------------------------
   28 Jan 25 -- Now called lint2, and added detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
 				I think I can do it without much difficulity.
-  29 Jan 25 -- I'm going to make the week a 2D array, and use a map to get the names from the row #.  Just to see if it will work.
+  29 Jan 25 -- I'm going to make the week a 2D array, and use a map to get the names from the row #.  Just to see if it will work.  It does.
+				Now I'm going to try to see if a remote doc is on fluoro, like there was today.
+
 */
 
-const lastModified = "29 Jan 2025"
+const lastModified = "30 Jan 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -244,6 +246,25 @@ func whosLateToday(week [6]dayType, dayCol int) []string { // week is an array, 
 		}
 	}
 	return lateDocs
+}
+
+func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+	// this function is to return a slice of names that are working remotely today.
+	const remoteMarkerString = "(*R)"
+
+	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but names can be duplicated.  Not worth de-duplicating them, yet.
+	// search for matching names
+	for _, cell := range week[dayCol] {
+		fields := strings.Split(cell, " ")
+		for i, field := range fields {
+			if strings.Contains(field, remoteMarkerString) {
+				j := int(i) - 1
+				prevField := fields[j]
+				remoteDocs = append(remoteDocs, prevField)
+			}
+		}
+	}
+	return remoteDocs
 }
 
 func main() {
@@ -435,6 +456,15 @@ func main() {
 			}
 		}
 
+		// Determine if the fluoro doc for today is remote
+		remoteNames := whosRemoteToday(week, dayCol)
+		for _, name := range remoteNames {
+			fmt.Printf(" Remote docs for today are: %s\n", name)
+		}
+
+		if pause() {
+			return
+		}
 	}
 }
 
