@@ -22,7 +22,7 @@ import (
   26 Sep 24 -- Started first version.  Intended as a linter for the weekly work schedule.  It will need a .conf or .ini file to establish the suitable params.
                It will need lists to specify who can be covering a specific area, and to make sure that if someone is on vacation, their name does not appear anywhere else
                for that day.  So I'll need categories in the .conf or .ini file, such as:
-				MD's Off (vacation) row 21
+				weekdayOncall row 3
 				neuro row 4
 				body row 5
 				ER row 6
@@ -37,7 +37,14 @@ import (
 				MAMMO row 14
 				BONE (DENSITY) row 15
 				LATE row 16
-				if the line begins w/ # ; / then it's a comment.  If a line doesn't begin w/ a keyword, then it's an error and the pgm exits.
+				Moonlighters row 17
+				Weekend JH row 18
+				Weekend FH row 19
+				Weekend IR row 20
+				MD's Off (vacation) row 21
+				Below row 21 are the MD phone #'s.
+
+				if the line begins with any of [# ; /] then it's a comment.  If a line doesn't begin w/ a keyword, then it's an error and the pgm exits.
 				I think I'll just check the vacation rule first.  Then expand it to the other rules.
 
                 I have to read the weekly schedule into an appropriate data structure, as also the .conf/.ini file.
@@ -46,40 +53,44 @@ import (
 ----------------------------------------------------------------------------------------------------
   28 Jan 25 -- Now called lint2, and added detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
 				I think I can do it without much difficulity.
+  29 Jan 25 -- I'm going to make the week a 2D array, and use a map to get the names from the row #.  Just to see if it will work.
 */
 
-const lastModified = "28 Jan 2025"
+const lastModified = "29 Jan 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
-type dayType struct {
-	weekdayOncall string
-	neuro         string
-	body          string
-	er            string
-	xrays         string
-	ir            string
-	nuclear       string
-	us            string
-	peds          string
-	fluoroJH      string
-	fluoroFH      string
-	msk           string
-	mammo         string
-	boneDensity   string
-	late          string
-	moonlighters  string
-	weekendJH     string
-	weekendFH     string
-	weekendIR     string
-	mdOff         string
-}
+const (
+	weekdayOncall = iota + 3 // and code is a 0-origin, while Excel is 1-origin for rows.
+	neuro
+	body
+	erXrays
+	ir
+	nuclear
+	us
+	peds
+	fluoroJH
+	fluoroFH
+	msk // includes Xray In/Outpatient and off-sites
+	mammo
+	boneDensity
+	late
+	moonlighters
+	weekendJH
+	weekendFH
+	weekendIR // includes On-Call Radiologist for diagnostic
+	mdOff
+	totalAmt
+)
 
-// var categoryNamesList = []string{"WeekdayOnCall", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"}
+type dayType [23]string // there are a few unused entries here.  This goes from 0 .. 22.  Indices 0..2 are not used.
+
+//var categoryNamesList = []string{"0", "1", "2", "3","weekdayOnCall", "neuro", "body", "ER/Xrays", "IR", "Nuclear Medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"} // 0, 1, 2 and 3 are unused
+
 var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var workingDir string
-var dayOff = make(map[string]bool) // not sure if I need this, but here it is.
 var names = make([]string, 0, 25)  // a list of all the doc's last names as read from the config file.
+var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
 
 var verboseFlag = flag.Bool("v", false, "Verbose mode")
 
@@ -117,8 +128,8 @@ func findAndReadConfIni() error {
 	}
 	for _, token := range tokenslice[1:] {
 		lower = strings.ToLower(token.Str)
-		dayOff[lower] = false
 		names = append(names, lower)
+		dayOff[lower] = false // this is a map[string]bool
 	}
 	if *verboseFlag {
 		fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
@@ -142,65 +153,70 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 	var day dayType
 	sheets := wb.Sheets
 
-	for i := 3; i < 22; i++ {
+	for i := weekdayOncall; i < totalAmt; i++ {
 		cell, err := sheets[0].Cell(i, col) // always sheet[0]
 		if err != nil {
 			return dayType{}, err
 		}
-		switch i {
-		case 3:
-			day.weekdayOncall = cell.String()
-		case 4:
-			day.neuro = cell.String()
-		case 5:
-			day.body = cell.String()
-		case 6:
-			day.er = cell.String()
-			day.xrays = cell.String()
-		case 7:
-			day.ir = cell.String()
-		case 8:
-			day.nuclear = cell.String()
-		case 9:
-			day.us = cell.String()
-		case 10:
-			day.peds = cell.String()
-		case 11:
-			day.fluoroJH = cell.String()
-		case 12:
-			day.fluoroFH = cell.String()
-		case 13:
-			day.msk = cell.String()
-		case 14:
-			day.mammo = cell.String()
-		case 15:
-			day.boneDensity = cell.String()
-		case 16:
-			day.late = cell.String()
-		case 17:
-			day.moonlighters = cell.String()
-		case 18:
-			day.weekendJH = cell.String()
-		case 19:
-			day.weekendFH = cell.String()
-		case 20:
-			day.weekendIR = cell.String()
-		case 21:
-			day.mdOff = cell.String()
 
-		default:
-			return dayType{}, fmt.Errorf("unknown day type %d", i)
+		day[i] = cell.String()
 
-		}
+		//switch i {
+		//case 3:
+		//	day.weekdayOncall = cell.String()
+		//case 4:
+		//	day.neuro = cell.String()
+		//case 5:
+		//	day.body = cell.String()
+		//case 6:
+		//	day.er = cell.String()
+		//	day.xrays = cell.String()
+		//case 7:
+		//	day.ir = cell.String()
+		//case 8:
+		//	day.nuclear = cell.String()
+		//case 9:
+		//	day.us = cell.String()
+		//case 10:
+		//	day.peds = cell.String()
+		//case 11:
+		//	day.fluoroJH = cell.String()
+		//case 12:
+		//	day.fluoroFH = cell.String()
+		//case 13:
+		//	day.msk = cell.String()
+		//case 14:
+		//	day.mammo = cell.String()
+		//case 15:
+		//	day.boneDensity = cell.String()
+		//case 16:
+		//	day.late = cell.String()
+		//case 17:
+		//	day.moonlighters = cell.String()
+		//case 18:
+		//	day.weekendJH = cell.String()
+		//case 19:
+		//	day.weekendFH = cell.String()
+		//case 20:
+		//	day.weekendIR = cell.String()
+		//case 21:
+		//	day.mdOff = cell.String()
+		//
+		//default:
+		//	return dayType{}, fmt.Errorf("unknown day type %d", i)
+		//
+		//}
 	}
 	return day, nil
 }
 
 func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on vacation for this day
-	vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.  It is a string containing multiple names.  I don't need to divide them into separate strings
-	vacationString := vacationCell
-	vacationString = strings.ToLower(vacationString)
+	//vacationCell := week[dayCol].mdOff // row 21 is the MD's Off row.  It is a string containing multiple names.  I don't need to divide them into separate strings
+	//daySchedule := week[dayCol] // row 21 is the MD's Off row.  It is a string containing multiple names.  I don't need to divide them into separate strings
+	//vacationCell := daySchedule[mdOff]
+	//vacationCell := week[dayCol][mdOff]
+	vacationString := strings.ToLower(week[dayCol][mdOff])
 
 	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
 	// search for matching names
@@ -216,9 +232,9 @@ func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an a
 
 func whosLateToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on the late shift for today.  Only 2 per day are late.
-	lateCell := week[dayCol].late // row 16 is the late doc's row.  It is a string containing the 2 names that are late that day
-	lateString := lateCell
-	lateString = strings.ToLower(lateString)
+	//lateCell := week[dayCol].late // row 16 is the late doc's row.  It is a string containing the 2 names that are late that day
+	//lateCell := week[dayCol][late]
+	lateString := strings.ToLower(week[dayCol][late])
 
 	lateDocs := make([]string, 0, 2)
 	// search for matching names
@@ -236,6 +252,25 @@ func main() {
 	var filename, ans string
 
 	fmt.Printf(" lint2 for the weekly schedule last modified %s\n", lastModified)
+
+	//sectionNames[4] = "neuro"
+	//sectionNames[5] = "body"
+	//sectionNames[6] = "ER/Xrays"
+	//sectionNames[7] = "IR"
+	//sectionNames[8] = "Nuclear"
+	//sectionNames[9] = "US"
+	//sectionNames[10] = "Peds"
+	//sectionNames[11] = "FluoroJH"
+	//sectionNames[12] = "FluoroFH"
+	//sectionNames[13] = "MSk"
+	//sectionNames[14] = "Mammo"
+	//sectionNames[15] = "BoneDensity"
+	//sectionNames[16] = "Late"
+	//sectionNames[17] = "Moonlighters"
+	//sectionNames[18] = "WeekendJH"
+	//sectionNames[19] = "WeekendFH"
+	//sectionNames[20] = "WeekendIR"
+	//sectionNames[21] = "MDOff"
 
 	err := findAndReadConfIni()
 	if err != nil {
@@ -334,68 +369,68 @@ func main() {
 
 		// Now, mdsOffToday is a slice of several names of who is off today.
 		for _, name := range mdsOffToday {
-			if lower := strings.ToLower(week[dayCol].weekdayOncall); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][weekdayOncall]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on weekday On call\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].neuro); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][neuro]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on neuro\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].body); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][body]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on body\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].er); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][erXrays]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on ER Xrays\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].ir); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][ir]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].nuclear); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][nuclear]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on Nuclear\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].us); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][us]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on US\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].peds); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][peds]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on peds\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].fluoroJH); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].fluoroFH); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].msk); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][msk]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on MSK\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].mammo); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][mammo]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on mammo\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].boneDensity); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][boneDensity]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on bone density\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].late); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][late]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on late\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].moonlighters); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][moonlighters]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on weekend moonlighters\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].weekendJH); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][weekendJH]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on weekend JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].weekendFH); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][weekendFH]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on weekend FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].weekendIR); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][weekendIR]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is off on %s, but is on weekend IR\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
 
 		// Now, lateDocsToday is a slice of two names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
 		for _, name := range lateDocsToday {
-			if lower := strings.ToLower(week[dayCol].fluoroJH); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol].fluoroFH); strings.Contains(lower, name) {
+			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				fmt.Printf(" %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
