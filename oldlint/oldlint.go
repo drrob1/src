@@ -1,4 +1,4 @@
-package main // lint.go
+package main // oldlint.go from lint.go
 
 import (
 	"bytes"
@@ -78,7 +78,6 @@ type dayType struct {
 	mdOff         string
 }
 
-// var categoryNamesList = []string{"WeekdayOnCall", "neuro", "body", "er", "xrays", "ir", "nuclear medicine", "us", "fluoro jh", "fluoro fh", "msk", "mammo", "bone density", "late", "moonlighters", "weekendJH", "weekendFH", "weekendIR", "md's off"}
 var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var workingDir string
 var dayOff = make(map[string]bool) // not sure if I need this, but here it is.

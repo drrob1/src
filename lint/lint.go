@@ -1,4 +1,4 @@
-package main // lint2.go from lint.go
+package main // lint.go, from lint2.go from lint.go
 
 import (
 	"bytes"
