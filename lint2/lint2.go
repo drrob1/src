@@ -57,9 +57,11 @@ import (
   29 Jan 25 -- I'm going to make the week a 2D array, and use a map to get the names from the row #.  Just to see if it will work.  It does.
 				Now I'm going to try to see if a remote doc is on fluoro, like there was today.
   30 Jan 25 -- And I shortened the main loop looking for vacation docs assigned to clinical work.
+----------------------------------------------------------------------------------------------------
+  31 Jan 25 -- Renamed back to lint.go
 */
 
-const lastModified = "30 Jan 2025"
+const lastModified = "31 Jan 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -395,7 +397,7 @@ func main() {
 		}
 
 		// Now, mdsOffToday is a slice of several names of who is off today.
-	
+
 		for _, name := range mdsOffToday {
 			for i := weekdayOncall; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(week[dayCol][i]); strings.Contains(lower, name) {
