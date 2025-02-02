@@ -59,9 +59,10 @@ import (
   30 Jan 25 -- And I shortened the main loop looking for vacation docs assigned to clinical work.
 ----------------------------------------------------------------------------------------------------
   31 Jan 25 -- Renamed back to lint.go
+   2 Feb 25 -- Made dayNames an array instead of a slice.  It's fixed, so it doesn't need to be a slice.
 */
 
-const lastModified = "31 Jan 2025"
+const lastModified = "2 Feb 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -93,7 +94,7 @@ type dayType [23]string // there are a few unused entries here.  This goes from 
 var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
 
-var dayNames = []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var workingDir string
 var names = make([]string, 0, 25)  // a list of all the doc's last names as read from the config file.
 var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
