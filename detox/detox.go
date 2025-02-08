@@ -28,18 +28,20 @@ import (
   23 Jan 24 -- Added noWorkFlag, which means do not actually do anything.  Just print what would be done.  And changed the name of the other option to dot.  It was too hard to type detox -dots
   28 Jan 24 -- noWorkFlag now really does work.
    2 Mar 24 -- Added back -dots as an alternative, so both -dot and -dots do the same thing.
-   7 Feb 25 -- Changing the flag values.  I don't need viper to do this.  I'll use -n to be noWorkFlag, and -d to mean noDotsFlag.
+   7 Feb 25 -- Changing the flag values.  I don't need viper to do this.  I'll add -n to be noWorkFlag, and -d to mean noDotsFlag.
+   8 Feb 25 -- removed NoDotFlag, as I have several options using the same flag bool; I only need 2 flag bools.
 */
 
-const lastModified = "7 Feb 25"
+const lastModified = "8 Feb 25"
 
-var noDotsFlag, noDotFlag bool
+var noDotsFlag bool
 var noWorkFlag bool
 
 func init() {
 	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
-	flag.BoolVar(&noDotFlag, "dot", false, "Enable removing excess dots from filenames.") // I've done this before, and it works.
-	flag.BoolVar(&noDotFlag, "d", false, "Enable removing excess dots from filenames.")   // IE, having 2 options set the same Flag bool variable.
+	flag.BoolVar(&noDotsFlag, "dot", false, "Enable removing excess dots from filenames.") // I've done this before, and it works.
+	flag.BoolVar(&noDotsFlag, "d", false, "Enable removing excess dots from filenames.")   // IE, having 2 options set the same Flag bool variable.
+	flag.BoolVar(&noWorkFlag, "no", false, "No work is to be done.  Just show what would be done.")
 	flag.BoolVar(&noWorkFlag, "n", false, "No work is to be done.  Just show what would be done.")
 }
 
@@ -47,9 +49,6 @@ func main() {
 	var globPattern string
 
 	flag.Parse()
-	if noDotFlag { // so if -d is used, it will also set -noDotsFlag.  If noDotsFlag is set by the -dots option, it doesn't matter.
-		noDotsFlag = true
-	}
 
 	fmt.Println()
 
@@ -61,8 +60,8 @@ func main() {
 
 	startDirectory, _ := os.Getwd() // startDirectory is a string
 	fmt.Println()
-	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s.  noDotsFlag=%t, noDotFlag=%t. \n",
-		lastModified, globPattern, startDirectory, noDotsFlag, noDotFlag)
+	fmt.Printf(" detox.go lastModified is %s, will use globbing pattern of %q and will start in %s.  noDotsFlag=%t, noWorkFlag=%t. \n",
+		lastModified, globPattern, startDirectory, noDotsFlag, noWorkFlag)
 	fmt.Println()
 
 	files := myReadDirNames(startDirectory)
