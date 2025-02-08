@@ -28,24 +28,26 @@ import (
   23 Jan 24 -- Added noWorkFlag, which means do not actually do anything.  Just print what would be done.  And changed the name of the other option to dot.  It was too hard to type detox -dots
   28 Jan 24 -- noWorkFlag now really does work.
    2 Mar 24 -- Added back -dots as an alternative, so both -dot and -dots do the same thing.
+   7 Feb 25 -- Changing the flag values.  I don't need viper to do this.  I'll use -n to be noWorkFlag, and -d to mean noDotsFlag.
 */
 
-const lastModified = "2 Mar 24"
+const lastModified = "7 Feb 25"
 
 var noDotsFlag, noDotFlag bool
 var noWorkFlag bool
 
 func init() {
 	flag.BoolVar(&noDotsFlag, "dots", false, "Enable removing excess dots from filenames.")
-	flag.BoolVar(&noDotFlag, "dot", false, "Enable removing excess dots from filenames.")
-	flag.BoolVar(&noWorkFlag, "no", false, "No work is to be done.  Just show what would be done.")
+	flag.BoolVar(&noDotFlag, "dot", false, "Enable removing excess dots from filenames.") // I've done this before, and it works.
+	flag.BoolVar(&noDotFlag, "d", false, "Enable removing excess dots from filenames.")   // IE, having 2 options set the same Flag bool variable.
+	flag.BoolVar(&noWorkFlag, "n", false, "No work is to be done.  Just show what would be done.")
 }
 
 func main() {
 	var globPattern string
 
 	flag.Parse()
-	if noDotFlag { // so if -dot is used, it will also set -noDotsFlag.  If noDotsFlag is set by the -dots option, it doesn't matter.
+	if noDotFlag { // so if -d is used, it will also set -noDotsFlag.  If noDotsFlag is set by the -dots option, it doesn't matter.
 		noDotsFlag = true
 	}
 
