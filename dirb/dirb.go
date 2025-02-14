@@ -36,6 +36,7 @@ const bookmarkfilename = "bookmarkfile.gob"
   28 Nov 24 -- Added a sep character in the target.
   29 Nov 24 -- added a message to print if -v is used.  And I'm going to use filepath.Join more.
 				It's become obvious to me that I should not store the "cdd " part in the map[string]string.  That will be added here.
+  14 Feb 25 -- The first time using the updated format of the directory database, need to use convertbookmarks once.
 */
 
 const LastAltered = "Nov 29, 2024"
