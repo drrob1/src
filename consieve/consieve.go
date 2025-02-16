@@ -4,6 +4,7 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -31,9 +32,10 @@ import (
 				Result for Sieve of Eratosthenes is ~2300/sec, on leox desktop, and workers = NumCPU()+1
 				Result for Sieve of Eratosthenes is ~8700/sec, on thelio desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
 22 Jul 2024 -- Result for the Sieve from work is ~4500/sec, before I started everything else, and it didn't change after I did start everything else.
+16 Feb 2025 -- Result on Win11 desktop w/ Ryzen 9 CUP, 5950X is 7700-7800.  I preallocated the memory, and changed the startup message.
 */
 
-const LastModified = "21 July 2024"
+const LastModified = "16 Feb 2025"
 const timeForTesting = 5 * time.Second
 
 var wg sync.WaitGroup
@@ -109,15 +111,26 @@ func sieveToPrimes(sieve []bool) []int {
 }
 
 func main() {
-	var sieve []bool
 
 	var max = 1_000_000
-	fmt.Printf(" Concurrent Sieve of Eratosthenes, last modified %s, Enter Max: ", LastModified)
+
+	execName, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	ExecFI, _ := os.Stat(execName)
+	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+
+	fmt.Printf(" Concurrent Sieve of Eratosthenes, last modified %s, compiled using %s on %s \nEnter Max: ", LastModified, runtime.Version(), ExecTimeStamp)
 	fmt.Scanln(&max)
 	fmt.Printf(" Using max of %d.\n", max)
 
 	t0 := time.Now()
 	tFinal := t0.Add(timeForTesting)
+
+	//var sieve []bool
+	sieve := make([]bool, 0, max) // allocate once.
 
 	if workers < 1 {
 		workers = 1
