@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -32,7 +33,7 @@ import (
 				Result for Sieve of Eratosthenes is ~2300/sec, on leox desktop, and workers = NumCPU()+1
 				Result for Sieve of Eratosthenes is ~8700/sec, on thelio desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
 22 Jul 2024 -- Result for the Sieve from work is ~4500/sec, before I started everything else, and it didn't change after I did start everything else.
-16 Feb 2025 -- Result on Win11 desktop w/ Ryzen 9 CUP, 5950X is 7700-7800.  I preallocated the memory, and changed the startup message.
+16 Feb 2025 -- Result on Win11 desktop w/ Ryzen 9 CUP, 5950X is 7700-7800.  I preallocated the memory, changed the startup message, and added verboseFlag.
 */
 
 const LastModified = "16 Feb 2025"
@@ -41,6 +42,7 @@ const timeForTesting = 5 * time.Second
 var wg sync.WaitGroup
 var workers = runtime.NumCPU() + 1
 var total int64
+var verboseFlag = flag.Bool("v", false, "Verbose mode")
 
 func sieveOfEratosthenes(mx int) []bool {
 	if mx < 2 {
@@ -126,6 +128,8 @@ func main() {
 	fmt.Scanln(&max)
 	fmt.Printf(" Using max of %d.\n", max)
 
+	flag.Parse()
+
 	t0 := time.Now()
 	tFinal := t0.Add(timeForTesting)
 
@@ -147,8 +151,10 @@ func main() {
 				if now.After(tFinal) {
 					dur := now.Sub(t0)
 					sec := dur.Seconds()
-					fmt.Printf("Elapsed time: %.5f for worker %02d, i = %d, dur=%.5f, rate = %.0f per second.\n",
-						now.Sub(t0).Seconds(), j, i, dur.Seconds(), float64(i)/sec)
+					if *verboseFlag {
+						fmt.Printf("Elapsed time: %.5f for worker %02d, i = %d, dur=%.5f, rate = %.0f per second.\n",
+							now.Sub(t0).Seconds(), j, i, dur.Seconds(), float64(i)/sec)
+					}
 					break
 				}
 				sieve = sieveOfEratosthenes(max)
