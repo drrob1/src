@@ -23,7 +23,7 @@ import (
 
 var wg sync.WaitGroup
 
-func f1(t int) {
+func f1(t int) { // no timeout or deadline
 	c1 := context.Background()
 	// WithCancel returns a copy of parent context with a new Done channel
 	c1, cancel := context.WithCancel(c1)
@@ -51,7 +51,7 @@ func f1(t int) {
 	return
 }
 
-func f2(t int) {
+func f2(t int) { // creates a timeout
 	c2 := context.Background()
 	c2, cancel := context.WithTimeout(c2, time.Duration(t)*time.Second)
 	defer func() {
@@ -79,7 +79,7 @@ func f2(t int) {
 	return
 }
 
-func f3(t int) {
+func f3(t int) { // creates a deadline
 	c3 := context.Background()
 	deadline := time.Now().Add(time.Duration(t) * time.Second)
 	c3, cancel := context.WithDeadline(c3, deadline)
