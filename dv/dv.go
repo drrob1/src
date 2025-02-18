@@ -164,9 +164,10 @@ REVISION HISTORY
 19 Jan 25 -- Added -w as a single letter meaning --vv.  The use of -w comes from a play on its name.
 20 Jan 25 -- Added timing info for startup code.
 22 Jan 25 -- Added runtime.Compiler to the startup message.
+17 Feb 25 -- Removed code regarding the fullConfigFile for the viper config file.
 */
 
-const LastAltered = "22 Jan 2025"
+const LastAltered = "17 Feb 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -225,8 +226,8 @@ func main() {
 		ctfmt.Printf(ct.Red, winflag, "Error getting user home directory is %s\n", err.Error())
 		return
 	}
-	fullConfigFileName := filepath.Join(homeDir, configFilename)
-	_ = fullConfigFileName // this is a kludge so this var is marked as needed when it's not
+	//fullConfigFileName := filepath.Join(homeDir, configFilename)
+	//_ = fullConfigFileName // this is a kludge so this var is marked as needed when it's not
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {

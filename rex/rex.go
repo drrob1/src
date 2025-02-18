@@ -1,14 +1,14 @@
-// rex.go -- directory sort using a regular expression pattern
+// rex.go -- directory sort using a regular expression pattern on the filename.
 
 package main
 
 import (
 	"bytes"
 	"errors"
-	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 	"io"
 	"log"
@@ -136,10 +136,11 @@ Revision History
  6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
 				I want the base amount to be the full screen.  I have to think about this for a bit.
 				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
- 8 Jan 25 -- Using maxFlag is not a good idea, as it just prevents halfFlag from ever working.  See top comments in dsrt.go
+ 8 Jan 25 -- Using maxFlag is not a good idea, as it just prevents halfFlag from ever working.  See top comments in dsrt.go.  Tagged as rex-v1.0
+17 Feb 25 -- Adding pflag.  I don't think I need viper yet.  I added pflag by naming its import path to flag.
 */
 
-const LastAltered = "Jan 8, 2025"
+const LastAltered = "Feb 17, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -248,7 +249,7 @@ func main() {
 	}
 
 	sepstring := string(filepath.Separator)
-	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of go 1.12.
+	HomeDirStr, err := os.UserHomeDir() // used for processing '~' symbol meaning home directory.  Function avail as of go 1.12.
 	if err != nil {
 		HomeDirStr = ""
 		fmt.Fprint(os.Stderr, err)
@@ -259,44 +260,43 @@ func main() {
 	// flag definitions and processing
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 	var RevFlag bool                                                                         // will always be false.
-	//flag.BoolVar(&RevFlag, "R", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
-	var nscreens = flag.Int("n", 1, "number of screens to display") // Ptr
+	var nscreens = flag.IntP("nscreens", "n", 1, "number of screens to display") // Ptr
 	var NLines int
-	flag.IntVar(&NLines, "N", 0, "number of lines to display") // Value
+	flag.IntVarP(&NLines, "nlines", "N", 0, "number of lines to display") // Value
 
-	var helpflag = flag.Bool("h", false, "print help message") // pointer
-	var HelpFlag bool
-	flag.BoolVar(&HelpFlag, "help", false, "print help message")
+	//var helpflag = flag.Bool("h", false, "print help message") // pointer
+	//var HelpFlag bool
+	//flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
-	var sizeflag = flag.Bool("s", false, "sort by size instead of by mod date") // pointer
-	var SizeFlag bool                                                           // will always be false.
+	var sizeflag = flag.BoolP("size", "s", false, "sort by size instead of by mod date") // pointer
+	var SizeFlag bool                                                                    // will always be false.
 
-	flag.BoolVar(&dirListFlag, "d", false, "include directories in the output listing")
+	flag.BoolVarP(&dirListFlag, "dirlist", "d", false, "include directories in the output listing")
 
 	var FilenameListFlag bool
-	flag.BoolVar(&FilenameListFlag, "D", false, "Directories only in the output listing")
+	flag.BoolVarP(&FilenameListFlag, "filelist", "D", false, "Directories only in the output listing")
 
-	var TotalFlag = flag.Bool("t", false, "include grand total of directory") // Removed 8/27/23, added back 5/4/24
+	var TotalFlag = flag.BoolP("total", "t", false, "include grand total of directory") // Removed 8/27/23, added back 5/4/24
 
-	flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")
-	flag.BoolVar(&verboseFlag, "v", false, "enter a verbose (testing) mode to println more variables")
+	//flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")  Never used anyways
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "enter a verbose (testing) mode to println more variables")
 
-	var longflag = flag.Bool("l", false, "long file size format.") // Ptr
+	var longflag = flag.BoolP("long", "l", false, "long file size format.") // Ptr
 
-	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex to be entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "x", "", "regex entered on command line to be excluded from output.")
+	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex to be entered after prompt")  Never used this way anyways
+	flag.StringVarP(&excludeRegexPattern, "exclude", "x", "", "regex entered on command line to be excluded from output.")
 
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
 	var extensionflag = flag.Bool("ext", false, "only print if there is no extension, like a binary file")
 
 	var w int
-	flag.IntVar(&w, "w", 0, " width of full displayed screen.")
+	flag.IntVarP(&w, "width", "w", 0, " width of full displayed screen.")
 
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag for noisy tests.")
 
-	flag.IntVar(&numOfCols, "c", 1, "Columns in the output.")
-	flag.BoolVar(&halfFlag, "1", false, "display 1/2 of the screen.")
+	flag.IntVarP(&numOfCols, "cols", "c", 1, "Columns in the output.")
+	flag.BoolVarP(&halfFlag, "half", "1", false, "display 1/2 of the screen.")
 
 	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
 	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
@@ -304,7 +304,7 @@ func main() {
 	c2 := flag.Bool("2", false, "Flag to set 2 column display mode.")
 	c3 := flag.Bool("3", false, "Flag to set 3 column display mode.")
 
-	flag.BoolVar(&allFlag, "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
+	flag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
 
 	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
@@ -316,7 +316,8 @@ func main() {
 
 	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
-	ctfmt.Print(ct.Magenta, winFlag, " rex will display sorted by date or size in 1 column.  LastAltered ", LastAltered, ", compiled using ", runtime.Version())
+	ctfmt.Print(ct.Magenta, winFlag, " rex will display sorted by date or size in up to 3 columns.  Now uses pflag.  LastAltered ",
+		LastAltered, ", compiled using ", runtime.Version())
 	if dsrtEnviron != "" {
 		ctfmt.Printf(ct.Yellow, winFlag, ", dsrt env = %s", dsrtEnviron)
 	}
@@ -351,9 +352,8 @@ func main() {
 		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d and numofCols=%d\n", w, *nscreens, NLines, numOfCols)
 	}
 
-	if *helpflag || HelpFlag {
-		fmt.Println()
-		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
+	flag.Usage = func() {
+		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Reads from rex and dsw environment variables before processing commandline switches.\n")
 		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
 			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
@@ -368,7 +368,7 @@ func main() {
 		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
 		fmt.Println()
 		flag.PrintDefaults()
-		os.Exit(0)
+		//return flagged by staticcheck as redundant.  Interesting
 	}
 
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
