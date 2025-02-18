@@ -1,19 +1,18 @@
-// rex.go -- directory sort using a regular expression pattern on the filename.
+// rexv.go from rex.go -- directory sort using a regular expression pattern on the filename
 
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	flag "github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"golang.org/x/term"
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -22,9 +21,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	//"time"
-	"unicode"
+	//"unicode"
+	//"bytes"
+	//"os/exec"
 )
 
 /*
@@ -138,16 +137,18 @@ Revision History
 				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
  8 Jan 25 -- Using maxFlag is not a good idea, as it just prevents halfFlag from ever working.  See top comments in dsrt.go.  Tagged as rex-v1.0
 17 Feb 25 -- Adding pflag.  I don't think I need viper yet.  I added pflag by naming its import path to flag.
+----------------------------------------------------------------------------------------------------
+17 Feb 25 -- Now called rexv.go, as I've added viper.
 */
 
 const LastAltered = "Feb 17, 2025"
 
 type dirAliasMapType map[string]string
 
-type DsrtParamType struct {
-	paramNum, w                                                               int
-	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalFlag, halfFlag bool
-}
+//type DsrtParamType struct {  replaced by viper
+//	paramNum, w                                                               int
+//	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalFlag, halfFlag bool
+//}
 
 type colorizedStr struct {
 	color ct.Color
@@ -157,8 +158,9 @@ type colorizedStr struct {
 const defaultHeight = 40
 const maxWidth = 300
 const minWidth = 90
-const min2Width = 160
+const min2Width = 170
 const min3Width = 170
+const configShortName = "rexv"
 
 const multiplier = 10 // used for the worker pool pattern in MyReadDir
 const fetch = 1000    // used for the concurrency pattern in MyReadDir
@@ -166,7 +168,7 @@ var numWorkers = runtime.NumCPU() * multiplier
 
 var excludeRegex *regexp.Regexp
 
-var dirListFlag, longFileSizeListFlag, filenameList, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
+var dirListFlag, longFileSizeListFlag, filenameToBeListedFlag, showGrandTotal, verboseFlag, noExtensionFlag, excludeFlag, veryVerboseFlag, halfFlag bool
 
 var maxDimFlag, fastFlag bool
 var sizeTotal, grandTotal int64
@@ -180,7 +182,7 @@ var allScreens = 50
 var allFlag bool
 
 func main() {
-	var dsrtParam DsrtParamType
+	//var dsrtParam DsrtParamType  replaced by viper
 	var fileInfos []os.FileInfo
 	var err error
 	var autoHeight, autoWidth int
@@ -188,68 +190,30 @@ func main() {
 	var numOfCols int
 
 	// environment variable processing.  If present, these will be the defaults.
-	dsrtEnviron := os.Getenv("rex")
-	dswEnviron := os.Getenv("dsw")
-	dsrtParam = ProcessEnvironString(dsrtEnviron, dswEnviron) // This is a function below.
-	//fmt.Printf(" dsrtEnviron = %s, dswEnviron = %s\n dsrtParam = %v\n", dsrtEnviron, dswEnviron, dsrtParam)
+	//dsrtEnviron := os.Getenv("rex")
+	//dswEnviron := os.Getenv("dsw")
+	//dsrtParam = ProcessEnvironString(dsrtEnviron, dswEnviron) // This is a function below.  Nevermind, replaced by viper.
 
 	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
 	winFlag := runtime.GOOS == "windows"
 
-	if !autoDefaults {
-		if winFlag {
-			comspec, ok := os.LookupEnv("ComSpec")
-			if ok {
-				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
-				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
-				tcc.Stdout = bytesbuf
-				tcc.Run()
-				colstr := bytesbuf.String()
-				lines := strings.Split(colstr, "\n")
-				trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
-				autoWidth, err = strconv.Atoi(trimmedLine)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
-				}
-
-				bytesbuf.Reset()
-				tcc = exec.Command(comspec, "-C", "echo", "%_rows")
-				tcc.Stdout = bytesbuf
-				tcc.Run()
-				rowstr := bytesbuf.String()
-				lines = strings.Split(rowstr, "\n")
-				trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
-				autoHeight, err = strconv.Atoi(trimmedLine)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
-				}
-
-			} else {
-				fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
-			}
-		} else {
-			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
-			autoWidth = minWidth
-			autoHeight = defaultHeight
-		}
-	} else {
-		autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd()))
-		if err != nil {
-			autoDefaults = false
-			fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
-			autoWidth = minWidth
-			autoHeight = defaultHeight
-		}
+	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		autoDefaults = false
+		fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
+		autoWidth = minWidth
+		autoHeight = defaultHeight
 	}
+	autoHeight -= 7 // an empirically determined fudge factor.
 
-	if autoHeight > 0 {
-		numOfLines = autoHeight - 7
-	} else {
-		numOfLines = defaultHeight
-	}
+	//if autoHeight > 0 {
+	//	numOfLines = autoHeight - 7
+	//} else {
+	//	numOfLines = defaultHeight
+	//}
 
 	sepstring := string(filepath.Separator)
-	HomeDirStr, err := os.UserHomeDir() // used for processing '~' symbol meaning home directory.  Function avail as of go 1.12.
+	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of go 1.12.
 	if err != nil {
 		HomeDirStr = ""
 		fmt.Fprint(os.Stderr, err)
@@ -257,29 +221,27 @@ func main() {
 	}
 	HomeDirStr = HomeDirStr + sepstring
 
-	// flag definitions and processing
+	// flag definitions and processing.  Now using pflag package
 	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
-	var RevFlag bool                                                                         // will always be false.
 
 	var nscreens = flag.IntP("nscreens", "n", 1, "number of screens to display") // Ptr
 	var NLines int
 	flag.IntVarP(&NLines, "nlines", "N", 0, "number of lines to display") // Value
+	viper.SetDefault("NLines", autoHeight)
 
 	//var helpflag = flag.Bool("h", false, "print help message") // pointer
 	//var HelpFlag bool
 	//flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
 	var sizeflag = flag.BoolP("size", "s", false, "sort by size instead of by mod date") // pointer
-	var SizeFlag bool                                                                    // will always be false.
 
 	flag.BoolVarP(&dirListFlag, "dirlist", "d", false, "include directories in the output listing")
 
 	var FilenameListFlag bool
-	flag.BoolVarP(&FilenameListFlag, "filelist", "D", false, "Directories only in the output listing")
+	flag.BoolVarP(&FilenameListFlag, "onlydir", "D", false, "Directories only in the output listing")
 
 	var TotalFlag = flag.BoolP("total", "t", false, "include grand total of directory") // Removed 8/27/23, added back 5/4/24
 
-	//flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")  Never used anyways
 	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "enter a verbose (testing) mode to println more variables")
 
 	var longflag = flag.BoolP("long", "l", false, "long file size format.") // Ptr
@@ -292,14 +254,14 @@ func main() {
 
 	var w int
 	flag.IntVarP(&w, "width", "w", 0, " width of full displayed screen.")
+	viper.SetDefault("w", autoWidth)
 
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag for noisy tests.")
 
 	flag.IntVarP(&numOfCols, "cols", "c", 1, "Columns in the output.")
 	flag.BoolVarP(&halfFlag, "half", "1", false, "display 1/2 of the screen.")
 
-	mFlag := flag.Bool("m", false, "Set maximum height, usually 50 lines")
-	maxFlag := flag.Bool("max", false, "Set max height, usually 50 lines, alternative flag")
+	mFlag := flag.BoolP("max", "m", false, "Set maximum height, usually 50 lines")
 
 	c2 := flag.BoolP("c2", "2", false, "Flag to set 2 column display mode.")
 	c3 := flag.BoolP("c3", "3", false, "Flag to set 3 column display mode.")
@@ -310,35 +272,136 @@ func main() {
 
 	flag.Parse()
 
+	// viper stuff
+	err = viper.BindPFlags(flag.CommandLine) // this statement passes control of all the flags to viper from the pflag package.  Remember, verbose and veryverbose flags are not init'd yet
+	if err != nil {
+		ctfmt.Printf(ct.Red, winFlag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
+	}
+
+	viper.SetConfigType("yaml")
+	viper.SetConfigName(configShortName) // From an online source.  This works too.  Great.
+	viper.AddConfigPath(".")
+
+	//AutomaticEnv makes Viper check if environment variables match any of the existing keys (config, default or flags). If matching env vars are found, they are loaded into Viper.
+	// This seems to be working.  But I don't intend to use it much.  I like having directory specific config files.  I removed the config file from homeDir and put it in Documents on Win11.
+	viper.AutomaticEnv()
+
+	var errconfig1, errconfig2 error
+	errconfig1 = viper.ReadInConfig()
+	if errconfig1 != nil {
+		viper.AddConfigPath(HomeDirStr)
+		errconfig2 = viper.ReadInConfig()
+	}
+
+	verboseFlag = viper.GetBool("verbose")
+	veryVerboseFlag = viper.GetBool("vv")
 	if veryVerboseFlag { // setting very verbose will also set verbose.
 		verboseFlag = true
 	}
 
-	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
-
-	ctfmt.Print(ct.Magenta, winFlag, " rex will display sorted by date or size in up to 3 columns.  Now uses pflag.  LastAltered ",
-		LastAltered, ", compiled using ", runtime.Version())
-	if dsrtEnviron != "" {
-		ctfmt.Printf(ct.Yellow, winFlag, ", dsrt env = %s", dsrtEnviron)
+	if verboseFlag {
+		if errconfig1 != nil {
+			ctfmt.Printf(ct.Red, winFlag, "Error reading config file 1, from current directory  Err: %s. \n", errconfig1.Error())
+		}
+		if errconfig2 != nil {
+			ctfmt.Printf(ct.Red, winFlag, "Error reading config file 2, from current directory  Err: %s. \n", errconfig2.Error())
+		}
 	}
-	if dswEnviron != "" {
-		ctfmt.Printf(ct.Yellow, winFlag, ", dsw env = %s", dswEnviron)
-	}
-	fmt.Println()
 
+	*mFlag = viper.GetBool("max")
+	maxDimFlag = *mFlag //  I removed maxFlag for this version.
+
+	NLines = viper.GetInt("NLines")
+	numOfLines = NLines
+
+	*nscreens = viper.GetInt("nscreens")
+	allFlag = viper.GetBool("all")
+	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+		*nscreens = allScreens // allScreens is defined above w/ a default, non-zero value of 50 as of this writing.
+	}
+	numOfLines *= *nscreens * numOfCols // Doesn't matter if *nscreens or numOfCols = 1 which is the default
+
+	halfFlag = viper.GetBool("half")
+	if halfFlag && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
+		numOfLines /= 2
+	}
+
+	*revflag = viper.GetBool("reverse")
+	Reverse := *revflag
+	Forward := !Reverse // convenience variable
+
+	*sizeflag = viper.GetBool("size")
+	SizeSort := *sizeflag
+	DateSort := !SizeSort // convenience variable
+
+	*extflag = viper.GetBool("noext")
+	*extensionflag = viper.GetBool("binary")
 	noExtensionFlag = *extensionflag || *extflag
+
+	excludeRegexPattern = viper.GetString("exclude")
+	if len(excludeRegexPattern) > 0 {
+		if verboseFlag {
+			fmt.Printf(" excludeRegexPattern is longer than 0 runes.  It is %d runes. \n", len(excludeRegexPattern))
+		}
+		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
+		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" ignoring exclude regular expression.")
+			excludeFlag = false
+		}
+		excludeFlag = true
+		if verboseFlag {
+			fmt.Printf(" Regex condition: excludeFlag=%t, excludeRegex=%v\n", excludeFlag, excludeRegex.String())
+		}
+	}
+
+	dirListFlag = viper.GetBool("dirlist")
+	FilenameListFlag = viper.GetBool("onlydir")
+	*TotalFlag = viper.GetBool("totals")
+	*longflag = viper.GetBool("long")
+	dirListFlag = dirListFlag || FilenameListFlag // if -D entered then this expression also needs to be true.
+	filenameToBeListedFlag = !FilenameListFlag    // need to reverse the flag because D means suppress the output of filenames.
+	longFileSizeListFlag = *longflag
+	showGrandTotal = *TotalFlag // added 09/12/2018 12:32:23 PM
 
 	if numOfCols < 1 {
 		numOfCols = 1
 	} else if numOfCols > 3 {
 		numOfCols = 3
 	}
-	if numOfCols == 1 {
+	if numOfCols == 1 { // there are 2 ways to set numOfCols, by numOfCols flag, or the c2 or c3 flags.
 		if *c2 {
 			numOfCols = 2
 		} else if *c3 {
 			numOfCols = 3
 		}
+	}
+
+	w = viper.GetInt("width")
+	if w <= 0 || w > maxWidth {
+		if numOfCols == 1 {
+			w = autoWidth
+		} else if numOfCols == 2 {
+			w = min2Width
+		} else { // numOfCols must be 3
+			w = min3Width
+		}
+	}
+	// check min widths
+	if numOfCols == 3 && w < min3Width {
+		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min3Width, numOfCols)
+		numOfCols = 1
+	} else if numOfCols == 2 && w < min2Width {
+		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min2Width, numOfCols)
+		numOfCols = 1
+	} else if numOfCols == 1 && w < minWidth {
+		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Output may not look good.\n", w, minWidth, numOfCols)
+	}
+
+	ctfmt.Println(ct.Magenta, winFlag, " rexv will display sorted by date or size in up to 3 columns.  Uses viper.  LastAltered ", LastAltered, ", compiled using ", runtime.Version())
+	if verboseFlag {
+		fmt.Printf(" width = %d\n", w)
 	}
 
 	if verboseFlag {
@@ -350,13 +413,12 @@ func main() {
 		fmt.Println("winFlag:", winFlag)
 		fmt.Println()
 		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d and numofCols=%d\n", w, *nscreens, NLines, numOfCols)
+		fmt.Printf(" After flag.Parse(); autowidth=%d, autoheight=%d, numOfLines=%d and numofCols=%d\n", autoWidth, autoHeight, numOfLines, numOfCols)
 	}
 
 	flag.Usage = func() {
 		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Printf(" Reads from rex and dsw environment variables before processing commandline switches.\n")
-		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
-			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
+		fmt.Printf(" Viper uses rexv.yaml as its config file name. \n")
 		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
 		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
@@ -371,58 +433,6 @@ func main() {
 		//return flagged by staticcheck as redundant.  Interesting
 	}
 
-	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
-	Forward := !Reverse // convenience variable
-
-	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
-	DateSort := !SizeSort // convenience variable
-
-	if NLines > 0 { // priority is -N option
-		numOfLines = NLines
-	} else if dsrtParam.paramNum > 0 && !maxDimFlag { // Use dsrt environ value if the -m or -M not used on command line.  Added Jan 5, 2025
-		numOfLines = dsrtParam.paramNum
-	} else if autoHeight > 0 { // finally use autoHeight.
-		numOfLines = autoHeight - 7
-	} else { // intended if autoHeight fails, like if the display is redirected
-		numOfLines = defaultHeight
-	}
-
-	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
-		*nscreens = allScreens
-	}
-	numOfLines *= *nscreens * numOfCols // Doesn't matter if *nscreens or numOfCols = 1
-
-	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
-		numOfLines /= 2
-	}
-
-	if len(excludeRegexPattern) > 0 {
-		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
-		excludeRegex, err = regexp.Compile(excludeRegexPattern)
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" ignoring exclude regular expression.")
-			excludeFlag = false
-		}
-		excludeFlag = true
-	} else if excludeFlag {
-		ctfmt.Print(ct.Yellow, winFlag, " Enter regex pattern to be excluded: ")
-		fmt.Scanln(&excludeRegexPattern)
-		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
-		excludeRegex, err = regexp.Compile(excludeRegexPattern)
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" ignoring exclude regular expression.")
-			excludeFlag = false
-		}
-	}
-
-	dirListFlag = dirListFlag || FilenameListFlag || dsrtParam.dirlistflag || dsrtParam.filenamelistflag // for rex, this flag is doing double duty, meaning -d was entered or any dir to be listed.
-	filenameList = !(FilenameListFlag || dsrtParam.filenamelistflag)                                     // need to reverse the flag because D means suppress the output of filenames.
-	longFileSizeListFlag = *longflag
-
-	showGrandTotal = *TotalFlag || dsrtParam.totalFlag // added 09/12/2018 12:32:23 PM, and removed 8/27/23.
-
 	inputRegExStr := ""
 	workingDir, er := os.Getwd()
 	if er != nil {
@@ -431,35 +441,6 @@ func main() {
 	}
 
 	startDir := workingDir
-
-	if w == 0 { // w not set by command line flag
-		w = dsrtParam.w
-	}
-	if autoWidth > 0 {
-		if w <= 0 || w > maxWidth {
-			w = autoWidth
-		}
-	} else {
-		if w <= 0 || w > maxWidth {
-			if numOfCols == 1 {
-				w = minWidth
-			} else if numOfCols == 2 {
-				w = min2Width
-			} else {
-				w = min3Width
-			}
-		}
-	}
-	// check min widths
-	if numOfCols == 3 && w < min3Width {
-		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min3Width, numOfCols)
-		numOfCols = 1
-	} else if numOfCols == 2 && w < min2Width {
-		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min2Width, numOfCols)
-		numOfCols = 1
-	} else if numOfCols == 1 && w < minWidth {
-		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Output may not look good.\n", w, minWidth, numOfCols)
-	}
 
 	if flag.NArg() == 0 {
 		inputRegExStr = "." // no regex entered on command line, default is everything, esp useful for testing.
@@ -480,12 +461,12 @@ func main() {
 		f, err := os.Open(workingDir)
 		if err != nil {
 			ctfmt.Printf(ct.Red, winFlag, " Opening %s gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
-			workingDir = startDir
+			workingDir = startDir // error from opening workingDir, so use orig startDir
 		}
 		fi, err := f.Stat()
 		if err != nil {
 			ctfmt.Printf(ct.Red, winFlag, " Stat(%s) gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
-			workingDir = startDir
+			workingDir = startDir // error from opening workingDir, so use orig startDir
 		}
 
 		if !fi.Mode().IsDir() {
@@ -552,8 +533,6 @@ func main() {
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
 		fmt.Printf(" Autodefault=%v, autoheight=%d, autowidth=%d, w=%d, numlines=%d. \n", autoDefaults, autoHeight, autoWidth, w, numOfLines)
-		fmt.Printf(" dsrtparam paramNum=%d, w=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t",
-			dsrtParam.paramNum, dsrtParam.w, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Printf(" Dirname is %s, smartCase = %t\n", workingDir, smartCase)
 		fmt.Println()
 	}
@@ -637,54 +616,6 @@ func IsSymlink(m os.FileMode) bool {
 	result := intermed != 0
 	return result
 } // IsSymlink
-
-// ------------------------------------ ProcessEnvironString ---------------------------------------
-
-func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system utils when can because they tend to be faster
-	var dsrtparam DsrtParamType
-
-	if dswEnv == "" {
-		dsrtparam.w = 0 // redundant
-	} else { // dswStr not in environ, ie not ok
-		n, err := strconv.Atoi(dswEnv)
-		if err == nil {
-			dsrtparam.w = n
-		} else {
-			fmt.Fprintf(os.Stderr, " dsw environ var not a valid number.  dswStr= %q, %v.  Ignored.", dswEnv, err)
-			dsrtparam.w = 0
-		}
-	}
-
-	if dsrtEnv == "" {
-		return dsrtparam
-	} // empty dsrtparam is returned
-
-	indiv := strings.Split(dsrtEnv, "")
-
-	for j, str := range indiv {
-		s := str[0]
-		if s == 'r' || s == 'R' {
-			dsrtparam.reverseflag = true
-		} else if s == 's' || s == 'S' {
-			dsrtparam.sizeflag = true
-		} else if s == 'd' {
-			dsrtparam.dirlistflag = true
-		} else if s == 'D' {
-			dsrtparam.filenamelistflag = true
-		} else if s == 't' { // added 09/12/2018 12:26:01 PM
-			dsrtparam.totalFlag = true // for the grand total operation
-		} else if s == 'h' {
-			dsrtparam.halfFlag = true
-		} else if unicode.IsDigit(rune(s)) {
-			dsrtparam.paramNum = int(s) - int('0')
-			if j+1 < len(indiv) && unicode.IsDigit(rune(indiv[j+1][0])) {
-				dsrtparam.paramNum = 10*dsrtparam.paramNum + int(indiv[j+1][0]) - int('0')
-				break // if have a 2-digit number, it ends processing of the indiv string
-			}
-		}
-	}
-	return dsrtparam
-}
 
 // --------------------------- MakeSubst -------------------------------------------
 
@@ -934,7 +865,7 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr { // co
 	for i, f := range fiSlice {
 		t := f.ModTime().Format("Jan-02-2006_15:04:05")
 		sizeStr := ""
-		if filenameList && f.Mode().IsRegular() {
+		if filenameToBeListedFlag && f.Mode().IsRegular() {
 			sizeTotal += f.Size()
 			if longFileSizeListFlag {
 				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
