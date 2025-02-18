@@ -254,7 +254,7 @@ func main() {
 
 	var w int
 	flag.IntVarP(&w, "width", "w", 0, " width of full displayed screen.")
-	viper.SetDefault("w", autoWidth)
+	viper.SetDefault("width", autoWidth)
 
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose flag for noisy tests.")
 
