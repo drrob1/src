@@ -368,10 +368,10 @@ outerLoop:
 		}
 
 		// Check for the stop code anywhere in the input.
-		if strings.Contains(ans, stopCode) {
-			e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
-			return nil, e
-		}
+		//if strings.Contains(ans, stopCode) {  Decided remove stopcode, as I never used it.  I use just a punctuation on the response line, giving an empty list.
+		//	e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
+		//	return nil, e
+		//}
 
 		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// Upper case letter will mean something, not sure what yet.
@@ -486,6 +486,8 @@ func ReplaceDigits(in string) string {
 	for _, ch := range in {
 		if ch >= '1' && ch <= '9' {
 			ch = ch + fudgefactor
+		} else if ch == '0' {
+			ch += fudgefactor + 1 // as this is '0' and not '1' but I want it to behave as if a '1' was entered.
 		}
 		sb.WriteRune(ch)
 	}

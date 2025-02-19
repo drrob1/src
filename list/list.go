@@ -80,9 +80,10 @@ import (
 				Since I'm starting to use pflag and viper, I'm going to have to remove the use of flag.NArgs here.  I'll make it global?  Then I'll have to change lots of other code.
 				I'll have to use both flag and pflag.
 				The only way for flag and pflag to not clobber each other is to use the Parsed() function to determine which is active.
+  19 Feb 25 -- Making "0" a synonym for "1" instead of a stop code.
 */
 
-var LastAltered = "Jan 15, 2025"
+var LastAltered = "Feb 19, 2025"
 
 type DirAliasMapType map[string]string
 
@@ -556,6 +557,8 @@ func ReplaceDigits(in string) string {
 	for _, ch := range in {
 		if ch >= '1' && ch <= '9' {
 			ch = ch + fudgefactor
+		} else if ch == '0' {
+			ch += fudgefactor + 1 // as this is '0' and not '1' but I want it to behave as if a '1' was entered.
 		}
 		sb.WriteRune(ch)
 	}
@@ -652,10 +655,10 @@ outerLoop:
 		}
 
 		// Check for the stop code anywhere in the input.
-		if strings.Contains(ans, stopCode) { // this is a "0" at time of writing this comment.
-			e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
-			return nil, e
-		}
+		//if strings.Contains(ans, stopCode) { // this is a "0" at time of writing this comment.  I decided to remove the zero stop code.  I never used it.  A punctuation char is easier.
+		//	e := fmt.Errorf("stopcode of %q found in input.  Stopping", stopCode)
+		//	return nil, e
+		//}
 
 		// Here is where I can scan the ans string first replacing digits 1..9, and then looking for a-z and replace that with all the letters so indicated before
 		// passing it onto the processing loop.
