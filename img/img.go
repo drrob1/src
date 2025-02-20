@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	flag "github.com/spf13/pflag"
 	"math"
+	"sync/atomic"
 
 	_ "golang.org/x/image/webp"
 	"image"
@@ -103,6 +104,7 @@ var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
 var keyCmdChan chan int
+var rotatedTimes int64 // used in keyTyped.  And atomicadd so need this type.
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -119,7 +121,14 @@ func isImage(file string) bool {
 func main() {
 	var err error
 	flag.Usage = func() {
-		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version())
+		executable, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		ExecFI, _ := os.Stat(executable)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Printf(" %s last altered %s, compiled with %s, and linked %s. \n",
+			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
 		fmt.Printf(" Usage information:\n")
 		fmt.Printf(" z = zoom and also toggles sticky.\n")
 		fmt.Printf(" v = verbose.\n")
@@ -497,7 +506,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
 		}
 	case fyne.KeyR:
-		rotateAndLoadTheImage(index, 1) // global
+		atomic.AddInt64(&rotatedTimes, 1)
+		rotateAndLoadTheImage(index, rotatedTimes) // index is global, rotatedTimes is local to this proc.
 	case fyne.Key1:
 		rotateAndLoadTheImage(index, 1)
 	case fyne.Key2:
@@ -538,7 +548,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 } // end keyTyped
 
 // rotateTheImage -- loads the image given by the index, and then rotates it before displaying it.
-func rotateAndLoadTheImage(idx int, repeat int) {
+func rotateAndLoadTheImage(idx int, repeat int64) {
 	imgName := imageInfo[idx].Name()
 	fullFilename, err := filepath.Abs(imgName)
 	if err != nil {
