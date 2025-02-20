@@ -1,9 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"fyne.io/fyne/v2/app"
+	flag "github.com/spf13/pflag"
 	"math"
 
 	_ "golang.org/x/image/webp"
@@ -23,6 +23,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/storage"
 
+	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -30,6 +31,7 @@ import (
 	//"fyne.io/fyne/v2/layout"
 	//"fyne.io/fyne/v2/container"
 	//"image/color"
+	//"github.com/disintegration/imaging"
 )
 
 // Based on Go GUI with Fyne, Chap 4.
@@ -71,9 +73,10 @@ REVISION HISTORY
 24 Aug 23 -- Removed the old version of main(), and edited some comments.  And added help output.
 26 Aug 23 -- Added call to SetFullScreen(), then removed it because it made most images look terrible.
  7 Sep 23 -- Added reverse sort flag, that would make the oldest first.
+19 Feb 25 -- Starting to think about adding a rotate image command, likely 'r'.  And I might as well use pflag instead of flag.
 */
 
-const LastModified = "Sep 7, 2023"
+const LastModified = "Feb 20, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -92,10 +95,10 @@ var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
 var globalW fyne.Window
-var verboseFlag = flag.Bool("v", false, "verbose flag.")
-var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot.")
-var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // defaults to on as of 8/21/23
-var reverseFlag = flag.Bool("r", false, "reverse sort flag, ie, oldest first.")
+var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag.")
+var zoomFlag = flag.BoolP("zoom", "z", false, "set zoom flag to allow zooming up a lot.")
+var stickyFlag = flag.BoolP("sticky", "s", true, "sticky flag for keeping zoom factor among images.") // defaults to on as of 8/21/23
+var reverseFlag = flag.BoolP("reverse", "r", false, "reverse sort flag, ie, oldest first.")
 var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
@@ -116,10 +119,11 @@ func isImage(file string) bool {
 func main() {
 	var err error
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " z = zoom and also toggles sticky.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " v = verbose.\n")
+		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version())
+		fmt.Printf(" Usage information:\n")
+		fmt.Printf(" z = zoom and also toggles sticky.\n")
+		fmt.Printf(" v = verbose.\n")
+		fmt.Printf(" r = rotate 90º clockwise.\n")
 		flag.PrintDefaults()
 	}
 
@@ -221,7 +225,7 @@ func processKeys() {
 	}
 }
 
-// --------------------------------------------------- loadTheImage ------------------------------
+// loadTheImage -- loads the image given by the index
 func loadTheImage(idx int) {
 	//                                          imgname := imageInfo[index].Name()  where index was a global.  I changed taking input from a global.
 	imgName := imageInfo[idx].Name()
@@ -492,6 +496,16 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if *verboseFlag {
 			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
 		}
+	case fyne.KeyR:
+		rotateAndLoadTheImage(index, 1) // global
+	case fyne.Key1:
+		rotateAndLoadTheImage(index, 1)
+	case fyne.Key2:
+		rotateAndLoadTheImage(index, 2)
+	case fyne.Key3:
+		rotateAndLoadTheImage(index, 3)
+	case fyne.Key4:
+		rotateAndLoadTheImage(index, 4)
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -522,3 +536,81 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 	}
 } // end keyTyped
+
+// rotateTheImage -- loads the image given by the index, and then rotates it before displaying it.
+func rotateAndLoadTheImage(idx int, repeat int) {
+	imgName := imageInfo[idx].Name()
+	fullFilename, err := filepath.Abs(imgName)
+	if err != nil {
+		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
+	}
+
+	//imageURI := storage.NewFileURI(fullFilename)
+	//imgRead, err := storage.Reader(imageURI)
+	imgRead, err := imaging.Open(fullFilename)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
+		return
+	}
+
+	var rotatedImg *image.NRGBA
+	var imgImg image.Image
+
+	for range repeat {
+		rotatedImg = imaging.Rotate90(imgRead)
+		imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
+		imgRead = imgImg
+	}
+
+	bounds := imgImg.Bounds()
+	imgHeight := bounds.Max.Y
+	imgWidth := bounds.Max.X
+
+	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	if *verboseFlag {
+		fmt.Println(title)
+	}
+
+	if scaleFactor != 1 {
+		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
+			scaledHeight := float64(imgHeight) * scaleFactor
+			intHeight := uint(math.Round(scaledHeight))
+			imgImg = resize.Resize(0, intHeight, imgImg, resize.Lanczos3)
+		} else {
+			scaledWidth := float64(imgWidth) * scaleFactor
+			intWidth := uint(math.Round(scaledWidth))
+			imgImg = resize.Resize(intWidth, 0, imgImg, resize.Lanczos3)
+		}
+		bounds = imgImg.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	}
+
+	if *verboseFlag {
+		bounds = imgImg.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
+		fmt.Println()
+	}
+
+	canvasImage := canvas.NewImageFromImage(imgImg)
+	canvasImage.ScaleMode = canvas.ImageScaleSmooth
+	if !*zoomFlag {
+		canvasImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
+		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
+	}
+
+	globalW.SetContent(canvasImage)
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+	globalW.SetTitle(title)
+	globalW.Show()
+
+} // end rotateAndLoadTheImage
+
+func imgImage(img *image.NRGBA) image.Image {
+	return img
+}
