@@ -78,7 +78,7 @@ REVISION HISTORY
 20 Feb 25 -- It works, and uses repeated hits of 'r' to rotate clockwise 90 deg each time.  Or can use '1', '2', '3', or '4' to directly rotate that number of degrees.
 */
 
-const LastModified = "Feb 20, 2025"
+const LastModified = "Feb 21, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -516,7 +516,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		rotateAndLoadTheImage(index, 2)
 	case fyne.Key3:
 		rotateAndLoadTheImage(index, 3)
-	case fyne.Key4:
+	case fyne.Key4, fyne.Key0:
 		rotateAndLoadTheImage(index, 4)
 
 	default:

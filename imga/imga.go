@@ -6,7 +6,9 @@ import (
 	"fyne.io/fyne/v2/app"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/disintegration/imaging"
 	"math"
+	"sync/atomic"
 
 	_ "golang.org/x/image/webp"
 	"image"
@@ -57,6 +59,7 @@ REVISION HISTORY
                And removed the duplicate code in main() that loads an image.
 20 Feb 25 -- Porting code from img.go to here, allowing manual rotation of an image using repeated hits of 'r' to rotate clockwise 90 deg, or '1', '2', or '3'.
 			It's too late now; I'll do this tomorrow.
+			Added the rotateAndLoadImage and imgImage procedures, modified keyTyped and loadTheImage.  Fetching the image names is done w/ one goroutine; this is fast enough.
 */
 
 const LastModified = "Feb 21, 2025"
@@ -82,6 +85,7 @@ var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
 var keyCmdChan chan int
+var rotatedCtr int64 // used in keyTyped.  And atomicadd so need this type.
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -259,6 +263,7 @@ func loadTheImage() {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
+	atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
 	globalW.SetContent(loadedimg)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
@@ -489,6 +494,17 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if *verboseFlag {
 			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
 		}
+	case fyne.KeyR:
+		atomic.AddInt64(&rotatedCtr, 1)
+		rotateAndLoadTheImage(index, rotatedCtr) // index is global, rotatedTimes is local to this proc.
+	case fyne.Key1:
+		rotateAndLoadTheImage(index, 1)
+	case fyne.Key2:
+		rotateAndLoadTheImage(index, 2)
+	case fyne.Key3:
+		rotateAndLoadTheImage(index, 3)
+	case fyne.Key4, fyne.Key0:
+		rotateAndLoadTheImage(index, 4)
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -514,3 +530,79 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 	}
 } // end keyTyped
+
+// rotateAndLoadTheImage -- loads the image given by the index, and then rotates it before displaying it.
+func rotateAndLoadTheImage(idx int, repeat int64) {
+	imgName := imageInfo[idx]
+	fullFilename, err := filepath.Abs(imgName)
+	if err != nil {
+		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
+	}
+
+	imgRead, err := imaging.Open(fullFilename)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
+		return
+	}
+
+	var rotatedImg *image.NRGBA
+	var imgImg image.Image
+
+	for range repeat {
+		rotatedImg = imaging.Rotate90(imgRead)
+		imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
+		imgRead = imgImg
+	}
+
+	bounds := imgImg.Bounds()
+	imgHeight := bounds.Max.Y
+	imgWidth := bounds.Max.X
+
+	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	if *verboseFlag {
+		fmt.Println(title)
+	}
+
+	if scaleFactor != 1 {
+		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
+			scaledHeight := float64(imgHeight) * scaleFactor
+			intHeight := uint(math.Round(scaledHeight))
+			imgImg = resize.Resize(0, intHeight, imgImg, resize.Lanczos3)
+		} else {
+			scaledWidth := float64(imgWidth) * scaleFactor
+			intWidth := uint(math.Round(scaledWidth))
+			imgImg = resize.Resize(intWidth, 0, imgImg, resize.Lanczos3)
+		}
+		bounds = imgImg.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	}
+
+	if *verboseFlag {
+		bounds = imgImg.Bounds()
+		imgHeight = bounds.Max.Y
+		imgWidth = bounds.Max.X
+		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
+		fmt.Println()
+	}
+
+	canvasImage := canvas.NewImageFromImage(imgImg)
+	canvasImage.ScaleMode = canvas.ImageScaleSmooth
+	if !*zoomFlag {
+		canvasImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
+		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
+	}
+
+	globalW.SetContent(canvasImage)
+	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+	globalW.SetTitle(title)
+	globalW.Show()
+
+} // end rotateAndLoadTheImage
+
+func imgImage(img *image.NRGBA) image.Image {
+	return img
+}
