@@ -75,6 +75,7 @@ REVISION HISTORY
 26 Aug 23 -- Added call to SetFullScreen(), then removed it because it made most images look terrible.
  7 Sep 23 -- Added reverse sort flag, that would make the oldest first.
 19 Feb 25 -- Starting to think about adding a rotate image command, likely 'r'.  And I might as well use pflag instead of flag.
+20 Feb 25 -- It works, and uses repeated hits of 'r' to rotate clockwise 90 deg each time.  Or can use '1', '2', '3', or '4' to directly rotate that number of degrees.
 */
 
 const LastModified = "Feb 20, 2025"
