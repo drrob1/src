@@ -312,6 +312,7 @@ func loadTheImage(idx int) {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
+	atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
 	globalW.SetContent(loadedimg)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)

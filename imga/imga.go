@@ -1,32 +1,3 @@
-/*
-REVISION HISTORY
--------- -------
- 9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
-             First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
-             import more parts of fyne.io than the unmodified version.
-12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
-13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
-15 Aug 21 -- Copied back to img.go after the code works and displays a single image from the command line.
-               Will use imgfyne to add the arrow key navigation and img display.
-18 Aug 21 -- It works!
-20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
-21 Aug 21 -- Adding Q and X to exit.
-23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
-26 Aug 21 -- Now called imga.go, to be sorted alphabetically as a slice of strings, not FileInfo's.
-               This allows use of more of the library functions.
-22 Sep 21 -- Added zoomfactor, and will account for shiftState.  And maxWidth, maxHeight more closely match the monitor limits of 1920 x 1080.
-27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
-30 Sep 21 -- Added KeyAsterisk and removed redundant code (as per Andy Williams)
- 4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.  And other things from img.go.
-16 Mar 22 -- Only writing using fmt.Print calls if verboseFlag is set.
-26 Mar 22 -- Handles correctly when dir is not current dir; I did not need to port the code from img.go as it always worked here.
-               It works because the sort is alphabetical, not by date, so I don't need to call Lstat.
-21 Nov 22 -- Fixed some issues flagged by static linter.
-21 Aug 23 -- Made the -sticky flag default to on.  And added a ScaleFactor value to the display window's title.
-25 Aug 23 -- Will time how long it take to create the slice of filenames in MyReadDir.  It's ~1% of the time that img2.go takes, because here os.Lstat isn't used.
-               And removed the duplicate code in main() that loads an image.
-*/
-
 package main
 
 import (
@@ -57,9 +28,38 @@ import (
 	"github.com/nfnt/resize"
 )
 
-// const maxWidth = 1800
-// const maxHeight = 900
-const LastModified = "Aug 25, 2023"
+/*
+REVISION HISTORY
+-------- -------
+ 9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
+             First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
+             import more parts of fyne.io than the unmodified version.
+12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
+13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
+15 Aug 21 -- Copied back to img.go after the code works and displays a single image from the command line.
+               Will use imgfyne to add the arrow key navigation and img display.
+18 Aug 21 -- It works!
+20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
+21 Aug 21 -- Adding Q and X to exit.
+23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
+26 Aug 21 -- Now called imga.go, to be sorted alphabetically as a slice of strings, not FileInfo's.
+               This allows use of more of the library functions.
+22 Sep 21 -- Added zoomfactor, and will account for shiftState.  And maxWidth, maxHeight more closely match the monitor limits of 1920 x 1080.
+27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
+30 Sep 21 -- Added KeyAsterisk and removed redundant code (as per Andy Williams)
+ 4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.  And other things from img.go.
+16 Mar 22 -- Only writing using fmt.Print calls if verboseFlag is set.
+26 Mar 22 -- Handles correctly when dir is not current dir; I did not need to port the code from img.go as it always worked here.
+               It works because the sort is alphabetical, not by date, so I don't need to call Lstat.
+21 Nov 22 -- Fixed some issues flagged by static linter.
+21 Aug 23 -- Made the -sticky flag default to on.  And added a ScaleFactor value to the display window's title.
+25 Aug 23 -- Will time how long it take to create the slice of filenames in MyReadDir.  It's ~1% of the time that img2.go takes, because here os.Lstat isn't used.
+               And removed the duplicate code in main() that loads an image.
+20 Feb 25 -- Porting code from img.go to here, allowing manual rotation of an image using repeated hits of 'r' to rotate clockwise 90 deg, or '1', '2', or '3'.
+			It's too late now; I'll do this tomorrow.
+*/
+
+const LastModified = "Feb 21, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota

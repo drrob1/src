@@ -1,37 +1,3 @@
-// From Go GUI with Fyne, Chap 4, by Andrew Williams, (C) Packtpub.
-/*
-REVISION HISTORY
--------- -------
- 9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
-             First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
-             import more parts of fyne.io than the unmodified version.
-12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
-13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
-15 Aug 21 -- Copied back to img.go after the code works and displays a single image from the command line.
-               Will use imgfyne to add the arrow key navigation and img display.
-18 Aug 21 -- It works!
-20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
-21 Aug 21 -- Adding Q and X to exit.
-23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
- 4 Sep 21 -- Added -, + and = keys
- 4 Sep 21 -- Now called img2, and I intend to use a more complex display, w/ a central image container and a bottom text label.
-               This will need a border layout.
-22 Sep 21 -- I figured out that I need to deal w/ shift states in the keys to get magnification
-29 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
-               Copied from img.go and imga.go.  When looking at my code, Andy commented that I don't need to resize, that's handled
-               automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
- 4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
-26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
-16 Mar 22 -- Will only write using fmt.Print calls if verboseFlag is set.
-26 Mar 22 -- Expanding to work when display directory is not current directory
-21 Oct 22 -- Fixed bad use of format verb caught by golangci-lint.
-21 Nov 22 -- Fixed some issues caught by static linter.
-21 Aug 23 -- Made the -sticky flag default to on.  And added scaleFactor to the window title.
-24 Aug 23 -- Will add the new code I wrote for img to here.
-25 Aug 23 -- Will time how long it takes to create the slice of fileInfos, and then sort them.
- 7 Sep 23 -- I want to add a reverse sort flag, so the first image is the oldest, and I want to allow the use of the scroll wheel.  This may take a bit.
-*/
-
 package main
 
 import (
@@ -65,7 +31,43 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const LastModified = "Sep 7, 2023"
+// From Go GUI with Fyne, Chap 4, by Andrew Williams, (C) Packtpub.
+/*
+REVISION HISTORY
+-------- -------
+ 9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
+             First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
+             import more parts of fyne.io than the unmodified version.
+12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
+13 Aug 21 -- Now called imgfyne.go.  Same purpose as img.go, but so I can test non-fyne code there and fyne code here.
+15 Aug 21 -- Copied back to img.go after the code works and displays a single image from the command line.
+               Will use imgfyne to add the arrow key navigation and img display.
+18 Aug 21 -- It works!
+20 Aug 21 -- Adding a verbose switch to print the messages, and not print them unless that switch is used.
+21 Aug 21 -- Adding Q and X to exit.
+23 Aug 21 -- Added webp format, after talking w/ Andy Williams, author of the book on fyne I read.  He's scottish.
+ 4 Sep 21 -- Added -, + and = keys
+ 4 Sep 21 -- Now called img2, and I intend to use a more complex display, w/ a central image container and a bottom text label.
+               This will need a border layout.
+22 Sep 21 -- I figured out that I need to deal w/ shift states in the keys to get magnification
+29 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
+               Copied from img.go and imga.go.  When looking at my code, Andy commented that I don't need to resize, that's handled
+               automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
+ 4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
+26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
+16 Mar 22 -- Will only write using fmt.Print calls if verboseFlag is set.
+26 Mar 22 -- Expanding to work when display directory is not current directory
+21 Oct 22 -- Fixed bad use of format verb caught by golangci-lint.
+21 Nov 22 -- Fixed some issues caught by static linter.
+21 Aug 23 -- Made the -sticky flag default to on.  And added scaleFactor to the window title.
+24 Aug 23 -- Will add the new code I wrote for img to here.
+25 Aug 23 -- Will time how long it takes to create the slice of fileInfos, and then sort them.
+ 7 Sep 23 -- I want to add a reverse sort flag, so the first image is the oldest, and I want to allow the use of the scroll wheel.  This may take a bit.
+20 Feb 25 -- Porting code from img.go to here, allowing manual rotation of an image using repeated hits of 'r' to rotate clockwise 90 deg, or '1', '2', or '3'.
+			It's too late now; I'll do this tomorrow.
+*/
+
+const LastModified = "Feb 21, 2025"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
