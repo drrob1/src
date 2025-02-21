@@ -85,114 +85,114 @@ func main() {
 
 	camModel, err := EXIF.Get(exif.Model)
 	if err != nil {
-		fmt.Printf(" Error Getting camera model for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Println(camModel.StringVal())
 	}
 
 	focal, err := EXIF.Get(exif.FocalLength)
 	if err != nil {
-		fmt.Printf(" Error Getting focal length for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		numer, denom, _ := focal.Rat2(0) // retrieve first (only) rat. value
-		fmt.Printf("%v/%v", numer, denom)
+		fmt.Printf("Focal length: %v/%v\n", numer, denom)
 	}
 
 	// Two convenience functions exist for date/time taken and GPS coords:
 	tm, err := EXIF.DateTime()
 	if err != nil {
-		fmt.Printf(" Error Getting datetime for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Println("Taken: ", tm)
 	}
 
 	lat, long, err := EXIF.LatLong()
 	if err != nil {
-		fmt.Printf(" Error Getting latitude and longitude for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Println("lat, long: ", lat, ", ", long)
 	}
 
 	orientation, err := EXIF.Get(exif.Orientation)
 	if err != nil {
-		fmt.Printf(" Error Getting orientation for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" Orientation is %s\n", orientation)
 	}
 
 	software, err := EXIF.Get(exif.Software)
 	if err != nil {
-		fmt.Printf(" Error Getting software for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" Software is %s\n", software)
 	}
 
 	colorspace, err := EXIF.Get(exif.ColorSpace)
 	if err != nil {
-		fmt.Printf(" Error Getting colorspace for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" Colorspace is %s\n", colorspace)
 	}
 
 	exposureTime, err := EXIF.Get(exif.ExposureTime)
 	if err != nil {
-		fmt.Printf(" Error Getting exposureTime for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" ExposureTime is %s\n", exposureTime)
 	}
 
 	fnumber, err := EXIF.Get(exif.FNumber)
 	if err != nil {
-		fmt.Printf(" Error Getting fNumber for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" FNumber is %s\n", fnumber)
 	}
 
 	focalLength, err := EXIF.Get(exif.FocalLength)
 	if err != nil {
-		fmt.Printf(" Error Getting focalLength for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" FocalLength is %s\n", focalLength)
 	}
 
 	whiteBalance, err := EXIF.Get(exif.WhiteBalance)
 	if err != nil {
-		fmt.Printf(" Error Getting whiteBalance for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" WhiteBalance is %s\n", whiteBalance)
 	}
 
 	digitalZoomRatio, err := EXIF.Get(exif.DigitalZoomRatio)
 	if err != nil {
-		fmt.Printf(" Error Getting DigitalZoomRatio for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" DigitalZoomRatio is %s\n", digitalZoomRatio)
 	}
 
 	gainControl, err := EXIF.Get(exif.GainControl)
 	if err != nil {
-		fmt.Printf(" Error Getting gainControl for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" GainControl is %s\n", gainControl)
 	}
 
 	contrast, err := EXIF.Get(exif.Contrast)
 	if err != nil {
-		fmt.Printf(" Error Getting contrast for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" Contrast is %s\n", contrast)
 	}
 
 	saturation, err := EXIF.Get(exif.Saturation)
 	if err != nil {
-		fmt.Printf(" Error Getting saturation for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" Saturation is %s\n", saturation)
 	}
 
 	sharpness, err := EXIF.Get(exif.Sharpness)
 	if err != nil {
-		fmt.Printf(" Error Getting sharpness for %s is %v, skipping\n", infileName, err)
+		fmt.Printf(" Error for %s is %v, skipping\n", infileName, err)
 	} else {
 		fmt.Printf(" Sharpness is %s\n", sharpness)
 	}
