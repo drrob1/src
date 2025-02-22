@@ -514,7 +514,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 	case fyne.KeyR:
 		atomic.AddInt64(&rotatedTimes, 1)
-		rotateAndLoadTheImage(index, rotatedTimes) // index is global, rotatedTimes is local to this proc.
+		rotateAndLoadTheImage(index, rotatedTimes) // index and rotatedTimes are global
 	case fyne.Key1:
 		rotateAndLoadTheImage(index, 1)
 	case fyne.Key2:

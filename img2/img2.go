@@ -68,9 +68,13 @@ REVISION HISTORY
 20 Feb 25 -- Porting code from img.go to here, allowing manual rotation of an image using repeated hits of 'r' to rotate clockwise 90 deg, or '1', '2', or '3'.
 			It's too late now; I'll do this tomorrow.
 			Added the rotateAndLoadImage and imgImage procedures, modified keyTyped and loadTheImage.  Fetching the image names is done w/ one goroutine; this is fast enough.
+22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
+			And here in img2 I'm going to rotate differently.  I'm going to use the routine that takes an amount to rotate in degrees.  Just to see if this, too, works.
+			It does.  And I noticed another way the code here is different; it doesn't use a channel to send keystrokes to a receiver.  IE, loading images is not concurrent.
+			The only concurrent code here is making the initial slice of strings containing all the image names in the working directory.
 */
 
-const LastModified = "Feb 21, 2025"
+const LastModified = "Feb 22, 2025"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -533,6 +537,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
 		loadTheImage()
+	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
+		scaleFactor = 1
+		atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
+		loadTheImage()
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		if !sticky {
 			scaleFactor = 1
@@ -554,7 +562,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 	case fyne.KeyR:
 		atomic.AddInt64(&rotatedCtr, 1)
-		rotateAndLoadTheImage(index, rotatedCtr) // index is global, rotatedTimes is local to this proc.
+		rotateAndLoadTheImage(index, rotatedCtr) // index and rotatedCtr are global
 	case fyne.Key1:
 		rotateAndLoadTheImage(index, 1)
 	case fyne.Key2:
@@ -562,7 +570,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.Key3:
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
-		rotateAndLoadTheImage(index, 4)
+		atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
+		rotateAndLoadTheImage(index, 0)
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -618,13 +627,18 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	var rotatedImg *image.NRGBA
 	var imgImg image.Image
 
-	for range repeat {
-		rotatedImg = imaging.Rotate90(imgRead)
-		imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
-		imgRead = imgImg
-	}
+	//for range repeat { old way
+	//	rotatedImg = imaging.Rotate90(imgRead)
+	//	imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
+	//	imgRead = imgImg
+	//}
 
-	bounds := imgImg.Bounds()
+	repeat = repeat % 4 // only allow 0..3
+	rotateFac := float64(repeat) * 90
+	rotatedImg = imaging.Rotate(imgRead, rotateFac, nil)
+	imgImg = imgImage(rotatedImg) //  need to convert from *image.NRGBA to image.Image becuse of the resize fcn.
+
+	bounds := rotatedImg.Bounds()
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
