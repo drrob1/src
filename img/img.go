@@ -262,7 +262,6 @@ func loadTheImage(idx int) {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
 	title := fmt.Sprintf(" %s %s, %d x %d, SF=%.2f \n", imgFmtName, imgName, imgWidth, imgHeight, scaleFactor)
 	if *verboseFlag {
 		fmt.Println(title)
@@ -523,7 +522,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
 		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
-		rotateAndLoadTheImage(index, 4)
+		rotateAndLoadTheImage(index, 0)
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -565,7 +564,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 
 	//imageURI := storage.NewFileURI(fullFilename)
 	//imgRead, err := storage.Reader(imageURI)
-	imgRead, err := imaging.Open(fullFilename)
+	imgRead, err := imaging.Open(fullFilename, imaging.AutoOrientation(true))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
 		return
@@ -574,10 +573,24 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	var rotatedImg *image.NRGBA
 	var imgImg image.Image
 
-	for range repeat {
+	//for range repeat { old way
+	//	rotatedImg = imaging.Rotate90(imgRead)
+	//	imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
+	//	imgRead = imgImg
+	//}
+	repeat = repeat % 4 // modulus operator
+	switch repeat {     // trying a new way, just to see if it works
+	case 0:
+		imgImg = imgRead
+	case 1:
 		rotatedImg = imaging.Rotate90(imgRead)
-		imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
-		imgRead = imgImg
+		imgImg = imgImage(rotatedImg)
+	case 2:
+		rotatedImg = imaging.Rotate180(imgRead)
+		imgImg = imgImage(rotatedImg)
+	case 3:
+		rotatedImg = imaging.Rotate270(imgRead)
+		imgImg = imgImage(rotatedImg)
 	}
 
 	bounds := imgImg.Bounds()
