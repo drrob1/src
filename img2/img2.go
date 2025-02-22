@@ -73,6 +73,7 @@ REVISION HISTORY
 			It does.  And I noticed another way the code here is different; it doesn't use a channel to send keystrokes to a receiver.  IE, loading images is not concurrent.
 			The only concurrent code here is making the initial slice of strings containing all the image names in the working directory.
 			I combined keys in the keyTyped routine here but not in the others.
+			I added AutoOrientation to the rotateAndLoadTheImage and then to loadTheImage
 */
 
 const LastModified = "Feb 22, 2025"
@@ -311,11 +312,16 @@ func loadTheImage() {
 		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
 		return
 	}
-	defer imgRead.Close() // moved based on static linter
+	//defer imgRead.Close() // moved based on static linter.  Not needed with imaging.Open
 
-	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
+	_, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.  Changed this line 2/22/25.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from image.Decode is %s.  Skipped.\n", err)
+		return
+	}
+	img, err := imaging.Open(fullFilename, imaging.AutoOrientation(true)) // added 2/22/25
+	if err != nil {
+		fmt.Printf(" Error from imaging.Open is %s.  Skipped.\n", err)
 		return
 	}
 	imgHeight := img.Bounds().Max.Y
@@ -600,7 +606,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
 	}
 
-	imgRead, err := imaging.Open(fullFilename)
+	imgRead, err := imaging.Open(fullFilename, imaging.AutoOrientation(true))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
 		return
