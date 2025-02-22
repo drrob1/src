@@ -60,9 +60,10 @@ REVISION HISTORY
 20 Feb 25 -- Porting code from img.go to here, allowing manual rotation of an image using repeated hits of 'r' to rotate clockwise 90 deg, or '1', '2', or '3'.
 			It's too late now; I'll do this tomorrow.
 			Added the rotateAndLoadImage and imgImage procedures, modified keyTyped and loadTheImage.  Fetching the image names is done w/ one goroutine; this is fast enough.
+22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 */
 
-const LastModified = "Feb 21, 2025"
+const LastModified = "Feb 22, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -474,6 +475,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
 		keyCmdChan <- loadImgCmd
+	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
+		scaleFactor = 1
+		atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
+		keyCmdChan <- loadImgCmd
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		if !sticky {
 			scaleFactor = 1
@@ -504,6 +509,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.Key3:
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
+		atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
 		rotateAndLoadTheImage(index, 4)
 
 	default:
