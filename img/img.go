@@ -76,9 +76,10 @@ REVISION HISTORY
  7 Sep 23 -- Added reverse sort flag, that would make the oldest first.
 19 Feb 25 -- Starting to think about adding a rotate image command, likely 'r'.  And I might as well use pflag instead of flag.
 20 Feb 25 -- It works, and uses repeated hits of 'r' to rotate clockwise 90 deg each time.  Or can use '1', '2', '3', or '4' to directly rotate that number of degrees.
+22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 */
 
-const LastModified = "Feb 21, 2025"
+const LastModified = "Feb 22, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -479,6 +480,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
 		//loadTheImage()
+		keyCmdChan <- loadImgCmd
+	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
+		scaleFactor = 1
+		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
