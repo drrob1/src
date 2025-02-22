@@ -220,7 +220,7 @@ func main() {
 func processKeys() {
 	for {
 		keyCmd := <-keyCmdChan
-		//fmt.Println("in processKeys go routine.  keycmd =", keyCmd)
+		//                             fmt.Println("in processKeys go routine.  keycmd =", keyCmd)
 		switch keyCmd {
 		case firstImgCmd:
 			firstImage()
@@ -522,6 +522,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.Key3:
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
+		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
 		rotateAndLoadTheImage(index, 4)
 
 	default:
