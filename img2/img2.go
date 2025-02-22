@@ -72,6 +72,7 @@ REVISION HISTORY
 			And here in img2 I'm going to rotate differently.  I'm going to use the routine that takes an amount to rotate in degrees.  Just to see if this, too, works.
 			It does.  And I noticed another way the code here is different; it doesn't use a channel to send keystrokes to a receiver.  IE, loading images is not concurrent.
 			The only concurrent code here is making the initial slice of strings containing all the image names in the working directory.
+			I combined keys in the keyTyped routine here but not in the others.
 */
 
 const LastModified = "Feb 22, 2025"
@@ -493,22 +494,12 @@ func lastImage() {
 // keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
-	case fyne.KeyUp:
+	case fyne.KeyUp, fyne.KeyLeft:
 		if !sticky {
 			scaleFactor = 1
 		}
 		prevImage()
-	case fyne.KeyDown:
-		if !sticky {
-			scaleFactor = 1
-		}
-		nextImage()
-	case fyne.KeyLeft:
-		if !sticky {
-			scaleFactor = 1
-		}
-		prevImage()
-	case fyne.KeyRight:
+	case fyne.KeyDown, fyne.KeyRight:
 		if !sticky {
 			scaleFactor = 1
 		}
@@ -525,16 +516,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			scaleFactor = 1
 		}
 		lastImage()
-	case fyne.KeyPageUp:
+	case fyne.KeyPageUp, fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
 		loadTheImage()
-	case fyne.KeyPageDown:
-		scaleFactor *= 0.9
-		loadTheImage()
-	case fyne.KeyPlus, fyne.KeyAsterisk:
-		scaleFactor *= 1.1
-		loadTheImage()
-	case fyne.KeyMinus:
+	case fyne.KeyPageDown, fyne.KeyMinus, fyne.KeySlash:
 		scaleFactor *= 0.9
 		loadTheImage()
 	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
@@ -549,9 +534,6 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
 		prevImage()
-	case fyne.KeySlash:
-		scaleFactor *= 0.9
-		loadTheImage()
 	case fyne.KeyV:
 		*verboseFlag = !*verboseFlag
 		fmt.Printf(" Verbose flag is now %t, Sticky is %t and scaleFactor is %2.2g\n", *verboseFlag, sticky, scaleFactor)
