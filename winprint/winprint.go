@@ -10,10 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 /*
-  23 Feb 25 -- Yesterday and today I'm playing w/ this package.
+  23 Feb 25 -- now called winprint, copied from showwinprinters.go.  I'm going to include some code I got from perplexity.
 */
 
 func main() {
@@ -86,15 +87,47 @@ func main() {
 		fmt.Printf(" Error from jpeg.Encode(%s) is %v\n", fi.Name(), err)
 		return
 	}
+	fmt.Printf(" Jpg Name %s, Fi.Size: %d, buf len: %d\n", fi.Name(), fi.Size(), buf.Len())
 
-	fmt.Printf(" Next step would be n, err := p.Write(buf) and then to check err and show n\n")
-	err = p.StartRawDocument(fi.Name())
+	//fmt.Printf(" Next step would be n, err := p.Write(buf) and then to check err and show n\n")
+	//err = p.StartRawDocument(fi.Name())
+	//if err != nil {
+	//	fmt.Printf(" Error from p.StartRawDocument(%s) is %v\n", fi.Name(), err)
+	//}
+	//n, err := p.Write(buf.Bytes())
+	//if err != nil {
+	//	fmt.Printf(" Error from p.Write(%s) is %v\n", fi.Name(), err)
+	//}
+	//fmt.Printf(" n: %d\n", n)
+
+	jobs, err := p.Jobs()
 	if err != nil {
-		fmt.Printf(" Error from p.StartRawDocument(%s) is %v\n", fi.Name(), err)
+		fmt.Printf(" Error from p.Jobs() is %v\n", err)
+		return
 	}
-	n, err := p.Write(buf.Bytes())
+	fmt.Printf(" Jobs opened successfully, and are:\n")
+	for _, job := range jobs {
+		fmt.Printf(" Job: %s\n", job)
+	}
+
+	paperSizes, err := p.Forms()
 	if err != nil {
-		fmt.Printf(" Error from p.Write(%s) is %v\n", fi.Name(), err)
+		fmt.Printf(" Error from p.Forms() is %v\n", err)
+		return
 	}
-	fmt.Printf(" n: %d\n", n)
+	fmt.Printf(" Forms opened successfully, and there are %d paper sizes\n", len(paperSizes))
+	if pause() {
+		return
+	}
+	for _, paperSize := range paperSizes {
+		fmt.Printf(" Form: %s, size: %v, flags: %v\n", paperSize.Name, paperSize.Size, paperSize.Flags)
+	}
+}
+
+func pause() bool {
+	var ans string
+	fmt.Printf(" Pausing.  Stop [y/N]: ")
+	fmt.Scanln(&ans)
+	ans = strings.ToLower(ans)
+	return strings.HasPrefix(ans, "y") // suggested by staticcheck.
 }
