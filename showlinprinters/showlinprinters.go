@@ -8,7 +8,7 @@ import (
 )
 
 func getAvailablePrinters() ([]string, error) {
-	cmd := exec.Command("lpstat", "-e")
+	cmd := exec.Command("lpstat", "-le")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -38,4 +38,11 @@ func main() {
 	for _, printer := range printers {
 		fmt.Println(printer)
 	}
+
+	fmt.Printf("\nipp:\n")
+	for _, printer := range printers {
+		field := strings.Split(printer, " ")
+		fmt.Printf("  %s\n", field[3]) // need 4th field
+	}
+	fmt.Printf("\n\n")
 }
