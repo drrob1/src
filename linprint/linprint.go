@@ -8,7 +8,7 @@ import (
 )
 
 /*
-  22 Feb 25 -- starting writing this, based on perplexity code.
+  23 Feb 25 -- First written.  Going to try to see if I can at least get this to happen on Linux.
 */
 
 func getAvailablePrinters() ([]string, error) {
@@ -49,4 +49,12 @@ func main() {
 		fmt.Printf("name: %s;      %s\n", field[0], field[3]) // need 1st and 4th fields
 	}
 	fmt.Printf("\n\n")
+
+	fullString8620Printer := printers[2]
+	printer8620Field := strings.Split(fullString8620Printer, " ")
+	printer8620 := printer8620Field[0]
+	printer8620IPP := printer8620Field[3]
+	fmt.Printf("\nname: %q     %s    %q   \n", printer8620, printer8620IPP, printer8620IPP)
+	fmt.Printf("\n\n")
+
 }
