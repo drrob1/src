@@ -46,7 +46,7 @@ func main() {
 		log.Fatalf("Error reading printer names: %v", err)
 		return
 	}
-	fmt.Printf("Available printers from godoes/printers:")
+	fmt.Printf("Available printers from godoes/printers:\n")
 	for _, name := range printNames {
 		fmt.Println(name)
 	}
