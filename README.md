@@ -18,8 +18,9 @@ All of my go code as of Nov 9, 2024.
 14. fdsrt -- directory sort pgm sorted by modified timestamp or size, using concurrency to collect filenames
 14. ds -- truncated directory sort intended for narrow terminal windows or columns
 15. dvfirst -- directory sort program based on dsrt, but using viper for its options
-16. dv -- directory sort program based on fdsrt, using viper for its options
+16. dv -- directory sort program based on fdsrt, using viper for its options.
 15. rex -- uses regular expressions to match the file names.
+16. rexv -- same as rex, but uses viper for options and initializations.
 16. ofx2csv -- takes open financial exchange datafile and writes in csv format.
 17. fromfx, fromfx2, queuefx -- takes qfx, ofx or qbo bank file and writes xls, csv, xlsx and directly to sqlite3 .db formats.
 18. taxproc -- takes the taxesyy file I create every year and processes the file for my taxes.mdb and taxes.db files.
@@ -36,6 +37,7 @@ All of my go code as of Nov 9, 2024.
 27. cgrepi -- a fast concurrent grep insensitive-case
 28. multack -- a concurrent case insensitive ack
 29. detox -- a linux-like detox utility for windows
+30. detoxp -- detox but uses pflag for its flags
 30. dirb -- porting the bashDirB script to windows in tcmd by jpsoft.  Uses makedirbkmk to create its map.
 31. feq, few -- file equal pgms mostly comparing different hash functions
 32. img, imga, img2 -- GUI pgm to show an image, and then switch easily
