@@ -3,10 +3,10 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
 	"log"
 	"os"
 	"path/filepath"
@@ -75,9 +75,10 @@ import (
    6 May 24 -- Wait groups are for the goroutines themselves, not the items processed by the goroutines.  I'm making that change now.
   10 May 24 -- Made sliceSize 50_000, as this can return ~20K matches when run in src directory.
   20 Nov 24 -- Will now exclude OneDrive.  This crashes Windows, so I have to exclude it.  And I'm excluding AppData.  Excluding AppData sped up the code a lot, from 3 min to 10 sec on Win11.
+   2 Mar 25 -- Clarified help message that the pattern is a regexp, not a glob.  And I changed to using pflag as a drop-in replacement for flag.
 */
 
-const lastAltered = "20 Nov 2024"
+const lastAltered = "2 Mar 2025"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -126,18 +127,28 @@ var verboseFlag, veryverboseFlag bool
 
 func main() {
 
+	helpFcn := func() { // this wasn't working until I moved this to above flag.Parse()
+		fmt.Fprintf(os.Stderr, " %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
+		fmt.Fprintf(os.Stderr, "\n Usage: multack [option flags] regexp [start-Directory]\n")
+		flag.PrintDefaults()
+	}
+	flag.Usage = helpFcn
+
 	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
-	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
-	flag.BoolVar(&veryverboseFlag, "vv", false, "Very Verbose flag")
-	flag.IntVar(&workerPoolMultiplier, "m", multiplier, "Multiplier for the number of goroutines in the worker pool.")
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose flag")
+	flag.BoolVarP(&veryverboseFlag, "vv", "w", false, "Very Verbose flag")
+	flag.BoolVar(&veryverboseFlag, "veryverbose", false, "Very Verbose flag synonym")
+	flag.IntVarP(&workerPoolMultiplier, "multiplier", "m", multiplier, "Multiplier for the number of goroutines in the worker pool.")
 	flag.Parse()
+
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
 	if veryverboseFlag {
 		verboseFlag = true
 	}
 
 	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
-		fmt.Printf(" Usage: multack regexp [start Directory]\n")
+		fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
+		fmt.Printf(" Usage: multack [option flags] regexp [start Directory]\n")
 		log.Fatalln("timeout must be in the range [0,300] seconds")
 	}
 	if *timeoutOpt == 0 {
@@ -145,8 +156,10 @@ func main() {
 	}
 
 	if flag.NArg() < 1 {
+		fmt.Printf("\n %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
 		fmt.Printf(" Usage: multack regexp [start Directory]\n")
-		log.Fatalln("a regexp to match must be specified")
+		fmt.Printf("\t a regexp to match must be specified\n")
+		return
 	}
 	pattern := flag.Arg(0)
 	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
@@ -191,7 +204,7 @@ func main() {
 	startDeviceID := getDeviceID(startInfo)
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %s, pattern=%s, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %q, pattern=%q, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
 
 	if verboseFlag {
