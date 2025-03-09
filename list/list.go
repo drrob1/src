@@ -81,9 +81,10 @@ import (
 				I'll have to use both flag and pflag.
 				The only way for flag and pflag to not clobber each other is to use the Parsed() function to determine which is active.
   19 Feb 25 -- Making "0" a synonym for "1" instead of a stop code.
+   9 Mar 25 -- Suppressed display of error in FileSelection().  I don't need to display errors twice.
 */
 
-var LastAltered = "Feb 19, 2025"
+var LastAltered = "Mar 9, 2025"
 
 type DirAliasMapType map[string]string
 
@@ -666,7 +667,7 @@ outerLoop:
 		ans = ReplaceDigits(ans)
 		processedAns, err := ExpandAllDashes(ans)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
+			//fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)  Don't need to display this twice.
 			return nil, err
 		}
 		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
