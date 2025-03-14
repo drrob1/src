@@ -60,9 +60,14 @@ import (
 ----------------------------------------------------------------------------------------------------
   31 Jan 25 -- Renamed back to lint.go
    2 Feb 25 -- Made dayNames an array instead of a slice.  It's fixed, so it doesn't need to be a slice.
+  14 Mar 25 -- Today is Pi Day.  But that's not important now.
+				I want to refactor this so it works in the environment it's needed.  It needs to get the files from o: drive and then homeDir/Documents, both.
+				So I want to write the routine here as taking a param of a full filename and scanning that file.
+				First I want to see if the xlsx.OpenFile takes a full file name as its param.  If so, that'll be easier for me to code.
+
 */
 
-const lastModified = "2 Feb 2025"
+const lastModified = "15 Mar 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
