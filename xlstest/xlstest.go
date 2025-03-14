@@ -6,6 +6,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/tealeg/xlsx/v3"
 	"os"
+	"path/filepath"
 	"src/filepicker"
 	"src/misc"
 	"strconv"
@@ -14,16 +15,47 @@ import (
 
 /*
   11 Nov 24 -- First version.  Turns out that adding a sheet here adds it as the last sheet, not first.
+  14 Mar 25 -- Today's Pi day.  But that's not important now.  Testing if open file takes a full filename.  It does.  Tested on linux so far.
+				And filepath.Split() does split correctly if the last part is a regexp.  Tested here on linux so far, and the windows syntax strings don't parse correctly.
 */
 
+var lastModified = "14 Mar 2025"
+
 func main() {
-	fmt.Printf(" xlstest.\n")
+	fmt.Printf(" xlstest, last modified %s.\n", lastModified)
 
 	flag.Parse()
 
 	var filename, ans string
 
+	// test filepicker.Split
+	testString := "/home/rob/Documents/xlsx$"
+	dir, name := filepath.Split(testString)
+	fmt.Printf("dir: %q name: %q \n", dir, name)
+
+	testString = "o:\\xlsx$" // doesn't work on linux
+	dir, name = filepath.Split(testString)
+	fmt.Printf("dir: %q name: %q \n", dir, name)
+
+	testString = "c:\\users\\rsolomon\\documents\\xlsx$" // doesn't work on linux
+	dir, name = filepath.Split(testString)
+	fmt.Printf("dir: %q name: %q \n\n", dir, name)
+
+	testString = "c:/users/rsolomon/documents/xlsx$" // this does parse correctly, on linux.
+	dir, name = filepath.Split(testString)
+	fmt.Printf("dir: %q name: %q \n\n", dir, name)
+
 	// filepicker stuff.
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	workingDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("homeDir: %q , workingDir: %q\n", homeDir, workingDir)
 
 	if flag.NArg() == 0 {
 		filenames, err := filepicker.GetRegexFilenames("xlsx$")
@@ -58,8 +90,11 @@ func main() {
 	}
 
 	fmt.Println()
+	fmt.Printf("filename: %q \n", filename)
 
-	workingDir, _ := os.Getwd()
+	filename = workingDir + string(os.PathSeparator) + filename
+	fmt.Printf(" after adding workingDir, filename: %q \n", filename) // this worked, so far on linux.
+
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
 		fmt.Printf("Error opening excel file %s in directory %s: %s\n", filename, workingDir, err)
