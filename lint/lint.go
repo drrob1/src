@@ -286,7 +286,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint2 for the weekly schedule last modified %s\n", lastModified)
+	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
 
 	//sectionNames[4] = "neuro"
 	//sectionNames[5] = "body"
@@ -356,6 +356,14 @@ func main() {
 		fmt.Printf(" spreadsheet picked is %s\n", filename)
 	}
 	fmt.Println()
+
+	scanXLSfile(filename)
+
+	fmt.Printf(" Finished scanning %s\n", filename)
+}
+
+// scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
+func scanXLSfile(filename string) {
 
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
