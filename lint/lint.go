@@ -334,6 +334,9 @@ func main() {
 			return
 		}
 		docs := filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xlsx$")
+		if *verboseFlag {
+			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
+		}
 		filenamesDocs, err := filepicker.GetRegexFullFilenames(docs)
 		if err != nil {
 			fmt.Printf(" Error from filepicker is %s.  Exiting \n", err)
@@ -374,7 +377,7 @@ func main() {
 
 	scanXLSfile(filename)
 
-	fmt.Printf(" Finished scanning %s\n", filename)
+	ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n", filename)
 }
 
 // scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
