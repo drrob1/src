@@ -327,6 +327,9 @@ func main() {
 			ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
 			return
 		}
+		if *verboseFlag {
+			fmt.Printf(" Filenames length: %d\n", len(filenames))
+		}
 
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -342,8 +345,15 @@ func main() {
 			fmt.Printf(" Error from filepicker is %s.  Exiting \n", err)
 			return
 		}
-		filenames = append(filenames, filenamesDocs...)
+		if *verboseFlag {
+			fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesDocs))
+		}
 
+		filenames = append(filenames, filenamesDocs...)
+		if *verboseFlag {
+			fmt.Printf(" Filenames length after append operation: %d\n", len(filenames))
+		}
+	
 		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
