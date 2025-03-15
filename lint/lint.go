@@ -322,7 +322,7 @@ func main() {
 	// filepicker stuff.
 
 	if flag.NArg() == 0 {
-		filenames, err := filepicker.GetRegexFullFilenames("o:\\week.*xlsx$")
+		filenames, err := filepicker.GetRegexFullFilenames("w:\\week.*xlsx$")
 		if err != nil {
 			ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
 			return
