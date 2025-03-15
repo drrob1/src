@@ -15,7 +15,7 @@ import (
 
 /*
   11 Nov 24 -- First version.  Turns out that adding a sheet here adds it as the last sheet, not first.
-  14 Mar 25 -- Today's Pi day.  But that's not important now.  Testing if open file takes a full filename.  It does.  Tested on linux so far.
+  14 Mar 25 -- Today's Pi day.  But that's not important now.  Testing if open file takes a full filename.  It does.  Tested on linux so far.  And now on Windows 11, too.
 				And filepath.Split() does split correctly if the last part is a regexp.  Tested here on linux so far, and the windows syntax strings don't parse correctly.
 */
 
@@ -33,15 +33,15 @@ func main() {
 	dir, name := filepath.Split(testString)
 	fmt.Printf("dir: %q name: %q \n", dir, name)
 
-	testString = "o:\\xlsx$" // doesn't work on linux
+	testString = "o:\\xlsx$" // doesn't work on linux, but does on Win11
 	dir, name = filepath.Split(testString)
 	fmt.Printf("dir: %q name: %q \n", dir, name)
 
-	testString = "c:\\users\\rsolomon\\documents\\xlsx$" // doesn't work on linux
+	testString = "c:\\users\\rsolomon\\documents\\xlsx$" // doesn't work on linux, but does on Win11
 	dir, name = filepath.Split(testString)
 	fmt.Printf("dir: %q name: %q \n\n", dir, name)
 
-	testString = "c:/users/rsolomon/documents/xlsx$" // this does parse correctly, on linux.
+	testString = "c:/users/rsolomon/documents/xlsx$" // this does parse correctly, on linux, and also on Win11
 	dir, name = filepath.Split(testString)
 	fmt.Printf("dir: %q name: %q \n\n", dir, name)
 
