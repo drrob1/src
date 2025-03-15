@@ -353,7 +353,7 @@ func main() {
 		if *verboseFlag {
 			fmt.Printf(" Filenames length after append operation: %d\n", len(filenames))
 		}
-	
+
 		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
