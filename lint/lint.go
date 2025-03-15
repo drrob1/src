@@ -340,7 +340,7 @@ func main() {
 			return
 		}
 		filenames = append(filenames, filenamesDocs...)
-	
+
 		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
