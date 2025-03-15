@@ -285,6 +285,8 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 func main() {
 	flag.Parse() // need this because of use of flag.NArg() below
 
+	filepicker.VerboseFlag = *verboseFlag
+
 	var filename, ans string
 
 	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)

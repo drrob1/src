@@ -36,6 +36,8 @@ type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
 
 const numLines = 50
 
+var VerboseFlag bool
+
 func (f FISliceDate) Less(i, j int) bool {
 	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
 }
@@ -173,6 +175,10 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 // GetRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
 func GetRegexFullFilenames(pattern string) ([]string, error) { // This rtn sorts using sort.Slice
 	CleanDirName, CleanPattern := filepath.Split(pattern)
+
+	if VerboseFlag {
+		fmt.Printf(" cleanDirName: %q, cleanPattern: %q\n", CleanDirName, CleanPattern)
+	}
 
 	if len(CleanDirName) == 0 {
 		CleanDirName = "." + string(filepath.Separator)
