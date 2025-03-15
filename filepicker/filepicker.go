@@ -12,8 +12,6 @@ import (
 	"strings"
 )
 
-const LastAltered = "12 Oct 2024"
-
 /*
 Revision History
 ----------------
@@ -28,7 +26,11 @@ Revision History
 30 Jan 22 -- Commented out a debugging print statement that I forgot to do before.
 24 May 24 -- Added comments that would be displayed by go doc.
 12 Oct 24 -- Added code to exclude directory names for the returned list.  And changed behavior of GetRegexFilenames so that an error doesn't bail out of the function.
+14 Mar 25 -- Added GetRegexFilenames2 to process directory info correctly.  As I look at the code, it looks like it always handled this correctly.
+				So the 2nd routine uses direntries.
 */
+
+const LastAltered = "14 Mar 2025"
 
 type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
 
@@ -167,6 +169,70 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
 	return stringSlice, nil
 } // end GetRegexFilenames
+
+// GetRegexFilenames2 -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
+func GetRegexFilenames2(pattern string) ([]string, error) { // This rtn sorts using sort.Slice
+	CleanDirName, CleanPattern := filepath.Split(pattern)
+
+	if len(CleanDirName) == 0 {
+		CleanDirName = "." + string(filepath.Separator)
+	}
+
+	if len(CleanPattern) == 0 {
+		CleanPattern = "."
+	}
+	//CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
+	CleanPattern = strings.ToLower(CleanPattern) // instead of the case insensitive flag, just force all to be lower case.  Maybe this is faster?
+
+	regex, err := regexp.Compile(CleanPattern)
+	if err != nil {
+		return nil, err
+	}
+
+	dir, err := os.Open(CleanDirName)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+
+	dirEntries, err := dir.ReadDir(0) // names is []string
+	if err != nil {
+		return nil, err
+	}
+
+	filesInfos := make(FISliceDate, 0, len(dirEntries))
+	for _, dirEntry := range dirEntries {
+		lowerName := strings.ToLower(dirEntry.Name())
+		if regex.MatchString(lowerName) {
+			if dirEntry.IsDir() { // Want to not return directory names.  Added 10/12/24.
+				continue
+			}
+			L, err := dirEntry.Info()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error from dirEntry.Info() is %v \n", err)
+				continue
+			}
+			filesInfos = append(filesInfos, L)
+		}
+	}
+
+	lessFunc := func(i, j int) bool {
+		return filesInfos[i].ModTime().UnixNano() > filesInfos[j].ModTime().UnixNano()
+	}
+	sort.Slice(filesInfos, lessFunc)
+
+	stringSlice := make([]string, 0, len(filesInfos))
+	var count int
+	for _, f := range filesInfos {
+		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
+		count++
+		if count >= numLines {
+			break
+		}
+	}
+	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
+	return stringSlice, nil
+} // end GetRegexFilenames2
 
 //-------------------------------------------------------------------- InsertByteSlice --------------------------------
 /*

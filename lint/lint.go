@@ -63,7 +63,7 @@ import (
   14 Mar 25 -- Today is Pi Day.  But that's not important now.
 				I want to refactor this so it works in the environment it's needed.  It needs to get the files from o: drive and then homeDir/Documents, both.
 				So I want to write the routine here as taking a param of a full filename and scanning that file.
-				First I want to see if the xlsx.OpenFile takes a full file name as its param.  If so, that'll be easier for me to code.
+				First I want to see if the xlsx.OpenFile takes a full file name as its param.  If so, that'll be easier for me to code.  It does.
 
 */
 
