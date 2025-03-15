@@ -9,6 +9,7 @@ import (
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
 	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"src/filepicker"
@@ -321,11 +322,25 @@ func main() {
 	// filepicker stuff.
 
 	if flag.NArg() == 0 {
-		filenames, err := filepicker.GetRegexFilenames("week.*xlsx$")
+		filenames, err := filepicker.GetRegexFullFilenames("o:\\week.*xlsx$")
 		if err != nil {
 			ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
 			return
 		}
+
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
+			return
+		}
+		docs := filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xlsx$")
+		filenamesDocs, err := filepicker.GetRegexFullFilenames(docs)
+		if err != nil {
+			fmt.Printf(" Error from filepicker is %s.  Exiting \n", err)
+			return
+		}
+		filenames = append(filenames, filenamesDocs...)
+	
 		for i := 0; i < min(len(filenames), 26); i++ {
 			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
 		}
