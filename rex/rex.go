@@ -138,9 +138,10 @@ Revision History
 				I decided to use the maxflag system, and set maxflag if halfflag or if nscreens > 1 or if allflag.
  8 Jan 25 -- Using maxFlag is not a good idea, as it just prevents halfFlag from ever working.  See top comments in dsrt.go.  Tagged as rex-v1.0
 17 Feb 25 -- Adding pflag.  I don't think I need viper yet.  I added pflag by naming its import path to flag.
+14 Mar 25 -- It's Pi Day today, but that's not important now.  I'm debugging code in rexv to handle directories as 1 param.  When that works, I'll port it here.
 */
 
-const LastAltered = "Feb 17, 2025"
+const LastAltered = "Nar 14, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -462,14 +463,17 @@ func main() {
 	}
 
 	if flag.NArg() == 0 {
-		inputRegExStr = "." // no regex entered on command line, default is everything, esp useful for testing.
-		// workingDir is set above
+		inputRegExStr = "." // no regex entered on command line, default is everything, esp useful for testing. workingDir is set above
 	} else if flag.NArg() == 1 {
-		inputRegExStr = flag.Arg(0)
-		// workingDir is set above
+		inputRegEx := flag.Arg(0)
+		workingDir, inputRegExStr = filepath.Split(inputRegEx)
+		if workingDir == "" {
+			workingDir = startDir // workingDir is set above
+		}
 	} else { // flag.NArg() >= 2 so I'll ignore any extra params.
 		inputRegExStr = flag.Arg(0)
-		workingDir = flag.Arg(1)
+		inputRegExStr = filepath.Base(inputRegExStr) // this trims input expression to remove any directory info, since the 2nd param is specified.
+		workingDir = flag.Arg(1)                     // use the 2nd entered param, ignoring any path into as part of the 1st param.
 
 		if winFlag { // added the winflag check so don't have to scan commandline on linux, which would be wasteful.
 			if strings.ContainsRune(workingDir, ':') {

@@ -27,7 +27,7 @@ Revision History
 24 May 24 -- Added comments that would be displayed by go doc.
 12 Oct 24 -- Added code to exclude directory names for the returned list.  And changed behavior of GetRegexFilenames so that an error doesn't bail out of the function.
 14 Mar 25 -- Added GetRegexFilenames2 to process directory info correctly.  As I look at the code, it looks like it always handled this correctly.
-				So the 2nd routine uses direntries.
+				So the 2nd routine uses direntries, and returns full filenames.
 */
 
 const LastAltered = "14 Mar 2025"
@@ -170,8 +170,8 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 	return stringSlice, nil
 } // end GetRegexFilenames
 
-// GetRegexFilenames2 -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
-func GetRegexFilenames2(pattern string) ([]string, error) { // This rtn sorts using sort.Slice
+// GetRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
+func GetRegexFullFilenames(pattern string) ([]string, error) { // This rtn sorts using sort.Slice
 	CleanDirName, CleanPattern := filepath.Split(pattern)
 
 	if len(CleanDirName) == 0 {
@@ -224,7 +224,8 @@ func GetRegexFilenames2(pattern string) ([]string, error) { // This rtn sorts us
 	stringSlice := make([]string, 0, len(filesInfos))
 	var count int
 	for _, f := range filesInfos {
-		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
+		fullFilename := filepath.Join(CleanDirName, f.Name())
+		stringSlice = append(stringSlice, fullFilename) // needs to preserve case of filename for linux
 		count++
 		if count >= numLines {
 			break
@@ -232,7 +233,7 @@ func GetRegexFilenames2(pattern string) ([]string, error) { // This rtn sorts us
 	}
 	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
 	return stringSlice, nil
-} // end GetRegexFilenames2
+} // end GetRegexFullFilenames
 
 //-------------------------------------------------------------------- InsertByteSlice --------------------------------
 /*
