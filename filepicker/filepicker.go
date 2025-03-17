@@ -30,6 +30,7 @@ Revision History
 				So the 2nd routine uses direntries, and returns full filenames.
 17 Mar 25 -- Now exports NumLines, in case by some change I ever want the client rtn to change it.  I'm not going to refactor anything else here, as it doesn't matter.
 				The more times I run the testfilepicker routine, the answer changes.  The numbers are too close to be reliably different.
+				This is may be related to fact that only NumLines matches are returned.
 */
 
 const LastAltered = "17 Mar 2025"
