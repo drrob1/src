@@ -8,66 +8,107 @@ package main
   13 Oct 17 -- Testing the inclusion of horizontal tab as a delim, needed for comparehashes.
   18 Oct 17 -- Now called testfilepicker, derived from testtoken.go
   10 Jan 22 -- Converted to modules, and will test both GetFilenames and GetRegexFilenames.
+  17 Mar 25 -- After I added more routines, I'll benchmark them now.
 */
 
 import (
 	"fmt"
-	"os"
 	"src/filepicker"
-	"strconv"
-	"strings"
+	"time"
 )
 
 const maxChoices = 20
 
+func testGetFilenames(pattern string) ([]string, error) {
+	t0 := time.Now()
+	filenames, err := filepicker.GetFilenames(pattern)
+	fmt.Printf("test getFilenames: duration %v, finding %d files\n", time.Since(t0), len(filenames))
+	return filenames, err
+}
+
+func testGetRegexFilenames(regex string) ([]string, error) {
+	t0 := time.Now()
+	filenames, err := filepicker.GetRegexFilenames(regex)
+	fmt.Printf("test getRegexFilenames: duration %v, finding %d files\n", time.Since(t0), len(filenames))
+	return filenames, err
+}
+
+func testGetRegexFullFilenames(regex string) ([]string, error) {
+	t0 := time.Now()
+	filenames, err := filepicker.GetRegexFullFilenames(regex)
+	fmt.Printf("test getRegexFullFiles: duration %v, finding %d files\n", time.Since(t0), len(filenames))
+	return filenames, err
+}
+
 func main() {
-	var ans, commandline, regex string // So I can test on linux.  Bash globs.
-	fmt.Print(" commandline = ")
-	_, err := fmt.Scanln(&commandline)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from Scanln is %v, will assume '*' \n", err)
-		commandline = "*"
-	}
 
-	filenames, err := filepicker.GetFilenames(commandline)
+	globPattern := "*.mp4"
+	regexPattern := "mp4$"
+	globFiles, err := testGetFilenames(globPattern) // in directory w/ ~2300 files, this routine was ~19.5 ms.  In dir w/ ~13,800 files, all 3 of these rtn's were ~8.3 s.
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from filepicker is %v \n", err)
+		fmt.Println("testGetFilenames: ", err)
 	}
-	fmt.Println(" Number of filenames in the string slice are", len(filenames))
-
-	maxchoices := min(maxChoices, len(filenames))
-	for i := 0; i < maxchoices; i++ {
-		fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
-	}
-	fmt.Print(" Enter filename choice : ")
-	_, err = fmt.Scanln(&ans)
+	regexFiles, err := testGetRegexFilenames(regexPattern) // same directory, this routine was ~23.7 ms
 	if err != nil {
-		ans = "0"
+		fmt.Println("testGetRegexFilenames: ", err)
 	}
-	fmt.Printf(" ans is string %s, hex %x \n", ans, ans)
-	i, err := strconv.Atoi(ans)
-	if err == nil {
-		fmt.Println(" ans as int is", i)
-	} else {
-		s := strings.ToUpper(ans)
-		s = strings.TrimSpace(s)
-		s0 := s[0]
-		i = int(s0 - 'A') // may need byte(s0) - 'A' or byte(s0-'A') or some other permutation
-		fmt.Println(" string ans as int is", i, " referenced filename is", filenames[i])
+	regexFullFiles, err := testGetRegexFullFilenames(regexPattern) // sam directory, this routine was ~14.8 ms
+	if err != nil {
+		fmt.Println("testGetRegexFullFilenames: ", err)
 	}
+	fmt.Printf(" Len of globFiles = %d, len(regexFiles)=%d, len(regexFullFiles)=%d	\n",
+		len(globFiles), len(regexFiles), len(regexFullFiles))
 
-	if i < len(filenames) {
-		fmt.Println(" Picked filename is", filenames[i])
+	/*
+		var ans, commandline, regex string // So I can test on linux.  Bash globs.
+		fmt.Print(" commandline = ")
+		_, err := fmt.Scanln(&commandline)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from Scanln is %v, will assume '*' \n", err)
+			commandline = "*"
+		}
+
+		filenames, err := filepicker.GetFilenames(commandline)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from filepicker is %v \n", err)
+		}
+		fmt.Println(" Number of filenames in the string slice are", len(filenames))
+
+		maxchoices := min(maxChoices, len(filenames))
+		for i := 0; i < maxchoices; i++ {
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
+		}
+		fmt.Print(" Enter filename choice : ")
+		_, err = fmt.Scanln(&ans)
+		if err != nil {
+			ans = "0"
+		}
+		fmt.Printf(" ans is string %s, hex %x \n", ans, ans)
+		i, err := strconv.Atoi(ans)
+		if err == nil {
+			fmt.Println(" ans as int is", i)
+		} else {
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A') // may need byte(s0) - 'A' or byte(s0-'A') or some other permutation
+			fmt.Println(" string ans as int is", i, " referenced filename is", filenames[i])
+		}
+
+		if i < len(filenames) {
+			fmt.Println(" Picked filename is", filenames[i])
+			fmt.Println()
+		}
+
+		a := 'a'
+		b := a ^ 32  // exclusive or
+		c := a &^ 32 // and not, where not means 1's complement
+		d := a | 32  // or
+		fmt.Printf(" Bit fiddling:  a,b,c,d = %d %c, %d %c, %d %c, %d  %c \n", a, a, b, b, c, c, d, d)
+
 		fmt.Println()
-	}
 
-	a := 'a'
-	b := a ^ 32  // exclusive or
-	c := a &^ 32 // and not, where not means 1's complement
-	d := a | 32  // or
-	fmt.Printf(" Bit fiddling:  a,b,c,d = %d %c, %d %c, %d %c, %d  %c \n", a, a, b, b, c, c, d, d)
-
-	fmt.Println()
+	*/
 
 	/*
 		floatflag := false
@@ -152,51 +193,47 @@ func main() {
 
 	*/
 
-	fmt.Print(" regex is: ")
-	_, err = fmt.Scanln(&regex)
-	if regex == "" {
-		fmt.Fprintf(os.Stderr, " Error from Scanln is %v, will assume '.' \n", err)
-		regex = "."
-	}
+	/*
+		fmt.Print(" regex is: ")
+		_, err = fmt.Scanln(&regex)
+		if regex == "" {
+			fmt.Fprintf(os.Stderr, " Error from Scanln is %v, will assume '.' \n", err)
+			regex = "."
+		}
 
-	filenames, err = filepicker.GetRegexFilenames(regex)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from filepicker is %v \n", err)
-	}
-	fmt.Println(" Number of filenames in the string slice are", len(filenames))
+		filenames, err = filepicker.GetRegexFilenames(regex)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from filepicker is %v \n", err)
+		}
+		fmt.Println(" Number of filenames in the string slice are", len(filenames))
 
-	maxchoices = min(maxChoices, len(filenames))
-	for i := 0; i < maxchoices; i++ {
-		fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
-	}
-	fmt.Print(" Enter filename choice : ")
-	_, err = fmt.Scanln(&ans)
-	fmt.Printf(" ans is string %s, hex %x \n", ans, ans)
-	if err != nil {
-		ans = "0"
-	}
-	i, err = strconv.Atoi(ans)
-	if err == nil {
-		fmt.Println(" ans as int is", i)
-	} else {
-		s := strings.ToUpper(ans)
-		s = strings.TrimSpace(s)
-		s0 := s[0]
-		i = int(s0 - 'A') // may need byte(s0) - 'A' or byte(s0-'A') or some other permutation
-		fmt.Println(" string ans as int is", i, " referenced filename is", filenames[i])
-	}
+		maxchoices = min(maxChoices, len(filenames))
+		for i := 0; i < maxchoices; i++ {
+			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
+		}
+		fmt.Print(" Enter filename choice : ")
+		_, err = fmt.Scanln(&ans)
+		fmt.Printf(" ans is string %s, hex %x \n", ans, ans)
+		if err != nil {
+			ans = "0"
+		}
+		i, err = strconv.Atoi(ans)
+		if err == nil {
+			fmt.Println(" ans as int is", i)
+		} else {
+			s := strings.ToUpper(ans)
+			s = strings.TrimSpace(s)
+			s0 := s[0]
+			i = int(s0 - 'A') // may need byte(s0) - 'A' or byte(s0-'A') or some other permutation
+			fmt.Println(" string ans as int is", i, " referenced filename is", filenames[i])
+		}
 
-	if i < len(filenames) {
-		fmt.Println(" Picked filename is", filenames[i])
-		fmt.Println()
-	}
-}
+		if i < len(filenames) {
+			fmt.Println(" Picked filename is", filenames[i])
+			fmt.Println()
+		}
 
-func min(i, j int) int {
-	if i < j {
-		return i
-	}
-	return j
+	*/
 }
 
 /*  from the web documentation at golang.org

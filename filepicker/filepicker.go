@@ -28,13 +28,15 @@ Revision History
 12 Oct 24 -- Added code to exclude directory names for the returned list.  And changed behavior of GetRegexFilenames so that an error doesn't bail out of the function.
 14 Mar 25 -- Added GetRegexFilenames2 to process directory info correctly.  As I look at the code, it looks like it always handled this correctly.
 				So the 2nd routine uses direntries, and returns full filenames.
+17 Mar 25 -- Now exports NumLines, in case by some change I ever want the client rtn to change it.  I'm not going to refactor anything else here, as it doesn't matter.
+				The more times I run the testfilepicker routine, the answer changes.  The numbers are too close to be reliably different.
 */
 
-const LastAltered = "14 Mar 2025"
+const LastAltered = "17 Mar 2025"
 
 type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
 
-const numLines = 50
+const NumLines = 50
 
 var VerboseFlag bool
 
@@ -54,10 +56,10 @@ func (f FISliceDate) Len() int {
 func GetFilenames(pattern string) ([]string, error) { // This routine sorts using sort.Sort
 	var filesDate FISliceDate
 
-	CleanDirName := "." + string(filepath.Separator)
-	CleanFileName := ""
-	CleanDirName, CleanFileName = filepath.Split(pattern)
-	CleanFileName = strings.ToUpper(CleanFileName)
+	//                                           CleanDirName := "." + string(filepath.Separator)
+	//                                           CleanFileName := ""
+	CleanDirName, CleanFileName := filepath.Split(pattern)
+	//                                           CleanFileName = strings.ToUpper(CleanFileName)  I have no idea why this is here.
 	if len(CleanDirName) == 0 {
 		CleanDirName = "." + string(filepath.Separator)
 	}
@@ -102,7 +104,7 @@ func GetFilenames(pattern string) ([]string, error) { // This routine sorts usin
 	for _, f := range filesDate {
 		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
 		count++
-		if count >= numLines {
+		if count >= NumLines {
 			break
 		}
 	}
@@ -164,7 +166,7 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 	for _, f := range filesDate {
 		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
 		count++
-		if count >= numLines {
+		if count >= NumLines {
 			break
 		}
 	}
@@ -233,7 +235,7 @@ func GetRegexFullFilenames(pattern string) ([]string, error) { // This rtn sorts
 		fullFilename := filepath.Join(CleanDirName, f.Name())
 		stringSlice = append(stringSlice, fullFilename) // needs to preserve case of filename for linux
 		count++
-		if count >= numLines {
+		if count >= NumLines {
 			break
 		}
 	}
