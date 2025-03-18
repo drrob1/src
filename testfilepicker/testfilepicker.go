@@ -13,7 +13,12 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"sort"
 	"src/filepicker"
+	"strings"
 	"time"
 )
 
@@ -48,6 +53,14 @@ func main() {
 	if err != nil {
 		fmt.Println("testGetFilenames: ", err)
 	}
+
+	t0 := time.Now()
+	glob2Files, err := getFilenames(globPattern)
+	if err != nil {
+		fmt.Printf("in main: getFilenames err %v\n ", err)
+	}
+	fmt.Printf(" in main, getFilenames took %v to match %d entries\n", time.Since(t0), len(glob2Files)) // same directory, slightly slower than library GetFilenames.
+
 	regexFiles, err := testGetRegexFilenames(regexPattern) // same directory, this routine was ~23.7 ms
 	if err != nil {
 		fmt.Println("testGetRegexFilenames: ", err)
@@ -59,6 +72,18 @@ func main() {
 	fmt.Printf(" Len of globFiles = %d, len(regexFiles)=%d, len(regexFullFiles)=%d	\n",
 		len(globFiles), len(regexFiles), len(regexFullFiles))
 
+	fmt.Printf(" As a test of the main copy of getFilenames\n")
+	fmt.Printf("%v\n", glob2Files[:10])
+	fmt.Printf(" library copy of GetFilenames\n")
+	fmt.Printf("%v\n\n", globFiles[:10])
+	equal := slices.Compare(globFiles, glob2Files)
+	if equal == 0 {
+		fmt.Println("slices are equal")
+	} else {
+		fmt.Println("slices are not equal, which sucks!")
+	}
+
+	fmt.Printf("\n\n")
 	/*
 		var ans, commandline, regex string // So I can test on linux.  Bash globs.
 		fmt.Print(" commandline = ")
@@ -245,3 +270,71 @@ func main() {
           fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
 */
+
+type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
+
+func (f FISliceDate) Less(i, j int) bool {
+	return f[i].ModTime().UnixNano() > f[j].ModTime().UnixNano() // I want a reverse sort, newest first
+}
+
+func (f FISliceDate) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+
+func (f FISliceDate) Len() int {
+	return len(f)
+}
+
+// GetFilenames -- pattern uses filepath.Match to see if there's a match.  IE, a glob type match.  And I'm writing it as I would now, using DirEntry
+func getFilenames(pattern string) ([]string, error) { // This routine sorts using sort.Sort
+	CleanDirName, CleanFileName := filepath.Split(pattern)
+	if len(CleanDirName) == 0 {
+		CleanDirName = "." + string(filepath.Separator)
+	}
+
+	if len(CleanFileName) == 0 {
+		CleanFileName = "*"
+	}
+
+	dirname, err := os.Open(CleanDirName)
+	if err != nil {
+		return nil, err
+	}
+	defer dirname.Close()
+
+	dirEntries, err := dirname.ReadDir(0)
+	if err != nil {
+		return nil, err
+	}
+
+	CleanFileName = strings.ToLower(CleanFileName)
+	fileInfos := make(FISliceDate, 0, len(dirEntries))
+	for _, entry := range dirEntries {
+		lowerName := strings.ToLower(entry.Name())
+		if matched, _ := filepath.Match(CleanFileName, lowerName); matched {
+			if entry.IsDir() { // It was showing directories until I did this on 10/12/24.
+				continue
+			}
+			L, err := entry.Info()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error from os.Lstat is %v \n", err)
+				continue
+			}
+			fileInfos = append(fileInfos, L)
+		}
+	}
+
+	sort.Sort(fileInfos)
+
+	stringSlice := make([]string, 0, 50) // hard coded this magic number.
+
+	var count int
+	for _, f := range fileInfos {
+		stringSlice = append(stringSlice, f.Name()) // needs to preserve case of filename for linux
+		count++
+		if count >= 50 { // I'm hard coding this magic number, as that's what it is in filepicker.
+			break
+		}
+	}
+	return stringSlice, nil
+} // end getFilenames
