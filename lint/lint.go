@@ -65,10 +65,11 @@ import (
 				I want to refactor this so it works in the environment it's needed.  It needs to get the files from o: drive and then homeDir/Documents, both.
 				So I want to write the routine here as taking a param of a full filename and scanning that file.
 				First I want to see if the xlsx.OpenFile takes a full file name as its param.  If so, that'll be easier for me to code.  It does.
-  16 Mar 25 -- Changing colores that are displayed.
+  16 Mar 25 -- Changing colors that are displayed.
+  18 Mar 25 -- Still doesn't work for Nikki, as it doesn't find the files on O-drive.  I'll broaden the expression to include all excel files.
 */
 
-const lastModified = "16 Mar 2025"
+const lastModified = "18 Mar 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -319,7 +320,7 @@ func main() {
 	// filepicker stuff.
 
 	if flag.NArg() == 0 {
-		filenames, err := filepicker.GetRegexFullFilenames("o:\\week.*xlsx$")
+		filenames, err := filepicker.GetRegexFullFilenames("o:\\week.*xls.?$")
 		if err != nil {
 			ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
 			return
@@ -333,7 +334,7 @@ func main() {
 			fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
 			return
 		}
-		docs := filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xlsx$")
+		docs := filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")
 		if *verboseFlag {
 			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 		}
