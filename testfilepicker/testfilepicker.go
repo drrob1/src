@@ -9,6 +9,8 @@ package main
   18 Oct 17 -- Now called testfilepicker, derived from testtoken.go
   10 Jan 22 -- Converted to modules, and will test both GetFilenames and GetRegexFilenames.
   17 Mar 25 -- After I added more routines, I'll benchmark them now.
+				On leox, the results for a local directory are ~15-20 ms, and the FullFilename routine is always the fastest.
+				On thelio, the results for a local directory are ~2 ms, and the FullFilename routine is still always the fastest.
 */
 
 import (
