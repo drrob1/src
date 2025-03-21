@@ -2,14 +2,16 @@ package main // lint.go, from lint2.go from lint.go
 
 import (
 	"bytes"
-	"flag"
+	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"src/filepicker"
@@ -18,6 +20,8 @@ import (
 	"src/whichexec"
 	"strconv"
 	"strings"
+	"time"
+	//"flag"
 )
 
 /*
@@ -66,10 +70,14 @@ import (
 				So I want to write the routine here as taking a param of a full filename and scanning that file.
 				First I want to see if the xlsx.OpenFile takes a full file name as its param.  If so, that'll be easier for me to code.  It does.
   16 Mar 25 -- Changing colors that are displayed.
-  18 Mar 25 -- Still doesn't work for Nikki, as it doesn't find the files on O-drive.  I'll broaden the expression to include all excel files.
+  18 Mar 25 -- Still doesn't work for Nikki, as it doesn't find the files on O-drive.  I'll broaden the expression to include all Excel files.
+  20 Mar 25 -- 1.  I need a switch to only search c:, for my use.  I'll call this conly, apprev as c.
+               2.  Nikki uses a much more complex directory structure on o-drive than I expected.  I think I'm going to need a walk function to search for all files
+					timestamped this month or next month, and add their full name to the slice, sort the slice by date, newest first.
+				And changed to use pflag.
 */
 
-const lastModified = "18 Mar 2025"
+const lastModified = "21 Mar 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -96,7 +104,17 @@ const (
 	totalAmt
 )
 
-type dayType [23]string // there are a few unused entries here.  This goes from 0 .. 22.  Indices 0..2 are not used.
+type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
+
+type fileDataType struct {
+	ffname    string // full filename
+	timestamp time.Time
+}
+type FDSliceType []fileDataType
+
+var fileDataSliceChan = make(chan FDSliceType, 1)
+var masterFDSlice FDSliceType
+var boolChan chan bool // unbuffered.
 
 var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
@@ -106,7 +124,9 @@ var workingDir string
 var names = make([]string, 0, 25)  // a list of all the doc's last names as read from the config file.
 var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
 
-var verboseFlag = flag.Bool("v", false, "Verbose mode")
+var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
+var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")
+var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 
 // Next I will code the check against the vacation people to make sure they're not assigned to anything else.
 
@@ -317,16 +337,31 @@ func main() {
 		return
 	}
 
+	// set up channel to receive FDSlices and append them to a master file data slice
+	boolChan = make(chan bool)                 // unbuffered
+	masterFDSlice = make(FDSliceType, 0, 1000) // a magic number here, for now
+	receiverFunc := func() {
+		for FDslice := range fileDataSliceChan {
+			masterFDSlice = append(masterFDSlice, FDslice...)
+		}
+		boolChan <- true // pause until this go routine completes its work
+	}
+	go receiverFunc() // keep receiving on the receiver chan and appending to the master slice
+
 	// filepicker stuff.
 
+	includeODrive := !*conlyFlag // a comvenience flag
 	if flag.NArg() == 0 {
-		filenames, err := filepicker.GetRegexFullFilenames("o:\\week.*xls.?$")
-		if err != nil {
-			ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
-			return
-		}
-		if *verboseFlag {
-			fmt.Printf(" Filenames length: %d\n", len(filenames))
+		var filenames []string
+		if includeODrive {
+			filenames, err = walkRegexFullFilenames() // function is below.  "o:\\week.*xls.?$"
+			if err != nil {
+				ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
+				return
+			}
+			if *verboseFlag {
+				fmt.Printf(" Filenames length: %d\n", len(filenames))
+			}
 		}
 
 		homeDir, err := os.UserHomeDir()
@@ -477,6 +512,112 @@ func scanXLSfile(filename string) {
 		}
 	}
 }
+
+// getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
+//
+//	Needs a walk function to find what it is looking for.  See top comments.
+func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.Slice
+
+	// validate the regular expression
+	regex, err := regexp.Compile("week.*xls.?$")
+	if err != nil {
+		return nil, err
+	}
+
+	// define the timestamp constraint of >= this monthyear.  No, >= 1 month ago.
+	t0 := time.Now()
+	threshold := t0.AddDate(0, -1, 0) // threshhold is 1 month ago
+	timeout := t0.Add(5 * time.Minute)
+
+	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
+	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
+		if err != nil {
+			return filepath.SkipDir
+		}
+		if de.IsDir() {
+			return nil // allow walk function to drill down itself
+		}
+
+		if time.Now().After(timeout) {
+			return errors.New("timeout occurred")
+		}
+
+		// Not a directory, and timeout has not happened.  Check the files here
+		openDir, err := os.Open(fpath)
+		if err != nil {
+			return filepath.SkipDir
+		}
+		defer openDir.Close()
+		dirEntries, err := openDir.ReadDir(0)
+		if err != nil {
+			return err
+		}
+
+		filesDatas := make(FDSliceType, 0, len(dirEntries))
+		for _, dirEntry := range dirEntries {
+			lowerName := strings.ToLower(dirEntry.Name())
+			if regex.MatchString(lowerName) {
+				if dirEntry.IsDir() { // Want to not return directory names.  Added 10/12/24.
+					continue
+				}
+
+				fi, err := dirEntry.Info()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error from dirEntry(%s).Info() is %v \n", dirEntry.Name(), err)
+					continue
+				}
+
+				filedata := fileDataType{
+					ffname:    filepath.Join(fpath, dirEntry.Name()),
+					timestamp: fi.ModTime(),
+				}
+				filesDatas = append(filesDatas, filedata)
+			}
+		}
+		fileDataSliceChan <- filesDatas // send this filesData down the channel to the goroutine collecting them.
+
+		// I now have a walk function that has collected all matching names in this fpath into a slice of fileInfos.
+		// Now what do I do now?  I want, after the call to the walk function, to have a slice of full filenames that match the constraints of name and timestamp.
+		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if thay match the timestamp constraint.
+		// I may need a go routine to collect all these slices into 1 slice to be sorted.  And I don't have a full filename in this slice.  I still have to
+		// construct that.
+		// Maybe I need a struct that has full filename and the timestamp, ie, fileInfo.ModTime(), which is of type time.Time.  I did this, and call it fileDataType.
+		// Then I made FileDataSliceType I call FDSliceType.  Then I made a masterFDSlice and a FDSlice channel so the walk function sends a slice of filedatas to the
+		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
+		// and another to signal when all of these local slices have been appended to the master filedata slice.
+		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
+
+		return nil
+	}
+
+	startDirectory := "o:Nikyla's File\\Radiology MD Schedule"
+	err = filepath.WalkDir(startDirectory, walkDirFunction)
+	if err != nil {
+		return nil, err
+	}
+	close(fileDataSliceChan)
+	<-boolChan // pause until masterFDSlice is filled.  This is an unbuffered channel
+
+	lessFunc := func(i, j int) bool {
+		//return masterFDSlice[i].timestamp.UnixNano() > masterFDSlice[j].timestamp.UnixNano() // this works
+		return masterFDSlice[i].timestamp.After(masterFDSlice[j].timestamp) // I want to see if this will work.  TRUE means time[i] is after time[j].
+	}
+	sort.Slice(masterFDSlice, lessFunc)
+
+	stringSlice := make([]string, 0, len(masterFDSlice))
+	var count int
+	for _, f := range masterFDSlice {
+		if f.timestamp.After(threshold) {
+			stringSlice = append(stringSlice, f.ffname) // needs to preserve case of filename for linux
+			count++
+			if count >= numLines {
+				break
+			}
+		}
+	}
+	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
+	return stringSlice, nil
+} // end walkRegexFullFilenames
 
 func pause() bool {
 	var ans string
