@@ -78,7 +78,7 @@ import (
 				And changed to use pflag.
 */
 
-const lastModified = "21 Mar 2025"
+const lastModified = "22 Mar 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -111,11 +111,6 @@ type fileDataType struct {
 	ffname    string // full filename
 	timestamp time.Time
 }
-type FDSliceType []fileDataType
-
-var fileDataSliceChan = make(chan FDSliceType, 1)
-var masterFDSlice FDSliceType
-var boolChan chan bool // unbuffered.
 
 var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
@@ -338,17 +333,6 @@ func main() {
 		return
 	}
 
-	// set up channel to receive FDSlices and append them to a master file data slice
-	boolChan = make(chan bool)                 // unbuffered
-	masterFDSlice = make(FDSliceType, 0, 1000) // a magic number here, for now
-	receiverFunc := func() {
-		for FDslice := range fileDataSliceChan {
-			masterFDSlice = append(masterFDSlice, FDslice...)
-		}
-		boolChan <- true // pause until this go routine completes its work
-	}
-	go receiverFunc() // keep receiving on the receiver chan and appending to the master slice
-
 	// filepicker stuff.
 
 	includeODrive := !*conlyFlag // a comvenience flag
@@ -533,6 +517,18 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 	threshold := t0.AddDate(0, -1, 0) // threshhold is 1 month ago
 	timeout := t0.Add(5 * time.Minute)
 
+	// set up channel to receive FDSlices and append them to a master file data slice
+	boolChan := make(chan bool)                 // unbuffered
+	fileDataChan := make(chan fileDataType, 10) // a magic number I pulled out of the air
+	FDSlice := make([]fileDataType, 0, 100)     // a magic number here, for now
+	receiverFunc := func() {
+		for fd := range fileDataChan { // fd is of type filedatatype
+			FDSlice = append(FDSlice, fd)
+		}
+		boolChan <- true // pause until this go routine completes its work
+	}
+	go receiverFunc() // keep receiving on the receiver chan and appending to the master slice
+
 	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
 		if *verboseFlag {
@@ -553,40 +549,25 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 			return errors.New("timeout occurred")
 		}
 
-		// Not a directory, and timeout has not happened.  Check the files here
-		openDir, err := os.Open(fpath)
-		if err != nil {
-			return filepath.SkipDir
-		}
-		defer openDir.Close()
-		dirEntries, err := openDir.ReadDir(0)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from openDir(%s).ReadDir is: %s\n", fpath, err.Error())
+		// Not a directory, and timeout has not happened.  Only process regular files, and skip symlinks.
+		if !de.Type().IsRegular() {
 			return nil
 		}
 
-		filesDatas := make(FDSliceType, 0, len(dirEntries))
-		for _, dirEntry := range dirEntries {
-			lowerName := strings.ToLower(dirEntry.Name())
-			if regex.MatchString(lowerName) {
-				if dirEntry.IsDir() { // Want to not return directory names.  Added 10/12/24.
-					continue
-				}
-
-				fi, err := dirEntry.Info()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error from dirEntry(%s).Info() is %v \n", dirEntry.Name(), err)
-					continue
-				}
-
-				filedata := fileDataType{
-					ffname:    filepath.Join(fpath, dirEntry.Name()),
-					timestamp: fi.ModTime(),
-				}
-				filesDatas = append(filesDatas, filedata)
+		lowerName := strings.ToLower(de.Name())
+		if regex.MatchString(lowerName) {
+			fi, err := de.Info()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error from dirEntry(%s).Info() is %v \n", de.Name(), err)
+				return nil
 			}
+
+			filedata := fileDataType{
+				ffname:    filepath.Join(fpath, de.Name()),
+				timestamp: fi.ModTime(),
+			}
+			fileDataChan <- filedata
 		}
-		fileDataSliceChan <- filesDatas // send this filesData down the channel to the goroutine collecting them.
 
 		// I now have a walk function that has collected all matching names in this fpath into a slice of fileInfos.
 		// Now what do I do now?  I want, after the call to the walk function, to have a slice of full filenames that match the constraints of name and timestamp.
@@ -598,6 +579,8 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
 		// and another to signal when all of these local slices have been appended to the master filedata slice.
 		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
+		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory names, it produces all file entries
+		// with each iteration.  So opening a directory here and fetching all the entries is not correct.  I have to change this to work on individual entries.
 
 		return nil
 	}
@@ -606,25 +589,25 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 	if runtime.GOOS == "windows" { // this is so I can debug on leox, too.
 		startDirectory = "o:\\Nikyla's File\\RADIOLOGY MD Schedule\\"
 	} else {
-		startDirectory = "~/bigbkupG"
+		startDirectory = "/home/rob/bigbkupG/Nikyla's File/RADIOLOGY MD Schedule"
 	}
 
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
 	if err != nil {
 		return nil, err
 	}
-	close(fileDataSliceChan)
+	close(fileDataChan)
 	<-boolChan // pause until masterFDSlice is filled.  This is an unbuffered channel
 
 	lessFunc := func(i, j int) bool {
 		//return masterFDSlice[i].timestamp.UnixNano() > masterFDSlice[j].timestamp.UnixNano() // this works
-		return masterFDSlice[i].timestamp.After(masterFDSlice[j].timestamp) // I want to see if this will work.  TRUE means time[i] is after time[j].
+		return FDSlice[i].timestamp.After(FDSlice[j].timestamp) // I want to see if this will work.  TRUE means time[i] is after time[j].
 	}
-	sort.Slice(masterFDSlice, lessFunc)
+	sort.Slice(FDSlice, lessFunc)
 
-	stringSlice := make([]string, 0, len(masterFDSlice))
+	stringSlice := make([]string, 0, len(FDSlice))
 	var count int
-	for _, f := range masterFDSlice {
+	for _, f := range FDSlice {
 		if f.timestamp.After(threshold) {
 			stringSlice = append(stringSlice, f.ffname) // needs to preserve case of filename for linux
 			count++
