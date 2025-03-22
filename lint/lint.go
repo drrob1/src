@@ -535,7 +535,7 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
 		if *verboseFlag {
-			fmt.Printf(" WalkDir fpath %s, de.name %s, err %v \n", fpath, de.Name(), err.Error())
+			fmt.Printf(" WalkDir fpath %s, de.name invalid, err %v \n", fpath, err.Error())
 		}
 		if err != nil {
 			return filepath.SkipDir
