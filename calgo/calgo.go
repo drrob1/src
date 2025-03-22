@@ -82,9 +82,10 @@ import (
                 I'm going to add a config file, called calgo.conf or calgo.ini, that will list the doc names and will be used for the docNames slice.
 				At the moment, the only difference btwn calg and calgo is that calg hard codes the names, and calgo uses a config file to get the names.
 				I did git tag calgo-tcell for the old code, and git tag calgo-new for this code.  I preserved the old version as oldcalgo.exe
+ 22 Mar 25 -- Pgm won't work without the config file.  That's not what I want.  I'll make it work without one; of course, it can't output the files without it.
 */
 
-const lastCompiled = "Dec 25, 2024"
+const lastCompiled = "Mar 22, 2025"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
@@ -898,19 +899,23 @@ func main() {
 
 	// process conf or ini file
 	var err error
-	docNames, err = findAndReadConfIni()
-	if err != nil {
-		fmt.Printf(" Error from findAndReadConfINI: %s\n", err)
-		fmt.Printf(" Continue? (Y/n)")
-		var ans string
-		n, err := fmt.Scanln(&ans)
-		if n == 0 || err != nil {
-			return // this means exit
-		}
 
-		ans = strings.ToLower(ans)
-		if strings.Contains(ans, "n") {
-			return // this means exit
+	if outputFlag {
+		docNames, err = findAndReadConfIni()
+		if err != nil {
+			fmt.Printf(" Error from findAndReadConfINI: %s\n", err)
+			fmt.Printf(" Continue? (Y/n)")
+			var ans string
+			n, err := fmt.Scanln(&ans) // problem here is that if I don't answer the question, the pgm exits without showing a calendar.  Masked by only looking if outputFlag is set.
+			if n == 0 || err != nil {
+				fmt.Printf(" Will turn off the outputFlag.\n")
+				outputFlag = false
+			}
+
+			ans = strings.ToLower(ans)
+			if strings.Contains(ans, "n") {
+				return // this means exit
+			}
 		}
 	}
 
