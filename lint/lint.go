@@ -9,6 +9,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -118,7 +119,6 @@ var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Bod
 	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
 
 var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-var workingDir string
 var names = make([]string, 0, 25)  // a list of all the doc's last names as read from the config file.
 var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
 
@@ -179,6 +179,29 @@ func findAndReadConfIni() error {
 
 	if *verboseFlag {
 		fmt.Printf(" Sorted Names: %#v\n\n", names)
+	}
+
+	// Now to process setting startdirectory
+
+	if *verboseFlag {
+		fmt.Printf(" In findAndReadConfIni before 2nd ReadLine. BytesReader.Len=%d, and .size=%d\n", bytesReader.Len(), bytesReader.Size())
+	}
+	inputLine, err = misc.ReadLine(bytesReader)
+	if *verboseFlag {
+		fmt.Printf(" In findAndReadConfIni after 2nd ReadLine BytesReader.Len=%d, and .size=%d, inputline=%q\n",
+			bytesReader.Len(), bytesReader.Size(), inputLine)
+	}
+	if err != nil {
+		fmt.Printf(" Error reading 2nd config line: %s\n", err)
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+
+	trimmedInputLine, ok := strings.CutPrefix(inputLine, "startdirectory") // CutPrefix became available as of Go 1.20
+	if ok {
+		startDirectory = trimmedInputLine
 	}
 
 	return nil
@@ -322,6 +345,12 @@ func main() {
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error from findAndReadConfINI: %s.  Exiting.\n", err)
 		return
+	}
+
+	if *verboseFlag {
+		if startDirectory != "" {
+			fmt.Printf(" Start Directory: %s\n", startDirectory)
+		}
 	}
 
 	// filepicker stuff.
