@@ -202,6 +202,7 @@ func findAndReadConfIni() error {
 	trimmedInputLine, ok := strings.CutPrefix(inputLine, "startdirectory") // CutPrefix became available as of Go 1.20
 	if ok {
 		startDirectory = trimmedInputLine
+		startDirectory = strings.TrimSpace(startDirectory)
 	}
 
 	return nil
@@ -617,6 +618,10 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		} else { // this is so I can debug on leox, too.  Variable is defined globally.
 			startDirectory = "/home/rob/bigbkupG/Nikyla's File/RADIOLOGY MD Schedule"
 		}
+	}
+
+	if *verboseFlag {
+		fmt.Printf(" WalkDir startDirectory: %s\n", startDirectory)
 	}
 
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
