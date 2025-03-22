@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"src/filepicker"
@@ -596,7 +597,13 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		return nil
 	}
 
-	startDirectory := "o:Nikyla's File\\Radiology MD Schedule"
+	var startDirectory string
+	if runtime.GOOS == "windows" { // this is so I can debug on leox, too.
+		startDirectory = "o:\\Nikyla's File\\RADIOLOGY MD Schedule\\"
+	} else {
+		startDirectory = "~/bigbkupG/Nikyla's File"
+	}
+
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
 	if err != nil {
 		return nil, err
