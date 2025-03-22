@@ -351,6 +351,9 @@ func main() {
 	// filepicker stuff.
 
 	includeODrive := !*conlyFlag // a comvenience flag
+	if *verboseFlag {
+		fmt.Printf(" conlyFlag=%t, includeODrive=%t\n", *conlyFlag, includeODrive)
+	}
 	if flag.NArg() == 0 {
 		var filenames []string
 		if includeODrive {
@@ -360,7 +363,7 @@ func main() {
 				return
 			}
 			if *verboseFlag {
-				fmt.Printf(" Filenames length: %d\n", len(filenames))
+				fmt.Printf(" Filenames length from o drive: %d\n", len(filenames))
 			}
 		}
 
@@ -395,7 +398,7 @@ func main() {
 		if n == 0 || err != nil {
 			ans = "0"
 		} else if ans == "999" || ans == "." || ans == "," || ans == ";" {
-			fmt.Println(" Stop code entered.  Exiting.")
+			fmt.Println(" No files entered.  Exiting.")
 			return
 		}
 		i, e := strconv.Atoi(ans)
@@ -531,6 +534,9 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 
 	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
+		if *verboseFlag {
+			fmt.Printf(" WalkDir fpath %s, de.name %s, err %v \n", fpath, de.Name(), err.Error())
+		}
 		if err != nil {
 			return filepath.SkipDir
 		}
