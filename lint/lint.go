@@ -406,18 +406,22 @@ func main() {
 	}
 	fmt.Println()
 
-	scanXLSfile(filename)
+	err = scanXLSfile(filename)
 
-	ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n", filename)
+	if err == nil {
+		ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n\n", filename)
+	} else {
+		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s\n\n", filename)
+	}
 }
 
 // scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
-func scanXLSfile(filename string) {
+func scanXLSfile(filename string) error {
 
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
-		fmt.Printf("Error opening excel file %s in directory %s: %s\n", filename, workingDir, err)
-		return
+		//fmt.Printf("Error opening excel file %s in directory %s: %s\n", filename, workingDir, err)
+		return err
 	}
 
 	// Populate the week's schedule
@@ -453,7 +457,7 @@ func scanXLSfile(filename string) {
 			}
 			fmt.Printf("\n")
 			if pause() {
-				return
+				return errors.New("exit from pause")
 			}
 
 			fmt.Printf("\n Late shift docs on day %d are %#v\n", dayCol, lateDocsToday)
@@ -495,10 +499,11 @@ func scanXLSfile(filename string) {
 
 		if *verboseFlag {
 			if pause() {
-				return
+				return errors.New("exit from pause")
 			}
 		}
 	}
+	return nil
 }
 
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
@@ -563,7 +568,7 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 			}
 
 			filedata := fileDataType{
-				ffname:    filepath.Join(fpath, de.Name()),
+				ffname:    fpath, // filepath.Join(fpath, de.Name()) doesn't work, because it turns out that fpath is the full path and filename
 				timestamp: fi.ModTime(),
 			}
 			fileDataChan <- filedata
