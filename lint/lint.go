@@ -561,7 +561,8 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		defer openDir.Close()
 		dirEntries, err := openDir.ReadDir(0)
 		if err != nil {
-			return err
+			ctfmt.Printf(ct.Red, true, " Error from openDir(%s).ReadDir is: %s\n", fpath, err.Error())
+			return nil
 		}
 
 		filesDatas := make(FDSliceType, 0, len(dirEntries))
@@ -605,7 +606,7 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 	if runtime.GOOS == "windows" { // this is so I can debug on leox, too.
 		startDirectory = "o:\\Nikyla's File\\RADIOLOGY MD Schedule\\"
 	} else {
-		startDirectory = "~/bigbkupG/Nikyla's File"
+		startDirectory = "~/bigbkupG"
 	}
 
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
