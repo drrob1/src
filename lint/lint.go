@@ -76,6 +76,8 @@ import (
                2.  Nikki uses a much more complex directory structure on o-drive than I expected.  I think I'm going to need a walk function to search for all files
 					timestamped this month or next month, and add their full name to the slice, sort the slice by date, newest first.
 				And changed to use pflag.
+  22 Mar 25 -- It now works as intended.  So now I want to add a flag to set the time interval that's valid, and a config file setting for the directory searched on o:
+				And I'll add a veryverboseFlag, using vv and w.  The veryverbose setting will be for the Excel tests I don't need anymore.
 */
 
 const lastModified = "22 Mar 2025"
@@ -123,6 +125,9 @@ var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verbo
 var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
 var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")
 var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
+var veryVerboseFlag bool
+var startDirectory string
+var monthsThreshold int
 
 // Next I will code the check against the vacation people to make sure they're not assigned to anything else.
 
@@ -161,7 +166,7 @@ func findAndReadConfIni() error {
 		names = append(names, lower)
 		dayOff[lower] = false // this is a map[string]bool
 	}
-	if *verboseFlag {
+	if veryVerboseFlag {
 		fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
 		for doc, vacay := range dayOff {
 			fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
@@ -300,32 +305,18 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 }
 
 func main() {
-	flag.Parse() // need this because of use of flag.NArg() below
+	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
+	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
+	flag.Parse()
+	if veryVerboseFlag {
+		*verboseFlag = true
+	}
 
 	filepicker.VerboseFlag = *verboseFlag
 
 	var filename, ans string
 
 	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
-
-	//sectionNames[4] = "neuro"
-	//sectionNames[5] = "body"
-	//sectionNames[6] = "ER/Xrays"
-	//sectionNames[7] = "IR"
-	//sectionNames[8] = "Nuclear"
-	//sectionNames[9] = "US"
-	//sectionNames[10] = "Peds"
-	//sectionNames[11] = "FluoroJH"
-	//sectionNames[12] = "FluoroFH"
-	//sectionNames[13] = "MSk"
-	//sectionNames[14] = "Mammo"
-	//sectionNames[15] = "BoneDensity"
-	//sectionNames[16] = "Late"
-	//sectionNames[17] = "Moonlighters"
-	//sectionNames[18] = "WeekendJH"
-	//sectionNames[19] = "WeekendFH"
-	//sectionNames[20] = "WeekendIR"
-	//sectionNames[21] = "MDOff"
 
 	err := findAndReadConfIni()
 	if err != nil {
@@ -434,7 +425,7 @@ func scanXLSfile(filename string) error {
 		}
 	}
 
-	if *verboseFlag {
+	if veryVerboseFlag {
 		for i, day := range week {
 			fmt.Printf("Day %d: %#v \n", i, day)
 		}
@@ -445,7 +436,7 @@ func scanXLSfile(filename string) error {
 		mdsOffToday := whosOnVacationToday(week, dayCol)
 		lateDocsToday := whosLateToday(week, dayCol)
 
-		if *verboseFlag {
+		if veryVerboseFlag {
 			fmt.Printf(" mdsOffToday on day %d is/are %#v\n", dayCol, mdsOffToday)
 			i := 0
 			for doc, vacay := range dayOff {
@@ -486,7 +477,7 @@ func scanXLSfile(filename string) error {
 		// Determine if the fluoro doc for today is remote
 		remoteNames := whosRemoteToday(week, dayCol)
 		for _, name := range remoteNames {
-			if *verboseFlag {
+			if veryVerboseFlag {
 				fmt.Printf(" Remote doc for today: %s, FluoroJH: %s, FluoroFH: %s\n", name, week[dayCol][fluoroJH], week[dayCol][fluoroFH])
 			}
 			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
@@ -497,7 +488,7 @@ func scanXLSfile(filename string) error {
 			}
 		}
 
-		if *verboseFlag {
+		if veryVerboseFlag {
 			if pause() {
 				return errors.New("exit from pause")
 			}
@@ -519,7 +510,7 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 
 	// define the timestamp constraint of >= this monthyear.  No, >= 1 month ago.
 	t0 := time.Now()
-	threshold := t0.AddDate(0, -1, 0) // threshhold is 1 month ago
+	threshold := t0.AddDate(0, -monthsThreshold, 0) // threshhold is months ago set by a commandline flag.  Default is 1 month.
 	timeout := t0.Add(5 * time.Minute)
 
 	// set up channel to receive FDSlices and append them to a master file data slice
@@ -579,22 +570,24 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if thay match the timestamp constraint.
 		// I may need a go routine to collect all these slices into 1 slice to be sorted.  And I don't have a full filename in this slice.  I still have to
 		// construct that.
-		// Maybe I need a struct that has full filename and the timestamp, ie, fileInfo.ModTime(), which is of type time.Time.  I did this, and call it fileDataType.
+		// Maybe I need a struct that has full filename and the timestamp, ie, fileInfo.ModTime(), which is of type time.Time.  I did this, and I call it fileDataType.
 		// Then I made FileDataSliceType I call FDSliceType.  Then I made a masterFDSlice and a FDSlice channel so the walk function sends a slice of filedatas to the
 		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
 		// and another to signal when all of these local slices have been appended to the master filedata slice.
 		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
-		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory names, it produces all file entries
+		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory names, it produces any file entries
 		// with each iteration.  So opening a directory here and fetching all the entries is not correct.  I have to change this to work on individual entries.
+		// Now it works.  The walk function gets the needed filenames, checks against the regex and date constraint and then sends down the channel if the file passes the constraint tests.
 
 		return nil
 	}
 
-	var startDirectory string
-	if runtime.GOOS == "windows" { // this is so I can debug on leox, too.
-		startDirectory = "o:\\Nikyla's File\\RADIOLOGY MD Schedule\\"
-	} else {
-		startDirectory = "/home/rob/bigbkupG/Nikyla's File/RADIOLOGY MD Schedule"
+	if startDirectory == "" { // if not set by the config file.
+		if runtime.GOOS == "windows" { // Variable is defined globally.
+			startDirectory = "o:\\Nikyla's File\\RADIOLOGY MD Schedule\\"
+		} else { // this is so I can debug on leox, too.  Variable is defined globally.
+			startDirectory = "/home/rob/bigbkupG/Nikyla's File/RADIOLOGY MD Schedule"
+		}
 	}
 
 	err = filepath.WalkDir(startDirectory, walkDirFunction)
@@ -602,11 +595,11 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		return nil, err
 	}
 	close(fileDataChan)
-	<-boolChan // pause until masterFDSlice is filled.  This is an unbuffered channel
+	<-boolChan // pause until FDSlice is filled.  boolChan is an unbuffered channel
 
 	lessFunc := func(i, j int) bool {
 		//return masterFDSlice[i].timestamp.UnixNano() > masterFDSlice[j].timestamp.UnixNano() // this works
-		return FDSlice[i].timestamp.After(FDSlice[j].timestamp) // I want to see if this will work.  TRUE means time[i] is after time[j].
+		return FDSlice[i].timestamp.After(FDSlice[j].timestamp) // I want to see if this will work.  It does, and TRUE means time[i] is after time[j].
 	}
 	sort.Slice(FDSlice, lessFunc)
 
