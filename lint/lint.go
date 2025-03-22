@@ -605,6 +605,10 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 	}
 	sort.Slice(FDSlice, lessFunc)
 
+	if *verboseFlag {
+		fmt.Printf(" in walkRegexFullFilenames after sort.Slice.  Len=%d\n  FDSlice %#v\n", len(FDSlice), FDSlice)
+	}
+
 	stringSlice := make([]string, 0, len(FDSlice))
 	var count int
 	for _, f := range FDSlice {
@@ -616,7 +620,9 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 			}
 		}
 	}
-	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
+	if *verboseFlag {
+		fmt.Printf(" In walkRegexFullFilenames.  len(stringSlice) = %d\n stringSlice=%v\n", len(stringSlice), stringSlice)
+	}
 	return stringSlice, nil
 } // end walkRegexFullFilenames
 
