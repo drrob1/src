@@ -607,7 +607,8 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
 		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory names, it produces any file entries
 		// with each iteration.  So opening a directory here and fetching all the entries is not correct.  I have to change this to work on individual entries.
-		// Now it works.  The walk function gets the needed filenames, checks against the regex and date constraint and then sends down the channel if the file passes the constraint tests.
+		// Now it works.  The walk function gets the needed filenames, checks against the regex and sends down the channel if the file matches.
+		// This routine then sorts the []FileDataType and checks against the date threshold constraint when converting to []string.
 
 		return nil
 	}
