@@ -79,6 +79,7 @@ import (
 				And changed to use pflag.
   22 Mar 25 -- It now works as intended.  So now I want to add a flag to set the time interval that's valid, and a config file setting for the directory searched on o:
 				And I'll add a veryverboseFlag, using vv and w.  The veryverbose setting will be for the Excel tests I don't need anymore.
+  27 Mar 25 -- I ran this using the -race flag; it's clean.  No data races.  Just checking.
 */
 
 const lastModified = "22 Mar 2025"
