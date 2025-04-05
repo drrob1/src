@@ -36,7 +36,7 @@ const FF = 12
 const CR = 13
 const ESC = 27
 
-//      NULL       = 0C;
+// NULL       = 0C;
 const BLANKCHR = ' '
 const BOXCHRVERT = '|'
 const BOXCHRHORZ = '_'

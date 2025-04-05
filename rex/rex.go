@@ -139,9 +139,10 @@ Revision History
  8 Jan 25 -- Using maxFlag is not a good idea, as it just prevents halfFlag from ever working.  See top comments in dsrt.go.  Tagged as rex-v1.0
 17 Feb 25 -- Adding pflag.  I don't think I need viper yet.  I added pflag by naming its import path to flag.
 14 Mar 25 -- It's Pi Day today, but that's not important now.  I'm debugging code in rexv to handle directories as 1 param.  When that works, I'll port it here.
+ 5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work in rexv, but not here.  Hmm, now it's working.  Strange.
 */
 
-const LastAltered = "Nar 14, 2025"
+const LastAltered = "Apr 5, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -469,6 +470,9 @@ func main() {
 		workingDir, inputRegExStr = filepath.Split(inputRegEx)
 		if workingDir == "" {
 			workingDir = startDir // workingDir is set above
+		}
+		if verboseFlag {
+			fmt.Printf("If flag.NArg() is 1.  After filepath.Split(%s), Working Directory: %s, inputRegExStr: %s\n", inputRegEx, workingDir, inputRegExStr)
 		}
 	} else { // flag.NArg() >= 2 so I'll ignore any extra params.
 		inputRegExStr = flag.Arg(0)

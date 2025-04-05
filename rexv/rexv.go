@@ -140,9 +140,10 @@ Revision History
 ----------------------------------------------------------------------------------------------------
 17 Feb 25 -- Now called rexv.go, as I've added viper.
 14 Mar 25 -- Will combine different directory options into 1 input param that will be split by filepath.Split().  And it's Pi Day, but that's not important now.
+ 5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work here, but not in rex.
 */
 
-const LastAltered = "Mar 14, 2025"
+const LastAltered = "Apr 5, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -270,6 +271,23 @@ func main() {
 	flag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
 
 	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
+
+	flag.Usage = func() { // must be above the Parse() to work.
+		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
+		fmt.Printf(" Viper uses rexv.yaml as its config file name. \n")
+		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
+		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
+		fmt.Println()
+		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
+		fmt.Println("                    * zero or more, + one or more, ? zero or one")
+		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
+		fmt.Println("                    ^ at beginning of text or line.  $ at end of text or line.")
+		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
+		fmt.Println()
+		flag.PrintDefaults()
+		//return flagged by staticcheck as redundant.  Interesting
+	}
 
 	flag.Parse()
 
@@ -417,23 +435,6 @@ func main() {
 		fmt.Printf(" After flag.Parse(); autowidth=%d, autoheight=%d, numOfLines=%d and numofCols=%d\n", autoWidth, autoHeight, numOfLines, numOfCols)
 	}
 
-	flag.Usage = func() {
-		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Printf(" Viper uses rexv.yaml as its config file name. \n")
-		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
-		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
-		fmt.Println()
-		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
-		fmt.Println("                    * zero or more, + one or more, ? zero or one")
-		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
-		fmt.Println("                    ^ at beginning of text or line.  $ at end of text or line.")
-		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
-		fmt.Println()
-		flag.PrintDefaults()
-		//return flagged by staticcheck as redundant.  Interesting
-	}
-
 	inputRegExStr := ""
 	workingDir, er := os.Getwd()
 	if er != nil {
@@ -449,6 +450,9 @@ func main() {
 		workingDir, inputRegExStr = filepath.Split(inputRegEx)
 		if workingDir == "" {
 			workingDir = startDir // workingDir is set above
+		}
+		if verboseFlag {
+			fmt.Printf("If flag.NArg() is 1.  After filepath.Split(%s), Working Directory: %s, inputRegExStr: %s\n", inputRegEx, workingDir, inputRegExStr)
 		}
 	} else { // flag.NArg() >= 2 so I'll ignore any extra params.
 		inputRegExStr = flag.Arg(0)
