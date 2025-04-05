@@ -10,6 +10,7 @@ package main
   18 Jan 14 -- Add procedure to make sure pattern ends in .xspf.
   21 Sep 16 -- Started conversion to Go.  This is going to take a while.  After experimenting with encoding/xml, I decided
                 not to use that package due to it's not ignoring garbage characters like <LF> <tab> <space> etc
+   5 Apr 25 -- Converted import to modules so it stops causing errors.
 */
 
 import (
@@ -22,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 	//
-	"getcommandline"
-	"timlibg"
+	"src/getcommandline"
+	"src/timlibg"
 )
 
 const MaxNumOfTracks = 512

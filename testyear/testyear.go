@@ -13,9 +13,10 @@ package main
    2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small
                 enough to make the expression evaluate to a negative value.
   20 Jan 92 -- First page now does not begin with a FF.
-  9 Nov 16 -- Converting to Go, using a CLI.  It will take a year on the commandline, and output two files.
-                A 1 page calendar meant for printing out, and a 12 page calendar meant for importing into
+   9 Nov 16 -- Converting to Go, using a CLI.  It will take a year on the commandline, and output two files.
+                A 1-page calendar meant for printing out, and a 12-page calendar meant for importing into
                 Excel.
+   5 Apr 25 -- Converting import statement to modules so the errors go away.
 */
 
 import (
@@ -23,9 +24,9 @@ import (
 	"os"
 	"path/filepath"
 	//
-	"getcommandline"
-	"timlibg"
-	"tokenize"
+	"src/getcommandline"
+	"src/timlibg"
+	"src/tokenize"
 )
 
 const LastCompiled = "12 Nov 16"
