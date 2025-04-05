@@ -38,6 +38,7 @@ import (
    9 Sep 17 -- Changing how bufio errors are checked, based on a posting from Rob Pike.
   11 Sep 17 -- Made the stdev a % factor instead of a constant factor, and tweaked the output in other ways.
   12 Sep 17 -- Added heading to output file.
+   5 Apr 25 -- Fixing the API of my token stuff.
 */
 
 const LastAltered = "12 Sep 2017"
@@ -152,10 +153,10 @@ func main() {
 		if err != nil {
 			break
 		}
-		tokenreader := tknptr.NewToken(line)
+		tokenreader := tknptr.New(line)
 		col := 0
 		ir := make(inputrow, 2) // input row
-		// loop to process first 2 digit tokens on this line and ignore the rest
+		// loop to process first 2-digit tokens on this line and ignore the rest
 		for col < 2 {
 			token, EOL := tokenreader.GETTKNREAL()
 			if EOL {
@@ -303,7 +304,7 @@ func SQR(R float64) float64 {
 	return R * R
 } // END SQR;
 
-//  ------------------------------------- StdLR ----------------------------------
+// ------------------------------------- StdLR ----------------------------------
 func StdLR(rows []Point) (float64, float64, float64) {
 	/*
 	   This routine does the standard, unweighted, computation of the slope and
@@ -334,7 +335,7 @@ func StdLR(rows []Point) (float64, float64, float64) {
 	return Slope, Intercept, R2
 } //  END StdLR;
 
-//===========================================================
+// ===========================================================
 func check(e error) {
 	if e != nil {
 		panic(e)
