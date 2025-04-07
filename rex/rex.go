@@ -140,9 +140,10 @@ Revision History
 17 Feb 25 -- Adding pflag.  I don't think I need viper yet.  I added pflag by naming its import path to flag.
 14 Mar 25 -- It's Pi Day today, but that's not important now.  I'm debugging code in rexv to handle directories as 1 param.  When that works, I'll port it here.
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work in rexv, but not here.  Hmm, now it's working.  Strange.
+ 7 Apr 25 -- Not strange, just out of date.  I was using an out of date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
 */
 
-const LastAltered = "Apr 5, 2025"
+const LastAltered = "Apr 7, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -310,6 +311,25 @@ func main() {
 
 	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
+	flag.Usage = func() { // this must be above flag.Parse() to work.
+		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
+		fmt.Printf(" Now uses pflag.  Reads from rex and dsw environment variables before processing commandline switches.\n")
+		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
+			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
+		fmt.Println(" Usage: rex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" Usage: rex [directory]pattern  -- Alternate syntax for directory and pattern.")
+		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
+		fmt.Println()
+		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
+		fmt.Println("                    * zero or more, + one or more, ? zero or one")
+		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
+		fmt.Println("                    ^ at beginning of text or line.  $ at end of text or line.")
+		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
+		fmt.Println()
+		flag.PrintDefaults()
+		//return flagged by staticcheck as redundant.  Interesting
+	}
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting very verbose will also set verbose.
@@ -352,25 +372,6 @@ func main() {
 		fmt.Println("winFlag:", winFlag)
 		fmt.Println()
 		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d and numofCols=%d\n", w, *nscreens, NLines, numOfCols)
-	}
-
-	flag.Usage = func() {
-		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
-		fmt.Printf(" Reads from rex and dsw environment variables before processing commandline switches.\n")
-		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
-			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
-		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
-		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
-		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
-		fmt.Println()
-		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
-		fmt.Println("                    * zero or more, + one or more, ? zero or one")
-		fmt.Println("                    x{n,m} from n to m of x, x{n,} n or more of x ")
-		fmt.Println("                    ^ at beginning of text or line.  $ at end of text or line.")
-		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
-		fmt.Println()
-		flag.PrintDefaults()
-		//return flagged by staticcheck as redundant.  Interesting
 	}
 
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag

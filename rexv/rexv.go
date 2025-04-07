@@ -141,9 +141,10 @@ Revision History
 17 Feb 25 -- Now called rexv.go, as I've added viper.
 14 Mar 25 -- Will combine different directory options into 1 input param that will be split by filepath.Split().  And it's Pi Day, but that's not important now.
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work here, but not in rex.
+ 7 Apr 25 -- Updated the help message.
 */
 
-const LastAltered = "Apr 5, 2025"
+const LastAltered = "Apr 7, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -275,7 +276,8 @@ func main() {
 	flag.Usage = func() { // must be above the Parse() to work.
 		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Viper uses rexv.yaml as its config file name. \n")
-		fmt.Println(" regex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" rexv pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" rexv [directory]pattern  -- alternate syntax for directory and pattern.")
 		fmt.Println(" Reads from dsrt environment variable before processing commandline switches, using same syntax as dsrt.")
 		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
 		fmt.Println()
