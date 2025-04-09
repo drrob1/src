@@ -23,6 +23,7 @@ dsrtre.go
 	               Turned out to be case sensitivity in the comparisons.
 	17 Aug 20 -- I'm using this way more than I expected.  And it's slower than I expected.  I'm going to take a stab at
 	               multitasking here.
+------------------------------------------------------------------------------------------------------------------------
 	19 Aug 20 -- Made timeout 15 min by default, max of 30 min.  4 min was too short on win10 machine.
 	               This forked from dsrtr and now called dsrtre as it takes a regular expression.
 	               Changed option to -t instead of -timeout, as I never remembered its name.
@@ -38,16 +39,19 @@ dsrtre.go
 	                  and does an ordinary directory return without checking Modtime().After(when).
      9 May 24 -- Removed commented out code.  And added test for ".git".
     10 May 24 -- Made result slice to be size of 1000 instead of 0.
+     9 Apr 25 -- Adding display of directories, and alternate way to enter dir, like in rex
 */
 
-const lastAltered = "10 May 2024"
+const lastAltered = "9 Apr 2025"
 
 type devID uint64
+
+type dirAliasMapType map[string]string
 
 func main() {
 	var timeoutOpt *int = flag.Int("t", 900, "seconds < 1800, where 0 means timeout of 900 sec.")
 	var verboseFlag = flag.Bool("v", false, "enter a verbose testing mode to println more variables")
-	var inputRegexPattern, startDir string
+	var inputRegexPattern, startDir, workingDir string
 	var inputRegex *regexp.Regexp
 	var err error
 	var rootDeviceID devID
@@ -58,37 +62,47 @@ func main() {
 		*timeoutOpt = 900
 	}
 
+	workingDir, err = os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting working directory: %s\n", err)
+		return
+	}
+
+	// assign input params
 	if flag.NArg() == 0 {
 		fmt.Print(" Enter regex: ")
-		fmt.Scanln(&inputRegexPattern)
-		startDir, err = os.Getwd()
+		_, err = fmt.Scanln(&inputRegexPattern)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Getwd returned this error: %v\n", err)
-			os.Exit(1)
+			fmt.Printf("Error reading input: %s, which is probably intentional to force an exit.\n", err)
+			return
 		}
-
-	} else if flag.NArg() == 1 {
-		inputRegexPattern = flag.Arg(0)
-		startDir, err = os.Getwd()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " Getwd returned this error: %v\n", err)
-			os.Exit(1)
+		startDir = workingDir
+	} else if flag.NArg() == 1 { // now allows alternate syntax to indicate starting directory.
+		inputExpr := flag.Arg(0)
+		startDir, inputRegexPattern = filepath.Split(inputExpr)
+		if startDir == "" {
+			startDir = workingDir
 		}
-	} else {
+	} else { // have 2 or more params, but will ignore the 'or more' part.
 		inputRegexPattern = flag.Arg(0)
 		startDir = flag.Arg(1)
-		home, er := os.UserHomeDir()
-		if er != nil {
-			fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir() is %s.  Exiting. \n", er)
-			os.Exit(1)
-		}
-		startDir = strings.ReplaceAll(startDir, "~", home)
 	}
+
+	home, er := os.UserHomeDir()
+	if er != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.UserHomeDir() is %s.  Exiting. \n", er)
+		return
+	}
+	startDir = strings.ReplaceAll(startDir, "~", home)
+	if strings.ContainsRune(workingDir, ':') {
+		startDir = ProcessDirectoryAliases(startDir)
+	} //else if strings.Contains(workingDir, "~") // this can only contain a ~ on Windows.	Static linter said just use the Replace func.
 
 	inputRegexPattern = strings.ToLower(inputRegexPattern)
 	inputRegex, err = regexp.Compile(inputRegexPattern)
 	if err != nil {
-		log.Fatalf(" error from regex compile function is %s", err)
+		fmt.Printf(" Error from regexp compile function is %s", err)
+		return
 	}
 
 	fmt.Println()
@@ -157,10 +171,10 @@ func main() {
 				return filepath.SkipDir
 			}
 
-			return nil
+			// return nil  by commenting this out, the routine will now display matching dir names.
 		}
 
-		// Must be a regular file
+		// Can be either a directory name or a regular file
 		NAME := strings.ToLower(d.Name()) // Despite windows not being case-sensitive, filepath.Match is case-sensitive.  Who new?
 		if BOOL := inputRegex.MatchString(NAME); BOOL {
 			fi, er := d.Info()
@@ -225,6 +239,49 @@ func AddCommas(instr string) string {
 	}
 	return string(BS)
 } // AddCommas
+
+// ------------------------------ GetDirectoryAliases ----------------------------------------
+func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
+
+	s, ok := os.LookupEnv("diraliases")
+	if !ok {
+		return nil
+	}
+
+	s = strings.ReplaceAll(s, "_", " ") // substitute the underscore, _, for a space
+	directoryAliasesMap := make(dirAliasMapType, 10)
+	//anAliasMap := make(dirAliasMapType,1)
+
+	dirAliasSlice := strings.Fields(s)
+
+	for _, aliasPair := range dirAliasSlice {
+		if string(aliasPair[len(aliasPair)-1]) != "\\" {
+			aliasPair = aliasPair + "\\"
+		}
+		aliasPair = strings.ReplaceAll(aliasPair, "-", " ") // substitute a dash,-, for a space
+		splitAlias := strings.Fields(aliasPair)
+		directoryAliasesMap[splitAlias[0]] = splitAlias[1]
+	}
+	return directoryAliasesMap
+}
+
+// ProcessDirectoryAliases -- intended for Windows systems where I'm using tcc to create directory aliases.
+func ProcessDirectoryAliases(cmdline string) string {
+	idx := strings.IndexRune(cmdline, ':')
+	if idx < 2 { // note that if rune is not found, function returns -1.
+		return cmdline
+	}
+	aliasesMap := getDirectoryAliases()
+	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
+	aliasValue, ok := aliasesMap[aliasName]
+	if !ok {
+		return cmdline
+	}
+	PathnFile := cmdline[idx+1:]
+	completeValue := aliasValue + PathnFile
+	fmt.Println("in ProcessDirectoryAliases and complete value is", completeValue)
+	return completeValue
+} // ProcessDirectoryAliases
 
 /*
 // ------------------------------ isSymlink ---------------------------
