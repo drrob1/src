@@ -318,7 +318,7 @@ func main() {
 		fmt.Printf(" Now uses pflag.  Reads from rex and dsw environment variables before processing commandline switches.\n")
 		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",
 			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
-		fmt.Println(" Usage: rex pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
+		fmt.Println(" Usage: rex regexp-pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Usage: rex [directory]pattern  -- Alternate syntax for directory and pattern.")
 		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
 		fmt.Println()

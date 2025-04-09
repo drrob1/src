@@ -250,7 +250,7 @@ func main() {
 	// flag definitions and processing
 	pflag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Printf(" Usage: %s [directory]glob\n")
+		fmt.Printf(" Usage: %s [directory]glob\n", os.Args[0])
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Config file is dv.yaml.\n")
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
