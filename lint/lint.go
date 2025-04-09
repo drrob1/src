@@ -80,6 +80,8 @@ import (
   22 Mar 25 -- It now works as intended.  So now I want to add a flag to set the time interval that's valid, and a config file setting for the directory searched on o:
 				And I'll add a veryverboseFlag, using vv and w.  The veryverbose setting will be for the Excel tests I don't need anymore.
   27 Mar 25 -- I ran this using the -race flag; it's clean.  No data races.  Just checking.
+   9 Apr 25 -- Made observation that since the walk function sorts its list, the first file that doesn't meet the threshold date can stop the search since the rest are older.
+				I didn't code this yet.
 */
 
 const lastModified = "22 Mar 2025"
