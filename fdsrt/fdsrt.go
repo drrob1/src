@@ -155,9 +155,10 @@ REVISION HISTORY
  7 Jun 24 -- Edited some comments and changed the final message.
  8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head).
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
+ 9 Apr 25 -- Updated help message.
 */
 
-const LastAltered = "8 Jan 2025"
+const LastAltered = "9 Apr 2025"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -240,7 +241,7 @@ func main() {
 	// flag definitions and processing
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: %s [directory]glob\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",

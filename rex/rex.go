@@ -141,9 +141,10 @@ Revision History
 14 Mar 25 -- It's Pi Day today, but that's not important now.  I'm debugging code in rexv to handle directories as 1 param.  When that works, I'll port it here.
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work in rexv, but not here.  Hmm, now it's working.  Strange.
  7 Apr 25 -- Not strange, just out of date.  I was using an out of date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
+ 9 Apr 25 -- Updated help message again.
 */
 
-const LastAltered = "Apr 7, 2025"
+const LastAltered = "Apr 9, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -312,6 +313,7 @@ func main() {
 	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
 	flag.Usage = func() { // this must be above flag.Parse() to work.
+		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
 		fmt.Printf("\n AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Now uses pflag.  Reads from rex and dsw environment variables before processing commandline switches.\n")
 		fmt.Printf(" dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t \n",

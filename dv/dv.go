@@ -165,9 +165,10 @@ REVISION HISTORY
 20 Jan 25 -- Added timing info for startup code.
 22 Jan 25 -- Added runtime.Compiler to the startup message.
 17 Feb 25 -- Removed code regarding the fullConfigFile for the viper config file.
+ 9 Apr 25 -- Modified help message.
 */
 
-const LastAltered = "17 Feb 2025"
+const LastAltered = "9 Apr 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -249,7 +250,7 @@ func main() {
 	// flag definitions and processing
 	pflag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Printf(" Usage information:\n")
+		fmt.Printf(" Usage: %s [directory]glob\n")
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Config file is dv.yaml.\n")
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")

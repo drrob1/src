@@ -149,9 +149,10 @@ REVISION HISTORY
 				My choices are: let halfFlag apply to whatever dsrt environ var is, or create another variable to hold the full value.
 				For now, I'll let halfFlag apply to whatever dsrt environ var is.
 20 Jan 25 -- Added timing for startup code
+ 9 Apr 25 -- Help message already includes LastAltered.  I slightly modified this message.
 */
 
-const LastAltered = "20 Jan 2025"
+const LastAltered = "9 Apr 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -230,7 +231,7 @@ func main() {
 	// flag definitions and processing
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), " Usage: %s [directory]glob\n", os.Args[0])
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " dsrt environ values are: paramNum=%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelistflag=%t, totalflag=%t, halfFlag=%t \n",
