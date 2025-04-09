@@ -38,6 +38,8 @@ package main // shufv.go
   19 May 24 -- Removed min(), as it duplicates a built-in as of Go 1.22+.  And I clarified the startup message.
    3 Jun 24 -- Changed how I create the output file to include the .xspf extension.
    6 Jun 24 -- Added error checking when flushing and closing the output file.
+   9 Apr 25 -- AI in goland complained about a line when the output file is created.  I needed to check the error first, so I did.  Note that the output file is random here.
+				The main difference btwn this rtn and shufv2 is how the output filename is constructed.  Here it's random, there it's based on the input filename.
 */
 
 import (
@@ -644,11 +646,11 @@ func main() {
 		os.Exit(1)
 	}
 	outputFile, err := os.CreateTemp(workingDir, "vlc-*.xspf") // this is supposed to place the random numbers in place of the wildcard.
-	tempFilename := outputFile.Name()
 	if err != nil {
 		fmt.Printf(" os.CreateTemp ERROR is %s\n", err)
 		os.Exit(1)
 	}
+	tempFilename := outputFile.Name()
 	if verboseFlag {
 		fmt.Printf(" Temp filename is %s\n", tempFilename)
 	}
