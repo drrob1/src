@@ -81,10 +81,10 @@ import (
 				And I'll add a veryverboseFlag, using vv and w.  The veryverbose setting will be for the Excel tests I don't need anymore.
   27 Mar 25 -- I ran this using the -race flag; it's clean.  No data races.  Just checking.
    9 Apr 25 -- Made observation that since the walk function sorts its list, the first file that doesn't meet the threshold date can stop the search since the rest are older.
-				I didn't code this yet.
+  10 Apr 25 -- Made the change by adding and else clause to an if statement in the walk function.
 */
 
-const lastModified = "22 Mar 2025"
+const lastModified = "10 Apr 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -334,6 +334,13 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 func main() {
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
+	flag.Usage = func() {
+		fmt.Printf(" %s last modified %s, compiled with %s\n", os.Args[0], lastModified, runtime.Version())
+		fmt.Printf(" Usage: %s [weelky xlsx file] \n", os.Args[0])
+		fmt.Printf(" Needs lint.conf or lint.ini, and looks in current, home and config directories.\n")
+		fmt.Printf(" first line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 	if veryVerboseFlag {
 		*verboseFlag = true
@@ -352,9 +359,7 @@ func main() {
 	}
 
 	if *verboseFlag {
-		if startDirectory != "" {
-			fmt.Printf(" Start Directory: %s\n", startDirectory)
-		}
+		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirectory)
 	}
 
 	// filepicker stuff.
@@ -654,6 +659,8 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 			if count >= numLines {
 				break
 			}
+		} else {
+			break // Made observation that in a sorted list the first file before the threshold timestamp ends the search.
 		}
 	}
 	if *verboseFlag {
