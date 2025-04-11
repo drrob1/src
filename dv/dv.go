@@ -157,6 +157,8 @@ REVISION HISTORY
  8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head).
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 ----------------------------------------------------------------------
+*/
+/*
 16 Jan 25 -- Now called dv, for dsrt viper.
              Will use viper to replace all my own logic.  Viper handles priorities among command line, environment, config file and default value.
 16 Jan 25 -- Looks like it's working, including the dv.yaml config file, environ flags that match option names, and command line option.
