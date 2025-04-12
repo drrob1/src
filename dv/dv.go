@@ -175,7 +175,7 @@ const LastAltered = "9 Apr 2025"
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
-// but does not sort the slice before returning it, due to difficulty in passing the sort function.
+// but does not sort the slice before returning it, due to difficulty in passing the sort function.  Instead, the slice is sorted in main, on or about line #503.
 // The returned slice of FileInfos will then be passed to the display rtn to colorize only the needed number of file infos.
 // Prior to the refactoring, I first retrieved a slice of all file infos, sorted these, and then only displayed those that met the criteria to be displayed.
 

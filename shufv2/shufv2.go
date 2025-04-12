@@ -37,7 +37,7 @@ package main // shufv2.go from shufv.go
   20 Feb 24 -- Increased the number of times to shuffle, as I did in launchv and lv2.  And updated the shuffle message.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   17 May 24 -- Now called shufv2, and after shuffling and writing the xspf file, it will call vlc on it, like lv2 and listvlc do.
-   3 Jun 24 -- Simplified creation of the temp xspf file.
+   3 Jun 24 -- Simplified creation of the temp xspf file.  The output xspf file name is constructed from the input filename.
 */
 
 import (

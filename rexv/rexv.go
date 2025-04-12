@@ -101,6 +101,9 @@ Revision History
 17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
                Adding exclude string to allow the exclude regex pattern on the command line.  Convenient for recalling commands.
 13 Jul 21 -- Now called reg.go, and will display its output in 2 columns like dsc.  ioutil is depracated, so that's now gone.
+*/
+/*
+------------------------------------------------------------------------------------------------------------------------------------------------------
 25 Jul 21 -- Now called rex.go, as reg conflicted on Windows w/ a registry edit pgm.
                The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
                But I'm keeping the display of 4 significant figures.

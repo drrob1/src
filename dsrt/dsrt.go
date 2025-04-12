@@ -134,6 +134,8 @@ REVISION HISTORY
                 I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var along the lines of allScreens, defaulting to 50 or so.
  3 Jul 23 -- Added environment var h to mean halfFlag.
  4 Jul 23 -- Improved ProcessEnvironString.
+*/
+/*
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
  2 May 24 -- Added timer to compare to fdsrt.
 22 June 24-- Changed the closing message

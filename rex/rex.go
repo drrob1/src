@@ -102,6 +102,7 @@ Revision History
 17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
                Adding exclude string to allow the exclude regex pattern on the command line.  Convenient for recalling commands.
 13 Jul 21 -- Now called reg.go, and will display its output in 2 columns like dsc.  ioutil is depracated, so that's now gone.
+------------------------------------------------------------------------------------------------------------------------------------------------------
 25 Jul 21 -- Now called rex.go, as reg conflicted on Windows w/ a registry edit pgm.
                The colors are a good way to give me the magnitude of filesize, so I don't need the displacements here.
                But I'm keeping the display of 4 significant figures.
@@ -127,6 +128,8 @@ Revision History
                I may just always show that, as it seems it would be easy and only 1 line.  I'll place that line at the bottom.
                I removed the -t ShowGrandTotal flag as I removed the code that calculated it quite a while ago.
 28 Aug 23 -- Added the all flag, currently equivalent to indicating 50 screens.  Mostly copied the code from dsrt.go.
+*/
+/*
 20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
  4 May 24 -- Adding concurrent code from fdsrt.
  3 Jun 24 -- Removed commented out code and edited a few comments.
