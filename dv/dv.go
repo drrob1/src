@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"runtime/metrics"
 	"sort"
 	"strconv"
 	"strings"
@@ -168,9 +169,10 @@ REVISION HISTORY
 22 Jan 25 -- Added runtime.Compiler to the startup message.
 17 Feb 25 -- Removed code regarding the fullConfigFile for the viper config file.
  9 Apr 25 -- Modified help message.
+13 Apr 25 -- Added metrics as covered by Mastering Go, 4th ed.
 */
 
-const LastAltered = "9 Apr 2025"
+const LastAltered = "13 Apr 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -522,6 +524,22 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
+
+	// metrics
+	metricSlice := make([]metrics.Sample, 2) // I want to get total cpu time, and user cpu time
+	metricSlice[0] = metrics.Sample{Name: "/cpu/classes/total:cpu-seconds"}
+	metricSlice[1] = metrics.Sample{Name: "/cpu/classes/user:cpu-seconds"}
+	metrics.Read(metricSlice)
+	if metricSlice[0].Value.Kind() == metrics.KindBad {
+		fmt.Printf("metric %q no longer supported\n", metricSlice[0].Name)
+	}
+	if metricSlice[1].Value.Kind() == metrics.KindBad {
+		fmt.Printf("metric %q no longer supported\n", metricSlice[1].Name)
+	}
+	totalCPUseconds := metricSlice[0].Value.Float64()
+	userCPUseconds := metricSlice[1].Value.Float64()
+	fmt.Printf(" User CPU seconds: %.4f;  total CPU Seconds: %.4f.\n", userCPUseconds, totalCPUseconds)
+
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertByteSlice

@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
+	"runtime/metrics"
 	"sort"
 	"src/misc"
 	"strconv"
@@ -152,9 +153,10 @@ REVISION HISTORY
 				For now, I'll let halfFlag apply to whatever dsrt environ var is.
 20 Jan 25 -- Added timing for startup code
  9 Apr 25 -- Help message already includes LastAltered.  I slightly modified this message.
+13 Apr 25 -- Added metrics as covered in Mastering Go, 4th ed.  Based on runtime/metrics
 */
 
-const LastAltered = "9 Apr 2025"
+const LastAltered = "13 Apr 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -473,6 +475,23 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
+	fmt.Println()
+
+	// metrics
+	metricSlice := make([]metrics.Sample, 2) // I want to get total cpu time, and user cpu time
+	metricSlice[0] = metrics.Sample{Name: "/cpu/classes/total:cpu-seconds"}
+	metricSlice[1] = metrics.Sample{Name: "/cpu/classes/user:cpu-seconds"}
+	metrics.Read(metricSlice)
+	if metricSlice[0].Value.Kind() == metrics.KindBad {
+		fmt.Printf("metric %q no longer supported\n", metricSlice[0].Name)
+	}
+	if metricSlice[1].Value.Kind() == metrics.KindBad {
+		fmt.Printf("metric %q no longer supported\n", metricSlice[1].Name)
+	}
+	totalCPUseconds := metricSlice[0].Value.Float64()
+	userCPUseconds := metricSlice[1].Value.Float64()
+	fmt.Printf(" User CPU seconds: %.4f;  total CPU Seconds: %.4f.\n", userCPUseconds, totalCPUseconds)
+
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertIntoByteSlice

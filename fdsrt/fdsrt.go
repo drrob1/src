@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"runtime/metrics"
 	"sort"
 	"strconv"
 	"strings"
@@ -158,9 +159,10 @@ REVISION HISTORY
  8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head).
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
  9 Apr 25 -- Updated help message.
+13 Apr 25 -- Adding metrics as covered in Mastering Go, 4th ed.
 */
 
-const LastAltered = "9 Apr 2025"
+const LastAltered = "13 Apr 2025"
 
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
 // It handles if there are no files populated by bash or file not found by bash, thru use of OS specific code.  On Windows it will get a pattern from the command line.
@@ -490,6 +492,22 @@ func main() {
 	} else {
 		fmt.Println(".")
 	}
+
+	// metrics
+	metricSlice := make([]metrics.Sample, 2) // I want to get total cpu time, and user cpu time
+	metricSlice[0] = metrics.Sample{Name: "/cpu/classes/total:cpu-seconds"}
+	metricSlice[1] = metrics.Sample{Name: "/cpu/classes/user:cpu-seconds"}
+	metrics.Read(metricSlice)
+	if metricSlice[0].Value.Kind() == metrics.KindBad {
+		fmt.Printf("metric %q no longer supported\n", metricSlice[0].Name)
+	}
+	if metricSlice[1].Value.Kind() == metrics.KindBad {
+		fmt.Printf("metric %q no longer supported\n", metricSlice[1].Name)
+	}
+	totalCPUseconds := metricSlice[0].Value.Float64()
+	userCPUseconds := metricSlice[1].Value.Float64()
+	fmt.Printf(" User CPU seconds: %.4f;  total CPU Seconds: %.4f.\n", userCPUseconds, totalCPUseconds)
+
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertByteSlice
