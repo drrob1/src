@@ -21,7 +21,7 @@ func main() {
 	//fmt.Println("Features:", strings.Join(CPU.FeatureSet(), ","))
 	for i, feature := range CPU.FeatureSet() {
 		fmt.Print(feature, ",")
-		if i%29 == 0 {
+		if i%25 == 24 {
 			fmt.Println()
 		}
 	}
