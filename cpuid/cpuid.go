@@ -20,7 +20,7 @@ func main() {
 	fmt.Printf(" There are %d features\n", len(CPU.FeatureSet())) // there are ~100 features on Win11 Desktop.
 	//fmt.Println("Features:", strings.Join(CPU.FeatureSet(), ","))
 	for i, feature := range CPU.FeatureSet() {
-		fmt.Print(feature, ",")
+		fmt.Print(feature, " ")
 		if i%25 == 24 {
 			fmt.Println()
 		}
