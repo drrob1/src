@@ -37,9 +37,9 @@ func main() {
 	fmt.Println("L2 Cache:", CPU.Cache.L2, "bytes")
 	fmt.Println("L3 Cache:", CPU.Cache.L3, "bytes")
 	hz := CPU.Hz
-	if hz == 0 { // for when Windows doesn't report a freq, and I want to debug this.
-		hz = 3_500_000_000 // 3 GHz
-	}
+	//if hz == 0 { // for when Windows doesn't report a freq, and I want to debug this.
+	//	hz = 3_500_000_000 // 3 GHz
+	//}
 	hzStr := strconv.FormatInt(hz, 10)
 	hzStr = AddCommas(hzStr)
 	fmt.Printf("Frequency %s hz\n", hzStr)
