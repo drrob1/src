@@ -15,7 +15,7 @@ func InitSliceNew(n int) []int {
 }
 
 func InitSliceAppend(n int) []int {
-	s := make([]int, 0, n) // this is my edit
+	s := make([]int, 0, n) // this is my edit.  The book ex did not pre-allocate all the memory up front here.
 	for i := 0; i < n; i++ {
 		s = append(s, i)
 	}
