@@ -5,15 +5,20 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	. "github.com/klauspost/cpuid/v2"
+	"runtime"
 	"strconv"
 )
 
 /*
 13 Apr 25 -- From chapter 13 of Mastering Go, 4th ed.
 15 Apr 25 -- Added commas to the long numbers
+16 Apr 25 -- Added comparison of Itoa and FormatInt.
 */
 
+const lastAltered = "Apr 16, 2025"
+
 func main() {
+	fmt.Printf(" CPUID last altered: %s, compiled using %s\n", lastAltered, runtime.Version())
 	// Print basic CPU information:
 	fmt.Println("Name:", CPU.BrandName)
 	fmt.Println("PhysicalCores:", CPU.PhysicalCores)
@@ -34,13 +39,23 @@ func main() {
 	fmt.Println("Cacheline bytes:", CPU.CacheLine)
 	fmt.Println("L1 Data Cache:", CPU.Cache.L1D, "bytes")
 	fmt.Println("L1 Instruction Cache:", CPU.Cache.L1I, "bytes")
-	fmt.Println("L2 Cache:", CPU.Cache.L2, "bytes")
-	fmt.Println("L3 Cache:", CPU.Cache.L3, "bytes")
+	casheL2Str := strconv.Itoa(int(CPU.Cache.L2))
+	casheL2Str = AddCommas(casheL2Str)
+	fmt.Println("L2 Cache:", casheL2Str, "bytes")
+	casheL3Str := strconv.Itoa(CPU.Cache.L3)
+	casheL3Str = AddCommas(casheL3Str)
+	fmt.Println("L3 Cache:", casheL3Str, "bytes")
 	hz := CPU.Hz
-	//if hz == 0 { // for when Windows doesn't report a freq, and I want to debug this.
-	//	hz = 3_500_000_000 // 3 GHz
-	//}
+	if hz == 0 { // for when Windows doesn't report a freq, and I want to debug this.
+		hz = 10_500_000_000 // 10.5 GHz
+	}
+	i2a := strconv.Itoa(int(hz))
 	hzStr := strconv.FormatInt(hz, 10)
+	if i2a == hzStr {
+		ctfmt.Printf(ct.Green, false, " strconv.Itoa == strconv.FormatInt\n")
+	} else {
+		ctfmt.Printf(ct.Red, false, " strconv.Itoa != strconv.FormatInt\n")
+	}
 	hzStr = AddCommas(hzStr)
 	fmt.Printf("Frequency %s hz\n", hzStr)
 	hzColorStr, color := getMagnitudeStringHz(hz)
