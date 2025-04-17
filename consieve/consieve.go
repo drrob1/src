@@ -32,9 +32,10 @@ import (
 				Result for Sieve of Eratosthenes is ~2300/sec, on leox desktop, and workers = NumCPU()+1
 				Result for Sieve of Eratosthenes is ~8700/sec, on thelio desktop w/ a Ryzen 9 CPU, 5950X, and workers = NumCPU()+1
 22 Jul 2024 -- Result for the Sieve from work is ~4500/sec, before I started everything else, and it didn't change after I did start everything else.
-16 Feb 2025 -- Result on Win11 desktop w/ Ryzen 9 CUP, 5950X is 7700-7800.  I preallocated the memory, changed the startup message, and added verboseFlag.
+16 Feb 2025 -- Result on Win11 desktop w/ Ryzen 9 CPU, 5950X is 7700-7800.  I preallocated the memory, changed the startup message, and added verboseFlag.
 				Turns out that the flag pacakge significantly slowed it down on Win11 desktop, from ~7700/min down to ~6200/min.  I'm removing it, and the display of indiv goroutines.
 				Removing the slow code sped it up back to ~7800/min.
+17 Apr 2025 -- Win11 Desktop needed $600 of surgery, new CPU (Ryxen 9 5900X) and different memory banks used.  Now it's ~3950/min.  So it goes.  It is running cooler, though.
 */
 
 const LastModified = "16 Feb 2025"
