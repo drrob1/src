@@ -94,7 +94,7 @@ func main() {
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 	fmt.Printf(" %s last altered %s, timestamp is %s, full exec name is %s\n\n", os.Args[0], lastAltered, ExecTimeStamp, execName)
 
-	//Filename = "Citi-test.db" // the db routines above need this to be defined.
+	// Filename = "Citi-test.db" // the db routines above need this to be defined.
 	Filename = "Citibank.db" // the db routines above need this to be defined.
 	var date string
 	fmt.Print(" Enter date as yyyy-mm-dd (default is today) : ")
@@ -113,6 +113,7 @@ func main() {
 			date = time.Now().Format(time.DateOnly)
 		}
 		fmt.Printf(" Entered date is valid.  Using %s.\n", formattedDate)
+		date = formattedDate
 	}
 
 	var transactionNumStr string
@@ -158,7 +159,7 @@ func main() {
 	scanner.Scan()
 	accountName = scanner.Text()
 	if accountName == "" {
-		fmt.Printf(" Warning: entered accountName is empty.  Assuming checking\n")
+		fmt.Printf(" Entered accountName is empty.  Assuming checking\n")
 		accountName = "checking"
 	}
 
@@ -169,6 +170,8 @@ func main() {
 		Amount:         amt,
 		AccountName:    accountName,
 	}
+
+	fmt.Printf(" Record: %s %s %d %s %.2f %s\n", record.status, record.Date, record.transactionNum, record.Description, record.Amount, record.AccountName)
 
 	err = AddRecord(record)
 	if err != nil {

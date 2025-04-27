@@ -17,6 +17,7 @@ func TestTryDateMDY(t *testing.T) {
 		{"10.25.2025", "2025-10-25"},
 		{"25.10.2025", ""},
 		{"11;11;25", ""},
+		{"12.25/25", ""},
 	}
 
 	for _, sampletest := range testString {
