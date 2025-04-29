@@ -145,9 +145,10 @@ Revision History
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work in rexv, but not here.  Hmm, now it's working.  Strange.
  7 Apr 25 -- Not strange, just out of date.  I was using an out of date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
  9 Apr 25 -- Updated help message again.
+28 Apr 25 -- Updated the reverse flag so -r means reverse.
 */
 
-const LastAltered = "Apr 9, 2025"
+const LastAltered = "Apr 28, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -265,8 +266,8 @@ func main() {
 	HomeDirStr = HomeDirStr + sepstring
 
 	// flag definitions and processing
-	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
-	var RevFlag bool                                                                         // will always be false.
+	var revflag = flag.BoolP("reverse", "r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
+	var RevFlag bool                                                                                     // will always be false.
 
 	var nscreens = flag.IntP("nscreens", "n", 1, "number of screens to display") // Ptr
 	var NLines int
