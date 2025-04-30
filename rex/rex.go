@@ -145,7 +145,7 @@ Revision History
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work in rexv, but not here.  Hmm, now it's working.  Strange.
  7 Apr 25 -- Not strange, just out of date.  I was using an out of date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
  9 Apr 25 -- Updated help message again.
-28 Apr 25 -- Updated the reverse flag so -r means reverse.
+28 Apr 25 -- Updated the reverse flag so -r means reverse.  And removed RevFlag.
 */
 
 const LastAltered = "Apr 28, 2025"
@@ -267,7 +267,7 @@ func main() {
 
 	// flag definitions and processing
 	var revflag = flag.BoolP("reverse", "r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
-	var RevFlag bool                                                                                     // will always be false.
+	// var RevFlag bool                                                                                     // will always be false.
 
 	var nscreens = flag.IntP("nscreens", "n", 1, "number of screens to display") // Ptr
 	var NLines int
@@ -380,7 +380,8 @@ func main() {
 		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d and numofCols=%d\n", w, *nscreens, NLines, numOfCols)
 	}
 
-	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
+	// Reverse := *revflag || RevFlag || dsrtParam.reverseflag
+	Reverse := *revflag || dsrtParam.reverseflag
 	Forward := !Reverse // convenience variable
 
 	SizeSort := *sizeflag || SizeFlag || dsrtParam.sizeflag
