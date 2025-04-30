@@ -146,9 +146,10 @@ Revision History
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work here, but not in rex.
  7 Apr 25 -- Updated the help message.
  9 Apr 25 -- Updated the help message again.
+30 Apr 25 -- Updated the -r flag.
 */
 
-const LastAltered = "Apr 9, 2025"
+const LastAltered = "Apr 30, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -229,7 +230,7 @@ func main() {
 	HomeDirStr = HomeDirStr + sepstring
 
 	// flag definitions and processing.  Now using pflag package
-	var revflag = flag.Bool("r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
+	var revflag = flag.BoolP("reverse", "r", false, "reverse the sort, ie, oldest or smallest is first") // Ptr
 
 	var nscreens = flag.IntP("nscreens", "n", 1, "number of screens to display") // Ptr
 	var NLines int
