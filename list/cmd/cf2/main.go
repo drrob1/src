@@ -98,10 +98,11 @@ import (
   22 Oct 24 -- Will now check to make sure params are present.
   30 Nov 24 -- Noticed that sometimes the colors on tcc get confused.  I'm going to output on Windows a color reset message.
   15 Jan 25 -- Adding filterStr capability.
-  20 Jan 25 -- Added set up timing display.
+  20 Jan 25 -- Added set-up timing display.
+   3 May 25 -- Will make errors from check dest directory more obvious
 */
 
-const LastAltered = "20 Jan 2025"
+const LastAltered = "3 May 2025"
 
 const defaultHeight = 40
 const minWidth = 90
@@ -268,7 +269,7 @@ func main() {
 			destDir = "." + sepString
 		}
 		if strings.ContainsRune(destDir, ':') {
-			//directoryAliasesMap := list.GetDirectoryAliases()
+			//                                                         directoryAliasesMap := list.GetDirectoryAliases()
 			destDir = list.ProcessDirectoryAliases(destDir)
 		} else if strings.Contains(destDir, "~") { // this can only contain a ~ on Windows.
 			homeDirStr, _ := os.UserHomeDir()
@@ -279,20 +280,20 @@ func main() {
 		}
 	}
 	fmt.Printf("\n destDir = %#v\n", destDir)
-	//fi, err := os.Lstat(destDir)  this was giving errors sometimes.
+	//                                                   fi, err := os.Lstat(destDir)  this was giving errors sometimes.
 	d, err := os.Open(destDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " os.Open(%s) failed w/ error %s.  Exiting\n", destDir, err)
-		os.Exit(1)
+		ctfmt.Printf(ct.Red, true, " os.Open(%s) failed w/ error %s.  Exiting\n", destDir, err)
+		return
 	}
 	fi, err := d.Stat()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " %s.Stat() failed w/ error %s.  Exiting\n", d.Name(), err)
-		os.Exit(1)
+		ctfmt.Printf(ct.Red, true, " %s.Stat() failed w/ error %s.  Exiting\n", d.Name(), err)
+		return
 	}
 	if !fi.IsDir() {
-		fmt.Fprintf(os.Stderr, " %s is supposed to be the destination directory, but stat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
-		os.Exit(1)
+		ctfmt.Printf(ct.Red, true, " %s is supposed to be the destination directory, but stat(%s) not c/w a directory.  Exiting\n", destDir, destDir)
+		return
 	}
 	d.Close()
 
