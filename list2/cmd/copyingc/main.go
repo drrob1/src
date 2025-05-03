@@ -6,21 +6,18 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io"
-	"src/few"
-	"src/list2"
-	"sync"
-	"sync/atomic"
-	"time"
-
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/few"
+	"src/list2"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 /*
@@ -78,16 +75,17 @@ import (
   31 Mar 23 -- StaticCheck found a few issues.
    6 Sep 23 -- Changed the final message.
    7 Jan 24 -- Edited a comment.  Main sets up the channels and both the file list and destination list.  The actual work of copying is done by CopyAFile.  I'm putting this here as I forgot it.
-   7 Apr 24 -- Shorted the destination file is same or older message
+   7 Apr 24 -- Shortened the destination file is same or older message
    8 Apr 24 -- Now shows the last altered date for list2.go.
-   9 Apr 24 -- Looks like I never added the code her to del a failed file transfer.  Added now.
-               Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
+   9 Apr 24 -- Looks like I never added the code here to del a failed file transfer.  Added now.
+               Listening to Miki Tebeka from Ardan Labs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
   11 Apr 24 -- Adding a multiplier, as I already did in cf.
   28 Jul 24 -- Fixed a data race by ErrNotNew not being global.  It should never have been global.
+   3 May 25 -- Changed how dest errors are displayed, to make them more obvious.
 */
 
-const LastAltered = "July 28, 2024" //
+const LastAltered = "May 3, 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -131,9 +129,6 @@ var rexStr, inputStr string
 var verifyFlag, verFlag bool
 
 func main() {
-	//if pooling < 1 {  Not needed now that this can't go negative.
-	//	pooling = 1
-	//}
 	execName, err := os.Executable()
 	if err != nil {
 		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
@@ -197,9 +192,6 @@ func main() {
 	}
 
 	if verboseFlag {
-		//execName, _ := os.Executable()
-		//ExecFI, _ := os.Stat(execName)
-		//ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Printf("%s timestamp is %s, full exec is %s\n", execFI.Name(), execTimeStamp, execName)
 		fmt.Println()
 	}
@@ -259,7 +251,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// now have the fileList.  Need to check the destination directory or directories.
+	// Now have the fileList.  Need to check the destination directory or directories.
 
 	destDirs := flag.Args()
 	var targetDirs []string
@@ -292,8 +284,7 @@ func main() {
 		for _, target := range destDirs {
 			td, err := validateTarget(target)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from validateTarget(%s) is %s\n", target, err)
-				//targetDirs = append(targetDirs, "")  I don't remember why I put this here.  It's a mistake.
+				ctfmt.Printf(ct.Red, true, " Error from validateTarget(%s) is %s\n", target, err)
 				continue
 			}
 			targetDirs = append(targetDirs, td)
@@ -308,8 +299,8 @@ func main() {
 
 	fileList, err = list2.FileSelection(fileList)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error from list2.FileSelection is %s\n", err)
-		os.Exit(1)
+		ctfmt.Printf(ct.Red, true, "Error from list2.FileSelection is %s\n", err)
+		return
 	}
 	if verboseFlag {
 		for i, f := range fileList {
@@ -325,8 +316,8 @@ func main() {
 		fmt.Println()
 	}
 	if len(fileList) == 0 {
-		fmt.Printf(" Length of the fileList after calling FileSelection is zero.  Aborting.\n")
-		os.Exit(1)
+		fmt.Printf("\n Length of the fileList after calling FileSelection is zero.  Aborting.\n")
+		return
 	}
 	fmt.Printf(" There are %d files to be copied to each of %d directories.\n\n", len(fileList), len(targetDirs))
 
