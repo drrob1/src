@@ -171,7 +171,7 @@ func main() {
 	}
 
 	globalA = app.New()
-	globalW = globalA.NewWindow("rpnf calculator using fyne")
+	globalW = globalA.NewWindow("rpnf2 calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
 	execname, _ = os.Executable()
