@@ -48,8 +48,11 @@ REVISION HISTORY
 13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
 19 May 16 -- Fixing help text for the % commanded coded in 2006.  Oddly enough, the help never included it.
  2 Jul 16 -- Fixed help text for the PI command.  And changed the pivot for the JUL command to be the current year instead of the constant "30".  HOL command pivot remains 40.
- 7 Jul 16 -- Added UP command.  Surprising I had not done this earlier.
- 9 Jul 16 -- Fixed bug in timlibc.  When juldate is too small get infinite loop in GREGORIAN
+ 7 Jul 16 -- Added UP command. Surprising I had not done this earlier.
+ 9 Jul 16 -- Fixed bug in timlibc, when juldate is too small to get infinite loop in GREGORIAN
+----------------------------------------------------------------------------------------------------
+*/
+/*
 18 Aug 16 -- Started conversion to Go
 29 Aug 16 -- Added Prime command and support function IsPrime.  And PWRI came back into use.
  5 Sep 16 -- Changed output format verb params in fixed and general format.
@@ -148,9 +151,11 @@ REVISION HISTORY
 23 Nov 24 -- Clean command was added several weeks ago.  It works.  I'm expanding it to allow a number, like fix does.
 24 Nov 24 -- Improved some comments to make them clearer and added more doc comments to the functions here
  3 May 25 -- Added volpi, made vol use the simpler formula that approximates pi as 3, and fixed the help message.
+ 4 May 25 -- Improved handling of the map commands so my kludge of characters changed to spaces is not necessary.
+             And I removed ls and list as synonyms for mapsho.  I never used them anyway.
 */
 
-const LastAlteredDate = "3 May 2025"
+const LastAlteredDate = "4 May 2025"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -307,19 +312,12 @@ func init() {
 	cmdMap["KM2MI"] = 630
 	cmdMap["C2F"] = 633
 	cmdMap["F2C"] = 636
-	cmdMap["MAP"] = 640 // mapsto, maprcl and mapsho are essentially subcommands of map.
+	cmdMap["MAP"] = 640 // mapsto, maprcl, mapdel and mapsho are essentially subcommands of map.
 	cmdMap["CLE"] = 650 // So I can process cleanN.  The code below is written for STO and RCL, so it uses the first 3 characters.
 	cmdMap["CLEAN"] = 650
 	cmdMap["CLEAN4"] = 650
 	cmdMap["CLEAN5"] = 660
 
-	/* commented out 6/16/21
-	if runtime.GOOS == "linux" {
-		homedir = os.Getenv("HOME")
-	} else if runtime.GOOS == "windows" {
-		homedir = os.Getenv("userprofile")
-	}
-	*/
 	homedir, err = os.UserHomeDir() // This func became available as of Go 1.12
 	if err != nil {
 		fmt.Fprintln(os.Stderr, " Error from os.UserHomeDir call is", err)
@@ -803,6 +801,107 @@ func GCD(a, b int) int {
 	return b
 }
 
+// mapRoutines -- This is where the map routines will be processed going forward.  The input string will not have the "map" keyword, but will start w/ the sub command.
+func mapRoutines(s string) (float64, []string) {
+	var R float64
+	ss := make([]string, 0, 100)
+	mappedRegFile, err := os.Open(fullMappedRegFilename) // open for reading
+	if os.IsNotExist(err) {
+		mappedRegExists = false
+	} else if err != nil {
+		mappedRegExists = false
+		fmt.Printf(" Error from opening %s is %s\n", fullMappedRegFilename, err)
+	} else {
+		mappedRegExists = true
+	}
+
+	if mappedRegExists {
+		mappedReg = nil
+		decoder := gob.NewDecoder(mappedRegFile) // first define a decoder
+		err := decoder.Decode(&mappedReg)        // then decoder reads the file.
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+		mappedRegFile.Close() // I need to close this file now, and not defer the close.  Else it may interfere when I write the file, since I now do a read and write in the same block.
+	}
+
+	fmt.Printf(" In mapRoutines, s is %s\n", s)
+
+	// search for the sub command and then chop it off of the string before processing
+	if strings.HasPrefix(s, "sto") {
+		s = strings.TrimSpace(s[3:]) // chop off sto and extraneous spaces.
+		regName := MakeSubst(s)
+		fmt.Printf(" In mapRoutines, regName is %q\n", regName)
+		if regName == "" {
+			ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
+			return 0, ss
+		}
+		mappedReg[regName] = READX()
+		mapWriteAndClose()
+		_, stringresult := mapRoutines("sho")
+		ss = append(ss, stringresult...)
+
+	} else if strings.HasPrefix(s, "rcl") {
+		if !mappedRegExists {
+			ss = append(ss, "No Mapped Registers file exists.")
+			return 0, ss
+		}
+		s = strings.TrimSpace(s[3:]) // chop off rcl and extraneous spaces.
+		regName := MakeSubst(s)
+		if regName == "" {
+			ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
+			return 0, ss
+		}
+		var ok bool
+		R, ok = mappedReg[regName]
+		if ok {
+			PUSHX(R)
+		} else { // I allow abbreviations for RCL only.
+			name := getFullMatchingName(regName)
+			if name == "" {
+				s3 := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regName)
+				ss = append(ss, s3)
+				return 0, ss
+			}
+			R = mappedReg[name]
+			PUSHX(R)
+		}
+	} else if strings.HasPrefix(s, "del") {
+		if !mappedRegExists {
+			ss = append(ss, "No Mapped Registers file exists.")
+			return 0, ss
+		}
+		s = strings.TrimSpace(s[3:]) // chop off del and extraneous spaces.
+		regName := MakeSubst(s)      // for del I'll not allow abbreviations.
+		if regName == "" {
+			ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
+			return 0, ss
+		}
+		delete(mappedReg, regName) // if regName is not in the map, this does nothing but does not panic.
+		s := fmt.Sprint("deleted ", regName)
+		ss = append(ss, s)
+		mapWriteAndClose() // added 6/19/21
+		_, stringresult := mapRoutines("sho")
+		ss = append(ss, stringresult...)
+
+	} else if strings.HasPrefix(s, "sho") {
+		if !mappedRegExists {
+			ss = append(ss, "No Mapped Registers file exists.")
+			return 0, ss
+		}
+		s0 := fmt.Sprint("Map length is ", len(mappedReg))
+		ss = append(ss, s0)
+
+		sliceRegVar := mappedRegSortedNames()
+		for _, reg := range sliceRegVar {
+			fmtValue := strconv.FormatFloat(reg.value, 'g', sigfig, 64)
+			s1 := fmt.Sprintf("reg[%s] = %s", reg.key, fmtValue)
+			ss = append(ss, s1)
+		}
+	}
+	return R, ss
+}
+
 // GetResult -- Input a string of commands and operations, return the result as a float64 and a message as a slice of strings.
 func GetResult(s string) (float64, []string) {
 	var token tknptr.TokenType
@@ -810,10 +909,15 @@ func GetResult(s string) (float64, []string) {
 	var R float64
 	var stringslice []string
 
-	tokenPointer := tknptr.New(s) // Using the Go idiom, instead of INITKN(s)
+	if strings.HasPrefix(s, "map") { // separated out the map routines May 4, 2025.  Note that the input string is not all caps yet.
+		s = s[3:] // chop off the "map" keyword
+		R, stringslice = mapRoutines(s)
+		return R, stringslice
+	}
+
+	tokenPointer := tknptr.New(s) // Changed to use the Go idiom instead of INITKN(s)
 	for {
-		//token, EOL = tokenPointer.GETTKNREAL()
-		token, EOL = tokenPointer.TokenReal() // here goes nothing
+		token, EOL = tokenPointer.TokenReal()
 		if EOL {
 			break
 		}
@@ -964,7 +1068,7 @@ outerloop:
 			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 			ss = append(ss, " substitutions: = for +, ; for *.")
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
-			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  !` become spaces in the name.")
+			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  !` become spaces in the name, but spaces are now allowed.")
 			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n", LastAlteredDate))
 		case 130: // STO
 			MemReg = Stack[X]
@@ -1471,7 +1575,7 @@ outerloop:
 				r, ok := mappedReg[regName]
 				if ok {
 					PUSHX(r)
-				} else { // call the abbreviation processing routine, that I have yet to write.
+				} else { // call the abbreviation processing routine
 					name := getFullMatchingName(regName)
 					if name == "" {
 						s := fmt.Sprintf("register label %s not found in maprcl cmd.  Command ignored.", regName)
@@ -1564,21 +1668,24 @@ func getMapRegName(cmd string) string {
 	return mappedregname
 }
 
-// ------------------------------------------------------------ MakeSubst -----------------------------------------------
-
+// MakeSubst -- Now uses a strings replace function.
 func MakeSubst(instr string) string {
 	// substitute ! ~ ` chara for spaces.  Copied from rpntcell
-	instr = strings.TrimSpace(instr)
-	inRune := make([]rune, len(instr))
 
-	for i, s := range instr {
-		switch s {
-		case '!', '`', '~':
-			s = ' '
-		}
-		inRune[i] = s
-	}
-	return string(inRune)
+	rep := strings.NewReplacer("!", " ", "~", " ", "`", " ")
+	return rep.Replace(instr)
+
+	//instr = strings.TrimSpace(instr) the old way of doing this, using a replacer is the new way.
+	//inRune := make([]rune, len(instr))
+	//
+	//for i, s := range instr {
+	//	switch s {
+	//	case '!', '`', '~':
+	//		s = ' '
+	//	}
+	//	inRune[i] = s
+	//}
+	//return string(inRune)
 }
 
 // ------------------------------------------------------------ GetRegIdx ---------
