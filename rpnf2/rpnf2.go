@@ -59,7 +59,7 @@ import (
  3 Sep 23 -- When entering an arrow key for stack manipulation, the entry is lost.  Time to fix that by sending the input string, if it exists, down the chan before sending the arrow key.
 20 Oct 23 -- Removed KeyQ -> quit from key processing.  I couldn't enter sqrt otherwise easily.  I had to type directly into the input box until I coded this fix.
 ----------------------------------------------------------------------------------------------------
- 4 May 25 -- Now called rpnf2, from rpnf.  It handles the map commands using the new map routines.
+ 4 May 25 -- Now called rpnf2, from rpnf.  It handles the map commands using the new map routines.  And it switches focus to the input box.
 */
 
 const lastModified = "May 4, 2025"
@@ -486,7 +486,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		}
 		inbufChan <- "~"
 		return
-	case fyne.KeyEscape: // fyne.KeyQ  removed "Q" from quitting, because then I couldn't enter sqrt, for example.
+	case fyne.KeyEscape: // fyne.KeyQ removed "Q" from quitting, because then I couldn't enter sqrt, for example.
 		globalW.Close() // quits the app if this is the last window.
 		//                                                                                               globalA.Quit()
 		//	                                                                                          (*globalA).Quit()
@@ -501,9 +501,9 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 	case fyne.KeyPageUp:
 	case fyne.KeyPageDown:
 	case fyne.KeySpace:
-		inbufChan <- input.Text
-		//                                                                                globalW.Canvas().Focus(input)
-		//                                                                                         input.TypedRune(' ')
+		// inbufChan <- input.Text
+		globalW.Canvas().Focus(input)
+		//      input.TypedRune(' ')   not needed.  If I do this then the <space> is doubled.
 		return
 	case fyne.KeyBackspace, fyne.KeyDelete:
 		text := input.Text
