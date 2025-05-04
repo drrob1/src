@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"src/hpcalc2"
 	"src/tknptr"
 	"strconv"
 	"strings"
@@ -62,7 +63,10 @@ REVISION HISTORY
 13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
  2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
  7 Jul 16 -- Added UP command to hpcalcc.cpp
- 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+ 8 Jul 16 -- Added display of stack dump to always happen, and a start-up message.
+*/
+
+/*
 22 Aug 16 -- Started conversion to Go, as rpn.go.
  8 Sep 16 -- Finished coding started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
 11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
@@ -92,13 +96,13 @@ REVISION HISTORY
  6 Apr 18 -- Wrote out DisplayTapeFile.
 22 Aug 18 -- learning about code folding
  2 Oct 18 -- Changed fmt.Scan to fmt.Scanln so now empty input will exit again.  It works, but I had to convert error to string.
- 7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, afterall.
+ 7 Oct 18 -- A bug doesn't allow entering several numbers on a line.  Looks like buffered input is needed, after all.
  1 Jan 19 -- There is a bug in entering several space delimited terms.  So I removed a trimspace and I'll see what happens next.
-26 Mar 20 -- I'm attempting to get output to the clipboard.  On linux using xsel or xclip utilities.
-29 Mar 20 -- Need to removed commas from a number string received from the clip.
+26 Mar 20 -- I'm attempting to get output to the clipboard. On linux using xsel or xclip utilities.
+29 Mar 20 -- Need to remove commas from a number string received from the clip.
 30 Mar 20 -- Will make it use tcc 22 as I have that at work also.
  1 Apr 20 -- Removed all spaces from the string returned from xclip.  The conversion fails if extraneous spaces are there.
- 8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster.  But only somewhat.
+ 8 Aug 20 -- Now uses hpcalc2, which seems somewhat faster. But only somewhat.
 23 Oct 20 -- Adding flag package to allow the -n flag, meaning no files read or written.
  8 Nov 20 -- Found minor error in fmt messages of fromclip command.  I was looking because of "Go Standard Library Cookbook"
  9 Nov 20 -- Added use of comspec, copied from hpcalc2.go.
@@ -110,7 +114,7 @@ REVISION HISTORY
  4 Feb 21 -- Will display stack before displaying any returned strings from hpcalc2.  And fixed bug of ignoring a command line param.
  5 Feb 21 -- Removed an extra PushMatrixStacks() while initializing everything.
 11 Feb 21 -- Added X for exit, to copy PACS.  And changed the prompt
- 8 Apr 21 -- Converted to module name src, that happens to reside at ~/go/src.  Go figure!
+ 8 Apr 21 -- Converted to module name src, that happens to reside at ~/go/src. Go figure!
 12 Jun 21 -- Now that I have RealTokenSlice in tknptr, I'll use it to allow more flexibility when entering commands.  And removed tokenize.CAP().
 14 Jun 21 -- Testing new routine in hpcalc2, called Result that takes a token as a param instead of a string.
 15 Jun 21 -- Added runtime.Version() to output of about cmd.
@@ -122,10 +126,12 @@ REVISION HISTORY
 21 Nov 22 -- static linter objected to err that was not tested in a few places while using file writes.
 18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
 24 Jun 23 -- hpcalc2 changed, so I have to recompile.  And I'm editing comments.  I stopped calling the map close fcn here 2 yrs ago.
- 3 Sep 23 -- I added a substitution, tilde for backtick, to makesubst.  So I have to recompile.
+ 3 Sep 23 -- I added a substitution, tilde for backtick, to makesubst. So I have to recompile.
+ 4 May 25 -- hpcalc2 now does not require fake spaces, so I'll send all map operations to it before processing the other commands.
+			 And I had to restore using hpcalc2.  It seems that I had previously made hpcalc the default.  I don't remember why or when.
 */
 
-const lastAlteredDate = "June 24, 2023"
+const lastAlteredDate = "May 4, 2025"
 
 var Storage [36]float64 // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
@@ -268,7 +274,18 @@ func main() {
 	hpcalc.PushMatrixStacks()
 
 	for len(INBUF) > 0 { // Main processing loop
-		INBUF = makesubst.MakeSubst(INBUF)
+		INBUF = makesubst.MakeShorterReplaced(INBUF) // just changes '=' for '+' and ';' for '*'
+
+		if strings.HasPrefix(INBUF, "map") || strings.HasPrefix(INBUF, "MAP") { // map operations are processed differently now.
+			_, stringslice = hpcalc2.GetResult(INBUF)
+			ClearScreen() // added 02/04/2021 9:07:12 AM to always update the stack, before displaying any returned strings from GetResult.
+			RepaintScreen()
+			for _, ss := range stringslice {
+				ctfmt.Println(ct.Cyan, WindowsFlag, ss)
+			}
+			INBUF = " "
+		}
+
 		INBUF = strings.ToUpper(INBUF)
 		DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 		// These commands are not run thru hpcalc as they are processed before calling GetResult.
@@ -351,10 +368,6 @@ func main() {
 		} // end of for _, rtkn := range realtokenslice
 		fmt.Println()
 		fmt.Print(" Enter calculation, Help, Quit or eXit: ")
-		//{{{
-		//_, err := fmt.Scan(&INBUF)  removed 10/2/18
-		//_, err := fmt.Scanln(&INBUF) // added 10/02/2018 1:58:57 PM, and removed again 10/07/2018 09:37:51 AM
-		// }}}
 		scan.Scan()
 		INBUF = scan.Text()
 		if err := scan.Err(); err != nil {
@@ -364,9 +377,9 @@ func main() {
 		if len(INBUF) == 0 {
 			break
 		}
-		INBUF = makesubst.MakeSubst(INBUF)
-		INBUF = strings.ToUpper(INBUF)
-		if strings.HasPrefix(INBUF, "Q") || INBUF == "EXIT" || INBUF == "X" {
+		INBUF = makesubst.MakeShorterReplaced(INBUF)
+		allCaps := strings.ToUpper(INBUF)
+		if strings.HasPrefix(allCaps, "Q") || allCaps == "EXIT" || allCaps == "X" {
 			fmt.Println()
 			break
 		}
@@ -529,6 +542,12 @@ func RepaintScreen() { // ExecFI, ExecTimeStamp and execname are not global.  I'
 	}
 	WriteRegToScreen()
 	WriteDisplayTapeToScreen()
+}
+
+func pause() {
+	fmt.Print(" Press <enter> to continue: ")
+	var input string
+	fmt.Scanln(&input)
 }
 
 // ---------------------------------------------------- End rpng.go ------------------------------

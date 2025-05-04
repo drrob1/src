@@ -825,10 +825,9 @@ func mapRoutines(s string) (float64, []string) {
 		mappedRegFile.Close() // I need to close this file now, and not defer the close.  Else it may interfere when I write the file, since I now do a read and write in the same block.
 	}
 
-	fmt.Printf(" In mapRoutines, s is %s\n", s)
-
+	scap := strings.ToUpper(s) // s made into all caps is needed because rpn does not force all caps, but rpnf does.
 	// search for the sub command and then chop it off of the string before processing
-	if strings.HasPrefix(s, "sto") {
+	if strings.HasPrefix(scap, "STO") {
 		s = strings.TrimSpace(s[3:]) // chop off sto and extraneous spaces.
 		regName := MakeSubst(s)
 		fmt.Printf(" In mapRoutines, regName is %q\n", regName)
@@ -841,7 +840,7 @@ func mapRoutines(s string) (float64, []string) {
 		_, stringresult := mapRoutines("sho")
 		ss = append(ss, stringresult...)
 
-	} else if strings.HasPrefix(s, "rcl") {
+	} else if strings.HasPrefix(scap, "RCL") {
 		if !mappedRegExists {
 			ss = append(ss, "No Mapped Registers file exists.")
 			return 0, ss
@@ -866,7 +865,7 @@ func mapRoutines(s string) (float64, []string) {
 			R = mappedReg[name]
 			PUSHX(R)
 		}
-	} else if strings.HasPrefix(s, "del") {
+	} else if strings.HasPrefix(scap, "DEL") {
 		if !mappedRegExists {
 			ss = append(ss, "No Mapped Registers file exists.")
 			return 0, ss
@@ -884,7 +883,7 @@ func mapRoutines(s string) (float64, []string) {
 		_, stringresult := mapRoutines("sho")
 		ss = append(ss, stringresult...)
 
-	} else if strings.HasPrefix(s, "sho") {
+	} else if strings.HasPrefix(scap, "SHO") {
 		if !mappedRegExists {
 			ss = append(ss, "No Mapped Registers file exists.")
 			return 0, ss
@@ -900,7 +899,7 @@ func mapRoutines(s string) (float64, []string) {
 		}
 	}
 	return R, ss
-}
+} // end mapRoutines.
 
 // GetResult -- Input a string of commands and operations, return the result as a float64 and a message as a slice of strings.
 func GetResult(s string) (float64, []string) {
@@ -909,7 +908,8 @@ func GetResult(s string) (float64, []string) {
 	var R float64
 	var stringslice []string
 
-	if strings.HasPrefix(s, "map") { // separated out the map routines May 4, 2025.  Note that the input string is not all caps yet.
+	scap := strings.ToLower(s)          // rpn is not all cap, but rpnf is.
+	if strings.HasPrefix(scap, "map") { // separated out the map routines May 4, 2025.  Note that the input string is not all caps yet.
 		s = s[3:] // chop off the "map" keyword
 		R, stringslice = mapRoutines(s)
 		return R, stringslice

@@ -8,8 +8,9 @@ import (
 REVISION HISTORY
 ----------------
 26 Aug 16 -- First version, in Go before possibly backported to the earlier versions.
- 1 Oct 21 -- I just noticed that strings package has a replacer type, that does this.  I'm going to try using that.
- 3 Sep 23 -- Added a substitution so that I can more easily enter a tilde, ie, substituting tilde for a backtick.
+ 1 Oct 21 -- I just noticed that strings package has a replacer type that does this.  I'm going to try using that.
+ 3 Sep 23 -- Added a substitution so that I can more easily enter a tilde, i.e., substituting tilde for a backtick.
+ 4 May 25 -- Added a replacer that does not affect back ticks.
 */
 
 func MakeSubst(instr string) string {
@@ -39,5 +40,10 @@ characters are runes.
 
 func MakeReplaced(instr string) string {
 	rplcd := strings.NewReplacer("=", "+", ";", "*", "`", "~")
+	return rplcd.Replace(instr)
+}
+
+func MakeShorterReplaced(instr string) string {
+	rplcd := strings.NewReplacer("=", "+", ";", "*")
 	return rplcd.Replace(instr)
 }
