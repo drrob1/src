@@ -7,12 +7,11 @@ import (
 	"math/rand"
 	"os"
 	"sort"
-	"strconv"
-	"strings"
-	//
 	"src/holidaycalc"
 	"src/timlibg"
 	"src/tknptr"
+	"strconv"
+	"strings"
 )
 
 /* (C) 1990-2024.  Robert W Solomon.  All rights reserved.
@@ -147,10 +146,11 @@ REVISION HISTORY
 14 Aug 24 -- For the undo/redo, the matrix stack will be dynamically managed.
  9 Nov 24 -- Trying to figure out how to correct the small floating point errors that I see.  Next and Prev are manual.  I'm going to try using math.Floor.
 23 Nov 24 -- Clean command was added several weeks ago.  It works.  I'm expanding it to allow a number, like fix does.
-24 Nov 24 -- Improved some comments to make them clearer, and added more doc comments to the functions here
+24 Nov 24 -- Improved some comments to make them clearer and added more doc comments to the functions here
+ 3 May 25 -- Added volpi, made vol use the simpler formula that approximates pi as 3, and fixed the help message.
 */
 
-const LastAlteredDate = "25 Nov 2024"
+const LastAlteredDate = "3 May 2025"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -232,6 +232,7 @@ func init() {
 	cmdMap["CBRT"] = 90
 	cmdMap["DIA"] = 100
 	cmdMap["VOL"] = 110
+	cmdMap["VOLPI"] = 670
 	cmdMap["HELP"] = 120
 	cmdMap["?"] = 120
 	cmdMap["H"] = 120 // added 02/04/2021 8:54:30 AM
@@ -544,7 +545,7 @@ func DumpStackFloat() []string {
 } // DumpStackFloat
 
 // OutputFixedOrFloat -- Tries to output a number without an exponent, if possible.  Will output an exponent if it has to.
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -912,7 +913,13 @@ outerloop:
 			LastX = Stack[X]
 			PushMatrixStacks()
 			Stack[X] = math.Cbrt(Stack[X]) * 1.2407009817988 // constant is cube root of 6/Pi, so can multiply cube roots.
-		case 110: // VOL
+		case 110: // VOL // approximates pi as 3, which is more accurate if thinking of volume in grams.
+			LastX = Stack[X]
+			PushMatrixStacks()
+			Stack[X] = Stack[X] * Stack[Y] * Stack[Z] / 2
+			STACKDN()
+			STACKDN()
+		case 670: // VOLPI // does not approximate pi as 3, which is more accurate if thinking of volume in mL's
 			LastX = Stack[X]
 			PushMatrixStacks()
 			Stack[X] = Stack[X] * Stack[Y] * Stack[Z] * PI / 6
@@ -925,10 +932,11 @@ outerloop:
 			ss = append(ss, " RECIP -- X = 1/X.")
 			ss = append(ss, " CHS,_ -- Change Sign,  X = -1 * X.")
 			ss = append(ss, " DIA -- Given a volume in X, then X = estimated diameter for that volume, assuming a sphere.  Does not approximate Pi as 3.")
-			ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
+			ss = append(ss, " VOL -- Take values in X, Y, And Z and return a volume in X.  Approximates Pi as 3.")
+			ss = append(ss, " VOLPI -- Take values in X, Y, And Z and return a volume in X.  Does not approximate Pi as 3.")
 			ss = append(ss, " TOCLIP, FROMCLIP, STOCLIP, RCLCLIP -- uses xclip on linux and tcc on Windows to access the clipboard.")
 			ss = append(ss, " STO,RCL  -- store/recall the X register to/from the memory register.")
-			ss = append(ss, " `,~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
+			ss = append(ss, " ~,SWAP,SWAPXY,<>,><,<,> -- equivalent commands that swap the X and Y registers.")
 			ss = append(ss, " @, LastX -- put the value of the LASTX register back into the X register.")
 			ss = append(ss, " , comma -- stack up.  | vertical bar -- stack down.")
 			ss = append(ss, " Pop -- displays X and then moves stack down.")
@@ -956,8 +964,7 @@ outerloop:
 			ss = append(ss, " SigFigN,FixN -- Set the significant figures to N for the stack display string.  Default is -1.")
 			ss = append(ss, " substitutions: = for +, ; for *.")
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
-			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  mapWriteAndClose needs to be deferred after")
-			ss = append(ss, "                                   first use of PushMatrixStacks.  !`~ become spaces in the name.")
+			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  !` become spaces in the name.")
 			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n", LastAlteredDate))
 		case 130: // STO
 			MemReg = Stack[X]
