@@ -830,7 +830,7 @@ func mapRoutines(s string) (float64, []string) {
 	if strings.HasPrefix(scap, "STO") {
 		s = strings.TrimSpace(s[3:]) // chop off sto and extraneous spaces.
 		regName := MakeSubst(s)
-		fmt.Printf(" In mapRoutines, regName is %q\n", regName)
+		//                                                       fmt.Printf(" In mapRoutines, regName is %q\n", regName)
 		if regName == "" {
 			ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
 			return 0, ss
