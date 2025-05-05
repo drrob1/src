@@ -490,9 +490,9 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 	case fyne.KeyPageUp:
 	case fyne.KeyPageDown:
 	case fyne.KeySpace:
-		inbufChan <- input.Text
-		//                                                                                globalW.Canvas().Focus(input)
-		//                                                                                         input.TypedRune(' ')
+		//     inbufChan <- input.Text // removed 5/5/25
+		globalW.Canvas().Focus(input) // added back 5/5/25
+		input.TypedRune(' ')          // added back 5/5/25
 		return
 	case fyne.KeyBackspace, fyne.KeyDelete:
 		text := input.Text
