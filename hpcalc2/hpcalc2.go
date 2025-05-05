@@ -1583,6 +1583,7 @@ outerloop:
 				}
 				r, ok := mappedReg[regName]
 				if ok {
+					PushMatrixStacks()
 					PUSHX(r)
 				} else { // call the abbreviation processing routine
 					name := getFullMatchingName(regName)
@@ -1591,6 +1592,7 @@ outerloop:
 						ss = append(ss, s)
 						break outerloop
 					}
+					PushMatrixStacks()
 					r := mappedReg[name]
 					PUSHX(r)
 				}
