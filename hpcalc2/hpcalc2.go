@@ -879,7 +879,7 @@ func mapRoutines(s string) (float64, []string) {
 		}
 		_, ok := mappedReg[regName]
 		if !ok {
-			s3 := fmt.Sprintf("register label %s not found in mapdel cmd.  Command ignored.", regName)
+			s3 := fmt.Sprintf("register label %q not found in mapdel cmd.  Command ignored.", regName)
 			ss = append(ss, s3)
 			return 0, ss
 		}
