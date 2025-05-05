@@ -250,6 +250,7 @@ func Doit() {
 		INBUF = strings.TrimSpace(INBUF)
 		if len(INBUF) > 0 {
 			INBUF = makesubst.MakeShorterReplaced(INBUF) // doesn't alter backtick, only '=' to '+' and ';' to '*'
+			DisplayTape = append(DisplayTape, INBUF)     // This is an easy way to capture everything.
 
 			if strings.HasPrefix(INBUF, "map") || strings.HasPrefix(INBUF, "MAP") { // map operations are processed differently now.
 				_, stringslice = hpcalc2.GetResult(INBUF)
@@ -262,7 +263,6 @@ func Doit() {
 			}
 
 			INBUF = strings.ToUpper(INBUF)
-			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 			// These commands are not run thru hpcalc as they are processed before calling it.
 			realtknslice := tknptr.RealTokenSlice(INBUF)
 			INBUF = "" // do this to stop endless processing of the same value of INBUF in a concurrent model.
@@ -353,6 +353,7 @@ func Doit() {
 				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc sets output mode AND number of significant figures.
 					outputMode = outputfix
 				}
+				resultToOutput = ""
 				if len(stringslice) > 0 {
 					resultToOutput = strings.Join(stringslice, "\n")
 				}

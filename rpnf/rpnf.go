@@ -38,9 +38,9 @@ import (
 16 Sep 21 -- Made result output color yellow, defined yellow, and added output modes.
 17 Sep 21 -- Fyne v 2.1.0 released today, and added a new widget.RichText that I'm going to use for the help output and see what happens.
 19 Sep 21 -- Added light and dark commands to change the theme.  And found container.NewScroll from the fyne conference 2021 talk.
-29 Sep 21 -- playing w/ an idea for backspace operation.  Turns out that it works.
+29 Sep 21 -- playing w/ an idea for backspace operation. Turns out that it works.
 30 Sep 21 -- changing function of <space>
- 1 Oct 21 -- changing left, right arrows to swap X,Y, '=' will always send '+' and ';' will always send '*'
+ 1 Oct 21 -- changing left, right arrows to swap X and Y, '=' will always send '+' and ';' will always send '*'
 11 Oct 21 -- Starting to add a pop-up modal form for register names.  This was finished the next evening.
 14 Oct 21 -- Added trim to the popup text
 21 Oct 21 -- Added processing of backspace and del to the popup text.  That was an oversight.
@@ -51,16 +51,17 @@ import (
                And will have keyTyped go back into the Entry widget.  I think it looks nicer.
 12 Feb 22 -- Going back to not have keyTyped to into the entry widget.  This allows <space> to be a delimiter.  I like that better.
 16 Mar 22 -- Removing fmt.Print calls so a terminal window doesn't appear, unless I use the -v flag.
- 5 May 22 -- HPCALC2 was changed to use OS specific code.  No changes here, though.
+ 5 May 22 -- HPCALC2 was changed to use OS specific code. No changes here, though.
 16 May 22 -- Removed a superfluous select statement in Doit.  I understand concurrency better now.
 11 Aug 22 -- About command will give more info about the exe binary
 21 Oct 22 -- golangci-lint caught that I have an unneeded Sprintf call.  I removed both of them.  And added to show when the binary was last linked for the ABOUT cmd.
-18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir.  This is %appdata% or $HOME/.config
+18 Feb 23 -- Changing from os.UserHomeDir to os.UserConfigDir. This is %appdata% or $HOME/.config
  3 Sep 23 -- When entering an arrow key for stack manipulation, the entry is lost.  Time to fix that by sending the input string, if it exists, down the chan before sending the arrow key.
 20 Oct 23 -- Removed KeyQ -> quit from key processing.  I couldn't enter sqrt otherwise easily.  I had to type directly into the input box until I coded this fix.
+ 5 May 25 -- Fixed a bug regarding not clearing old message so they don't get displayed after they've become stale.
 */
 
-const lastModified = "Oct 20, 2023"
+const lastModified = "May 5, 2025"
 
 const ( // output modes
 	outputfix = iota
@@ -339,6 +340,7 @@ func Doit() {
 				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc sets output mode AND number of significant figures.
 					outputMode = outputfix
 				}
+				resultToOutput = "" // clears any old messages.
 				if len(stringslice) > 0 {
 					resultToOutput = strings.Join(stringslice, "\n")
 				}
