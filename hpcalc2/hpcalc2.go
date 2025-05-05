@@ -829,7 +829,7 @@ func mapRoutines(s string) (float64, []string) {
 	// search for the sub command and then chop it off of the string before processing
 	if strings.HasPrefix(scap, "STO") {
 		s = strings.TrimSpace(s[3:]) // chop off sto and extraneous spaces.
-		regName := MakeSubst(s)
+		regName := strings.TrimSpace(MakeSubst(s))
 		//                                                       fmt.Printf(" In mapRoutines, regName is %q\n", regName)
 		if regName == "" {
 			ss = append(ss, "mapsto needs a register label.  None found so command ignored.")
@@ -846,7 +846,7 @@ func mapRoutines(s string) (float64, []string) {
 			return 0, ss
 		}
 		s = strings.TrimSpace(s[3:]) // chop off rcl and extraneous spaces.
-		regName := MakeSubst(s)
+		regName := strings.TrimSpace(MakeSubst(s))
 		if regName == "" {
 			ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
 			return 0, ss
@@ -870,8 +870,8 @@ func mapRoutines(s string) (float64, []string) {
 			ss = append(ss, "No Mapped Registers file exists.")
 			return 0, ss
 		}
-		s = strings.TrimSpace(s[3:]) // chop off del and extraneous spaces.
-		regName := MakeSubst(s)      // for del I'll not allow abbreviations.
+		s = strings.TrimSpace(s[3:])               // chop off del and extraneous spaces.
+		regName := strings.TrimSpace(MakeSubst(s)) // for del I'll not allow abbreviations.
 		if regName == "" {
 			ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
 			return 0, ss

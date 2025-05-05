@@ -62,7 +62,7 @@ import (
  4 May 25 -- Now called rpnf2, from rpnf.  It handles the map commands using the new map routines.  And it switches focus to the input box.
 */
 
-const lastModified = "May 4, 2025"
+const lastModified = "May 5, 2025"
 
 const ( // output modes
 	outputfix = iota
@@ -247,8 +247,9 @@ func Doit() {
 	INBUF := ""
 	for { // main processing loop
 		INBUF = <-inbufChan // this is blocking
+		INBUF = strings.TrimSpace(INBUF)
 		if len(INBUF) > 0 {
-			INBUF = makesubst.MakeShorterReplaced(INBUF) // doesn't alter backtick
+			INBUF = makesubst.MakeShorterReplaced(INBUF) // doesn't alter backtick, only '=' to '+' and ';' to '*'
 
 			if strings.HasPrefix(INBUF, "map") || strings.HasPrefix(INBUF, "MAP") { // map operations are processed differently now.
 				_, stringslice = hpcalc2.GetResult(INBUF)
@@ -333,7 +334,7 @@ func Doit() {
 					lightTheme = true
 				} else {
 					// -------------------------------------------------------------------------------------
-					_, stringslice = hpcalc2.Result(rtkn) //   Here is where GetResult is called -> Result
+					_, stringslice = hpcalc2.Result(rtkn) //   Here is where Result is called
 					// -------------------------------------------------------------------------------------
 				}
 				// -------------------------------------------------------------------------------------
@@ -503,7 +504,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 	case fyne.KeySpace:
 		// inbufChan <- input.Text
 		globalW.Canvas().Focus(input)
-		//      input.TypedRune(' ')   not needed.  If I do this then the <space> is doubled.
+		input.TypedRune(' ') // The <space> is doubled on Windows but not on Linux.
 		return
 	case fyne.KeyBackspace, fyne.KeyDelete:
 		text := input.Text
