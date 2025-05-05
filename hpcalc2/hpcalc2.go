@@ -855,6 +855,7 @@ func mapRoutines(s string) (float64, []string) {
 		var ok bool
 		R, ok = mappedReg[regName]
 		if ok {
+			PushMatrixStacks()
 			PUSHX(R)
 		} else { // I allow abbreviations for RCL only.
 			name := getFullMatchingName(regName)
@@ -864,6 +865,7 @@ func mapRoutines(s string) (float64, []string) {
 				return 0, ss
 			}
 			R = mappedReg[name]
+			PushMatrixStacks()
 			PUSHX(R)
 		}
 	} else if strings.HasPrefix(scap, "DEL") {
