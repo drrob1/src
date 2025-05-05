@@ -155,7 +155,7 @@ REVISION HISTORY
              And I removed ls and list as synonyms for mapsho.  I never used them anyway.
 */
 
-const LastAlteredDate = "4 May 2025"
+const LastAlteredDate = "5 May 2025"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -805,6 +805,7 @@ func GCD(a, b int) int {
 func mapRoutines(s string) (float64, []string) {
 	var R float64
 	ss := make([]string, 0, 100)
+	s = strings.TrimSpace(s)
 	mappedRegFile, err := os.Open(fullMappedRegFilename) // open for reading
 	if os.IsNotExist(err) {
 		mappedRegExists = false
@@ -828,7 +829,7 @@ func mapRoutines(s string) (float64, []string) {
 	scap := strings.ToUpper(s) // s made into all caps is needed because rpn does not force all caps, but rpnf does.
 	// search for the sub command and then chop it off of the string before processing
 	if strings.HasPrefix(scap, "STO") {
-		s = strings.TrimSpace(s[3:]) // chop off sto and extraneous spaces.
+		s = s[3:] // chop off sto
 		regName := strings.TrimSpace(MakeSubst(s))
 		//                                                       fmt.Printf(" In mapRoutines, regName is %q\n", regName)
 		if regName == "" {
@@ -845,7 +846,7 @@ func mapRoutines(s string) (float64, []string) {
 			ss = append(ss, "No Mapped Registers file exists.")
 			return 0, ss
 		}
-		s = strings.TrimSpace(s[3:]) // chop off rcl and extraneous spaces.
+		s = s[3:] // chop off rcl and extraneous spaces.
 		regName := strings.TrimSpace(MakeSubst(s))
 		if regName == "" {
 			ss = append(ss, "maprcl needs a register label.  None found so command ignored.")
@@ -870,10 +871,16 @@ func mapRoutines(s string) (float64, []string) {
 			ss = append(ss, "No Mapped Registers file exists.")
 			return 0, ss
 		}
-		s = strings.TrimSpace(s[3:])               // chop off del and extraneous spaces.
+		s = s[3:]                                  // chop off del and extraneous spaces.
 		regName := strings.TrimSpace(MakeSubst(s)) // for del I'll not allow abbreviations.
 		if regName == "" {
 			ss = append(ss, "mapdel needs a register label.  None found so command ignored.")
+			return 0, ss
+		}
+		_, ok := mappedReg[regName]
+		if !ok {
+			s3 := fmt.Sprintf("register label %s not found in mapdel cmd.  Command ignored.", regName)
+			ss = append(ss, s3)
 			return 0, ss
 		}
 		delete(mappedReg, regName) // if regName is not in the map, this does nothing but does not panic.
