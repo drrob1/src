@@ -153,9 +153,10 @@ REVISION HISTORY
  3 May 25 -- Added volpi, made vol use the simpler formula that approximates pi as 3, and fixed the help message.
  4 May 25 -- Improved handling of the map commands so my kludge of characters changed to spaces is not necessary.
              And I removed ls and list as synonyms for mapsho.  I never used them anyway.
+ 6 May 25 -- Added snapshot command, which calls push matrix stacks.
 */
 
-const LastAlteredDate = "5 May 2025"
+const LastAlteredDate = "6 May 2025"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -317,6 +318,8 @@ func init() {
 	cmdMap["CLEAN"] = 650
 	cmdMap["CLEAN4"] = 650
 	cmdMap["CLEAN5"] = 660
+	cmdMap["SNAPSHOT"] = 680
+	cmdMap["SNAP"] = 680
 
 	homedir, err = os.UserHomeDir() // This func became available as of Go 1.12
 	if err != nil {
@@ -1645,13 +1648,16 @@ outerloop:
 			Stack[X] = x
 			s := fmt.Sprintf("clean(x, %.0f) done", placesReal)
 			ss = append(ss, s)
-		case 660: // CLEAN5  this is redundant now.  I'm not deleting it.
+		case 660: // CLEAN5 this is redundant now.  I'm not deleting it.
 			PushMatrixStacks()
 			LastX = Stack[X]
 			x := Floor(Stack[X], 5) // this is to correct the small floating point errors, to 5 decimal places.  Floor is my function that's defined above.
 			Stack[X] = x
 			s := "clean5 done"
 			ss = append(ss, s)
+
+		case 680: // SNAPSHOT
+			PushMatrixStacks()
 
 		case 999: // do nothing, ignore me but don't generate an error message.
 
