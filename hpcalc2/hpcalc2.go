@@ -1558,7 +1558,7 @@ outerloop:
 				mappedRegFile.Close() // I need to close this file now, and not defer the close.  Else it may interfere when I write the file, since I now do a read and write in the same block.
 			}
 			subcmd := tkn.Str[3:] // slice off first three characters, which are map
-			ss = append(ss, fmt.Sprintf(" map command is %s.  Should not be in this old part of the map commands.", subcmd))
+			ss = append(ss, fmt.Sprintf(" map command is %s, in the old part of the map cmds.", subcmd))
 			if strings.HasPrefix(subcmd, "STO") {
 				regName := getMapRegName(subcmd)
 				if regName == "" {
