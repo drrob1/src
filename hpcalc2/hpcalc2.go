@@ -98,6 +98,7 @@ REVISION HISTORY
 15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', ie, string is in scientific notation.
 25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
  3 Jul 20 -- Added cbrt as synonym for curt.
+------------------------------------------------------------------------------------------------------------------------------------------------------
  7 Aug 20 -- Now called hpcal2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
                And made a minimal change in GetResult for variable I to make code more idiomatic.
  9 Aug 20 -- Cleaned out some old, unhelpful comments and removed one extraneous "break" in GetResult tknptr.OP section.
@@ -547,7 +548,7 @@ func DumpStackFloat() []string {
 } // DumpStackFloat
 
 // OutputFixedOrFloat -- Tries to output a number without an exponent, if possible.  Will output an exponent if it has to.
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
