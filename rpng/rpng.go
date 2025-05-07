@@ -1,4 +1,4 @@
-// (C) 1990-2023.  Robert W.  Solomon.  All rights reserved.
+// (C) 1990-2023.  Robert W. Solomon.  All rights reserved.
 // rpng.go
 package main
 
