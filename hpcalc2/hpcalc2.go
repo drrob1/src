@@ -1072,7 +1072,7 @@ outerloop:
 			ss = append(ss, " HEX -- Round X register to a long_integer and output it in hex format.")
 			ss = append(ss, " HCF -- Displays highest common factor for rounded X and Y.  GCD for greatest common denominator is a synonym.")
 			ss = append(ss, " HOL -- Display holidays.")
-			ss = append(ss, " UNDO, REDO -- entire stack.  More comprehensive than lastx.")
+			ss = append(ss, " UNDO, REDO, SNAPSHOT -- entire stack.  More comprehensive than lastx.  SNAPSHOT pushes a snapshot of the stack to the undo stack for another undo level.")
 			ss = append(ss, " Prime, PrimeFactors -- evaluates X.")
 			ss = append(ss, " Adjust -- X reg *100, Round, /100")
 			ss = append(ss, " NextAfter,Before,Prev -- Reference factor for the fcn is 1e9 or 0.")
