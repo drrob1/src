@@ -721,15 +721,16 @@ func UndoMatrixStacks() {
 	if CurUndoRedoIdx == len(StackUndoMatrix)-1 {
 		StackUndoMatrix = append(StackUndoMatrix, Stack)
 	}
-	if CurUndoRedoIdx <= len(StackUndoMatrix) && CurUndoRedoIdx > 0 {
+	// There was a subtle bug here.  In versions of this code before 5/7/25, I first decremented the pointer and then used it.  That's a mistake and caused it to skip the most recent previous stack state in the undo operation.
+	Stack = StackUndoMatrix[CurUndoRedoIdx]
+	if CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
-		Stack = StackUndoMatrix[CurUndoRedoIdx]
 	}
 }
 
 // RedoMatrixStacks -- Redoes the stack matrix, that is, undoes the undo by reverting to a later stack state.
 func RedoMatrixStacks() {
-	if CurUndoRedoIdx >= 0 && CurUndoRedoIdx < len(StackUndoMatrix)-1 {
+	if CurUndoRedoIdx < len(StackUndoMatrix)-1 {
 		CurUndoRedoIdx++
 		Stack = StackUndoMatrix[CurUndoRedoIdx]
 	}
@@ -746,7 +747,7 @@ func Floor(real, places float64) float64 { // written and debugged here before I
 	if negFlag {
 		result *= -1
 	}
-	factor := math.Pow(10, places)
+	factor := math.Pow(10, places) // 10^places, or 10**places
 	result *= factor
 	result = math.Floor(result + 0.5)
 	result /= factor
@@ -946,8 +947,8 @@ outerloop:
 	case tknptr.DELIM:
 
 	case tknptr.DGT:
-		PUSHX(tkn.Rsum)
 		PushMatrixStacks()
+		PUSHX(tkn.Rsum)
 
 	case tknptr.OP:
 		I := tkn.Isum
@@ -1650,7 +1651,7 @@ outerloop:
 		case 660: // CLEAN5 this is redundant now.  I'm not deleting it.
 			PushMatrixStacks()
 			LastX = Stack[X]
-			x := Floor(Stack[X], 5) // this is to correct the small floating point errors, to 5 decimal places.  Floor is my function that's defined above.
+			x := Floor(Stack[X], 5) // this is to correct the small floating point errors, to 5 decimal places.  Floor is my function defined above.
 			Stack[X] = x
 			s := "clean5 done"
 			ss = append(ss, s)
