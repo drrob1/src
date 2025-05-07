@@ -100,8 +100,8 @@ REVISION HISTORY
  3 Jul 20 -- Added cbrt as synonym for curt.
  7 Aug 20 -- Now called hpcal2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
                And made a minimal change in GetResult for variable I to make code more idiomatic.
- 9 Aug 20 -- Cleaned out some old, unhelpful comments, and removed one extraneous "break" in GetResult tknptr.OP section.
-24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out of bounds error.
+ 9 Aug 20 -- Cleaned out some old, unhelpful comments and removed one extraneous "break" in GetResult tknptr.OP section.
+24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out-of-bounds error.
  8 Nov 20 -- Adding toclip, fromclip, based on code from "Go Standard Library Cookbook", by Radomir Sohlich, (c) 2018 Packtpub.
  9 Nov 20 -- Including use of comspec to find tcc on Windows.
  4 Dec 20 -- Thinking about how to add conversion factors.  1 lb = 453.59238 g; 1 oz = 28.34952 g; 1 m = 3.28084 ft; 1 mi = 1.609344 km
@@ -717,9 +717,10 @@ func PushMatrixStacks() { // this is called from GetResult before an operation t
 
 // UndoMatrixStacks -- performs an undo operation by reverting to a previous stack state.
 func UndoMatrixStacks() {
-	//if CurUndoRedoIdx == len(StackUndoMatrix)-1 { // only push the current state if it's not already been pushed.  IE, first undo for this stack state.  I don't remember why I do this.
-	//	StackUndoMatrix = append(StackUndoMatrix, Stack)
-	//}
+	// only push the current state if it's not already been pushed.  IE, first undo for this stack state.  This is so I can redo to this stack if I want.
+	if CurUndoRedoIdx == len(StackUndoMatrix)-1 {
+		StackUndoMatrix = append(StackUndoMatrix, Stack)
+	}
 	if CurUndoRedoIdx <= len(StackUndoMatrix) && CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
 		Stack = StackUndoMatrix[CurUndoRedoIdx]
