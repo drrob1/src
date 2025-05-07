@@ -548,7 +548,7 @@ func DumpStackFloat() []string {
 } // DumpStackFloat
 
 // OutputFixedOrFloat -- Tries to output a number without an exponent, if possible.  Will output an exponent if it has to.
-func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
