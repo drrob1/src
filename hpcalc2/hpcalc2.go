@@ -547,7 +547,7 @@ func DumpStackFloat() []string {
 } // DumpStackFloat
 
 // OutputFixedOrFloat -- Tries to output a number without an exponent, if possible.  Will output an exponent if it has to.
-func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
@@ -722,6 +722,7 @@ func UndoMatrixStacks() {
 		StackUndoMatrix = append(StackUndoMatrix, Stack)
 	}
 	// There was a subtle bug here.  In versions of this code before 5/7/25, I first decremented the pointer and then used it.  That's a mistake and caused it to skip the most recent previous stack state in the undo operation.
+	// In other words, this needs to be a post-decremented pointer, and I was pre decrementing it all along.  Oops.
 	Stack = StackUndoMatrix[CurUndoRedoIdx]
 	if CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
