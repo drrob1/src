@@ -154,9 +154,10 @@ REVISION HISTORY
  4 May 25 -- Improved handling of the map commands so my kludge of characters changed to spaces is not necessary.
              And I removed ls and list as synonyms for mapsho.  I never used them anyway.
  6 May 25 -- Added snapshot command, which calls push matrix stacks.
+ 7 May 25 -- Altered the undoMatrixStack function by removing a step I don't remember why I did.
 */
 
-const LastAlteredDate = "6 May 2025"
+const LastAlteredDate = "7 May 2025"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -710,19 +711,25 @@ func PWRI(R float64, I int) float64 {
 
 // PushMatrixStacks -- Saves the stack state prior to an operation that will change the stack state.
 func PushMatrixStacks() { // this is called from GetResult before an operation that would change the stack.
-	//StacksMatrixUp()
-	//StackUndoMatrix[Bottom] = Stack
 	StackUndoMatrix = append(StackUndoMatrix, Stack)
 	CurUndoRedoIdx = len(StackUndoMatrix) - 1
 }
 
 // UndoMatrixStacks -- performs an undo operation by reverting to a previous stack state.
 func UndoMatrixStacks() {
-	if CurUndoRedoIdx == len(StackUndoMatrix)-1 { // only push the current state if it's not already been pushed.  IE, first undo for this stack state.
-		StackUndoMatrix = append(StackUndoMatrix, Stack)
-	}
+	//if CurUndoRedoIdx == len(StackUndoMatrix)-1 { // only push the current state if it's not already been pushed.  IE, first undo for this stack state.  I don't remember why I do this.
+	//	StackUndoMatrix = append(StackUndoMatrix, Stack)
+	//}
 	if CurUndoRedoIdx <= len(StackUndoMatrix) && CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
+		Stack = StackUndoMatrix[CurUndoRedoIdx]
+	}
+}
+
+// RedoMatrixStacks -- Redoes the stack matrix, that is, undoes the undo by reverting to a later stack state.
+func RedoMatrixStacks() {
+	if CurUndoRedoIdx >= 0 && CurUndoRedoIdx < len(StackUndoMatrix)-1 {
+		CurUndoRedoIdx++
 		Stack = StackUndoMatrix[CurUndoRedoIdx]
 	}
 }
@@ -746,14 +753,6 @@ func Floor(real, places float64) float64 { // written and debugged here before I
 		result *= -1
 	}
 	return result
-}
-
-// RedoMatrixStacks -- Redoes the stack matrix, that is, undoes the undo by reverting to a later stack state.
-func RedoMatrixStacks() {
-	if CurUndoRedoIdx >= 0 && CurUndoRedoIdx < len(StackUndoMatrix)-1 {
-		CurUndoRedoIdx++
-		Stack = StackUndoMatrix[CurUndoRedoIdx]
-	}
 }
 
 //-------------------------------------------------------- HCF -------------------------------------
@@ -1082,9 +1081,9 @@ outerloop:
 			ss = append(ss, " lb2g, oz2g, cm2in, m2ft, mi2km, c2f and their inverses -- unit conversions.")
 			ss = append(ss, " mapsho, mapsto, maprcl, mapdel -- mappedReg commands.  !` become spaces in the name, but spaces are now allowed.")
 			ss = append(ss, fmt.Sprintf(" last altered hpcalc2 %s.\n", LastAlteredDate))
-		case 130: // STO
+		case 130: // STO not used by rpnf, rpnf2 and probably rpng, rpnt, which have their own storage registers.
 			MemReg = Stack[X]
-		case 135: // RCL
+		case 135: // RCL not used by rpnf, rpnf2 and probably rpng, rpnt, which have their own storage registers.
 			PUSHX(MemReg)
 		case 140: // UNDO
 			UndoMatrixStacks()
@@ -1153,7 +1152,6 @@ outerloop:
 			if U < 2 {
 				ss = append(ss, "PrimeFactors cmd of numbers < 2 ignored.")
 			} else {
-
 				PrimeUfactors := PrimeFactorMemoized(U)
 				stringslice := make([]string, 0, 10)
 
@@ -1655,7 +1653,7 @@ outerloop:
 			Stack[X] = x
 			s := "clean5 done"
 			ss = append(ss, s)
-
+		// case 670 is volpi, above right under vol.
 		case 680: // SNAPSHOT
 			PushMatrixStacks()
 
