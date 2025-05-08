@@ -60,8 +60,8 @@ import (
  xlsx (github.com/tealeg/xlsx/v3)
 ----------------------------------------------------------------------------------------------------
   28 Jan 25 -- Now called lint2, and added detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
-				I think I can do it without much difficulity.
-  29 Jan 25 -- I'm going to make the week a 2D array, and use a map to get the names from the row #.  Just to see if it will work.  It does.
+				I think I can do it without much difficulty.
+  29 Jan 25 -- I'm going to make the week a 2D array and use a map to get the names from the row #.  Just to see if it will work.  It does.
 				Now I'm going to try to see if a remote doc is on fluoro, like there was today.
   30 Jan 25 -- And I shortened the main loop looking for vacation docs assigned to clinical work.
 ----------------------------------------------------------------------------------------------------
@@ -82,9 +82,10 @@ import (
   27 Mar 25 -- I ran this using the -race flag; it's clean.  No data races.  Just checking.
    9 Apr 25 -- Made observation that since the walk function sorts its list, the first file that doesn't meet the threshold date can stop the search since the rest are older.
   10 Apr 25 -- Made the change by adding an else clause to an if statement in the walk function.
+   8 May 25 -- Fixed the help message.
 */
 
-const lastModified = "10 Apr 2025"
+const lastModified = "8 May 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -335,8 +336,8 @@ func main() {
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
 	flag.Usage = func() {
-		fmt.Printf(" %s last modified %s, compiled with %s\n", os.Args[0], lastModified, runtime.Version())
-		fmt.Printf(" Usage: %s [weelky xlsx file] \n", os.Args[0])
+		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastModified, runtime.Version())
+		fmt.Printf(" Usage: %s [weekly xlsx file] \n", os.Args[0])
 		fmt.Printf(" Needs lint.conf or lint.ini, and looks in current, home and config directories.\n")
 		fmt.Printf(" first line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
 		flag.PrintDefaults()
