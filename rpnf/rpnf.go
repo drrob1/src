@@ -59,9 +59,10 @@ import (
  3 Sep 23 -- When entering an arrow key for stack manipulation, the entry is lost.  Time to fix that by sending the input string, if it exists, down the chan before sending the arrow key.
 20 Oct 23 -- Removed KeyQ -> quit from key processing.  I couldn't enter sqrt otherwise easily.  I had to type directly into the input box until I coded this fix.
  5 May 25 -- Fixed a bug regarding not clearing old message so they don't get displayed after they've become stale.
+ 7 May 25 -- Edited "about" text.
 */
 
-const lastModified = "May 5, 2025"
+const lastModified = "May 7, 2025"
 
 const ( // output modes
 	outputfix = iota
@@ -328,13 +329,10 @@ func Doit() {
 
 				//  These commands are processed thru GetResult() first, then these are processed here.
 				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
-					execname, _ := os.Executable()
-					ExecFI, _ := os.Stat(execname)
-					ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s, last linked %s", lastModified, runtime.Version(), ExecTimeStamp)
+					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
 					stringslice = append(stringslice, str)
 
-					str = fmt.Sprintf(" %s timestamp is %s.  Full exec name is %s.\n", execFI.Name(), execTimeStamp, execname)
+					str = fmt.Sprintf(" %s timestamp is %s.\n Full exec name is %s.", execFI.Name(), execTimeStamp, execname)
 					stringslice = append(stringslice, str)
 
 				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc sets output mode AND number of significant figures.
