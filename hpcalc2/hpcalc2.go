@@ -99,7 +99,7 @@ REVISION HISTORY
 25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
  3 Jul 20 -- Added cbrt as synonym for curt.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
- 7 Aug 20 -- Now called hpcal2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
+ 7 Aug 20 -- Now called hpcalc2.go, and will use a map to get a commandNumber, and then a switch-case on command number.
                And made a minimal change in GetResult for variable I to make code more idiomatic.
  9 Aug 20 -- Cleaned out some old, unhelpful comments and removed one extraneous "break" in GetResult tknptr.OP section.
 24 Oct 20 -- Fixed a bug in that if cmd is < 3 character, subslicing a slice panic'd w/ an out-of-bounds error.
@@ -726,19 +726,22 @@ func UndoMatrixStacks() {
 		StackUndoMatrix = append(StackUndoMatrix, Stack)
 	}
 	// There was a subtle bug here.  In versions of this code before 5/7/25, I first decremented the pointer and then used it.  That's a mistake and caused it to skip the most recent previous stack state in the undo operation.
-	// In other words, this needs to be a post-decremented pointer, and I was pre decrementing it all along.  Oops.
+	// In other words, this needs to be a post-decremented pointer, and I was pre decrementing it since I wrote this code in Apr 2024.  Oops.
 	Stack = StackUndoMatrix[CurUndoRedoIdx]
 	if CurUndoRedoIdx > 0 {
 		CurUndoRedoIdx--
 	}
 }
 
-// RedoMatrixStacks -- Redoes the stack matrix, that is, undoes the undo by reverting to a later stack state.
+// RedoMatrixStacks -- Redo the stack matrix, that is, undo the undo by reverting to a later stack state.  Need to increment the pointer first, twice.
 func RedoMatrixStacks() {
 	if CurUndoRedoIdx < len(StackUndoMatrix)-1 {
 		CurUndoRedoIdx++
-		Stack = StackUndoMatrix[CurUndoRedoIdx]
 	}
+	if CurUndoRedoIdx < len(StackUndoMatrix)-1 {
+		CurUndoRedoIdx++
+	}
+	Stack = StackUndoMatrix[CurUndoRedoIdx]
 }
 
 // Floor -- To automatically fix the small floating point errors introduced by the conversions.  Real can be negative, places cannot be negative or > 10.
