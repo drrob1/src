@@ -116,17 +116,17 @@ REVISION HISTORY
 31 Jan 21 -- Added SigFig()
  3 Feb 21 -- Fixed bug in what gets pushed onto the stack with the c2f and f2c commands.
  4 Feb 21 -- Added H for help.
-11 Feb 21 -- Added these commands that will be ignored, X, P and Q.  And took out come dead code.
+11 Feb 21 -- Added these commands that will be ignored, X, P and Q.  And took out some dead code.
  8 Apr 21 -- Converting to src module residing at ~/go/src.  What a coincidence!
 14 Jun 21 -- Split off Result from GetResult
 16 Jun 21 -- Adding os.UserHomeDir(), which became available as of Go 1.12.
 17 Jun 21 -- Added "defer mapWriteAndClose()" to the init function, to see it this works.  It doesn't, so I removed it.
                Deferred code will be run at the end of the containing function.  But I can call defer mapWriteAndClose() at the top of a client pgm.
-               And fixed help message regarding mapWriteAndClose, which is not automatic but needs to be deferred as I just wrote.
+               And fixed the help message regarding mapWriteAndClose, which is not automatic but needs to be deferred as I just wrote.
 19 Jun 21 -- Changed MAP code so that it saves the file whenever writing or deleting, so don't need to call mapWriteAndClose directly anymore.
 16 Sep 21 -- I increased the number of digits for the %g verb when output is dump'd.
  2 Nov 21 -- Adjusted dumpedfixed so that very large or very small numbers are output in general format to not mess up the display
- 4 May 22 -- PIOVER6 never coded, so that's now added.  And I decided to use platform specific code for toclip/fromclip, contained in clippy.go.
+ 4 May 22 -- PIOVER6 never coded, so that's now added.  And I decided to use platform-specific code for toclip/fromclip, contained in clippy.go.
                And stoclip and rclclip are now synonyms for toclip and fromclip.  But these only work at the command line,
                as sto and rcl are processed by rpng and rpnf without passing them to HPCALC2.
  7 May 22 -- Played a bit in clippy_linux.go, where I'm using make to initialize bytes.NewBuffer().
@@ -155,10 +155,12 @@ REVISION HISTORY
  4 May 25 -- Improved handling of the map commands so my kludge of characters changed to spaces is not necessary.
              And I removed ls and list as synonyms for mapsho.  I never used them anyway.
  6 May 25 -- Added snapshot command, which calls push matrix stacks.
- 7 May 25 -- Altered the undoMatrixStack function by removing a step I don't remember why I did.
+ 7 May 25 -- Altered the undoMatrixStack function by removing a step I don't remember why I did.  Then I remember and I put it back.
+				And I fixed the bug in undo from when I completely changed the undo-redo code in Apr 2024.  More descriptive comments are below.
+ 8 May 25 -- Increased the initial capacity of the undo slice.
 */
 
-const LastAlteredDate = "7 May 2025"
+const LastAlteredDate = "8 May 2025"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -197,7 +199,8 @@ type mappedRegStructType struct { // so the mapsho items can be sorted.
 var mappedReg map[string]float64
 var Stack StackType
 
-// var StackUndoMatrix [StackSize]StackType
+// var StackUndoMatrix [StackSize]StackType  This is no longer a fixed size.
+
 var StackUndoMatrix []StackType
 var fullMappedRegFilename = homedir + string(os.PathSeparator) + mappedRegFilename
 
@@ -218,7 +221,7 @@ const verySmallNumber = 1e-10
 
 // -----------------------------------------------------------------------------------------------------------------------------
 func init() {
-	StackUndoMatrix = make([]StackType, 0, StackSize) // initial capacity of this is the same as it used to be.
+	StackUndoMatrix = make([]StackType, 0, StackSize*StackSize) // initial capacity is larger than it used to be.  Not sure it matters, but I'm having fun here.
 	var err error
 	cmdMap = make(map[string]int, 100)
 	cmdMap["DUMP"] = 10
@@ -548,7 +551,7 @@ func DumpStackFloat() []string {
 } // DumpStackFloat
 
 // OutputFixedOrFloat -- Tries to output a number without an exponent, if possible.  Will output an exponent if it has to.
-func OutputFixedOrFloat(r float64) { //  Now only rpn.go (and probably rpn2.go) still uses this routine.
+func OutputFixedOrFloat(r float64) {       //  Now only rpn.go (and probably rpn2.go) still uses this routine.
 	if (r == 0) || math.Abs(r) < 1.0e-10 { // write 0.0
 		fmt.Print("0.0")
 	} else {
