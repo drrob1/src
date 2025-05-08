@@ -81,7 +81,7 @@ import (
 				And I'll add a veryverboseFlag, using vv and w.  The veryverbose setting will be for the Excel tests I don't need anymore.
   27 Mar 25 -- I ran this using the -race flag; it's clean.  No data races.  Just checking.
    9 Apr 25 -- Made observation that since the walk function sorts its list, the first file that doesn't meet the threshold date can stop the search since the rest are older.
-  10 Apr 25 -- Made the change by adding and else clause to an if statement in the walk function.
+  10 Apr 25 -- Made the change by adding an else clause to an if statement in the walk function.
 */
 
 const lastModified = "10 Apr 2025"
