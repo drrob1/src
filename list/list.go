@@ -82,9 +82,10 @@ import (
 				The only way for flag and pflag to not clobber each other is to use the Parsed() function to determine which is active.
   19 Feb 25 -- Making "0" a synonym for "1" instead of a stop code.
    9 Mar 25 -- Suppressed display of error in FileSelection().  I don't need to display errors twice.
+  18 May 25 -- Added unique function.
 */
 
-var LastAltered = "Mar 9, 2025"
+var LastAltered = "May 18, 2025"
 
 type DirAliasMapType map[string]string
 
@@ -550,8 +551,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 	return completeValue
 } // ProcessDirectoryAliases
 
-// ----------------------------- ReplaceDigits -------------------------------------
-
+// ReplaceDigits -- replaces the digits 1..9 with the letters a..z.  This is because I have a habit of hitting "1" for the first item I see, instead of "a".
 func ReplaceDigits(in string) string {
 	const fudgefactor = 'a' - '1'
 	var sb strings.Builder
@@ -566,8 +566,7 @@ func ReplaceDigits(in string) string {
 	return sb.String()
 }
 
-// ----------------------------- ExpandADash ---------------------------------------
-
+// ExpandADash -- expands the first instance of a dash that it finds
 func ExpandADash(in string) (string, error) {
 
 	if !strings.Contains(in, "-") {
@@ -599,8 +598,7 @@ func ExpandADash(in string) (string, error) {
 	return result, nil
 }
 
-// ------------------------------------ ExpandAllDashes --------------------------------------------
-
+// ExpandAllDashes -- expands all instances of a dash that it finds by calling ExpandADash as often as it needs to.
 func ExpandAllDashes(in string) (string, error) {
 	var workingStr = in
 	var err error
@@ -614,6 +612,17 @@ func ExpandAllDashes(in string) (string, error) {
 	}
 
 	return workingStr, nil
+}
+
+// unique -- makes sure that the slice only contains unique values.
+func unique(in string) string {
+	var sb strings.Builder
+	for _, ch := range in {
+		if !strings.ContainsRune(sb.String(), ch) {
+			sb.WriteRune(ch)
+		}
+	}
+	return sb.String()
 }
 
 // FileSelection -- This displays the files on screen and creates the list from what's entered by the user.
@@ -665,12 +674,15 @@ outerLoop:
 		// passing it onto the processing loop.
 		// Upper case letter will mean something, not sure what yet.
 		ans = ReplaceDigits(ans)
-		processedAns, err := ExpandAllDashes(ans)
+		expandedAns, err := ExpandAllDashes(ans)
 		if err != nil {
 			//fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)  Don't need to display this twice.
 			return nil, err
 		}
-		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
+
+		uniqueAns := unique(expandedAns) // added May 18, 2025
+
+		for _, c := range uniqueAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			idx := int(c - 'a')
 			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
 				break outerLoop

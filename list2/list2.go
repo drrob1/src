@@ -39,6 +39,7 @@ import (
   11 May 23 -- Adding replacement of digits 1..9 to mean a..i.
    7 Apr 24 -- See notes from today in list.go.  Essentially, I added alternating brightness in the selection display to help see adjacent lines w/ the came color.
   25 May 24 -- Adding doc comments for go doc.
+  18 May 25 -- Added unique function, and removed the unused stopCode.
 */
 
 type DirAliasMapType map[string]string
@@ -70,7 +71,8 @@ var LastAltered = "Apr 8, 2024"
 const defaultHeight = 40
 const minWidth = 90
 const minHeight = 26
-const stopCode = "0"
+
+// const stopCode = "0"  Since this is unused, I removed it 5/18/25.
 
 var autoWidth, autoHeight int
 
@@ -376,12 +378,15 @@ outerLoop:
 		// here is where I can scan the ans string looking for a-z and replace that with all the letters so indicated before passing it onto the processing loop.
 		// Upper case letter will mean something, not sure what yet.
 		ans = ReplaceDigits(ans)
-		processedAns, err := ExpandAllDashes(ans)
+		expandedAns, err := ExpandAllDashes(ans)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from ExpandAllDashes(%s): %q\n", ans, err)
 			return nil, err
 		}
-		for _, c := range processedAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
+
+		uniqueAns := unique(expandedAns) // added May 18, 2025
+
+		for _, c := range uniqueAns { // parse the answer character by character.  Well, really rune by rune but I'm ignoring that.
 			idx := int(c - 'a')
 			if idx < 0 || idx > minHeight || idx > (end-beg-1) { // entered character out of range, so complete.  IE, if enter a digit, xyz or a non-alphabetic character routine will return.
 				break outerLoop
@@ -478,8 +483,7 @@ func getFileInfoXWithGlobals() ([]FileInfoExType, error) {
 	return fileInfoX, nil
 } // end getFileInfoXWithGlobals
 
-// ----------------------------- ReplaceDigits -------------------------------------
-
+// ReplaceDigits -- allows me to enter 1-9 and have it replaced with the corresponding letter, as I tend to enter "1" when I mean "a".
 func ReplaceDigits(in string) string {
 	const fudgefactor = 'a' - '1'
 	var sb strings.Builder
@@ -490,6 +494,17 @@ func ReplaceDigits(in string) string {
 			ch += fudgefactor + 1 // as this is '0' and not '1' but I want it to behave as if a '1' was entered.
 		}
 		sb.WriteRune(ch)
+	}
+	return sb.String()
+}
+
+// unique -- makes sure that the slice only contains unique values.
+func unique(in string) string {
+	var sb strings.Builder
+	for _, ch := range in {
+		if !strings.ContainsRune(sb.String(), ch) {
+			sb.WriteRune(ch)
+		}
 	}
 	return sb.String()
 }

@@ -276,3 +276,27 @@ func TestReplaceDigits(t *testing.T) { // go test -run Replace -v   -> to just r
 		fmt.Printf(" ReplaceDigits passed its test function.\n")
 	}
 }
+
+func TestUnique(t *testing.T) {
+	var testString = []struct {
+		in  string
+		out string
+	}{
+		{"", ""},
+		{"a", "a"},
+		{"aa", "a"},
+		{"aaa", "a"},
+		{"ab", "ab"},
+		{"aab", "ab"},
+		{"aabb", "ab"},
+		{"aabbb", "ab"},
+		{"aabzz", "abz"},
+	}
+
+	for _, test := range testString {
+		if test.out != unique(test.in) {
+			t.Errorf("unique(%s) should be %s, but it is %s instead\n", test.in, test.out, unique(test.in))
+		}
+	}
+
+}
