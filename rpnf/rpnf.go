@@ -60,9 +60,10 @@ import (
 20 Oct 23 -- Removed KeyQ -> quit from key processing.  I couldn't enter sqrt otherwise easily.  I had to type directly into the input box until I coded this fix.
  5 May 25 -- Fixed a bug regarding not clearing old message so they don't get displayed after they've become stale.
  7 May 25 -- Edited "about" text.
+22 May 25 -- Copied new code from rpnf2 that handles the map command.  So now there's no difference btwn rpnf and rpnf2
 */
 
-const lastModified = "May 7, 2025"
+const lastModified = "May 22, 2025"
 
 const ( // output modes
 	outputfix = iota
@@ -247,9 +248,19 @@ func Doit() {
 	INBUF := ""
 	for { // main processing loop
 		INBUF = <-inbufChan // this is blocking
+		INBUF = strings.TrimSpace(INBUF)
 		if len(INBUF) > 0 {
-			//                                                                                                INBUF = makesubst.MakeSubst(INBUF)
-			INBUF = makesubst.MakeReplaced(INBUF)
+			INBUF = makesubst.MakeShorterReplaced(INBUF)                            // doesn't alter backtick, only will change '=' to '+' and ';' to '*'
+			if strings.HasPrefix(INBUF, "map") || strings.HasPrefix(INBUF, "MAP") { // map operations are processed differently now.  This code copied from rpnf2.
+				_, stringslice = hpcalc2.GetResult(INBUF)
+				if len(stringslice) > 0 {
+					resultToOutput = strings.Join(stringslice, "\n")
+				}
+				populateUI()
+				globalW.Show()
+				continue
+			}
+
 			INBUF = strings.ToUpper(INBUF)
 			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
 			// These commands are not run thru hpcalc as they are processed before calling it.
