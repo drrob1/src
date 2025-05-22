@@ -148,7 +148,7 @@ REVISION HISTORY
              The coordination with a wait group and the done channel works, but is slightly slower than dsrt.  This is w/ fetch = 1000.  It's worse when fetch=100.  And maybe also
              slightly worse when fetch = 2000.  I'll leave it at 1000, and stop working on this.
              At least I got it to work.
-             When run in jpg1 w/ 23000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
+             When run in jpg1 w/ 23,000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
              When run on thelio and logged into the /mnt/misc dir w/ 23000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
              So this is more complicated after all.
  3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where it belongs.  Now the timing may be slightly faster than dsrt, here on Win11
@@ -170,9 +170,10 @@ REVISION HISTORY
 17 Feb 25 -- Removed code regarding the fullConfigFile for the viper config file.
  9 Apr 25 -- Modified help message.
 13 Apr 25 -- Added metrics as covered by Mastering Go, 4th ed.
+22 May 25 -- Made all option represent 100,000 screens, instead of the paltry 50.
 */
 
-const LastAltered = "13 Apr 2025"
+const LastAltered = "22 May 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -205,7 +206,7 @@ var filterStr string
 var excludeRegex *regexp.Regexp
 
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
-var allScreens = 50
+var allScreens = 100_000
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
