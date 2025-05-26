@@ -31,9 +31,10 @@ Revision History
 17 Mar 25 -- Now exports NumLines, in case by some change I ever want the client rtn to change it.  I'm not going to refactor anything else here, as it doesn't matter.
 				The more times I run the testfilepicker routine, the answer changes.  The numbers are too close to be reliably different.
 				This is may be related to fact that only NumLines matches are returned.
+26 May 25 -- Adding option to exclude files that Excel has locked.  IE, they begin w/ a tilda, ~
 */
 
-const LastAltered = "17 Mar 2025"
+const LastAltered = "26 May 2025"
 
 type FISliceDate []os.FileInfo // used by sort.Sort in GetFilenames.
 
@@ -243,6 +244,77 @@ func GetRegexFullFilenames(pattern string) ([]string, error) { // This rtn sorts
 	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
 	return stringSlice, nil
 } // end GetRegexFullFilenames
+
+func GetRegexFullFilenamesNotLocked(pattern string) ([]string, error) { // This rtn sorts using sort.Slice
+	CleanDirName, CleanPattern := filepath.Split(pattern)
+
+	if VerboseFlag {
+		fmt.Printf(" cleanDirName: %q, cleanPattern: %q\n", CleanDirName, CleanPattern)
+	}
+
+	if len(CleanDirName) == 0 {
+		CleanDirName = "." + string(filepath.Separator)
+	}
+
+	if len(CleanPattern) == 0 {
+		CleanPattern = "."
+	}
+	//CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
+	CleanPattern = strings.ToLower(CleanPattern) // instead of the case insensitive flag, just force all to be lower case.  Maybe this is faster?
+
+	regex, err := regexp.Compile(CleanPattern)
+	if err != nil {
+		return nil, err
+	}
+
+	dir, err := os.Open(CleanDirName)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+
+	dirEntries, err := dir.ReadDir(0) // names is []string
+	if err != nil {
+		return nil, err
+	}
+
+	filesInfos := make(FISliceDate, 0, len(dirEntries))
+	for _, dirEntry := range dirEntries {
+		lowerName := strings.ToLower(dirEntry.Name())
+		if regex.MatchString(lowerName) {
+			if dirEntry.IsDir() { // Want to not return directory names.  Added 10/12/24.
+				continue
+			}
+			if strings.HasPrefix(dirEntry.Name(), "~") { // ignore files locked by Excel.
+				continue
+			}
+			L, err := dirEntry.Info()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error from dirEntry.Info() is %v \n", err)
+				continue
+			}
+			filesInfos = append(filesInfos, L)
+		}
+	}
+
+	lessFunc := func(i, j int) bool {
+		return filesInfos[i].ModTime().UnixNano() > filesInfos[j].ModTime().UnixNano()
+	}
+	sort.Slice(filesInfos, lessFunc)
+
+	stringSlice := make([]string, 0, len(filesInfos))
+	var count int
+	for _, f := range filesInfos {
+		fullFilename := filepath.Join(CleanDirName, f.Name())
+		stringSlice = append(stringSlice, fullFilename) // needs to preserve case of filename for linux
+		count++
+		if count >= NumLines {
+			break
+		}
+	}
+	//                                   fmt.Printf(" In GetRegexFilenames.  len(stringSlice) = %d\n", len(stringSlice))
+	return stringSlice, nil
+} // end GetRegexFullFilenamesNotLocked
 
 //-------------------------------------------------------------------- InsertByteSlice --------------------------------
 /*

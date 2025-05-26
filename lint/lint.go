@@ -83,10 +83,10 @@ import (
    9 Apr 25 -- Made observation that since the walk function sorts its list, the first file that doesn't meet the threshold date can stop the search since the rest are older.
   10 Apr 25 -- Made the change by adding an else clause to an if statement in the walk function.
    8 May 25 -- Fixed the help message.
-  26 May 25 -- When I installed this on Caity's computer, I got the idea that I should filter out the files that Excel controls, i.e., those that begin w/ ~, tilda.  I didn't do this yet.
+  26 May 25 -- When I installed this on Caity's computer, I got the idea that I should filter out the files that Excel controls, i.e., those that begin w/ ~, tilda.
 */
 
-const lastModified = "8 May 2025"
+const lastModified = "26 May 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -392,7 +392,8 @@ func main() {
 		if *verboseFlag {
 			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 		}
-		filenamesDocs, err := filepicker.GetRegexFullFilenames(docs)
+		//                                                  filenamesDocs, err := filepicker.GetRegexFullFilenames(docs)
+		filenamesDocs, err := filepicker.GetRegexFullFilenamesNotLocked(docs)
 		if err != nil {
 			fmt.Printf(" Error from filepicker is %s.  Exiting \n", err)
 			return
@@ -592,6 +593,9 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 
 		lowerName := strings.ToLower(de.Name())
 		if regex.MatchString(lowerName) {
+			if strings.HasPrefix(de.Name(), "~") { // ignore files that Excel has locked.
+				return nil
+			}
 			fi, err := de.Info()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error from dirEntry(%s).Info() is %v \n", de.Name(), err)
