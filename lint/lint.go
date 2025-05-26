@@ -83,6 +83,7 @@ import (
    9 Apr 25 -- Made observation that since the walk function sorts its list, the first file that doesn't meet the threshold date can stop the search since the rest are older.
   10 Apr 25 -- Made the change by adding an else clause to an if statement in the walk function.
    8 May 25 -- Fixed the help message.
+  26 May 25 -- When I installed this on Caity's computer, I got the idea that I should filter out the files that Excel controls, i.e., those that begin w/ ~, tilda.  I didn't do this yet.
 */
 
 const lastModified = "8 May 2025"
