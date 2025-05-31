@@ -84,9 +84,10 @@ import (
   10 Apr 25 -- Made the change by adding an else clause to an if statement in the walk function.
    8 May 25 -- Fixed the help message.
   26 May 25 -- When I installed this on Caity's computer, I got the idea that I should filter out the files that Excel controls, i.e., those that begin w/ ~, tilda.
+  31 May 25 -- Changed an error message.
 */
 
-const lastModified = "26 May 2025"
+const lastModified = "31 May 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 
@@ -375,7 +376,7 @@ func main() {
 		if includeODrive {
 			filenames, err = walkRegexFullFilenames() // function is below.  "o:\\week.*xls.?$"
 			if err != nil {
-				ctfmt.Printf(ct.Red, false, " Error from filepicker is %s.  Exiting \n", err)
+				ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames is %s.  Exiting \n", err)
 				return
 			}
 			if *verboseFlag {
