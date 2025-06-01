@@ -247,7 +247,7 @@ func removeExt(filename string) string {
 }
 
 func isDate(instr string) bool {
-	regexStr := `^[0-3]?[0-9]/[0-3]?[0-9]/(?:[0-9]{2})?[0-9]{2}$`
+	regexStr := "^[0-3]?[0-9]/[0-3]?[0-9]/(?:[0-9]{2})?[0-9]{2}$" // this is from "Regular Expression Cookbook", 2nd Edition, by Jan Goyvaerts and Steven Levithan
 	regex := regexp.MustCompile(regexStr)
 	isdate := regex.MatchString(instr)
 	return isdate
