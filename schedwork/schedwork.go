@@ -247,7 +247,10 @@ func removeExt(filename string) string {
 }
 
 func isDate(instr string) bool {
-	regexStr := "^[0-3]?[0-9]/[0-3]?[0-9]/(?:[0-9]{2})?[0-9]{2}$" // this is from "Regular Expression Cookbook", 2nd Edition, by Jan Goyvaerts and Steven Levithan
+	// This regexp is from "Regular Expression Cookbook", 2nd Edition, by Jan Goyvaerts and Steven Levithan.  It is used to determine if a string could be a date.
+	// It does not separate m/d/y from d/m/y, but it does not matter for this program, and the expression allows 1 or 2 digits for m and d and 2 or 4 digits for y.
+	regexStr := "^[0-3]?[0-9]/[0-3]?[0-9]/(?:[0-9]{2})?[0-9]{2}$"
+	// ^(1[0-2]|0?[1-9])/(3[01]|[12][0-9]|0?[1-9])/(?:[0-9]{2})?[0-9]{2}$  This only allows m/d/y, not d/m/y.
 	regex := regexp.MustCompile(regexStr)
 	isdate := regex.MatchString(instr)
 	return isdate
