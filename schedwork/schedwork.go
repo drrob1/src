@@ -27,7 +27,7 @@ import (
 			It works as intended.
 */
 
-const LastAltered = "31 May 25"
+const LastAltered = "1 June 25"
 const csvext = ".csv"
 
 var verboseFlag bool
@@ -226,7 +226,6 @@ func main() {
 	}
 
 	fmt.Printf(" Finished writing %d bytes and %d records to %s. \n", sum, recCount, OutFilename)
-	fmt.Printf(" \n\n\n Getting ready to populate the byAssignment and byDate slices. \n\n\n")
 
 	// write out Excel
 

@@ -34,7 +34,7 @@ import (
 31 May 25 -- Now called bolt.go, and I'll add the file selection stuff from lint.go
 */
 
-const LastAltered = "31 May 25"
+const LastAltered = "1 June 25"
 const csvext = ".csv"
 const conf = "bolt.conf"
 const ini = "bolt.ini"
@@ -297,7 +297,6 @@ func main() {
 	}
 
 	fmt.Printf(" Finished writing %d bytes and %d records to %s. \n", sum, recCount, OutFilename)
-	fmt.Printf(" \n\n\n Getting ready to populate the byAssignment and byDate slices. \n\n\n")
 
 	// write out Excel
 
