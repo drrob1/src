@@ -32,9 +32,10 @@ import (
 			It works as intended.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 31 May 25 -- Now called bolt.go, and I'll add the file selection stuff from lint.go
+ 3 Jun 25 -- Cleaned up the code a bit.
 */
 
-const LastAltered = "1 June 25"
+const LastAltered = "3 June 25"
 const csvext = ".csv"
 const conf = "bolt.conf"
 const ini = "bolt.ini"
@@ -96,11 +97,6 @@ func findAndReadConfIni() error {
 func writeXLSX(fullFilename string, table [][]string) (string, error) {
 	// I decided to populate an Excel type table, and then write it out.
 
-	//workBook, err := xlsx.OpenFile(templateName)
-	//if err != nil {
-	//	return err
-	//}
-
 	baseFilename := filepath.Base(fullFilename)
 	workbook := xlsx.NewFile()
 	comment := removeExt(baseFilename)
@@ -113,13 +109,10 @@ func writeXLSX(fullFilename string, table [][]string) (string, error) {
 		return "", err
 	}
 
-	_, _ = sheet.Cell(0, 1) // just to allow this to compile, for now.
-
 	for i, row := range table { // remember that xl is 1-based, but the xlsx routines handle this correctly
 		for j, field := range row {
 			cell, err := sheet.Cell(i, j)
 			if err != nil {
-				fmt.Println(" Error from fmt.Fprintln: ", err, ".  Exiting.")
 				return "", err
 			}
 			if isDate(field) {

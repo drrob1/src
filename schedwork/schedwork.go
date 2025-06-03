@@ -25,9 +25,10 @@ import (
 			Maybe I just need to populate the table so it can be viewed.  I may not need to do anything, just teach them to download this file and read it into Excel.
 			I decided to use the xlsx package to write an Excel file.
 			It works as intended.
+ 3 Jun 25 -- Cleaned up the code a bit.
 */
 
-const LastAltered = "1 June 25"
+const LastAltered = "3 June 25"
 const csvext = ".csv"
 
 var verboseFlag bool
@@ -35,11 +36,6 @@ var veryVerboseFlag bool
 
 func writeXLSX(baseFilename string, table [][]string) (string, error) {
 	// I decided to populate an Excel type table, and then write it out.
-
-	//workBook, err := xlsx.OpenFile(templateName)
-	//if err != nil {
-	//	return err
-	//}
 
 	workbook := xlsx.NewFile()
 	comment := removeExt(baseFilename)
@@ -52,13 +48,10 @@ func writeXLSX(baseFilename string, table [][]string) (string, error) {
 		return "", err
 	}
 
-	_, _ = sheet.Cell(0, 1) // just to allow this to compile, for now.
-
 	for i, row := range table { // remember that xl is 1-based, but the xlsx routines handle this correctly
 		for j, field := range row {
 			cell, err := sheet.Cell(i, j)
 			if err != nil {
-				fmt.Println(" Error from fmt.Fprintln: ", err, ".  Exiting.")
 				return "", err
 			}
 			if isDate(field) {
