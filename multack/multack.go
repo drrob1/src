@@ -42,7 +42,7 @@ import (
                  So I'll just use the map as a list of known directories to skip.  So far, only ".git" is skipped.
                  And I don't have to check for IsDir() or IsRegular(), so I removed that, also.
                Starting w/ Go 1.16, there is a new walk function, that does not use a FiloInfo but a dirEntry, which they claim is faster.  I'll try it.
-   8 Dec 21 -- Will output when .git gets skipped, and will use the pattern of signalling without data, as I learned from Bill Kennedy.
+   8 Dec 21 -- Will output when .git gets skipped, and will use the pattern of signaling without data, as I learned from Bill Kennedy.
   10 Dec 21 -- I'm testing for .git and will skipdir if found.  And will simply return on IsDir.
                  I'm going to restructure this to use waitgroups.  I'll see how that goes.
                  I think I was having a shadowing problem w/ err.  When I made that er, the code started working.
@@ -76,9 +76,10 @@ import (
   10 May 24 -- Made sliceSize 50_000, as this can return ~20K matches when run in src directory.
   20 Nov 24 -- Will now exclude OneDrive.  This crashes Windows, so I have to exclude it.  And I'm excluding AppData.  Excluding AppData sped up the code a lot, from 3 min to 10 sec on Win11.
    2 Mar 25 -- Clarified help message that the pattern is a regexp, not a glob.  And I changed to using pflag as a drop-in replacement for flag.
+   6 Jun 25 -- I got the idea to add an exclude expresssion, after I tried to use one and found that I never implemented that here.  Copied code I write in cgrepi to here.
 */
 
-const lastAltered = "2 Mar 2025"
+const lastAltered = "6 June 2025"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -95,6 +96,7 @@ type devID uint64
 
 type grepType struct {
 	regex    *regexp.Regexp
+	excluded *regexp.Regexp // added 6/6/25
 	filename string
 	// goRtnNum int
 }
@@ -124,21 +126,23 @@ var totFilesScanned, totMatchesFound int64
 var sliceOfStrings []string // based on an anonymous type.
 var wg sync.WaitGroup
 var verboseFlag, veryverboseFlag bool
+var excludeStr string
 
 func main() {
 
 	helpFcn := func() { // this wasn't working until I moved this to above flag.Parse()
-		fmt.Fprintf(os.Stderr, " %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
-		fmt.Fprintf(os.Stderr, "\n Usage: multack [option flags] regexp [start-Directory]\n")
+		fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
+		fmt.Printf("\n Usage: multack [option flags] regexp [start-Directory]\n")
 		flag.PrintDefaults()
 	}
 	flag.Usage = helpFcn
 
-	var timeoutOpt = flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
+	timeoutOpt := flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose flag")
 	flag.BoolVarP(&veryverboseFlag, "vv", "w", false, "Very Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "veryverbose", false, "Very Verbose flag synonym")
 	flag.IntVarP(&workerPoolMultiplier, "multiplier", "m", multiplier, "Multiplier for the number of goroutines in the worker pool.")
+	flag.StringVarP(&excludeStr, "exclude", "x", "", "Exclude regular expression")
 	flag.Parse()
 
 	workerPoolSize := runtime.NumCPU() * workerPoolMultiplier
@@ -174,10 +178,17 @@ func main() {
 		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
 	}
 
-	var lineRegex *regexp.Regexp
+	var lineRegex, excludeRegex *regexp.Regexp
 	var err error
 	if lineRegex, err = regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
+	}
+
+	if excludeStr != "" {
+		excludeRegex, err = regexp.Compile(excludeStr)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Exclude regexp.Compile(%q) is invalid, error is %s\n", excludeStr, err.Error())
+		}
 	}
 
 	startDirectory, errr := os.Getwd() // startDirectory is a string
@@ -237,10 +248,8 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
-				grepFile(g.regex, g.filename)
+				grepFile(g.regex, g.excluded, g.filename)
 			}
-			//g := <-grepChan
-			//grepFile(g.regex, g.filename) // Does this work?  Is that what I really need, though using the for loop does work.  No, this doesn't work.  All go routines are asleep error.
 		}()
 	}
 
@@ -280,6 +289,7 @@ func main() {
 
 		grepChan <- grepType{ // send this to a worker go routine.
 			regex:    lineRegex,
+			excluded: excludeRegex,
 			filename: fPath,
 		}
 
@@ -316,20 +326,20 @@ func main() {
 	fmt.Println()
 } // end main
 
-func grepFile(lineRegex *regexp.Regexp, fpath string) {
+func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	var localMatches int64
 	file, err := os.Open(fpath)
-	defer func() {
-		file.Close()
-		atomic.AddInt64(&totFilesScanned, 1)
-		atomic.AddInt64(&totMatchesFound, localMatches)
-	}()
 	if err != nil {
 		log.Printf("grepFile os.Open error : %s\n", err)
 		return
 	}
 
+	defer func() {
+		file.Close()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches)
+	}()
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n')
@@ -355,11 +365,20 @@ func grepFile(lineRegex *regexp.Regexp, fpath string) {
 			if veryverboseFlag {
 				fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 			}
-			localMatches++
-			matchChan <- matchType{
-				fpath:        fpath,
-				lino:         lino,
-				lineContents: lineStr,
+			if excludeRegex == nil { // if there is no excludeRegex, then this matcch is enough to send it down the channel.
+				localMatches++
+				matchChan <- matchType{
+					fpath:        fpath,
+					lino:         lino,
+					lineContents: lineStr,
+				}
+			} else if !excludeRegex.MatchString(lineStr) { // if there is an excludeRegex, then need to test it.
+				localMatches++
+				matchChan <- matchType{
+					fpath:        fpath,
+					lino:         lino,
+					lineContents: lineStr,
+				}
 			}
 		}
 	}
@@ -400,14 +419,4 @@ func extractExtensions(files []string) []string {
 	//fmt.Println()
 	return extensions
 } // end extractExtensions
-*/
-
-/*
-// ------------------------------ isSymlink ---------------------------
-func isSymlink(m os.FileMode) bool {
-	intermed := m & os.ModeSymlink
-	result := intermed != 0
-	return result
-} // IsSymlink
-
 */
