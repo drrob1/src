@@ -12,7 +12,7 @@ REVISION HISTORY
 
 	needs to be.  I'm going to take a crack at writing a simpler version myself.
 	It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
-	through all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
+	through all the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
 	this better.  It seems much too complex.  I'm going to simplify it.
 
 16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
@@ -60,6 +60,7 @@ REVISION HISTORY
 18 Apr 24 -- Added workerPoolMultiplier flag option.
 21 Apr 24 -- Took out the first 2 lines, that were probably coded by the late Michael T Jones.  Looks like these would be the defaults, anyway.
  3 May 24 -- I misunderstood how wait groups work.  They're at the go routine level, not individual files.  I'm going to change that now.
+ 6 Jun 25 -- I got the idea to add an exclude expresssion, after I tried to use one and found that I never implemented that here.
 */
 
 package main
@@ -82,7 +83,7 @@ import (
 	"time"
 )
 
-const LastAltered = "3 May 2024"
+const LastAltered = "6 June 2025"
 const maxSecondsToTimeout = 300
 
 const limitWorkerPool = 750 // Since linux limit of file handles is 1024, I'll leave room for other programs.
@@ -93,8 +94,8 @@ var workers = runtime.NumCPU()
 
 type grepType struct {
 	regex    *regexp.Regexp
+	excluded *regexp.Regexp // added 6/6/25
 	filename string
-	// goRtnNum int
 }
 
 type matchType struct {
@@ -122,16 +123,18 @@ var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
 var sliceOfStrings []string // based on an anonymous type.
 var workerPoolMultiplier int
+var verboseFlag bool
 
 var wg sync.WaitGroup
 
 func main() {
-	//runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores.  This is the default.  I'll take this out.
-	//log.SetFlags(0)  This is also probably the default.  So I'll take it out, too.
+	//                          runtime.GOMAXPROCS(runtime.NumCPU()) // Use all the machine's cores.  This is the default.  I'll take this out.
+	//                          log.SetFlags(0)  This is also probably the default.  So I'll take it out, too.
 
 	// flag definitions and processing
 	globFlag := flag.Bool("g", false, "force use of globbing, only makes sense on Windows.") // Ptr
-	verboseFlag := flag.Bool("v", false, "Verbose flag")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose flag")
+	excludeStr := flag.String("x", "", "Exclude pattern")
 	var timeoutOpt = flag.Int64("timeout", maxSecondsToTimeout, "seconds (0 means no timeout)")
 	flag.IntVar(&workerPoolMultiplier, "m", 10, "Multiplier of workers, default is 10.")
 	flag.Parse()
@@ -146,31 +149,34 @@ func main() {
 		workers = limitWorkerPool
 	}
 
-	args := flag.Args()
-	if len(args) < 1 {
+	if flag.NArg() == 0 {
 		log.Fatalln("a regexp to match must be specified")
 	}
-	pattern := args[0]
-	testCaseSensitivity, _ := regexp.Compile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
+	pattern := flag.Arg(0)
+	testCaseSensitivity := regexp.MustCompile("[A-Z]") // If this matches then there is an upper case character in the input pattern.
 	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
 	}
 	if !caseSensitiveFlag {
 		pattern = strings.ToLower(pattern) // this is the change for the pattern.
 	}
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
 	}
-	files := args[1:]
-	if len(files) < 1 { // no files or globbing pattern on command line.
+
+	var err error
+	var excludeRegex *regexp.Regexp
+
+	files := flag.Args()[1:] // this is only a list of files on bash.  On Windows it's a globbing expression.
+	if len(files) < 1 {      // no files or globbing pattern on command line.
 		if runtime.GOOS == "windows" {
-			//files = []string{"*.txt"}
 			files = []string{"*"} // Now that files containing a null byte are skipped, I can default to every file in this directory.
 		} else {
 			files = txtFiles() // intended only for use on linux.
 		}
 	}
+	lenOfFiles := min(len(files), workers)
 
 	t0 = time.Now()
 	tfinal = t0.Add(time.Duration(*timeoutOpt) * time.Second)
@@ -179,17 +185,33 @@ func main() {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
+	if *excludeStr != "" {
+		excludeRegex, err = regexp.Compile(*excludeStr)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " regexp.Compile(%q) is invalid, error is %s\n", *excludeStr, err.Error())
+		}
+	}
+
 	fmt.Println()
 	gotWin := runtime.GOOS == "windows"
-	ctfmt.Printf(ct.Yellow, gotWin, " Concurrent grep ignore case last altered %s, using pattern of %q, %d worker rtns, compiled with %s. \n",
-		LastAltered, pattern, workers, runtime.Version())
+	ctfmt.Printf(ct.Yellow, gotWin, " Concurrent grep ignore case last altered %s, using pattern of %q, excludeStr=%q, %d worker rtns, compiled with %s. \n",
+		LastAltered, pattern, *excludeStr, workers, runtime.Version())
 	fmt.Println()
+
+	if verboseFlag {
+		fmt.Printf(" grep pattern is %s, exclude regex pattern is %q\n", pattern, *excludeStr)
+		if excludeRegex == nil {
+			fmt.Printf(" No exclude regex pattern is present\n")
+		} else {
+			fmt.Printf(" exclude regex pattern is %s\n", excludeRegex.String())
+		}
+	}
 
 	workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" Current working Directory is %s; %s was last linked %s.\n\n", workingDir, execName, LastLinkedTimeStamp)
 	}
 
@@ -207,26 +229,19 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
-				grepFile(g.regex, g.filename)
+				grepFile(g.regex, g.excluded, g.filename)
 			}
 		}()
 	}
 
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" Length of files = %d, minGoRtns = %d.\n\n", len(files), minGoRtns)
 	}
 
-	//if len(files) > int(*maxFiles) {
-	//	files = files[:*maxFiles]
-	//	if *verboseFlag {
-	//		fmt.Printf(" Length of files = %d.\n", len(files))
-	//	}
-	//}
-
 	matchChan = make(chan matchType, workers)
-	sliceOfAllMatches := make(matchesSliceType, 0, len(files)) // this uses a named type, needed to satisfy the sort interface.
-	sliceOfStrings = make([]string, 0, len(files))             // this uses an anonymous type.
-	go func() {                                                // start the receiving operation before the sending starts
+	sliceOfAllMatches := make(matchesSliceType, 0, lenOfFiles) // this uses a named type, needed to satisfy the sort interface.
+	sliceOfStrings = make([]string, 0, lenOfFiles)             // this uses an anonymous type.
+	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
@@ -235,8 +250,7 @@ func main() {
 	}()
 
 	for _, file := range files {
-		//wg.Add(1)
-		grepChan <- grepType{regex: lineRegex, filename: file}
+		grepChan <- grepType{regex: lineRegex, excluded: excludeRegex, filename: file}
 	}
 	close(grepChan) // must close the channel so the worker go routines know to stop.  Doing this after all work is sent into the channel.
 
@@ -252,15 +266,9 @@ func main() {
 	// Time to sort and show
 	sort.Strings(sliceOfStrings)
 	sortStringElapsed := time.Since(t0)
-	//sort.Sort(sliceOfAllMatches)
-	sort.Stable(sliceOfAllMatches)
+	sort.Sort(sliceOfAllMatches)
+	//       sort.Stable(sliceOfAllMatches)  I don't know why I put this here.  I don't need a stable sort here.  I must have been playing.
 	sortMatchedElapsed := time.Since(t0)
-	//fmt.Printf(" Matches string are now sorted.  Elapsed time is now %s after sorting %d strings, and %s after %d matches\n\n", sortStringElapsed, len(sliceOfStrings), sortMatchedElapsed, len(sliceOfAllMatches))
-
-	//for _, s := range sliceOfStrings {  I only want to see the output from sort.Stable
-	//	fmt.Printf("%s", s)
-	//}
-	//fmt.Println()
 
 	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
 		fmt.Printf("%s:%d:%s", m.fpath, m.lino, m.lineContents)
@@ -272,43 +280,52 @@ func main() {
 		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
 }
 
-func grepFile(lineRegex *regexp.Regexp, fpath string) {
+func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
 	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	file, err := os.Open(fpath)
-	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.
-		//wg.Done()  this has been changed to not increment and decrement for individual files on May 3, 2024.
-		file.Close()
-		atomic.AddInt64(&totFilesScanned, 1)
-		atomic.AddInt64(&totMatchesFound, localMatches)
-	}()
 	if err != nil {
 		log.Printf("grepFile os.Open error is: %s\n", err)
 		return
 	}
 
+	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.  6/6/25, not needed since I changed how the wg id handled.
+		file.Close()
+		atomic.AddInt64(&totFilesScanned, 1)
+		atomic.AddInt64(&totMatchesFound, localMatches)
+	}()
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineStr, er := reader.ReadString('\n') // lineStr is terminated w/ the \n character.  I would have to call a trim function to remove it.
 		if er != nil {                         // when can't read any more bytes, break.  If any bytes were read, er == nil.
 			break // just exit when hit EOF condition.
 		}
-		if strings.ContainsRune(lineStr, null) {
+		if strings.ContainsRune(lineStr, null) { // don't search binary files, and probably others like PDF's which may contain nulls.
 			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.  The wg.Done() is deferred so it doesn't matter.
 		}
-		if caseSensitiveFlag {
+		if caseSensitiveFlag { // passed in globally
 			lineStrng = lineStr
 		} else {
 			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
 		}
 
 		if lineRegex.MatchString(lineStrng) { // this is now either case sensitive or not, depending on whether the input pattern has upper case letters.
-			//fmt.Printf("%s:%d:%s", fpath, lino, lineStr)  Will now only see the sorted output.
-			localMatches++
-			matchChan <- matchType{
-				fpath:        fpath,
-				lino:         lino,
-				lineContents: lineStr,
+			if excludeRegex == nil { // If no excludeRegex, then only need to match the lineRegex
+				localMatches++
+				matchChan <- matchType{
+					fpath:        fpath,
+					lino:         lino,
+					lineContents: lineStr,
+				}
+			} else { // If there is an excludeRegex, then must make sure that this expression doesn't match.
+				if !excludeRegex.MatchString(lineStrng) {
+					localMatches++
+					matchChan <- matchType{
+						fpath:        fpath,
+						lino:         lino,
+						lineContents: lineStr,
+					}
+				}
 			}
 		}
 		now := time.Now()
@@ -347,10 +364,3 @@ func txtFiles() []string { // intended to be needed on linux.
 	}
 	return matchingNames
 }
-
-//func min(x, y int) int {
-//	if x < y {
-//		return x
-//	}
-//	return y
-//}
