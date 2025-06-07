@@ -372,7 +372,7 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 					lino:         lino,
 					lineContents: lineStr,
 				}
-			} else if !excludeRegex.MatchString(lineStr) { // if there is an excludeRegex, then need to test it.
+			} else if !excludeRegex.MatchString(lineStrng) { // if there is an excludeRegex, then need to test it.
 				localMatches++
 				matchChan <- matchType{
 					fpath:        fpath,
