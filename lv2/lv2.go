@@ -60,7 +60,7 @@ REVISION HISTORY
                So now I want to write all the files matched w/ the regexp to temp .xspf file.  Since I don't need the duration line, I can do this now.  I'll hardcode the html stuff
                that I need to use for each file.  It must have the <location> line else it won't work.  But it may be faster to parse if I give it everything I have but for the duration.
                I expect this will take a bit of time.
-               Header1 will be lines 1 and 2.  Title line will have the regexp as the title btwn the html tags.
+               Header1 will be lines 1 and 2.  Title line will have the regexp as the title btwn the HTML tags.
                trackList opening is once per file.
                track has location line, and then the extension application stuff needs a counter starting from 0.  <track> <location> <extension application> </extension> </track>
                </trackList><playlist>
@@ -84,6 +84,8 @@ REVISION HISTORY
 20 May 24 -- Refactored the writeOutputFile routine.
 22 May 24 -- Fixed some displayed messages.
 21 Nov 24 -- Added '\' as a character to be removed when constructing the output filename.
+ 7 Jun 25 -- Adding the ability to exclude a regexp.
+				Nevermind.  It's already here.  It excludes a filename, as done in rex and dsrt, for quite a while now.
 */
 
 /*
@@ -110,7 +112,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "May 22, 2024"
+const lastModified = "June 7, 2025"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
