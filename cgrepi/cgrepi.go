@@ -2,30 +2,23 @@
 REVISION HISTORY
 ----------------
 20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
-
 	And then I figured I could not improve performance by using more packages.
 	But I can change the side effect of displaying altered case.
-
 22 Mar 20 -- Will add timing code that I wrote for anack.
 27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
 14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is more complex than it
-
 	needs to be.  I'm going to take a crack at writing a simpler version myself.
 	It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
 	through all the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
 	this better.  It seems much too complex.  I'm going to simplify it.
-
 16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
 19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
-
 	keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
 	Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
-
 30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
-
 	              But if input string has an upper case character, then the search is case sensitive.
-	1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
-	2 Oct 22 -- The extension system is made mostly obsolete by null byte detection.  So the default will be *.  But I discovered when the files slice exceeds 1790 elements,
+ 1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
+ 2 Oct 22 -- The extension system is made mostly obsolete by null byte detection.  So the default will be *.  But I discovered when the files slice exceeds 1790 elements,
 	              the go routines all deadlock, so the wait group is not exiting.
 
 	            Posted to gonuts using the go playground for the code: 10/2/22 @1:35 pm   go playground sharing link: https://go.dev/play/p/gIVVLsiTqod/
@@ -39,21 +32,16 @@ REVISION HISTORY
 
 	            Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
 	              So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
-	5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
-	7 Oct 22 -- Added color to output.
-
+ 5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
+ 7 Oct 22 -- Added color to output.
 20 Nov 22 -- static linter found an issue, so I commented it out.
-11 Dec 22 -- From the Go course I bought from ArdanLabs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.
+11 Dec 22 -- From the Go course I bought from Ardan Labs.  The first speaker, Miki Tebeka, discusses the linux ulimit -a command, which shows the linux limits.  There's a limit of 1024 open files.
              So I'll include this limit in the code now.
 15 Feb 23 -- I'll play w/ lowering the number of workers.  I think the easiest way to do this is to make the multiplier = 1 and do measurements.  But for tomorrow.  It's too late now.
-
 	Bill Kennedy said that the magic number is about the same as runtime.NumCPU().  Wow, it IS faster.
 	On Win10 Desktop, time went from 222 ms -> 192 ms, using "cgrepi elapsed".  That's ~ 13.5% faster
-
 10 Apr 24 -- I/O bound jobs, like here, benefit from having more goroutines than NumCPU()
-
 	But I have to remember that linux only has 1024 or so file handles; this number cannot be exceeded.
-
 15 Apr 24 -- Added the multiplier because of Miki Tebeka saying that I/O bound work, as this is, is not limited to NumCPU() go routines for optimal performance.
 18 Apr 24 -- Had to fix the multiplier, because the current code structure doesn't allow for the multiplier to be flag controlled.  So I made it a const of 10 as of this writing.
 	         And I removed my own min(), as Go 1.22 has that as a generic built-in.
@@ -61,6 +49,7 @@ REVISION HISTORY
 21 Apr 24 -- Took out the first 2 lines, that were probably coded by the late Michael T Jones.  Looks like these would be the defaults, anyway.
  3 May 24 -- I misunderstood how wait groups work.  They're at the go routine level, not individual files.  I'm going to change that now.
  6 Jun 25 -- I got the idea to add an exclude expresssion, after I tried to use one and found that I never implemented that here.
+				Turns out that none of the std grep versions have a way to do this.
 */
 
 package main

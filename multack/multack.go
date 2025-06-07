@@ -30,7 +30,6 @@ import (
                With a ResultType buffer of 100,000 items, it's ~24% faster than anack.
                I'll stop at 100,000 items.  It's great it works.
                (4/10/24 but it's obvious I got the code wrong)
-
    2 Apr 20 -- Updated its start string to declare its correct name.  I forgot to change that yesterday.
   23 Apr 20 -- 2 edge cases don't work on linux.  If there is a filepattern but no matching files in the start directory,
                 and if there is only 1 matching file in the start directory.
@@ -77,6 +76,7 @@ import (
   20 Nov 24 -- Will now exclude OneDrive.  This crashes Windows, so I have to exclude it.  And I'm excluding AppData.  Excluding AppData sped up the code a lot, from 3 min to 10 sec on Win11.
    2 Mar 25 -- Clarified help message that the pattern is a regexp, not a glob.  And I changed to using pflag as a drop-in replacement for flag.
    6 Jun 25 -- I got the idea to add an exclude expresssion, after I tried to use one and found that I never implemented that here.  Copied code I write in cgrepi to here.
+				Turns out that none of the std grep versions have a way to do this.
 */
 
 const lastAltered = "6 June 2025"
