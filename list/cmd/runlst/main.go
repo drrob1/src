@@ -65,10 +65,11 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    9 Jun 24 -- Now called runlst, so it won't conflict w/ the ancient scripts I have on linux from 2004 or so.  And it will take a param and interpret it as a regexp.
                  And will use my which find instead of someone else's findexec.
-  11 Jun 24 -- I'm going to give writing a closure function a shot.  Hey, looks like it's working.
+  11 Jun 24 -- I'm going to give writing a closure function a shot.  Hey, it looks like it's working.
+  14 Jun 25 -- Added output of execCmd if verboseFlag is set.
 */
 
-const LastAltered = "11 June 2024" //
+const LastAltered = "14 June 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -359,6 +360,13 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
+	if verboseFlag {
+		if cmd {
+			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Run()\n", cmdStr, cmdPath)
+		} else {
+			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Start()\n", cmdStr, cmdPath)
+		}
+	}
 	if cmd {
 		err = execCmd.Run() // will see if this works better when running cmd.exe, likely at work.
 	} else {

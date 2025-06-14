@@ -6,11 +6,9 @@ import (
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/jonhadfield/findexec"
-	"os/exec"
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
 	"os"
+	"os/exec"
 	"regexp"
 	"runtime"
 	"src/list"
@@ -63,9 +61,10 @@ import (
   16 Jul 23 -- Now called runx.go.  I intend to have this also allow -rex specifier.  If regex is given, that will take priority over the default or given glob expression.
   24 Sep 23 -- I have to fix a bug.  It's not working as I expect on linux.  And Doug is 35 today.  But that's not why I'm here, in the code now.
    8 Jun 24 -- Fine-tuned the error message.  I forgot how this worked.
+  14 Jun 25 -- Added output of execCmd to verboseFlag.
 */
 
-const LastAltered = "9 June 2024" //
+const LastAltered = "14 June 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -368,6 +367,13 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
+	if verboseFlag {
+		if cmd {
+			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Run()\n", cmdStr, cmdPath)
+		} else {
+			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Start()\n", cmdStr, cmdPath)
+		}
+	}
 	if cmd {
 		err = execCmd.Run() // will see if this works better when running cmd.exe, likely at work.
 	} else {

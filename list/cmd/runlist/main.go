@@ -59,11 +59,12 @@ import (
                  Else, use the one provided.  Or, have the glob string a flag.  That is probably much easier to implement.  I'll make globStr global, and allow it to be set
                  as a param.  If it's not, use the default.  I already have a globFlag.  For this to work the same on Windows and linux, I have to have a separate glob string
                  as a param.  I'll do that.  So this will not use the globFlag.
-                 On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
+                 On linux, this only works w/ LibreOffice.  So I'll automatically select that on linux.
    8 Jun 24 -- Updated the help message, because I forgot how this works.
+  14 Jun 25 -- Adding output of run start or execcmd.Run or execcmd.Start.
 */
 
-const LastAltered = "9 June 2024" //
+const LastAltered = "14 June 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -320,6 +321,13 @@ func main() {
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
+	if verboseFlag {
+		if cmd {
+			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Run()\n", cmdStr, cmdPath)
+		} else {
+			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Start()\n", cmdStr, cmdPath)
+		}
+	}
 	if cmd {
 		err = execCmd.Run() // will see if this works better when running cmd.exe, likely at work.
 	} else {
