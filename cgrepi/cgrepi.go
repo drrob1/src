@@ -230,7 +230,7 @@ func main() {
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, lenOfFiles) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, lenOfFiles)             // this uses an anonymous type.
-	go func() { // start the receiving operation before the sending starts
+	go func() {                                                // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
 			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
