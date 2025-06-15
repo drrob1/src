@@ -62,6 +62,7 @@ import (
                  On linux, this only works w/ LibreOffice.  So I'll automatically select that on linux.
    8 Jun 24 -- Updated the help message, because I forgot how this works.
   14 Jun 25 -- Adding output of run start or execcmd.Run or execcmd.Start.
+  15 Jun 25 -- Added option to force execcmd.Start.  I didn't do this for runlst or runx yet.
 */
 
 const LastAltered = "14 June 2025" //
@@ -95,30 +96,34 @@ func main() {
 	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first.") // Value
 
 	var sizeFlag bool
-	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date.")
+	flag.BoolVar(&sizeFlag, "s", false, "Sort by size instead of by date.")
 
 	var verboseFlag, veryVerboseFlag bool
 
-	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
+	flag.BoolVar(&verboseFlag, "v", false, "Verbose mode, which is same as test mode.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
 
 	var excludeFlag bool
 	var excludeRegex *regexp.Regexp
 	var excludeRegexPattern string
 	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
+	flag.StringVar(&excludeRegexPattern, "x", "", "Regex to be excluded from output.") // var, not a ptr.
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
-	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
+	flag.StringVar(&filterStr, "filter", "", "Individual size filter value below which listing is suppressed.")
+	flag.BoolVar(&filterFlag, "f", false, "Filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation.")
 
 	var globFlag bool
-	flag.BoolVar(&globFlag, "G", false, "glob flag to use globbing on file matching.") // essentially ignored.
+	flag.BoolVar(&globFlag, "G", false, "Glob flag to use globbing on file matching.") // essentially ignored.
 	flag.StringVar(&globString, "g", "", "Use this glob string pattern instead of the defaults.")
+
+	var startFlag bool
+	flag.BoolVar(&startFlag, "s", false, "Use execCmd.Start().")
+	flag.BoolVar(&startFlag, "start", false, "Use execCmd.Start().")
 
 	flag.Parse()
 
@@ -299,6 +304,9 @@ func main() {
 		}
 	}
 	variadicParam = append(variadicParam, fileNameStr...)
+	if startFlag {
+		cmd = true
+	}
 
 	if cmdStr == "excel" || cmdStr == "winword" || cmdStr == "powerpnt" || cmdStr == "msaccess" {
 		searchPath := officePath + os.Getenv("PATH")

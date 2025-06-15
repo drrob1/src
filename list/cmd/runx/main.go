@@ -57,7 +57,7 @@ import (
                  Else, use the one provided.  Or, have the glob string a flag.  That is probably much easier to implement.  I'll make globStr global, and allow it to be set
                  as a param.  If it's not, use the default.  I already have a globFlag.  For this to work the same on Windows and linux, I have to have a separate glob string
                  as a param.  I'll do that.  So this will not use the globFlag.
-                 On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
+                 On linux, this only works w/ LibreOffice.  So I'll automatically select that on linux.
   16 Jul 23 -- Now called runx.go.  I intend to have this also allow -rex specifier.  If regex is given, that will take priority over the default or given glob expression.
   24 Sep 23 -- I have to fix a bug.  It's not working as I expect on linux.  And Doug is 35 today.  But that's not why I'm here, in the code now.
    8 Jun 24 -- Fine-tuned the error message.  I forgot how this worked.
@@ -92,8 +92,6 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), " In this way, this program works the same on both Windows and Linux.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		flag.PrintDefaults()
-		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from dsrt environment variable before processing commandline switches.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " Reads from diraliases environment variable if needed on Windows.\n")
 	}
 
 	var revFlag bool

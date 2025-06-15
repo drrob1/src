@@ -60,7 +60,7 @@ import (
                  Else, use the one provided.  Or, have the glob string a flag.  That is probably much easier to implement.  I'll make globStr global, and allow it to be set
                  as a param.  If it's not, use the default.  I already have a globFlag.  For this to work the same on Windows and linux, I have to have a separate glob string
                  as a param.  I'll do that.  So this will not use the globFlag.
-                 On linux, this only works w/ libreoffice.  So I'll automatically select that on linux.
+                 On linux, this only works w/ LibreOffice.  So I'll automatically select that on linux.
    8 Jun 24 -- Updated the help message, because I forgot how this works.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    9 Jun 24 -- Now called runlst, so it won't conflict w/ the ancient scripts I have on linux from 2004 or so.  And it will take a param and interpret it as a regexp.
