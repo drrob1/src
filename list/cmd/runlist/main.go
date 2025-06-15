@@ -122,7 +122,6 @@ func main() {
 	flag.StringVar(&globString, "g", "", "Use this glob string pattern instead of the defaults.")
 
 	var startFlag bool
-	flag.BoolVar(&startFlag, "s", false, "Use execCmd.Start().")
 	flag.BoolVar(&startFlag, "start", false, "Use execCmd.Start().")
 
 	flag.Parse()
@@ -281,7 +280,7 @@ func main() {
 
 	var cmdPath string
 	var execCmd *exec.Cmd
-	var cmd bool
+	var cmdExe bool
 	variadicParam := make([]string, 0, len(fileNameStr))
 
 	//variadicParam := []string{"-C", "vlc"} // This isn't really needed anymore.  I'll leave it here anyway, as a model in case I ever need to do this again.
@@ -299,13 +298,13 @@ func main() {
 			if strings.Contains(cmdPath, "tcc") {
 				variadicParam = append(variadicParam, "-C")
 			} else { // running cmd.exe, and likely at work.
-				cmd = true // and variadicParam won't have the -C flag
+				cmdExe = true // and variadicParam won't have the -C flag
 			}
 		}
 	}
 	variadicParam = append(variadicParam, fileNameStr...)
 	if startFlag {
-		cmd = true
+		cmdExe = false
 	}
 
 	if cmdStr == "excel" || cmdStr == "winword" || cmdStr == "powerpnt" || cmdStr == "msaccess" {
@@ -330,13 +329,13 @@ func main() {
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
 	if verboseFlag {
-		if cmd {
+		if cmdExe {
 			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Run()\n", cmdStr, cmdPath)
 		} else {
 			fmt.Printf(" cmdStr = %q, cmdPath = %s and will do execCmd.Start()\n", cmdStr, cmdPath)
 		}
 	}
-	if cmd {
+	if cmdExe {
 		err = execCmd.Run() // will see if this works better when running cmd.exe, likely at work.
 	} else {
 		err = execCmd.Start()
