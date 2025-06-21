@@ -14,6 +14,7 @@ import (
 )
 
 //  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
+//  21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
 
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
@@ -154,7 +155,11 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 			} else {
 				var color ct.Color
 				sizestr, color = getMagnitudeString(f.Size())
-				ctfmt.Printf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				if termDisplayOut {
+					ctfmt.Printf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				} else {
+					fmt.Printf("%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				}
 			}
 			lnCount++
 

@@ -171,9 +171,10 @@ REVISION HISTORY
  9 Apr 25 -- Modified help message.
 13 Apr 25 -- Added metrics as covered by Mastering Go, 4th ed.
 22 May 25 -- Made all option represent 100,000 screens, instead of the paltry 50.
+21 Jun 25 -- Got idea from reading Linux Mag Pro, to detect when output is redirected, and then not output the color codes.
 */
 
-const LastAltered = "22 May 2025"
+const LastAltered = "21 June 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -195,7 +196,7 @@ const multiplier = 10 // used for the worker pool pattern in MyReadDir
 const fetch = 1000    // used for the concurrency pattern in MyReadDir
 var numWorkers = runtime.NumCPU() * multiplier
 
-const configFilename = "dv.yaml"
+// const configFilename = "dv.yaml"  Currently unused.
 const configShortName = "dv"
 
 var showGrandTotal, noExtensionFlag, excludeFlag, longFileSizeListFlag, filenameToBeListedFlag, dirList, verboseFlag bool
@@ -210,6 +211,8 @@ var allScreens = 100_000
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
+var termRedirected bool // need to show this in verbose mode
+var termDisplayOut bool // need to show this in verbose mode
 
 //var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
@@ -235,10 +238,13 @@ func main() {
 	//fullConfigFileName := filepath.Join(homeDir, configFilename)
 	//_ = fullConfigFileName // this is a kludge so this var is marked as needed when it's not
 
+	termDisplayOut = true
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		autoHeight = defaultHeight
 		autoWidth = minWidth
+		termDisplayOut = false
+		termRedirected = true
 	}
 	autoHeight -= 7 // an empirically determined fudge factor.
 
@@ -310,8 +316,8 @@ func main() {
 		ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
 	}
 
-	viper.SetConfigType("yaml")
 	//viper.SetConfigFile(fullConfigFileName) // This works but I'm experimenting.
+	viper.SetConfigType("yaml")
 	viper.SetConfigName(configShortName) // From an online source.  This works too.  Great.
 	viper.AddConfigPath(".")
 
@@ -348,7 +354,7 @@ func main() {
 
 	*nscreens = viper.GetInt("nscreens")
 	allFlag = viper.GetBool("all")
-	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+	if allFlag || termRedirected { // if both nscreens and allScreens are used, allFlag takes precedence.  As of 6/21/25, if the terminal is redirected allFlag is considered to be true.
 		*nscreens = allScreens // allScreens is defined above w/ a default, non-zero value of 50 as of this writing.
 	}
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1 which is the default
@@ -379,7 +385,7 @@ func main() {
 
 	globFlag = viper.GetBool("glob")
 	if globFlag {
-		fmt.Printf(" Glob flag has been removed from fdsrt.  This flag is now ignored.\n")
+		fmt.Printf(" Glob flag has been removed from dv.  This flag is now ignored.\n")
 		globFlag = false
 	}
 
@@ -420,14 +426,20 @@ func main() {
 			fmt.Printf("uid=%d, gid=%d, on a computer running %s for %s:%s Username %s, Name %s, HomeDir %s \n",
 				uid, gid, systemStr, userPtr.Uid, userPtr.Gid, userPtr.Username, userPtr.Name, userPtr.HomeDir)
 		}
-		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t. \n", autoHeight, autoWidth, excludeFlag, halfFlag)
+		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t, termRedirected=%t, termDisplayOut=%t. \n",
+			autoHeight, autoWidth, excludeFlag, halfFlag, termRedirected, termDisplayOut)
 		fmt.Printf(" NLines=%d, Reverse=%t, ncreens=%d, sizeflag=%t, DirListFlag=%t, FilenameListFlag=%t, TotalFlag=%t, longflag=%t \n",
 			NLines, Reverse, *nscreens, *sizeflag, *DirListFlag, FilenameListFlag, *TotalFlag, *longflag)
 		fmt.Printf(" extflag=%t, extensionflag=%t, filterFlag=%t, noFilterFlag=%t, globFlag=%t, mFlag=%t, allFlag=%t \n",
 			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag)
 	}
 
-	ctfmt.Printf(ct.Green, winflag, "%50s Finished startup code, which took %s\n", " ", time.Since(t1))
+	if termDisplayOut {
+		ctfmt.Printf(ct.Green, winflag, "%50s Finished startup code, which took %s\n", " ", time.Since(t1))
+	} else {
+		fmt.Printf("%50s Finished startup code, which took %s\n", " ", time.Since(t1))
+
+	}
 	// from here down, the code is essentially the same as before.  Config section is finished.
 
 	// set which sort function will be in the sortfcn var
@@ -490,7 +502,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" *** Here I am at or about line 467 ***")
+		fmt.Println(" *** Here I am at or about line 505 ***")
 		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
 		fmt.Printf(" nscreens=%d, numLines=%d, pflag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
 			*nscreens, numLines, pflag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)

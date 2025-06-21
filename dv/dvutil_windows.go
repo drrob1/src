@@ -19,6 +19,7 @@ REVISION HISTORY
 15 Feb 22 -- Replaced testFlag w/ verboseFlag.  Finally.
 24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
 12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.  But that is not called here in Windows code, so nevermind.
+21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
 */
 
 /* Not used here.
@@ -162,7 +163,11 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 			} else {
 				var color ct.Color
 				sizestr, color = getMagnitudeString(f.Size())
-				ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
+				if termDisplayOut {
+					ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
+				} else {
+					fmt.Printf("%-17s %s %s\n", sizestr, s, f.Name())
+				}
 			}
 			lnCount++
 		} else if IsSymlink(f.Mode()) {
