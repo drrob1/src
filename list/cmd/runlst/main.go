@@ -67,9 +67,10 @@ import (
                  And will use my which find instead of someone else's findexec.
   11 Jun 24 -- I'm going to give writing a closure function a shot.  Hey, it looks like it's working.
   14 Jun 25 -- Added output of execCmd if verboseFlag is set.
+  21 Jun 25 -- Made a minor change in how params are processed.
 */
 
-const LastAltered = "14 June 2025" //
+const LastAltered = "21 June 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -243,13 +244,12 @@ func main() {
 		processingFunction()
 		regex, err = regexp.Compile(flag.Arg(1))
 		if err != nil {
-			fmt.Printf(" Error from regexp.Compile is %s\n", err)
-			return
+			fmt.Printf(" Error from regexp.Compile is %s.  Ignored.\n", err)
 		}
 
 	} else {
 		fmt.Printf(" Could not figure out the params.\n")
-		os.Exit(1)
+		return
 	}
 
 	if verboseFlag {

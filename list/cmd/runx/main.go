@@ -1,11 +1,11 @@
 package main // runx
 
 import (
-	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/jonhadfield/findexec"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 	"os"
 	"os/exec"
@@ -62,9 +62,10 @@ import (
   24 Sep 23 -- I have to fix a bug.  It's not working as I expect on linux.  And Doug is 35 today.  But that's not why I'm here, in the code now.
    8 Jun 24 -- Fine-tuned the error message.  I forgot how this worked.
   14 Jun 25 -- Added output of execCmd to verboseFlag.
+  21 Jun 25 -- Now using pflag as flag.
 */
 
-const LastAltered = "14 June 2025" //
+const LastAltered = "21 June 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -86,42 +87,42 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information: [ x|w|p|a|l ].  Glob pattern is now set by the -g flag, and -rex is implemented.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " If have both -rex and -g, -rex is followed and -g is ignored, as is the x|w|p|a pattern.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " In this way, this program works the same on both Windows and Linux.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
+		fmt.Printf(" %s last altered %s, and compiled with %s.  Now uses pflag package. \n", os.Args[0], LastAltered, runtime.Version())
+		fmt.Printf(" Usage information: [ x|w|p|a|l ].  Glob pattern is set by the -g flag, and -rex is implemented.\n")
+		fmt.Printf(" If have both -rex and -g, -rex is followed and -g is ignored, as is the x|w|p|a pattern.\n")
+		fmt.Printf(" In this way, this program works the same on both Windows and Linux.\n")
+		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		flag.PrintDefaults()
 	}
 
 	var revFlag bool
-	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first.") // Value
+	flag.BoolVarP(&revFlag, "reverse", "r", false, "Reverse the sort, ie, oldest or smallest is first.") // Value
 
 	var sizeFlag bool
-	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date.")
+	flag.BoolVarP(&sizeFlag, "size", "s", false, "sort by size instead of by date.")
 
 	var verboseFlag, veryVerboseFlag bool
 
-	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
-	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
+	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "Very verbose debugging option.")
 
-	var excludeFlag bool
+	//var excludeFlag bool
+	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")  Never used anyway.
 	var excludeRegex *regexp.Regexp
 	var excludeRegexPattern string
-	flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
-	flag.StringVar(&excludeRegexPattern, "x", "", "regex to be excluded from output.") // var, not a ptr.
+	flag.StringVarP(&excludeRegexPattern, "exclude", "x", "", "regex to be excluded from output.") // var, not a ptr.
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
-	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
+	flag.BoolVarP(&filterFlag, "filt", "f", false, "filter value to suppress listing individual size below 1 MB.")
+	flag.BoolVarP(&noFilterFlag, "nofilter", "F", false, "Flag to undo an environment var with f set.")
 
-	flag.BoolVar(&verifyFlag, "verify", false, "Verify copy operation.")
+	flag.BoolVarP(&verifyFlag, "verify", "V", false, "Verify copy operation (not used here).")
 
 	var globFlag bool
 	flag.BoolVar(&globFlag, "G", false, "glob flag to use globbing on file matching.") // essentially ignored.
-	flag.StringVar(&globString, "g", "", "Use this glob string pattern instead of the defaults.")
+	flag.StringVarP(&globString, "glob", "g", "", "Use this glob string pattern instead of the defaults.")
 
 	var regexStr string
 	flag.StringVar(&regexStr, "rex", "", "Regexp to use for creating the list.")
@@ -149,17 +150,16 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
-			excludeFlag = false
+			// excludeFlag = false  this isn't used anywhere else
 		}
-		excludeFlag = true
+		// excludeFlag = true  this isn't used anywhere else
 		fmt.Printf(" excludeRegexPattern = %q, excludeRegex.String = %q\n", excludeRegexPattern, excludeRegex.String())
 	}
 
 	if regexStr != "" {
 		regex, err = regexp.Compile(regexStr)
 		if err != nil {
-			fmt.Printf(" Regular Expression of %s returned error of %s.  Exiting.\n", regexStr, err)
-			os.Exit(1)
+			fmt.Printf(" Regular Expression of %s returned error of %s.  Ignored.\n", regexStr, err)
 		}
 	}
 

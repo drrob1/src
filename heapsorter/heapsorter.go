@@ -34,13 +34,13 @@ import (
   19 May  20 -- Created ModifiedHeapSort which also uses InsertionSort for < 12 items.  And took another crack at fixing AnotherHeapSort.
                 Neither of these work.
                 However, I also took another crack at NonRecursiveQuickSort.
-  21 May  20 -- Removed unneeded commented out code.  I'm not recompiling.
+  21 May  20 -- Removed unneeded, commented out code.  I'm not recompiling.
   23 May  20 -- Copied ShellSort by Sedgewick here.  Renamed ShellSort that I based on bubble sort to MyShellSort
   24 May  20 -- All the nonrecursive Quicksort routines I found create their own stack of indices.  I'll try my hand at creating my own
                   stack operations push and pop.  I was not able to write a routine based on code in Sedgewick.
   25 May  20 -- Thoughts on mysorts.go and mysorts2.go.
         Over the last 2 weeks I've been able to get the bad code working.  I now have 3 versions of ShellSort, and 2 versions of nonrecursive quick sort.
-        I got ShellSort working by noticing a non-idiomatic for loop, and Rob Pike in his book says the advantages of using idioms is that they help avoid bugs.
+        I got ShellSort working by noticing a non-idiomatic for loop, and Rob Pike in his book says the advantage of using idioms is that they help avoid bugs.
         The idiom is a pattern known to work.  Look closely at non-idiomatic code for the source of bugs.  I did and that's where I found the bug in ShellSort.
         The non-recursive quick sort routines depend on creating a stack themselves instead of relying on recursion to use the system's stack.
         When I switched to idiomatic stack code using push and pop, the code started working.  One reason for this is that I made the stack much
@@ -165,13 +165,15 @@ func checkSorted(slice []string) {
 
 // -----------------------------------------------------------
 
+// An insertion sort works by inserting the next item into it's correct position.  It moves items right to make room for the inserted item.
+
 func StraightInsertion(input []string) []string {
 	n := len(input)
 	for i := 1; i < n; i++ {
 		x := input[i]
 		j := i
-		for ; (j > 0) && (x < input[j-1]); j-- { // looks like it's moving elements right
-			input[j] = input[j-1] //  until it comes to a smaller value entry.  This line does not swap anything.
+		for ; (j > 0) && (x < input[j-1]); j-- { // looks like it's moving elements right until it comes to a smaller value entry.
+			input[j] = input[j-1]
 		}
 		input[j] = x // then it inserts the element at the spot at which it stopped moving elements.
 	}
@@ -258,7 +260,7 @@ func BadShellSort(a []string) []string {
 
 /* -----------------------------------------------------------
 {{{
-   Bubblesort from "Essential Algorithms" by Rod Stephens.  This is pseudo-code
+   Bubblesort from "Essential Algorithms" by Rod Stephens.  This is pseudocode
 
 Bubblesort(Data: values[])
     // Repeat until the array is sorted.
@@ -295,34 +297,27 @@ func MyShellSort(a []string) []string {
 	n := len(a)
 	for h = 1; h < n; h = h*3 + 1 {
 	}
-	//	fmt.Println(" in MyShellSort: h=", h)
 
-	// t0 := time.Now()
 	for ; h > 0; h /= 3 {
-		//		fmt.Println(" in MyShellSort sorting loop: h=",h)
-		//		pause()
 		for { // loop until sorted
 			sorted := true
 			for i := h; i < n; i++ {
 				if a[i] < a[i-h] {
 					a[i], a[i-h] = a[i-h], a[i]
 					sorted = false
-					//fmt.Println("  ShellSort:  i =", i, ", sorted=", sorted)
 				}
-			} // END FOR i := h TO last item DO
+			}
 			if sorted {
 				break
 			}
-			// elapsed := time.Since(t0)
-			// if elapsed > 30*time.Second { return a }
 		} // end loop until sorted
-	} // END FOR h
+	}
 	return a
 } //END MyShellSort
 
 // -----------------------------------------------------------
 
-// From Algorithms, 2nd Ed, by Robert Sedgewick (C) 1988 p 108.  Code based on Pascal and 1 origin arrays.
+// From Algorithms, 2nd Ed., by Robert Sedgewick (C) 1988 p. 108.  Code based on Pascal and 1 origin arrays.
 
 func ShellSort(a []string) []string {
 	var h int
