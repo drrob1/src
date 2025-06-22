@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
@@ -13,7 +12,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -146,9 +144,10 @@ Revision History
  7 Apr 25 -- Not strange, just out of date.  I was using an out of date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
  9 Apr 25 -- Updated help message again.
 28 Apr 25 -- Updated the reverse flag so -r means reverse.  And removed RevFlag.
+21 Jun 25 -- Porting code I just wrote for dv to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
 */
 
-const LastAltered = "Apr 28, 2025"
+const LastAltered = "June 21, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -182,10 +181,12 @@ var numOfLines, grandTotalCount int
 var smartCase bool
 
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
-var allScreens = 50
+var allScreens = 100_000 // value updated as of 6/21/25, backported from dv.go.
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
+var termRedirected bool
+var termDisplayOut bool
 
 func main() {
 	var dsrtParam DsrtParamType
@@ -202,52 +203,68 @@ func main() {
 	//fmt.Printf(" dsrtEnviron = %s, dswEnviron = %s\n dsrtParam = %v\n", dsrtEnviron, dswEnviron, dsrtParam)
 
 	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
+	termDisplayOut = autoDefaults
+	termRedirected = !autoDefaults
 	winFlag := runtime.GOOS == "windows"
 
-	if !autoDefaults {
-		if winFlag {
-			comspec, ok := os.LookupEnv("ComSpec")
-			if ok {
-				bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
-				tcc := exec.Command(comspec, "-C", "echo", "%_columns")
-				tcc.Stdout = bytesbuf
-				tcc.Run()
-				colstr := bytesbuf.String()
-				lines := strings.Split(colstr, "\n")
-				trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
-				autoWidth, err = strconv.Atoi(trimmedLine)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
-				}
+	/*
+		if !autoDefaults { removed 6/21/25.  Now I use this to determine whether color codes are output.
+			if winFlag {
+				comspec, ok := os.LookupEnv("ComSpec")
+				if ok {
+					bytesbuf := bytes.NewBuffer([]byte{}) // from Go Standard Library Cookbook by Radomir Sohlich (C) 2018 Packtpub
+					tcc := exec.Command(comspec, "-C", "echo", "%_columns")
+					tcc.Stdout = bytesbuf
+					tcc.Run()
+					colstr := bytesbuf.String()
+					lines := strings.Split(colstr, "\n")
+					trimmedLine := strings.TrimSpace(lines[1]) // 2nd line of the output is what I want trimmed
+					autoWidth, err = strconv.Atoi(trimmedLine)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, "Error from cols conversion is", err, "Value ignored.")
+					}
 
-				bytesbuf.Reset()
-				tcc = exec.Command(comspec, "-C", "echo", "%_rows")
-				tcc.Stdout = bytesbuf
-				tcc.Run()
-				rowstr := bytesbuf.String()
-				lines = strings.Split(rowstr, "\n")
-				trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
-				autoHeight, err = strconv.Atoi(trimmedLine)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
-				}
+					bytesbuf.Reset()
+					tcc = exec.Command(comspec, "-C", "echo", "%_rows")
+					tcc.Stdout = bytesbuf
+					tcc.Run()
+					rowstr := bytesbuf.String()
+					lines = strings.Split(rowstr, "\n")
+					trimmedLine = strings.TrimSpace(lines[1]) // 2nd line of the output is what I need trimmed
+					autoHeight, err = strconv.Atoi(trimmedLine)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, "Error from rows conversion is", err, "Value ignored.")
+					}
 
+				} else {
+					fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
+				}
 			} else {
-				fmt.Fprintln(os.Stderr, "comspec expected but not found.  Using environment params settings only.")
+				fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
+				autoWidth = minWidth
+				autoHeight = defaultHeight
 			}
 		} else {
-			fmt.Fprintln(os.Stderr, "Expected a windows computer, but winflag is false.  WTF?")
-			autoWidth = minWidth
-			autoHeight = defaultHeight
+			autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd()))
+			if err != nil {
+				autoDefaults = false
+				fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
+				autoWidth = minWidth
+				autoHeight = defaultHeight
+			}
 		}
-	} else {
+	*/
+	if autoDefaults {
 		autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd()))
 		if err != nil {
 			autoDefaults = false
-			fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
+			fmt.Println(" From term.Getsize:", err)
 			autoWidth = minWidth
 			autoHeight = defaultHeight
 		}
+	} else { // i.e., terminal has been redirected.
+		autoWidth = maxWidth
+		autoHeight = defaultHeight
 	}
 
 	if autoHeight > 0 {
@@ -375,7 +392,7 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
-		fmt.Println("winFlag:", winFlag)
+		fmt.Println("winFlag:", winFlag, ", autodefaults:", autoDefaults, ", termDisplayOut:", termDisplayOut, ", termRedirected:", termRedirected)
 		fmt.Println()
 		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d and numofCols=%d\n", w, *nscreens, NLines, numOfCols)
 	}
@@ -397,7 +414,7 @@ func main() {
 		numOfLines = defaultHeight
 	}
 
-	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+	if allFlag || termRedirected { // if both nscreens and allScreens are used, allFlag takes precedence.  As of 6/21/25, if termRedirected is same as using AllFlag.
 		*nscreens = allScreens
 	}
 	numOfLines *= *nscreens * numOfCols // Doesn't matter if *nscreens or numOfCols = 1
@@ -442,6 +459,7 @@ func main() {
 
 	startDir := workingDir
 
+	// check widths
 	if w == 0 { // w not set by command line flag
 		w = dsrtParam.w
 	}
@@ -591,20 +609,32 @@ func main() {
 	for i := 0; i < len(cs); i += numOfCols {
 		c0 := cs[i].color
 		s0 := fixedStringLen(cs[i].str, columnWidth)
-		ctfmt.Printf(c0, winFlag, "%s", s0)
+		if termDisplayOut {
+			ctfmt.Printf(c0, winFlag, "%s", s0)
+		} else {
+			fmt.Printf("%s", s0)
+		}
 
 		j := i + 1
 		if numOfCols > 1 && j < len(cs) { // numOfCols of 2 or 3
 			c1 := cs[j].color
 			s1 := fixedStringLen(cs[j].str, columnWidth)
-			ctfmt.Printf(c1, winFlag, "  %s", s1)
+			if termDisplayOut {
+				ctfmt.Printf(c1, winFlag, "%s", s1)
+			} else {
+				fmt.Printf("%s", s1)
+			}
 		}
 
 		k := j + 1
 		if numOfCols == 3 && k < len(cs) {
 			c2 := cs[k].color
 			s2 := fixedStringLen(cs[k].str, columnWidth)
-			ctfmt.Printf(c2, winFlag, "  %s", s2)
+			if termDisplayOut {
+				ctfmt.Printf(c2, winFlag, "%s", s2)
+			} else {
+				fmt.Printf("%s", s2)
+			}
 		}
 		fmt.Println()
 	}
