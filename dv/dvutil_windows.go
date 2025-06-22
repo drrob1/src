@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
@@ -20,12 +19,7 @@ REVISION HISTORY
 24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
 12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.  But that is not called here in Windows code, so nevermind.
 21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
-*/
-
-/* Not used here.
-func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
-	return "", ""
-}
+22 Jun 25 -- myPrintf now used.
 
 */
 
@@ -163,11 +157,7 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 			} else {
 				var color ct.Color
 				sizestr, color = getMagnitudeString(f.Size())
-				if termDisplayOut {
-					ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
-				} else {
-					fmt.Printf("%-17s %s %s\n", sizestr, s, f.Name())
-				}
+				myPrintf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
 			}
 			lnCount++
 		} else if IsSymlink(f.Mode()) {

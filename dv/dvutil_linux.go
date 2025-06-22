@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 
 //  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
 //  21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
+//  22 Jun 25 -- myPrintf now used.
 
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
@@ -51,7 +51,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		narg = pflag.NArg()
 		arg0 = pflag.Arg(0)
 	} else {
-		ctfmt.Printf(ct.Red, false, " Neither flag.Parsed() nor pflag.Parsed() is true.  WTF?\n")
+		myPrintf(ct.Red, false, " Neither flag.Parsed() nor pflag.Parsed() is true.  WTF?\n")
 		return nil
 	}
 	if verboseFlag {
@@ -151,12 +151,12 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 				if f.Size() > 100000 {
 					sizestr = AddCommas(sizestr)
 				}
-				ctfmt.Printf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				myPrintf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 			} else {
 				var color ct.Color
 				sizestr, color = getMagnitudeString(f.Size())
 				if termDisplayOut {
-					ctfmt.Printf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					myPrintf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				} else {
 					fmt.Printf("%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 				}

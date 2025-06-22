@@ -172,9 +172,10 @@ REVISION HISTORY
 13 Apr 25 -- Added metrics as covered by Mastering Go, 4th ed.
 22 May 25 -- Made all option represent 100,000 screens, instead of the paltry 50.
 21 Jun 25 -- Got idea from reading Linux Mag Pro, to detect when output is redirected, and then not output the color codes.
+22 Jun 25 -- Ported myPrintf and related code to here, and is now the same exact signature as Printf including the returned values.
 */
 
-const LastAltered = "21 June 2025"
+const LastAltered = "22 June 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -213,6 +214,8 @@ var allScreens = 100_000
 var allFlag bool
 var termRedirected bool // need to show this in verbose mode
 var termDisplayOut bool // need to show this in verbose mode
+
+var myPrintf func(c ct.Color, bold bool, format string, a ...interface{}) (n int, err error)
 
 //var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
@@ -310,10 +313,15 @@ func main() {
 
 	pflag.Parse()
 
+	myPrintf = printfWithColor
+	if termRedirected {
+		myPrintf = printfWithoutColor
+	}
+
 	// viper stuff
 	err = viper.BindPFlags(pflag.CommandLine) // this statement passes control of all the flags to viper from the pflag package.  Remember, verbose and veryverbose flags are not init'd yet
 	if err != nil {
-		ctfmt.Printf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
+		myPrintf(ct.Red, winflag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
 	}
 
 	//viper.SetConfigFile(fullConfigFileName) // This works but I'm experimenting.
@@ -339,10 +347,10 @@ func main() {
 	}
 	if verboseFlag {
 		if errconfig1 != nil {
-			ctfmt.Printf(ct.Red, winflag, "Error reading config file 1, from current directory  Err: %s. \n", errconfig1.Error())
+			myPrintf(ct.Red, winflag, "Error reading config file 1, from current directory  Err: %s. \n", errconfig1.Error())
 		}
 		if errconfig2 != nil {
-			ctfmt.Printf(ct.Red, winflag, "Error reading config file 2, from current directory  Err: %s. \n", errconfig2.Error())
+			myPrintf(ct.Red, winflag, "Error reading config file 2, from current directory  Err: %s. \n", errconfig2.Error())
 		}
 	}
 
@@ -434,12 +442,8 @@ func main() {
 			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag)
 	}
 
-	if termDisplayOut {
-		ctfmt.Printf(ct.Green, winflag, "%50s Finished startup code, which took %s\n", " ", time.Since(t1))
-	} else {
-		fmt.Printf("%50s Finished startup code, which took %s\n", " ", time.Since(t1))
+	myPrintf(ct.Green, winflag, "%50s Finished startup code, which took %s\n", " ", time.Since(t1))
 
-	}
 	// from here down, the code is essentially the same as before.  Config section is finished.
 
 	// set which sort function will be in the sortfcn var
@@ -533,7 +537,7 @@ func main() {
 	fmt.Printf(" %s: Elapsed time = %s, File Size total = %s, len(fileInfos)=%d", os.Args[0], elapsed, s, len(fileInfos))
 	if showGrandTotal {
 		s1, color := getMagnitudeString(grandTotal)
-		ctfmt.Println(color, true, ", Directory grand total is", s0, "or approx", s1, "in", grandTotalCount, "files.")
+		myPrintf(color, true, ", Directory grand total is %s or approx %s in %d files.\n", s0, s1, grandTotalCount)
 	} else {
 		fmt.Println(".")
 	}
@@ -947,4 +951,16 @@ func pause() bool {
 		return true
 	}
 	return false
+}
+
+// printfWithColor is intended to be assigned to a variable when the display is not redirected.
+func printfWithColor(clr ct.Color, bold bool, format string, a ...interface{}) (n int, err error) {
+	n, err = ctfmt.Printf(clr, bold, format, a...)
+	return n, err
+}
+
+// printfWithoutColor is intended to be assigned to a variable when the display is redirected.
+func printfWithoutColor(clr ct.Color, bold bool, format string, a ...interface{}) (n int, err error) {
+	n, err = fmt.Printf(format, a...)
+	return n, err
 }
