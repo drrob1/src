@@ -417,7 +417,7 @@ func main() {
 	if allFlag || termRedirected { // if both nscreens and allScreens are used, allFlag takes precedence.  As of 6/21/25, if termRedirected is same as using AllFlag.
 		*nscreens = allScreens
 	}
-	numOfLines *= *nscreens * numOfCols // Doesn't matter if *nscreens or numOfCols = 1
+	numOfLines *= *nscreens // * numOfCols // Doesn't matter if *nscreens or numOfCols = 1.  As of 6/21/25, I need to comment out this line.
 
 	if (halfFlag || dsrtParam.halfFlag) && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
 		numOfLines /= 2
