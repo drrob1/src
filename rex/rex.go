@@ -145,9 +145,10 @@ Revision History
  9 Apr 25 -- Updated help message again.
 28 Apr 25 -- Updated the reverse flag so -r means reverse.  And removed RevFlag.
 21 Jun 25 -- Porting code I just wrote for dv to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
+22 Jun 25 -- Ported code I wrote for rexv, myPrintf, to here.
 */
 
-const LastAltered = "June 21, 2025"
+const LastAltered = "June 22, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -355,19 +356,24 @@ func main() {
 
 	flag.Parse()
 
+	myPrintf := printfWithColor
+	if termRedirected {
+		myPrintf = printfWithoutColor
+	}
+
 	if veryVerboseFlag { // setting very verbose will also set verbose.
 		verboseFlag = true
 	}
 
 	maxDimFlag = *mFlag || *maxFlag // either m or max options will set this flag and suppress use of halfFlag.
 
-	ctfmt.Print(ct.Magenta, winFlag, " rex will display sorted by date or size in up to 3 columns.  Now uses pflag.  LastAltered ",
-		LastAltered, ", compiled using ", runtime.Version())
+	myPrintf(ct.Magenta, winFlag, " rex will display sorted by date or size in up to 3 columns.  Now uses pflag.  LastAltered %s, compiled using %s\n",
+		LastAltered, runtime.Version())
 	if dsrtEnviron != "" {
-		ctfmt.Printf(ct.Yellow, winFlag, ", dsrt env = %s", dsrtEnviron)
+		myPrintf(ct.Yellow, winFlag, ", dsrt env = %s", dsrtEnviron)
 	}
 	if dswEnviron != "" {
-		ctfmt.Printf(ct.Yellow, winFlag, ", dsw env = %s", dswEnviron)
+		myPrintf(ct.Yellow, winFlag, ", dsw env = %s", dswEnviron)
 	}
 	fmt.Println()
 
@@ -433,7 +439,7 @@ func main() {
 		}
 		excludeFlag = true
 	} else if excludeFlag {
-		ctfmt.Print(ct.Yellow, winFlag, " Enter regex pattern to be excluded: ")
+		myPrintf(ct.Yellow, winFlag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
@@ -513,17 +519,17 @@ func main() {
 		}
 		f, err := os.Open(workingDir)
 		if err != nil {
-			ctfmt.Printf(ct.Red, winFlag, " Opening %s gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
+			myPrintf(ct.Red, winFlag, " Opening %s gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
 			workingDir = startDir
 		}
 		fi, err := f.Stat()
 		if err != nil {
-			ctfmt.Printf(ct.Red, winFlag, " Stat(%s) gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
+			myPrintf(ct.Red, winFlag, " Stat(%s) gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
 			workingDir = startDir
 		}
 
 		if !fi.Mode().IsDir() {
-			ctfmt.Printf(ct.Red, winFlag, " %s is not a directory.  Will use %s instead.\n", workingDir, startDir)
+			myPrintf(ct.Red, winFlag, " %s is not a directory.  Will use %s instead.\n", workingDir, startDir)
 			workingDir = startDir
 		}
 
@@ -609,32 +615,20 @@ func main() {
 	for i := 0; i < len(cs); i += numOfCols {
 		c0 := cs[i].color
 		s0 := fixedStringLen(cs[i].str, columnWidth)
-		if termDisplayOut {
-			ctfmt.Printf(c0, winFlag, "%s", s0)
-		} else {
-			fmt.Printf("%s", s0)
-		}
+		myPrintf(c0, winFlag, "%s", s0)
 
 		j := i + 1
 		if numOfCols > 1 && j < len(cs) { // numOfCols of 2 or 3
 			c1 := cs[j].color
 			s1 := fixedStringLen(cs[j].str, columnWidth)
-			if termDisplayOut {
-				ctfmt.Printf(c1, winFlag, "%s", s1)
-			} else {
-				fmt.Printf("%s", s1)
-			}
+			myPrintf(c1, winFlag, "%s", s1)
 		}
 
 		k := j + 1
 		if numOfCols == 3 && k < len(cs) {
 			c2 := cs[k].color
 			s2 := fixedStringLen(cs[k].str, columnWidth)
-			if termDisplayOut {
-				ctfmt.Printf(c2, winFlag, "%s", s2)
-			} else {
-				fmt.Printf("%s", s2)
-			}
+			myPrintf(c2, winFlag, "%s", s2)
 		}
 		fmt.Println()
 	}
@@ -1026,4 +1020,14 @@ func pause() bool {
 		return true
 	}
 	return false
+}
+
+// printfWithColor is intended to be assigned to a variable when the display is not redirected.
+func printfWithColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+	ctfmt.Printf(clr, bold, format, a...)
+}
+
+// printfWithoutColor is intended to be assigned to a variable when the display is redirected.
+func printfWithoutColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+	fmt.Printf(format, a...)
 }
