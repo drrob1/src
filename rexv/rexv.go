@@ -21,9 +21,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	//"unicode"
-	//"bytes"
-	//"os/exec"
 )
 
 /*
@@ -147,16 +144,13 @@ Revision History
  7 Apr 25 -- Updated the help message.
  9 Apr 25 -- Updated the help message again.
 30 Apr 25 -- Updated the -r flag.
+22 Jun 25 -- Porting code I just wrote for dv and rex to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
+				Here I'm using a procedure variable to track whether color should be output.
 */
 
-const LastAltered = "Apr 30, 2025"
+const LastAltered = "June 22, 2025"
 
 type dirAliasMapType map[string]string
-
-//type DsrtParamType struct {  replaced by viper
-//	paramNum, w                                                               int
-//	reverseflag, sizeflag, dirlistflag, filenamelistflag, totalFlag, halfFlag bool
-//}
 
 type colorizedStr struct {
 	color ct.Color
@@ -184,10 +178,12 @@ var numOfLines, grandTotalCount int
 var smartCase bool
 
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
-var allScreens = 50
+var allScreens = 100_000
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
+var termRedirected bool
+var termDisplayOut bool
 
 func main() {
 	//var dsrtParam DsrtParamType  replaced by viper
@@ -197,28 +193,19 @@ func main() {
 	var excludeRegexPattern string
 	var numOfCols int
 
-	// environment variable processing.  If present, these will be the defaults.
-	//dsrtEnviron := os.Getenv("rex")
-	//dswEnviron := os.Getenv("dsw")
-	//dsrtParam = ProcessEnvironString(dsrtEnviron, dswEnviron) // This is a function below.  Nevermind, replaced by viper.
-
 	autoDefaults := term.IsTerminal(int(os.Stdout.Fd()))
+	termDisplayOut = autoDefaults
+	termRedirected = !autoDefaults
 	winFlag := runtime.GOOS == "windows"
 
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		autoDefaults = false
-		fmt.Fprintln(os.Stderr, " From term.Getsize:", err)
-		autoWidth = minWidth
+		fmt.Println(" From term.Getsize:", err)
+		autoWidth = maxWidth
 		autoHeight = defaultHeight
 	}
 	autoHeight -= 7 // an empirically determined fudge factor.
-
-	//if autoHeight > 0 {
-	//	numOfLines = autoHeight - 7
-	//} else {
-	//	numOfLines = defaultHeight
-	//}
 
 	sepstring := string(filepath.Separator)
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.  Function avail as of go 1.12.
@@ -236,10 +223,6 @@ func main() {
 	var NLines int
 	flag.IntVarP(&NLines, "nlines", "N", 0, "number of lines to display") // Value
 	viper.SetDefault("NLines", autoHeight)
-
-	//var helpflag = flag.Bool("h", false, "print help message") // pointer
-	//var HelpFlag bool
-	//flag.BoolVar(&HelpFlag, "help", false, "print help message")
 
 	var sizeflag = flag.BoolP("size", "s", false, "sort by size instead of by mod date") // pointer
 
@@ -299,10 +282,15 @@ func main() {
 
 	flag.Parse()
 
+	myPrintf := printfWithColor
+	if termRedirected {
+		myPrintf = printfWithoutColor
+	}
+
 	// viper stuff
 	err = viper.BindPFlags(flag.CommandLine) // this statement passes control of all the flags to viper from the pflag package.  Remember, verbose and veryverbose flags are not init'd yet
 	if err != nil {
-		ctfmt.Printf(ct.Red, winFlag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
+		myPrintf(ct.Red, winFlag, "Error binding flags is %s.  Binding is ignored.\n", err.Error())
 	}
 
 	viper.SetConfigType("yaml")
@@ -328,10 +316,10 @@ func main() {
 
 	if verboseFlag {
 		if errconfig1 != nil {
-			ctfmt.Printf(ct.Red, winFlag, "Error reading config file 1, from current directory  Err: %s. \n", errconfig1.Error())
+			myPrintf(ct.Red, winFlag, "Error reading config file 1, from current directory  Err: %s. \n", errconfig1.Error())
 		}
 		if errconfig2 != nil {
-			ctfmt.Printf(ct.Red, winFlag, "Error reading config file 2, from current directory  Err: %s. \n", errconfig2.Error())
+			myPrintf(ct.Red, winFlag, "Error reading config file 2, from current directory  Err: %s. \n", errconfig2.Error())
 		}
 	}
 
@@ -343,10 +331,10 @@ func main() {
 
 	*nscreens = viper.GetInt("nscreens")
 	allFlag = viper.GetBool("all")
-	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+	if allFlag || termRedirected { // if both nscreens and allScreens are used, allFlag takes precedence.
 		*nscreens = allScreens // allScreens is defined above w/ a default, non-zero value of 50 as of this writing.
 	}
-	numOfLines *= *nscreens * numOfCols // Doesn't matter if *nscreens or numOfCols = 1 which is the default
+	numOfLines *= *nscreens // * numOfCols // Doesn't matter if *nscreens or numOfCols = 1 which is the default.  Bug fixed 6/22/25.
 
 	halfFlag = viper.GetBool("half")
 	if halfFlag && !maxDimFlag { // halfFlag could be set by environment var, but overridden by use of maxDimFlag.
@@ -415,6 +403,7 @@ func main() {
 			w = min3Width
 		}
 	}
+
 	// check min widths
 	if numOfCols == 3 && w < min3Width {
 		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Will make column = 1.\n", w, min3Width, numOfCols)
@@ -426,7 +415,8 @@ func main() {
 		fmt.Printf(" Width of %d is less than minimum of %d for %d column output.  Output may not look good.\n", w, minWidth, numOfCols)
 	}
 
-	ctfmt.Println(ct.Magenta, winFlag, " rexv will display sorted by date or size in up to 3 columns.  Uses viper.  LastAltered ", LastAltered, ", compiled using ", runtime.Version())
+	myPrintf(ct.Magenta, winFlag, " rexv will display sorted by date or size in up to 3 columns.  Uses viper.  LastAltered %s, compiled using %s.\n",
+		LastAltered, runtime.Version())
 	if verboseFlag {
 		fmt.Printf(" width = %d\n", w)
 	}
@@ -437,7 +427,7 @@ func main() {
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
 		fmt.Println(ExecFI.Name(), "timestamp is", ExecTimeStamp, ".  Full exec is", execName)
 		fmt.Println()
-		fmt.Println("winFlag:", winFlag)
+		fmt.Printf("winFlag: %t, termDisplayOut: %t, termRedirected: %t\n", winFlag, termDisplayOut, termRedirected)
 		fmt.Println()
 		fmt.Printf(" After flag.Parse(); option switches w=%d, nscreens=%d, Nlines=%d and numofCols=%d\n", w, *nscreens, NLines, numOfCols)
 		fmt.Printf(" After flag.Parse(); autowidth=%d, autoheight=%d, numOfLines=%d and numofCols=%d\n", autoWidth, autoHeight, numOfLines, numOfCols)
@@ -475,17 +465,17 @@ func main() {
 		}
 		f, err := os.Open(workingDir)
 		if err != nil {
-			ctfmt.Printf(ct.Red, winFlag, " Opening %s gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
+			myPrintf(ct.Red, winFlag, " Opening %s gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
 			workingDir = startDir // error from opening workingDir, so use orig startDir
 		}
 		fi, err := f.Stat()
 		if err != nil {
-			ctfmt.Printf(ct.Red, winFlag, " Stat(%s) gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
+			myPrintf(ct.Red, winFlag, " Stat(%s) gave this error: %s.  Will use %s instead.\n", workingDir, err, startDir)
 			workingDir = startDir // error from opening workingDir, so use orig startDir
 		}
 
 		if !fi.Mode().IsDir() {
-			ctfmt.Printf(ct.Red, winFlag, " %s is not a directory.  Will use %s instead.\n", workingDir, startDir)
+			myPrintf(ct.Red, winFlag, " %s is not a directory.  Will use %s instead.\n", workingDir, startDir)
 			workingDir = startDir
 		}
 
@@ -570,20 +560,20 @@ func main() {
 	for i := 0; i < len(cs); i += numOfCols {
 		c0 := cs[i].color
 		s0 := fixedStringLen(cs[i].str, columnWidth)
-		ctfmt.Printf(c0, winFlag, "%s", s0)
+		myPrintf(c0, winFlag, "%s", s0)
 
 		j := i + 1
 		if numOfCols > 1 && j < len(cs) { // numOfCols of 2 or 3
 			c1 := cs[j].color
 			s1 := fixedStringLen(cs[j].str, columnWidth)
-			ctfmt.Printf(c1, winFlag, "  %s", s1)
+			myPrintf(c1, winFlag, "  %s", s1)
 		}
 
 		k := j + 1
 		if numOfCols == 3 && k < len(cs) {
 			c2 := cs[k].color
 			s2 := fixedStringLen(cs[k].str, columnWidth)
-			ctfmt.Printf(c2, winFlag, "  %s", s2)
+			myPrintf(c2, winFlag, "  %s", s2)
 		}
 		fmt.Println()
 	}
@@ -927,4 +917,14 @@ func pause() bool {
 		return true
 	}
 	return false
+}
+
+// printfWithColor is intended to be assigned to a variable when the display is not redirected.
+func printfWithColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+	ctfmt.Printf(clr, bold, format, a...)
+}
+
+// printfWithoutColor is intended to be assigned to a variable when the display is redirected.
+func printfWithoutColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+	fmt.Printf(format, a...)
 }
