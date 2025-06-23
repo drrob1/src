@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,13 +18,7 @@ REVISION HISTORY
 15 Feb 22 -- Replaced testFlag w/ verboseFlag.  Finally.
 24 Feb 22 -- Fixed a bug in the glob option.  And Evan's 30 today.  Wow.
 12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.  But that is not called here in Windows code, so nevermind.
-*/
-
-/* Not used here.
-func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
-	return "", ""
-}
-
+23 Jun 25 -- Ported myPrintf and related code.
 */
 
 // getFileInfosFromCommandLine() will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
@@ -162,7 +155,7 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 			} else {
 				var color ct.Color
 				sizestr, color = getMagnitudeString(f.Size())
-				ctfmt.Printf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
+				myPrintf(color, true, "%-17s %s %s\n", sizestr, s, f.Name())
 			}
 			lnCount++
 		} else if IsSymlink(f.Mode()) {

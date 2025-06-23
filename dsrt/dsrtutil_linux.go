@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +12,7 @@ import (
 )
 
 //  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
+//  23 Jun 25 -- Ported myPrintf and related code here.
 
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
@@ -134,11 +134,11 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 				if f.Size() > 100000 {
 					sizestr = AddCommas(sizestr)
 				}
-				ctfmt.Printf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				myPrintf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 			} else {
 				var color ct.Color
 				sizestr, color = getMagnitudeString(f.Size())
-				ctfmt.Printf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				myPrintf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
 			}
 			lnCount++
 

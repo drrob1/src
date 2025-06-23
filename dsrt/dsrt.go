@@ -154,9 +154,10 @@ REVISION HISTORY
 20 Jan 25 -- Added timing for startup code
  9 Apr 25 -- Help message already includes LastAltered.  I slightly modified this message.
 13 Apr 25 -- Added metrics as covered in Mastering Go, 4th ed.  Based on runtime/metrics
+22 Jun 25 -- Ported myPrintf and related code to here.
 */
 
-const LastAltered = "13 Apr 2025"
+const LastAltered = "23 June 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -184,12 +185,14 @@ var filterStr string
 var excludeRegex *regexp.Regexp
 
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
-var allScreens = 50
+var allScreens = 100_000
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
 
-//var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
+var termRedirected bool
+var termDisplayOut bool
+var myPrintf func(c ct.Color, bold bool, format string, a ...interface{})
 
 func main() {
 	var dsrtParam DsrtParamType
@@ -216,10 +219,13 @@ func main() {
 		ctfmt.Printf(ct.Green, winflag, ", dsrt env = %s \n", dsrtEnviron)
 	}
 
+	termDisplayOut = true
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
 		autoHeight = defaultHeight
 		autoWidth = minWidth
+		termDisplayOut = false
+		termRedirected = true
 	}
 
 	if runtime.GOARCH == "amd64" {
@@ -290,6 +296,11 @@ func main() {
 
 	flag.Parse()
 
+	myPrintf = printfWithColor
+	if termRedirected {
+		myPrintf = printfWithoutColor
+	}
+
 	if veryVerboseFlag { // setting veryVerbose flag will also set verbose flag, ie testFlag.
 		verboseFlag = true
 	}
@@ -306,7 +317,7 @@ func main() {
 		numOfLines = defaultHeight
 	}
 
-	if allFlag { // if both nscreens and allScreens are used, allFlag takes precedence.
+	if allFlag || termRedirected { // if both nscreens and allScreens are used, allFlag takes precedence.  Or if terminal is redirected, allFlag is treated as being true.
 		*nscreens = allScreens // allScreens is defined above w/ a default, non-zero value of 50 as of this writing.
 	}
 	numOfLines *= *nscreens // Doesn't matter if *nscreens = 1 which is the default
@@ -332,7 +343,8 @@ func main() {
 		fmt.Printf(" dsrtparam paramNum =%d, reverseflag=%t, sizeflag=%t, dirlistflag=%t, filenamelist=%t, totalflag=%t, halfFlag=%t\n",
 			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag,
 			dsrtParam.totalflag, dsrtParam.halfFlag)
-		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t. \n", autoHeight, autoWidth, excludeFlag, halfFlag)
+		fmt.Printf(" autoheight=%d, autowidth=%d, excludeFlag=%t, halfFlag=%t, termRedirected=%t, TermDisplayOut=%t. \n",
+			autoHeight, autoWidth, excludeFlag, halfFlag, termRedirected, termDisplayOut)
 	}
 
 	Reverse := *revflag || RevFlag || dsrtParam.reverseflag
@@ -737,4 +749,14 @@ func includeThis(fi os.FileInfo) bool {
 		}
 	}
 	return true
+}
+
+// printfWithColor is intended to be assigned to a variable when the display is not redirected.
+func printfWithColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+	ctfmt.Printf(clr, bold, format, a...)
+}
+
+// printfWithoutColor is intended to be assigned to a variable when the display is redirected.
+func printfWithoutColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+	fmt.Printf(format, a...)
 }
