@@ -5,19 +5,16 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 	"hash/crc32"
 	"io"
-	"time"
-
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"src/list"
 	"strings"
+	"time"
 )
 
 /*
@@ -45,14 +42,15 @@ import (
   31 Mar 23 -- StaticCheck found a few issues.
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
    8 Apr 23 -- Changed list.New signature.
+   6 Jul 25 -- Will also show total of bytes copied, and made timeFudgeFactor 1 ms, as in the other routines.
 */
 
-const LastAltered = "8 Apr 2023" //
+const LastAltered = "6 July 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 100 * time.Millisecond
+const timeFudgeFactor = 1 * time.Millisecond
 
 // const minHeight = 26  not used here, but used in FileSelection.
 
@@ -153,6 +151,7 @@ func main() {
 	list.ReverseFlag = revFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
+	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
 
 	//fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
@@ -235,9 +234,10 @@ func main() {
 	start := time.Now()
 
 	var success, fail int
+	var totalBytes int64
 	onWin := runtime.GOOS == "windows"
 	for _, f := range fileList {
-		err = CopyAFile(f.RelPath, destDir)
+		n, err := CopyAFile(f.RelPath, destDir)
 		if err == nil {
 			if verifyFlag {
 				ctfmt.Printf(ct.Green, onWin, " %s Copied to %s, and then VERIFIED. \n", f.RelPath, destDir) // if get here, verification succeeded.
@@ -245,18 +245,24 @@ func main() {
 				ctfmt.Printf(ct.Green, onWin, " Copied %s -> %s\n", f.RelPath, destDir)
 			}
 			success++
+			totalBytes += n
 		} else {
 			ctfmt.Printf(ct.Red, onWin, " ERROR: %s\n", err)
 			fail++
 		}
 	}
-	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), LastAltered)
-	fmt.Printf("\n Successfully copied %d files, and FAILED to copy %d files; elapsed time is %s\n\n", success, fail, time.Since(start))
+
+	//   fmt.Printf("\n Successfully copied %d files, and FAILED to copy %d files; elapsed time is %s\n\n", success, fail, time.Since(start))
+	magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytes)
+	fmt.Printf("\n Successfully copied %d files ", success)
+	ctfmt.Printf(magnitudeColor, true, "and %s,", magnitudeString)
+	fmt.Printf(" and FAILED to copy %d files; elapsed time is %s\n\n", fail, time.Since(start))
+
 } // end main
 
-// ------------------------------------ Copy ----------------------------------------------
+// ------------------------------------ CopyAFile ----------------------------------------------
 
-func CopyAFile(srcFile, destDir string) error {
+func CopyAFile(srcFile, destDir string) (int64, error) {
 	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	//fmt.Printf(" CopyFile: src = %#v, destDir = %#v\n", srcFile, destDir)
@@ -265,17 +271,17 @@ func CopyAFile(srcFile, destDir string) error {
 	in, err := os.Open(srcFile)
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Open(%s): src = %#v, destDir = %#v\n", srcFile, srcFile, destDir)
-		return err
+		return 0, err
 	}
 	defer in.Close()
 
 	destFI, err := os.Stat(destDir)
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Stat(%s): src = %#v, destDir = %#v, err = %#v\n", destDir, srcFile, destDir, err)
-		return err
+		return 0, err
 	}
 	if !destFI.IsDir() {
-		return fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir)
+		return 0, fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir)
 	}
 
 	baseFile := filepath.Base(srcFile)
@@ -284,34 +290,34 @@ func CopyAFile(srcFile, destDir string) error {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+			return 0, fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
 		}
 	}
 	out, err := os.Create(outName)
 	if err != nil {
 		//fmt.Printf(" CopyFile after os.Create(%s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
-		return err
+		return 0, err
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, in)
+	n, err := io.Copy(out, in)
 
 	if err != nil {
 		//fmt.Printf(" CopyFile after io.Copy(%s, %s): src = %#v, destDir = %#v, outName = %#v, err = %#v\n", outName, srcFile, destDir, outName, err)
-		return err
+		return 0, err
 	}
 	err = out.Sync()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	err = in.Close()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = out.Close()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	t := inFI.ModTime()
 	if !onWin {
@@ -319,23 +325,23 @@ func CopyAFile(srcFile, destDir string) error {
 	}
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if verifyFlag {
 		in, err = os.Open(srcFile)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		out, err = os.Open(outName)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if verifyFiles(in, out) {
 			//ctfmt.Printf(ct.Green, onWin, " %s and its copy are verified.   ", srcFile) // no newline here intentionally.
 		} else {
-			return fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
+			return 0, fmt.Errorf("%s and %s failed the verification process by crc32 IEEE", srcFile, outName)
 		}
 
 		if list.VerboseFlag { // this is made global by assigning to list above.
@@ -343,7 +349,7 @@ func CopyAFile(srcFile, destDir string) error {
 		}
 	}
 
-	return nil
+	return n, nil
 } // end CopyAFile
 
 func verifyFiles(r1, r2 io.Reader) bool {
