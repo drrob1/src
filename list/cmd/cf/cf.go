@@ -88,9 +88,10 @@ import (
    6 July 24-- Changed startup message.
   28 July 24-- Added timing to each goroutine.  And fixed a data race by no longer making ErrNotNew global.
   22 Oct 24 -- Will now check to make sure params are present.
+   6 Jul 25 -- Will display approx number of bytes copied.
 */
 
-const LastAltered = "22 Oct 2024" //
+const LastAltered = "7 July 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -103,11 +104,12 @@ type cfType struct { // copy file type
 }
 
 type msgType struct {
-	s        string
-	e        error
-	color    ct.Color
-	success  bool
-	verified bool
+	s           string
+	e           error
+	color       ct.Color
+	success     bool
+	verified    bool
+	bytesCopied int64
 }
 
 var autoWidth, autoHeight int
@@ -125,6 +127,7 @@ var verifyFlag, verFlag bool
 var multiplier int
 
 func main() {
+	var totalBytesCopied int64
 	execName, err := os.Executable()
 	if err != nil {
 		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
@@ -329,6 +332,7 @@ func main() {
 			if msg.success {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
 				atomic.AddInt64(&succeeded, 1)
+				atomic.AddInt64(&totalBytesCopied, msg.bytesCopied)
 			} else {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
 				atomic.AddInt64(&failed, 1)
@@ -353,7 +357,9 @@ func main() {
 	wg.Wait()
 	close(msgChan)
 	if succeeded > 0 {
-		ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d. ", succeeded)
+		magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
+		ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d, ", succeeded)
+		ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
 	}
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
@@ -412,7 +418,7 @@ func copyAFile(srcFile, destDir string) {
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew := fmt.Errorf("Elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
+			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
@@ -437,7 +443,8 @@ func copyAFile(srcFile, destDir string) {
 	defer out.Close()
 
 	t0 = time.Now()
-	_, err = io.Copy(out, in)
+	var n int64
+	n, err = io.Copy(out, in)
 
 	if err != nil {
 		var msg msgType
@@ -566,11 +573,12 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:        fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
-				e:        nil,
-				color:    ct.Green,
-				success:  true,
-				verified: true,
+				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
+				e:           nil,
+				color:       ct.Green,
+				success:     true,
+				verified:    true,
+				bytesCopied: n,
 			}
 			msgChan <- msg
 			return
@@ -588,12 +596,12 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	msg := msgType{
-		s:        fmt.Sprintf("elapsed %s: %s copied to %s", time.Since(t0), srcFile, destDir),
-		e:        nil,
-		color:    ct.Green,
-		success:  true,
-		verified: verifyFlag, // I already know that this flag is false if get here.
+		s:           fmt.Sprintf("elapsed %s: %s copied to %s", time.Since(t0), srcFile, destDir),
+		e:           nil,
+		color:       ct.Green,
+		success:     true,
+		verified:    verifyFlag, // I already know that this flag is false if get here.
+		bytesCopied: n,
 	}
 	msgChan <- msg
-	// return  this is redundant.
 } // end CopyAFile
