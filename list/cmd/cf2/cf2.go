@@ -357,7 +357,8 @@ func main() {
 	if succeeded > 0 {
 		magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
 		ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
-		ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
+		ctfmt.Printf(ct.Magenta, false, "and approx total of bytes copied is ")
+		ctfmt.Printf(magnitudeColor, true, "%s,", magnitudeString)
 	}
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
