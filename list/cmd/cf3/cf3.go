@@ -101,9 +101,10 @@ import (
 				See list.go and listutil_windows.go and listutil_linux.go for more details.
   20 Jan 25 -- Added set-up timing display.
    3 May 25 -- When there are errors in the dest directory, that needs to be more obvious.
+   7 Jul 25 -- Will output approx total bytes copied.
 */
 
-const LastAltered = "3 May 2025" //
+const LastAltered = "7 July 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -113,12 +114,13 @@ const fanoutMax = 900
 const configFilename = "cf3.yaml"
 
 type msgType struct {
-	s        string
-	e        error
-	color    ct.Color
-	elapsed  time.Duration
-	success  bool
-	verified bool
+	s           string
+	e           error
+	color       ct.Color
+	elapsed     time.Duration
+	success     bool
+	verified    bool
+	bytesCopied int64
 }
 
 var autoWidth, autoHeight int
@@ -132,6 +134,7 @@ var verifyFlag, verFlag bool
 var multiplier int
 
 func main() {
+	var totalBytesCopied int64
 	t1 := time.Now()
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
 	execName, err := os.Executable()
@@ -379,7 +382,8 @@ func main() {
 		for msg := range msgChan {
 			if msg.success {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
-				succeeded++ // there is only 1 go routine, so this is not a data race
+				succeeded++                         // there is only 1 go routine doing this read-modify-write, so this is not a data race
+				totalBytesCopied += msg.bytesCopied // there is only 1 go routine doing this read-modify-write, so this is not a data race
 			} else {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
 				failed++ // there is only 1 go routine, so this is not a data race
@@ -402,7 +406,9 @@ func main() {
 	close(msgChan)
 	fmt.Printf(" \n %s:", os.Args[0])
 	if succeeded > 0 {
+		magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
 		ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
+		ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
 	}
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
@@ -491,7 +497,8 @@ func copyAFile(srcFile, destDir string) {
 	defer out.Close()
 
 	t0 = time.Now() // redefine t0 now that it's going to try to copy the file.
-	_, err = io.Copy(out, in)
+	var n int64
+	n, err = io.Copy(out, in)
 
 	if err != nil {
 		var msg msgType
@@ -611,12 +618,13 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:        fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
-				e:        nil,
-				color:    ct.Green,
-				elapsed:  time.Since(t0),
-				success:  true,
-				verified: true,
+				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
+				e:           nil,
+				color:       ct.Green,
+				elapsed:     time.Since(t0),
+				success:     true,
+				verified:    true,
+				bytesCopied: n,
 			}
 			msgChan <- msg
 			return
@@ -636,12 +644,13 @@ func copyAFile(srcFile, destDir string) {
 
 	elapsed := time.Since(t0)
 	msg := msgType{
-		s:        fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
-		e:        nil,
-		color:    ct.Green,
-		elapsed:  elapsed,
-		success:  true,
-		verified: verifyFlag, // I already know that this flag is false if get here.
+		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
+		e:           nil,
+		color:       ct.Green,
+		elapsed:     elapsed,
+		success:     true,
+		verified:    verifyFlag, // I already know that this flag is false if get here.
+		bytesCopied: n,
 	}
 	msgChan <- msg
 	// return  this is redundant.

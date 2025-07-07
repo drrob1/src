@@ -5,20 +5,17 @@ import (
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"io"
-	"src/few"
-	"sync"
-	"time"
-
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/few"
 	"src/list"
 	"strings"
+	"sync"
+	"time"
 )
 
 /*
@@ -100,9 +97,10 @@ import (
   15 Jan 25 -- Adding filterStr capability.
   20 Jan 25 -- Added set-up timing display.
    3 May 25 -- Will make errors from check dest directory more obvious
+   7 Jul 25 -- Will output approx total bytes copied.
 */
 
-const LastAltered = "3 May 2025"
+const LastAltered = "7 July 2025"
 
 const defaultHeight = 40
 const minWidth = 90
@@ -111,12 +109,13 @@ const timeFudgeFactor = 1 * time.Millisecond
 const fanoutMax = 900
 
 type msgType struct {
-	s        string
-	e        error
-	color    ct.Color
-	elapsed  time.Duration
-	success  bool
-	verified bool
+	s           string
+	e           error
+	color       ct.Color
+	elapsed     time.Duration
+	success     bool
+	verified    bool
+	bytesCopied int64
 }
 
 var autoWidth, autoHeight int
@@ -132,6 +131,7 @@ var verifyFlag, verFlag bool
 var multiplier int
 
 func main() {
+	var totalBytesCopied int64
 	t1 := time.Now()
 	execName, err := os.Executable()
 	if err != nil {
@@ -332,14 +332,14 @@ func main() {
 		for msg := range msgChan {
 			if msg.success {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.s)
-				succeeded++ // there is only 1 go routine, so this is not a data race
+				succeeded++                         // there is only 1 go routine doing this read-modify-write, so this is not a data race
+				totalBytesCopied += msg.bytesCopied // there is only 1 go routine doing this read-modify-write, so this is not a data race
 			} else {
 				ctfmt.Printf(msg.color, onWin, " %s\n", msg.e)
 				failed++ // there is only 1 go routine, so this is not a data race
 			}
 			wg.Done()
 		}
-
 	}()
 
 	// time to copy the files
@@ -355,11 +355,14 @@ func main() {
 	close(msgChan)
 	fmt.Printf(" \n %s:", os.Args[0])
 	if succeeded > 0 {
+		magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
 		ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
+		ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
 	}
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
+
 	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtnsNum, os.Args[0])
 
 	if onWin { // because tcc can get confused about it's color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
@@ -444,7 +447,8 @@ func copyAFile(srcFile, destDir string) {
 	defer out.Close()
 
 	t0 = time.Now() // redefine t0 now that it's going to try to copy the file.
-	_, err = io.Copy(out, in)
+	var n int64
+	n, err = io.Copy(out, in)
 
 	if err != nil {
 		var msg msgType
@@ -564,12 +568,13 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:        fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
-				e:        nil,
-				color:    ct.Green,
-				elapsed:  time.Since(t0),
-				success:  true,
-				verified: true,
+				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
+				e:           nil,
+				color:       ct.Green,
+				elapsed:     time.Since(t0),
+				success:     true,
+				verified:    true,
+				bytesCopied: n,
 			}
 			msgChan <- msg
 			return
@@ -589,13 +594,13 @@ func copyAFile(srcFile, destDir string) {
 
 	elapsed := time.Since(t0)
 	msg := msgType{
-		s:        fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
-		e:        nil,
-		color:    ct.Green,
-		elapsed:  elapsed,
-		success:  true,
-		verified: verifyFlag, // I already know that this flag is false if get here.
+		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
+		e:           nil,
+		color:       ct.Green,
+		elapsed:     elapsed,
+		success:     true,
+		verified:    verifyFlag, // I already know that this flag is false if get here.
+		bytesCopied: n,
 	}
 	msgChan <- msg
-	// return  this is redundant.
 } // end CopyAFile
