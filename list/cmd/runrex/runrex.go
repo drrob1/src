@@ -67,6 +67,7 @@ import (
   21 Jun 25 -- Made a minor change in how params are processed.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    8 Jul 25 -- Now called runrex to make it clear it uses a regular expression as its command line param.
+   9 Jun 25 -- Added option to force execcmd.Start.
 */
 
 const LastAltered = "8 July 2025" //
@@ -125,6 +126,9 @@ func main() {
 	var globFlag bool
 	flag.BoolVar(&globFlag, "G", false, "glob flag to use globbing on file matching.") // essentially ignored.
 	flag.StringVar(&globString, "g", "", "Use this glob string pattern instead of the defaults.")
+
+	var startFlag bool
+	flag.BoolVar(&startFlag, "start", false, "Use execCmd.Start() regardless of tcc or cmd.exe.")
 
 	flag.Parse()
 
@@ -332,6 +336,9 @@ func main() {
 		}
 	}
 	variadicParam = append(variadicParam, fileNameStr...)
+	if startFlag {
+		cmd = false
+	}
 
 	if cmdStr == "excel" || cmdStr == "winword" || cmdStr == "powerpnt" || cmdStr == "msaccess" {
 		execStr := whichexec.Find(cmdStr, officePath)
