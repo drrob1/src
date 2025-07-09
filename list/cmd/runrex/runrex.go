@@ -1,4 +1,4 @@
-package main // runlst from runlist
+package main // runrex from runlst from runlist
 
 import (
 	"flag"
@@ -65,9 +65,11 @@ import (
   11 Jun 24 -- I'm going to give writing a closure function a shot.  Hey, it looks like it's working.
   14 Jun 25 -- Added output of execCmd if verboseFlag is set.
   21 Jun 25 -- Made a minor change in how params are processed.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+   8 Jul 25 -- Now called runrex to make it clear it uses a regular expression as its command line param.
 */
 
-const LastAltered = "21 June 2025" //
+const LastAltered = "8 July 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -238,7 +240,6 @@ func main() {
 		if err != nil {
 			fmt.Printf(" Error from regexp.Compile is %s.  Ignored.\n", err)
 		}
-
 	} else {
 		fmt.Printf(" Could not figure out the params.\n")
 		return
