@@ -11,9 +11,12 @@ import (
 	flag "github.com/spf13/pflag"
 	_ "golang.org/x/image/webp"
 	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+	"image/gif"
+	//_ "image/gif"
+	"image/jpeg"
+	//_ "image/jpeg"
+	"image/png"
+	//_ "image/png"
 	"math"
 	"os"
 	"path/filepath"
@@ -22,7 +25,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	//"fyne.io/fyne/v2/internal/widget"
@@ -36,9 +38,9 @@ import (
 /*
 
 This pgm works by the main thread initializing the image display and then starting the display message loop.
-Then the keyTyped handles the keyboard events.
+Then the keyTyped function handles the keyboard events.
 I now want to change that so that keyTyped puts these events into a buffered channel that is handled by a different go routine.
-Just to see if I can now.
+Just to see if I can.
 
 
 REVISION HISTORY
@@ -430,12 +432,19 @@ func lastImage() {
 // ------------------------------------------------------------ keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
-	case fyne.KeyW, fyne.KeyS:
+	case fyne.KeyW:
 		baseName := imageInfo[index].Name()
 		err := saveImage(imageAsDisplayed, baseName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from saveImage(%s) is %s.  Skipped.\n", baseName, err)
 		}
+	case fyne.KeyS:
+		baseName := imageInfo[index].Name()
+		err := imageSave(imageAsDisplayed, baseName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from saveImage(%s) is %s.  Skipped.\n", baseName, err)
+		}
+
 	case fyne.KeyUp:
 		if !sticky {
 			scaleFactor = 1
@@ -655,7 +664,7 @@ func imgImage(img *image.NRGBA) image.Image {
 	return img
 }
 
-func saveImage(img image.Image, inputname string) error {
+func saveImage(img image.Image, inputname string) error { // uses method 1
 	if img == nil {
 		return fmt.Errorf("image passed to saveImage is nil")
 	}
@@ -663,9 +672,45 @@ func saveImage(img image.Image, inputname string) error {
 	bounds := img.Bounds()
 	imgWidth := bounds.Max.X
 	imgHeight := bounds.Max.Y
-	sizeStr := fmt.Sprintf("%dx%d", imgWidth, imgHeight)
+	sizeStr := fmt.Sprintf("%dx%d_rot_%d", imgWidth, imgHeight, rotatedTimes)
 	savedName := inputname[:len(inputname)-len(ext)] + "_saved_" + sizeStr + ext // using strings.TrimSuffix would likely also work here
 	err := imaging.Save(img, savedName)
 	fmt.Printf(" Saved image %s with error of %v\n", savedName, err)
 	return err
+}
+
+func imageSave(img image.Image, inputname string) error { // uses method 2, just to see if both work.
+	if img == nil {
+		return fmt.Errorf("image passed to saveImage is nil")
+	}
+	ext := filepath.Ext(inputname)
+	bounds := img.Bounds()
+	imgWidth := bounds.Max.X
+	imgHeight := bounds.Max.Y
+	sizeStr := fmt.Sprintf("%dx%d_rot_%d", imgHeight, imgWidth, rotatedTimes)
+	savedName := inputname[:len(inputname)-len(ext)] + "_saved_" + sizeStr + ext
+
+	f, err := os.Create(savedName)
+	if err != nil {
+		return fmt.Errorf("in imageSave, error creating file %s: %v", savedName, err)
+	}
+	defer f.Close()
+
+	switch ext {
+	case ".jpg", ".jpeg":
+		err = jpeg.Encode(f, img, &jpeg.Options{Quality: 100})
+	case ".png":
+		err = png.Encode(f, img)
+	case ".gif":
+		err = gif.Encode(f, img, nil)
+	default: // it seems that webp doesn't have an encode method.
+		err = fmt.Errorf("cannot encode unsupported image format: %s", ext)
+	}
+
+	if err != nil {
+		return fmt.Errorf("error encoding image: %v", err)
+	}
+
+	fmt.Printf(" Saved image %s\n", savedName)
+	return nil
 }
