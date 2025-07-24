@@ -663,7 +663,11 @@ func saveImage(img image.Image, inputname string) error {
 		return fmt.Errorf("image passed to saveImage is nil")
 	}
 	ext := filepath.Ext(inputname)
-	savedName := inputname[:len(inputname)-len(ext)] + "_saved" + ext // using strings.TrimSuffix would likely also work here
+	bounds := img.Bounds()
+	imgWidth := bounds.Max.X
+	imgHeight := bounds.Max.Y
+	sizeStr := fmt.Sprintf("%dx%d", imgWidth, imgHeight)
+	savedName := inputname[:len(inputname)-len(ext)] + "_saved_" + sizeStr + ext // using strings.TrimSuffix would likely also work here
 	err := imaging.Save(img, savedName)
 	fmt.Printf(" Saved image %s with error of %v\n", savedName, err)
 	return err
