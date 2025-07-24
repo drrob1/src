@@ -3,34 +3,30 @@ package main
 import (
 	"flag"
 	"fmt"
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/disintegration/imaging"
-	"image/color"
-	"math"
-	"sync/atomic"
-
+	"github.com/nfnt/resize"
 	_ "golang.org/x/image/webp"
 	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
-
+	"image/color"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/storage"
-	"fyne.io/fyne/v2/widget"
-
-	"github.com/nfnt/resize"
 )
 
 // From Go GUI with Fyne, Chap 4, by Andrew Williams, (C) Packtpub.
@@ -74,9 +70,10 @@ REVISION HISTORY
 			The only concurrent code here is making the initial slice of strings containing all the image names in the working directory.
 			I combined keys in the keyTyped routine here but not in the others.
 			I added AutoOrientation to the rotateAndLoadTheImage and then to loadTheImage
+24 Jul 25 -- Added ability to save an image in its current size and degree of rotation.  Developed first in img.go.
 */
 
-const LastModified = "Feb 22, 2025"
+const LastModified = "July 24, 2025"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -202,6 +199,7 @@ var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor 
 var reverseFlag = flag.Bool("r", false, "reverse sort flag, ie, oldest image is first.")
 var sticky bool
 var rotatedCtr int64 // used in keyTyped.  And atomicadd so need this type.
+var imageAsDisplayed image.Image
 
 var scaleFactor float64 = 1
 var shiftState bool // it must be global to preserve state btwn key presses.
@@ -382,6 +380,8 @@ func loadTheImage() {
 		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 	}
 
+	imageAsDisplayed = loadedimg.Image
+
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
 	globalW.SetContent(GUI)
@@ -449,9 +449,9 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	}
 
 	imageInfoChan <- fi
-	// return  redundant
 } // MyReadDirForImages
 
+/*
 // isSorted -----------------------------------------------
 func isSorted(slice []os.FileInfo) bool {
 	for i := 0; i < len(slice)-1; i++ {
@@ -462,6 +462,7 @@ func isSorted(slice []os.FileInfo) bool {
 	}
 	return true
 }
+*/
 
 //  nextImage -----------------------------------------------------
 
@@ -500,6 +501,19 @@ func lastImage() {
 // keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
+	case fyne.KeyW:
+		baseName := imageInfo[index].Name()
+		err := saveImage(imageAsDisplayed, baseName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from saveImage(%s) is %s.  Skipped.\n", baseName, err)
+		}
+	case fyne.KeyS:
+		baseName := imageInfo[index].Name()
+		err := imageSave(imageAsDisplayed, baseName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from saveImage(%s) is %s.  Skipped.\n", baseName, err)
+		}
+
 	case fyne.KeyUp, fyne.KeyLeft:
 		if !sticky {
 			scaleFactor = 1
@@ -661,6 +675,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		fmt.Println()
 	}
 
+	imageAsDisplayed = imgImg
+
 	canvasImage := canvas.NewImageFromImage(imgImg)
 	canvasImage.ScaleMode = canvas.ImageScaleSmooth
 	if !*zoomFlag {
@@ -677,4 +693,55 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 
 func imgImage(img *image.NRGBA) image.Image {
 	return img
+}
+
+func saveImage(img image.Image, inputname string) error { // uses method 1
+	if img == nil {
+		return fmt.Errorf("image passed to saveImage is nil")
+	}
+	ext := filepath.Ext(inputname)
+	bounds := img.Bounds()
+	imgWidth := bounds.Max.X
+	imgHeight := bounds.Max.Y
+	sizeStr := fmt.Sprintf("%dx%d_rot_%d", imgWidth, imgHeight, rotatedCtr)
+	savedName := inputname[:len(inputname)-len(ext)] + "_saved_" + sizeStr + ext // using strings.TrimSuffix would likely also work here
+	err := imaging.Save(img, savedName)
+	fmt.Printf(" Saved image %s with error of %v\n", savedName, err)
+	return err
+}
+
+func imageSave(img image.Image, inputname string) error { // uses method 2, just to see if both work.
+	if img == nil {
+		return fmt.Errorf("image passed to imageSave is nil")
+	}
+	ext := filepath.Ext(inputname)
+	bounds := img.Bounds()
+	imgWidth := bounds.Max.X
+	imgHeight := bounds.Max.Y
+	sizeStr := fmt.Sprintf("%dx%d_rot_%d", imgHeight, imgWidth, rotatedCtr)
+	savedName := inputname[:len(inputname)-len(ext)] + "_saved_" + sizeStr + ext
+
+	f, err := os.Create(savedName)
+	if err != nil {
+		return fmt.Errorf("in imageSave, error creating file %s: %v", savedName, err)
+	}
+	defer f.Close()
+
+	switch ext {
+	case ".jpg", ".jpeg":
+		err = jpeg.Encode(f, img, &jpeg.Options{Quality: 100})
+	case ".png":
+		err = png.Encode(f, img)
+	case ".gif":
+		err = gif.Encode(f, img, nil)
+	default: // it seems that webp doesn't have an encode method.
+		err = fmt.Errorf("cannot encode unsupported image format: %s", ext)
+	}
+
+	if err != nil {
+		return fmt.Errorf("error encoding image: %v", err)
+	}
+
+	fmt.Printf(" Saved image %s\n", savedName)
+	return nil
 }

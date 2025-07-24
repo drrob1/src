@@ -631,7 +631,6 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		bounds = imgImg.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
 		title = fmt.Sprintf("%s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
 	}
 
@@ -648,7 +647,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	canvasImage.ScaleMode = canvas.ImageScaleSmooth
 	if !*zoomFlag {
 		canvasImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
-		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
+		//                                                 loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
 	imageAsDisplayed = canvasImage.Image
@@ -681,7 +680,7 @@ func saveImage(img image.Image, inputname string) error { // uses method 1
 
 func imageSave(img image.Image, inputname string) error { // uses method 2, just to see if both work.
 	if img == nil {
-		return fmt.Errorf("image passed to saveImage is nil")
+		return fmt.Errorf("image passed to imageSave is nil")
 	}
 	ext := filepath.Ext(inputname)
 	bounds := img.Bounds()
