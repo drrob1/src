@@ -2,30 +2,27 @@ package main
 
 import (
 	"fmt"
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/storage"
+	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
 	flag "github.com/spf13/pflag"
-	"math"
-	"sync/atomic"
-
 	_ "golang.org/x/image/webp"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/storage"
-
-	"github.com/disintegration/imaging"
-	"github.com/nfnt/resize"
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	//"fyne.io/fyne/v2/internal/widget"
