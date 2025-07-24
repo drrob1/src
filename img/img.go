@@ -531,10 +531,13 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		atomic.AddInt64(&rotatedTimes, 1)
 		rotateAndLoadTheImage(index, rotatedTimes) // index and rotatedTimes are global
 	case fyne.Key1:
+		rotatedTimes = 1
 		rotateAndLoadTheImage(index, 1)
 	case fyne.Key2:
+		rotatedTimes = 2
 		rotateAndLoadTheImage(index, 2)
 	case fyne.Key3:
+		rotatedTimes = 3
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
 		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
