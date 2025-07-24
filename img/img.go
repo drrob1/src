@@ -77,9 +77,10 @@ REVISION HISTORY
 19 Feb 25 -- Starting to think about adding a rotate image command, likely 'r'.  And I might as well use pflag instead of flag.
 20 Feb 25 -- It works, and uses repeated hits of 'r' to rotate clockwise 90 deg each time.  Or can use '1', '2', '3', or '4' to directly rotate that number of degrees.
 22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
+23 Jul 25 -- Got idea to save an image in its current size and degree of rotation.  This may take some time to get right.
 */
 
-const LastModified = "Feb 22, 2025"
+const LastModified = "July 24, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -107,6 +108,7 @@ var scaleFactor float64 = 1
 var shiftState bool
 var keyCmdChan chan int
 var rotatedTimes int64 // used in keyTyped.  And atomicadd so need this type.
+var imageAsDisplayed image.Image
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -195,7 +197,7 @@ func main() {
 		}
 
 		if isNotImageStr(imgFilename) {
-			fmt.Fprintln(os.Stderr, imgFilename, "does not have an image extension.  ")
+			fmt.Println(imgFilename, "does not have an image extension.  ")
 		}
 
 		index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
@@ -311,6 +313,8 @@ func loadTheImage(idx int) {
 		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
+
+	imageAsDisplayed = loadedimg.Image
 
 	atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
 	globalW.SetContent(loadedimg)
@@ -429,6 +433,12 @@ func lastImage() {
 // ------------------------------------------------------------ keyTyped ------------------------------
 func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	switch e.Name {
+	case fyne.KeyW, fyne.KeyS:
+		baseName := imageInfo[index].Name()
+		err := saveImage(imageAsDisplayed, baseName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from saveImage(%s) is %s.  Skipped.\n", baseName, err)
+		}
 	case fyne.KeyUp:
 		if !sticky {
 			scaleFactor = 1
@@ -635,6 +645,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
+	imageAsDisplayed = canvasImage.Image
+
 	globalW.SetContent(canvasImage)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
@@ -644,4 +656,15 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 
 func imgImage(img *image.NRGBA) image.Image {
 	return img
+}
+
+func saveImage(img image.Image, inputname string) error {
+	if img == nil {
+		return fmt.Errorf("image passed to saveImage is nil")
+	}
+	ext := filepath.Ext(inputname)
+	savedName := inputname[:len(inputname)-len(ext)] + "_saved" + ext // using strings.TrimSuffix would likely also work here
+	err := imaging.Save(img, savedName)
+	fmt.Printf(" Saved image %s with error of %v\n", savedName, err)
+	return err
 }
