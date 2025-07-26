@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/jdeng/goheif"
 	flag "github.com/spf13/pflag"
 	"image/jpeg"
@@ -18,10 +19,10 @@ func main() {
 	}
 	defer fi.Close()
 
-	//exif, err := goheif.ExtractExif(fi)
-	//if err != nil {
-	//	fmt.Printf("Warning: no EXIF from %s: %v\n", fin, err)
-	//}
+	exif, err := goheif.ExtractExif(fi)
+	if err != nil {
+		fmt.Printf("Warning: no EXIF from %s: %v\n", fin, err)
+	}
 
 	img, err := goheif.Decode(fi)
 	if err != nil {
@@ -36,13 +37,13 @@ func main() {
 
 	w := bufio.NewWriter(fo)
 	defer w.Flush()
-	//if exif != nil {
-	//	_, err = w.Write(exif)
-	//	if err != nil {
-	//		log.Fatalf("Failed to write EXIF to %s: %v\n", fout, err)
-	//	}
-	//	fmt.Printf("Wrote EXIF to %s\n", fout)
-	//}
+	if exif != nil {
+		_, err = w.Write(exif)
+		if err != nil {
+			log.Fatalf("Failed to write EXIF to %s: %v\n", fout, err)
+		}
+		fmt.Printf("Wrote EXIF to %s\n", fout)
+	}
 	err = jpeg.Encode(w, img, &jpeg.Options{Quality: 100})
 	if err != nil {
 		log.Fatalf("Failed to encode %s: %v\n", fout, err)
