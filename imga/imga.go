@@ -58,9 +58,10 @@ REVISION HISTORY
 			Added the rotateAndLoadImage and imgImage procedures, modified keyTyped and loadTheImage.  Fetching the image names is done w/ one goroutine; this is fast enough.
 22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 24 Jul 25 -- Added ability to save an image in its current size and degree of rotation.  Developed first in img.go.
+26 Jul 25 -- Using a differnt method to trim off ext of base filename, just to see if it works.
 */
 
-const LastModified = "July 24, 2025"
+const LastModified = "July 26, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -655,7 +656,7 @@ func imageSave(img image.Image, inputname string) error { // uses method 2, just
 	imgWidth := bounds.Max.X
 	imgHeight := bounds.Max.Y
 	sizeStr := fmt.Sprintf("%dx%d_rot_%d", imgHeight, imgWidth, rotatedCtr)
-	savedName := inputname[:len(inputname)-len(ext)] + "_saved_" + sizeStr + ext
+	savedName := strings.TrimSuffix(inputname, ext) + "_saved_" + sizeStr + ext
 
 	f, err := os.Create(savedName)
 	if err != nil {
