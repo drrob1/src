@@ -1,13 +1,13 @@
-package heiclist
+package main
 
 import (
 	"bufio"
 	"fmt"
 	"github.com/jdeng/goheif"
 	flag "github.com/spf13/pflag"
-	"golang.org/x/term"
 	"image/jpeg"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"src/list"
@@ -19,11 +19,7 @@ import (
 */
 
 const lastAltered = "28 July 2025"
-const defaultHeight = 40
-const minWidth = 90
-
-var autoWidth, autoHeight int
-var err error
+const jpgExt = ".jpg"
 
 func writeHeicToJpg(heic, jpg string, quality int) error {
 	fi, err := os.Open(heic)
@@ -49,18 +45,21 @@ func writeHeicToJpg(heic, jpg string, quality int) error {
 	return err
 }
 
+func processFilename(fn string, quality int) error {
+	baseFilename := filepath.Base(fn)
+	ext := filepath.Ext(baseFilename)
+	baseFilename = strings.TrimSuffix(baseFilename, ext)
+	fmt.Printf(" %s -> %s\n", fn, baseFilename+jpgExt)
+	err := writeHeicToJpg(fn, baseFilename+jpgExt, quality)
+	return err
+}
+
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), lastAltered)
-	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
-	if err != nil {
-		autoHeight = defaultHeight
-		autoWidth = minWidth
-	}
 
 	flag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], lastAltered, runtime.Version())
 		fmt.Printf(" Usage information: %s [glob pattern]\n", os.Args[0])
-		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Converts image in heic format to jpg format.\n")
 		flag.PrintDefaults()
 	}
@@ -86,6 +85,9 @@ func main() {
 	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
+	var quality int
+	flag.IntVarP(&quality, "quality", "q", 100, "quality of the jpg file")
+
 	flag.Parse()
 
 	if veryVerboseFlag { // setting veryVerboseFlag also sets verbose flag, ie, verboseFlag
@@ -105,7 +107,7 @@ func main() {
 			fmt.Printf(" excludeRegexPattern found and is %d runes. \n", len(excludeRegexPattern))
 		}
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
-		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		excludeRegex, err := regexp.Compile(excludeRegexPattern)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
@@ -121,9 +123,9 @@ func main() {
 	list.ExcludeRex = excludeRegex
 	list.DelListFlag = true
 
-	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
+	fileList, err := list.NewFromGlob("*.heic")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
+		fmt.Fprintf(os.Stderr, " Error from list.NewFromGlob is %s\n", err)
 		fmt.Printf(" flag.NArg = %d, len(os.Args) = %d\n", flag.NArg(), len(os.Args))
 		fmt.Print(" Continue? [yN] ")
 		var ans string
@@ -156,19 +158,23 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("\n\n")
 
 	if len(fileList) == 0 {
 		fmt.Printf(" The selected list of files is empty.  Exiting.\n")
 		os.Exit(1)
 	}
 
+	fmt.Printf("\n\n")
+
 	// now have the fileList.
 
-	fmt.Printf(" There are %d files in the file list.\n", len(fileList))
+	fmt.Printf(" There are %d files in the file list.\n\n", len(fileList))
 
-	for i, f := range fileList {
-		fmt.Printf(" to be converted fileList[%d] = %s\n", i, f.RelPath)
+	for _, f := range fileList {
+		err = processFilename(f.FullPath, quality)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " Error from processFilename is %s\n", err)
+		}
 	}
 	fmt.Println()
 }
