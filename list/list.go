@@ -73,7 +73,7 @@ import (
                  Currently, only runlist, runx and runlst use NewFromGlob() and NewFromRegexp().
   25 Oct 24 -- Fixed bug in CheckDest so that it will catch if no params are on the line.
   28 Nov 24 -- Will now display the size in the same color as the filename.
-  28 Dec 24 -- While investigating to make changes to use concurreny, I see that I've already done this to populate the slice of dirEntries, mostly on linux.
+  28 Dec 24 -- While investigating to make changes to use concurrency, I see that I've already done this to populate the slice of dirEntries, mostly on linux.
 				My testing did not find it to be faster on Windows.  Concurrency was slightly faster when a pattern had to be matched, but otherwise not.
 				Hence, the concurrent routines are primarily used on linux.
   15 Jan 25 -- Adding filterStr here by copying the code already in the dsrt family of routines (dsrt, ds, rex, dv).

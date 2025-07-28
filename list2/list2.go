@@ -31,7 +31,8 @@ import (
    1 Jan 23 -- I changed the display colors for the list.  The line is not all the same color now.
    4 Jan 23 -- Adding screen clearing between screen displays.  Copied from rpng.
    6 Jan 23 -- Improving error handling, by having these functions here return an error variable.  This was needed to better handle the newly added stop code.
-  15 Jan 23 -- Now called list2 which will use globals and will use InputRex, so I don't need platform specific code.  All command line params will be output directories,
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+  15 Jan 23 -- Now called list2 which will use globals and will use InputRex, so I don't need platform-specific code.  All command line params will be output directories,
                  including symlinks.
   18 Jan 23 -- Adding SmartCaseFlag
    8 Feb 23 -- Combined the 2 init functions into one.  It was a mistake to have 2 of them.
