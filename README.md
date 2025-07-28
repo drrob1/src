@@ -1,5 +1,5 @@
 ## gocode
-All of my go code as of Nov 9, 2024.
+All of my go code as of July 28, 2025
 
 1.  sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.  Multisha, consha, csha, fsha and fsha3 do this w/ conconcurrency.
 2.  rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
@@ -48,6 +48,7 @@ All of my go code as of Nov 9, 2024.
 37. copylist, dellist -- create a list on which copy or del is executed.
 38. copyc, copyc1, copyc2, copycv, cf, cf2 -- use same list concept to use concurrency in the copying of selected files.  I primarily use cf2 now.
 39. copying, copyingc -- same basic concept but implemented differently.  Command line params are list of output destinations.  Needs flags to specify inputs.
+40. heiclist -- convert a list of heic files to jpg, using my list routines.
 
 
 All the other files were either used in testing or are support files for the above programs.
