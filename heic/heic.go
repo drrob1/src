@@ -15,10 +15,11 @@ import (
 )
 
 /*
-25 Jun 25 -- First version, based on example code at GitHub.com.  Now that it works on linux (but not on windows, I'll enhance it a bit.
+25 Jul 25 -- First version, based on example code at GitHub.com.  Now that it works on linux (but not on windows, I'll enhance it a bit.
 				It's too late now.  I'll do this tomorrow.  I want to add more processing on the output name.
-26 Jun 25 -- I will add code from fromfx so that if there are no files on the command line, then it will ask.  And it will assume
+26 Jul 25 -- I will add code from fromfx so that if there are no files on the command line, then it will ask.  And it will assume
 				heic for the first file and jpg for the 2nd file, if given on command line without extensions.
+29 Jul 25 -- Playing with os.Create instead of the example's use of os.OpenFile.  It works.
 */
 
 const lastModified = "July 26, 2025"
@@ -110,7 +111,8 @@ func main() {
 		log.Fatalf("Failed to parse %s: %v\n", fin, err)
 	}
 
-	fo, err := os.OpenFile(fout, os.O_RDWR|os.O_CREATE, 0644)
+	//fo, err := os.OpenFile(fout, os.O_RDWR|os.O_CREATE, 0644)  I don't know why the example uses os.OpenFile instead of os.Create
+	fo, err := os.Create(fout)
 	if err != nil {
 		log.Fatalf("Failed to create output file %s: %v\n", fout, err)
 	}
