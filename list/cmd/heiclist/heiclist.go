@@ -16,9 +16,10 @@ import (
 
 /*
 28 July 25 -- Now that heic.go works to convert a single heic -> jpg, I'll write this as a list converter
+29 July 25 -- Now uses os.Create, instead of os.OpenFile.
 */
 
-const lastAltered = "28 July 2025"
+const lastAltered = "29 July 2025"
 const jpgExt = ".jpg"
 
 func writeHeicToJpg(heic, jpg string, quality int) error {
@@ -33,7 +34,8 @@ func writeHeicToJpg(heic, jpg string, quality int) error {
 	}
 	fi.Close()
 
-	fo, err := os.OpenFile(jpg, os.O_RDWR|os.O_CREATE, 0644)
+	//fo, err := os.OpenFile(jpg, os.O_RDWR|os.O_CREATE, 0644)  I don't know why the sample code used OpenFile instead of Create.
+	fo, err := os.Create(jpg)
 	if err != nil {
 		return err
 	}
