@@ -38,15 +38,15 @@ All of my go code as of July 28, 2025
 28. multack -- a concurrent case insensitive ack
 29. detox -- a linux-like detox utility for windows
 30. detoxp -- detox but uses pflag for its flags
-30. dirb -- porting the bashDirB script to windows in tcmd by jpsoft.  Uses makedirbkmk to create its map.
+30. dirb -- porting the bashDirB script to windows in tcmd by jpsoft.  Uses makedirbkmk to create its map, which is stored in configDir.
 31. feq, few -- file equal pgms mostly comparing different hash functions
 32. img, imga, img2 -- GUI pgm to show an image, and then switch easily
 33. freq -- letter counting and sorting, for use in wordle
 34. goclick, gofshowtime -- to keep a window active at work
 35. hideme -- for work, intended for the Aidoc demon.
-36. runlst, run, runx -- attempt to emulate executable extension, but starting w/ the data and then launching the correct program.
+36. runlst, run, runx, runrex -- attempt to emulate executable extension, but starting w/ the data and then launching the correct program.
 37. copylist, dellist -- create a list on which copy or del is executed.
-38. copyc, copyc1, copyc2, copycv, cf, cf2 -- use same list concept to use concurrency in the copying of selected files.  I primarily use cf2 now.
+38. copyc, copyc1, copyc2, copycv, cf, cf2, cf3 -- use same list concept to use concurrency in the copying of selected files.  I primarily use cf2 now.
 39. copying, copyingc -- same basic concept but implemented differently.  Command line params are list of output destinations.  Needs flags to specify inputs.
 40. heiclist -- convert a list of heic files to jpg, using my list routines.
 
