@@ -2,14 +2,17 @@ package main
 
 /*
  1 Aug 25 -- Started working on a routine to scan the weekly schedule and create a list of doc names on it, instead of having to provide one.
+			It works.  Now to see if one other varient works.  Yep, all routines here work.
 */
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	flag "github.com/spf13/pflag"
+	"github.com/tealeg/xlsx/v3"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -24,7 +27,7 @@ import (
 )
 
 const lastModified = "1 Aug 2025"
-const maxDimensions = 1000
+const maxDimensions = 200
 
 const conf = "docnames.conf"
 const ini = "docnames.ini"
@@ -52,26 +55,18 @@ const (
 	totalAmt
 )
 
-type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
-
 type fileDataType struct {
 	ffname    string // full filename
 	timestamp time.Time
 }
 
-var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
-
-var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-var docNames = make([]string, 0, 25) // a list of all the doc's last names as read from the config file.
-var dayOff = make(map[string]bool)   // only used in findAndReadConfIni when verboseFlag is set
-
 var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")
 var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 var veryVerboseFlag bool
 var startDirectory string
-var verboseFlag = flag.BoolP("v", "V", false, "verbose debugging output")
+var verboseFlag = flag.BoolP("verbose", "v", false, "verbose debugging output")
 var monthsThreshold int
+var dgtRegexp *regexp.Regexp
 
 func findAndReadConfIni() error { // Only is used to get startDirectory
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
@@ -102,6 +97,101 @@ func findAndReadConfIni() error { // Only is used to get startDirectory
 	}
 
 	return nil
+}
+
+func excludeMe(s string) bool {
+	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
+		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
+		strings.Contains(s, "see") || strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "modality") ||
+		strings.Contains(s, ":") || strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
+		return true
+	}
+	return false
+}
+
+func uniqueStrings(s []string) []string { // AI wrote this, and then I changed how it defined the list string slice.
+	keys := make(map[string]bool)
+	list := make([]string, 0, len(s))
+	for _, entry := range s {
+		if _, value := keys[entry]; !value { // this relies on fact that if key is not present, returned result will be false.
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
+func anotherUniqueStrings(s []string) []string {
+	list := make([]string, 0, len(s))
+	list = append(list, s[0]) // first element is copied to the list
+	for i := 1; i < len(s); i++ {
+		if s[i] != s[i-1] {
+			list = append(list, s[i])
+		}
+	}
+	return list
+}
+
+// func readScheduleRowsRtnStrSlice(wb *xlsx.File)  I decided to not use this form.
+func readScheduleRowsRtnStrSlice(fn string) ([]string, error) {
+	docNamesSlice := make([]string, 0, maxDimensions)
+	workBook, err := xlsx.OpenFile(fn)
+	if err != nil {
+		return nil, err
+	}
+	sheet := workBook.Sheets[0]
+
+	for row := weekdayOncall; row < totalAmt; row++ {
+		for col := 1; col < 6; col++ {
+			cell, err := sheet.Cell(row, col)
+			if err != nil {
+				return nil, err
+			}
+			s := cell.String()
+			fields := strings.Fields(s)
+			for _, field := range fields {
+				field = strings.ToLower(field)
+				if excludeMe(field) {
+					continue
+				}
+				docNamesSlice = append(docNamesSlice, field)
+			}
+		}
+	}
+	sort.Strings(docNamesSlice)
+	return docNamesSlice, nil
+}
+
+func readScheduleRowsMapRtn(fn string) ([]string, error) {
+	docNamesSlice := make([]string, 0, maxDimensions)
+	keysMap := make(map[string]bool)
+	workBook, err := xlsx.OpenFile(fn)
+	if err != nil {
+		return nil, err
+	}
+	sheet := workBook.Sheets[0]
+
+	for row := weekdayOncall; row < totalAmt; row++ {
+		for col := 1; col < 6; col++ {
+			cell, err := sheet.Cell(row, col)
+			if err != nil {
+				return nil, err
+			}
+			s := cell.String()
+			fields := strings.Fields(s)
+			for _, field := range fields {
+				field = strings.ToLower(field)
+				if excludeMe(field) {
+					continue
+				}
+				if _, value := keysMap[field]; !value { // this relies on fact that if key is not present, returned result will be false.
+					keysMap[field] = true
+					docNamesSlice = append(docNamesSlice, field)
+				}
+			}
+		}
+	}
+	return docNamesSlice, nil
 }
 
 func main() {
@@ -202,9 +292,39 @@ func main() {
 		filename = flag.Arg(0)
 	}
 
+	dgtRegexp = regexp.MustCompile(`\d`) // any digit character matches this regexp
+
+	docnamesSlice, err := readScheduleRowsRtnStrSlice(filename)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from readScheduleRowsRtnStrSlice is %s.  Exiting \n", err)
+		return
+	}
+	if *verboseFlag {
+		fmt.Printf(" docnamesSlice length: %d\n", len(docnamesSlice))
+		fmt.Printf(" docnamesSlice: %#v\n\n", docnamesSlice)
+	}
+
+	uniqueDocnamesSlice := uniqueStrings(docnamesSlice)
+	anotherUniqueDocnamesSlice := anotherUniqueStrings(docnamesSlice)
+	if *verboseFlag {
+		fmt.Printf(" After calling uniqueStrings -- length: %d\n", len(uniqueDocnamesSlice))
+		fmt.Printf(" uniqueDocnamesSlice: %#v\n\n", uniqueDocnamesSlice)
+		fmt.Printf(" AntherUniquedocnamesSlice: %#v\n\n", anotherUniqueDocnamesSlice)
+	}
+
+	uniqueDocnamesFromMap, err := readScheduleRowsMapRtn(filename)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from readScheduleRowsMapRtn is %s.  Exiting \n", err)
+		return
+	}
+	if *verboseFlag {
+		fmt.Printf(" After calling readScheduleRowsMapRtn -- length: %d\n", len(uniqueDocnamesFromMap))
+		fmt.Printf(" uniqueDocnamesMap: %#v\n\n", uniqueDocnamesFromMap)
+	}
+
 }
 
-//	Needs a walk function to find what it is looking for.  See top comments.
+// Needs a walk function to find what it is looking for.  See top comments.
 func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.Slice
 
 	// validate the regular expression
