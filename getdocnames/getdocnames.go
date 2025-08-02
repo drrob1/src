@@ -3,6 +3,8 @@ package main
 /*
  1 Aug 25 -- Started working on a routine to scan the weekly schedule and create a list of doc names on it, instead of having to provide one.
 			It works.  Now to see if one other varient works.  Yep, all routines here work.
+ 2 Aug 25 -- Playing some more.  Now that I remember about slice.Compact, I want to test if it needs a sorted slice to work.  Turns out that it does need a sorted slice.
+				Turns out that it does need a sorted slice, as it only removes consecutive occurances of duplicate strings.
 */
 
 import (
@@ -17,6 +19,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"src/filepicker"
 	"src/misc"
@@ -123,6 +126,7 @@ func uniqueStrings(s []string) []string { // AI wrote this, and then I changed h
 
 // After writing this, I was reminded that there is now slices.Compact(), which does this as part of the std library, as of ~ Go 1.20.
 func anotherUniqueStrings(s []string) []string {
+	sort.Strings(s)
 	list := make([]string, 0, len(s))
 	list = append(list, s[0]) // first element is copied to the list
 	for i := 1; i < len(s); i++ {
@@ -159,7 +163,6 @@ func readScheduleRowsRtnStrSlice(fn string) ([]string, error) {
 			}
 		}
 	}
-	sort.Strings(docNamesSlice)
 	return docNamesSlice, nil
 }
 
@@ -319,6 +322,17 @@ func main() {
 	if *verboseFlag {
 		fmt.Printf(" After calling readScheduleRowsMapRtn -- length: %d\n", len(uniqueDocnamesFromMap))
 		fmt.Printf(" uniqueDocnamesMap: %#v\n\n", uniqueDocnamesFromMap)
+	}
+
+	uniqueNames, err := readScheduleRowsRtnStrSlice(filename)
+	if err != nil {
+		ctfmt.Printf(ct.Red, false, " Error from readScheduleRowsRtnStrSlice is %s.  Exiting \n", err)
+		return
+	}
+	uniqueNames = slices.Compact(uniqueNames)
+	if *verboseFlag {
+		fmt.Printf(" After calling slices.Compact(uniqueNames) -- length: %d\n", len(uniqueNames))
+		fmt.Printf(" uniqueNames: %#v\n\n", uniqueNames)
 	}
 
 }
