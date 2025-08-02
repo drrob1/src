@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const lastModified = "1 Aug 2025"
+const lastModified = "2 Aug 2025"
 const maxDimensions = 200
 
 const conf = "docnames.conf"
@@ -66,7 +66,6 @@ var veryVerboseFlag bool
 var startDirectory string
 var verboseFlag = flag.BoolP("verbose", "v", false, "verbose debugging output")
 var monthsThreshold int
-var dgtRegexp *regexp.Regexp
 
 func findAndReadConfIni() error { // Only is used to get startDirectory
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
@@ -100,6 +99,7 @@ func findAndReadConfIni() error { // Only is used to get startDirectory
 }
 
 func excludeMe(s string) bool {
+	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
 	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
 		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
 		strings.Contains(s, "see") || strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "modality") ||
@@ -121,6 +121,7 @@ func uniqueStrings(s []string) []string { // AI wrote this, and then I changed h
 	return list
 }
 
+// After writing this, I was reminded that there is now slices.Compact(), which does this as part of the std library, as of ~ Go 1.20.
 func anotherUniqueStrings(s []string) []string {
 	list := make([]string, 0, len(s))
 	list = append(list, s[0]) // first element is copied to the list
@@ -291,8 +292,6 @@ func main() {
 	} else { // will use filename entered on commandline
 		filename = flag.Arg(0)
 	}
-
-	dgtRegexp = regexp.MustCompile(`\d`) // any digit character matches this regexp
 
 	docnamesSlice, err := readScheduleRowsRtnStrSlice(filename)
 	if err != nil {

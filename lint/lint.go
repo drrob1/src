@@ -88,11 +88,13 @@ import (
    2 Aug 25 -- Completed getdocnames yesterday which extracts the names from the schedule itself.  This way I don't need to specify them in the config file, making this routine
 				more robust.  I'm going to add it.  I have to ignore the line of the config file that begins w/ "off".  I have to check what the code does if there is no
 				startdirectory line in the config file, or the line has invalid syntax (like not beginning w/ the correctly spelled keyword).
+				Processing the config file used to do so by using global var's.  I'm changing that to use params.  This way, I can ignore a return param if I want to.
 */
 
-const lastModified = "31 May 2025"
+const lastModified = "2 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
+const numOfDocs = 40 // used to dimension a string slice.
 
 const (
 	weekdayOncall = iota + 3 // and code is a 0-origin, while Excel is 1-origin for rows.
@@ -124,41 +126,41 @@ type fileDataType struct {
 	timestamp time.Time
 }
 
+var names = make([]string, 0, numOfDocs)
 var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
 
 var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-var names = make([]string, 0, 25)  // a list of all the doc's last names as read from the config file.
 var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
 
 var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
 var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")
 var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 var veryVerboseFlag bool
-var startDirectory string
 var monthsThreshold int
 
-// Next I will code the check against the vacation people to make sure they're not assigned to anything else.
-
-func findAndReadConfIni() error {
+// findAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
+func findAndReadConfIni() ([]string, string, error) {
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
 	fullFile, found := whichexec.FindConfig(conf)
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
 		if !found {
-			return fmt.Errorf("%s or %s not found", conf, ini)
+			return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
 		}
 	}
 
+	docNames := make([]string, 0, numOfDocs) // a list of all the doc's last names as read from the config file.
+	var startDirectory string
 	// now need to process the config file using code from fansha.
 	fileByteSlice, err := os.ReadFile(fullFile)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	bytesReader := bytes.NewReader(fileByteSlice)
 	inputLine, err := misc.ReadLine(bytesReader)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	// remove any commas
@@ -166,28 +168,42 @@ func findAndReadConfIni() error {
 
 	// will use my tknptr stuff here.
 	tokenslice := tknptr.TokenSlice(inputLine)
-	lower := strings.ToLower(tokenslice[0].Str)
-	if !strings.Contains(lower, "off") {
-		return fmt.Errorf("%s is not off", tokenslice[0].Str)
-	}
-	for _, token := range tokenslice[1:] {
-		lower = strings.ToLower(token.Str)
-		names = append(names, lower)
-		dayOff[lower] = false // this is a map[string]bool
-	}
-	if veryVerboseFlag {
-		fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
-		for doc, vacay := range dayOff {
-			fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
+	paramName := strings.ToLower(tokenslice[0].Str)
+	//if !strings.Contains(lower, "off") {
+	//	return fmt.Errorf("%s is not off", tokenslice[0].Str)
+	//}
+	if paramName == "off" {
+		if veryVerboseFlag {
+			fmt.Printf(" Found config file: %s, containing %s\n", fullFile, inputLine)
 		}
-		fmt.Println()
-		fmt.Printf(" Names unsorted: %#v\n", names)
-	}
+		for _, token := range tokenslice[1:] {
+			lower := strings.ToLower(token.Str)
+			docNames = append(docNames, lower)
+			dayOff[lower] = false // this is a map[string]bool
+		}
+		if veryVerboseFlag {
+			fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
+			for doc, vacay := range dayOff {
+				fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
+			}
+			fmt.Println()
+			fmt.Printf(" Names unsorted: %#v\n", docNames)
+		}
 
-	sort.Strings(names)
+		sort.Strings(docNames)
 
-	if *verboseFlag {
-		fmt.Printf(" Sorted Names: %#v\n\n", names)
+		if *verboseFlag {
+			fmt.Printf(" Sorted Names: %#v\n\n", docNames)
+		}
+	} else if paramName == "startdirectory" { // only have 1 line in the config file, and it's for startdirectory
+		trimmedInputLine, ok := strings.CutPrefix(inputLine, "startdirectory") // CutPrefix became available as of Go 1.20
+		if ok {
+			startDirectory = trimmedInputLine
+			startDirectory = strings.TrimSpace(startDirectory)
+		}
+		return docNames, startDirectory, nil
+	} else {
+		return nil, "", fmt.Errorf("first line of config file must be 'off' or 'startdirectory'")
 	}
 
 	// Now to process setting startdirectory
@@ -203,9 +219,9 @@ func findAndReadConfIni() error {
 	if err != nil {
 		fmt.Printf(" Error reading 2nd config line: %s\n", err)
 		if errors.Is(err, io.EOF) {
-			return nil
+			return docNames, "", nil
 		}
-		return err
+		return docNames, "", err
 	}
 
 	trimmedInputLine, ok := strings.CutPrefix(inputLine, "startdirectory") // CutPrefix became available as of Go 1.20
@@ -214,7 +230,7 @@ func findAndReadConfIni() error {
 		startDirectory = strings.TrimSpace(startDirectory)
 	}
 
-	return nil
+	return docNames, startDirectory, nil
 }
 
 func readDay(wb *xlsx.File, col int) (dayType, error) {
@@ -282,7 +298,7 @@ func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an a
 	// this function is to return a slice of names that are on vacation for this day
 	vacationString := strings.ToLower(week[dayCol][mdOff])
 
-	mdsOff := make([]string, 0, 15) // Actually, never more than 10 off, but religious holidays can have a lot off.
+	mdsOff := make([]string, 0, numOfDocs) // Actually, never more than 10 off, but religious holidays can have a lot off.
 
 	// search for matching names
 	for _, vacationName := range names { // names is a global
@@ -360,8 +376,8 @@ func main() {
 
 	err := findAndReadConfIni()
 	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error from findAndReadConfINI: %s.  Exiting.\n", err)
-		return
+		ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
+		//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
 	}
 
 	if *verboseFlag {
