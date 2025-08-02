@@ -89,6 +89,7 @@ import (
 				more robust.  I'm going to add it.  I have to ignore the line of the config file that begins w/ "off".  I have to check what the code does if there is no
 				startdirectory line in the config file, or the line has invalid syntax (like not beginning w/ the correctly spelled keyword).
 				Processing the config file used to do so by using global var's.  I'm changing that to use params.  This way, I can ignore a return param if I want to.
+				I'm tagging this as lint v2.0
 */
 
 const lastModified = "2 Aug 2025"
