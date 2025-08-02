@@ -95,6 +95,7 @@ const lastModified = "2 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
+const maxDimensions = 200
 
 const (
 	weekdayOncall = iota + 3 // and code is a 0-origin, while Excel is 1-origin for rows.
@@ -138,6 +139,7 @@ var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Doc
 var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 var veryVerboseFlag bool
 var monthsThreshold int
+var startDirectory string // this needs to be a global, esp for the walk function.
 
 // findAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
 func findAndReadConfIni() ([]string, string, error) {
@@ -354,6 +356,7 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 }
 
 func main() {
+	var err error
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
 	flag.Usage = func() {
@@ -374,12 +377,11 @@ func main() {
 
 	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
 
-	err := findAndReadConfIni()
+	_, startDirectory, err = findAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
 		//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
 	}
-
 	if *verboseFlag {
 		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirectory)
 	}
@@ -457,6 +459,16 @@ func main() {
 		fmt.Printf(" spreadsheet picked is %s\n", filename)
 	}
 	fmt.Println()
+
+	names, err = getDocNames(filename)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from getDocNames: %s.  Exiting \n", err)
+		return
+	}
+	if *verboseFlag {
+		fmt.Printf(" doc names extracted from %s length: %d\n", filename, len(names))
+		fmt.Printf(" names: %#v\n\n", names)
+	}
 
 	err = scanXLSfile(filename)
 
@@ -701,4 +713,44 @@ func pause() bool {
 	fmt.Scanln(&ans)
 	ans = strings.ToLower(ans)
 	return strings.HasPrefix(ans, "y") // suggested by staticcheck.
+}
+func excludeMe(s string) bool {
+	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
+	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
+		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
+		strings.Contains(s, "see") || strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "modality") ||
+		strings.Contains(s, ":") || strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
+		return true
+	}
+	return false
+}
+
+func getDocNames(fn string) ([]string, error) {
+	docNamesSlice := make([]string, 0, maxDimensions)
+	workBook, err := xlsx.OpenFile(fn)
+	if err != nil {
+		return nil, err
+	}
+	sheet := workBook.Sheets[0]
+
+	for row := weekdayOncall; row < totalAmt; row++ {
+		for col := 1; col < 6; col++ {
+			cell, err := sheet.Cell(row, col)
+			if err != nil {
+				return nil, err
+			}
+			s := cell.String()
+			fields := strings.Fields(s)
+			for _, field := range fields {
+				field = strings.ToLower(field)
+				if excludeMe(field) {
+					continue
+				}
+				docNamesSlice = append(docNamesSlice, field)
+			}
+		}
+	}
+	sort.Strings(docNamesSlice)
+	docNamesSlice = slices.Compact(docNamesSlice) // slices package became available with Go 1.20-ish
+	return docNamesSlice, nil
 }
