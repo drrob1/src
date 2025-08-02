@@ -49,6 +49,7 @@ All of my go code as of July 28, 2025
 38. copyc, copyc1, copyc2, copycv, cf, cf2, cf3 -- use same list concept to use concurrency in the copying of selected files.  I primarily use cf2 now.
 39. copying, copyingc -- same basic concept but implemented differently.  Command line params are list of output destinations.  Needs flags to specify inputs.
 40. heiclist -- convert a list of heic files to jpg, using my list routines.
+41. lint -- specialty program for work that checks our weekly schedule for 3 errors: vacation assigned to work, and 2 errors about fluoro.
 
 
 All the other files were either used in testing or are support files for the above programs.

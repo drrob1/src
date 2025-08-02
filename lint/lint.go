@@ -375,7 +375,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint for the weekly schedule last modified %s\n", lastModified)
+	fmt.Printf(" lint V 2.0 for the weekly schedule, last modified %s\n", lastModified)
 
 	_, startDirectory, err = findAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
