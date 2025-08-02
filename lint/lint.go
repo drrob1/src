@@ -85,6 +85,9 @@ import (
    8 May 25 -- Fixed the help message.
   26 May 25 -- When I installed this on Caity's computer, I got the idea that I should filter out the files that Excel controls, i.e., those that begin w/ ~, tilda.
   31 May 25 -- Changed an error message.
+   2 Aug 25 -- Completed getdocnames yesterday which extracts the names from the schedule itself.  This way I don't need to specify them in the config file, making this routine
+				more robust.  I'm going to add it.  I have to ignore the line of the config file that begins w/ "off".  I have to check what the code does if there is no
+				startdirectory line in the config file, or the line has invalid syntax (like not beginning w/ the correctly spelled keyword).
 */
 
 const lastModified = "31 May 2025"
