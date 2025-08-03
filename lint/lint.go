@@ -90,9 +90,10 @@ import (
 				startdirectory line in the config file, or the line has invalid syntax (like not beginning w/ the correctly spelled keyword).
 				Processing the config file used to do so by using global var's.  I'm changing that to use params.  This way, I can ignore a return param if I want to.
 				I'm tagging this as lint v2.0
+   3 Aug 25 -- walk function will skip .git
 */
 
-const lastModified = "2 Aug 2025"
+const lastModified = "3 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -603,9 +604,9 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
 		if *verboseFlag {
 			if err != nil {
-				fmt.Printf(" WalkDir fpath %s, de.name invalid, err %v \n", fpath, err.Error())
+				fmt.Printf(" WalkDir fpath %s, de.Name %s, err %v \n", fpath, de.Name(), err.Error())
 			} else {
-				fmt.Printf(" WalkDir fpath %s\n", fpath)
+				fmt.Printf(" WalkDir fpath %s, de.Name %s\n", fpath, de.Name())
 			}
 		}
 		if err != nil {
@@ -613,6 +614,9 @@ func walkRegexFullFilenames() ([]string, error) { // This rtn sorts using sort.S
 		}
 		if de.IsDir() {
 			return nil // allow walk function to drill down itself
+		}
+		if strings.Contains(fpath, ".git") {
+			return filepath.SkipDir
 		}
 
 		if time.Now().After(timeout) {
