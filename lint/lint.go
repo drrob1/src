@@ -9,6 +9,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
+	"github.com/umahmood/soundex"
 	"io"
 	"os"
 	"path/filepath"
@@ -91,6 +92,7 @@ import (
 				Processing the config file used to do so by using global var's.  I'm changing that to use params.  This way, I can ignore a return param if I want to.
 				I'm tagging this as lint v2.0
    3 Aug 25 -- walk function will skip .git
+   4 Aug 25 -- Our 40th Anniversary.  But that's not important now.  I'm using soundex codes to report likely spelling errors so they can be fixed.
 */
 
 const lastModified = "3 Aug 2025"
@@ -127,6 +129,11 @@ type dayType [23]string // there are a few unused entries here.  This goes from 
 type fileDataType struct {
 	ffname    string // full filename
 	timestamp time.Time
+}
+
+type soundexSlice struct {
+	s      string
+	soundx string
 }
 
 var names = make([]string, 0, numOfDocs)
@@ -472,6 +479,20 @@ func main() {
 		fmt.Printf(" names: %#v\n\n", names)
 	}
 
+	// detecting and reporting likely spelling errors based on the soundex algorithm
+
+	soundx := getSoundex(names)
+	spellingErrors := showSpellingErrors(soundx)
+	if len(spellingErrors) > 0 {
+		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling errors detected in %s\n\n", len(spellingErrors), filename)
+		for _, err := range spellingErrors {
+			ctfmt.Printf(ct.Red, true, " %s\n", err)
+		}
+		fmt.Printf("\n\n\n")
+	}
+
+	// scan the xlsx schedule file
+
 	err = scanXLSfile(filename)
 
 	if err == nil {
@@ -758,4 +779,30 @@ func getDocNames(fn string) ([]string, error) {
 	sort.Strings(docNamesSlice)
 	docNamesSlice = slices.Compact(docNamesSlice) // slices package became available with Go 1.20-ish
 	return docNamesSlice, nil
+}
+
+func getSoundex(input []string) []soundexSlice {
+	out := make([]soundexSlice, 0, len(input))
+	var sound soundexSlice
+	for _, inp := range input {
+		if inp == "choi" { // choi and chiu have the same result.  So only 1 can be used.
+			continue
+		}
+		sound.s = inp
+		sound.soundx = soundex.Code(inp)
+		out = append(out, sound)
+	}
+	return out
+}
+
+func showSpellingErrors(in []soundexSlice) []string {
+	out := make([]string, 0, len(in))
+
+	for i := 1; i < len(in); i++ {
+		if in[i].soundx == in[i-1].soundx { // one of these is likely a spelling error
+			out = append(out, in[i-1].s)
+			out = append(out, in[i].s)
+		}
+	}
+	return out
 }
