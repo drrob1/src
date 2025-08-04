@@ -6,6 +6,7 @@ package main
  2 Aug 25 -- Playing some more.  Now that I remember about slice.Compact, I want to test if it needs a sorted slice to work.  Turns out that it does need a sorted slice.
 				Turns out that it does need a sorted slice, as it only removes consecutive occurances of duplicate strings.
  4 Aug 25 -- I discovered that typos in the doc names are not rare.  I want to notify the user that there may be a typo.  I'll use soundex for this.
+			And it's our 40th Anniversary.  But that's not important now.
 */
 
 import (
