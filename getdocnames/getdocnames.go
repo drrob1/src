@@ -219,6 +219,18 @@ func getSoundex(input []string) []soundexSlice {
 	return out
 }
 
+func showSpellingErrors(in []soundexSlice) []string {
+	out := make([]string, 0, len(in))
+
+	for i := 1; i < len(in); i++ {
+		if in[i].soundx == in[i-1].soundx { // one of these is likely a spelling error
+			out = append(out, in[i-1].s)
+			out = append(out, in[i].s)
+		}
+	}
+	return out
+}
+
 func main() {
 
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
@@ -362,6 +374,11 @@ func main() {
 		for i, s := range soundexStrings {
 			fmt.Printf(" %d: %s -- %s\n", i, s.s, s.soundx)
 		}
+	}
+
+	spellingErrors := showSpellingErrors(soundexStrings)
+	if *verboseFlag && len(spellingErrors) > 0 {
+		fmt.Printf("\n\n Spelling errors length: %d, spelling errors: %#v\n", len(spellingErrors), spellingErrors)
 	}
 
 }
