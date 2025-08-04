@@ -209,6 +209,9 @@ func getSoundex(input []string) []soundexSlice {
 	out := make([]soundexSlice, 0, len(input))
 	var sound soundexSlice
 	for _, inp := range input {
+		if inp == "choi" { // choi and chiu have the same result.  So only 1 can be used.
+			continue
+		}
 		sound.s = inp
 		sound.soundx = soundex.Code(inp)
 		out = append(out, sound)
