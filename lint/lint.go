@@ -484,9 +484,9 @@ func main() {
 	soundx := getSoundex(names)
 	spellingErrors := showSpellingErrors(soundx)
 	if len(spellingErrors) > 0 {
-		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling errors detected in %s\n\n", len(spellingErrors), filename)
-		for _, err := range spellingErrors {
-			ctfmt.Printf(ct.Red, true, " %s\n", err)
+		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling errors detected in %s: ", len(spellingErrors), filename)
+		for _, spell := range spellingErrors {
+			ctfmt.Printf(ct.Red, true, " %s  ", spell)
 		}
 		fmt.Printf("\n\n\n")
 	}
