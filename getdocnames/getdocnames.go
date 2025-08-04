@@ -5,6 +5,7 @@ package main
 			It works.  Now to see if one other varient works.  Yep, all routines here work.
  2 Aug 25 -- Playing some more.  Now that I remember about slice.Compact, I want to test if it needs a sorted slice to work.  Turns out that it does need a sorted slice.
 				Turns out that it does need a sorted slice, as it only removes consecutive occurances of duplicate strings.
+ 4 Aug 25 -- I discovered that typos in the doc names are not rare.  I want to notify the user that there may be a typo.  I'll use soundex for this.
 */
 
 import (
@@ -15,6 +16,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	flag "github.com/spf13/pflag"
 	"github.com/tealeg/xlsx/v3"
+	"github.com/umahmood/soundex"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +31,7 @@ import (
 	"time"
 )
 
-const lastModified = "2 Aug 2025"
+const lastModified = "4 Aug 2025"
 const maxDimensions = 200
 
 const conf = "docnames.conf"
@@ -61,6 +63,11 @@ const (
 type fileDataType struct {
 	ffname    string // full filename
 	timestamp time.Time
+}
+
+type soundexSlice struct {
+	s      string
+	soundx string
 }
 
 var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")
@@ -198,6 +205,17 @@ func readScheduleRowsMapRtn(fn string) ([]string, error) {
 	return docNamesSlice, nil
 }
 
+func getSoundex(input []string) []soundexSlice {
+	out := make([]soundexSlice, 0, len(input))
+	var sound soundexSlice
+	for _, inp := range input {
+		sound.s = inp
+		sound.soundx = soundex.Code(inp)
+		out = append(out, sound)
+	}
+	return out
+}
+
 func main() {
 
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
@@ -333,6 +351,14 @@ func main() {
 	if *verboseFlag {
 		fmt.Printf(" After calling slices.Compact(uniqueNames) -- length: %d\n", len(uniqueNames))
 		fmt.Printf(" uniqueNames: %#v\n\n", uniqueNames)
+	}
+
+	soundexStrings := getSoundex(anotherUniqueDocnamesSlice)
+	if *verboseFlag {
+		fmt.Printf(" After calling getSoundex -- length: %d\n", len(soundexStrings))
+		for i, s := range soundexStrings {
+			fmt.Printf(" %d: %s -- %s\n", i, s.s, s.soundx)
+		}
 	}
 
 }
