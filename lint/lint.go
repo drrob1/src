@@ -4,12 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	flag "github.com/spf13/pflag"
-	"github.com/stoewer/go-strcase"
-	"github.com/tealeg/xlsx/v3"
-	"github.com/umahmood/soundex"
 	"io"
 	"os"
 	"path/filepath"
@@ -24,6 +18,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
+	"github.com/stoewer/go-strcase"
+	"github.com/tealeg/xlsx/v3"
+	"github.com/umahmood/soundex"
 	//"flag"
 )
 
@@ -93,9 +94,14 @@ import (
 				I'm tagging this as lint v2.0
    3 Aug 25 -- walk function will skip .git
    4 Aug 25 -- Our 40th Anniversary.  But that's not important now.  I'm using soundex codes to report likely spelling errors so they can be fixed.
+   6 Aug 25 -- I found out today that the hospital will retire the o: drive, in favor of OneDrive.  I'll need to change the code to use OneDrive.
+               There's an environment varible called ONEDRIVE that is set to the path of OneDrive.  But at work there's OneDrive and OneDriveConsumer.  I don't know which is which.
+               On my system, they have the same value; I'll need to check if that's also true at work.
+				I first coded this to use a filepicker function, but that doesn't exclude old files.  The walk function will skip files that are older than the threshold.
+				I need to modify the walk function to take a param that is the start directory, and then combine the results of all the walk function calls.
 */
 
-const lastModified = "3 Aug 2025"
+const lastModified = "7 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -423,6 +429,15 @@ func main() {
 		if *verboseFlag {
 			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 		}
+		oneDrive := filepath.Join(filepath.Join(homeDir, "OneDrive"), "week.*xls.?$")
+		oneDriveWorkString := os.Getenv("OneDrive")
+		oneDriveWork := filepath.Join(oneDriveWorkString, "week.*xls.?$")
+		if *verboseFlag {
+			fmt.Printf(" oneDrive=%q, OneDriveWork: %q\n", oneDrive, oneDriveWork)
+		}
+		if *verboseFlag {
+			fmt.Printf(" Filenames length after append operation: %d\n", len(filenames))
+		}
 		//                                                  filenamesDocs, err := filepicker.GetRegexFullFilenames(docs)
 		filenamesDocs, err := filepicker.GetRegexFullFilenamesNotLocked(docs)
 		if err != nil {
@@ -436,6 +451,22 @@ func main() {
 		filenames = append(filenames, filenamesDocs...)
 		if *verboseFlag {
 			fmt.Printf(" Filenames length after append operation: %d\n", len(filenames))
+		}
+
+		filenamesOneDrive, err := filepicker.GetRegexFullFilenamesNotLocked(oneDrive)
+		if err != nil {
+			fmt.Printf(" Error from filepicker is %s.  Ignored \n", err)
+		} else {
+			filenames = append(filenames, filenamesOneDrive...)
+			if *verboseFlag {
+				fmt.Printf(" Filenames length after append operation: %d\n", len(filenames))
+			}
+		}
+		filenamesOneDriveWork, err := filepicker.GetRegexFullFilenamesNotLocked(oneDriveWork)
+		if err != nil {
+			fmt.Printf(" Error from filepicker is %s.  Ignored \n", err)
+		} else {
+			filenames = append(filenames, filenamesOneDriveWork...)
 		}
 
 		for i := 0; i < min(len(filenames), 26); i++ {
@@ -740,7 +771,8 @@ func pause() bool {
 	ans = strings.ToLower(ans)
 	return strings.HasPrefix(ans, "y") // suggested by staticcheck.
 }
-func excludeMe(s string) bool {
+
+func excludeMe(s string) bool { // used by getDocNames
 	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
 	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
 		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
@@ -751,6 +783,7 @@ func excludeMe(s string) bool {
 	return false
 }
 
+//getDocNames -- takes a filename and returns a slice of doc names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
 func getDocNames(fn string) ([]string, error) {
 	docNamesSlice := make([]string, 0, maxDimensions)
 	workBook, err := xlsx.OpenFile(fn)
