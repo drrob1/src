@@ -166,7 +166,11 @@ func findAndReadConfIni() ([]string, string, error) {
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
 		if !found {
-			return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
+			if *verboseFlag {
+				return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
+			} else {
+				return nil, "", nil
+			}
 		}
 	}
 
@@ -393,12 +397,15 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint V 2.0 for the weekly schedule, last modified %s\n", lastModified)
+	fmt.Printf(" lint V 2.1 for the weekly schedule, last modified %s\n", lastModified)
 
 	_, startDirFromConfigFile, err = findAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
-		//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
+		if *verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
+			fmt.Printf(" Warning from findAndReadConfIni: %s.  Ignoring. \n", err)
+			ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
+			//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
+		}
 	}
 	if *verboseFlag {
 		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirFromConfigFile)
