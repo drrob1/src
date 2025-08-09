@@ -1,39 +1,41 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
 	"net/http"
-	"src/poetry"
+	"os"
 )
 
-func poemHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	poemName := r.Form["name"][0] // first element of a slice
+/*
+  9 Aug 25 -- This was originally written from "Black Hat Go".  I don't need this.  I'm going to change it to implement my idea towards lint updating itself.
+               First, I have to see if I can get it to list directory contents.
+               Turns out I did do this, in digest.go.  It uses a GitHub package called grab.  I'll use that, so I don't have to write my own code to do this.
+*/
 
-	p, err := poetry.LoadPoem(poemName)
+const urlRwsNet = "http://drrws.net/"
+const urlRobSolomonName = "http://robsolomon.name/"
+const urlHostGator = "http://drrws.com"
+
+func listFilesHandler(w http.ResponseWriter, r *http.Request) {
+	dir := "." // or any directory you wish to list
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		http.Error(w, " File not found.", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, " %s \n", p)
+
+	var files []string
+	for _, entry := range entries {
+		files = append(files, entry.Name())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(files)
 }
 
 func main() {
-	p, err := poetry.LoadPoem("shortpoem.txt")
-	if err != nil {
-		fmt.Println(" Error reading from shortpoem.txt", err)
-	}
-	fmt.Println(p)
-	fmt.Println()
-	fmt.Printf("%#v\n", p)
 
-	//
-	fmt.Println(" Will now start the web server.")
-	http.HandleFunc("/poem", poemHandler)
-	http.ListenAndServe(":8088", nil) // there could be an IP adr here also, in addition to the port
-
-	// Once this is started, I have to test it.  Easiest way is to use curl.  So from another terminal I did:
-	//  curl -v http://127.0.0.1:8088/poem\?name=shortpoem.txt
-	//  or whatever file in ~/gocode that I wanted displayed.
-
+	http.HandleFunc("/", listFilesHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/cavaliergopher/grab/v3"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"src/timlibg"
 	"strconv"
+
+	"github.com/cavaliergopher/grab/v3"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 //import "github.com/cavaliercoder/grab"  Turns out that this URL is out of date.  When I switched to the above import, the code started working.
