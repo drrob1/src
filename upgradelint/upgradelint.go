@@ -45,7 +45,7 @@ const lintInfo = "lint.info"
 var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag")
 
 func main() {
-	fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s, %s last linked %s\n", os.Args[0], lastAltered)
+	fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s %s\n", os.Args[0], lastAltered)
 
 	fullLintInfoName := urlRwsNet + lintInfo
 	fullRemoteLintExeName := urlRwsNet + lintExe
@@ -166,12 +166,12 @@ func readInfoFile(fn string) (time.Time, hash.Hash, hash.Hash, error) {
 		return time.Time{}, nil, nil, err
 	}
 
-	err = binary.Read(buf, binary.LittleEndian, sha1hash.Sum(nil))
+	err = binary.Read(buf, binary.LittleEndian, &sha1hash)
 	if err != nil {
 		return time.Time{}, nil, nil, err
 	}
 
-	err = binary.Read(buf, binary.LittleEndian, sha256hash.Sum(nil))
+	err = binary.Read(buf, binary.LittleEndian, &sha256hash)
 
 	return t0, sha1hash, sha256hash, err
 }
