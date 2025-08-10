@@ -147,6 +147,7 @@ func main() {
 
 func readInfoFile(fn string) (time.Time, hash.Hash, hash.Hash, error) {
 	var t0 time.Time
+	var microsecs int64
 	var sha1hash hash.Hash
 	var sha256hash hash.Hash
 
@@ -156,7 +157,11 @@ func readInfoFile(fn string) (time.Time, hash.Hash, hash.Hash, error) {
 	}
 
 	buf := bytes.NewBuffer(inputBytes)
-	err = binary.Read(buf, binary.LittleEndian, &t0)
+	err = binary.Read(buf, binary.LittleEndian, &microsecs)
+	if err != nil {
+		return time.Time{}, nil, nil, err
+	}
+	t0 = time.UnixMicro(microsecs)
 	if err != nil {
 		return time.Time{}, nil, nil, err
 	}

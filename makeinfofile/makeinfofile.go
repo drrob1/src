@@ -31,15 +31,14 @@ func main() {
 	pflag.Parse()
 
 	t0 := time.Now()
-	targetFilename := lintInfo
 
 	// Create Hash Section
-	targetFile, err := os.Open(targetFilename)
+	targetFile, err := os.Open(lintExe)
 	if os.IsNotExist(err) {
-		ctfmt.Println(ct.Red, true, targetFilename, " does not exist.  Skipping.")
+		ctfmt.Println(ct.Red, true, lintExe, " does not exist.  Skipping.")
 		return
 	} else if err != nil { // we know that the file exists
-		ctfmt.Println(ct.Red, true, " Error opening ", targetFilename, ".  Exiting.")
+		ctfmt.Println(ct.Red, true, " Error opening ", lintExe, ".  Exiting.")
 		os.Exit(1)
 	}
 
@@ -47,13 +46,13 @@ func main() {
 	sha256hash = sha256.New()
 	_, err = io.Copy(sha1hash, targetFile)
 	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error copying %s is %s.  Exiting.\n\n ", targetFilename, err)
+		ctfmt.Printf(ct.Red, true, " Error copying %s is %s.  Exiting.\n\n ", lintExe, err)
 		os.Exit(1)
 	}
 
 	_, err = io.Copy(sha256hash, targetFile)
 	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error copying %s is %s.  Exiting.\n\n ", targetFilename, err)
+		ctfmt.Printf(ct.Red, true, " Error copying %s is %s.  Exiting.\n\n ", lintExe, err)
 		os.Exit(1)
 	}
 
@@ -65,7 +64,7 @@ func main() {
 	// write binary data section
 	var buf bytes.Buffer
 
-	err = binary.Write(&buf, binary.LittleEndian, t0)
+	err = binary.Write(&buf, binary.LittleEndian, t0.UnixMicro()) // time.Time is not fixed size so it won't write as a binary.
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error writing timestamp to binary file is %s.  Exiting.\n\n ", err)
 		os.Exit(1)
@@ -83,7 +82,7 @@ func main() {
 
 	//write to file section
 
-	err = os.WriteFile(targetFilename, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
+	err = os.WriteFile(lintInfo, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " os.WriteFile failed with error %v \n", err)
 	}
