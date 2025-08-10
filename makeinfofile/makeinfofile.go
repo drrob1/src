@@ -1,15 +1,15 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"crypto/sha1"
 	"crypto/sha256"
-	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
 	"os"
-	"time"
+	"strconv"
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -30,7 +30,16 @@ func main() {
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose flag")
 	pflag.Parse()
 
-	t0 := time.Now()
+	fi, err := os.Stat(lintExe)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error returned from os.Stat(%s): %q.  \n", lintExe, err)
+		os.Exit(1)
+	}
+	if fi.IsDir() {
+		ctfmt.Printf(ct.Red, true, " Error: %s is a directory.  Exiting.\n\n ", lintExe)
+		os.Exit(1)
+	}
+	t0 := fi.ModTime() // this is the timestamp of the lint.exe file.
 
 	// Create Hash Section
 	targetFile, err := os.Open(lintExe)
@@ -61,29 +70,39 @@ func main() {
 		fmt.Printf(" sha256hash is %x\n", sha256hash.Sum(nil))
 	}
 
-	// write binary data section
-	var buf bytes.Buffer
+	// write data section as strings.  Binary i/o didn't work.
+	f, err := os.Create(lintInfo)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error creating %s is %s.  Exiting.\n\n ", lintInfo, err)
+		os.Exit(1)
+	}
+	defer f.Close()
 
-	err = binary.Write(&buf, binary.LittleEndian, t0.UnixMicro()) // time.Time is not fixed size so it won't write as a binary.
+	buf := bufio.NewWriter(f)
+	defer buf.Flush()
+
+	micro := strconv.Itoa(int(t0.UnixMicro()))
+	buf.WriteString(micro)
+	_, err = buf.WriteString("\n")
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error writing timestamp to binary file is %s.  Exiting.\n\n ", err)
-		os.Exit(1)
-	}
-	err = binary.Write(&buf, binary.LittleEndian, sha1hash.Sum(nil))
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error writing sha1 hash to binary file is %s.  Exiting.\n\n ", err)
-		os.Exit(1)
-	}
-	err = binary.Write(&buf, binary.LittleEndian, sha256hash.Sum(nil))
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error writing sha256 hash to binary file is %s.  Exiting.\n\n ", err)
-		os.Exit(1)
+		return
 	}
 
-	//write to file section
-
-	err = os.WriteFile(lintInfo, buf.Bytes(), os.ModePerm) // os.ModePerm = 0777
+	s1 := hex.EncodeToString(sha1hash.Sum(nil))
+	_, err = buf.WriteString(s1)
 	if err != nil {
-		ctfmt.Printf(ct.Red, true, " os.WriteFile failed with error %v \n", err)
+		ctfmt.Printf(ct.Red, true, " Error writing sha1 hash to output file is %s.  Exiting.\n\n ", err)
+		return
 	}
+	buf.WriteString("\n")
+
+	s256 := hex.EncodeToString(sha256hash.Sum(nil))
+	_, err = buf.WriteString(s256)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error writing sha256 hash to output file is %s.  Exiting.\n\n ", err)
+		return
+	}
+	buf.WriteString("\n")
+
 }

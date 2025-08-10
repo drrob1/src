@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
-	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"hash"
 	"io"
 	"os"
+	"src/misc"
+	"strconv"
 	"time"
 
 	"github.com/cavaliergopher/grab/v3"
@@ -45,7 +46,8 @@ const lintInfo = "lint.info"
 var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag")
 
 func main() {
-	fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s %s\n", os.Args[0], lastAltered)
+	flag.Parse()
+	fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s\n", os.Args[0], lastAltered)
 
 	fullLintInfoName := urlRwsNet + lintInfo
 	fullRemoteLintExeName := urlRwsNet + lintExe
@@ -63,7 +65,7 @@ func main() {
 		fmt.Printf(" resp.Filename is %s\n\n", resp.Filename)
 	}
 
-	t0, sha1HashReadIn, sha256HashReadIn, err := readInfoFile(resp.Filename)
+	t0, sha1StrReadIn, sha256StrReadIn, err := readInfoFile(resp.Filename)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from readInfoFile(%s): %q.  \n", resp.Filename, err)
 		os.Exit(1)
@@ -72,6 +74,7 @@ func main() {
 	fi, err := os.Stat(lintExe)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from os.Stat(%s): %q.  \n", lintExe, err)
+		goto downloadMe // bad, bad boy
 	}
 
 	if fi.ModTime().After(t0) {
@@ -82,6 +85,7 @@ func main() {
 		os.Exit(0)
 	}
 
+downloadMe:
 	// Need to download the latest version of lint.exe and check its hashes.
 	configDir, err := os.UserConfigDir() // os.TempDir returns a directory that is not guaranteed to exist or have write access.
 	if err != nil {
@@ -105,30 +109,37 @@ func main() {
 	}
 	defer lintExeFile.Close()
 
-	var sha1HashComputed, sha256HashComputed hash.Hash
-	sha1HashComputed = sha1.New()
-	sha256HashComputed = sha256.New()
+	sha1HashComputed := sha1.New()
+	sha256HashComputed := sha256.New()
 	_, err = io.Copy(sha1HashComputed, lintExeFile)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from io.Copy(%s): %q.  \n", resp.Filename, err)
 		return
 	}
+	sha1StrComputed := hex.EncodeToString(sha1HashComputed.Sum(nil))
+
 	_, err = io.Copy(sha256HashComputed, lintExeFile)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from io.Copy(%s): %q.  \n", resp.Filename, err)
 		return
 	}
+	lintExeFile.Close() // can't rename a file that is open.
+	sha256StrComputed := hex.EncodeToString(sha256HashComputed.Sum(nil))
+	if *verboseFlag {
+		fmt.Printf(" sha1StrComputed is %s, sha256StrComputed is %s\n\n", sha1StrComputed, sha256StrComputed)
+	}
 
-	if sha1HashReadIn != sha1HashComputed || sha256HashReadIn != sha256HashComputed { // I don't yet know how to compare these.
-		ctfmt.Printf(ct.Red, true, " Error: sha1HashReadIn is %x \n sha1HashComputed is %x \n sha256HashReadIn is %x \n sha256HashComputed is %x\n",
-			sha1HashReadIn, sha1HashComputed, sha256HashReadIn, sha256HashComputed)
+	if sha1StrComputed != sha1StrReadIn || sha256StrComputed != sha256StrReadIn {
+		ctfmt.Printf(ct.Red, true, " Error: sha1StrReadIn is %s \n sha1StrComputed is %s \n sha256StrReadIn is %x \n sha256StrComputed is %x\n",
+			sha1StrReadIn, sha1StrComputed, sha256StrReadIn, sha256StrComputed)
 		ctfmt.Printf(ct.Red, true, " lint.exe not upgraded. \n")
-		os.Exit(1)
+		return
 	}
 
 	if *verboseFlag {
 		fmt.Printf(" lint.exe is to be upgraded. \n")
 	}
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from os.Getwd(): %q.  \n", err)
@@ -145,33 +156,33 @@ func main() {
 	}
 }
 
-func readInfoFile(fn string) (time.Time, hash.Hash, hash.Hash, error) {
-	var t0 time.Time
-	var microsecs int64
-	var sha1hash hash.Hash
-	var sha256hash hash.Hash
-
+func readInfoFile(fn string) (time.Time, string, string, error) {
 	inputBytes, err := os.ReadFile(fn)
 	if err != nil {
-		return time.Time{}, nil, nil, err
+		return time.Time{}, "", "", err
 	}
 
-	buf := bytes.NewBuffer(inputBytes)
-	err = binary.Read(buf, binary.LittleEndian, &microsecs)
+	buf := bytes.NewReader(inputBytes)
+
+	microStr, err := misc.ReadLine(buf)
 	if err != nil {
-		return time.Time{}, nil, nil, err
+		return time.Time{}, "", "", err
 	}
-	t0 = time.UnixMicro(microsecs)
+	microsecs, err := strconv.Atoi(microStr)
 	if err != nil {
-		return time.Time{}, nil, nil, err
+		return time.Time{}, "", "", err
 	}
+	timeStamp := time.UnixMicro(int64(microsecs))
 
-	err = binary.Read(buf, binary.LittleEndian, &sha1hash)
+	sha1Str, err := misc.ReadLine(buf)
 	if err != nil {
-		return time.Time{}, nil, nil, err
+		return timeStamp, "", "", err
 	}
 
-	err = binary.Read(buf, binary.LittleEndian, &sha256hash)
+	sha256Str, err := misc.ReadLine(buf)
+	if err != nil {
+		return timeStamp, "", "", err
+	}
 
-	return t0, sha1hash, sha256hash, err
+	return timeStamp, sha1Str, sha256Str, err
 }
