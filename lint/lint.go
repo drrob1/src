@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"slices"
 	"sort"
-	"src/filepicker"
 	"src/misc"
 	"src/tknptr"
 	"src/whichexec"
@@ -95,15 +94,14 @@ import (
    3 Aug 25 -- walk function will skip .git
    4 Aug 25 -- Our 40th Anniversary.  But that's not important now.  I'm using soundex codes to report likely spelling errors so they can be fixed.
    6 Aug 25 -- I found out today that the hospital will retire the o: drive, in favor of OneDrive.  I'll need to change the code to use OneDrive.
-               There's an environment varible called ONEDRIVE that is set to the path of OneDrive.
-               On my system, they have the same value; I'll need to check if that's also true at work.
-               At work, there's OneDriveCommercial, which is set to the same value as ONEDRIVE.  This is also true at home in that OneDrive and OneDriveConsumer have the same value.
+               There's an environment varible called OneDrive that is set to the path of OneDrive.  And another one called OneDriveConsumer.
+               At work, there's OneDriveCommercial, which is set to the same value as OneDrive.  This is also true at home in that OneDrive and OneDriveConsumer have the same value.
 				I first coded this to use a filepicker function, but that doesn't exclude old files.  The walk function will skip files that are older than the threshold.
 				I need to modify the walk function to take a param that is the start directory, and then combine the results of all the walk function calls.
                 And O: drive is going away at work as of Aug 8, 2025.  I'll need to change the code to use OneDrive.  I'll remove the conly flag as it's not needed now.
 */
 
-const lastModified = "8 Aug 2025"
+const lastModified = "11 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -393,7 +391,7 @@ func main() {
 		*verboseFlag = true
 	}
 
-	filepicker.VerboseFlag = *verboseFlag
+	// filepicker.VerboseFlag = *verboseFlag  no longer using filepicker.  I'm now using walkRegexFullFilenames.
 
 	var filename, ans string
 
