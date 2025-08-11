@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -99,6 +100,7 @@ import (
 				I first coded this to use a filepicker function, but that doesn't exclude old files.  The walk function will skip files that are older than the threshold.
 				I need to modify the walk function to take a param that is the start directory, and then combine the results of all the walk function calls.
                 And O: drive is going away at work as of Aug 8, 2025.  I'll need to change the code to use OneDrive.  I'll remove the conly flag as it's not needed now.
+  11 Aug 25 -- Time to add the code to autoupdate.
 */
 
 const lastModified = "11 Aug 2025"
@@ -377,8 +379,10 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 
 func main() {
 	var err error
+	var noUpgradeLint bool
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
+	flag.BoolVarP(&noUpgradeLint, "noupgrade", "n", false, "do not upgrade schedule files")
 	flag.Usage = func() {
 		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastModified, runtime.Version())
 		fmt.Printf(" Usage: %s <weekly xlsx file> \n", os.Args[0])
@@ -565,6 +569,22 @@ func main() {
 	} else {
 		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s\n\n", filename)
 	}
+
+	if noUpgradeLint {
+		return
+	}
+
+	// Time to run the updatelist cmd.
+
+	execCmd := exec.Command("upgradelint", "")
+	execCmd.Stdin = os.Stdin
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	err = execCmd.Start()
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, "\n\n Error starting upgradelint: %s.  Contact Rob Solomon\n\n", err)
+	}
+
 }
 
 // scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.

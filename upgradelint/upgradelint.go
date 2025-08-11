@@ -56,6 +56,8 @@ func main() {
 		fmt.Printf(" fullLintInfoName is %s, fullLintExeName is %s\n\n", fullLintInfoName, fullRemoteLintExeName)
 	}
 
+	time.Sleep(time.Second * 2) // to give lint time to exit after calling upgradelint.go.
+
 	_, err := os.Stat(lintInfo) // before I added this, the code seems to not download lint.info.  It's best if lint.info is not there.
 	if err == nil {
 		if *verboseFlag {
@@ -100,6 +102,7 @@ func main() {
 			execTimeStamp := execFI.ModTime().Format("Jan-02-2006_15:04:05")
 			fmt.Printf(" lint.exe timestamp is %s, lint.info timestamp is %s\n", execTimeStamp, infoTimeStamp)
 		}
+		fmt.Printf(" Hit <enter> \n\n")
 		os.Exit(0)
 	}
 
@@ -172,6 +175,7 @@ downloadMe:
 		ctfmt.Printf(ct.Red, true, " Error returned from os.Rename(%s, %s): %q.  \n", resp.Filename, currentDir+"/"+lintExe, err)
 		os.Exit(1)
 	}
+	fmt.Printf(" lint.exe upgraded to the most recent version dated %s. \n\n Hit <enter>\n\n", infoTimeStamp)
 }
 
 func readInfoFile(fn string) (time.Time, string, string, error) {
