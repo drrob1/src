@@ -9,6 +9,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 
 	ct "github.com/daviddengcn/go-colortext"
@@ -23,6 +24,7 @@ import (
 
 const lintExe = "lint.exe"
 const lintInfo = "lint.info" // this is a binary file
+const lastAltered = "11 Aug 2025"
 
 func main() {
 	var sha1hash, sha256hash hash.Hash
@@ -30,6 +32,7 @@ func main() {
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose flag")
 	pflag.Parse()
 
+	fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastAltered, runtime.Version())
 	fi, err := os.Stat(lintExe)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from os.Stat(%s): %q.  \n", lintExe, err)
@@ -40,11 +43,13 @@ func main() {
 		os.Exit(1)
 	}
 	t0 := fi.ModTime() // this is the timestamp of the lint.exe file.
+	execTimeStamp := t0.Format("Jan-02-2006_15:04:05")
+	fmt.Printf(" lint.exe timestamp is %s\n", execTimeStamp)
 
 	// Create Hash Section
 	targetFile, err := os.Open(lintExe)
 	if os.IsNotExist(err) {
-		ctfmt.Println(ct.Red, true, lintExe, " does not exist.  Skipping.")
+		ctfmt.Println(ct.Red, true, lintExe, " does not exist.  Exiting.")
 		return
 	} else if err != nil { // we know that the file exists
 		ctfmt.Println(ct.Red, true, " Error opening ", lintExe, ".  Exiting.")

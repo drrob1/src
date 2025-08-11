@@ -36,7 +36,7 @@ import (
   10 Aug 25 -- Now called upgradelint.go.
 */
 
-const lastAltered = "10 Aug 2025"
+const lastAltered = "11 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
@@ -47,12 +47,12 @@ var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag")
 
 func main() {
 	flag.Parse()
-	fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s\n", os.Args[0], lastAltered)
 
 	fullLintInfoName := urlRwsNet + lintInfo
 	fullRemoteLintExeName := urlRwsNet + lintExe
 
 	if *verboseFlag {
+		fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s\n", os.Args[0], lastAltered)
 		fmt.Printf(" fullLintInfoName is %s, fullLintExeName is %s\n\n", fullLintInfoName, fullRemoteLintExeName)
 	}
 
@@ -70,17 +70,23 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " Error returned from readInfoFile(%s): %q.  \n", resp.Filename, err)
 		os.Exit(1)
 	}
+	infoTimeStamp := t0.Format("Jan-02-2006_15:04:05")
 
-	fi, err := os.Stat(lintExe)
+	if *verboseFlag {
+		fmt.Printf(" t0 read from %s is %s, sha1StrReadIn is %s, sha256StrReadIn is %s\n\n", lintInfo, infoTimeStamp, sha1StrReadIn, sha256StrReadIn)
+	}
+
+	execFI, err := os.Stat(lintExe)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from os.Stat(%s): %q.  \n", lintExe, err)
 		goto downloadMe // bad, bad boy
 	}
 
-	if fi.ModTime().After(t0) {
+	if execFI.ModTime().After(t0) {
 		if *verboseFlag {
-			fmt.Printf(" lint.exe is newer than lint.info value.  Nothing to do.\n")
-			fmt.Printf(" lint.exe timestamp is %s, lint.info timpstamp contains %s\n", fi.ModTime(), t0)
+			fmt.Printf(" lint.exe is newer than lint.info value.  Nothing to do.  I'm going home.\n")
+			execTimeStamp := execFI.ModTime().Format("Jan-02-2006_15:04:05")
+			fmt.Printf(" lint.exe timestamp is %s, lint.info timestamp is %s\n", execTimeStamp, infoTimeStamp)
 		}
 		os.Exit(0)
 	}
