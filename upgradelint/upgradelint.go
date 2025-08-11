@@ -56,6 +56,18 @@ func main() {
 		fmt.Printf(" fullLintInfoName is %s, fullLintExeName is %s\n\n", fullLintInfoName, fullRemoteLintExeName)
 	}
 
+	_, err := os.Stat(lintInfo) // before I added this, the code seems to not download lint.info.  It's best if lint.info is not there.
+	if err == nil {
+		if *verboseFlag {
+			fmt.Printf(" lint.info exists.  Got to delete it.\n")
+		}
+		err = os.Remove(lintInfo)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error returned from os.Remove(%s): %q.  \n", lintInfo, err)
+			os.Exit(1)
+		}
+	}
+
 	resp, err := grab.Get(".", fullLintInfoName)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from grab.Get(%s): %q.  \n", fullLintInfoName, err)
