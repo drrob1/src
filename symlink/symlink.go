@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() < 2 {
-		fmt.Printf("Usage: symlink source target, also called symlink something somewhere, or symlink old new")
+		fmt.Printf("Usage: symlink source target, also called symlink something somewhere, or symlink old new\n")
 		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastAltered, runtime.Version())
 		os.Exit(1)
 	}
