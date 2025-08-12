@@ -11,11 +11,18 @@ import (
 
 /*
   11 Aug 25 -- I got the idea for this program from scrolling thru the os package.
+  12 Aug 25 -- I added help.  And I discovered that there is a linux command called hardlink, that's clashing w/ this name.  I'll use hlink.
 */
 
-const lastAltered = "11 Aug 2025"
+const lastAltered = "12 Aug 2025"
 
 func main() {
+	flag.Usage = func() {
+		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastAltered, runtime.Version())
+		fmt.Printf(" Usage: hardlink source target, also called hardlink something somewhere, or hardlink old new\n")
+		//flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if flag.NArg() < 2 {
@@ -33,9 +40,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = os.Stat(somewhere)
+	fi, err := os.Stat(somewhere)
 	if err == nil {
-		fmt.Printf(" %s exists. Should I continue? (y/N) ", somewhere)
+		fmt.Printf(" %s exists, IsDir=%t and isRegular=%t. Should I continue? (y/N) ", somewhere, fi.IsDir(), fi.Mode().IsRegular())
 		var answer string
 		_, er := fmt.Scanln(&answer)
 		if er != nil {

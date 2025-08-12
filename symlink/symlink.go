@@ -9,9 +9,20 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const lastAltered = "11 Aug 2025"
+/*
+  11 Aug 25 -- I got the idea for this program from scrolling thru the os package.
+  12 Aug 25 -- I added help.
+*/
+
+const lastAltered = "12 Aug 2025"
 
 func main() {
+	flag.Usage = func() {
+		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastAltered, runtime.Version())
+		fmt.Printf(" Usage: symlink source target, also called symlink something somewhere, or symlink old new\n")
+		//flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if flag.NArg() < 2 {
@@ -29,9 +40,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = os.Stat(somewhere)
+	fi, err := os.Stat(somewhere)
 	if err == nil {
-		fmt.Printf(" %s exists. Should I continue? (y/N) ", somewhere)
+		fmt.Printf(" %s exists, IsDir=%t and isRegular=%t. Should I continue? (y/N) ", somewhere, fi.IsDir(), fi.Mode().IsRegular())
 		var answer string
 		_, er := fmt.Scanln(&answer)
 		if er != nil {
