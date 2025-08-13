@@ -34,9 +34,10 @@ import (
                A running program can't update itself, so this has to be a separate program that will download the latest version of lint.exe and upgrade it.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   10 Aug 25 -- Now called upgradelint.go.
+  11 Aug 25 -- Added sleep to give lint time to exit.
 */
 
-const lastAltered = "11 Aug 2025"
+const lastAltered = "12 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
@@ -56,7 +57,7 @@ func main() {
 		fmt.Printf(" fullLintInfoName is %s, fullLintExeName is %s\n\n", fullLintInfoName, fullRemoteLintExeName)
 	}
 
-	time.Sleep(time.Second * 2) // to give lint time to exit after calling upgradelint.go.
+	time.Sleep(time.Second * 1) // to give lint time to exit after calling upgradelint.go.
 
 	_, err := os.Stat(lintInfo) // before I added this, the code seems to not download lint.info.  It's best if lint.info is not there.
 	if err == nil {

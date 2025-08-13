@@ -101,9 +101,10 @@ import (
 				I need to modify the walk function to take a param that is the start directory, and then combine the results of all the walk function calls.
                 And O: drive is going away at work as of Aug 8, 2025.  I'll need to change the code to use OneDrive.  I'll remove the conly flag as it's not needed now.
   11 Aug 25 -- Time to add the code to autoupdate.
+  12 Aug 25 -- If this is run w/ the verboseFlag, I'll pass that to upgradelint.
 */
 
-const lastModified = "11 Aug 2025"
+const lastModified = "12 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -414,13 +415,11 @@ func main() {
 	}
 
 	// filepicker no longer used.  Now I'm using the walkRegexFullFilenames function.
-
 	//filenames, err := filepicker.GetRegexFullFilenames(docs)
 	//if err != nil {
 	//	ctfmt.Printf(ct.Red, true, " Error from filepicker.GetRegexFullFilenames is %s.  Exiting \n", err)
 	//	return
 	//}
-
 	//includeODrive := !*conlyFlag // a comvenience flag
 	//if *verboseFlag {
 	//	fmt.Printf(" conlyFlag=%t, includeODrive=%t\n", *conlyFlag, includeODrive)
@@ -463,7 +462,7 @@ func main() {
 			fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
 			return
 		}
-		// docs = filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")  Don't want the regex as part of this expression.
+		//                               docs = filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")  Don't want the regex as part of this expression.
 		docs = filepath.Join(homeDir, "Documents")
 		if *verboseFlag {
 			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
@@ -576,15 +575,17 @@ func main() {
 
 	// Time to run the updatelist cmd.
 
-	execCmd := exec.Command("upgradelint", "")
-	execCmd.Stdin = os.Stdin
-	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
-	err = execCmd.Start()
+	execcmd := exec.Command("upgradelint", "")
+	if *verboseFlag {
+		execcmd = exec.Command("upgradelint", "-v")
+	}
+	execcmd.Stdin = os.Stdin
+	execcmd.Stdout = os.Stdout
+	execcmd.Stderr = os.Stderr
+	err = execcmd.Start()
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, "\n\n Error starting upgradelint: %s.  Contact Rob Solomon\n\n", err)
 	}
-
 }
 
 // scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
