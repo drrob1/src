@@ -35,9 +35,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   10 Aug 25 -- Now called upgradelint.go.
   11 Aug 25 -- Added sleep to give lint time to exit.
+  16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go.
 */
 
-const lastAltered = "12 Aug 2025"
+const lastAltered = "16 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
@@ -45,12 +46,24 @@ const lintExe = "lint.exe"
 const lintInfo = "lint.info"
 
 var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag")
+var whichURL int
 
 func main() {
+	flag.IntVarP(&whichURL, "url", "u", 0, "which URL to use.  0 is 1and1, 2 is hostgator, 3 is SimpleNetHosting")
 	flag.Parse()
 
-	fullLintInfoName := urlRwsNet + lintInfo
-	fullRemoteLintExeName := urlRwsNet + lintExe
+	var fullLintInfoName, fullRemoteLintExeName string
+	switch whichURL {
+	case 1:
+		fullLintInfoName = urlRobSolomonName + lintInfo
+		fullRemoteLintExeName = urlRobSolomonName + lintExe
+	case 2:
+		fullLintInfoName = urlRwsCom + lintInfo
+		fullRemoteLintExeName = urlRwsCom + lintExe
+	default:
+		fullLintInfoName = urlRwsNet + lintInfo
+		fullRemoteLintExeName = urlRwsNet + lintExe
+	}
 
 	if *verboseFlag {
 		fmt.Printf(" %s to test downloading lint.info and upgrading lint.exe if appropriate.  Last altered %s\n", os.Args[0], lastAltered)
@@ -152,7 +165,7 @@ downloadMe:
 	}
 
 	if sha1StrComputed != sha1StrReadIn || sha256StrComputed != sha256StrReadIn {
-		ctfmt.Printf(ct.Red, true, " Error: sha1StrReadIn is %s \n sha1StrComputed is %s \n sha256StrReadIn is %x \n sha256StrComputed is %x\n",
+		ctfmt.Printf(ct.Red, true, "\n Error: sha1StrReadIn is %s \n        sha1StrComputed is %s \n sha256StrReadIn is %s \n sha256StrComputed is %s\n",
 			sha1StrReadIn, sha1StrComputed, sha256StrReadIn, sha256StrComputed)
 		ctfmt.Printf(ct.Red, true, " lint.exe not upgraded. \n")
 		return

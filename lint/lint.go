@@ -102,9 +102,11 @@ import (
                 And O: drive is going away at work as of Aug 8, 2025.  I'll need to change the code to use OneDrive.  I'll remove the conly flag as it's not needed now.
   11 Aug 25 -- Time to add the code to autoupdate.
   12 Aug 25 -- If this is run w/ the verboseFlag, I'll pass that to upgradelint.
+  16 Aug 25 -- Fixed an error in a param message.  And will use workingDir to run upgradelint.  And add flags to use the other websites as backup, which have to get passed to
+				upgradelint.
 */
 
-const lastModified = "12 Aug 2025"
+const lastModified = "16 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -121,7 +123,7 @@ const (
 	peds
 	fluoroJH
 	fluoroFH
-	msk // includes Xray In/Outpatient and off-sites
+	msk // includes X-ray In/Outpatient and off-sites
 	mammo
 	boneDensity
 	late
@@ -381,9 +383,12 @@ func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array
 func main() {
 	var err error
 	var noUpgradeLint bool
+	var whichURL int
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
-	flag.BoolVarP(&noUpgradeLint, "noupgrade", "n", false, "do not upgrade schedule files")
+	flag.BoolVarP(&noUpgradeLint, "noupgrade", "n", false, "do not upgrade lint.exe")
+	flag.IntVarP(&whichURL, "url", "u", 0, "which URL to use for the auto updating of lint.exe")
+
 	flag.Usage = func() {
 		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastModified, runtime.Version())
 		fmt.Printf(" Usage: %s <weekly xlsx file> \n", os.Args[0])
@@ -571,14 +576,29 @@ func main() {
 
 	if noUpgradeLint {
 		return
-	}
+	} // this flag is a param above.
 
 	// Time to run the updatelist cmd.
 
-	execcmd := exec.Command("upgradelint", "")
-	if *verboseFlag {
-		execcmd = exec.Command("upgradelint", "-v")
+	workingDir, err := os.Getwd()
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, "\n\n Error getting working directory: %s.  Contact Rob Solomon\n\n", err)
+		return
 	}
+	fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe")
+	if *verboseFlag {
+		fmt.Printf(" workingDir=%s, fullUpgradeLintPath=%s\n", workingDir, fullUpgradeLintPath)
+	}
+
+	variadicArgs := make([]string, 0, 2)
+	if *verboseFlag {
+		variadicArgs = append(variadicArgs, "-v")
+	}
+	if whichURL > 0 {
+		variadicArgs = append(variadicArgs, "-u", strconv.Itoa(whichURL))
+	}
+
+	execcmd := exec.Command(fullUpgradeLintPath, variadicArgs...)
 	execcmd.Stdin = os.Stdin
 	execcmd.Stdout = os.Stdout
 	execcmd.Stderr = os.Stderr
@@ -593,7 +613,7 @@ func scanXLSfile(filename string) error {
 
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
-		//fmt.Printf("Error opening excel file %s in directory %s: %s\n", filename, workingDir, err)
+		//fmt.Printf("Error opening Excel file %s in directory %s: %s\n", filename, workingDir, err)
 		return err
 	}
 
