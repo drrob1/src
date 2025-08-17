@@ -104,9 +104,10 @@ import (
   12 Aug 25 -- If this is run w/ the verboseFlag, I'll pass that to upgradelint.
   16 Aug 25 -- Fixed an error in a param message.  And will use workingDir to run upgradelint.  And add flags to use the other websites as backup, which have to get passed to
 				upgradelint.
+  17 Aug 25 -- Clarified a comment to the walk function, saying that it skips files that begin w/ a tilda, ~.
 */
 
-const lastModified = "16 Aug 2025"
+const lastModified = "17 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -701,7 +702,7 @@ func scanXLSfile(filename string) error {
 
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
 //
-//	Needs a walk function to find what it is looking for.  See top comments.
+//	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
 func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice
 
 	if startdirectory == "" {
