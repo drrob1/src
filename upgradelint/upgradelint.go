@@ -35,10 +35,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   10 Aug 25 -- Now called upgradelint.go.
   11 Aug 25 -- Added sleep to give lint time to exit.
-  16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go.
+  16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go from lint.go.
 */
 
-const lastAltered = "16 Aug 2025"
+const lastAltered = "17 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
@@ -165,9 +165,10 @@ downloadMe:
 	}
 
 	if sha1StrComputed != sha1StrReadIn || sha256StrComputed != sha256StrReadIn {
-		ctfmt.Printf(ct.Red, true, "\n Error: sha1StrReadIn is %s \n        sha1StrComputed is %s \n sha256StrReadIn is %s \n sha256StrComputed is %s\n",
+		ctfmt.Printf(ct.Red, true, " Error: \n sha1StrReadIn is  %s \nsha1StrComputed is %s \n sha256StrReadIn is  %s \nsha256StrComputed is %s\n",
 			sha1StrReadIn, sha1StrComputed, sha256StrReadIn, sha256StrComputed)
 		ctfmt.Printf(ct.Red, true, " lint.exe not upgraded. \n")
+		fmt.Printf(" Hit <enter> \n\n")
 		return
 	}
 

@@ -105,6 +105,7 @@ import (
   16 Aug 25 -- Fixed an error in a param message.  And will use workingDir to run upgradelint.  And add flags to use the other websites as backup, which have to get passed to
 				upgradelint.
   17 Aug 25 -- Clarified a comment to the walk function, saying that it skips files that begin w/ a tilda, ~.
+				And change behavior of walk function so that veryverbose is needed for it to display the walk function's output.
 */
 
 const lastModified = "17 Aug 2025"
@@ -738,7 +739,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 
 	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
-		if *verboseFlag {
+		if veryVerboseFlag {
 			if err != nil {
 				fmt.Printf(" WalkDir fpath %s, de.Name %s, err %v \n", fpath, de.Name(), err.Error())
 			} else {
@@ -752,13 +753,13 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			return filepath.SkipDir
 		}
 		if de.IsDir() {
-			if *verboseFlag {
+			if veryVerboseFlag {
 				fmt.Printf(" de.IsDir() is true, fpath = %q, de.Name=%s\n", fpath, de.Name())
 			}
 			return nil // allow walk function to drill down itself
 		}
 		if de.Name() == ".git" { // only if full directory name is .git, then skip this directory.  This is a hack.  I don't want to skip the entire directory.
-			if *verboseFlag {
+			if veryVerboseFlag {
 				fmt.Printf(" fpath contains .git, fpath = %q, de.Name=%s\n", fpath, de.Name())
 			}
 			return filepath.SkipDir
@@ -768,7 +769,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			return errors.New("timeout occurred")
 		}
 
-		// Not a directory, and timeout has not happened.  Only process regular files, and skip symlinks.  Is this my problem?  Yes, it is.  I do want symlinks, after all.
+		// Not a directory, and timeout has not happened.  Only process regular files, and skip symlinks.  I do want symlinks, after all.
 		//if !de.Type().IsRegular() {
 		//	if *verboseFlag {
 		//		fmt.Printf(" de.Type().IsRegular() is false, fpath = %q, de.Name=%s\n", fpath, de.Name())
