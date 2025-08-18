@@ -36,9 +36,10 @@ import (
   10 Aug 25 -- Now called upgradelint.go.
   11 Aug 25 -- Added sleep to give lint time to exit.
   16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go from lint.go.
+  18 Aug 25 -- Added code to reset the file pointer after computing sha1 and before computing sha256.  This fixes the bug in computing sha256.
 */
 
-const lastAltered = "17 Aug 2025"
+const lastAltered = "18 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
@@ -153,6 +154,11 @@ downloadMe:
 	}
 	sha1StrComputed := hex.EncodeToString(sha1HashComputed.Sum(nil))
 
+	_, err = lintExeFile.Seek(0, 0) // reset the file pointer to the beginning of the file.
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error returned from lintExeFile.Seek(0, 0): %q.  Call Rob Solomon. \n", err)
+		return
+	}
 	_, err = io.Copy(sha256HashComputed, lintExeFile)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from io.Copy(%s): %q.  \n", resp.Filename, err)

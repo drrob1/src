@@ -20,11 +20,12 @@ import (
 /*
   10 Aug 25 -- Creates the info file for the lint program.  First line has to be the timestamp, and the 2nd line the sha1,
                and the 3rd line the sha256.
+  18 Aug 25 -- Added code to reset the file pointer after computing sha1 and before computing sha256.  This fixes the bug in computing sha256.
 */
 
 const lintExe = "lint.exe"
 const lintInfo = "lint.info" // this is a binary file
-const lastAltered = "11 Aug 2025"
+const lastAltered = "18 Aug 2025"
 
 func main() {
 	var sha1hash, sha256hash hash.Hash
@@ -55,6 +56,7 @@ func main() {
 		ctfmt.Println(ct.Red, true, " Error opening ", lintExe, ".  Exiting.")
 		os.Exit(1)
 	}
+	defer targetFile.Close()
 
 	sha1hash = sha1.New()
 	sha256hash = sha256.New()
@@ -64,6 +66,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	_, err = targetFile.Seek(0, 0) // reset the file pointer to the beginning of the file so can compute sha256.
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error resetting file pointer is %s.  Exiting.\n\n ", err)
+		return
+	}
 	_, err = io.Copy(sha256hash, targetFile)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error copying %s is %s.  Exiting.\n\n ", lintExe, err)
