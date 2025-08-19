@@ -37,9 +37,10 @@ import (
   11 Aug 25 -- Added sleep to give lint time to exit.
   16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go from lint.go.
   18 Aug 25 -- Added code to reset the file pointer after computing sha1 and before computing sha256.  This fixes the bug in computing sha256.
+  19 Aug 25 -- Changed the test for whether lint.exe is not older han lint.info to use the timestamp of the lint.exe file.  This is more robust as it branches the correct way on equality.
 */
 
-const lastAltered = "18 Aug 2025"
+const lastAltered = "19 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
@@ -111,7 +112,7 @@ func main() {
 		goto downloadMe // bad, bad boy
 	}
 
-	if execFI.ModTime().After(t0) {
+	if !execFI.ModTime().Before(t0) { // take care to branch the correct way on equality.
 		if *verboseFlag {
 			fmt.Printf(" lint.exe is newer than lint.info value.  Nothing to do.  I'm going home.\n")
 			execTimeStamp := execFI.ModTime().Format("Jan-02-2006_15:04:05")
