@@ -168,6 +168,7 @@ func main() {
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Now uses viper config file of cf3.yaml\n")
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
+		fmt.Printf(" Has --sym option to only show and copy symlinks.  This is not in cf2 or cf as of this writing.\n")
 		pflag.PrintDefaults()
 	}
 
