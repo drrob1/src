@@ -2,11 +2,6 @@ package main // cf3, from cf2, from cf, for copy fanout.  This one is truly a fa
 
 import (
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package
-	"github.com/spf13/viper"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +12,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag" // docs say that pflag is a drop in replacement for the standard library flag package
+	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 /*
@@ -102,9 +103,10 @@ import (
   20 Jan 25 -- Added set-up timing display.
    3 May 25 -- When there are errors in the dest directory, that needs to be more obvious.
    7 Jul 25 -- Will output approx total bytes copied.
+  20 Aug 25 -- Added a flag to exclude regular files when I only want to see symlinks.
 */
 
-const LastAltered = "7 July 2025" //
+const LastAltered = "20 Aug 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -199,13 +201,16 @@ func main() {
 	pflag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 	pflag.IntVarP(&multiplier, "multiplier", "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
-	//flag.Parse()  //  this is here because list checkDest needs it, so I'm initializing both.  Nevermind, as these seem to be clashing.
+	symFlag := pflag.Bool("sym", false, "Copy symlinks only, ie, skip regular files.")
+
 	pflag.Parse()
 
 	if pflag.NArg() < 2 {
 		ctfmt.Printf(ct.Red, true, " Not enough params on command line.  Two needed, but found %d\n", pflag.NArg())
 		return
 	}
+
+	list.SymFlag = *symFlag
 
 	// viper stuff
 	err = viper.BindPFlags(pflag.CommandLine)

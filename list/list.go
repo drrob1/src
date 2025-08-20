@@ -4,10 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/spf13/pflag"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"os/exec"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
+	"golang.org/x/term"
 )
 
 /*
@@ -32,7 +33,7 @@ import (
                  And myReadDir creates the relPath field that I added to FileInfoExType.
   25 Dec 22 -- Moved FileSection here.
   26 Dec 22 -- Changed test against the regexp to be nil instead of "".
-  29 Dec 22 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform specific code.
+  29 Dec 22 -- Adding the '.' to be a sentinel marker for the 1st param that's ignored.  This change is made in the platform-specific code.
   30 Dec 22 -- I'm thinking about being able to use environment strings to pass around flag values.  ListFilter, ListVerbose, ListVeryVerbose, ListReverse.
                  Nevermind.  I'll pass the variables globally, exported from here.  And I added a procedure New to not stutter, as in list.NewList.  But I kept the old NewList, for now.
    1 Jan 23 -- I changed the display colors for the list.  The line is not all the same color now.
@@ -54,7 +55,7 @@ import (
    2 Jul 23 -- Made the FileSelection routines use "newlines" between iterations.  This way, I can use the scroll back buffer if I want to.
    8 Jul 23 -- In _windows part, I changed how the first param is tested for being a directory.
   12 Jul 23 -- Globbing isn't working.  Nevermind, I forgot about first param must be a dot if I'm going to use globbing.
-  14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine, from platform specific code.
+  14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine, from platform-specific code.
   16 Jul 23 -- I'm thinking about adding GetFileInfoXFromRegexp.  And I'll need the corresponding rex flag for it.  And I'll need NewFromRex.
   25 Sep 23 -- There's a bug in runlist and runx in which the beginning of line anchor is not processed correctly.  I'm tracking this down now.
                  I found the bug.  I was matching against RelPath which includes the path dir info, so the ^ anchor is meaningless.
@@ -83,6 +84,7 @@ import (
   19 Feb 25 -- Making "0" a synonym for "1" instead of a stop code.
    9 Mar 25 -- Suppressed display of error in FileSelection().  I don't need to display errors twice.
   18 May 25 -- Added unique function.
+  20 Aug 25 -- I decided to include symlinks to be copied.  And I'll add a flag to only copy symlinks.
 */
 
 var LastAltered = "May 18, 2025"
@@ -105,6 +107,7 @@ var FilterFlag bool
 var FilterStr string
 var ReverseFlag bool
 var GlobFlag bool
+var SymFlag bool // only copy symlinks.
 
 // FastDebugFlag is used for debugging the concurrent routines.
 var FastDebugFlag bool
@@ -484,9 +487,19 @@ func includeThis(fi os.FileInfo, excludeRex *regexp.Regexp) bool { // this alrea
 	if VeryVerboseFlag {
 		fmt.Printf(" includeThis.  FI=%#v, FilterFlag=%t\n", fi, FilterFlag)
 	}
-	if !fi.Mode().IsRegular() {
+	//if !fi.Mode().IsRegular() {  removed Aug 20, 2025 because I want to include symlinks.
+	//	return false
+	//}
+	if fi.IsDir() {
 		return false
 	}
+
+	// symflag means to only include symlinks.
+	if fi.Mode().IsRegular() && SymFlag { // skip regular files if symflag is set.
+		return false
+	}
+
+	// if get here, then it's either a regular file or a symlink.  I want to include both.
 
 	if excludeRex != nil {
 		if BOOL := excludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
@@ -1121,6 +1134,12 @@ func includeThisForConcurrent(fi os.FileInfo) bool {
 	if fi.Size() < int64(filterAmt) { // don't need to first check against 0.
 		return false
 	}
+	if fi.Mode().IsRegular() && SymFlag { // Don't include regular files if SymFlag is set.  Only include symlinks.
+		return false
+	}
+
+	// if get here, file is either a regular file or a symlink.  I want both.
+
 	if ExcludeRex != nil {
 		if BOOL := ExcludeRex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
@@ -1226,6 +1245,12 @@ func includeThisWithMatchForConcurrent(fi os.FileInfo, matchPat string) bool {
 	if fi.Size() < int64(filterAmt) {
 		return false
 	}
+	if fi.Mode().IsRegular() && SymFlag { // Don't include regular files if SymFlag is set.  Only include symlinks.
+		return false
+	}
+
+	// if get here, file is either a regular file or a symlink.  I want both.
+
 	if ExcludeRex != nil {
 		if ExcludeRex.MatchString(strings.ToLower(fi.Name())) {
 			return false
@@ -1340,21 +1365,22 @@ func includeThisWithRexForConcurrent(fi os.FileInfo, rex *regexp.Regexp) bool {
 	if fi.Size() < int64(filterAmt) {
 		return false
 	}
+	if fi.Mode().IsRegular() && SymFlag { // Don't include regular files if SymFlag is set.  Only include symlinks.
+		return false
+	}
+
+	// if get here, file is either a regular file or a symlink.  I want both.
+
 	if ExcludeRex != nil {
 		if ExcludeRex.MatchString(strings.ToLower(fi.Name())) {
 			return false
 		}
 	}
-	//matchPat = strings.ToLower(matchPat)
+
 	f := strings.ToLower(fi.Name())
 	match := rex.MatchString(f)
 	return match
 
-	// flagged Dec 28, 2024 by staticcheck, as redundant code.  I replaced it with return match, above.
-	//if !match {
-	//	return false
-	//}
-	//return true
 } // end includeThisWithRexForConcurrent
 
 // ------------------------------ pause -----------------------------------------

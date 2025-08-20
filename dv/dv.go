@@ -5,11 +5,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"os/user"
@@ -23,6 +18,12 @@ import (
 	"sync"
 	"time"
 	"unicode"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 /*
@@ -173,9 +174,10 @@ REVISION HISTORY
 22 May 25 -- Made all option represent 100,000 screens, instead of the paltry 50.
 21 Jun 25 -- Got idea from reading Linux Mag Pro, to detect when output is redirected, and then not output the color codes.
 22 Jun 25 -- Ported myPrintf and related code to here, and is now the same exact signature as Printf including the returned values.
+20 Aug 25 -- Updated help messages to reflect that allScreens is now 100 K.
 */
 
-const LastAltered = "22 June 2025"
+const LastAltered = "20 Aug 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -306,8 +308,8 @@ func main() {
 
 	mFlag := pflag.BoolP("max", "m", false, "Set maximum height, usually 50 lines")
 
-	pflag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
-	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.")
+	pflag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 100_000 screens by default.  Intended to be used w/ the scroll back buffer.")
+	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.  Currently set to 100,000 screens.")
 
 	pflag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
