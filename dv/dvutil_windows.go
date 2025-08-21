@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	ct "github.com/daviddengcn/go-colortext"
+	"github.com/spf13/pflag"
 )
 
 /*
@@ -20,6 +21,8 @@ REVISION HISTORY
 12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.  But that is not called here in Windows code, so nevermind.
 21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
 22 Jun 25 -- myPrintf now used.
+21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
+				Even Lstat makes no attempt to follow the symlink.  I guess I'm stuck, for now until I figure this out.
 
 */
 

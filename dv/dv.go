@@ -175,9 +175,11 @@ REVISION HISTORY
 21 Jun 25 -- Got idea from reading Linux Mag Pro, to detect when output is redirected, and then not output the color codes.
 22 Jun 25 -- Ported myPrintf and related code to here, and is now the same exact signature as Printf including the returned values.
 20 Aug 25 -- Updated help messages to reflect that allScreens is now 100 K.
+21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.  It's in the platform-specific code.
+				Even Lstat makes no attempt to follow the symlink.  I guess I'm stuck, for now until I figure this out.
 */
 
-const LastAltered = "20 Aug 2025"
+const LastAltered = "21 Aug 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
