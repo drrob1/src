@@ -87,7 +87,7 @@ import (
   20 Aug 25 -- I decided to include symlinks to be copied.  And I'll add a flag to only copy symlinks.
 */
 
-var LastAltered = "May 18, 2025"
+var LastAltered = "Aug 20, 2025"
 
 type DirAliasMapType map[string]string
 

@@ -176,7 +176,7 @@ REVISION HISTORY
 22 Jun 25 -- Ported myPrintf and related code to here, and is now the same exact signature as Printf including the returned values.
 20 Aug 25 -- Updated help messages to reflect that allScreens is now 100 K.
 21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.  It's in the platform-specific code.
-				Even Lstat makes no attempt to follow the symlink.  I guess I'm stuck, for now until I figure this out.
+				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
 */
 
 const LastAltered = "21 Aug 2025"
@@ -220,8 +220,6 @@ var termRedirected bool // need to show this in verbose mode
 var termDisplayOut bool // need to show this in verbose mode
 
 var myPrintf func(c ct.Color, bold bool, format string, a ...interface{}) (n int, err error)
-
-//var directoryAliasesMap dirAliasMapType // this was unused after I removed a redundant statement in dsrtutil_windows
 
 func main() {
 	var userPtr *user.User // from os/user

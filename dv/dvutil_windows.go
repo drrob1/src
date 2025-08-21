@@ -22,7 +22,7 @@ REVISION HISTORY
 21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
 22 Jun 25 -- myPrintf now used.
 21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
-				Even Lstat makes no attempt to follow the symlink.  I guess I'm stuck, for now until I figure this out.
+				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
 
 */
 
@@ -164,7 +164,15 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 			}
 			lnCount++
 		} else if IsSymlink(f.Mode()) {
-			fmt.Printf("%17s %s <%s>\n", sizestr, s, f.Name())
+			finfo, err := os.Stat(f.Name()) // I don't know if this will work if symlink is not in the current directory
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from os.Stat on %s is %v\n", f.Name(), err)
+				continue
+			}
+			var color ct.Color
+			sizestr, color = getMagnitudeString(finfo.Size())
+			s = finfo.ModTime().Format("Jan-02-2006_15:04:05")
+			myPrintf(color, true, "%17s %s <%s>\n", sizestr, s, f.Name())
 			lnCount++
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
