@@ -23,6 +23,7 @@ REVISION HISTORY
 22 Jun 25 -- myPrintf now used.
 21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
 				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
+				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
 
 */
 
@@ -30,8 +31,10 @@ REVISION HISTORY
 // It handles if there are no files populated by bash or file not found by bash, but doesn't sort the slice before returning it, because of difficulty passing
 // the sortfcn.
 // The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfosFromCommandLine() []os.FileInfo {
+// And now it also returns the directory name, which is needed for the symlink case.  It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
+func getFileInfosFromCommandLine() ([]os.FileInfo, string) {
 	var fileInfos []os.FileInfo
+	var dirName, fileName string
 
 	HomeDirStr, err := os.UserHomeDir() // used for processing ~ symbol meaning home directory.
 	if err != nil {
@@ -56,11 +59,11 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			pattern = ProcessDirectoryAliases(pattern)
 		} //else if strings.Contains(pattern, "~") { // this can only contain a ~ on Windows. }  Advised by static linter to not do this, just call Replace.
 		pattern = strings.Replace(pattern, "~", HomeDirStr, 1)
-		dirName, fileName := filepath.Split(pattern)
+		dirName, fileName = filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
 			fileInfos = myReadDir(dirName)
-			return fileInfos
+			return fileInfos, dirName
 		}
 		if dirName == "" {
 			dirName = "."
@@ -80,7 +83,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			filenames, err = filepath.Glob(pattern)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, " In getFileInfosFromCommandLine: error from Glob is %v.\n", err)
-				return nil
+				return nil, ""
 			}
 			dirName = "" // make this an empty string because the name returned by glob includes the dir info.
 			if verboseFlag {
@@ -98,12 +101,12 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
 				fileInfos = myReadDir(dirName)
-				return fileInfos
+				return fileInfos, dirName
 			}
 		} // if globFlag
 
 		if veryVerboseFlag {
-			fmt.Printf(" len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
+			fmt.Printf(" dirName=%s, len(filenames)=%d, filenames=%v \n\n", dirName, len(filenames), filenames)
 		}
 		fileInfos = make([]os.FileInfo, 0, len(filenames))
 		const sepStr = string(os.PathSeparator)
@@ -123,7 +126,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 
 			match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, but I'm ignoring this.
 			if er != nil {
-				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
+				fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern and %s dirName is %v.\n", pattern, dirName, er)
 				continue
 			}
 
@@ -137,13 +140,14 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		} // for f ranges over filenames
 	} // if pflag.NArgs()
 
-	return fileInfos
+	return fileInfos, dirName
 
 } // end getFileInfosFromCommandLine
 
 // displayFileInfos only has to display.  The matching, filtering and excluding was already done by getFileInfosFromCommandLine.
 // This is platform specific because of lack of uid:gid on Windows.
-func displayFileInfos(fiSlice []os.FileInfo) {
+// And now it needs the directory name, which is needed for the symlink case.
+func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 	var lnCount int
 	for _, f := range fiSlice {
 		s := f.ModTime().Format("Jan-02-2006_15:04:05")
@@ -164,7 +168,8 @@ func displayFileInfos(fiSlice []os.FileInfo) {
 			}
 			lnCount++
 		} else if IsSymlink(f.Mode()) {
-			finfo, err := os.Stat(f.Name()) // I don't know if this will work if symlink is not in the current directory
+			fullFileName := filepath.Join(dirName, f.Name()) // the full path is needed for the symlink case.
+			finfo, err := os.Stat(fullFileName)              //  Without this, the date is that of the symlink, and the size is zero.  It still sorts by the date of the symlink.
 			if err != nil {
 				fmt.Fprintf(os.Stderr, " Error from os.Stat on %s is %v\n", f.Name(), err)
 				continue

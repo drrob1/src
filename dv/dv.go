@@ -31,19 +31,19 @@ REVISION HISTORY
 ----------------
 20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
 21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
-22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
+22 Apr 17 -- Coded the use of the first non-flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
 24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
 25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
-26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
+26 Apr 17 -- Noticed that the match routine is case-sensitive.  I don't like that.
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
 19 May 17 -- Will now show the uid:gid for linux.
-20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
+20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform-specific code.
 21 May 17 -- Cross compiling to GOARCH=386, and the uid and User routines won't work.
  2 Sep 17 -- Added timestamp detection code I first wrote for gastricgo.
 18 Oct 17 -- Added filesize totals
 22 Oct 17 -- Made default numlines of 40.
-23 Oct 17 -- Broadened the defaults so that linux default is 40 and windows default is 50.
+23 Oct 17 -- Broadened the defaults so that linux default is 40 and Windows default is 50.
 12 Dec 17 -- Added -d and -D flags to mean directory and nofilename output, respectively.
 13 Dec 17 -- Changed how lines are counted.
 10 Jan 18 -- Added correct processing of ~.
@@ -61,7 +61,7 @@ REVISION HISTORY
 11 Sep 18 -- Will total and display all filesizes in the files slice.
 12 Sep 18 -- Adding a t flag to show the totals of the entire directory
 13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
-16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
+16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc.
 20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
 19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
                I changed the meanings so now use <symlink> and (dir) indicators, and fixed the error on Windows
@@ -78,8 +78,8 @@ REVISION HISTORY
 22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
  9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
 22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
- 4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
-                 So as long as I want the exact same code for both platforms, I do need platform specific code.
+ 4 Oct 19 -- No longer need platform-specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
+                 So as long as I want the exact same code for both platforms, I do need platform-specific code.
  6 Oct 19 -- Removed -H and added -help flags
 25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
 18 Sep 20 -- Added -e and -ext flags to only show files without extensions.
@@ -104,8 +104,8 @@ REVISION HISTORY
 22 Oct 21 -- Updating the idiom that uses bytes.buffer.
 16 Jan 22 -- Updating how the help message is created, learned from "Powerful Command-Line Applications in Go" by Ricardo Gerardi
 26 Jan 22 -- Adding a verbose flag
-27 Jan 22 -- Full refactoring to use a lot more platform specific code instead of all the if windows or if linux stuff.
-29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux but on Windows it means to use the Glob function.
+27 Jan 22 -- Full refactoring to use a lot more platform-specific code instead of all the if windows or if linux stuff.
+29 Jan 22 -- Refactoring is done.  Now to add -g option which is ignored on linux, but on Windows it means to use the Glob function.
  1 Feb 22 -- Added veryVerboseFlag, and optimized includeThis.
  3 Feb 22 -- Finally reversed the -x and -exclude options, so now -x means I enter the exclude regex on the command line.  Whew!
                Current logic has the getFileInfos routine process the command line options and params, determines which files match
@@ -177,6 +177,8 @@ REVISION HISTORY
 20 Aug 25 -- Updated help messages to reflect that allScreens is now 100 K.
 21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.  It's in the platform-specific code.
 				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
+				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
+				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
 */
 
 const LastAltered = "21 Aug 2025"
@@ -270,6 +272,7 @@ func main() {
 		fmt.Printf(" AutoHeight = %d and autoWidth = %d.\n", autoHeight, autoWidth)
 		fmt.Printf(" Config file is dv.yaml.\n")
 		fmt.Printf(" Reads from diraliases environment variable if needed on Windows.\n")
+		fmt.Printf(" Follows symlinks to display size, which the others in this family don't do.\n")
 		pflag.PrintDefaults()
 	}
 
@@ -516,7 +519,8 @@ func main() {
 
 	t0 := time.Now()
 
-	fileInfos = getFileInfosFromCommandLine()
+	var dirName string
+	fileInfos, dirName = getFileInfosFromCommandLine()
 	if verboseFlag {
 		fmt.Printf(" After call to getFileInfosFromCommandLine.  pflag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", pflag.NArg(), len(fileInfos), numOfLines)
 	}
@@ -526,7 +530,7 @@ func main() {
 
 	elapsed := time.Since(t0)
 
-	displayFileInfos(fileInfos)
+	displayFileInfos(fileInfos, dirName)
 
 	s := fmt.Sprintf("%d", sizeTotal)
 	if sizeTotal > 100000 {
@@ -936,10 +940,7 @@ func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
 	if err != nil {
 		return false
 	}
-	if !match {
-		return false
-	}
-	return true
+	return match
 }
 
 // ------------------------------ pause -----------------------------------------
