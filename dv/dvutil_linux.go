@@ -3,18 +3,24 @@ package main
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
+
+	ct "github.com/daviddengcn/go-colortext"
+	"github.com/spf13/pflag"
 )
 
 //  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
 //  21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
 //  22 Jun 25 -- myPrintf now used.
+//  21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
+//                Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
+//                To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
+//                This doesn't work the same as it does on Windows.  The symlink shows up as an error if called from another directory.  It does work from the same directory.
+//                I don't yet know what to do about this.
 
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
@@ -36,7 +42,7 @@ func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 // on Jan 14, 2023 I completely rewrote the section of getFileInfosFromCommandLine where there is only 1 identifier on the command line.  This was based on what I learned
 // from args.go.  Let's see if it works.  Basically, I relied too much on os.Lstat or os.Stat.  Now I'm relying on os.Open.
 
-func getFileInfosFromCommandLine() []os.FileInfo {
+func getFileInfosFromCommandLine() ([]os.FileInfo, string) {
 	var fileInfos []os.FileInfo
 	var narg int
 	var args []string
@@ -52,7 +58,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		arg0 = pflag.Arg(0)
 	} else {
 		myPrintf(ct.Red, false, " Neither flag.Parsed() nor pflag.Parsed() is true.  WTF?\n")
-		return nil
+		return nil, ""
 	}
 	if verboseFlag {
 		fmt.Printf(" Entering getFileInfosFromCommandLine.  Nargs=%d, len(Args)=%d, len(fileinfos)=%d\n", narg, len(args), len(fileInfos))
@@ -73,7 +79,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		if verboseFlag {
 			fmt.Printf(" after call to myreaddir.  Len(fileInfos)=%d\n", len(fileInfos))
 		}
-		return fileInfos
+		return fileInfos, workingDir
 
 	} else if narg == 1 { // a lone name may either mean file not found or it's a directory which could be a symlink.
 		const sep = string(filepath.Separator)
@@ -86,7 +92,7 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 			if stat.IsDir() { // either a direct or symlinked directory name
 				fHandle.Close()
 				fileInfos = myReadDir(loneFilename)
-				return fileInfos
+				return fileInfos, ""
 			}
 
 		} else { // err must not be nil after attempting to open loneFilename.
@@ -107,10 +113,12 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 		if fi.IsDir() {
 			fHandle.Close()
 			fileInfos = myReadDir(loneFilename)
-			return fileInfos
+			dir := filepath.Dir(loneFilename)
+			return fileInfos, dir
 		} else { // loneFilename is not a directory, but opening it did not return an error.  So just return its fileInfo.
 			fileInfos = append(fileInfos, fi)
-			return fileInfos
+			dir := filepath.Dir(loneFilename)
+			return fileInfos, dir
 		}
 	} else { // must have more than one filename on the command line, populated by bash.
 		fileInfos = make([]os.FileInfo, 0, narg)
@@ -135,39 +143,48 @@ func getFileInfosFromCommandLine() []os.FileInfo {
 	if verboseFlag {
 		fmt.Printf(" Leaving getFileInfosFromCommandLine.  narg=%d, len(args)=%d, len(fileinfos)=%d\n", narg, len(args), len(fileInfos))
 	}
-	return fileInfos
+	dir := filepath.Dir(args[0])
+	return fileInfos, dir
 }
 
-func displayFileInfos(fiSlice []os.FileInfo) {
+func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 	var lnCount int
 	for _, f := range fiSlice {
 		s := f.ModTime().Format("Jan-02-2006_15:04:05")
-		sizestr := ""
+		sizeStr := ""
 		usernameStr, groupnameStr := GetUserGroupStr(f)
 		if filenameToBeListedFlag && f.Mode().IsRegular() {
 			sizeTotal += f.Size()
 			if longFileSizeListFlag {
-				sizestr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
+				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
 				if f.Size() > 100000 {
-					sizestr = AddCommas(sizestr)
+					sizeStr = AddCommas(sizeStr)
 				}
-				myPrintf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+				myPrintf(ct.Yellow, false, "%10v %s:%s %16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
 			} else {
 				var color ct.Color
-				sizestr, color = getMagnitudeString(f.Size())
+				sizeStr, color = getMagnitudeString(f.Size())
 				if termDisplayOut {
-					myPrintf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					myPrintf(color, false, "%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
 				} else {
-					fmt.Printf("%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+					fmt.Printf("%10v %s:%s %-16s %s %s\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
 				}
 			}
 			lnCount++
 
 		} else if IsSymlink(f.Mode()) {
-			fmt.Printf("%10v %s:%s %16s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			fullFileName := filepath.Join(dirName, f.Name())
+			fInfo, err := os.Stat(fullFileName)
+			if err != nil {
+				fmt.Printf(" Error from os.Stat on %s is %v\n", f.Name(), err)
+				continue
+			}
+			var color ct.Color
+			sizeStr, color = getMagnitudeString(fInfo.Size())
+			myPrintf(color, true, "%10v %s:%s %16s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
 			lnCount++
 		} else if dirList && f.IsDir() {
-			fmt.Printf("%10v %s:%s %16s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizestr, s, f.Name())
+			fmt.Printf("%10v %s:%s %16s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
 			lnCount++
 		}
 		if lnCount >= numOfLines {
