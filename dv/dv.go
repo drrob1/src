@@ -181,7 +181,7 @@ REVISION HISTORY
 				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
 */
 
-const LastAltered = "21 Aug 2025"
+const LastAltered = "22 Aug 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

@@ -92,7 +92,7 @@ func getFileInfosFromCommandLine() ([]os.FileInfo, string) {
 			if stat.IsDir() { // either a direct or symlinked directory name
 				fHandle.Close()
 				fileInfos = myReadDir(loneFilename)
-				return fileInfos, ""
+				return fileInfos, loneFilename // return the directory name, as we know it's a directory.
 			}
 
 		} else { // err must not be nil after attempting to open loneFilename.
