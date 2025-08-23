@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"src/misc"
 	"strconv"
 	"time"
@@ -38,12 +39,14 @@ import (
   16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go from lint.go.
   18 Aug 25 -- Added code to reset the file pointer after computing sha1 and before computing sha256.  This fixes the bug in computing sha256.
   19 Aug 25 -- Changed the test for whether lint.exe is not older than lint.info to use the timestamp of the lint.exe file.  This is more robust as it branches the correct way on equality.
+  22 Aug 25 -- Added -1 and -2 as shortcuts for -u 1 and -u 2.
+				And now I learned that I have to erase the old lint.exe in the configDir before downlading the new one.
 */
 
-const lastAltered = "19 Aug 2025"
+const lastAltered = "22 Aug 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
-const urlRwsCom = "http://drrws.com"                // from SimpleNetHosting
+const urlRwsCom = "http://drrws.com/"               // from SimpleNetHosting
 const lintExe = "lint.exe"
 const lintInfo = "lint.info"
 
@@ -52,7 +55,14 @@ var whichURL int
 
 func main() {
 	flag.IntVarP(&whichURL, "url", "u", 0, "which URL to use.  0 is 1and1, 2 is hostgator, 3 is SimpleNetHosting")
+	u1 := flag.BoolP("u1", "1", false, "Shortcut for -u 1")
+	u2 := flag.BoolP("u2", "2", false, "Shortcut for -u 2")
 	flag.Parse()
+	if *u1 {
+		whichURL = 1
+	} else if *u2 {
+		whichURL = 2
+	}
 
 	var fullLintInfoName, fullRemoteLintExeName string
 	switch whichURL {
@@ -128,6 +138,16 @@ downloadMe:
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error returned from os.UserConfigDir(): %q.  Exiting.\n", err)
 		os.Exit(1)
+	}
+
+	joinedName := filepath.Join(configDir, lintExe)
+	_, err = os.Stat(joinedName)
+	if err == nil { // it exists, so delete it.
+		err = os.Remove(joinedName)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error returned from os.Remove(%s): %q.  Aborting the upgrade.\n", joinedName, err)
+		}
+		return
 	}
 
 	resp, err = grab.Get(configDir, fullRemoteLintExeName) // can't put the file into the current directory because it will overwrite the current one.

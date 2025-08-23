@@ -106,9 +106,10 @@ import (
 				upgradelint.
   17 Aug 25 -- Clarified a comment to the walk function, saying that it skips files that begin w/ a tilda, ~.
 				And change behavior of walk function so that veryverbose is needed for it to display the walk function's output.
+  22 Aug 25 -- Added exclusion of "ra" as it seems that the schedule now includes Radiology Assistant initials for Murina and Payal.
 */
 
-const lastModified = "17 Aug 2025"
+const lastModified = "22 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -877,7 +878,8 @@ func excludeMe(s string) bool { // used by getDocNames
 	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
 	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
 		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
-		strings.Contains(s, "see") || strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "modality") ||
+		strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "wed") || strings.Contains(s, "thu") ||
+		strings.Contains(s, "ra") || strings.Contains(s, "modality") ||
 		strings.Contains(s, ":") || strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
 		return true
 	}
