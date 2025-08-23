@@ -1,23 +1,9 @@
 package main
 
-/*
- 1 Aug 25 -- Started working on a routine to scan the weekly schedule and create a list of doc names on it, instead of having to provide one.
-			It works.  Now to see if one other varient works.  Yep, all routines here work.
- 2 Aug 25 -- Playing some more.  Now that I remember about slice.Compact, I want to test if it needs a sorted slice to work.  Turns out that it does need a sorted slice.
-				Turns out that it does need a sorted slice, as it only removes consecutive occurances of duplicate strings.
- 4 Aug 25 -- I discovered that typos in the doc names are not rare.  I want to notify the user that there may be a typo.  I'll use soundex for this.
-			And it's our 40th Anniversary.  But that's not important now.
-*/
-
 import (
 	"bytes"
 	"errors"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	flag "github.com/spf13/pflag"
-	"github.com/tealeg/xlsx/v3"
-	"github.com/umahmood/soundex"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,9 +16,25 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
+	"github.com/tealeg/xlsx/v3"
+	"github.com/umahmood/soundex"
 )
 
-const lastModified = "4 Aug 2025"
+/*
+ 1 Aug 25 -- Started working on a routine to scan the weekly schedule and create a list of doc names on it, instead of having to provide one.
+			It works.  Now to see if one other varient works.  Yep, all routines here work.
+ 2 Aug 25 -- Playing some more.  Now that I remember about slice.Compact, I want to test if it needs a sorted slice to work.  Turns out that it does need a sorted slice.
+				Turns out that it does need a sorted slice, as it only removes consecutive occurances of duplicate strings.
+ 4 Aug 25 -- I discovered that typos in the doc names are not rare.  I want to notify the user that there may be a typo.  I'll use soundex for this.
+			And it's our 40th Anniversary.  But that's not important now.
+23 Aug 25 -- I want to experiment w/ using an array to hold the exclusion strings.  There are 2 typses, one is for the entire string, and the other is for a contains test.
+*/
+
+const lastModified = "23 Aug 2025"
 const maxDimensions = 200
 
 const conf = "docnames.conf"
@@ -109,15 +111,32 @@ func findAndReadConfIni() error { // Only is used to get startDirectory
 	return nil
 }
 
-func excludeMe(s string) bool {
-	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
-	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
-		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
-		strings.Contains(s, "see") || strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "modality") ||
-		strings.Contains(s, ":") || strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
+/*
+	if s == "fh" || s == "dr." || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") || s == "jh" || s == "plain" ||
+		s == "please" || s == "see" || s == "modality" || s == "sat" || s == "sun" || s == "wed" || s == "thu" || s == "ra" || strings.Contains(s, ":") ||
+		strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
 		return true
 	}
-	return false
+*/
+
+func excludeMe(s string) bool {
+	var equalMeStrings = []string{"fh", "dr.", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra"}
+	for _, equalsMe := range equalMeStrings {
+		if s == equalsMe {
+			return true
+		}
+	}
+
+	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@"}
+	for _, containsMe := range containsMeStrings {
+		if strings.Contains(s, containsMe) {
+			return true
+		}
+	}
+
+	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
+
+	return dgtRegexp.MatchString(s)
 }
 
 func uniqueStrings(s []string) []string { // AI wrote this, and then I changed how it defined the list string slice.
