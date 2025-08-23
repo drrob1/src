@@ -109,7 +109,7 @@ import (
   22 Aug 25 -- Added exclusion of "ra" as it seems that the schedule now includes Radiology Assistant initials for Murina and Payal.
 */
 
-const lastModified = "22 Aug 2025"
+const lastModified = "23 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -876,11 +876,9 @@ func pause() bool {
 
 func excludeMe(s string) bool { // used by getDocNames
 	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
-	if strings.Contains(s, "fh") || strings.Contains(s, "dr.") || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") ||
-		strings.Contains(s, "jh") || strings.Contains(s, "plain") || strings.Contains(s, "please") || strings.Contains(s, "sat") ||
-		strings.Contains(s, "sun") || strings.Contains(s, "thu") || strings.Contains(s, "wed") || strings.Contains(s, "thu") ||
-		strings.Contains(s, "ra") || strings.Contains(s, "modality") ||
-		strings.Contains(s, ":") || strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
+	if s == "fh" || s == "dr." || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") || s == "jh" || s == "plain" ||
+		s == "please" || s == "see" || s == "modality" || s == "sat" || s == "sun" || s == "wed" || s == "thu" || s == "ra" || strings.Contains(s, ":") ||
+		strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
 		return true
 	}
 	return false
@@ -913,7 +911,16 @@ func getDocNames(fn string) ([]string, error) {
 		}
 	}
 	sort.Strings(docNamesSlice)
+	if *verboseFlag {
+		fmt.Printf(" in getDocNames: raw docNamesSlice is %#v\n", docNamesSlice)
+	}
+
 	docNamesSlice = slices.Compact(docNamesSlice) // slices package became available with Go 1.20-ish
+
+	if *verboseFlag {
+		fmt.Printf(" in getDocNames: compacted docNamesSlice is %#v\n", docNamesSlice)
+	}
+
 	return docNamesSlice, nil
 }
 
