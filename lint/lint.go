@@ -107,9 +107,10 @@ import (
   17 Aug 25 -- Clarified a comment to the walk function, saying that it skips files that begin w/ a tilda, ~.
 				And change behavior of walk function so that veryverbose is needed for it to display the walk function's output.
   22 Aug 25 -- Added exclusion of "ra" as it seems that the schedule now includes Radiology Assistant initials for Murina and Payal.
+  24 Aug 25 -- Replaced excludeMe using new code I tested in getDocNames.  It uses slices of strings to define the strings to exclude.  And it makes it much easier to add new strings.
 */
 
-const lastModified = "23 Aug 2025"
+const lastModified = "24 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -874,14 +875,34 @@ func pause() bool {
 	return strings.HasPrefix(ans, "y") // suggested by staticcheck.
 }
 
-func excludeMe(s string) bool { // used by getDocNames
-	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
-	if s == "fh" || s == "dr." || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") || s == "jh" || s == "plain" ||
-		s == "please" || s == "see" || s == "modality" || s == "sat" || s == "sun" || s == "wed" || s == "thu" || s == "ra" || strings.Contains(s, ":") ||
-		strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
-		return true
+//func excludeMe(s string) bool { // used by getDocNames
+//	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
+//	if s == "fh" || s == "dr." || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") || s == "jh" || s == "plain" ||
+//		s == "please" || s == "see" || s == "modality" || s == "sat" || s == "sun" || s == "wed" || s == "thu" || s == "ra" || strings.Contains(s, ":") ||
+//		strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
+//		return true
+//	}
+//	return false
+//}
+
+func excludeMe(s string) bool {
+	var equalMeStrings = []string{"fh", "dr.", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra"}
+	for _, equalsMe := range equalMeStrings {
+		if s == equalsMe {
+			return true
+		}
 	}
-	return false
+
+	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@"}
+	for _, containsMe := range containsMeStrings {
+		if strings.Contains(s, containsMe) {
+			return true
+		}
+	}
+
+	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
+
+	return dgtRegexp.MatchString(s)
 }
 
 // getDocNames -- takes a filename and returns a slice of doc names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
