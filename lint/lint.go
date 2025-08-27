@@ -108,9 +108,10 @@ import (
 				And change behavior of walk function so that veryverbose is needed for it to display the walk function's output.
   22 Aug 25 -- Added exclusion of "ra" as it seems that the schedule now includes Radiology Assistant initials for Murina and Payal.
   24 Aug 25 -- Replaced excludeMe using new code I tested in getDocNames.  It uses slices of strings to define the strings to exclude.  And it makes it much easier to add new strings.
+  26 Aug 25 -- Added "dr" to excludeMe string, which occurs when the period is forgotten.  And added the -1 and -2 shortcuts that are passed to upgradelint.
 */
 
-const lastModified = "24 Aug 2025"
+const lastModified = "26 Aug 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -392,6 +393,8 @@ func main() {
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
 	flag.BoolVarP(&noUpgradeLint, "noupgrade", "n", false, "do not upgrade lint.exe")
 	flag.IntVarP(&whichURL, "url", "u", 0, "which URL to use for the auto updating of lint.exe")
+	u1 := flag.BoolP("u1", "1", false, "Shortcut for -u 1")
+	u2 := flag.BoolP("u2", "2", false, "Shortcut for -u 2")
 
 	flag.Usage = func() {
 		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastModified, runtime.Version())
@@ -403,6 +406,12 @@ func main() {
 	flag.Parse()
 	if veryVerboseFlag {
 		*verboseFlag = true
+	}
+
+	if *u1 {
+		whichURL = 1
+	} else if *u2 {
+		whichURL = 2
 	}
 
 	// filepicker.VerboseFlag = *verboseFlag  no longer using filepicker.  I'm now using walkRegexFullFilenames.
@@ -874,16 +883,6 @@ func pause() bool {
 	ans = strings.ToLower(ans)
 	return strings.HasPrefix(ans, "y") // suggested by staticcheck.
 }
-
-//func excludeMe(s string) bool { // used by getDocNames
-//	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
-//	if s == "fh" || s == "dr." || strings.Contains(s, "(") || strings.Contains(s, ")") || strings.Contains(s, "/") || s == "jh" || s == "plain" ||
-//		s == "please" || s == "see" || s == "modality" || s == "sat" || s == "sun" || s == "wed" || s == "thu" || s == "ra" || strings.Contains(s, ":") ||
-//		strings.Contains(s, "*") || strings.Contains(s, "@") || dgtRegexp.MatchString(s) {
-//		return true
-//	}
-//	return false
-//}
 
 func excludeMe(s string) bool {
 	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "-"}
