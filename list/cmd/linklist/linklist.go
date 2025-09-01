@@ -1,9 +1,7 @@
-package main
+package main // linklist
 
 import (
-	"bufio"
 	"fmt"
-	"image/jpeg"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,59 +9,24 @@ import (
 	"src/list"
 	"strings"
 
-	"github.com/jdeng/goheif"
 	flag "github.com/spf13/pflag"
 )
 
 /*
 28 July 25 -- Now that heic.go works to convert a single heic -> jpg, I'll write this as a list converter
 29 July 25 -- Now uses os.Create, instead of os.OpenFile.
+31 Aug 25  -- Now called linklist.go based on heiclist code, and copylist.   It will make symlinks in the destination directory.
 */
 
-const lastAltered = "29 July 2025"
-const jpgExt = ".jpg"
-
-func writeHeicToJpg(heic, jpg string, quality int) error {
-	fi, err := os.Open(heic)
-	if err != nil {
-		return err
-	}
-
-	img, err := goheif.Decode(fi)
-	if err != nil {
-		return err
-	}
-	fi.Close()
-
-	//fo, err := os.OpenFile(jpg, os.O_RDWR|os.O_CREATE, 0644)  I don't know why the sample code used OpenFile instead of Create.
-	fo, err := os.Create(jpg)
-	if err != nil {
-		return err
-	}
-	defer fo.Close()
-
-	w := bufio.NewWriter(fo)
-	defer w.Flush()
-	err = jpeg.Encode(w, img, &jpeg.Options{Quality: quality})
-	return err
-}
-
-func processFilename(fn string, quality int) error {
-	baseFilename := filepath.Base(fn)
-	ext := filepath.Ext(baseFilename)
-	baseFilename = strings.TrimSuffix(baseFilename, ext)
-	fmt.Printf(" %s -> %s\n", fn, baseFilename+jpgExt)
-	err := writeHeicToJpg(fn, baseFilename+jpgExt, quality)
-	return err
-}
+const lastAltered = "31 Aug 2025"
 
 func main() {
 	fmt.Printf("%s is compiled w/ %s, last altered %s\n", os.Args[0], runtime.Version(), lastAltered)
 
 	flag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], lastAltered, runtime.Version())
-		fmt.Printf(" Usage information: %s [glob pattern]\n", os.Args[0])
-		fmt.Printf(" Converts image in heic format to jpg format.\n")
+		fmt.Printf(" Usage information: %s src-dir[glob pattern] dest-dir\n", os.Args[0])
+		fmt.Printf(" Makes symlinks in the destination directory instead of actually copying the files.  This does not need concurrency.\n")
 		flag.PrintDefaults()
 	}
 
@@ -126,44 +89,52 @@ func main() {
 	list.ExcludeRex = excludeRegex
 	list.DelListFlag = true
 
-	fileList, err := list.NewFromGlob("*.heic")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from list.NewFromGlob is %s\n", err)
-		fmt.Printf(" flag.NArg = %d, len(os.Args) = %d\n", flag.NArg(), len(os.Args))
-		fmt.Print(" Continue? [yN] ")
-		var ans string
-		n, err := fmt.Scanln(&ans)
-		if n == 0 || err != nil {
-			fmt.Printf(" No input detected.  Exiting.\n")
-			os.Exit(1)
-		}
-		ans = strings.ToLower(ans)
-		if strings.Contains(ans, "n") {
-			os.Exit(1)
-		}
+	if flag.NArg() != 2 {
+		fmt.Printf(" Need two arguments, source and destination directories.  %d found.  Exiting.\n", flag.NArg())
+		os.Exit(1)
 	}
+	srcDir := flag.Arg(0)
+	destDir := flag.Arg(1)
+	if verboseFlag {
+		fmt.Printf(" srcDir = %q, destDir = %q\n", srcDir, destDir)
+	}
+	destFI, err := os.Stat(destDir)
+	if err != nil {
+		fmt.Printf(" os.Stat(%s) error is: %s.  Exiting.\n", destDir, err)
+		os.Exit(1)
+	}
+	if !destFI.IsDir() {
+		fmt.Printf(" os.Stat(%s) must be a directory as the destination, but it's not.  Exiting.\n", destDir)
+		os.Exit(1)
+	}
+
+	fileList, err := list.NewFromGlob(srcDir)
+
+	if err != nil {
+		fmt.Printf(" Error from list.NewFromGlob is %s\n", err)
+		fmt.Printf(" flag.NArg = %d, len(os.Args) = %d\n", flag.NArg(), len(os.Args))
+		os.Exit(1)
+	}
+
+	if len(fileList) == 0 {
+		fmt.Printf(" Length of the fileList is zero.  Aborting \n")
+		os.Exit(1)
+	}
+
 	if verboseFlag {
 		fmt.Printf(" len(fileList) = %d\n", len(fileList))
 	}
+
 	if veryVerboseFlag {
 		for i, f := range fileList {
 			fmt.Printf(" first fileList[%d] = %#v\n", i, f)
 		}
 		fmt.Println()
 	}
-	if len(fileList) == 0 {
-		fmt.Printf(" Length of the fileList is zero.  Aborting \n")
-		os.Exit(1)
-	}
 
 	fileList, err = list.FileSelection(fileList)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from list.FileSelection is %s\n", err)
-		os.Exit(1)
-	}
-
-	if len(fileList) == 0 {
-		fmt.Printf(" The selected list of files is empty.  Exiting.\n")
+		fmt.Printf(" Error from list.FileSelection is %s\n", err)
 		os.Exit(1)
 	}
 
@@ -174,9 +145,10 @@ func main() {
 	fmt.Printf(" There are %d files in the file list.\n\n", len(fileList))
 
 	for _, f := range fileList {
-		err = processFilename(f.FullPath, quality)
+		fullDestPath := filepath.Join(destDir, f.RelPath)
+		err = os.Symlink(f.FullPath, fullDestPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from processFilename is %s\n", err)
+			fmt.Printf(" Error from os.Symlink(%s,%s) is %q.  Continuing to next item.\n", f.FullPath, fullDestPath, err)
 		}
 	}
 	fmt.Println()
