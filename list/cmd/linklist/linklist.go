@@ -94,6 +94,14 @@ func main() {
 		os.Exit(1)
 	}
 	srcDir := flag.Arg(0)
+	if srcDir == "." {
+		workingDir, err := os.Getwd()
+		if err != nil {
+			fmt.Printf(" Error from os.Getwd is %s\n", err)
+			os.Exit(1)
+		}
+		srcDir = filepath.Join(workingDir, "*")
+	}
 	destDir := flag.Arg(1)
 	if verboseFlag {
 		fmt.Printf(" srcDir = %q, destDir = %q\n", srcDir, destDir)
@@ -145,7 +153,7 @@ func main() {
 	fmt.Printf(" There are %d files in the file list.\n\n", len(fileList))
 
 	for _, f := range fileList {
-		fullDestPath := filepath.Join(destDir, f.RelPath)
+		fullDestPath := filepath.Join(destDir, f.FI.Name())
 		err = os.Symlink(f.FullPath, fullDestPath)
 		if err != nil {
 			fmt.Printf(" Error from os.Symlink(%s,%s) is %q.  Continuing to next item.\n", f.FullPath, fullDestPath, err)
