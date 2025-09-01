@@ -154,13 +154,24 @@ func main() {
 	fmt.Printf(" There are %d files in the file list.\n\n", len(fileList))
 
 	var sumSize int64
-	for _, f := range fileList {
-		sumSize += f.FI.Size()
+	for _, f := range fileList { // I want symlinks to be included in the sum as if they were the files they point to.
+		if f.FI.IsDir() { // skip directories
+			continue
+		}
+		amount := f.FI.Size()
+		if !f.FI.Mode().IsRegular() { // not a dir name and not a regular file, so must be a symlink.
+			fi, err := os.Stat(f.AbsPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from os.Stat(%s) is %s.  Skipping\n", f.FullPath, err)
+				continue
+			}
+			amount = fi.Size()
+		}
+		sumSize += amount
 	}
 
 	fmt.Printf(" The sum of the sizes of the files in the list is %d bytes.\n\n", sumSize)
 
-	magStr, colr := list.GetMagnitudeString(sumSize)
-	ctfmt.Printf(colr, true, " The sum of the sizes of the files in the list is %s.\n\n", magStr)
-	fmt.Println()
+	magStr, color := list.GetMagnitudeString(sumSize)
+	ctfmt.Printf(color, true, " The sum of the sizes of the files in the list is %s.\n\n", magStr)
 }
