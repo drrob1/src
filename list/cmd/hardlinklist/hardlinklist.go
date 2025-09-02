@@ -1,4 +1,4 @@
-package main // linklist
+package main // hardlinklist
 
 import (
 	"fmt"
@@ -16,7 +16,8 @@ import (
 28 July 25 -- Now that heic.go works to convert a single heic -> jpg, I'll write this as a list converter
 29 July 25 -- Now uses os.Create, instead of os.OpenFile.
 31 Aug 25  -- Now called linklist.go based on heiclist code, and copylist.   It will make symlinks in the destination directory.
- 2 Sep 25 -- Added check for directory, and if it's a directory, then skip it.
+----------------------------------------------------------------------------------------------------
+ 2 Sep 25 -- Now called hardlinklist.go, and will make hard links in the destination directory.
 */
 
 const lastAltered = "2 Sep 2025"
@@ -27,7 +28,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], lastAltered, runtime.Version())
 		fmt.Printf(" Usage information: %s src-dir[glob pattern] dest-dir\n", os.Args[0])
-		fmt.Printf(" Makes symlinks in the destination directory instead of actually copying the files.  This does not need concurrency.\n")
+		fmt.Printf(" Makes hardlinks in the destination directory instead of actually copying the files.  This does not need concurrency.\n")
 		flag.PrintDefaults()
 	}
 
@@ -159,7 +160,7 @@ func main() {
 			continue
 		}
 		fullDestPath := filepath.Join(destDir, f.FI.Name())
-		err = os.Symlink(f.FullPath, fullDestPath)
+		err = os.Link(f.FullPath, fullDestPath)
 		if err != nil {
 			fmt.Printf(" Error from os.Symlink(%s,%s) is %q.  Continuing to next item.\n", f.FullPath, fullDestPath, err)
 		}
