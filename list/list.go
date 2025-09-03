@@ -95,7 +95,7 @@ type DirAliasMapType map[string]string
 type FileInfoExType struct {
 	FI       os.FileInfo
 	Dir      string
-	RelPath  string
+	RelPath  string // this is a misnomer, but to not have to propagate the correction thru my code, I'll leave this here.
 	AbsPath  string
 	FullPath string // probably not needed, but I really do want to be complete.
 }

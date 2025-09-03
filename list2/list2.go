@@ -2,9 +2,6 @@ package list2
 
 import (
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +9,10 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 )
 
 /*
@@ -49,7 +50,7 @@ type DirAliasMapType map[string]string
 type FileInfoExType struct {
 	FI      os.FileInfo
 	Dir     string
-	RelPath string
+	RelPath string // this is a misnomer, but I'll leave this here.
 }
 
 var filterAmt int64 // not exported.  Only the FilterFlag is exported.
