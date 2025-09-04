@@ -6,13 +6,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -21,9 +22,10 @@ import (
    3 Nov 24 -- First version of allcc.go.  This will allow me to insert single records into allcc-sqlite.db.  At least when I'm finished developing it.
 				Then I'll write this for Citibank.db.
    4 Nov 24 -- Writing date validation routine using regexp.
+   4 Sep 25 -- It doesn't work anymore.  It fails at the read float64.  Nevermind, I intended to use the citibank.db file.
 */
 
-const lastAltered = "4 Nov 24"
+const lastAltered = "4 Sep 25"
 
 type transaction struct {
 	Date        string
@@ -55,7 +57,7 @@ func AddRecord(record transaction) error {
 		return errors.New("Date is empty")
 	}
 	if record.Amount == 0 {
-		return errors.New("Amount is empty")
+		return errors.New("Amount is empty, maybe you meant to use the citidb command?")
 	}
 
 	db, err := openConnection()
@@ -129,8 +131,8 @@ func main() {
 	var amtstr string
 	n, err = fmt.Scanln(&amtstr)
 	if n != 1 || err != nil {
-		fmt.Printf(" Entered amount is in error.  Exiting\n")
-		return
+		fmt.Printf(" Entered amount is in error.  Assuming zero\n")
+		amtstr = "0.0"
 	}
 	amt, err = strconv.ParseFloat(amtstr, 64)
 	if err != nil {
@@ -138,26 +140,18 @@ func main() {
 		return
 	}
 	var description string
-	fmt.Print(" Enter description as text (can't have spaces -- just kidding as I fixed this.) : ")
+	fmt.Print(" Enter description as text : ")
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
 	description = scanner.Text()
-	// n, err = fmt.Scanln(&description) spaces in the input causes this input to fail.
-	//if n != 1 || err != nil {
-	//	fmt.Printf(" Entered description is in error.  Exiting\n")
-	//	return
-	//}
 	if description == "" {
-		fmt.Printf(" Warning: entered description is empty.\n")
+		fmt.Printf(" Warning: entered description is empty.  Assuming voided\n")
+		description = "Voided"
 	}
 	var comment string
-	fmt.Print(" Enter comment as text (can't have spaces) -- I fixed this : ")
+	fmt.Print(" Enter comment as text : ")
 	scanner.Scan()
 	comment = scanner.Text()
-	//n, err = fmt.Scanln(&comment) spaces in the input causes this input to fail.
-	//if n != 1 || err != nil {
-	//	fmt.Printf(" Entered comment is in error.  Exiting\n")
-	//}
 	if comment == "" {
 		fmt.Printf(" Warning: entered comment is empty.\n")
 	}
