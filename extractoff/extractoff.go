@@ -1,4 +1,4 @@
-package main // lint.go, from lint2.go from lint.go
+package main // extractoff.go from lint.go from lint2.go from lint.go
 
 import (
 	"bytes"
@@ -111,6 +111,8 @@ import (
   26 Aug 25 -- Added "dr" to excludeMe string, which occurs when the period is forgotten.  And added the -1 and -2 shortcuts that are passed to upgradelint.
 				This code is now saved in lintprior1sep25.go
 ------------------------------------------------------------------------------------------------------------------------------------------------------
+*/
+/*
    1 Sep 25 -- The department changed the format for the schedule, highlighting on call and weekend docs.  I'll need to change the code to use the new format.
    8 Sep 25 -- I got them to add back an indication of who's off, but it's all in 1 box in the Friday column.  I have to think about this, and wonder about it changing again.
 				And the numbering changed.  I have to move weekdayOncall, which used to be at the top, and is now near the bottom.  Basically, I have to completely change
@@ -124,7 +126,10 @@ const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
 const maxDimensions = 200
+
 const monday = 1
+const friday = 5
+const saturday = 6
 
 const (
 	neuro = iota + 3
@@ -172,7 +177,6 @@ var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verbo
 
 var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
 
-// var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")  Not relevant as o: drive is gone.
 var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 var veryVerboseFlag bool
 var monthsThreshold int
@@ -212,6 +216,9 @@ func findAndReadConfIni() ([]string, string, error) {
 	// will use my tknptr stuff here.
 	tokenslice := tknptr.TokenSlice(inputLine)
 	paramName := strings.ToLower(tokenslice[0].Str)
+	//if !strings.Contains(lower, "off") {
+	//	return fmt.Errorf("%s is not off", tokenslice[0].Str)
+	//}
 	if paramName == "off" {
 		if veryVerboseFlag {
 			fmt.Printf(" Found config file: %s, containing %s\n", fullFile, inputLine)
@@ -409,17 +416,6 @@ func main() {
 	var docs string
 
 	if flag.NArg() == 0 {
-		//if includeODrive {  O: drive is gone as of 8/8/25.
-		//	filenames, err = walkRegexFullFilenames() // function is below.  "o:\\week.*xls.?$"
-		//	if err != nil {
-		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames is %s.  Exiting \n", err)
-		//		return
-		//	}
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length from o drive: %d\n", len(filenames))
-		//	}
-		//}
-
 		if startDirFromConfigFile != "" {
 			filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
 			if err != nil {
@@ -584,7 +580,7 @@ func main() {
 }
 
 // scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
-func scanXLSfile(filename string) error {
+func scanXLSfile(filename string) error { // since I'm not writing any data, I don't have to save the file.  I can just open it.
 
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
@@ -593,8 +589,8 @@ func scanXLSfile(filename string) error {
 	}
 
 	// Populate the week's schedule
-	var week [6]dayType           // Only need 5 workdays.  Element 0 is not used.
-	for i := monday; i < 6; i++ { // Monday = 1, Friday = 5
+	var week [6]dayType                  // Only need 5 workdays.  Element 0 is not used.
+	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
 		week[i], err = readDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
@@ -930,4 +926,10 @@ func showSpellingErrors(in []soundexSlice) []string {
 		}
 	}
 	return out
+}
+
+func extractOff(startdirectory string) error {
+	if startdirectory == "" {
+		return errors.New("startdirectory is empty")
+	}
 }

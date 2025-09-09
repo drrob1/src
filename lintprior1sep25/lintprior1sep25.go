@@ -109,14 +109,8 @@ import (
   22 Aug 25 -- Added exclusion of "ra" as it seems that the schedule now includes Radiology Assistant initials for Murina and Payal.
   24 Aug 25 -- Replaced excludeMe using new code I tested in getDocNames.  It uses slices of strings to define the strings to exclude.  And it makes it much easier to add new strings.
   26 Aug 25 -- Added "dr" to excludeMe string, which occurs when the period is forgotten.  And added the -1 and -2 shortcuts that are passed to upgradelint.
-				This code is now saved in lintprior1sep25.go
-------------------------------------------------------------------------------------------------------------------------------------------------------
    1 Sep 25 -- The department changed the format for the schedule, highlighting on call and weekend docs.  I'll need to change the code to use the new format.
    8 Sep 25 -- I got them to add back an indication of who's off, but it's all in 1 box in the Friday column.  I have to think about this, and wonder about it changing again.
-				And the numbering changed.  I have to move weekdayOncall, which used to be at the top, and is now near the bottom.  Basically, I have to completely change
-				whosOnVacationToday.  When I do that, then the rest of the code should be ok.  I already changed some of the const names for the sections to be covered.
-				Previously, scanXLSfile processes the file and displays the error messages.  Main sets up the data structures leading into scanXLSfile.  scanXLSfile was able to
-				read each day separately, which worked before.  Now, the off data is in Friday's column.  So would have to read the whole file, and then process the off data.
 */
 
 const lastModified = "9 Sep 2025"
@@ -124,10 +118,10 @@ const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
 const maxDimensions = 200
-const monday = 1
 
 const (
-	neuro = iota + 3
+	weekdayOncall = iota + 3 // and code is a 0-origin, while Excel is 1-origin for rows.  But the Excel package handles this for me.
+	neuro
 	body
 	erXrays
 	ir
@@ -139,16 +133,13 @@ const (
 	msk // includes X-ray In/Outpatient and off-sites
 	mammo
 	boneDensity
-	oncallradiologist
 	late
-	bluebarweekendcoverage
+	moonlighters
+	weekendJH
+	weekendFH
+	weekendIR // includes On-Call Radiologist for diagnostic
 	mdOff
 	totalAmt
-	//weekdayOncall = iota + 3 // and code is a 0-origin, while Excel is 1-origin for rows.  But the Excel package handles this for me.
-	//moonlighters
-	//weekendJH
-	//weekendFH
-	//weekendIR
 )
 
 type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
@@ -212,6 +203,9 @@ func findAndReadConfIni() ([]string, string, error) {
 	// will use my tknptr stuff here.
 	tokenslice := tknptr.TokenSlice(inputLine)
 	paramName := strings.ToLower(tokenslice[0].Str)
+	//if !strings.Contains(lower, "off") {
+	//	return fmt.Errorf("%s is not off", tokenslice[0].Str)
+	//}
 	if paramName == "off" {
 		if veryVerboseFlag {
 			fmt.Printf(" Found config file: %s, containing %s\n", fullFile, inputLine)
@@ -277,13 +271,59 @@ func readDay(wb *xlsx.File, col int) (dayType, error) {
 	var day dayType
 	sheets := wb.Sheets
 
-	for i := neuro; i < totalAmt; i++ {
+	for i := weekdayOncall; i < totalAmt; i++ {
 		cell, err := sheets[0].Cell(i, col) // always sheet[0]
 		if err != nil {
 			return dayType{}, err
 		}
 
 		day[i] = cell.String()
+
+		//switch i {
+		//case 3:
+		//	day.weekdayOncall = cell.String()
+		//case 4:
+		//	day.neuro = cell.String()
+		//case 5:
+		//	day.body = cell.String()
+		//case 6:
+		//	day.er = cell.String()
+		//	day.xrays = cell.String()
+		//case 7:
+		//	day.ir = cell.String()
+		//case 8:
+		//	day.nuclear = cell.String()
+		//case 9:
+		//	day.us = cell.String()
+		//case 10:
+		//	day.peds = cell.String()
+		//case 11:
+		//	day.fluoroJH = cell.String()
+		//case 12:
+		//	day.fluoroFH = cell.String()
+		//case 13:
+		//	day.msk = cell.String()
+		//case 14:
+		//	day.mammo = cell.String()
+		//case 15:
+		//	day.boneDensity = cell.String()
+		//case 16:
+		//	day.late = cell.String()
+		//case 17:
+		//	day.moonlighters = cell.String()
+		//case 18:
+		//	day.weekendJH = cell.String()
+		//case 19:
+		//	day.weekendFH = cell.String()
+		//case 20:
+		//	day.weekendIR = cell.String()
+		//case 21:
+		//	day.mdOff = cell.String()
+		//
+		//default:
+		//	return dayType{}, fmt.Errorf("unknown day type %d", i)
+		//
+		//}
 	}
 	return day, nil
 }
@@ -593,8 +633,8 @@ func scanXLSfile(filename string) error {
 	}
 
 	// Populate the week's schedule
-	var week [6]dayType           // Only need 5 workdays.  Element 0 is not used.
-	for i := monday; i < 6; i++ { // Monday = 1, Friday = 5
+	var week [6]dayType      // Only need 5 workdays.  Element 0 is not used.
+	for i := 1; i < 6; i++ { // Monday = 1, Friday = 5
 		week[i], err = readDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
@@ -634,7 +674,7 @@ func scanXLSfile(filename string) error {
 		// Now, mdsOffToday is a slice of several names of who is off today.
 
 		for _, name := range mdsOffToday {
-			for i := neuro; i < late; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
+			for i := weekdayOncall; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(week[dayCol][i]); strings.Contains(lower, name) {
 					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), dayNames[dayCol], categoryNamesList[i])
 				}
@@ -875,7 +915,7 @@ func getDocNames(fn string) ([]string, error) {
 	}
 	sheet := workBook.Sheets[0]
 
-	for row := neuro; row < totalAmt; row++ {
+	for row := weekdayOncall; row < totalAmt; row++ {
 		for col := 1; col < 6; col++ {
 			cell, err := sheet.Cell(row, col)
 			if err != nil {
