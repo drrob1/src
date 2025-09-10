@@ -602,7 +602,7 @@ func scanXLSfile(filename string) error {
 		}
 	}
 
-	if veryVerboseFlag {
+	if *verboseFlag {
 		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
 		for i, day := range week {
 			fmt.Printf("Day %d: %#v \n", i, day)
@@ -622,7 +622,7 @@ func scanXLSfile(filename string) error {
 		tokens := tknptr.TokenSlice(offString)
 		ctfmt.Printf(ct.Yellow, true, "length of tokens from off box extracted from Friday: %d \n tokens: \n", len(tokens))
 		for i, token := range tokens {
-			ctfmt.Printf(ct.Yellow, true, "token[%d] is %#v\n", i, token)
+			ctfmt.Printf(ct.Yellow, true, "token[%d] is %s\n", i, token.String())
 		}
 		fmt.Printf("\n\n")
 

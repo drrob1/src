@@ -84,9 +84,10 @@ REVISION HISTORY
                And I also added 3 fields to TokenType (FullString, RealFlag and HexFlag), and added a signaling flag, wantReal that TokenReal() uses to signal into GetToken().
 24 Jul 23 -- Spoke too soon.  Hex input isn't working correctly.  Gotta fix that now.  And I removed 'h' to indicate hex.  Now only 0x will work, as used in C-ish.
 24 May 24 -- Added comments that will be detected by go doc
+10 Sep 25 -- Added a stringer method for TokenType
 */
 
-const LastAltered = "24 May 2024"
+const LastAltered = "10 Sep 2025"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -118,6 +119,23 @@ type BufferState struct {
 	CURPOSN, HOLDCURPOSN, PREVPOSN int
 	lineByteSlice, HoldLineBS      []byte
 	StateMap                       map[byte]int // as of 9/28/20, StateMap is part of this structure.
+}
+
+var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
+
+func (t TokenType) String() string { // satisfies the stringer interface
+	var s string
+	if t.Rsum == 0 {
+		s = fmt.Sprintf("Str: %s, fullStr: %s, State: %s, DelimCh: 0x%02X, DelimState: %s, Isum: %d, Rsum: %g, RealFlag: %t, HexFlag: %t",
+			t.Str, t.FullString, FSAnameType[t.State], t.DelimCH, FSAnameType[t.DelimState], t.Isum, t.Rsum, t.RealFlag, t.HexFlag)
+	} else if math.Abs(t.Rsum) < 1e8 {
+		s = fmt.Sprintf("Str: %s, fullStr: %s, State: %s, DelimCh: %0#2X, DelimState: %s, Isum: %d, Rsum: %.2f, RealFlag: %t, HexFlag: %t",
+			t.Str, t.FullString, FSAnameType[t.State], t.DelimCH, FSAnameType[t.DelimState], t.Isum, t.Rsum, t.RealFlag, t.HexFlag)
+	} else {
+		s = fmt.Sprintf("Str: %s, fullStr: %s, State: %s, DelimCh: 0x%02X, DelimState: %s, Isum: %d, Rsum: %.4g, RealFlag: %t, HexFlag: %t",
+			t.Str, t.FullString, FSAnameType[t.State], t.DelimCH, FSAnameType[t.DelimState], t.Isum, t.Rsum, t.RealFlag, t.HexFlag)
+	}
+	return s
 }
 
 // ---------------------------------------------------------------------
