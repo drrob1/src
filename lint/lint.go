@@ -117,6 +117,8 @@ import (
 				whosOnVacationToday.  When I do that, then the rest of the code should be ok.  I already changed some of the const names for the sections to be covered.
 				Previously, scanXLSfile processes the file and displays the error messages.  Main sets up the data structures leading into scanXLSfile.  scanXLSfile was able to
 				read each day separately, which worked before.  Now, the off data is in Friday's column.  So would have to read the whole file, and then process the off data.
+   9 Sep 25 -- I'm coming back to do these changes in lint.go itself.  I'll stop using extractoff.go.  My plan is to create the vacation string slice in the format that it used to be in,
+				and then pass that to whosOnVacationToday.  And then I'll have to change the code to use the new format.
 */
 
 const lastModified = "9 Sep 2025"
@@ -125,6 +127,8 @@ const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
 const maxDimensions = 200
 const monday = 1
+const friday = 5
+const saturday = 6
 
 const (
 	neuro = iota + 3
@@ -144,11 +148,6 @@ const (
 	bluebarweekendcoverage
 	mdOff
 	totalAmt
-	//weekdayOncall = iota + 3 // and code is a 0-origin, while Excel is 1-origin for rows.  But the Excel package handles this for me.
-	//moonlighters
-	//weekendJH
-	//weekendFH
-	//weekendIR
 )
 
 type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
@@ -157,6 +156,8 @@ type fileDataType struct {
 	ffname    string // full filename
 	timestamp time.Time
 }
+
+type workWeekType [6]dayType
 
 type soundexSlice struct {
 	s      string
@@ -273,7 +274,7 @@ func findAndReadConfIni() ([]string, string, error) {
 	return docNames, startDirectory, nil
 }
 
-func readDay(wb *xlsx.File, col int) (dayType, error) {
+func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 	var day dayType
 	sheets := wb.Sheets
 
@@ -447,22 +448,10 @@ func main() {
 		if *verboseFlag {
 			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 		}
-		//filenamesDocs, err := walkRegexFullFilenames(docs)
-		//if err != nil {
-		//	fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignored \n", docs, err)
-		//} else {
-		//	filenames = append(filenames, filenamesDocs...)
-		//}
-		//oneDrive := filepath.Join(filepath.Join(homeDir, "OneDrive"), "week.*xls.?$")
-		//if *verboseFlag {
-		//	fmt.Printf(" oneDrive=%q, OneDriveWork: %q\n", oneDrive, oneDriveWork)
-		//}
 		oneDriveString := os.Getenv("OneDrive")
 		if *verboseFlag {
 			fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
 		}
-		//                                                  filenamesOneDrive, err := filepicker.GetRegexFullFilenames(docs)
-		//                                         filenamesOneDrive, err := filepicker.GetRegexFullFilenamesNotLocked(docs)
 		filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
 		if err != nil {
 			fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignoring \n", oneDriveString, err)
@@ -546,7 +535,8 @@ func main() {
 	if err == nil {
 		ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n\n", filename)
 	} else {
-		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s\n\n", filename)
+		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s is %s\n\n", filename, err)
+		return
 	}
 
 	if noUpgradeLint {
@@ -584,6 +574,8 @@ func main() {
 }
 
 // scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
+//
+//	Does not need to return anything except error to main.
 func scanXLSfile(filename string) error {
 
 	workBook, err := xlsx.OpenFile(filename)
@@ -593,9 +585,9 @@ func scanXLSfile(filename string) error {
 	}
 
 	// Populate the week's schedule
-	var week [6]dayType           // Only need 5 workdays.  Element 0 is not used.
-	for i := monday; i < 6; i++ { // Monday = 1, Friday = 5
-		week[i], err = readDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
+	var week workWeekType                // [6]dayType  Only need 5 workdays.  Element 0 is not used.
+	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
+		week[i], err = readEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
 			continue
@@ -603,9 +595,24 @@ func scanXLSfile(filename string) error {
 	}
 
 	if veryVerboseFlag {
+		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
 		for i, day := range week {
 			fmt.Printf("Day %d: %#v \n", i, day)
 		}
+		fmt.Printf("\n\n")
+
+		fmt.Printf(" Now testing offString \n")
+		offString, er := extractOff(week)
+		if er != nil {
+			fmt.Printf("Error extracting off: %s\n", er)
+			return er
+		}
+		ctfmt.Printf(ct.Green, true, "off box extracted from Friday: %q\n", offString)
+		if pause() {
+			return errors.New("exit from pause")
+		}
+
+		return errors.New("user choice to exit from scanXLSfile")
 	}
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
@@ -930,4 +937,9 @@ func showSpellingErrors(in []soundexSlice) []string {
 		}
 	}
 	return out
+}
+
+func extractOff(week workWeekType) (string, error) {
+	s := week[friday][mdOff]
+	return s, nil
 }

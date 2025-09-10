@@ -280,7 +280,7 @@ func findAndReadConfIni() ([]string, string, error) {
 	return docNames, startDirectory, nil
 }
 
-func readDay(wb *xlsx.File, col int) (dayType, error) {
+func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 	var day dayType
 	sheets := wb.Sheets
 
@@ -402,15 +402,6 @@ func main() {
 	}
 
 	// filepicker no longer used.  Now I'm using the walkRegexFullFilenames function.
-	//filenames, err := filepicker.GetRegexFullFilenames(docs)
-	//if err != nil {
-	//	ctfmt.Printf(ct.Red, true, " Error from filepicker.GetRegexFullFilenames is %s.  Exiting \n", err)
-	//	return
-	//}
-	//includeODrive := !*conlyFlag // a comvenience flag
-	//if *verboseFlag {
-	//	fmt.Printf(" conlyFlag=%t, includeODrive=%t\n", *conlyFlag, includeODrive)
-	//}
 	var filenames []string
 	var homeDir string
 	var docs string
@@ -443,16 +434,6 @@ func main() {
 		if *verboseFlag {
 			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 		}
-		//filenamesDocs, err := walkRegexFullFilenames(docs)
-		//if err != nil {
-		//	fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignored \n", docs, err)
-		//} else {
-		//	filenames = append(filenames, filenamesDocs...)
-		//}
-		//oneDrive := filepath.Join(filepath.Join(homeDir, "OneDrive"), "week.*xls.?$")
-		//if *verboseFlag {
-		//	fmt.Printf(" oneDrive=%q, OneDriveWork: %q\n", oneDrive, oneDriveWork)
-		//}
 		oneDriveString := os.Getenv("OneDrive")
 		if *verboseFlag {
 			fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
@@ -589,9 +570,9 @@ func scanXLSfile(filename string) error { // since I'm not writing any data, I d
 	}
 
 	// Populate the week's schedule
-	var week [6]dayType                  // Only need 5 workdays.  Element 0 is not used.
-	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
-		week[i], err = readDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
+	var week [6]dayType                  // Only need 5 workdays.  Element 0 is not used as it's the assignments column.
+	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5, Saturday = 6.
+		week[i], err = readEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
 			continue
@@ -602,6 +583,18 @@ func scanXLSfile(filename string) error { // since I'm not writing any data, I d
 		for i, day := range week {
 			fmt.Printf("Day %d: %#v \n", i, day)
 		}
+
+		offString, err := extractOff(week)
+		if err != nil {
+			fmt.Printf("Error extracting off: %s\n", err)
+			return err
+		}
+		fmt.Printf("off: %s\n", offString)
+		if pause() {
+			return errors.New("exit from pause")
+		}
+
+		return nil
 	}
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
@@ -928,8 +921,7 @@ func showSpellingErrors(in []soundexSlice) []string {
 	return out
 }
 
-func extractOff(startdirectory string) error {
-	if startdirectory == "" {
-		return errors.New("startdirectory is empty")
-	}
+func extractOff(week [6]dayType) (string, error) {
+	s := week[friday][mdOff]
+	return s, nil
 }
