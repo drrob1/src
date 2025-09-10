@@ -127,9 +127,6 @@ const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
 const maxDimensions = 200
-const monday = 1
-const friday = 5
-const saturday = 6
 
 const (
 	neuro = iota + 3
@@ -149,6 +146,16 @@ const (
 	bluebarweekendcoverage
 	mdOff
 	totalAmt
+)
+
+const (
+	monday = iota + 1
+	tuesday
+	wednesday
+	thursday
+	friday
+	saturday
+	sunday
 )
 
 type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
@@ -609,9 +616,15 @@ func scanXLSfile(filename string) error {
 			return er
 		}
 		ctfmt.Printf(ct.Green, true, "off box extracted from Friday: %q\n", offString)
-		if pause() {
-			return errors.New("exit from pause")
+		ctfmt.Printf(ct.Cyan, true, "off box extracted from Friday: %s\n", offString)
+
+		offString = strings.ReplaceAll(offString, ",", "") // remove commas from off box text
+		tokens := tknptr.TokenSlice(offString)
+		ctfmt.Printf(ct.Yellow, true, "length of tokens from off box extracted from Friday: %d \n tokens: \n", len(tokens))
+		for i, token := range tokens {
+			ctfmt.Printf(ct.Yellow, true, "token[%d] is %#v\n", i, token)
 		}
+		fmt.Printf("\n\n")
 
 		return errors.New("user choice to exit from scanXLSfile")
 	}
