@@ -119,6 +119,7 @@ import (
 				read each day separately, which worked before.  Now, the off data is in Friday's column.  So would have to read the whole file, and then process the off data.
    9 Sep 25 -- I'm coming back to do these changes in lint.go itself.  I'll stop using extractoff.go.  My plan is to create the vacation string slice in the format that it used to be in,
 				and then pass that to whosOnVacationToday.  And then I'll have to change the code to use the new format.
+				Currently, whosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
 */
 
 const lastModified = "9 Sep 2025"
@@ -289,7 +290,7 @@ func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
-func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+func whosOnVacationToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on vacation for this day
 	vacationString := strings.ToLower(week[dayCol][mdOff])
 
@@ -306,7 +307,7 @@ func whosOnVacationToday(week [6]dayType, dayCol int) []string { // week is an a
 	return mdsOff
 }
 
-func whosLateToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+func whosLateToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on the late shift for today.  Only 2 per day are late.
 
 	lateString := strings.ToLower(week[dayCol][late])
@@ -321,7 +322,7 @@ func whosLateToday(week [6]dayType, dayCol int) []string { // week is an array, 
 	return lateDocs
 }
 
-func whosRemoteToday(week [6]dayType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+func whosRemoteToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are working remotely today.
 	const remoteMarkerString = "(*R)"
 
