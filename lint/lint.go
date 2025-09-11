@@ -1002,9 +1002,9 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 
 	var vacStructArray vacStructArrayType
 
-	dayNum := 1                                        // start on Monday
+	dayNum := 1 // start on Monday
+	docNameStrSlice := make([]string, 0, numOfDocs)
 	for i := 1; i < len(vacDocsTokensForEntireWeek); { // note that this for does not include the first element, or an increment.  I'll handle the increment in the body of the for.
-		docNameStrSlice := make([]string, 0, numOfDocs)
 		var sb strings.Builder
 		docToken := vacDocsTokensForEntireWeek[i]
 		if docToken.State == tknptr.DGT { // month number is first.
@@ -1039,8 +1039,12 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 			dayOfWeekNum := juldate % 7
 			vacStructArray[dayNum].MF = dayOfWeekNum
 			vacStructArray[dayNum].MFStr = dayNamesString[dayOfWeekNum]
+			i++ // now points to the token after the colon
+			docToken = vacDocsTokensForEntireWeek[i]
+			//ctfmt.Printf(ct.Green, true, "debugging string tokens in date processing section: token[%d]: %s\n", i, docToken.Str)
 		} else if docToken.State == tknptr.ALLELSE {
 			docNameStrSlice = append(docNameStrSlice, docToken.Str)
+			//ctfmt.Printf(ct.Green, true, "debugging string tokens in ALLELSE section: token[%d]: %s\n docNameStrSlice: %#v\n", i, docToken.Str, docNameStrSlice)
 			i++
 			if i >= len(vacDocsTokensForEntireWeek) { // if reached the end of the slice, then this is the last doc name.  And exit the for loop.
 				vacStructArray[dayNum].docsAreOff = docNameStrSlice
@@ -1049,10 +1053,11 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 			if vacDocsTokensForEntireWeek[i].State != tknptr.ALLELSE { // if not end of slice, and next token is not a string for a doc name, then this is the last doc name for this day.
 				vacStructArray[dayNum].docsAreOff = docNameStrSlice
 				dayNum++
-				continue
+				docNameStrSlice = make([]string, 0, numOfDocs) // clear it for the next day.
 			}
 		} else {
-			return vacStructArray, fmt.Errorf("unexpected token state: %d, token.Str %s", docToken.State, docToken.Str)
+			ctfmt.Printf(ct.Red, true, "unexpected token : %s \n", docToken.String())
+			i++
 		}
 	}
 	return vacStructArray, nil
