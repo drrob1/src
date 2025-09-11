@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"src/misc"
+	"src/timlibg"
 	"src/tknptr"
 	"src/whichexec"
 	"strconv"
@@ -120,9 +121,11 @@ import (
    9 Sep 25 -- I'm coming back to do these changes in lint.go itself.  I'll stop using extractoff.go.  My plan is to create the vacation string slice in the format that it used to be in,
 				and then pass that to whosOnVacationToday.  And then I'll have to change the code to use the new format.
 				Currently, whosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
+  11 Sep 25 -- My plan is to populate a vacationStructSlice with the data from docsOffStringForWeek.  I need year from index 2 from each dayType.
+
 */
 
-const lastModified = "9 Sep 2025"
+const lastModified = "13 Sep 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -159,9 +162,12 @@ const (
 	sunday
 )
 
+var dayNamesString = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+
 type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
 
-type fileDataType struct {
+type fileDataType struct { // used for the walk function.
+	name      string // base name of the file
 	ffname    string // full filename
 	timestamp time.Time
 }
@@ -172,6 +178,14 @@ type soundexSlice struct {
 	s      string
 	soundx string
 }
+
+type vacStructType struct {
+	date       string // from the schedule, for internal consistency
+	MFStr      string // Monday-Friday day of the week, for internal consistency
+	MF         int
+	docsAreOff []string
+}
+type vacStructArrayType [6]vacStructType
 
 var names = make([]string, 0, numOfDocs)
 var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
@@ -574,6 +588,7 @@ func main() {
 //
 //	Does not need to return anything except error to main.
 func scanXLSfile(filename string) error {
+	// First this reads the entire file into the array for the entire work week.
 
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
@@ -581,10 +596,10 @@ func scanXLSfile(filename string) error {
 		return err
 	}
 
-	// Populate the week's schedule
-	var week workWeekType                // [6]dayType  Only need 5 workdays.  Element 0 is not used.
+	// Populate the wholeWorkWeek's schedule
+	var wholeWorkWeek workWeekType       // [6]dayType  Only need 5 workdays.  Element 0 is not used.
 	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
-		week[i], err = readEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
+		wholeWorkWeek[i], err = readEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
 			continue
@@ -593,35 +608,57 @@ func scanXLSfile(filename string) error {
 
 	if *verboseFlag {
 		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
-		for i, day := range week {
+		for i, day := range wholeWorkWeek {
 			fmt.Printf("Day %d: %#v \n", i, day)
 		}
 		fmt.Printf("\n\n")
 
-		fmt.Printf(" Now testing offString \n")
-		offString, er := extractOff(week)
+		fmt.Printf(" Now testing docsOffStringForWeek \n")
+		docsOffStringForWeek, er := extractOff(wholeWorkWeek)
 		if er != nil {
 			fmt.Printf("Error extracting off: %s\n", er)
 			return er
 		}
-		ctfmt.Printf(ct.Green, true, "off box extracted from Friday: %q\n", offString)
-		ctfmt.Printf(ct.Cyan, true, "off box extracted from Friday: %s\n", offString)
+		ctfmt.Printf(ct.Green, true, "docs off box extracted from Friday, as one line: %q\n", docsOffStringForWeek)
+		ctfmt.Printf(ct.Cyan, true, "docs off box extracted from Friday, processing new line characters: %s\n", docsOffStringForWeek)
 
-		offString = strings.ReplaceAll(offString, ",", "") // remove commas from off box text
-		tokens := tknptr.TokenSlice(offString)
-		ctfmt.Printf(ct.Yellow, true, "length of tokens from off box extracted from Friday: %d \n tokens: \n", len(tokens))
-		for i, token := range tokens {
-			ctfmt.Printf(ct.Yellow, true, "token[%d] is %s\n", i, token.String())
+		docsOffStringForWeek = strings.ReplaceAll(docsOffStringForWeek, ",", "") // remove commas from off box text
+		docOffTokensForWeek := tknptr.TokenSlice(docsOffStringForWeek)
+		ctfmt.Printf(ct.Yellow, true, "length of tokens from off box extracted from Friday: %d \n tokens: \n", len(docOffTokensForWeek))
+		for i, docToken := range docOffTokensForWeek {
+			ctfmt.Printf(ct.Yellow, true, "token[%d] is %s\n", i, docToken.String())
+		}
+		fmt.Printf("\n\n Now to test extractYearFromSchedule \n")
+
+		for day := range wholeWorkWeek { // this tests the extractYearFromSchedule function
+			yearStr, e := extractYearFromSchedule(wholeWorkWeek, day) // when day == 0 the string is empty, so just remember that.
+			if e != nil {
+				fmt.Printf("Error extracting year from day %d: %s\n", day, e)
+				continue
+			}
+			ctfmt.Printf(ct.Cyan, true, "Year for day %d is %s\n", day, yearStr)
 		}
 		fmt.Printf("\n\n")
 
-		return errors.New("user choice to exit from scanXLSfile")
+		vacationArray, err := populateVacStruct(wholeWorkWeek)
+		if err != nil {
+			fmt.Printf("Error populating vacation array: %s\n", err)
+			return err
+		}
+		ctfmt.Printf(ct.Cyan, true, "Vacation array populated and output follows\n")
+		for i, vac := range vacationArray {
+			fmt.Printf("Vacation[%d] is %#v\n", i, vac)
+		}
+
+		fmt.Printf("\n\n")
+
+		return errors.New("still writing and debugging, early exit from scanXLSfile")
 	}
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
-	for dayCol := 1; dayCol < len(week); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
-		mdsOffToday := whosOnVacationToday(week, dayCol)
-		lateDocsToday := whosLateToday(week, dayCol)
+	for dayCol := 1; dayCol < len(wholeWorkWeek); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
+		mdsOffToday := whosOnVacationToday(wholeWorkWeek, dayCol)
+		lateDocsToday := whosLateToday(wholeWorkWeek, dayCol)
 
 		if veryVerboseFlag {
 			fmt.Printf(" mdsOffToday on day %d is/are %#v\n", dayCol, mdsOffToday)
@@ -645,7 +682,7 @@ func scanXLSfile(filename string) error {
 
 		for _, name := range mdsOffToday {
 			for i := neuro; i < late; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
-				if lower := strings.ToLower(week[dayCol][i]); strings.Contains(lower, name) {
+				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
 					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), dayNames[dayCol], categoryNamesList[i])
 				}
 			}
@@ -653,24 +690,24 @@ func scanXLSfile(filename string) error {
 
 		// Now, lateDocsToday is a slice of two names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
 		for _, name := range lateDocsToday {
-			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
 
 		// Determine if the fluoro doc for today is remote
-		remoteNames := whosRemoteToday(week, dayCol)
+		remoteNames := whosRemoteToday(wholeWorkWeek, dayCol)
 		for _, name := range remoteNames {
 			if veryVerboseFlag {
-				fmt.Printf(" Remote doc for today: %s, FluoroJH: %s, FluoroFH: %s\n", name, week[dayCol][fluoroJH], week[dayCol][fluoroFH])
+				fmt.Printf(" Remote doc for today: %s, FluoroJH: %s, FluoroFH: %s\n", name, wholeWorkWeek[dayCol][fluoroJH], wholeWorkWeek[dayCol][fluoroFH])
 			}
-			if lower := strings.ToLower(week[dayCol][fluoroJH]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
-			if lower := strings.ToLower(week[dayCol][fluoroFH]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
 			}
 		}
@@ -753,12 +790,6 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		}
 
 		// Not a directory, and timeout has not happened.  Only process regular files, and skip symlinks.  I do want symlinks, after all.
-		//if !de.Type().IsRegular() {
-		//	if *verboseFlag {
-		//		fmt.Printf(" de.Type().IsRegular() is false, fpath = %q, de.Name=%s\n", fpath, de.Name())
-		//	}
-		//	return nil
-		//}
 
 		// now de.Name is a regular file.
 		lowerName := strings.ToLower(de.Name())
@@ -773,6 +804,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			}
 
 			filedata := fileDataType{
+				name:      de.Name(),
 				ffname:    fpath, // filepath.Join(fpath, de.Name()) doesn't work, because it turns out that fpath is the full path and filename
 				timestamp: fi.ModTime(),
 			}
@@ -800,13 +832,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		return nil
 	}
 
-	//if startDirectory == "" { // if not set by the config file.  As of Aug 8, 2025, the O: drive is going away.  So I'm not going to use it.
-	//	if runtime.GOOS == "windows" { // Variable is defined globally.
-	//		startDirectory = "o:\\Nikyla's File\\RADIOLOGY MD Schedule\\"
-	//	} else { // this is so I can debug on leox, too.  Variable is defined globally.
-	//		startDirectory = "/home/rob/bigbkupG/Nikyla's File/RADIOLOGY MD Schedule"
-	//	}
-	//}
+	//  As of Aug 8, 2025 or so, the O: drive went away.  So I'm not going to use it.
 
 	if *verboseFlag {
 		fmt.Printf(" WalkDir startDirectory: %s\n", startdirectory)
@@ -945,4 +971,89 @@ func showSpellingErrors(in []soundexSlice) []string {
 func extractOff(week workWeekType) (string, error) {
 	s := week[friday][mdOff]
 	return s, nil
+}
+
+func extractYearFromSchedule(week workWeekType, day int) (string, error) {
+	yearStr := week[day][dateLine] // should be Month Day, 4 digit Year
+	if yearStr == "" {
+		return "", errors.New("yearStr is empty")
+	}
+	field := strings.Fields(yearStr)
+	if len(field) < 3 {
+		return "", fmt.Errorf("len(fields) < 3, it is %d", len(field))
+	}
+	return field[2], nil // this is the 3rd field
+}
+
+func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
+	docsOffStringForEntireWeek, err := extractOff(wholeWorkWeek)
+	if err != nil {
+		return vacStructArrayType{}, err
+	}
+	docsOffStringForEntireWeek = strings.ReplaceAll(docsOffStringForEntireWeek, ",", "") // remove commas from off box text
+	vacDocsTokensForEntireWeek := tknptr.TokenSlice(docsOffStringForEntireWeek)
+	ctfmt.Printf(ct.Yellow, true, "in populateVacStruct; length of tokens from off box extracted from Friday's box: %d \n tokens: \n", len(vacDocsTokensForEntireWeek))
+	if *verboseFlag {
+		for i, docToken := range vacDocsTokensForEntireWeek {
+			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
+		}
+		fmt.Printf("\n\n")
+	}
+
+	var vacStructArray vacStructArrayType
+
+	dayNum := 1                                        // start on Monday
+	for i := 1; i < len(vacDocsTokensForEntireWeek); { // note that this for does not include the first element, or an increment.  I'll handle the increment in the body of the for.
+		docNameStrSlice := make([]string, 0, numOfDocs)
+		var sb strings.Builder
+		docToken := vacDocsTokensForEntireWeek[i]
+		if docToken.State == tknptr.DGT { // month number is first.
+			sb.WriteString(docToken.Str)
+			m, err := strconv.Atoi(docToken.Str)
+			if err != nil {
+				return vacStructArrayType{}, err
+			}
+			i++
+			docToken = vacDocsTokensForEntireWeek[i] // this is now the slash
+			sb.WriteString(docToken.Str)
+			i++
+			docToken = vacDocsTokensForEntireWeek[i]
+			sb.WriteString(docToken.Str) // this is now the day number
+			d, err := strconv.Atoi(docToken.Str)
+			if err != nil {
+				return vacStructArrayType{}, err
+			}
+			i++ // this points to the colon to be ignored
+			sb.WriteString("/")
+			yearStr, err := extractYearFromSchedule(wholeWorkWeek, dayNum)
+			if err != nil {
+				return vacStructArrayType{}, err
+			}
+			sb.WriteString(yearStr) // now should have a complete date string in format m/d/yyyy
+			vacStructArray[dayNum].date = sb.String()
+			year, err := strconv.Atoi(yearStr)
+			if err != nil {
+				return vacStructArrayType{}, err
+			}
+			juldate := timlibg.JULIAN(m, d, year)
+			dayOfWeekNum := juldate % 7
+			vacStructArray[dayNum].MF = dayOfWeekNum
+			vacStructArray[dayNum].MFStr = dayNamesString[dayOfWeekNum]
+		} else if docToken.State == tknptr.ALLELSE {
+			docNameStrSlice = append(docNameStrSlice, docToken.Str)
+			i++
+			if i >= len(vacDocsTokensForEntireWeek) { // if reached the end of the slice, then this is the last doc name.  And exit the for loop.
+				vacStructArray[dayNum].docsAreOff = docNameStrSlice
+				break
+			}
+			if vacDocsTokensForEntireWeek[i].State != tknptr.ALLELSE { // if not end of slice, and next token is not a string for a doc name, then this is the last doc name for this day.
+				vacStructArray[dayNum].docsAreOff = docNameStrSlice
+				dayNum++
+				continue
+			}
+		} else {
+			return vacStructArray, fmt.Errorf("unexpected token state: %d, token.Str %s", docToken.State, docToken.Str)
+		}
+	}
+	return vacStructArray, nil
 }
