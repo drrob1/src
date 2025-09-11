@@ -129,7 +129,8 @@ const numOfDocs = 40 // used to dimension a string slice.
 const maxDimensions = 200
 
 const (
-	neuro = iota + 3
+	dateLine = iota + 2 // need this to get the year.
+	neuro
 	body
 	erXrays
 	ir
@@ -286,7 +287,7 @@ func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 	var day dayType
 	sheets := wb.Sheets
 
-	for i := neuro; i < totalAmt; i++ {
+	for i := dateLine; i < totalAmt; i++ {
 		cell, err := sheets[0].Cell(i, col) // always sheet[0]
 		if err != nil {
 			return dayType{}, err
@@ -385,8 +386,6 @@ func main() {
 		whichURL = 2
 	}
 
-	// filepicker.VerboseFlag = *verboseFlag  no longer using filepicker.  I'm now using walkRegexFullFilenames.
-
 	var filename, ans string
 
 	fmt.Printf(" lint V 2.1 for the weekly schedule, last modified %s\n", lastModified)
@@ -403,16 +402,6 @@ func main() {
 		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirFromConfigFile)
 	}
 
-	// filepicker no longer used.  Now I'm using the walkRegexFullFilenames function.
-	//filenames, err := filepicker.GetRegexFullFilenames(docs)
-	//if err != nil {
-	//	ctfmt.Printf(ct.Red, true, " Error from filepicker.GetRegexFullFilenames is %s.  Exiting \n", err)
-	//	return
-	//}
-	//includeODrive := !*conlyFlag // a comvenience flag
-	//if *verboseFlag {
-	//	fmt.Printf(" conlyFlag=%t, includeODrive=%t\n", *conlyFlag, includeODrive)
-	//}
 	var filenames []string
 	var homeDir string
 	var docs string
