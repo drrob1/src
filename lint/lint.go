@@ -101,6 +101,7 @@ import (
 				I first coded this to use a filepicker function, but that doesn't exclude old files.  The walk function will skip files that are older than the threshold.
 				I need to modify the walk function to take a param that is the start directory, and then combine the results of all the walk function calls.
                 And O: drive is going away at work as of Aug 8, 2025.  I'll need to change the code to use OneDrive.  I'll remove the conly flag as it's not needed now.
+                I tagged this version that knows about OneDrive, and auto-updating, as lint v2.1.
   11 Aug 25 -- Time to add the code to autoupdate.
   12 Aug 25 -- If this is run w/ the verboseFlag, I'll pass that to upgradelint.
   16 Aug 25 -- Fixed an error in a param message.  And will use workingDir to run upgradelint.  And add flags to use the other websites as backup, which have to get passed to
@@ -123,10 +124,12 @@ import (
 				Currently, whosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
   11 Sep 25 -- My plan is to populate a vacationStructSlice with the data from docsOffStringForWeek.  I need year from index 2 from each dayType.
                  The populateVacStructSlice function is working.  And now the vacation scanning, late doc on fluoro, and remote doc on fluoro are all working.  Hurray!
-
+  12 Sep 25 -- I got the format Greg and Carol made working last night.  And, as I suspected would happen, it was changed this morning.  Anyway, I'm glad I got it working as it was a challenge for me.
+                 Since the new format is very similar to the original format, I think it will be easy to implement that.  It was.
+                 I'll make this lint v3.0 when I'm comfortable that I won't need v3.0.1, etc.
 */
 
-const lastModified = "11 Sep 2025"
+const lastModified = "12 Sep 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -148,9 +151,9 @@ const (
 	boneDensity
 	oncallradiologist
 	late
-	bluebarweekendcoverage
 	mdOff
-	totalAmt
+	bluebarweekendcoverage
+	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
 const (
@@ -194,7 +197,8 @@ var names = make([]string, 0, numOfDocs)
 //
 //	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
 var categoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "weekend Coverate", "weekend Neuro", "weekend body", "On-Call IR", "On-Call MD"} // 0 and 1 are unused
+	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
+	"On-Call IR", "On-Call MD"} // 0 and 1 are unused
 
 var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
@@ -312,6 +316,8 @@ func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 			return dayType{}, err
 		}
 
+		s := cell.String()
+		s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces
 		day[i] = cell.String()
 	}
 	return day, nil
@@ -613,8 +619,9 @@ func scanXLSfile(filename string) error {
 	}
 
 	// wholeWorkWeek is now fully populated w/ the data from the Excel file.
-	var vacationArray vacStructArrayType
+
 	if *verboseFlag {
+		var vacationArray vacStructArrayType // don't need this visible outside this block, as the format was changed again as of Sep 11, 2025.
 		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
 		for i, day := range wholeWorkWeek {
 			fmt.Printf("Day %d: %#v \n", i, day)
@@ -662,18 +669,18 @@ func scanXLSfile(filename string) error {
 
 		//return errors.New("still writing and debugging, early exit from scanXLSfile")
 	}
-	vacationArray, err = populateVacStruct(wholeWorkWeek)
-	if err != nil {
-		fmt.Printf("Error populating vacation array: %s\n", err)
-		return err
-	}
+	// Removed as the schedule format was changed again as of Sep 11, 2025.
+	//vacationArray, err = populateVacStruct(wholeWorkWeek)
+	//if err != nil {
+	//	fmt.Printf("Error populating vacation array: %s\n", err)
+	//	return err
+	//}
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
-	// vacationArray is now populated.
 	for dayCol := 1; dayCol < len(wholeWorkWeek); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
-		//mdsOffToday := whosOnVacationToday(wholeWorkWeek, dayCol)  Old way of determining who is off.  Now use the vacationArray.
-		mdsOffToday := vacationArray[dayCol].docsAreOff // the vacationArray contains a slice of the docs who are off, organized by day.
+		//mdsOffToday := vacationArray[dayCol].docsAreOff // the vacationArray contains a slice of the docs who are off, organized by day.  But the need for this code is gone.  So, this code is now obsolete as of Sep 11, 2025.  It took long enough to debug for it to be obsolete and useless.
 		//ctfmt.Printf(ct.Cyan, true, "mdsOffToday on day %d is %#v\n", dayCol, mdsOffToday)
+		mdsOffToday := whosOnVacationToday(wholeWorkWeek, dayCol) //Old way of determining who is off is back.  Now stop using the vacationArray.
 		lateDocsToday := whosLateToday(wholeWorkWeek, dayCol)
 
 		if veryVerboseFlag {
@@ -899,7 +906,7 @@ func pause() bool {
 }
 
 func excludeMe(s string) bool {
-	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "-"}
+	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&"}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
 			return true
@@ -934,6 +941,7 @@ func getDocNames(fn string) ([]string, error) {
 				return nil, err
 			}
 			s := cell.String()
+			s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces, else the comma creates a false spelling error.
 			fields := strings.Fields(s)
 			for _, field := range fields {
 				field = strings.ToLower(field)
