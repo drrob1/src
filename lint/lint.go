@@ -122,10 +122,11 @@ import (
 				and then pass that to whosOnVacationToday.  And then I'll have to change the code to use the new format.
 				Currently, whosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
   11 Sep 25 -- My plan is to populate a vacationStructSlice with the data from docsOffStringForWeek.  I need year from index 2 from each dayType.
+                 The populateVacStructSlice function is working.  And now the vacation scanning, late doc on fluoro, and remote doc on fluoro are all working.  Hurray!
 
 */
 
-const lastModified = "13 Sep 2025"
+const lastModified = "11 Sep 2025"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -188,8 +189,12 @@ type vacStructType struct {
 type vacStructArrayType [6]vacStructType
 
 var names = make([]string, 0, numOfDocs)
-var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
+
+// old var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
+//
+//	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
+var categoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
+	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "weekend Coverate", "weekend Neuro", "weekend body", "On-Call IR", "On-Call MD"} // 0 and 1 are unused
 
 var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
@@ -312,6 +317,7 @@ func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
+// whosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.  This is not needed now, as it's function is replaced by populateVacStruct func.
 func whosOnVacationToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on vacation for this day
 	vacationString := strings.ToLower(week[dayCol][mdOff])
@@ -606,6 +612,8 @@ func scanXLSfile(filename string) error {
 		}
 	}
 
+	// wholeWorkWeek is now fully populated w/ the data from the Excel file.
+	var vacationArray vacStructArrayType
 	if *verboseFlag {
 		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
 		for i, day := range wholeWorkWeek {
@@ -640,7 +648,7 @@ func scanXLSfile(filename string) error {
 		}
 		fmt.Printf("\n\n")
 
-		vacationArray, err := populateVacStruct(wholeWorkWeek)
+		vacationArray, err = populateVacStruct(wholeWorkWeek)
 		if err != nil {
 			fmt.Printf("Error populating vacation array: %s\n", err)
 			return err
@@ -652,12 +660,20 @@ func scanXLSfile(filename string) error {
 
 		fmt.Printf("\n\n")
 
-		return errors.New("still writing and debugging, early exit from scanXLSfile")
+		//return errors.New("still writing and debugging, early exit from scanXLSfile")
+	}
+	vacationArray, err = populateVacStruct(wholeWorkWeek)
+	if err != nil {
+		fmt.Printf("Error populating vacation array: %s\n", err)
+		return err
 	}
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
+	// vacationArray is now populated.
 	for dayCol := 1; dayCol < len(wholeWorkWeek); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
-		mdsOffToday := whosOnVacationToday(wholeWorkWeek, dayCol)
+		//mdsOffToday := whosOnVacationToday(wholeWorkWeek, dayCol)  Old way of determining who is off.  Now use the vacationArray.
+		mdsOffToday := vacationArray[dayCol].docsAreOff // the vacationArray contains a slice of the docs who are off, organized by day.
+		//ctfmt.Printf(ct.Cyan, true, "mdsOffToday on day %d is %#v\n", dayCol, mdsOffToday)
 		lateDocsToday := whosLateToday(wholeWorkWeek, dayCol)
 
 		if veryVerboseFlag {
@@ -681,7 +697,7 @@ func scanXLSfile(filename string) error {
 		// Now, mdsOffToday is a slice of several names of who is off today.
 
 		for _, name := range mdsOffToday {
-			for i := neuro; i < late; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
+			for i := neuro; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
 					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), dayNames[dayCol], categoryNamesList[i])
 				}
@@ -992,7 +1008,7 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 	}
 	docsOffStringForEntireWeek = strings.ReplaceAll(docsOffStringForEntireWeek, ",", "") // remove commas from off box text
 	vacDocsTokensForEntireWeek := tknptr.TokenSlice(docsOffStringForEntireWeek)
-	ctfmt.Printf(ct.Yellow, true, "in populateVacStruct; length of tokens from off box extracted from Friday's box: %d \n tokens: \n", len(vacDocsTokensForEntireWeek))
+	//ctfmt.Printf(ct.Yellow, true, "in populateVacStruct; length of tokens from off box extracted from Friday's box: %d \n tokens: \n", len(vacDocsTokensForEntireWeek))
 	if *verboseFlag {
 		for i, docToken := range vacDocsTokensForEntireWeek {
 			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
@@ -1043,7 +1059,8 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 			docToken = vacDocsTokensForEntireWeek[i]
 			//ctfmt.Printf(ct.Green, true, "debugging string tokens in date processing section: token[%d]: %s\n", i, docToken.Str)
 		} else if docToken.State == tknptr.ALLELSE {
-			docNameStrSlice = append(docNameStrSlice, docToken.Str)
+			lower := strings.ToLower(docToken.Str)
+			docNameStrSlice = append(docNameStrSlice, lower)
 			//ctfmt.Printf(ct.Green, true, "debugging string tokens in ALLELSE section: token[%d]: %s\n docNameStrSlice: %#v\n", i, docToken.Str, docNameStrSlice)
 			i++
 			if i >= len(vacDocsTokensForEntireWeek) { // if reached the end of the slice, then this is the last doc name.  And exit the for loop.
