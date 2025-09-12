@@ -113,6 +113,7 @@ import (
   26 Aug 25 -- Added "dr" to excludeMe string, which occurs when the period is forgotten.  And added the -1 and -2 shortcuts that are passed to upgradelint.
 				This code is now saved in lintprior1sep25.go
 ------------------------------------------------------------------------------------------------------------------------------------------------------
+    Lint v 3.0 coming up soon.
    1 Sep 25 -- The department changed the format for the schedule, highlighting on call and weekend docs.  I'll need to change the code to use the new format.
    8 Sep 25 -- I got them to add back an indication of who's off, but it's all in 1 box in the Friday column.  I have to think about this, and wonder about it changing again.
 				And the numbering changed.  I have to move weekdayOncall, which used to be at the top, and is now near the bottom.  Basically, I have to completely change
@@ -126,7 +127,7 @@ import (
                  The populateVacStructSlice function is working.  And now the vacation scanning, late doc on fluoro, and remote doc on fluoro are all working.  Hurray!
   12 Sep 25 -- I got the format Greg and Carol made working last night.  And, as I suspected would happen, it was changed this morning.  Anyway, I'm glad I got it working as it was a challenge for me.
                  Since the new format is very similar to the original format, I think it will be easy to implement that.  It was.
-                 I'll make this lint v3.0 when I'm comfortable that I won't need v3.0.1, etc.
+                 I'll tag this lint v3.0 in git when I'm comfortable that I won't need v3.0.1, etc.
 */
 
 const lastModified = "12 Sep 2025"
@@ -414,7 +415,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint V 2.1 for the weekly schedule, last modified %s\n", lastModified)
+	fmt.Printf(" lint V 3.0 for the weekly schedule, last modified %s\n", lastModified)
 
 	_, startDirFromConfigFile, err = findAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
