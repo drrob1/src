@@ -1025,25 +1025,27 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 		docToken := vacDocsTokensForEntireWeek[i]
 		if docToken.State == tknptr.DGT { // month number is first.
 			sb.WriteString(docToken.Str)
-			m, err := strconv.Atoi(docToken.Str)
-			if err != nil {
-				return vacStructArrayType{}, err
-			}
+			//m, err := strconv.Atoi(docToken.Str)
+			//if err != nil {
+			//	return vacStructArrayType{}, err
+			//}
+			m := docToken.Isum
 			i++
 			docToken = vacDocsTokensForEntireWeek[i] // this is now the slash
 			sb.WriteString(docToken.Str)
 			i++
 			docToken = vacDocsTokensForEntireWeek[i]
 			sb.WriteString(docToken.Str) // this is now the day number
-			d, err := strconv.Atoi(docToken.Str)
-			if err != nil {
-				return vacStructArrayType{}, err
-			}
+			//d, err := strconv.Atoi(docToken.Str)
+			//if err != nil {
+			//	return vacStructArrayType{}, err
+			//}
+			d := docToken.Isum
 			i++ // this points to the colon to be ignored
 			sb.WriteString("/")
-			yearStr, err := extractYearFromSchedule(wholeWorkWeek, dayNum)
-			if err != nil {
-				return vacStructArrayType{}, err
+			yearStr, er := extractYearFromSchedule(wholeWorkWeek, dayNum)
+			if er != nil {
+				return vacStructArrayType{}, er
 			}
 			sb.WriteString(yearStr) // now should have a complete date string in format m/d/yyyy
 			vacStructArray[dayNum].date = sb.String()
