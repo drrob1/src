@@ -8,15 +8,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"gonum.org/v1/gonum/stat"
 	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"gonum.org/v1/gonum/stat"
 	//
 	"src/filepicker"
 	"src/getcommandline"
@@ -87,13 +88,21 @@ REVISION HISTORY
 const LastAltered = "July 20, 2024"
 
 /*
-  Normal values from source that I don't remember anymore.
+  Normal values from source that I don't remember anymore.  Applies to a solid meal, not a liquid meal.
   1 hr should have 90% of activity remaining in stomach = 6.6 hr halflife = 395 min halflife
   2 hr should have 60% of activity remaining in stomach = 2.7 hr halflife = 163 min halflife
   3 hr should have 30% of activity remaining in stomach = 1.7 hr halflife = 104 min halflife
   4 hr should have 10% of activity remaining in stomach = 1.2 hr halflife = 72 min halflife
   Using these 4 points as data for gastric3, I get T-1/2 of Orig std unweighted = 72.91,
   fit weighted= 60.65, fitexy weighted= 60.76, and iterated weighted= 75.73
+
+
+  Normal values for a liquid meal are from a perplexity question.
+
+  Liquid phase meal, as used at JH: retention of < 70% @30 min and < 30% at 1 hr is WNL.  Range for emptying times (not defined) 10-60 min.
+  JNM HA Ziessman 2009 in 30 healthy subjects found nl emptying to be < 19 min ± 2 SD, and < 22 min ±3 SD.  T-½ of 6-20 min also considered WNL.
+  This gives T-½ of 34-35 min for liquids.
+  I'll use T-½ of 40 min for liquids.
 */
 
 //----------------------------------------------------------------------------
@@ -912,8 +921,8 @@ func chixy(bang float64, row []Point) float64 {
 } // end chixy
 
 func avevar(points []Point) (float64, float64, float64, float64) { // return mean, variance of both x and y.
-	var avex, avey, // ave of x and y which is lny
-		variancex, variancey, // variance of x and y
+	var avex, avey,                                                // ave of x and y which is lny
+		variancex, variancey,                                      // variance of x and y
 		epx, epy float64 // ep of x and y
 
 	for j := range points { // for j :=  0; j < n; j++ {
@@ -1430,7 +1439,7 @@ func readLine(r *bytes.Reader) (string, error) {
 // ----------------------------------------------------------------------
 
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
