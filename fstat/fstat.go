@@ -11,8 +11,11 @@ import (
 /*
   17 Sep 25 -- Started writing this.  It will show the results of a file stat.  If a symlink, it will show the target.
                  I found that lstat() reports the target as a symlink if needed, stat() does not.
+                 Lstat() reports a symlink to not be a regular file, but Stat() does report it as a regular file.
                  Hardlinks do not show up as symlinks.
                  I am going to rewrite this to only use lstat() to detect symlinks.
+                 Using open(name) and then f.Stat() behaves the same as Stat().
+                 I'm not going to test to see what a DirEntry does.
 */
 
 const lastAltered = "17 Sep 25"
@@ -72,4 +75,42 @@ func main() {
 		fmt.Printf("Using Stat(%s):  fullname: %s, dir: %s\n   isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
 			name, fullname, dirname, fi.IsDir(), fi.Mode().IsRegular(), fi.Mode(), fi.Size())
 	}
+
+	f, err := os.Open(name)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.Open(%s) is %s.  Exiting. \n", name, err)
+		os.Exit(1)
+	}
+	fi, err = f.Stat()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from f.Stat(%s) is %s.  Exiting. \n", name, err)
+		os.Exit(1)
+	}
+	fullname, err = filepath.Abs(fi.Name())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from filepath.Abs(%s) is %s.  Exiting. \n", fi.Name(), err)
+		os.Exit(1)
+	}
+	fmt.Printf("Using open.Stat(%s):  fullname: %s, dir: %s\n   isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
+		fi.Name(), fullname, dirname, fi.IsDir(), fi.Mode().IsRegular(), fi.Mode(), fi.Size())
+
+	//deSlice, err := os.ReadDir(name) // returns a slice of DirEntry's.  But it needs the name of a directory, not a file.  This won't work for a file.  Nevermind.
+	//if err != nil {
+	//	fmt.Fprintf(os.Stderr, " Error from os.ReadDir(%s) is %s.  Exiting. \n", name, err)
+	//	os.Exit(1)
+	//}
+	//de := deSlice[0]
+	//fullname, err = filepath.Abs(de.Name())
+	//if err != nil {
+	//	fmt.Fprintf(os.Stderr, " Error from filepath.Abs(%s) is %s.  Exiting. \n", fi.Name(), err)
+	//	os.Exit(1)
+	//}
+	//dirName := filepath.Dir(name)
+	//info, err := de.Info()
+	//if err != nil {
+	//	fmt.Fprintf(os.Stderr, " Error from de.Info() is %s.  Exiting. \n", err)
+	//}
+	//fmt.Printf("Using os.ReadDir(%s):  fullname: %s, dir: %s\n   isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
+	//	name, fullname, dirName, de.IsDir(), info.Mode().IsRegular(), info.Mode(), info.Size())
+
 }

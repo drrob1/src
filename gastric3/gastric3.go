@@ -921,8 +921,8 @@ func chixy(bang float64, row []Point) float64 {
 } // end chixy
 
 func avevar(points []Point) (float64, float64, float64, float64) { // return mean, variance of both x and y.
-	var avex, avey,                                                // ave of x and y which is lny
-		variancex, variancey,                                      // variance of x and y
+	var avex, avey, // ave of x and y which is lny
+		variancex, variancey, // variance of x and y
 		epx, epy float64 // ep of x and y
 
 	for j := range points { // for j :=  0; j < n; j++ {
@@ -1439,7 +1439,7 @@ func readLine(r *bytes.Reader) (string, error) {
 // ----------------------------------------------------------------------
 
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for {                                 // keep swallowing characters until EOL or an error.
+	for { // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
