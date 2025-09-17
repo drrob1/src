@@ -179,9 +179,10 @@ REVISION HISTORY
 				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
 				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
 				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
+17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.
 */
 
-const LastAltered = "22 Aug 2025"
+const LastAltered = "17 Sep 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -726,14 +727,17 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 
 	for {
 		// reading DirEntry's and sending the slices into the channel needs to happen here.
-		deSlice, err := d.ReadDir(fetch)
-		if errors.Is(err, io.EOF) { // finished.  So return the slice.
+		deSlice, err := d.ReadDir(fetch) // the docs say that this way of getting a FileInfo does not follow symlinks.
+		if errors.Is(err, io.EOF) {      // finished.  So return the slice.
 			close(deChan)
 			break
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
 			continue
+		}
+		if len(deSlice) == 0 { // this clause added by the AI in GoLand 9/17/25.
+			break
 		}
 		deChan <- deSlice
 	}

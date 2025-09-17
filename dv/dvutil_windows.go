@@ -24,7 +24,7 @@ REVISION HISTORY
 21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
 				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
 				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
-
+17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.
 */
 
 // getFileInfosFromCommandLine() will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
@@ -174,10 +174,15 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 				fmt.Fprintf(os.Stderr, " Error from os.Stat on %s is %v\n", f.Name(), err)
 				continue
 			}
+			link, err := os.Readlink(fullFileName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error from os.Readlink on %s is %v\n", f.Name(), err)
+				continue
+			}
 			var color ct.Color
 			sizestr, color = getMagnitudeString(finfo.Size())
 			s = finfo.ModTime().Format("Jan-02-2006_15:04:05")
-			myPrintf(color, true, "%17s %s <%s>\n", sizestr, s, f.Name())
+			myPrintf(color, true, "%17s %s <%s> [%s]\n", sizestr, s, f.Name(), link)
 			lnCount++
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
