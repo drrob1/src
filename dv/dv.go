@@ -182,7 +182,7 @@ REVISION HISTORY
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't yet work on linux.
 */
 
-const LastAltered = "17 Sep 2025"
+const LastAltered = "18 Sep 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

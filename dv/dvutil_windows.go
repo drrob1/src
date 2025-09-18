@@ -182,7 +182,7 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 			var color ct.Color
 			sizestr, color = getMagnitudeString(finfo.Size())
 			s = finfo.ModTime().Format("Jan-02-2006_15:04:05")
-			myPrintf(color, true, "%17s %s <%s> [%s]\n", sizestr, s, f.Name(), link)
+			myPrintf(color, true, "%-17s %s <%s> [%s]\n", sizestr, s, f.Name(), link)
 			lnCount++
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
