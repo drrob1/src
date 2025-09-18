@@ -5,10 +5,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	flag "github.com/spf13/pflag"
-	"golang.org/x/term"
 	"io"
 	"log"
 	"os"
@@ -20,6 +16,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
+	"golang.org/x/term"
 
 	//"time"
 	"unicode"
@@ -146,9 +147,10 @@ Revision History
 28 Apr 25 -- Updated the reverse flag so -r means reverse.  And removed RevFlag.
 21 Jun 25 -- Porting code I just wrote for dv to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
 22 Jun 25 -- Ported code I wrote for rexv, myPrintf, to here.
+17 Sep 25 -- Starting to display more info for symlinks, ie, the target of the symlink and the correct size.
 */
 
-const LastAltered = "June 22, 2025"
+const LastAltered = "Sep 18, 2025"
 
 type dirAliasMapType map[string]string
 
@@ -994,8 +996,25 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr { // co
 			}
 
 		} else if IsSymlink(f.Mode()) {
-			s := fmt.Sprintf("%5s %s <%s>", sizeStr, t, f.Name())
-			colorized := colorizedStr{color: ct.White, str: s}
+			linktarget, err := os.Readlink(f.Name())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error reading symlink %s: %v\n", f.Name(), err)
+				continue
+			}
+			fullFilename, err := filepath.Abs(f.Name())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error getting absolute path for symlink %s: %v\n", f.Name(), err)
+				continue
+			}
+			fullFI, err := os.Stat(fullFilename)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, " Error getting stat for symlink %s: %v\n", fullFilename, err)
+				continue
+			}
+			var colr ct.Color
+			sizeStr, colr = getMagnitudeString(fullFI.Size())
+			s := fmt.Sprintf("%7s   %s <%s> [%s]", sizeStr, t, f.Name(), linktarget)
+			colorized := colorizedStr{color: colr, str: s}
 			cs = append(cs, colorized)
 		} else if dirListFlag && f.IsDir() {
 			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
