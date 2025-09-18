@@ -156,7 +156,7 @@ REVISION HISTORY
              I'm going to continue development after all.  On windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
              And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
  7 Jun 24 -- Edited some comments and changed the final message.
- 8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head).
+ 8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable now interpreted as nscreens instead of nlines (off the top of my head).
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 ----------------------------------------------------------------------
 */
@@ -179,7 +179,7 @@ REVISION HISTORY
 				Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
 				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
 				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
-17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.
+17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't yet work on linux.
 */
 
 const LastAltered = "17 Sep 2025"

@@ -13,14 +13,16 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//  12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
-//  21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
-//  22 Jun 25 -- myPrintf now used.
-//  21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
+// 12 Apr 23 -- Fixed a bug in GetIDName, which is now called idName to be more idiomatic for Go.
+// 21 Jun 25 -- DisplayFileInfos now knows when output is redirected.
+// 22 Jun 25 -- myPrintf now used.
+// 21 Aug 25 -- Now gets more info for symlinks by using a separate call to lstat.  I don't yet know if this is needed on linux too.
 //                Lstat makes no attempt to follow the symlink.  I think Stat does follow the symlink.
 //                To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
 //                This doesn't work the same as it does on Windows.  The symlink shows up as an error if called from another directory.  It does work from the same directory.
 //                I don't yet know what to do about this.
+// 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't seem to be working here on linux.  I don't yet know why.  Maybe it's because
+//                using DirEntry does follow symlinks on linux but not windows?
 
 func GetUserGroupStr(fi os.FileInfo) (usernameStr, groupnameStr string) {
 	if runtime.GOARCH != "amd64" { // 06/20/2019 11:23:40 AM made condition not equal, and will remove conditional from dsrt.go
@@ -176,12 +178,17 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 			fullFileName := filepath.Join(dirName, f.Name())
 			fInfo, err := os.Stat(fullFileName)
 			if err != nil {
-				fmt.Printf(" Error from os.Stat on %s is %v\n", f.Name(), err)
+				fmt.Printf(" Error from os.Stat(%s) is %v\n", f.Name(), err)
+				continue
+			}
+			link, err := os.Readlink(fullFileName)
+			if err != nil {
+				fmt.Printf(" Error from os.Readlink(%s) is %v\n", fullFileName, err)
 				continue
 			}
 			var color ct.Color
 			sizeStr, color = getMagnitudeString(fInfo.Size())
-			myPrintf(color, true, "%10v %s:%s %16s %s <%s>\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
+			myPrintf(color, true, "%10v %s:%s %16s %s <%s> [%s]\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name(), link)
 			lnCount++
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%10v %s:%s %16s %s (%s)\n", f.Mode(), usernameStr, groupnameStr, sizeStr, s, f.Name())
