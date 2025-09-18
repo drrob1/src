@@ -41,9 +41,10 @@ import (
   19 Aug 25 -- Changed the test for whether lint.exe is not older than lint.info to use the timestamp of the lint.exe file.  This is more robust as it branches the correct way on equality.
   22 Aug 25 -- Added -1 and -2 as shortcuts for -u 1 and -u 2.
 				And now I learned that I have to erase the old lint.exe in the configDir before downlading the new one.
+  18 Sep 25 -- Trying to see if ending w/ io.WriteString(os.Stdout, "\n\n") will fix the problem of not getting a prompt.
 */
 
-const lastAltered = "22 Aug 2025"
+const lastAltered = "18 Sep 2025"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
 const urlRwsCom = "http://drrws.com/"               // from SimpleNetHosting
@@ -128,7 +129,8 @@ func main() {
 			execTimeStamp := execFI.ModTime().Format("Jan-02-2006_15:04:05")
 			fmt.Printf(" lint.exe timestamp is %s, lint.info timestamp is %s\n", execTimeStamp, infoTimeStamp)
 		}
-		fmt.Printf(" Hit <enter> \n\n")
+		//fmt.Printf(" Hit <enter> \n\n")  Not needed after I added io.WriteString(os.Stdout, "\n")
+		io.WriteString(os.Stdout, "\n") // This works to get a prompt.
 		os.Exit(0)
 	}
 
@@ -217,7 +219,9 @@ downloadMe:
 		ctfmt.Printf(ct.Red, true, " Error returned from os.Rename(%s, %s): %q.  \n", resp.Filename, currentDir+"/"+lintExe, err)
 		os.Exit(1)
 	}
-	fmt.Printf(" lint.exe upgraded to the most recent version dated %s. \n\n Hit <enter>\n\n", infoTimeStamp)
+	//fmt.Printf(" lint.exe upgraded to the most recent version dated %s. \n\n Hit <enter>\n\n", infoTimeStamp)  Not needed after I added io.WriteString(os.Stdout, "\n")
+	fmt.Printf(" lint.exe upgraded to the most recent version dated %s. \n\n", infoTimeStamp)
+	io.WriteString(os.Stdout, "\n") // This works to get a prompt.
 }
 
 func readInfoFile(fn string) (time.Time, string, string, error) {
