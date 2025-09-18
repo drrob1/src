@@ -1013,7 +1013,7 @@ func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr { // co
 			}
 			var colr ct.Color
 			sizeStr, colr = getMagnitudeString(fullFI.Size())
-			s := fmt.Sprintf("%7s   %s <%s> [%s]", sizeStr, t, f.Name(), linktarget)
+			s := fmt.Sprintf("%-10s %s <%s> [%s]", sizeStr, t, f.Name(), linktarget)
 			colorized := colorizedStr{color: colr, str: s}
 			cs = append(cs, colorized)
 		} else if dirListFlag && f.IsDir() {
