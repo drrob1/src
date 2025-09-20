@@ -109,6 +109,7 @@ import (
                 Maybe I'll lower the fudge factor to a microsecond.  I did, and that works.  I'll now try not directly comparing time using Before(), I'll try using nanosecond.
                 If I copy a file from the synology, I don't want this routine to allow an unmodified version to be copied back to the synology.  The timestamps should be the same.
                 I compared the behavior of cf, cf2 and cf3.  Cf3 now does not add the fudgefactor and uses UnixNano for the comparison.  Now to test on Windows.
+                It works on Windows, too.  And cf and cf2 still add the fudgefactor.  I'll keep testing and see how it goes.
 */
 
 const LastAltered = "20 Sep 2025" //
