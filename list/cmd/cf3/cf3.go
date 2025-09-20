@@ -104,14 +104,19 @@ import (
    3 May 25 -- When there are errors in the dest directory, that needs to be more obvious.
    7 Jul 25 -- Will output approx total bytes copied.
   20 Aug 25 -- Added a flag to exclude regular files when I only want to see symlinks.
+  20 Sep 25 -- Experimenting w/ not adding the fudge factor.  I think I branched the wrong way on equality.  I'll change it on about line 481.  Wait, nevermind.
+                I want the copy routine to bail if the copy is the same or newer than the source.  So now it looks right.
+                Maybe I'll lower the fudge factor to a microsecond.  I did, and that works.  I'll now try not directly comparing time using Before(), I'll try using nanosecond.
+                If I copy a file from the synology, I don't want this routine to allow an unmodified version to be copied back to the synology.  The timestamps should be the same.
+                I compared the behavior of cf, cf2 and cf3.  Cf3 now does not add the fudgefactor and uses UnixNano for the comparison.  Now to test on Windows.
 */
 
-const LastAltered = "20 Aug 2025" //
+const LastAltered = "20 Sep 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 * time.Millisecond
+const timeFudgeFactor = 1 * time.Microsecond
 const fanoutMax = 900
 const configFilename = "cf3.yaml"
 
@@ -475,10 +480,13 @@ func copyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
+	inFIns := inFI.ModTime().UnixNano()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
+		outFIns := outFI.ModTime().UnixNano()
+		//if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.  So don't copy the file.
+		if outFIns >= inFIns { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here.  So don't copy the file.
+			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than in %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
@@ -591,23 +599,24 @@ func copyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
-	t := inFI.ModTime()
-	if runtime.GOOS == "linux" {
-		t = t.Add(timeFudgeFactor)
-	}
 
-	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time
-	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Red,
-			elapsed: time.Since(t0),
-			success: false,
-		}
-		msgChan <- msg
-		return
-	}
+	//t := inFI.ModTime() // I'm experimenting w/ not adding the fudge factor.
+	//if runtime.GOOS == "linux" {
+	//	t = t.Add(timeFudgeFactor)
+	//}
+	//
+	//err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
+	//if err != nil {
+	//	msg := msgType{
+	//		s:       "",
+	//		e:       err,
+	//		color:   ct.Red,
+	//		elapsed: time.Since(t0),
+	//		success: false,
+	//	}
+	//	msgChan <- msg
+	//	return
+	//}
 
 	if verifyFlag {
 		result, err := few.Feq32withNames(srcFile, outName)
