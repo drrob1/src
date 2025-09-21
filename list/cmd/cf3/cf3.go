@@ -118,6 +118,9 @@ import (
                 appears newer by up to 100 ns, but could be as small as 1 ns.  So adding 1000 ns = 1 μs is fine.
                 I decided to change the comparison.  I add 1000 ns to the dest file's timestamp as UnixNano, and then compare that to the source's timestamp.
                 I stopped adding the fudgefactor to the destination timestamp.
+                I am going to see if using UnixMicro works better.  It does work, but then I decided that I don't need microseconds.  I'll use Unix() which is the
+                number of seconds since January 1, 1970 UTC.  I'll test on Windows.  It works.  I'll test on Linux.  It works.  But I can't interchange cf, cf2 and cf3.
+                By adding the fudge factor back, then I can interchange them.  I did that and it works.
 */
 
 const LastAltered = "21 Sep 2025" //
@@ -489,12 +492,11 @@ func copyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
-	inFIns := inFI.ModTime().UnixNano()
+	inFIns := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		outFIns := outFI.ModTime().UnixNano()
-		//if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.  So don't copy the file.
-		if outFIns+int64(timeFudgeFactor) >= inFIns { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 μs.  So don't copy the file.
+		outFIns := outFI.ModTime().Unix()
+		if outFIns >= inFIns { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 sec.  So don't copy the file.
 			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than in %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
@@ -610,9 +612,9 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	//if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above.
-	//	t = t.Add(timeFudgeFactor)
-	//}
+	if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above, but only if I use nanosecond precision.  If I use microsecond precision, then the time fudge factor is not needed.
+		t = t.Add(timeFudgeFactor) // I'm now using seconds precision.  The fudge factor is only needed to maintain compatibility with cf and cf2.
+	}
 
 	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
 	if err != nil {
@@ -680,3 +682,5 @@ func copyAFile(srcFile, destDir string) {
 	msgChan <- msg
 	// return  this is redundant.
 } // end CopyAFile
+
+//    if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.  So don't copy the file.

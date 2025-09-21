@@ -16,7 +16,7 @@ import (
                  I am going to rewrite this to only use lstat() to detect symlinks.
                  Using open(name) and then f.Stat() behaves the same as Stat().
                  I'm not going to test to see what a DirEntry does.
-  21 Sep 25 -- Added display of UnixNano time stamps, and file sizes.
+  21 Sep 25 -- Added display of UnixNano time stamps, file sizes, and now UnixMicro() and Unix().
 */
 
 const lastAltered = "21 Sep 25"
@@ -66,8 +66,10 @@ func main() {
 	fmt.Printf("name: %s, fullname: %s, dir: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
 		name, fullname, dirname, symFlag, symfi.IsDir(), symfi.Mode().IsRegular(), symfi.Mode(), symfi.Size())
 
-	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d\n", symfi.ModTime().UnixNano(), symfi.Size())
-	fmt.Printf(" Using Stat: NanoTime: %d, Size: %d\n", fi.ModTime().UnixNano(), fi.Size())
+	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d\n",
+		symfi.ModTime().UnixNano(), symfi.Size(), symfi.ModTime().UnixMicro(), symfi.ModTime().Unix())
+	fmt.Printf(" Using Stat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d\n",
+		fi.ModTime().UnixNano(), fi.Size(), fi.ModTime().UnixMicro(), fi.ModTime().Unix())
 
 	if symFlag {
 		link, err := os.Readlink(name)
