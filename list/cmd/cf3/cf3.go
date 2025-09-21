@@ -110,9 +110,12 @@ import (
                 If I copy a file from the synology, I don't want this routine to allow an unmodified version to be copied back to the synology.  The timestamps should be the same.
                 I compared the behavior of cf, cf2 and cf3.  Cf3 now does not add the fudgefactor and uses UnixNano for the comparison.  Now to test on Windows.
                 It works on Windows, too.  And cf and cf2 still add the fudgefactor.  I'll keep testing and see how it goes.
+  21 Sep 25 -- Not using the time fudgefactor means that the destination file has a timestamp of when it was copied.  I want it to have the same timestamp as the source.
+                So I'll use that code, but without the fudgefactor, for now.  I'll test if it works to not keep copying the same file.  It doesn't, so
+                I'm adding back the fudgefactor.  Now it works, and the fudgefactor is smaller than in the other routines.  Here I made it a microsecond.
 */
 
-const LastAltered = "20 Sep 2025" //
+const LastAltered = "21 Sep 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -601,23 +604,23 @@ func copyAFile(srcFile, destDir string) {
 		return
 	}
 
-	//t := inFI.ModTime() // I'm experimenting w/ not adding the fudge factor.
-	//if runtime.GOOS == "linux" {
-	//	t = t.Add(timeFudgeFactor)
-	//}
-	//
-	//err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
-	//if err != nil {
-	//	msg := msgType{
-	//		s:       "",
-	//		e:       err,
-	//		color:   ct.Red,
-	//		elapsed: time.Since(t0),
-	//		success: false,
-	//	}
-	//	msgChan <- msg
-	//	return
-	//}
+	t := inFI.ModTime()
+	if runtime.GOOS == "linux" { // I'm experimenting w/ not adding the fudge factor.  Didn't work.  So I'm adding it back.
+		t = t.Add(timeFudgeFactor)
+	}
+
+	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       err,
+			color:   ct.Red,
+			elapsed: time.Since(t0),
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
 
 	if verifyFlag {
 		result, err := few.Feq32withNames(srcFile, outName)
