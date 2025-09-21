@@ -116,7 +116,8 @@ import (
                 I did more experimenting, and I found that the copied file does not exactly get the same timestamp as the source on linux.  The last 2 digits,
                 representing < 100 ns, are different.  The copied file has these as zero, but the source file has these as not zero, hence the source always
                 appears newer by up to 100 ns, but could be as small as 1 ns.  So adding 1000 ns = 1 μs is fine.
-
+                I decided to change the comparison.  I add 1000 ns to the dest file's timestamp as UnixNano, and then compare that to the source's timestamp.
+                I stopped adding the fudgefactor to the destination timestamp.
 */
 
 const LastAltered = "21 Sep 2025" //
@@ -493,7 +494,7 @@ func copyAFile(srcFile, destDir string) {
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		outFIns := outFI.ModTime().UnixNano()
 		//if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.  So don't copy the file.
-		if outFIns >= inFIns { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here.  So don't copy the file.
+		if outFIns+int64(timeFudgeFactor) >= inFIns { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 μs.  So don't copy the file.
 			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than in %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
@@ -609,9 +610,9 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above.
-		t = t.Add(timeFudgeFactor)
-	}
+	//if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above.
+	//	t = t.Add(timeFudgeFactor)
+	//}
 
 	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
 	if err != nil {
