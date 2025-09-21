@@ -113,6 +113,10 @@ import (
   21 Sep 25 -- Not using the time fudgefactor means that the destination file has a timestamp of when it was copied.  I want it to have the same timestamp as the source.
                 So I'll use that code, but without the fudgefactor, for now.  I'll test if it works to not keep copying the same file.  It doesn't, so
                 I'm adding back the fudgefactor.  Now it works, and the fudgefactor is smaller than in the other routines.  Here I made it a microsecond.
+                I did more experimenting, and I found that the copied file does not exactly get the same timestamp as the source on linux.  The last 2 digits,
+                representing < 100 ns, are different.  The copied file has these as zero, but the source file has these as not zero, hence the source always
+                appears newer by up to 100 ns, but could be as small as 1 ns.  So adding 1000 ns = 1 μs is fine.
+
 */
 
 const LastAltered = "21 Sep 2025" //
@@ -120,7 +124,7 @@ const LastAltered = "21 Sep 2025" //
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 * time.Microsecond
+const timeFudgeFactor = 1 * time.Microsecond // this is as small as is reasonable.  See above notes.
 const fanoutMax = 900
 const configFilename = "cf3.yaml"
 
@@ -605,7 +609,7 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" { // I'm experimenting w/ not adding the fudge factor.  Didn't work.  So I'm adding it back.
+	if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above.
 		t = t.Add(timeFudgeFactor)
 	}
 
