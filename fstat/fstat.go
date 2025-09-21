@@ -16,9 +16,10 @@ import (
                  I am going to rewrite this to only use lstat() to detect symlinks.
                  Using open(name) and then f.Stat() behaves the same as Stat().
                  I'm not going to test to see what a DirEntry does.
+  21 Sep 25 -- Added display of UnixNano time stamps, and file sizes.
 */
 
-const lastAltered = "17 Sep 25"
+const lastAltered = "21 Sep 25"
 
 // IsSymlink -- returns true if the file is a symlink.
 func IsSymlink(m os.FileInfo) bool {
@@ -64,6 +65,9 @@ func main() {
 
 	fmt.Printf("name: %s, fullname: %s, dir: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
 		name, fullname, dirname, symFlag, symfi.IsDir(), symfi.Mode().IsRegular(), symfi.Mode(), symfi.Size())
+
+	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d\n", symfi.ModTime().UnixNano(), symfi.Size())
+	fmt.Printf(" Using Stat: NanoTime: %d, Size: %d\n", fi.ModTime().UnixNano(), fi.Size())
 
 	if symFlag {
 		link, err := os.Readlink(name)
