@@ -121,9 +121,10 @@ import (
                 I am going to see if using UnixMicro works better.  It does work, but then I decided that I don't need microseconds.  I'll use Unix() which is the
                 number of seconds since January 1, 1970 UTC.  I'll test on Windows.  It works.  I'll test on Linux.  It works.  But I can't interchange cf, cf2 and cf3.
                 By adding the fudge factor back, then I can interchange them.  I did that and it works.
+  22 Sep 25 -- I decided to remove the fudge factor, for all of my routines.
 */
 
-const LastAltered = "21 Sep 2025" //
+const LastAltered = "22 Sep 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -612,9 +613,9 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above, but only if I use nanosecond precision.  If I use microsecond precision, then the time fudge factor is not needed.
-		t = t.Add(timeFudgeFactor) // I'm now using seconds precision.  The fudge factor is only needed to maintain compatibility with cf and cf2.
-	}
+	//if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above, but only if I use nanosecond precision.  If I use microsecond precision, then the time fudge factor is not needed.
+	//	t = t.Add(timeFudgeFactor) // I'm now using seconds precision.  The fudge factor is only needed to maintain compatibility with cf and cf2.  I decided to remove it for all of my routines, starting w/ cf3.
+	//}
 
 	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
 	if err != nil {
