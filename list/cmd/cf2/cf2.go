@@ -3,9 +3,6 @@ package main // cf2, from cf, for copy fanout.  This one is truly a fanout patte
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,6 +13,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 )
 
 /*
@@ -98,9 +99,10 @@ import (
   20 Jan 25 -- Added set-up timing display.
    3 May 25 -- Will make errors from check dest directory more obvious
    7 Jul 25 -- Will output approx total bytes copied.
+  22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
 */
 
-const LastAltered = "7 July 2025"
+const LastAltered = "22 Sep 2025"
 
 const defaultHeight = 40
 const minWidth = 90
@@ -419,9 +421,11 @@ func copyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
+	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		outFIsec := outFI.ModTime().Unix()
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
@@ -536,9 +540,9 @@ func copyAFile(srcFile, destDir string) {
 		return
 	}
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" {
-		t = t.Add(timeFudgeFactor)
-	}
+	//if runtime.GOOS == "linux" { Not needed anymore.  See above comments.  Worked out w/ cf3 and my fstat tool.
+	//	t = t.Add(timeFudgeFactor)
+	//}
 
 	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time
 	if err != nil {
@@ -605,3 +609,5 @@ func copyAFile(srcFile, destDir string) {
 	}
 	msgChan <- msg
 } // end CopyAFile
+
+// if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.

@@ -3,9 +3,6 @@ package main // cf, for copy fanout.  It's not a true fanout pattern, but merely
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +14,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 )
 
 /*
@@ -89,9 +90,10 @@ import (
   28 July 24-- Added timing to each goroutine.  And fixed a data race by no longer making ErrNotNew global.
   22 Oct 24 -- Will now check to make sure params are present.
    6 Jul 25 -- Will display approx number of bytes copied.
+  22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
 */
 
-const LastAltered = "7 July 2025" //
+const LastAltered = "22 Sep 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -415,9 +417,11 @@ func copyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
+	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		outFIsec := outFI.ModTime().Unix()
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
@@ -541,10 +545,11 @@ func copyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" {
-		t = t.Add(timeFudgeFactor)
-	}
+	//if runtime.GOOS == "linux" {  Not needed anymore.  Worked out using cf3 and my fstat tool.  See top comments and cf3.
+	//	t = t.Add(timeFudgeFactor)
+	//}
 
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
@@ -605,3 +610,5 @@ func copyAFile(srcFile, destDir string) {
 	}
 	msgChan <- msg
 } // end CopyAFile
+
+//    odTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.

@@ -493,11 +493,11 @@ func copyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
-	inFIns := inFI.ModTime().Unix()
+	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		outFIns := outFI.ModTime().Unix()
-		if outFIns >= inFIns { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 sec.  So don't copy the file.
+		outFIsec := outFI.ModTime().Unix()
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 sec.  So don't copy the file.
 			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than in %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
