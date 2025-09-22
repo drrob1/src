@@ -3,23 +3,21 @@ package main // copyc
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
-	"src/few"
-	"sync"
-	"sync/atomic"
-	"time"
-
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"src/few"
 	"src/list"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 )
 
 /*
@@ -84,14 +82,15 @@ import (
    6 Apr 24 -- Shortened the destination file is same or older message.
    8 Apr 24 -- Now shows the last altered dated for list.go
    9 Apr 24 -- Found an error in CopyAFile, in that I don't check for an error when I close the file.
-               Listening to Miki Tebeka from ArdanLabs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
+               Listening to Miki Tebeka from Ardan Labs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
   15 Apr 24 -- Added a multiplier for worker pools
   15 Jun 24 -- Changed completion message.
   28 Jul 24 -- Fixed a data race by not making ErrNotNew global.  Doesn't really matter because I now always use cf2, and a little cf.
+  22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
 */
 
-const LastAltered = "28 July 2024" //
+const LastAltered = "22 Sep 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -407,9 +406,11 @@ func copyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
+	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		outFIsec := outFI.ModTime().Unix()
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ErrNotNew := fmt.Errorf(" %s is not newer than %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
@@ -438,13 +439,6 @@ func copyAFile(srcFile, destDir string) {
 
 	if err != nil {
 		var msg msgType
-		//msg := msgType{
-		//	s:       "",
-		//	e:       err,
-		//	color:   ct.Red,
-		//	success: false,
-		//}
-		// msgChan <- msg  Too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		if e != nil {
@@ -486,13 +480,6 @@ func copyAFile(srcFile, destDir string) {
 	err = out.Sync()
 	if err != nil {
 		var msg msgType
-		//msg := msgType{
-		//	s:       "",
-		//	e:       err,
-		//	color:   ct.Magenta,
-		//	success: false,
-		//}
-		//msgChan <- msg  too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
@@ -531,10 +518,11 @@ func copyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" {
-		t = t.Add(timeFudgeFactor)
-	}
+	//if runtime.GOOS == "linux" {  Not needed.  Worked out the problem on cf3 using my fstat tool.  See cf3 and top comments here.
+	//	t = t.Add(timeFudgeFactor)
+	//}
 
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
@@ -594,3 +582,5 @@ func copyAFile(srcFile, destDir string) {
 	msgChan <- msg
 	// return  this is redundant.
 } // end CopyAFile
+
+//    if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.

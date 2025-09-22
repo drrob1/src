@@ -3,9 +3,6 @@ package main // copylist
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"hash/crc32"
 	"io"
 	"os"
@@ -15,6 +12,10 @@ import (
 	"src/list"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 )
 
 /*
@@ -43,9 +44,10 @@ import (
    5 Apr 23 -- Refactored list.ProcessDirectoryAliases
    8 Apr 23 -- Changed list.New signature.
    6 Jul 25 -- Will also show total of bytes copied, and made timeFudgeFactor 1 ms, as in the other routines.
+  22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
 */
 
-const LastAltered = "6 July 2025" //
+const LastAltered = "22 Sep 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -287,10 +289,12 @@ func CopyAFile(srcFile, destDir string) (int64, error) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
+	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			return 0, fmt.Errorf(" %s is same or older than destination %s.  Skipping to next file", baseFile, destDir)
+		outFIsec := outFI.ModTime().Unix()
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+			return 0, fmt.Errorf(" %s is not newer than in destination %s.  Skipping to next file", baseFile, destDir)
 		}
 	}
 	out, err := os.Create(outName)
@@ -320,9 +324,11 @@ func CopyAFile(srcFile, destDir string) (int64, error) {
 		return 0, err
 	}
 	t := inFI.ModTime()
-	if !onWin {
-		t = t.Add(timeFudgeFactor)
-	}
+
+	//if !onWin { // Removing the fudge factor.  It's need was worked out in cf3 and using my fstat tool.  See top comments and cf3.
+	//	t = t.Add(timeFudgeFactor)
+	//}
+
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
 		return 0, err
@@ -363,3 +369,5 @@ func crc32IEEE(r io.Reader) uint32 { // using IEEE Polynomial
 	//fmt.Printf(" crc32 value returned to caller is %d\n", crc32Val)  It works.0
 	return crc32Val
 }
+
+//    if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
