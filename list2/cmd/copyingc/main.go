@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"path/filepath"
@@ -18,6 +15,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"golang.org/x/term"
 )
 
 /*
@@ -83,9 +84,10 @@ import (
   11 Apr 24 -- Adding a multiplier, as I already did in cf.
   28 Jul 24 -- Fixed a data race by ErrNotNew not being global.  It should never have been global.
    3 May 25 -- Changed how dest errors are displayed, to make them more obvious.
+  22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
 */
 
-const LastAltered = "May 3, 2025" //
+const LastAltered = "Sep 22, 2025" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -471,9 +473,11 @@ func CopyAFile(srcFile, destDir string) {
 	baseFile := filepath.Base(srcFile)
 	outName := filepath.Join(destDir, baseFile)
 	inFI, _ := in.Stat()
+	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-		if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+		outFIsec := outFI.ModTime().Unix()
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
 			ErrNotNew := fmt.Errorf(" %s is not newer %s", baseFile, destDir)
 			msg := msgType{
 				s:       "",
@@ -580,10 +584,11 @@ func CopyAFile(srcFile, destDir string) {
 		msgChan <- msg
 		return
 	}
+
 	t := inFI.ModTime()
-	if runtime.GOOS == "linux" {
-		t = t.Add(timeFudgeFactor)
-	}
+	//if runtime.GOOS == "linux" {  Not needed as worked out using cf3 and my fstat tool.
+	//	t = t.Add(timeFudgeFactor)
+	//}
 
 	err = os.Chtimes(outName, t, t)
 	if err != nil {
@@ -668,3 +673,5 @@ func min(n1, n2 int) int {
 	}
 	return n2
 }
+
+//   if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
