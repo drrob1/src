@@ -63,8 +63,13 @@ func main() {
 
 	symFlag := IsSymlink(symfi)
 
-	fmt.Printf("name: %s, fullname: %s, dir: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
-		name, fullname, dirname, symFlag, symfi.IsDir(), symfi.Mode().IsRegular(), symfi.Mode(), symfi.Size())
+	linkName, err := os.Readlink(name)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, " Error from os.Readlink(%s) is %s.\n", name, err) // this is an error for a hardlink.  Showing it anyway.
+	}
+
+	fmt.Printf("name: %s, fullname: %s, dir: %q, link name: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
+		name, fullname, dirname, linkName, symFlag, symfi.IsDir(), symfi.Mode().IsRegular(), symfi.Mode(), symfi.Size())
 
 	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d\n",
 		symfi.ModTime().UnixNano(), symfi.Size(), symfi.ModTime().UnixMicro(), symfi.ModTime().Unix())
@@ -72,12 +77,7 @@ func main() {
 		fi.ModTime().UnixNano(), fi.Size(), fi.ModTime().UnixMicro(), fi.ModTime().Unix())
 
 	if symFlag {
-		link, err := os.Readlink(name)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " Error from os.Readlink(%s) is %s.  Exiting. \n", name, err)
-			os.Exit(1)
-		}
-		fmt.Printf("Target of symlink: %q\n", link)
+		fmt.Printf("Target of symlink: %q\n", linkName)
 		fmt.Printf("Using Stat(%s):  fullname: %s, dir: %s\n   isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
 			name, fullname, dirname, fi.IsDir(), fi.Mode().IsRegular(), fi.Mode(), fi.Size())
 	}
