@@ -148,13 +148,13 @@ func main() {
 }
 
 func binarySearchDirEntries(slice []os.DirEntry, target string) (int, bool) {
-	var numTries int
+	//var numTries int
 	left := 0
 	right := len(slice) - 1
 
 	for left <= right {
 		current := (left + right) / 2
-		numTries++
+		//numTries++
 		if slice[current].Name() < target {
 			left = current + 1
 		} else if slice[current].Name() > target {
@@ -167,13 +167,13 @@ func binarySearchDirEntries(slice []os.DirEntry, target string) (int, bool) {
 }
 
 func binarySearchFileInfos(slice []os.FileInfo, target string) (int, bool) {
-	var numTries int
+	//var numTries int
 	left := 0
 	right := len(slice) - 1
 
 	for left <= right {
 		current := (left + right) / 2
-		numTries++
+		//numTries++
 		if slice[current].Name() < target {
 			left = current + 1
 		} else if slice[current].Name() > target {
@@ -186,13 +186,13 @@ func binarySearchFileInfos(slice []os.FileInfo, target string) (int, bool) {
 }
 
 func binarySearchStrings(slice []string, target string) (int, bool) {
-	var numTries int
+	//var numTries int
 	left := 0
 	right := len(slice) - 1
 
 	for left <= right {
 		current := (left + right) / 2
-		numTries++
+		//numTries++
 		if slice[current] < target {
 			left = current + 1
 		} else if slice[current] > target {
