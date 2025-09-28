@@ -503,7 +503,7 @@ func main() {
 		inputRegEx := flag.Arg(0)
 		workingDir, inputRegExStr = filepath.Split(inputRegEx)
 		if workingDir == "" {
-			workingDir = startDir // workingDir is set above
+			workingDir = startDir // startDir is set above
 		}
 		if verboseFlag {
 			fmt.Printf("If flag.NArg() is 1.  After filepath.Split(%s), Working Directory: %s, inputRegExStr: %s\n", inputRegEx, workingDir, inputRegExStr)

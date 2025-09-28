@@ -65,7 +65,7 @@ func main() {
 
 	linkName, err := os.Readlink(name)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from os.Readlink(%s) is %s.\n", name, err) // this is an error for a hardlink.  Showing it anyway.
+		fmt.Fprintf(os.Stderr, " Error from os.Readlink(%s) is %s.\n", name, err) // this is an error for a hardlink or regular file.  Showing it anyway.
 	}
 
 	fmt.Printf("name: %s, fullname: %s, dir: %q, link name: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
