@@ -26,6 +26,12 @@ func main() {
 	pflag.Parse()
 	fmt.Printf(" searchfor.go last altered %s, compiled with %s\n", lastAltered, runtime.Version())
 
+	if pflag.NArg() != 1 {
+		fmt.Printf(" This pgm searches for the file given as its first parameter to see if it exists, and which os routine can find it.\n")
+		fmt.Printf(" Usage: searchfor <file>\n")
+		os.Exit(1)
+	}
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		fmt.Printf(" Error from os.Getwd() is %s\n", err)
