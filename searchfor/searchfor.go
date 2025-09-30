@@ -35,6 +35,7 @@ func main() {
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose flag")
 	pflag.Parse()
 	fmt.Printf(" searchfor.go last altered %s, compiled with %s\n", lastAltered, runtime.Version())
+	fmt.Printf(" fetchAmountofFiles: %d, numWorkers: %d\n", fetchAmountofFiles, numWorkers)
 
 	if pflag.NArg() != 1 {
 		fmt.Printf(" This pgm searches for the file given as its first parameter to see if it exists, and which os routine can find it.\n")
@@ -185,11 +186,21 @@ func main() {
 		for i := 0; i < 20; i++ {
 			fmt.Printf("i: %d, FI.Name(): %s\n", i, fiSlice[i].Name())
 		}
+		fmt.Printf(" fiSlice[%d].Name(): %q\n", len(fiSlice)-1, fiSlice[len(fiSlice)-1].Name())
+		fmt.Printf("\n")
 	}
 
 	position, found = binarySearchFileInfos(fiSlice, target)
 	if found {
 		ctfmt.Printf(ct.Green, true, " Found %s at position %d\n", searchTarget, position)
+	} else {
+		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
+	}
+
+	position, found = linearSearchFileInfos(fiSlice, target)
+
+	if found {
+		ctfmt.Printf(ct.Green, true, "linear search found %s at position %d\n", searchTarget, position)
 	} else {
 		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
 	}
@@ -254,6 +265,15 @@ func binarySearchStrings(slice []string, target string) (int, bool) {
 	return -1, false
 }
 
+func linearSearchFileInfos(slice []os.FileInfo, target string) (int, bool) {
+	for i, fi := range slice {
+		if fi.Name() == target {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
 func myReadDir(dir string) []os.FileInfo {
 	// Adding concurrency in returning []os.FileInfo
 
@@ -279,9 +299,9 @@ func myReadDir(dir string) []os.FileInfo {
 					if de.IsDir() {
 						continue
 					}
-					if !de.Type().IsRegular() {
-						continue
-					}
+					//if !de.Type().IsRegular() {
+					//	continue
+					//}
 					fiChan <- fi // the code in the other routines uses a function here, includeThis, which I don't need here.
 				}
 			}
@@ -334,7 +354,95 @@ func myReadDir(dir string) []os.FileInfo {
 		for i := 0; i < 20; i++ {
 			fmt.Printf("i: %d, FI.Name(): %q\n", i, fiSlice[i].Name())
 		}
+		fmt.Printf(" fiSlice[%d].Name(): %q\n", len(fiSlice)-1, fiSlice[len(fiSlice)-1].Name())
+		fmt.Printf("\n")
 	}
 
 	return fiSlice
 } // myReadDir
+
+//func myReaddir(dir string) []os.FileInfo {
+//	// Adding concurrency in returning []os.FileInfo
+//
+//	var wg sync.WaitGroup
+//
+//	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
+//	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+//	fiSlice := make([]os.FileInfo, 0, numWorkers)
+//	wg.Add(numWorkers)
+//
+//	// reading from deChan to get the slices of DirEntry's
+//	for range numWorkers {
+//		go func() {
+//			defer wg.Done()
+//			for deSlice := range deChan {
+//				for _, de := range deSlice {
+//					fi, err := de.Info()
+//					if err != nil {
+//						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
+//						continue
+//					}
+//					if de.IsDir() {
+//						continue
+//					}
+//					if !de.Type().IsRegular() {
+//						continue
+//					}
+//					fiChan <- fi // the code in the other routines uses a function here, includeThis, which I don't need here.
+//				}
+//			}
+//		}()
+//	}
+//
+//	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+//	// I figured it out, by closing the channel after all work is sent to it.
+//	go func() {
+//		for fi := range fiChan {
+//			fiSlice = append(fiSlice, fi)
+//		}
+//		close(doneChan)
+//	}()
+//
+//	d, err := os.Open(dir)
+//	if err != nil {
+//		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
+//		os.Exit(1)
+//	}
+//	defer d.Close()
+//
+//	for {
+//		// reading DirEntry's and sending the slices into the channel needs to happen here.
+//		deSlice, err := d.ReadDir(fetchAmountofFiles) // the docs say that this way of getting a FileInfo does not follow symlinks.
+//		if errors.Is(err, io.EOF) {                   // finished.  So return the slice.
+//			close(deChan) // here is where I close the deChan channel.
+//			break
+//		}
+//		if err != nil {
+//			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
+//			continue
+//		}
+//		deChan <- deSlice
+//		if verboseFlag {
+//			fmt.Printf(" myReadDir(%s) sent %d DirEntry's to deChan.\n", dir, len(deSlice))
+//			for i := 0; i < 10; i++ {
+//				fmt.Printf("deSlice[%d].Name(): %q\n", i, deSlice[i].Name())
+//			}
+//			fmt.Printf("\n")
+//		}
+//	}
+//	wg.Wait()     // for the deChan
+//	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
+//
+//	<-doneChan // block until channel is freed by closing it
+//
+//	if verboseFlag {
+//		fmt.Printf(" myReadDir(%s) finished reading %d files.\n", dir, len(fiSlice))
+//		for i := 0; i < 20; i++ {
+//			fmt.Printf("i: %d, FI.Name(): %q\n", i, fiSlice[i].Name())
+//		}
+//		fmt.Printf(" fiSlice[%d].Name(): %q\n", len(fiSlice)-1, fiSlice[len(fiSlice)-1].Name())
+//		fmt.Printf("\n")
+//	}
+//
+//	return fiSlice
+//} // myReadDir
