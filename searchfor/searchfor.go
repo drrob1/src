@@ -27,6 +27,7 @@ import (
   30 Sep 25 -- The linear search is finding the target when the binary search is not.  This means I have to write out the entire slice of FileInfo's to a file to debug this.
    1 Oct 25 -- In the concurrent method, I'm removing the done channel as I don't think I need it.  Yep, it still works without it.
 				Now I want to add a simpler concurrent method, one that just gets file infos without the dir entry intermediate step.
+                Now I'll add timing info.
 */
 
 const lastAltered = "1 Oct 2025"
@@ -73,12 +74,13 @@ func main() {
 	fmt.Printf(" Search directory is %s, search target is %s\n", dir, target)
 
 	// os.ReadDir section dealing w/ DirEntry
+	t0 := time.Now()
 	DirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		fmt.Printf(" Error from os.ReadDir(%s) is %s\n", dir, err)
 		os.Exit(1)
 	}
-	fmt.Printf(" os.ReadDir(%s) succeeded, finding %d dir entries.\n", dir, len(DirEntries))
+	fmt.Printf(" os.ReadDir(%s) succeeded, finding %d dir entries, which took %s.\n", dir, len(DirEntries), time.Since(t0))
 
 	lessDirEntries := func(i, j int) bool {
 		return DirEntries[i].Name() < DirEntries[j].Name()
@@ -101,12 +103,13 @@ func main() {
 	fmt.Printf(" os.Open(%s) succeeded.\n", dir)
 
 	// os.Readdir section dealing w/ FileInfo
+	t1 := time.Now()
 	FileInfoSlice, err := d.Readdir(-1) // -1 means read all.  Zero would also mean read all.  I guess -1 is clearer.
 	if err != nil {
 		fmt.Printf(" Error from d.Readdir(-1) is %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" d.Readdir(-1) succeeded, finding %d FileInfos.\n", len(FileInfoSlice))
+	fmt.Printf(" d.Readdir(-1) succeeded, finding %d FileInfos, which took %s.\n", len(FileInfoSlice), time.Since(t1))
 	lessFileInfo := func(i, j int) bool {
 		return FileInfoSlice[i].Name() < FileInfoSlice[j].Name()
 	}
@@ -128,12 +131,13 @@ func main() {
 	}
 	defer d.Close()
 	fmt.Printf(" 2nd os.Open(%s) succeeded.\n", dir)
+	t2 := time.Now()
 	dirNamesStringSlice, err := d.Readdirnames(-1)
 	if err != nil {
 		fmt.Printf(" Error from d.Readdirnames(-1) is %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" d.Readdirnames(-1) succeeded, finding %d names.\n", len(dirNamesStringSlice))
+	fmt.Printf(" d.Readdirnames(-1) succeeded, finding %d names, which took %s.\n", len(dirNamesStringSlice), time.Since(t2))
 	sort.Strings(dirNamesStringSlice)
 	position = sort.SearchStrings(dirNamesStringSlice, target)
 	if position < len(dirNamesStringSlice) && dirNamesStringSlice[position] == target {
@@ -162,12 +166,13 @@ func main() {
 	}
 	defer d.Close()
 	fmt.Printf(" 3rd os.Open(%s) succeeded.\n", dir)
+	t3 := time.Now()
 	DirEntries, err = d.ReadDir(-1)
 	if err != nil {
 		fmt.Printf(" Error from d.ReadDir(-1) is %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf(" d.ReadDir(-1) succeeded, finding %d dir entries.\n", len(DirEntries))
+	fmt.Printf(" d.ReadDir(-1) succeeded, finding %d dir entries, which took %s.\n", len(DirEntries), time.Since(t3))
 	sort.Slice(DirEntries, lessDirEntries)
 	position, found = binarySearchDirEntries(DirEntries, target)
 	if found {
@@ -184,8 +189,9 @@ func main() {
 
 	// Now to try the original concurrent method of getting the directory list.
 
+	t4 := time.Now()
 	fiSlice := myReadDir(dir)
-	fmt.Printf(" myReadDir(%s) succeeded, finding %d FileInfo's.\n", dir, len(fiSlice))
+	fmt.Printf(" myReadDir(%s) succeeded, finding %d FileInfo's, which took %s.\n", dir, len(fiSlice), time.Since(t4))
 	lessFileInfo = func(i, j int) bool { // Not having a correct less function here was causing the sort.Slice to fail.  I lost a day figuring this out.
 		return fiSlice[i].Name() < fiSlice[j].Name()
 	}
@@ -217,9 +223,10 @@ func main() {
 
 	// Now test the simpler version of myReadDir.
 
+	t5 := time.Now()
 	fiSimplerSlice := myReadDirSimpler(dir)
-	fmt.Printf(" myReadDirSimpler(%s) succeeded, finding %d FileInfo's.\n", dir, len(fiSimplerSlice))
-	lessFileInfo = func(i, j int) bool { // Not having a correct less function here was causing the sort.Slice to fail.  I lost a day figuring this out.
+	fmt.Printf(" myReadDirSimpler(%s) succeeded, finding %d FileInfo's, which took %s.\n", dir, len(fiSimplerSlice), time.Since(t5))
+	lessFileInfo = func(i, j int) bool {
 		return fiSimplerSlice[i].Name() < fiSimplerSlice[j].Name()
 	}
 	sort.Slice(fiSimplerSlice, lessFileInfo)
