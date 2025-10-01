@@ -25,9 +25,10 @@ import (
   28 Sep 25 -- Added ability to include directory name in the search.
   29 Sep 25 -- Adding ability to check the concurrent method of getting the directory list.
   30 Sep 25 -- The linear search is finding the target when the binary search is not.  This means I have to write out the entire slice of FileInfo's to a file to debug this.
+   1 Oct 25 -- In the concurrent method, I'm removing the done channel as I don't think I need it.  Yep, it still works without it.
 */
 
-const lastAltered = "30 Sep 2025"
+const lastAltered = "1 Oct 2025"
 const multiplier = 10 // used for the worker pool pattern in MyReadDir
 //  const debugName = "debug*.txt"
 
@@ -210,7 +211,7 @@ func main() {
 
 	position, found = binarySearchFileInfos(fiSlice, target)
 	if found {
-		ctfmt.Printf(ct.Green, true, " Found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, " Binary search found %s at position %d\n", searchTarget, position)
 	} else {
 		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
 	}
@@ -218,7 +219,7 @@ func main() {
 	position, found = linearSearchFileInfos(fiSlice, target)
 
 	if found {
-		ctfmt.Printf(ct.Green, true, "linear search found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, "Linear search found %s at position %d\n", searchTarget, position)
 	} else {
 		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
 	}
@@ -329,7 +330,7 @@ func myReadDir(dir string) []os.FileInfo {
 
 	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
 	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
-	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
+	//doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
 	fiSlice := make([]os.FileInfo, 0, fetchAmountofFiles*numWorkers)
 	wg.Add(numWorkers)
 
@@ -362,7 +363,7 @@ func myReadDir(dir string) []os.FileInfo {
 		for fi := range fiChan {
 			fiSlice = append(fiSlice, fi)
 		}
-		close(doneChan)
+		//close(doneChan)
 	}()
 
 	d, err := os.Open(dir)
@@ -395,7 +396,7 @@ func myReadDir(dir string) []os.FileInfo {
 	wg.Wait()     // for the deChan
 	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
 
-	<-doneChan // block until channel is freed by closing it
+	//<-doneChan // block until channel is freed by closing it
 
 	if verboseFlag {
 		fmt.Printf(" myReadDir(%s) finished reading %d files.\n", dir, len(fiSlice))
