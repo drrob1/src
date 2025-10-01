@@ -194,7 +194,7 @@ func main() {
 
 	fiSlice := myReadDir(dir)
 	fmt.Printf(" myReadDir(%s) succeeded, finding %d FileInfo's.\n", dir, len(fiSlice))
-	lessFileInfo = func(i, j int) bool { // Not having a correct less function here is causing the sort.Slice to fail.  I lost a day figuring this out.
+	lessFileInfo = func(i, j int) bool { // Not having a correct less function here was causing the sort.Slice to fail.  I lost a day figuring this out.
 		return fiSlice[i].Name() < fiSlice[j].Name()
 	}
 	sort.Slice(fiSlice, lessFileInfo)
