@@ -28,9 +28,10 @@ import (
    1 Oct 25 -- In the concurrent method, I'm removing the done channel as I don't think I need it.  Yep, it still works without it.
 				Now I want to add a simpler concurrent method, one that just gets file infos without the dir entry intermediate step.
                 Now I'll add timing info.
+   2 Oct 25 -- Added use of filepath.Glob
 */
 
-const lastAltered = "1 Oct 2025"
+const lastAltered = "2 Oct 2025"
 const multiplier = 10 // used for the worker pool pattern in MyReadDir
 //  const debugName = "debug*.txt"
 
@@ -245,6 +246,31 @@ func main() {
 		ctfmt.Printf(ct.Red, true, "Simpler: Did not find %s\n", searchTarget)
 	}
 
+	// Now test using filepath.Glob
+
+	t6 := time.Now()
+	combinedPattern := filepath.Join(dir, "*")
+	GlobStringSlice, err := filepath.Glob(combinedPattern)
+	if err != nil {
+		fmt.Printf(" Error from filepath.Glob(%s) is %s\n", combinedPattern, err)
+		os.Exit(1)
+	}
+	fmt.Printf(" filepath.Glob(%s) succeeded, finding %d FileInfo's, which took %s.\n", combinedPattern, len(GlobStringSlice), time.Since(t6))
+	sort.Strings(GlobStringSlice)
+	position, found = binarySearchGlobStrings(GlobStringSlice, target)
+	if found {
+		ctfmt.Printf(ct.Green, true, "Glob: Binary search found %s at position %d\n", searchTarget, position)
+	} else {
+		ctfmt.Printf(ct.Red, true, "Glob: Binary search did not find %s\n", searchTarget)
+	}
+	position, found = linearSearchGlobStrings(GlobStringSlice, target)
+	if found {
+		ctfmt.Printf(ct.Green, true, "Glob: Linear search found %s at position %d\n", searchTarget, position)
+	} else {
+		ctfmt.Printf(ct.Red, true, "Glob: Linear search did not find %s\n", searchTarget)
+	}
+
+	// wrap up
 	if verboseFlag {
 		nowStr := time.Now().Format("2006-01-02_15_04_05")
 		fn := filepath.Join(dir, fmt.Sprintf("searchfor_%s_%s.txt", nowStr, target))
@@ -283,6 +309,7 @@ func main() {
 				buf.WriteString("\n")
 			}
 		}
+
 		buf.WriteString(" --------------------------------- Start of fiSimplerSlice  --------------------------------- \n")
 		for i, fi := range fiSimplerSlice {
 			buf.WriteString(fmt.Sprintf("%d: %s    ", i, fi.Name()))
@@ -291,6 +318,16 @@ func main() {
 			}
 		}
 		buf.WriteString("\n----------------------------------  end of fiSimplerSlice  ---------------------------------- \n\n")
+
+		buf.WriteString(" --------------------------------- Start of GlobStringSlice  --------------------------------- \n")
+		for i, s := range GlobStringSlice {
+			buf.WriteString(fmt.Sprintf("%d: %s    ", i, s))
+			if i%4 == 3 {
+				buf.WriteString("\n")
+			}
+		}
+		buf.WriteString("\n----------------------------------  end of GlobStringSlice  ---------------------------------- \n\n")
+
 		buf.WriteString("\n\n")
 		buf.Flush()
 
@@ -356,9 +393,37 @@ func binarySearchStrings(slice []string, target string) (int, bool) {
 	return -1, false
 }
 
+func binarySearchGlobStrings(slice []string, target string) (int, bool) {
+	//var numTries int
+	left := 0
+	right := len(slice) - 1
+
+	for left <= right {
+		current := (left + right) / 2
+		//numTries++
+		if filepath.Base(slice[current]) < target {
+			left = current + 1
+		} else if filepath.Base(slice[current]) > target {
+			right = current - 1
+		} else { // found it
+			return current, true
+		}
+	}
+	return -1, false
+}
+
 func linearSearchFileInfos(slice []os.FileInfo, target string) (int, bool) {
 	for i, fi := range slice {
 		if fi.Name() == target {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
+func linearSearchGlobStrings(slice []string, target string) (int, bool) {
+	for i, s := range slice {
+		if filepath.Base(s) == target {
 			return i, true
 		}
 	}
