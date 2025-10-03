@@ -180,9 +180,10 @@ REVISION HISTORY
 				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
 				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't yet work on linux.
+ 3 Oct 25 -- MyReadDir routines will skip directory names, by changing includeThis.
 */
 
-const LastAltered = "18 Sep 2025"
+const LastAltered = "3 Oct 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -909,6 +910,8 @@ func includeThis(fi os.FileInfo) bool {
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
 		return false
+	} else if fi.Mode().IsDir() {
+		return false
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
 			return false
@@ -927,6 +930,8 @@ func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, match pattern=%s \n", noExtensionFlag, excludeFlag, filterAmt, matchPat)
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+		return false
+	} else if fi.Mode().IsDir() {
 		return false
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
