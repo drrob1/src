@@ -181,6 +181,7 @@ REVISION HISTORY
 				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't yet work on linux.
  3 Oct 25 -- MyReadDir routines will skip directory names, by changing includeThis.
+				And I added a noconcurrent flag so it calls the new nonConcurrentFileInfosFromCommandLine.
 */
 
 const LastAltered = "3 Oct 2025"
@@ -237,15 +238,13 @@ func main() {
 
 	t1 := time.Now()
 	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
-	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size, using concurrent code.  LastAltered %s, compiled with %s version %s\n",
+	ctfmt.Printf(ct.Magenta, winflag, "dv will display Directory SoRTed by date or size, possibly using concurrent code.  LastAltered %s, compiled with %s version %s\n",
 		LastAltered, runtime.Compiler, runtime.Version())
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		ctfmt.Printf(ct.Red, winflag, "Error getting user home directory is %s\n", err.Error())
 		return
 	}
-	//fullConfigFileName := filepath.Join(homeDir, configFilename)
-	//_ = fullConfigFileName // this is a kludge so this var is marked as needed when it's not
 
 	termDisplayOut = true
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
@@ -317,6 +316,9 @@ func main() {
 	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.  Currently set to 100,000 screens.")
 
 	pflag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
+
+	var nonConcurrent bool // used by the noconcurrent flag
+	pflag.BoolVarP(&nonConcurrent, "noconcurrent", "c", false, "Use non-concurrent code.  Used primarily for testing.")
 
 	pflag.Parse()
 
@@ -445,8 +447,8 @@ func main() {
 			autoHeight, autoWidth, excludeFlag, halfFlag, termRedirected, termDisplayOut)
 		fmt.Printf(" NLines=%d, Reverse=%t, ncreens=%d, sizeflag=%t, DirListFlag=%t, FilenameListFlag=%t, TotalFlag=%t, longflag=%t \n",
 			NLines, Reverse, *nscreens, *sizeflag, *DirListFlag, FilenameListFlag, *TotalFlag, *longflag)
-		fmt.Printf(" extflag=%t, extensionflag=%t, filterFlag=%t, noFilterFlag=%t, globFlag=%t, mFlag=%t, allFlag=%t \n",
-			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag)
+		fmt.Printf(" extflag=%t, extensionflag=%t, filterFlag=%t, noFilterFlag=%t, globFlag=%t, mFlag=%t, allFlag=%t, nonConcurrent=%t \n",
+			*extflag, *extensionflag, filterFlag, *noFilterFlag, globFlag, *mFlag, allFlag, nonConcurrent)
 	}
 
 	myPrintf(ct.Green, winflag, "%50s Finished startup code, which took %s\n", " ", time.Since(t1))
@@ -513,7 +515,7 @@ func main() {
 	}
 
 	if verboseFlag {
-		fmt.Println(" *** Here I am at or about line 505 ***")
+		fmt.Println(" *** Here I am at or about line 520 ***")
 		fmt.Println(" FilterFlag =", filterFlag, ".  filterStr =", filterStr, ". filterAmt =", filterAmt, "excludeFlag =", excludeFlag)
 		fmt.Printf(" nscreens=%d, numLines=%d, pflag.NArgs=%d, dirList=%t, Filenametobelistedflag=%t, longfilesizelistflag=%t, showgrandtotal=%t\n",
 			*nscreens, numLines, pflag.NArg(), dirList, filenameToBeListedFlag, longFileSizeListFlag, showGrandTotal)
@@ -522,9 +524,14 @@ func main() {
 	t0 := time.Now()
 
 	var dirName string
-	fileInfos, dirName = getFileInfosFromCommandLine()
+	if nonConcurrent {
+		fileInfos, dirName = nonConcurrentFileInfosFromCommandLine()
+	} else {
+		fileInfos, dirName = getFileInfosFromCommandLine()
+	}
 	if verboseFlag {
-		fmt.Printf(" After call to getFileInfosFromCommandLine.  pflag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n", pflag.NArg(), len(fileInfos), numOfLines)
+		fmt.Printf(" After retrieving nonconcurrent or concurrent FileInfosFromCommandLine.  pflag.NArg=%d, len(fileinfos)=%d, numOfLines=%d\n",
+			pflag.NArg(), len(fileInfos), numOfLines)
 	}
 	if len(fileInfos) > 1 {
 		sort.Slice(fileInfos, sortfcn) // must be sorted here for sortfcn to work correctly, because the slice name it uses must be correct.  Better if that name is not global.
