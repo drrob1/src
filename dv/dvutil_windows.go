@@ -332,15 +332,10 @@ func ThirdFileInfosFromCommandLine() ([]os.FileInfo, string) {
 		const sepStr = string(os.PathSeparator)
 		for _, f := range filenames { // basically I do this here because of a pattern to be matched.
 			var path string
-			//if strings.Contains(f, sepStr) || strings.Contains(f, ":") || globFlag {
-			//	path = f
-			//} else {
-			//	path = dirName + sepStr + f
-			//}
-			path, err = filepath.Abs(f)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error from filepath.Abs(%s) is %v\n", f, err)
-				continue
+			if strings.Contains(f, sepStr) || strings.Contains(f, ":") || globFlag {
+				path = f
+			} else {
+				path = filepath.Join(dirName, f)
 			}
 
 			fi, err := os.Lstat(path)
