@@ -182,9 +182,10 @@ REVISION HISTORY
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't yet work on linux.
  3 Oct 25 -- MyReadDir routines will skip directory names, by changing includeThis.
 				And I added a noconcurrent flag so it calls the new nonConcurrentFileInfosFromCommandLine.
+ 4 Oct 25 -- Added 3rd ReadDir which is not concurrent, called StdLinearReadDir
 */
 
-const LastAltered = "3 Oct 2025"
+const LastAltered = "4 Oct 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -319,6 +320,9 @@ func main() {
 
 	var nonConcurrent bool // used by the noconcurrent flag
 	pflag.BoolVarP(&nonConcurrent, "noconcurrent", "c", false, "Use non-concurrent code.  Used primarily for testing.")
+
+	var thirdReadDir bool
+	pflag.BoolVarP(&thirdReadDir, "3rd", "3", false, "Use third readDir function.  Used primarily for testing.")
 
 	pflag.Parse()
 
@@ -526,6 +530,8 @@ func main() {
 	var dirName string
 	if nonConcurrent {
 		fileInfos, dirName = nonConcurrentFileInfosFromCommandLine()
+	} else if thirdReadDir {
+		fileInfos, dirName = ThirdFileInfosFromCommandLine()
 	} else {
 		fileInfos, dirName = getFileInfosFromCommandLine()
 	}
@@ -958,6 +964,31 @@ func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
 	}
 	return match
 }
+
+func StdLinearReadDir(dir string) []os.FileInfo { // Non-concurrent version of myReadDir.  This is the original version.
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		fmt.Printf("ERROR: %s\n", err)
+		return nil
+	}
+
+	fileInfos := make([]os.FileInfo, 0, len(dirEntries))
+	for _, d := range dirEntries {
+		fi, e := d.Info()
+		if e != nil {
+			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
+			continue
+		}
+		if includeThis(fi) {
+			fileInfos = append(fileInfos, fi)
+		}
+		if fi.Mode().IsRegular() && showGrandTotal {
+			grandTotal += fi.Size()
+			grandTotalCount++
+		}
+	}
+	return fileInfos
+} // StdLinearReadDir
 
 // ------------------------------ pause -----------------------------------------
 
