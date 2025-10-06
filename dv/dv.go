@@ -181,8 +181,8 @@ REVISION HISTORY
 				It turns out that I can use filepath.Abs() to get the full path.  Nope, that doesn't work after all.
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.  Doesn't yet work on linux.
  3 Oct 25 -- MyReadDir routines will skip directory names, by changing includeThis.
-				And I added a noconcurrent flag so it calls the new nonConcurrentFileInfosFromCommandLine.
- 4 Oct 25 -- Added 3rd ReadDir which is not concurrent, called StdLinearReadDir
+				And I added a noconcurrent flag so it calls the new nonConcurrentFileInfosFromCommandLine.  At work, this found j.mdb.
+ 4 Oct 25 -- Added 3rd ReadDir which is not concurrent, called StdLinearReadDir.  At work, this did not find j.mdb.
 */
 
 const LastAltered = "4 Oct 2025"

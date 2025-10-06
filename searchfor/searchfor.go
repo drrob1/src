@@ -29,9 +29,11 @@ import (
 				Now I want to add a simpler concurrent method, one that just gets file infos without the dir entry intermediate step.
                 Now I'll add timing info.
    2 Oct 25 -- Added use of filepath.Glob
+   6 Oct 25 -- So far, all of these routines find the target, which is usually j.mdb.  But in dv, only the non-concurrent code finds it.  This is very puzzling.
+                 I'm going to try to resort the files to the newest first like I do in dv, to see if that makes a difference.
 */
 
-const lastAltered = "2 Oct 2025"
+const lastAltered = "6 Oct 2025"
 const multiplier = 10 // used for the worker pool pattern in MyReadDir
 //  const debugName = "debug*.txt"
 
@@ -89,9 +91,33 @@ func main() {
 	sort.Slice(DirEntries, lessDirEntries)
 	position, found := binarySearchDirEntries(DirEntries, target)
 	if found {
-		ctfmt.Printf(ct.Green, true, " Found %s at position %d\n\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, " Found %s at position %d\n", searchTarget, position)
 	} else {
-		ctfmt.Printf(ct.Red, true, " Did not find %s\n\n", searchTarget)
+		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
+	}
+
+	// now to sort dir entries by ModTime, newest first.
+	lessDirEntries = func(i, j int) bool {
+		//return DirEntries[i].Info().ModTime().After(DirEntries[j].ModTime())
+		FI1, err := DirEntries[i].Info()
+		if err != nil {
+			fmt.Printf(" Error from DirEntries[i].Info() is %s\n", err)
+			os.Exit(1)
+		}
+		FI2, err := DirEntries[j].Info()
+		if err != nil {
+			fmt.Printf(" Error from DirEntries[j].Info() is %s\n", err)
+			os.Exit(1)
+		}
+		return FI1.ModTime().After(FI2.ModTime())
+	}
+	t0a := time.Now()
+	sort.Slice(DirEntries, lessDirEntries) // This now sorts by ModTime, newest first.
+	position, found = linearSearchDirEntries(DirEntries, target)
+	if found {
+		ctfmt.Printf(ct.Green, true, "Linear search of time sorted DirEntries found %s at position %d, taking %s\n\n", searchTarget, position, time.Since(t0a))
+	} else {
+		ctfmt.Printf(ct.Red, true, " Linear search of time sorted DirEntries did not find %s, taking %s\n\n", searchTarget, time.Since(t0a))
 	}
 
 	// Now have to open the directory to explore the other functions
@@ -117,9 +143,9 @@ func main() {
 	sort.Slice(FileInfoSlice, lessFileInfo)
 	position, found = binarySearchFileInfos(FileInfoSlice, target)
 	if found {
-		ctfmt.Printf(ct.Green, true, " Found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, " Found %s at position %d\n\n", searchTarget, position)
 	} else {
-		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
+		ctfmt.Printf(ct.Red, true, " Did not find %s\n\n", searchTarget)
 	}
 	d.Close() // have to close it after a successful search.
 	fmt.Printf(" 1st d.Close() succeeded.\n\n")
@@ -148,9 +174,9 @@ func main() {
 	}
 	position, found = binarySearchStrings(dirNamesStringSlice, target)
 	if found {
-		ctfmt.Printf(ct.Green, true, "Using binarySearchStrings found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, "Using binarySearchStrings found %s at position %d\n\n", searchTarget, position)
 	} else {
-		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
+		ctfmt.Printf(ct.Red, true, " Did not find %s\n\n", searchTarget)
 	}
 	err = d.Close()
 	if err != nil {
@@ -174,6 +200,9 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf(" d.ReadDir(-1) succeeded, finding %d dir entries, which took %s.\n", len(DirEntries), time.Since(t3))
+	lessDirEntries = func(i, j int) bool { // Need to define this again because I changed it above to sort by time instead of name.
+		return DirEntries[i].Name() < DirEntries[j].Name()
+	}
 	sort.Slice(DirEntries, lessDirEntries)
 	position, found = binarySearchDirEntries(DirEntries, target)
 	if found {
@@ -199,7 +228,7 @@ func main() {
 	sort.Slice(fiSlice, lessFileInfo)
 
 	if verboseFlag {
-		fmt.Printf(" myReadDir(%s) finished reading %d files, after sort.Slice\n", dir, len(fiSlice))
+		fmt.Printf(" Concurrent myReadDir(%s) finished reading %d files, after sort.Slice\n", dir, len(fiSlice))
 		for i := 0; i < 20; i++ {
 			fmt.Printf("i: %d, FI.Name(): %s\n", i, fiSlice[i].Name())
 		}
@@ -209,17 +238,30 @@ func main() {
 
 	position, found = binarySearchFileInfos(fiSlice, target)
 	if found {
-		ctfmt.Printf(ct.Green, true, " Binary search found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, "Concurrent myReadDir FileInfo Binary search found %s at position %d\n", searchTarget, position)
 	} else {
-		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
+		ctfmt.Printf(ct.Red, true, "Concurrent myReadDir FileInfo did not find %s\n", searchTarget)
 	}
 
 	position, found = linearSearchFileInfos(fiSlice, target)
 
 	if found {
-		ctfmt.Printf(ct.Green, true, "Linear search found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, "Concurrent myReadDir FileInfo Linear search found %s at position %d\n", searchTarget, position)
 	} else {
-		ctfmt.Printf(ct.Red, true, " Did not find %s\n", searchTarget)
+		ctfmt.Printf(ct.Red, true, "Concurrent myReadDir FileInfo did not find %s\n", searchTarget)
+	}
+
+	t4a := time.Now()
+	lessFileInfo = func(i, j int) bool {
+		return fiSlice[i].ModTime().After(fiSlice[j].ModTime())
+	}
+	sort.Slice(fiSlice, lessFileInfo) // This now sorts by ModTime, newest first.
+	fmt.Printf("Concurrent myReadDir FileInfo sort.Slice(fiSlice, lessFileInfo) sorting on ModTime, newest first took %s\n", time.Since(t4a))
+	position, found = linearSearchFileInfos(fiSlice, target)
+	if found {
+		ctfmt.Printf(ct.Green, true, "Linear search of time sorted FileInfos found %s at position %d, taking %s\n\n", searchTarget, position, time.Since(t4a))
+	} else {
+		ctfmt.Printf(ct.Red, true, " Linear search of time sorted FileInfos did not find %s, taking %s\n\n", searchTarget, time.Since(t4a))
 	}
 
 	// Now test the simpler version of myReadDir.
@@ -241,9 +283,9 @@ func main() {
 	position, found = linearSearchFileInfos(fiSimplerSlice, target)
 
 	if found {
-		ctfmt.Printf(ct.Green, true, "Simpler: Linear search found %s at position %d\n", searchTarget, position)
+		ctfmt.Printf(ct.Green, true, "Simpler: Linear search found %s at position %d\n\n", searchTarget, position)
 	} else {
-		ctfmt.Printf(ct.Red, true, "Simpler: Did not find %s\n", searchTarget)
+		ctfmt.Printf(ct.Red, true, "Simpler: Did not find %s\n\n", searchTarget)
 	}
 
 	// Now test using filepath.Glob
@@ -415,6 +457,15 @@ func binarySearchGlobStrings(slice []string, target string) (int, bool) {
 func linearSearchFileInfos(slice []os.FileInfo, target string) (int, bool) {
 	for i, fi := range slice {
 		if fi.Name() == target {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
+func linearSearchDirEntries(slice []os.DirEntry, target string) (int, bool) {
+	for i, de := range slice {
+		if de.Name() == target {
 			return i, true
 		}
 	}
