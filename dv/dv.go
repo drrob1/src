@@ -183,9 +183,11 @@ REVISION HISTORY
  3 Oct 25 -- MyReadDir routines will skip directory names, by changing includeThis.
 				And I added a noconcurrent flag so it calls the new nonConcurrentFileInfosFromCommandLine.  At work, this found j.mdb.
  4 Oct 25 -- Added 3rd ReadDir which is not concurrent, called StdLinearReadDir.  At work, this did not find j.mdb.
+ 7 Oct 25 -- The non-current code finds j.mdb, but the concurrent ones do not.  Maybe I'm excluding something I don't really want to.  I'm going to check for that now.
+				I extended the veryverbose message in includeThis and includeThisWithMatch, and I removed the IsDir check as I do sometimes want to see a dir name.
 */
 
-const LastAltered = "4 Oct 2025"
+const LastAltered = "7 Oct 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -919,12 +921,13 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 
 func includeThis(fi os.FileInfo) bool {
 	if veryVerboseFlag {
-		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
+		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, FileInfo Name=%s \n",
+			noExtensionFlag, excludeFlag, filterAmt, fi.Name())
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
 		return false
-	} else if fi.Mode().IsDir() {
-		return false
+		//} else if fi.Mode().IsDir() {
+		//	return false
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
 			return false
@@ -940,12 +943,13 @@ func includeThis(fi os.FileInfo) bool {
 
 func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
 	if veryVerboseFlag {
-		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, match pattern=%s \n", noExtensionFlag, excludeFlag, filterAmt, matchPat)
+		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, FileInfo Name=%s, match pattern=%s \n",
+			noExtensionFlag, excludeFlag, filterAmt, fi.Name(), matchPat)
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
 		return false
-	} else if fi.Mode().IsDir() {
-		return false
+		//} else if fi.Mode().IsDir() {
+		//	return false
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
 			return false

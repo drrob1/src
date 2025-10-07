@@ -30,10 +30,12 @@ import (
                 Now I'll add timing info.
    2 Oct 25 -- Added use of filepath.Glob
    6 Oct 25 -- So far, all of these routines find the target, which is usually j.mdb.  But in dv, only the non-concurrent code finds it.  This is very puzzling.
-                 I'm going to try to resort the files to the newest first like I do in dv, to see if that makes a difference.
+                 I'm going to try to re-sort the files to the newest first like I do in dv, to see if that makes a difference.
+   7 Oct 25 -- All of the routines find the target, even the concurrent ones.  But dv still doesn't work when using the concurrent code.  Maybe the inital call Stat
+                 refreshs a cache in the OS or something.  I'm going to remove that and see what happens at work.
 */
 
-const lastAltered = "6 Oct 2025"
+const lastAltered = "7 Oct 2025"
 const multiplier = 10 // used for the worker pool pattern in MyReadDir
 //  const debugName = "debug*.txt"
 
@@ -62,13 +64,13 @@ func main() {
 
 	searchTarget := pflag.Arg(0)
 
-	_, err = os.Stat(searchTarget)
-	if err != nil {
-		fmt.Printf(" Error from os.Stat(%s) is %s\n", searchTarget, err)
-		os.Exit(1)
-	}
+	//_, err = os.Stat(searchTarget)
+	//if err != nil {
+	//	fmt.Printf(" Error from os.Stat(%s) is %s\n", searchTarget, err)
+	//	os.Exit(1)
+	//}
 
-	fmt.Printf(" Search target exists\n")
+	//fmt.Printf(" Search target exists\n")
 
 	dir, target := filepath.Split(searchTarget)
 	if dir == "" {

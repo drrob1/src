@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/spf13/pflag"
 )
@@ -17,9 +18,10 @@ import (
                  Using open(name) and then f.Stat() behaves the same as Stat().
                  I'm not going to test to see what a DirEntry does.
   21 Sep 25 -- Added display of UnixNano time stamps, file sizes, and now UnixMicro() and Unix().
+   7 Oct 25 -- I'm adding a date format output that is human-readable.
 */
 
-const lastAltered = "21 Sep 25"
+const lastAltered = "7 Oct 25"
 
 // IsSymlink -- returns true if the file is a symlink.
 func IsSymlink(m os.FileInfo) bool {
@@ -71,10 +73,10 @@ func main() {
 	fmt.Printf("name: %s, fullname: %s, dir: %q, link name: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
 		name, fullname, dirname, linkName, symFlag, symfi.IsDir(), symfi.Mode().IsRegular(), symfi.Mode(), symfi.Size())
 
-	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d\n",
-		symfi.ModTime().UnixNano(), symfi.Size(), symfi.ModTime().UnixMicro(), symfi.ModTime().Unix())
-	fmt.Printf(" Using Stat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d\n",
-		fi.ModTime().UnixNano(), fi.Size(), fi.ModTime().UnixMicro(), fi.ModTime().Unix())
+	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d, TimeStamp: %s\n",
+		symfi.ModTime().UnixNano(), symfi.Size(), symfi.ModTime().UnixMicro(), symfi.ModTime().Unix(), symfi.ModTime().Format(time.RFC3339))
+	fmt.Printf(" Using Stat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d, TimeStamp: %s\n",
+		fi.ModTime().UnixNano(), fi.Size(), fi.ModTime().UnixMicro(), fi.ModTime().Unix(), fi.ModTime().Format(time.RFC3339))
 
 	if symFlag {
 		fmt.Printf("Target of symlink: %q\n", linkName)
