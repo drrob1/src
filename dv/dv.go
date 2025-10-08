@@ -185,9 +185,11 @@ REVISION HISTORY
  4 Oct 25 -- Added 3rd ReadDir which is not concurrent, called StdLinearReadDir.  At work, this did not find j.mdb.
  7 Oct 25 -- The non-current code finds j.mdb, but the concurrent ones do not.  Maybe I'm excluding something I don't really want to.  I'm going to check for that now.
 				I extended the veryverbose message in includeThis and includeThisWithMatch, and I removed the IsDir check as I do sometimes want to see a dir name.
+ 8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
+				the slice.  Now to address this in the display routine.
 */
 
-const LastAltered = "7 Oct 2025"
+const LastAltered = "8 Oct 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

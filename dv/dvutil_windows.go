@@ -27,6 +27,8 @@ REVISION HISTORY
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.
  3 Oct 25 -- Adding non-concurrent routine to getFileInfosFromCommandLine.  It uses os.Stat instead of os.Lstat.
  4 Oct 25 -- Added ThirdFileInfosFromCommandLine.  It's not concurrent, and keeps os.Lstat.
+ 8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
+				the slice.  Now to address this in the display routine.
 */
 
 // getFileInfosFromCommandLine() will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
@@ -407,7 +409,13 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
 			lnCount++
+		} else {
+			var color ct.Color
+			sizestr, color = getMagnitudeString(f.Size())
+			myPrintf(color, true, "%s %s %-17s Not Regular, Dir nor Symlink.\n", f.Name(), s, sizestr)
+			lnCount++
 		}
+
 		if lnCount >= numOfLines {
 			break
 		}
