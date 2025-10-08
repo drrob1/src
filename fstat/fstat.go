@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/spf13/pflag"
 )
@@ -22,6 +21,7 @@ import (
 */
 
 const lastAltered = "7 Oct 25"
+const timeFormat = "2006-01-02 15:04:05"
 
 // IsSymlink -- returns true if the file is a symlink.
 func IsSymlink(m os.FileInfo) bool {
@@ -70,13 +70,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, " Error from os.Readlink(%s) is %s.\n", name, err) // this is an error for a hardlink or regular file.  Showing it anyway.
 	}
 
-	fmt.Printf("name: %s, fullname: %s, dir: %q, link name: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
+	fmt.Printf("name: %s, fullname: %s, dir: %q,\n link name: %s\n   symFlag: %t, isDir: %t, isRegularFile: %t, modebits: %b, size: %d\n",
 		name, fullname, dirname, linkName, symFlag, symfi.IsDir(), symfi.Mode().IsRegular(), symfi.Mode(), symfi.Size())
 
 	fmt.Printf("Using Lstat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d, TimeStamp: %s\n",
-		symfi.ModTime().UnixNano(), symfi.Size(), symfi.ModTime().UnixMicro(), symfi.ModTime().Unix(), symfi.ModTime().Format(time.RFC3339))
+		symfi.ModTime().UnixNano(), symfi.Size(), symfi.ModTime().UnixMicro(), symfi.ModTime().Unix(), symfi.ModTime().Format(timeFormat))
 	fmt.Printf(" Using Stat: NanoTime: %d, Size: %d, MicroTime: %d, UnixSec: %d, TimeStamp: %s\n",
-		fi.ModTime().UnixNano(), fi.Size(), fi.ModTime().UnixMicro(), fi.ModTime().Unix(), fi.ModTime().Format(time.RFC3339))
+		fi.ModTime().UnixNano(), fi.Size(), fi.ModTime().UnixMicro(), fi.ModTime().Unix(), fi.ModTime().Format(timeFormat))
 
 	if symFlag {
 		fmt.Printf("Target of symlink: %q\n", linkName)
