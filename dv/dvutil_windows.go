@@ -412,7 +412,8 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 		} else {
 			var color ct.Color
 			sizestr, color = getMagnitudeString(f.Size())
-			myPrintf(color, true, "%s %s %-17s Not Regular, Dir nor Symlink.\n", f.Name(), s, sizestr)
+			myPrintf(color, true, "%-17s %s %s, IsRegular=%t, IsDir=%t, IsSymkink=%t.\n",
+				sizestr, s, f.Name(), f.Mode().IsRegular(), f.IsDir(), IsSymlink(f.Mode()))
 			lnCount++
 		}
 
