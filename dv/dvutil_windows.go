@@ -409,7 +409,7 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
 			lnCount++
-		} else {
+		} else { // this is a debugging step.  There are times I don't want a file to be listed, like in the -D switch, so this isn't what I want in production code.
 			var color ct.Color
 			sizestr, color = getMagnitudeString(f.Size())
 			myPrintf(color, true, "%-17s %s %s, IsRegular=%t, IsDir=%t, IsSymkink=%t.\n",
