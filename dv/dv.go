@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -135,7 +136,7 @@ REVISION HISTORY
                 Right now, I can use the scroll back buffer to achieve the same thing when I use a large value of n (number of screens).
                 The more I think about this, using the scroll back buffer is probably best because this affects ds and rex, and maybe others I can't think of right now.
 30 Jun 23 -- I'm adding -a flag, to mean all.  It will be equivalent to 100 screens, or setting nscreen to 100.  For now.  Changed to default of 50 a few days later.
- 2 Jul 23 -- I'm going to change the environ var number to mean number of screens when the all flag is used.  Not today, it's too late.  I'll start this tomorrow.
+ 2 Jul 23 -- I'm going to change the environ var number to mean number of screens when the allFlag is used.  Not today, it's too late.  I'll start this tomorrow.
                 I'll leave -N to mean lines/screen, as there's no point in having a command line switch to change that;  I could just use the nscreen option directly.
                 I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var along the lines of allScreens, defaulting to 50 or so.
  3 Jul 23 -- Added environment var h to mean halfFlag.
@@ -187,6 +188,7 @@ REVISION HISTORY
 				I extended the veryverbose message in includeThis and includeThisWithMatch, and I removed the IsDir check as I do sometimes want to see a dir name.
  8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
 				the slice.  Now to address this in the display routine.
+				I decided to write out the entire FI slice to a debugging file.  And made allScreens = 5000
 */
 
 const LastAltered = "8 Oct 2025"
@@ -222,12 +224,14 @@ var filterStr string
 var excludeRegex *regexp.Regexp
 
 // allScreens is the number of screens to be used for the allFlag switch.  This can be set by the environ var dsrt.
-var allScreens = 100_000
+var allScreens = 5000
 
 // this is to be equivalent to allScreens screens, by default same as n=50.
 var allFlag bool
 var termRedirected bool // need to show this in verbose mode
 var termDisplayOut bool // need to show this in verbose mode
+
+var debugDirRead string
 
 var myPrintf func(c ct.Color, bold bool, format string, a ...interface{}) (n int, err error)
 
@@ -582,6 +586,35 @@ func main() {
 	userCPUseconds := metricSlice[1].Value.Float64()
 	fmt.Printf(" User CPU seconds: %.4f;  total CPU Seconds: %.4f.\n", userCPUseconds, totalCPUseconds)
 
+	// wrap up
+	if veryVerboseFlag {
+		nowStr := time.Now().Format("Jan-02-2006_15_04_05")
+		fn := filepath.Join(debugDirRead, fmt.Sprintf("dv-%s.txt", nowStr))
+		f, err := os.Create(fn)
+		if err != nil {
+			fmt.Printf(" Error from os.Create(%s) is %s\n", fn, err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		fmt.Printf(" os.Create(%s) succeeded, file is %s\n", fn, f.Name())
+
+		// Write out the fiSlice to the debug file.
+		buf := bufio.NewWriter(f)
+		buf.WriteString(" --------------------------------- FileInfos  ---------------------------------  ")
+		buf.WriteString(nowStr)
+		buf.WriteString("\n")
+		for i, fi := range fileInfos {
+			buf.WriteString(fmt.Sprintf("%d: %s    ", i, fi.Name()))
+			if i%4 == 3 {
+				buf.WriteString("\n")
+			}
+		}
+		buf.WriteString("\n----------------------------------  end of FileInfos  ---------------------------------- \n\n")
+
+		buf.WriteString("\n\n")
+		buf.Flush()
+	}
+
 } // end main dsrt
 
 //-------------------------------------------------------------------- InsertByteSlice
@@ -923,7 +956,7 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 
 func includeThis(fi os.FileInfo) bool {
 	if veryVerboseFlag {
-		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, FileInfo Name=%s \n",
+		fmt.Printf(" at top of includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, FileInfo Name=%s;  \n",
 			noExtensionFlag, excludeFlag, filterAmt, fi.Name())
 	}
 	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
@@ -939,6 +972,9 @@ func includeThis(fi os.FileInfo) bool {
 		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
 		}
+	}
+	if veryVerboseFlag {
+		fmt.Printf(" at bottom of includeThis.  Will return TRUE \n")
 	}
 	return true
 }

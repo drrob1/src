@@ -54,6 +54,7 @@ func getFileInfosFromCommandLine() ([]os.FileInfo, string) {
 			fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine Getwd is %v\n", er)
 			os.Exit(1)
 		}
+		debugDirRead = workingDir
 		fileInfos = myReadDir(workingDir)
 	} else { // Must have a pattern on the command line, ie, NArg > 0
 		pattern := pflag.Arg(0) // this only gets the first non flag argument and is all I want on Windows.  And it doesn't panic if there are no arg's.
@@ -65,6 +66,7 @@ func getFileInfosFromCommandLine() ([]os.FileInfo, string) {
 		dirName, fileName = filepath.Split(pattern)
 		fileName = strings.ToLower(fileName)
 		if dirName != "" && fileName == "" { // then have a dir pattern without a filename pattern
+			debugDirRead = dirName
 			fileInfos = myReadDir(dirName)
 			return fileInfos, dirName
 		}
@@ -94,6 +96,7 @@ func getFileInfosFromCommandLine() ([]os.FileInfo, string) {
 			}
 
 		} else {
+			debugDirRead = dirName
 			d, err := os.Open(dirName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error from Windows processCommandLine directory os.Open is %v\n", err)
