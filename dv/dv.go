@@ -189,9 +189,11 @@ REVISION HISTORY
  8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
 				the slice.  Now to address this in the display routine.
 				I decided to write out the entire FI slice to a debugging file.  And made allScreens = 5000
+ 9 Oct 25 -- I figured out that at work, the hard linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
+				retrieved first by filename and then individually calling Lstat, it is considered a regular file.  I'm going to display this correctly at work.
 */
 
-const LastAltered = "8 Oct 2025"
+const LastAltered = "9 Oct 2025"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -296,7 +298,7 @@ func main() {
 	sizeflag := pflag.BoolP("size", "s", false, "sort by size instead of by mod date")             // pointer
 	DirListFlag := pflag.BoolP("dirlist", "d", false, "include directories in the output listing") // pointer
 
-	var FilenameListFlag bool
+	var FilenameListFlag bool // FilenameToBeListedFlag is global.
 	pflag.BoolVarP(&FilenameListFlag, "onlydir", "D", false, "Directories only in the output listing")
 
 	TotalFlag := pflag.BoolP("totals", "t", false, "include grand total of directory, makes most sense when no pattern is given on command line.")

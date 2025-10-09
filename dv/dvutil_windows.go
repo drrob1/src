@@ -29,6 +29,8 @@ REVISION HISTORY
  4 Oct 25 -- Added ThirdFileInfosFromCommandLine.  It's not concurrent, and keeps os.Lstat.
  8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
 				the slice.  Now to address this in the display routine.
+ 9 Oct 25 -- I figured out that at work, the hard linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
+				retrieved first by filename and then individually calling Lstat, it is considered a regular file.  I'm going to display this correctly at work.
 */
 
 // getFileInfosFromCommandLine() will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
@@ -412,7 +414,10 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
 			lnCount++
-		} else { // this is a debugging step.  There are times I don't want a file to be listed, like in the -D switch, so this isn't what I want in production code.
+		} else {                         // I found out that at work, a hardlinked file is not a regular file, directory nor a symlink.  So I have to check for that.
+			if !filenameToBeListedFlag { // involves the -D switch.  If this is true, then don't list the file.
+				continue
+			}
 			var color ct.Color
 			sizestr, color = getMagnitudeString(f.Size())
 			myPrintf(color, true, "%-17s %s %s, IsRegular=%t, IsDir=%t, IsSymkink=%t.\n",
