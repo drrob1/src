@@ -420,8 +420,7 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 			}
 			var color ct.Color
 			sizestr, color = getMagnitudeString(f.Size())
-			myPrintf(color, true, "%-17s %s %s, IsRegular=%t, IsDir=%t, IsSymkink=%t.\n",
-				sizestr, s, f.Name(), f.Mode().IsRegular(), f.IsDir(), IsSymlink(f.Mode()))
+			myPrintf(color, true, "%-17s %s {%s} hardlink\n", sizestr, s, f.Name())
 			lnCount++
 		}
 
