@@ -7,7 +7,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"getcommandline" // this ones mine.
+	"src/getcommandline" // this ones mine.
 	"hash"
 	"io"
 	"os"

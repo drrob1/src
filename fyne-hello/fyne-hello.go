@@ -6,11 +6,11 @@ import (
 )
 
 func main() {
-	app := app.New()
+	a := app.New()
 
-	quitapp := func() { app.Quit() }
+	quitapp := func() { a.Quit() }
 
-	w := app.NewWindow("Hello")
+	w := a.NewWindow("Hello")
 	w.SetContent(widget.NewVBox(widget.NewLabel("Hello Fyne"), widget.NewButton("Quit", quitapp)))
 	w.ShowAndRun()
 }

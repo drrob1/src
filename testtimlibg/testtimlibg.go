@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	//        "time"
-	"timlibg"
+	"src/timlibg"
 )
 
 // need to test the TIME2MDY, GetDateTime, MDY2STR, JULIAN, GREGORIAN functions.
