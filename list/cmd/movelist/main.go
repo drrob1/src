@@ -66,9 +66,10 @@ import (
    8 Jul 23 -- Now called movelist, and it's based on copycp.  I intend to use the shell move commands.
                  And I fixed part where dest dir is tested.
   27 Oct 25 -- Changing the final message and including more to be displayed under verbose mode.
+  28 Oct 25 -- Noticed that I overwrote a slice assignment for variadic param.  I fixed that code.  Probably doesn't matter, though.
 */
 
-const LastAltered = "27 Oct 2025" //
+const LastAltered = "28 Oct 2025" //
 
 const sepString = string(filepath.Separator)
 
@@ -250,12 +251,12 @@ func main() {
 			fmt.Printf(" After os.LookupEnv(ComSpec), got a return of not ok.  ShellStr = %s\n", shellStr)
 			os.Exit(1)
 		}
-		variadicParam = []string{"/C", "move", "/u"}          // start the variadic param w/ these required params, the first one has tcc only run 1 cmd and then exit.
-		variadicParam = append(variadicParam, fileListStr...) // now append all the files to be copied.
+		variadicParam = append(variadicParam, []string{"/C", "move", "/u"}...) // start the variadic param w/ these required params, the first one has tcc only run 1 cmd and then exit.
+		variadicParam = append(variadicParam, fileListStr...)                  // now append all the files to be copied.
 	} else if runtime.GOOS == "linux" { // just in case this ever gets attempted using macOS.
 		shellStr = "mv"
-		variadicParam = []string{"-u", "-v"}                  // start the variadic param w/ these required params
-		variadicParam = append(variadicParam, fileListStr...) // now append all the files to be copied.
+		variadicParam = append(variadicParam, []string{"-u", "-v"}...) // start the variadic param w/ these required params in a way that doesn't overwrite the slice elements.
+		variadicParam = append(variadicParam, fileListStr...)          // now append all the files to be copied.
 	}
 
 	variadicParam = append(variadicParam, destDir)
