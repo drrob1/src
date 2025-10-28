@@ -3,8 +3,6 @@ package main // movelist, based on copycp
 import (
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +11,9 @@ import (
 	"src/list"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 /*
@@ -64,9 +65,10 @@ import (
    8 Apr 23 -- Changed list.New signature.
    8 Jul 23 -- Now called movelist, and it's based on copycp.  I intend to use the shell move commands.
                  And I fixed part where dest dir is tested.
+  27 Oct 25 -- Changing the final message and including more to be displayed under verbose mode.
 */
 
-const LastAltered = "8 July 2023" //
+const LastAltered = "27 Oct 2025" //
 
 const sepString = string(filepath.Separator)
 
@@ -126,8 +128,6 @@ func main() {
 		list.VeryVerboseFlag, list.VerboseFlag = true, true
 	}
 
-	//Reverse := revFlag
-
 	if verboseFlag {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
@@ -159,7 +159,6 @@ func main() {
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
 
-	//fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
@@ -258,9 +257,12 @@ func main() {
 		variadicParam = []string{"-u", "-v"}                  // start the variadic param w/ these required params
 		variadicParam = append(variadicParam, fileListStr...) // now append all the files to be copied.
 	}
+
 	variadicParam = append(variadicParam, destDir)
 
-	//fmt.Printf(" Debug: shellStr = %s\n variadicParam = %s\n", shellStr, variadicParam)
+	if verboseFlag {
+		fmt.Printf(" verbose: shellStr = %s\n variadicParam = %s\n", shellStr, variadicParam)
+	}
 
 	// time to copy the files
 
@@ -275,5 +277,5 @@ func main() {
 		fmt.Printf(" Error returned by running %s %s is %v\n", shellStr, variadicParam, err)
 	}
 
-	ctfmt.Printf(ct.Cyan, onWin, " Sent %d files to %s, which took %s.\n", len(fileListStr), shellStr, time.Since(t0))
+	ctfmt.Printf(ct.Cyan, onWin, " Sent %d files to %s using %s, which took %s.\n", len(fileListStr), destDir, shellStr, time.Since(t0))
 } // end main
