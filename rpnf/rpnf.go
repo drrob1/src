@@ -6,12 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
 	"image/color"
 	"os"
 	"runtime"
@@ -22,6 +16,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	//"fyne.io/fyne/v2/data/binding"
 	//ct "github.com/daviddengcn/go-colortext"
 	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -61,6 +62,8 @@ import (
  5 May 25 -- Fixed a bug regarding not clearing old message so they don't get displayed after they've become stale.
  7 May 25 -- Edited "about" text.
 22 May 25 -- Copied new code from rpnf2 that handles the map command.  So now there's no difference btwn rpnf and rpnf2
+ 1 Nov 25 -- Updated comments.  The screen is built in populateUI using NewVBox for the left and right parts, and then NewHBox to combine them.  SetContent is used to display the output.
+				The input is handled in keyTyped and its brothers.  The explicit go routine is in DoIt, which starts the concurrent code to handle the input.
 */
 
 const lastModified = "May 22, 2025"
@@ -569,14 +572,14 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 				//                                                                                  input.TypedRune('~')
 				return
 			}
-			// globalW.Canvas().Focus(input)  Not changing focus into the entry widget.  This is the line that changes focus.
+			// globalW.Canvas().Focus(input)  Not changing focus into the entry widget.  This is the line that changes focus.  Added to KeySpace, above May 2025.
 		} else {
 			input.TypedRune(rune(e.Name[0]))
 			//globalW.Canvas().Focus(input)
 		}
 
 	}
-	// globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.  Undone.
+	// globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.  Undone.  Added to KeySpace, above May 2025.
 } // end keyTyped
 
 // ---------------------------------------------------------- keyTypedHelp --------------------------------------------
@@ -726,7 +729,7 @@ func showHelp(extra []string) {
 	helpLabel := widget.NewLabel(helpStr)
 
 	//dialog.ShowCustom("", "OK", helpLabel, globalW) // empty title
-	//dialog.ShowInformation("", helpStr, globalW)  // empty title  I don't like it's look, as each line is centered and not left aligned.
+	//dialog.ShowInformation("", helpStr, globalW)  // empty title  I don't like its look, as each line is centered and not left aligned.
 	//helpScroll := container.NewVScroll(helpLabel)
 	helpScroll := container.NewScroll(helpLabel)
 	helpWindow = globalA.NewWindow("Help")

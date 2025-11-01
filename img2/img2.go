@@ -3,17 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/storage"
-	"fyne.io/fyne/v2/widget"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/disintegration/imaging"
-	"github.com/nfnt/resize"
-	_ "golang.org/x/image/webp"
 	"image"
 	"image/color"
 	"image/gif"
@@ -27,6 +16,18 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
+	_ "golang.org/x/image/webp"
 )
 
 // From Go GUI with Fyne, Chap 4, by Andrew Williams, (C) Packtpub.
@@ -50,9 +51,9 @@ REVISION HISTORY
 22 Sep 21 -- I figured out that I need to deal w/ shift states in the keys to get magnification
 29 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
                Copied from img.go and imga.go.  When looking at my code, Andy commented that I don't need to resize, that's handled
-               automatically.  I have a follow up question: how to I magnify a region of an image?  Answer: crop it.
+               automatically.  I have a follow-up question: how to I magnify a region of an image?  Answer: crop it.
  4 Dec 21 -- Made the channels buffered, cleaned up some channel code, and added "v" command to turn on verbose mode.  Ported from img.go.
-26 Dec 21 -- Experimenting w/ detecting mouse scroll wheel movement
+26 Dec 21 -- Experimenting w/ detecting mouse scroll-wheel movement
 16 Mar 22 -- Will only write using fmt.Print calls if verboseFlag is set.
 26 Mar 22 -- Expanding to work when display directory is not current directory
 21 Oct 22 -- Fixed bad use of format verb caught by golangci-lint.
@@ -71,6 +72,8 @@ REVISION HISTORY
 			I combined keys in the keyTyped routine here but not in the others.
 			I added AutoOrientation to the rotateAndLoadTheImage and then to loadTheImage
 24 Jul 25 -- Added ability to save an image in its current size and degree of rotation.  Developed first in img.go.
+ 1 Nov 25 -- Updated the comments below.  And I'm adding here that the core of this app uses container.NewBorder to place elements top, bottom and the image in the center.
+				There is no explicit go routine here to handle the input; input is handled by keyTyped which is implicitly concurrent code.
 */
 
 const LastModified = "July 24, 2025"
@@ -334,10 +337,6 @@ func loadTheImage() {
 		fmt.Println(title)
 	}
 
-	//bounds = img.Bounds()   This seems to be redundant.  I don't know why it's here.
-	//imgHeight = bounds.Max.Y
-	//imgWidth = bounds.Max.X
-
 	/*  Andy said that this code is not needed.
 	if imgWidth > maxWidth {
 		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
@@ -380,7 +379,7 @@ func loadTheImage() {
 		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
 	}
 
-	imageAsDisplayed = loadedimg.Image
+	imageAsDisplayed = loadedimg.Image // this is for the saveImage function.
 
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
