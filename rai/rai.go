@@ -82,11 +82,12 @@ func main() {
 		calibrationDate, treatingDate = treatingDate, calibrationDate
 	}
 
-	deltaT := treatingDate.Sub(calibrationDate).Hours() / 24.0 // calculating it this way makes it a float and not a duration.
+	deltaT := treatingDate.Sub(calibrationDate).Hours() / 24.0               // calculating it this way makes it a float and not a duration.
+	deltaT2 := float64(treatingDate.Sub(calibrationDate) / 24.0 / time.Hour) // calculating it this way changes it from a duration to a float.
 
 	if verboseFlag {
 		fmt.Printf(" Treating Date = %s, Calibration Date = %s\n", treatingDate.Format(layout), calibrationDate.Format(layout))
-		fmt.Printf(" deltaT1 = %g \n", deltaT)
+		fmt.Printf(" deltaT1 = %g, deltaT2 = %g \n", deltaT, deltaT2)
 	}
 
 	fmt.Printf(" Enter desired dose : ")
