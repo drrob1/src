@@ -26,7 +26,7 @@ import (
 
 */
 
-const lastModified = "26 Nov 25"
+const lastModified = "27 Nov 25"
 const layout = "01/02/06"
 
 var lambda = math.Log(2) / 8.0249
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	fmt.Printf(" Enter date of calibration as mm dd yy : ")
-	_, err = fmt.Scanf("%d %d %d\n", &mm, &dd, &yy)
+	_, err = fmt.Scanln(&mm, &dd, &yy) // doing this differently to make sure it works.  It does.
 	if err != nil {
 		fmt.Printf(" Error from scanning for calibrationDateStr %s\n", err)
 		fmt.Printf(" Exiting\n")
@@ -90,7 +90,7 @@ func main() {
 		fmt.Printf(" deltaT1 = %g, deltaT2 = %g \n", deltaT, deltaT2)
 	}
 
-	fmt.Printf(" Enter desired dose : ")
+	fmt.Printf(" Enter desired dose (mCi) : ")
 	var dose float64
 	fmt.Scanf("%g\n", &dose)
 	if dose <= 0 {
