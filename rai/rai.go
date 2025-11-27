@@ -105,11 +105,11 @@ func main() {
 	raiToOrder1 := dose * math.Exp(lambda*deltaT)
 	raiToOrder2 := dose / math.Exp(-lambda*deltaT)
 
-	if verboseFlag {
-		fmt.Printf(" RAI to order 1 = %.2f, RAI to order 2 = %.2f\n", raiToOrder1, raiToOrder2)
-	}
+	fmt.Printf(" RAI to order = %.2f\n", raiToOrder1) // I don't need to show both values, now that I've confirmed that they are equal.
 
-	fmt.Printf(" RAI to order 1 = %.2f, RAI to order 2 = %.2f\n", raiToOrder1, raiToOrder2)
+	if verboseFlag {
+		fmt.Printf(" RAI to order 1 = %.4g, RAI to order 2 = %.4g\n", raiToOrder1, raiToOrder2)
+	}
 
 	fmt.Printf(" Done\n\n")
 }
