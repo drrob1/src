@@ -25,7 +25,8 @@ import (
     13 Apr 17 -- golint complained, so I added some comments
      6 Aug 23 -- The julian date number is of type int.  This is a reminder comment.
     24 May 24 -- Adding the comments so that go doc will work.
-     7 Nov 24 -- Adding converting to/from Excel based date numbers.  Day zero was 12/31/1899, so day one was 1/1/1900.
+     7 Nov 24 -- Adding converting to/from Excel-based date numbers.  Day zero was 12/31/1899, so day one was 1/1/1900.
+	28 Nov 25 -- Fixed bug in JULIAN because "y" was not assigned correctly.
 */
 
 // DateTimeType -- fields are Rawtime, Month, Day, Year, Hours, Minutes, Seconds, Nanosec, MonthStr and DayOfWeekStr.
@@ -100,23 +101,18 @@ func MDY2STR(M, D, Y int) string {
 
 // ----------------------------------------------- JULIAN
 
-// JULIAN used to need longint or longcard.  Since the numbers are < 800,000, 32-bit int would be enough, but this returns int.
+// JULIAN -- Since the numbers are < 800,000, 32-bit int would be enough, but this returns int.
 func JULIAN(M, D, Y int) int {
 
-	var (
-		M0, Y0  int
-		Juldate int
-	)
 	_, _, YY := TIME2MDY()
 	YearPivot := YY%100 + 1
 
 	if Y < YearPivot {
-		Y0 = Y + 2000 - 1
+		Y += 2000
 	} else if Y < 100 {
-		Y0 = Y + 1900 - 1
-	} else {
-		Y0 = Y - 1
-	} // if Y
+		Y += 1900
+	}
+	Y0 := Y - 1
 
 	// Month, Day or Year is out of range
 	if (M < 1) || (M > 12) || (D < 1) || (D > 31) || (Y < 1700) || (Y > 2500) {
@@ -124,17 +120,18 @@ func JULIAN(M, D, Y int) int {
 		return Juldate
 	} // if stuff is out of range
 
-	M0 = M - 1
+	M0 := M - 1
 
-	Juldate = Y0*365 + // Number of days in previous normal years
-		Y0/4 - // Number of possible leap days
-		Y0/100 + // Subtract all century years
-		Y0/400 + // Add back the true leap century years
-		ADIPM[M0] + M0*30 + D
+	// Y0 and M0 are the previous years and months, then we have to add in the current partial year and month.
+	// Y0/4 is the number of possible leap years since the year 1
+	// Y0/100 is the number of century years since the year 1 that have to be subtracted
+	// Y0/400 is the number of leap century years since the year 1 that have to be added back
 
-	if (((Y%4 == 0) && (Y%100 != 0)) || (Y%400 == 0)) && (M > 2) {
+	Juldate := Y0*365 + Y0/4 - Y0/100 + Y0/400 + ADIPM[M0] + M0*30 + D
+
+	if (((Y%4 == 0) && (Y%100 != 0)) || (Y%400 == 0)) && (M > 2) { // add in current year if it's a leap year
 		Juldate++
-	} // if have to increment Juldate
+	}
 	return Juldate
 } // JULIAN
 
