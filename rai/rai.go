@@ -3,6 +3,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"src/timlibg"
 	"strings"
 	"time"
 
@@ -24,10 +25,14 @@ import (
 
    Notice that the sign of the exponent in the factor is different btwn the 2 expressions
 
+  28 Nov 25 -- Decided to use my own TimLibg routines as they're more flexible.  The time package cannot handle either a 4-digit year or a 2-digit year.  My routines can.
+				And if no year is entered, then the current year is assumed.
+				Nevermind, I decided to keep using the time package but allow the user to enter a 4-digit year, and if it's not 4 digits, then I'll use the current year.
 */
 
-const lastModified = "27 Nov 25"
-const layout = "01/02/06"
+const lastModified = "28 Nov 25"
+const shortLayout = "01/02/06"
+const longLayout = "01/02/2006"
 
 var lambda = math.Log(2) / 8.0249
 
@@ -41,34 +46,52 @@ func main() {
 	var mm, dd, yy int
 
 	fmt.Printf(" Enter date for patient to be treated as mm dd yy : ")
-	_, err := fmt.Scanf("%d %d %d\n", &mm, &dd, &yy)
+	n, err := fmt.Scanf("%d %d %d\n", &mm, &dd, &yy)
 	if err != nil {
-		fmt.Printf(" Error scanning for treatingDateStr %s\n", err)
-		fmt.Printf(" Exiting\n")
-		return
+		if n == 3 { // then year is not entered, so use current year.
+			fmt.Printf(" Error scanning for treatingDateStr %s\n", err)
+			fmt.Printf(" Exiting\n")
+			return
+		}
+	}
+	if yy == 0 {
+		yy = time.Now().Year()
 	}
 	treatingDateStr := fmt.Sprintf("%02d/%02d/%02d", mm, dd, yy)
-	treatingDate, err := time.Parse(layout, treatingDateStr)
+	treatingDate, err := time.Parse(shortLayout, treatingDateStr)
 	if err != nil {
-		fmt.Printf(" Error from parsing treatingDateStr %s, using layout %s is %s\n", treatingDateStr, layout, err)
-		fmt.Printf(" Exiting\n")
-		return
+		//  fmt.Printf(" Error from parsing treatingDateStr %s, using layout %s is %s\n", treatingDateStr, shortLayout, err)
+		treatingDate, err = time.Parse(longLayout, treatingDateStr)
+		if err != nil {
+			fmt.Printf(" Error from parsing treatingDateStr %s, using layout %s is %s\n", treatingDateStr, longLayout, err)
+			fmt.Printf(" Exiting\n")
+			return
+		}
 	}
+	treatingJulian := timlibg.JULIAN(mm, dd, yy)
 
 	fmt.Printf(" Enter date of calibration as mm dd yy : ")
-	_, err = fmt.Scanln(&mm, &dd, &yy) // doing this differently to make sure it works.  It does.
+	n, err = fmt.Scanln(&mm, &dd, &yy) // doing this differently to make sure it works.  It does.
 	if err != nil {
-		fmt.Printf(" Error from scanning for calibrationDateStr %s\n", err)
-		fmt.Printf(" Exiting\n")
-		return
+		if n == 3 { // then year is not entered, so use current year.
+			fmt.Printf(" Error from scanning for calibrationDateStr %s\n", err)
+			fmt.Printf(" Exiting\n")
+			return
+		}
 	}
 
+	if yy == 0 {
+		yy = time.Now().Year()
+	}
 	calibrationDateStr := fmt.Sprintf("%02d/%02d/%02d", mm, dd, yy)
-	calibrationDate, err := time.Parse(layout, calibrationDateStr)
+	calibrationDate, err := time.Parse(shortLayout, calibrationDateStr)
 	if err != nil {
-		fmt.Printf(" Error from parsing calibrationDateStr %s is %s\n", calibrationDateStr, err)
-		fmt.Printf(" Exiting\n")
-		return
+		calibrationDate, err = time.Parse(longLayout, calibrationDateStr)
+		if err != nil {
+			fmt.Printf(" Error from parsing calibrationDateStr %s, using layout %s is %s\n", calibrationDateStr, longLayout, err)
+			fmt.Printf(" Exiting\n")
+			return
+		}
 	}
 
 	if calibrationDate.After(treatingDate) {
@@ -83,11 +106,15 @@ func main() {
 	}
 
 	deltaT := treatingDate.Sub(calibrationDate).Hours() / 24.0               // calculating it this way makes it a float and not a duration.
-	deltaT2 := float64(treatingDate.Sub(calibrationDate) / 24.0 / time.Hour) // calculating it this way changes it from a duration to a float.
+	deltaT2 := float64(treatingDate.Sub(calibrationDate) / 24.0 / time.Hour) // need to explicitly convert to a float from a duration.
+
+	calibrationJulian := timlibg.JULIAN(mm, dd, yy)
+	ΔT := treatingJulian - calibrationJulian
 
 	if verboseFlag {
-		fmt.Printf(" Treating Date = %s, Calibration Date = %s\n", treatingDate.Format(layout), calibrationDate.Format(layout))
-		fmt.Printf(" deltaT1 = %g, deltaT2 = %g \n", deltaT, deltaT2)
+		fmt.Printf(" Treating Date = %s, Calibration Date = %s\n", treatingDate.Format(shortLayout), calibrationDate.Format(shortLayout))
+		fmt.Printf(" deltaT1 = %g, deltaT2 = %g, ΔT = %d, treatingJulian = %d, calibrationJulian = %d \n",
+			deltaT, deltaT2, ΔT, treatingJulian, calibrationJulian)
 	}
 
 	fmt.Printf(" Enter desired dose (mCi) : ")
