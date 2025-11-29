@@ -3,8 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/jdeng/goheif"
-	flag "github.com/spf13/pflag"
 	"image/jpeg"
 	"log"
 	"os"
@@ -12,6 +10,9 @@ import (
 	"src/filepicker"
 	"strconv"
 	"strings"
+
+	"github.com/jdeng/goheif"
+	flag "github.com/spf13/pflag"
 )
 
 /*
@@ -108,7 +109,7 @@ func main() {
 
 	img, err := goheif.Decode(fi)
 	if err != nil {
-		log.Fatalf("Failed to parse %s: %v\n", fin, err)
+		log.Fatalf("Failed to decode %s: %v\n", fin, err)
 	}
 
 	//fo, err := os.OpenFile(fout, os.O_RDWR|os.O_CREATE, 0644)  I don't know why the example uses os.OpenFile instead of os.Create
