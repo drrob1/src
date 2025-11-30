@@ -359,8 +359,12 @@ func Doit() {
 
 			}
 		}
+
 		populateUI()
-		globalW.Show()
+		fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
+			// safe to touch widgets here
+			globalW.Show()
+		})
 	}
 } // end Doit
 
@@ -805,10 +809,13 @@ func populateUI() {
 
 	combinedColumns := container.NewHBox(leftColumn, rightColumn)
 
-	globalW.SetContent(combinedColumns)
-	globalW.Resize(fyne.Size{
-		Width:  float32(*screenWidth),
-		Height: float32(*screenHeight),
+	fyne.Do(func() { // I was getting warnings from fyne that this was being called from a non-GUI thread.
+		// safe to touch widgets here
+		globalW.SetContent(combinedColumns)
+		globalW.Resize(fyne.Size{
+			Width:  float32(*screenWidth),
+			Height: float32(*screenHeight),
+		})
 	})
 
 } // end populateUI
