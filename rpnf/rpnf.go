@@ -64,9 +64,10 @@ import (
 22 May 25 -- Copied new code from rpnf2 that handles the map command.  So now there's no difference btwn rpnf and rpnf2
  1 Nov 25 -- Updated comments.  The screen is built in populateUI using NewVBox for the left and right parts, and then NewHBox to combine them.  SetContent is used to display the output.
 				The input is handled in keyTyped and its brothers.  The explicit go routine is in DoIt, which starts the concurrent code to handle the input.
+30 Nov 25 -- I'm fixing some fyne errors that were flagged now that I've updated to fyne v 2.7.1 from 2.2.3.  I upgraded fyne so that I could play w/ code from Linux Magazine.
 */
 
-const lastModified = "May 22, 2025"
+const lastModified = "Nov 30, 2025"
 
 const ( // output modes
 	outputfix = iota
@@ -84,13 +85,14 @@ var input, nameLabelInput *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
 var yellow = color.NRGBA{R: 255, G: 255, B: 0, A: 255}
-var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
-var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
-var gray = color.Gray{Y: 100}
-var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
-var lightcyan = color.NRGBA{R: 224, G: 255, B: 255, A: 255}
 
-// var homeDir, INBUF, resultToOutput string
+// These are not used, but I'm leaving them here for reference.
+// var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
+// var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
+// var gray = color.Gray{Y: 100}
+// var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
+// var lightcyan = color.NRGBA{R: 224, G: 255, B: 255, A: 255}
+
 var homeDir, resultToOutput string
 var windowsFlag bool
 
@@ -310,7 +312,8 @@ func Doit() {
 					}
 					hpcalc2.PUSHX(Storage[i].Value)
 				} else if rtkn.Str == "FROMCLIP" {
-					contents := globalW.Clipboard().Content()
+					// contents := globalW.Clipboard().Content()  This was flagged by a linter as deprecated.
+					contents := globalA.Clipboard().Content() // added Nov 30, 2025.
 					contents = strings.TrimSpace(contents)
 					f, err := strconv.ParseFloat(contents, 64)
 					if err == nil {
@@ -321,7 +324,8 @@ func Doit() {
 					}
 				} else if rtkn.Str == "TOCLIP" {
 					rStr := strconv.FormatFloat(hpcalc2.READX(), 'g', hpcalc2.SigFig(), 64)
-					globalW.Clipboard().SetContent(rStr)
+					// globalW.Clipboard().SetContent(rStr)  Flagged by a linter as deprecated.
+					globalA.Clipboard().SetContent(rStr) // added Nov 30, 2025.
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
 					outputMode = outputfix
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") || rtkn.Str == "REAL" || rtkn.Str == "FLOAT" {
@@ -546,42 +550,37 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		}
 		if shiftState {
 			shiftState = false
-			if e.Name == fyne.KeySlash {
+			switch e.Name { // This was made a switch as recommended by the linter.  Nov 30, 2025.
+			case fyne.KeySlash:
 				input.TypedRune('?')
-			} else if e.Name == fyne.KeyPeriod {
+			case fyne.KeyPeriod:
 				inbufChan <- "~"
-				//input.TypedRune('>')
 				return
-			} else if e.Name == fyne.KeyComma {
+			case fyne.KeyComma:
 				inbufChan <- "~"
-				//input.TypedRune('<')
 				return
-			} else if e.Name == fyne.KeyMinus {
+			case fyne.KeyMinus:
 				input.TypedRune('_')
-			} else if e.Name == fyne.Key8 {
+			case fyne.Key8:
 				input.TypedRune('*')
-			} else if e.Name == fyne.Key6 {
+			case fyne.Key6:
 				input.TypedRune('^')
-			} else if e.Name == fyne.Key5 {
+			case fyne.Key5:
 				input.TypedRune('%')
-			} else if e.Name == fyne.Key2 {
+			case fyne.Key2:
 				input.TypedRune('@')
-			} else if e.Name == fyne.Key1 {
+			case fyne.Key1:
 				input.TypedRune('!')
-			} else if e.Name == fyne.KeyBackTick {
+			case fyne.KeyBackTick:
 				if len(input.Text) > 0 {
 					inbufChan <- input.Text
 				}
 				inbufChan <- "~"
-				//                                                                                  input.TypedRune('~')
 				return
 			}
-			// globalW.Canvas().Focus(input)  Not changing focus into the entry widget.  This is the line that changes focus.  Added to KeySpace, above May 2025.
 		} else {
 			input.TypedRune(rune(e.Name[0]))
-			//globalW.Canvas().Focus(input)
 		}
-
 	}
 	// globalW.Canvas().Focus(input) // first key typed that's not a command changes the focus to the entry widget.  Undone.  Added to KeySpace, above May 2025.
 } // end keyTyped
@@ -769,11 +768,12 @@ func populateUI() {
 	resultLabel.Alignment = fyne.TextAlignCenter
 
 	ss := make([]string, 0, 10)
-	if outputMode == outputfix {
+	switch outputMode { // made a switch statement as recommended by the linter.  Nov 30, 2025.
+	case outputfix:
 		_, ss = hpcalc2.GetResult("DUMPFIXED")
-	} else if outputMode == outputfloat {
+	case outputfloat:
 		_, ss = hpcalc2.GetResult("DUMPFLOAT")
-	} else if outputMode == outputgen {
+	case outputgen:
 		_, ss = hpcalc2.GetResult("DUMP")
 	}
 
