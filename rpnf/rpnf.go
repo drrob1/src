@@ -65,6 +65,7 @@ import (
  1 Nov 25 -- Updated comments.  The screen is built in populateUI using NewVBox for the left and right parts, and then NewHBox to combine them.  SetContent is used to display the output.
 				The input is handled in keyTyped and its brothers.  The explicit go routine is in DoIt, which starts the concurrent code to handle the input.
 30 Nov 25 -- I'm fixing some fyne errors that were flagged now that I've updated to fyne v 2.7.1 from 2.2.3.  I upgraded fyne so that I could play w/ code from Linux Magazine.
+				Now I'm using perplexity to help me define a dark theme.
 */
 
 const lastModified = "Nov 30, 2025"
@@ -101,6 +102,11 @@ type register struct {
 	Name  string
 }
 
+type myDarkTheme struct {
+}
+
+// var _ fyne.Theme = (*myDarkTheme)(nil)  recommended by perplexity.  I don't need it now.
+
 var Storage [36]register // 0 ..  9, a ..  z
 var DisplayTape, stringslice []string
 var inbufChan chan string
@@ -118,6 +124,29 @@ var screenHeight = flag.Float64("sh", 1000, "screen height for the resizze metho
 
 var execname, execTimeStamp string
 var execFI os.FileInfo
+
+func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	if name == theme.ColorNameBackground {
+		// dark background for dark variant, maybe slightly lighter for light variant
+		if variant == theme.VariantDark {
+			return color.RGBA{R: 0x12, G: 0x12, B: 0x12, A: 0xff}
+		}
+		return color.RGBA{R: 0x22, G: 0x22, B: 0x22, A: 0xff}
+	}
+	return theme.DefaultTheme().Color(name, variant)
+}
+
+func (m myDarkTheme) Font(style fyne.TextStyle) fyne.Resource {
+	return theme.DefaultTheme().Font(style)
+}
+
+func (m myDarkTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(name)
+}
+
+func (m myDarkTheme) Size(name fyne.ThemeSizeName) float32 {
+	return theme.DefaultTheme().Size(name)
+}
 
 func main() {
 
@@ -177,6 +206,7 @@ func main() {
 	}
 
 	globalA = app.New()
+	globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.
 	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
