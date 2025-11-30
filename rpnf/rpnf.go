@@ -333,10 +333,16 @@ func Doit() {
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTG") || strings.HasPrefix(rtkn.Str, "GEN") {
 					outputMode = outputgen
 				} else if rtkn.Str == "DARK" {
-					fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+					fyne.Do(func() {
+						// safe to touch widgets here
+						fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+					})
 					lightTheme = false
 				} else if rtkn.Str == "LIGHT" {
-					fyne.CurrentApp().Settings().SetTheme(theme.LightTheme()) // Goland is saying that LightTheme is depracated and will be removed in v3.
+					fyne.Do(func() {
+						// safe to touch widgets here
+						fyne.CurrentApp().Settings().SetTheme(theme.LightTheme()) // Goland is saying that LightTheme is depracated and will be removed in v3.
+					})
 					lightTheme = true
 				} else {
 					// -------------------------------------------------------------------------------------
