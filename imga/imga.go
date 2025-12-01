@@ -3,15 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/storage"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/disintegration/imaging"
-	"github.com/nfnt/resize"
-	_ "golang.org/x/image/webp"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -24,6 +15,16 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/storage"
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
+	_ "golang.org/x/image/webp"
 )
 
 /*
@@ -59,9 +60,10 @@ REVISION HISTORY
 22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 24 Jul 25 -- Added ability to save an image in its current size and degree of rotation.  Developed first in img.go.
 26 Jul 25 -- Using a differnt method to trim off ext of base filename, just to see if it works.
+ 1 Dec 25 -- Added fyne.Do, as was supposed to happen long ago.
 */
 
-const LastModified = "July 26, 2025"
+const LastModified = "Dec 1, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -266,11 +268,15 @@ func loadTheImage() {
 	imageAsDisplayed = loadedimg.Image
 
 	atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
-	globalW.SetContent(loadedimg)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-	globalW.SetTitle(title)
-	globalW.Show()
-	// return
+
+	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
+		// safe to touch widgets here
+		globalW.SetContent(loadedimg)
+		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+		globalW.SetTitle(title)
+		globalW.Show()
+	})
+
 } // end loadTheImage
 
 // ------------------------------- filenameAlphaIndex --------------------------------------

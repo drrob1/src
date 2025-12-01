@@ -74,9 +74,10 @@ REVISION HISTORY
 24 Jul 25 -- Added ability to save an image in its current size and degree of rotation.  Developed first in img.go.
  1 Nov 25 -- Updated the comments below.  And I'm adding here that the core of this app uses container.NewBorder to place elements top, bottom and the image in the center.
 				There is no explicit go routine here to handle the input; input is handled by keyTyped which is implicitly concurrent code.
+ 1 Dec 25 -- Added fyne.Do, as was supposed to happen all along.
 */
 
-const LastModified = "July 24, 2025"
+const LastModified = "Dec 1, 2025"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -383,11 +384,15 @@ func loadTheImage() {
 
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
-	globalW.SetContent(GUI)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
-	globalW.SetTitle(title)
 
-	globalW.Show()
+	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
+		// safe to touch widgets here
+		globalW.SetContent(GUI)
+		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
+		globalW.SetTitle(title)
+		globalW.Show()
+	})
+
 } // end loadTheImage
 
 // filenameIndex --------------------------------------

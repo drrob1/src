@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"image"
+	"image/gif"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
@@ -10,8 +13,6 @@ import (
 	"github.com/nfnt/resize"
 	flag "github.com/spf13/pflag"
 	_ "golang.org/x/image/webp"
-	"image"
-	"image/gif"
 	//_ "image/gif"
 	"image/jpeg"
 	//_ "image/jpeg"
@@ -77,9 +78,10 @@ REVISION HISTORY
 20 Feb 25 -- It works, and uses repeated hits of 'r' to rotate clockwise 90 deg each time.  Or can use '1', '2', '3', or '4' to directly rotate that number of degrees.
 22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 23 Jul 25 -- Got idea to save an image in its current size and degree of rotation.  This may take some time to get right.
+ 1 Dec 25 -- Added fyne.Do, as was supposed to happen all along.
 */
 
-const LastModified = "July 24, 2025"
+const LastModified = "Dec 1, 2025"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -316,10 +318,14 @@ func loadTheImage(idx int) {
 	imageAsDisplayed = loadedimg.Image
 
 	atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
-	globalW.SetContent(loadedimg)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-	globalW.SetTitle(title)
-	globalW.Show()
+
+	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
+		// safe to touch widgets here
+		globalW.SetContent(loadedimg)
+		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+		globalW.SetTitle(title)
+		globalW.Show()
+	})
 
 } // end loadTheImage
 
