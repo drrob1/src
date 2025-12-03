@@ -26,7 +26,7 @@ import (
 
 */
 
-const lastModified = "30 Nov 25"
+const lastModified = "3 Dec 25"
 const width = 800
 const height = 600
 
@@ -46,12 +46,20 @@ type Rect struct {
 }
 
 func NewOverlay() *Overlay {
-	over := &Overlay{}
-	over.ExtendBaseWidget(over)
+	over := Overlay{}
+	over.ExtendBaseWidget(&over)
 	over.con = container.NewWithoutLayout()
 	over.rect = NewRect()
-	return over
+	return &over // pointer semantics
 }
+
+//func NewOverlay() *Overlay { Original function.  I rewrote it in the format recommended by Bill Kennedy.
+//	over := &Overlay{}
+//	over.ExtendBaseWidget(over)
+//	over.con = container.NewWithoutLayout()
+//	over.rect = NewRect()
+//	return over // pointer semantics
+//}
 
 func NewRect() *Rect {
 	return &Rect{}
@@ -168,7 +176,7 @@ func main() {
 	typedKey := func(ev *fyne.KeyEvent) { // I separated this out so I can more easily understand it.
 		key := string(ev.Name)
 		switch key {
-		case "Q":
+		case "Q", "Escape", "X":
 			os.Exit(0)
 		}
 	}
