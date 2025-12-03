@@ -23,6 +23,8 @@ import (
   -------- -------
   30 Nov 25 -- First version.  Copied from Linux Magazine 299, Oct 2025, that I read in Aruba Nov 2025.
 				I had to upgrade fyne to the current version to get it to compile.  Current is 2.7.1.  The version was 2.2.3.
+				This works by creating an overlay on top of the image.  The overlay is a rectangle that can be dragged to select a region.
+				Here, the purpose of the overlay is to highlight the region of interest.
 
 */
 
@@ -88,7 +90,7 @@ func (r *Rect) AsImage(zoom float64) image.Rectangle {
 	y := pos.Y * float32(zoom)
 	w := size.Width * float32(zoom)
 	h := size.Height * float32(zoom)
-	rect := image.Rectangle{Min: image.Point{X: int(x), Y: int(y)}, Max: image.Point{X: int(x + w), Y: int(y + h)}}
+	rect := image.Rectangle{Min: image.Point{X: int(x), Y: int(y)}, Max: image.Point{X: int(x) + int(w), Y: int(y) + int(h)}}
 
 	return rect
 }
@@ -136,7 +138,7 @@ func (t *Overlay) SaveBig(big image.Image, path string) error {
 	r := t.rect.AsImage(t.zoom)
 	draw.Draw(dimg, r, &image.Uniform{t.rect.Color()}, r.Min, draw.Over)
 	err := imaging.Save(dimg, path)
-	return err
+	return err // my simplification.  A linter told me to return err instead of if err != nil return err and then return nil.
 }
 
 func (t *Overlay) LoadImage(r io.Reader) (image.Image, *canvas.Image) {
