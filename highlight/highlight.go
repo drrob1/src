@@ -26,9 +26,16 @@ import (
 				This works by creating an overlay on top of the image.  The overlay is a rectangle that can be dragged to select a region.
 				Here, the purpose of the overlay is to highlight the region of interest.
 
+				From the article, the overlay is at the top of the stack, and the image is at the bottom.  These 2 layers form a composite in which
+				the lower layer is visible unless the upper layer defines something to prevent this.  Initially, the top layer is translucent and the image below is displayed.
+				The upper layer is clickable.  When the Open Image button callback loads a new image from the disk, the program uses Objects[0] to access the stack's container
+				element array, grabs the first element (index 0) and replaces it w/ the image just loaded.  Refresh() is called so the container displays the new image.
+				This is at lines 198 and 199 below.
+
+				The button horizontal container is located vertically above the stack that holds both the image and the overlay.
 */
 
-const lastModified = "3 Dec 25"
+const lastModified = "4 Dec 25"
 const width = 800
 const height = 600
 
@@ -164,7 +171,7 @@ func main() {
 	var big image.Image
 	var imgPath string
 
-	if len(os.Args) == 2 {
+	if len(os.Args) >= 2 {
 		imgPath = os.Args[1]
 		file, err := os.Open(imgPath)
 		if err != nil {
