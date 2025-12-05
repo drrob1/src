@@ -33,6 +33,16 @@ import (
 				This is at lines 198 and 199 below.
 
 				The button horizontal container is located vertically above the stack that holds both the image and the overlay.
+
+				Back to the Original
+                The layer design is ideal for more complex highlighting (eg, additive selections that let the user mark several blocks at once).  Unfortunately, though, the original image's
+                code has been lost, because I shrunk the image at the outset to display it in a more compact way on the desktop.  On top of this, the selection resides in a layer at a higher
+                level.  You may be wondering how the code flattens the image later.  The idea is to save the modified image file including the markers on disk.
+
+                The original file still exists in the main program's memory, and the nighlighting is also there, but scaled down.  The highlighting needs to scale to match when the scaled down
+                image is enlarged again.  This is true for the rectangles origin point and its size (h and w).
+
+
 */
 
 const lastModified = "4 Dec 25"
@@ -53,22 +63,6 @@ type Rect struct {
 	To   fyne.Position
 	Zoom float64
 }
-
-func NewOverlay() *Overlay {
-	over := Overlay{}
-	over.ExtendBaseWidget(&over)
-	over.con = container.NewWithoutLayout()
-	over.rect = NewRect()
-	return &over // pointer semantics
-}
-
-//func NewOverlay() *Overlay { Original function.  I rewrote it in the format recommended by Bill Kennedy.
-//	over := &Overlay{}
-//	over.ExtendBaseWidget(over)
-//	over.con = container.NewWithoutLayout()
-//	over.rect = NewRect()
-//	return over // pointer semantics
-//}
 
 func NewRect() *Rect {
 	return &Rect{}
@@ -106,10 +100,31 @@ func (r *Rect) Color() color.NRGBA {
 	return color.NRGBA{R: 204, G: 255, B: 0, A: 50}
 }
 
-func (t *Overlay) CreateRenderer() fyne.WidgetRenderer {
+func NewOverlay() *Overlay {
+	over := Overlay{}
+	over.ExtendBaseWidget(&over)            // This turns the overlay into a widget that detects mouse clicks and drags.
+	over.con = container.NewWithoutLayout() // This is an empty container that holds the rectangle later in the code.
+	over.rect = NewRect()
+	return &over // pointer semantics
+}
+
+//func NewOverlay() *Overlay { Original function.  I rewrote it in the format recommended by Bill Kennedy.
+//	over := &Overlay{}
+//	over.ExtendBaseWidget(over)
+//	over.con = container.NewWithoutLayout()
+//	over.rect = NewRect()
+//	return over // pointer semantics
+//}
+
+func (t *Overlay) CreateRenderer() fyne.WidgetRenderer { // This uses the container's standard renderer.   So now creating the customized widget is done.
 	return widget.NewSimpleRenderer(t.con)
 }
 
+// Dragged is the function signature for the dragged event.
+// The signature is required by the fyne.Draggable interface.
+// When the user drags the mouse, this function is called because the dragged event is registered with the overlay by the function signature.
+// The event is repeated continuously and sends the mouse pointer's current coordinates to the function avery few miliseconds as it moves over the surface.
+// The sequence ends when the mouse button is released, and the DragEnd event signals the event to the callback function.
 func (t *Overlay) Dragged(e *fyne.DragEvent) {
 	if t.inMotion == false {
 		t.inMotion = true
@@ -118,7 +133,7 @@ func (t *Overlay) Dragged(e *fyne.DragEvent) {
 	}
 	t.rect.To = e.Position
 	pos, size := t.rect.Dims()
-	t.DrawMarker(pos, size)
+	t.DrawMarker(pos, size) // draws the rectangle each time the mouse moves.  It receives the new coordinates from the Dragged event each time it is called.
 }
 
 func (t *Overlay) DragEnd() {
@@ -133,9 +148,9 @@ func (t *Overlay) DrawMarker(pos fyne.Position, size fyne.Size) {
 		t.marker = rect
 		return
 	}
-	t.con.Remove(t.marker)
-	t.marker = rect
-	t.con.Add(rect)
+	t.con.Remove(t.marker) // remove previous rectangle
+	t.marker = rect        // replace with new rectangle
+	t.con.Add(rect)        // store the new rectangle into the container, using the current coordinates and size.
 	t.Refresh()
 	return
 }
@@ -198,7 +213,7 @@ func main() {
 		defer reader.Close()
 		imgPath = reader.URI().Path()
 		big, img = ov.LoadImage(reader)
-		stack.Objects[0] = img
+		stack.Objects[0] = img // the bottom of the stack, at position [0], is the image.
 		stack.Refresh()
 	}
 	openBtnFunc := func() {
