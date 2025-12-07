@@ -22,27 +22,44 @@ import (
   REVISION HISTORY
   -------- -------
   30 Nov 25 -- First version.  Copied from Linux Magazine 299, Oct 2025, that I read in Aruba Nov 2025.
-				I had to upgrade fyne to the current version to get it to compile.  Current is 2.7.1.  The version was 2.2.3.
-				This works by creating an overlay on top of the image.  The overlay is a rectangle that can be dragged to select a region.
-				Here, the purpose of the overlay is to highlight the region of interest.
+			I had to upgrade fyne to the current version to get it to compile.  Current is 2.7.1.  The old version was 2.2.3.
+			This works by creating an overlay on top of the image.  The overlay is a rectangle that can be dragged to select a region.
+			Here, the purpose of the overlay is to highlight the region of interest.
 
-				From the article, the overlay is at the top of the stack, and the image is at the bottom.  These 2 layers form a composite in which
-				the lower layer is visible unless the upper layer defines something to prevent this.  Initially, the top layer is translucent and the image below is displayed.
-				The upper layer is clickable.  When the Open Image button callback loads a new image from the disk, the program uses Objects[0] to access the stack's container
-				element array, grabs the first element (index 0) and replaces it w/ the image just loaded.  Refresh() is called so the container displays the new image.
-				This is at lines 198 and 199 below.
+			From the article, the overlay is at the top of the stack, and the image is at the bottom.  These 2 layers form a composite in which
+			the lower layer is visible unless the upper layer defines something to prevent this.  Initially, the top layer is translucent and the image below is displayed.
+			The upper layer is clickable.  When the Open Image button callback loads a new image from the disk, the program uses Objects[0] to access the stack's container
+			element array, grabs the first element (index 0) and replaces it w/ the image just loaded.  Refresh() is called so the container displays the new image.
+			This is at lines 198 and 199 below.
 
-				The button horizontal container is located vertically above the stack that holds both the image and the overlay.
+			The button horizontal container is located vertically above the stack that holds both the image and the overlay.
 
-				Back to the Original
-                The layer design is ideal for more complex highlighting (eg, additive selections that let the user mark several blocks at once).  Unfortunately, though, the original image's
-                code has been lost, because I shrunk the image at the outset to display it in a more compact way on the desktop.  On top of this, the selection resides in a layer at a higher
-                level.  You may be wondering how the code flattens the image later.  The idea is to save the modified image file including the markers on disk.
+			Back to the Original
+            The layer design is ideal for more complex highlighting (eg, additive selections that let the user mark several blocks at once).  Unfortunately, though, the original image's
+            code has been lost, because I shrunk the image at the outset to display it in a more compact way on the desktop.  On top of this, the selection resides in a layer at a higher
+            level.  You may be wondering how the code flattens the image later.  The idea is to save the modified image file including the markers on disk.
 
-                The original file still exists in the main program's memory, and the nighlighting is also there, but scaled down.  The highlighting needs to scale to match when the scaled down
-                image is enlarged again.  This is true for the rectangles origin point and its size (h and w).
+            The original file still exists in the main program's memory, and the nighlighting is also there, but scaled down.  The highlighting needs to scale to match when the scaled down
+            image is enlarged again.  This is true for the rectangle origin point (x,y) and its size (h and w).
 
+			The loadImage() function trimmed the image to a width of 800 pixels and a height resulting from a constant aspect ratio.  If the original width of the image was X pixels,
+			this results in a downscaling factor of X/800.  To transfer the highlighting in the display layer to the original image, the code needs to multiply both the X,Y position
+			and the width, height of the marker by the scaling factor.
 
+			The AsImage() function expects the scaling factor as an artument for this stretching operation; it draws a rectangle w/ the new dimensions.  Note that Go's image package
+			expects the coordinates of a rectangle in a different format than the Fyne framework.  While Fyne requires the top left corner as the origin and the length and width of the rectangle
+			the image package defines Min in the image.Point format as the starting point in the upper left corner and the coordinates of the bottom right corner as Max.
+
+			Both are legitimate formats, but the code has to translate btwn the 2 formats.  The return of AsImage() uses RGB values and an alpha value to define the yellow-green highlighting
+			color while keeping the text below it shining through.
+
+			To save a screenshot with highlighting back to disk in its original format, the SaveBig() function clones the original image to big; this is because Go's image.Image
+			structure does not allow any modifications by default.  The Clone() command returns a structure that uses the same interface, but allows drawing with Draw().
+			The draw.Over param superimposes the semi-transparent rectangle over the image file on disk, like in the GUI.
+
+			The three standard commands (go mod init, go mod tidy, go build) create the binary.  Then you just need to move the finalized GUI program to a path in the $PATH environment variable.
+            There is nothing to stop you from highlighting images.  You can add code as you see fit.  Want to highlight more sections while holding down the Super key or save in a
+			different path?  Go for it.
 */
 
 const lastModified = "4 Dec 25"
