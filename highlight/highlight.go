@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/disintegration/imaging"
 )
@@ -63,7 +64,7 @@ import (
 			The three standard commands (go mod init, go mod tidy, go build) create the binary.  Then you just need to move the finalized GUI program to a path in the $PATH environment variable.
             There is nothing to stop you from highlighting images.  You can add code as you see fit.  Want to highlight more sections while holding down the Super key or save in a
 			different path?  Go for it.
-  13 Dec 25 -- Added saving to a random name, not to overwrite the original.
+  13 Dec 25 -- Added saving to a random name, not to overwrite the original.  I needed to use Junie AI chat to learn how to convert from path string to a listableURI.
 */
 
 const lastModified = "13 Dec 25"
@@ -251,8 +252,23 @@ func main() {
 		stack.Objects[0] = img // the bottom of the stack, at position [0], is the image.
 		stack.Refresh()
 	}
-	openBtnFunc := func() {
-		dialog.NewFileOpen(fileOpenFunc, w).Show()
+	//openBtnFunc := func() { // artidle example.
+	//	dialog.NewFileOpen(fileOpenFunc, w).Show()
+	//}
+	openBtnFunc := func() { // I want to specify starting directory 1st
+		openDialog := dialog.NewFileOpen(fileOpenFunc, w)
+		workingDir, err := os.Getwd()
+		if err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+		uri, err := listableFromPath(workingDir)
+		if err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+		openDialog.SetLocation(uri)
+		openDialog.Show()
 	}
 	openBtn := widget.NewButton("Open Image", openBtnFunc)
 
@@ -269,4 +285,10 @@ func main() {
 
 	w.ShowAndRun()
 
+}
+
+func listableFromPath(path string) (fyne.ListableURI, error) {
+	u := storage.NewFileURI(path)
+	listerURI, err := storage.ListerForURI(u)
+	return listerURI, err
 }
