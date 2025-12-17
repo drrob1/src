@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -65,9 +66,11 @@ import (
             There is nothing to stop you from highlighting images.  You can add code as you see fit.  Want to highlight more sections while holding down the Super key or save in a
 			different path?  Go for it.
   13 Dec 25 -- Added saving to a random name, not to overwrite the original.  I needed to use Junie AI chat to learn how to convert from path string to a listableURI.
+				I don't like the built-in fyne open dialog.  There is no way to narrow down the search.  I will use Junie AI chat to learn how to create a custom dialog.
+  17 Dec 25 -- Separated out the AI-generated code for a custom menu to open files, so I can try to understand it better.
 */
 
-const lastModified = "13 Dec 25"
+const lastModified = "17 Dec 25"
 const width = 800
 const height = 600
 
@@ -189,6 +192,7 @@ func (t *Overlay) SaveBig(big image.Image, path string) error {
 	draw.Draw(dimg, r, &image.Uniform{t.rect.Color()}, r.Min, draw.Over)
 	i := rand.IntN(1_000_000)
 	s := strconv.Itoa(i)
+	// b := strings.TrimSuffix(base, filepath.Ext(base)) is an alternate way to get the base name.
 	ext := filepath.Ext(path)
 	baseName := path[:len(path)-len(ext)]
 	err := imaging.Save(dimg, baseName+"_"+s+ext)
@@ -242,6 +246,23 @@ func main() {
 	}
 	w.Canvas().SetOnTypedKey(typedKey)
 
+	workingDir, err := os.Getwd()
+	if err != nil {
+		dialog.ShowError(err, w)
+		return
+	}
+	curURI, err := listableFromPath(workingDir)
+	if err != nil {
+		dialog.ShowError(err, w)
+		return
+	}
+
+	nameEntry := widget.NewEntry()
+	nameEntry.SetPlaceHolder("Filter by base name (e.g., report, invoice)")
+	nameEntry.OnChanged = func(_ string) {
+		items, pathLabel, list := refreshLst(curURI, nameEntry.Text) // this is the routine above
+	}
+
 	fileOpenFunc := func(reader fyne.URIReadCloser, err error) {
 		if err != nil || reader == nil {
 			return
@@ -257,20 +278,26 @@ func main() {
 	//}
 	openBtnFunc := func() { // I want to specify starting directory 1st
 		openDialog := dialog.NewFileOpen(fileOpenFunc, w)
-		workingDir, err := os.Getwd()
-		if err != nil {
-			dialog.ShowError(err, w)
-			return
-		}
-		uri, err := listableFromPath(workingDir)
-		if err != nil {
-			dialog.ShowError(err, w)
-			return
-		}
-		openDialog.SetLocation(uri)
+		openDialog.SetLocation(curURI)
+		openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"}))
 		openDialog.Show()
 	}
 	openBtn := widget.NewButton("Open Image", openBtnFunc)
+
+	openBtn2 := widget.NewButton("Open…", func() {
+		// Example: only show files whose base name starts with "img_" and are PNG/JPG
+		NewOpenFileDialogWithPrefix(w, "img_", []string{".png", ".jpg", ".jpeg"}, func(u fyne.URI) {
+			// handle selection; for example, open via storage.OpenFileFromURI
+			//f, err := storage.OpenFileFromURI(u) // depracated according to Goland.
+			f, err := storage.Reader(u)
+			if err != nil {
+				dialog.ShowError(err, w)
+				return
+			}
+			defer f.Close()
+			// ... decode image, etc.
+		})
+	})
 
 	saveBtnFunc := func() {
 		ov.SaveBig(big, imgPath)
@@ -279,7 +306,7 @@ func main() {
 
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
-	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
+	buttons := container.NewHBox(openBtn, openBtn2, saveBtn, quitBtn)
 
 	w.SetContent(container.NewVBox(buttons, stack))
 
