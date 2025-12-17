@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -21,6 +20,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/disintegration/imaging"
+	"github.com/spf13/pflag"
 )
 
 /*
@@ -68,6 +68,7 @@ import (
   13 Dec 25 -- Added saving to a random name, not to overwrite the original.  I needed to use Junie AI chat to learn how to convert from path string to a listableURI.
 				I don't like the built-in fyne open dialog.  There is no way to narrow down the search.  I will use Junie AI chat to learn how to create a custom dialog.
   17 Dec 25 -- Separated out the AI-generated code for a custom menu to open files, so I can try to understand it better.
+				I still don't understand it well.  So I asked perplexity.  I think I understand it now.  It's all about the SetFilter function that must return a bool.
 */
 
 const lastModified = "17 Dec 25"
@@ -180,7 +181,6 @@ func (t *Overlay) DrawMarker(pos fyne.Position, size fyne.Size) {
 	t.marker = rect        // replace with new rectangle
 	t.con.Add(rect)        // store the new rectangle into the container, using the current coordinates and size.
 	t.Refresh()
-	return
 }
 
 // SaveBig -- To save a screenshot with highlighting back to disk in its original format, the SaveBig() function clones the original image to big; this is because Go's
@@ -217,23 +217,30 @@ func (t *Overlay) LoadImage(r io.Reader) (image.Image, *canvas.Image) {
 }
 
 func main() {
-	a := app.NewWithID("com.example.imagehighlighter")
+	a := app.NewWithID("com.example.Image_Highlighter")
 	s := fmt.Sprintf("Image Highlighter, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
 	ov := NewOverlay()
 	img := &canvas.Image{}
 	var big image.Image
-	var imgPath string
+	var imgPath, basenameSearchStr string
 
-	if len(os.Args) >= 2 {
-		imgPath = os.Args[1]
+	pflag.StringVarP(&basenameSearchStr, "search", "s", "", "String to search base filename against.  If not specified, the program opens the first image file in the current directory.")
+	pflag.Parse()
+
+	if pflag.NArg() > 0 {
+		imgPath = pflag.Arg(0)
 		file, err := os.Open(imgPath)
 		if err != nil {
 			panic(err)
 		}
 		defer file.Close() // this is not in the article.  The AI here added it.
 		big, img = ov.LoadImage(file)
+	}
+
+	if basenameSearchStr == "" { // this will allow either setting the search string as a command line argument or not.
+		basenameSearchStr = pflag.Arg(1)
 	}
 
 	stack := container.NewStack(img, ov)
@@ -257,12 +264,6 @@ func main() {
 		return
 	}
 
-	nameEntry := widget.NewEntry()
-	nameEntry.SetPlaceHolder("Filter by base name (e.g., report, invoice)")
-	nameEntry.OnChanged = func(_ string) {
-		items, pathLabel, list := refreshLst(curURI, nameEntry.Text) // this is the routine above
-	}
-
 	fileOpenFunc := func(reader fyne.URIReadCloser, err error) {
 		if err != nil || reader == nil {
 			return
@@ -273,31 +274,17 @@ func main() {
 		stack.Objects[0] = img // the bottom of the stack, at position [0], is the image.
 		stack.Refresh()
 	}
-	//openBtnFunc := func() { // artidle example.
+	//openBtnFunc := func() { // article example.
 	//	dialog.NewFileOpen(fileOpenFunc, w).Show()
 	//}
 	openBtnFunc := func() { // I want to specify starting directory 1st
 		openDialog := dialog.NewFileOpen(fileOpenFunc, w)
 		openDialog.SetLocation(curURI)
 		openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"}))
+		openDialog.SetFilter(&nameFilterType{search: basenameSearchStr}) // I hope if this is empty, then it matches everything.  And I hope I can have 2 filtering conditions.
 		openDialog.Show()
 	}
 	openBtn := widget.NewButton("Open Image", openBtnFunc)
-
-	openBtn2 := widget.NewButton("Open…", func() {
-		// Example: only show files whose base name starts with "img_" and are PNG/JPG
-		NewOpenFileDialogWithPrefix(w, "img_", []string{".png", ".jpg", ".jpeg"}, func(u fyne.URI) {
-			// handle selection; for example, open via storage.OpenFileFromURI
-			//f, err := storage.OpenFileFromURI(u) // depracated according to Goland.
-			f, err := storage.Reader(u)
-			if err != nil {
-				dialog.ShowError(err, w)
-				return
-			}
-			defer f.Close()
-			// ... decode image, etc.
-		})
-	})
 
 	saveBtnFunc := func() {
 		ov.SaveBig(big, imgPath)
@@ -306,7 +293,7 @@ func main() {
 
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
-	buttons := container.NewHBox(openBtn, openBtn2, saveBtn, quitBtn)
+	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
 
 	w.SetContent(container.NewVBox(buttons, stack))
 
