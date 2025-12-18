@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -70,7 +71,8 @@ import (
 				I don't like the built-in fyne open dialog.  There is no way to narrow down the search.  I will use Junie AI chat to learn how to create a custom dialog.
   17 Dec 25 -- Separated out the AI-generated code for a custom menu to open files, so I can try to understand it better.
 				I still don't understand it well.  So I asked perplexity.  I think I understand it now.  It's all about the SetFilter function that must return a bool.
-  18 Dec 25 -- Added code to make sure it's a picture file.
+  18 Dec 25 -- Added code to make sure it's a picture file, using the regexp below.  Now I'm adding the code to only show files that match the current base name, still using the
+				standard dialog (that I hate).  It takes the base name of the file opened by the open file button function.
 */
 
 const lastModified = "18 Dec 25"
@@ -159,7 +161,7 @@ func (t *Overlay) CreateRenderer() fyne.WidgetRenderer { // This uses the contai
 // The event is repeated continuously and sends the mouse pointer's current coordinates to the function avery few miliseconds as it moves over the surface.
 // The sequence ends when the mouse button is released, and the DragEnd event signals the event to the callback function.
 func (t *Overlay) Dragged(e *fyne.DragEvent) {
-	if t.inMotion == false {
+	if !t.inMotion { // the article explicitly compares to false.  StaticCheck cried foul and said to change it.
 		t.inMotion = true
 		t.rect.From = e.Position
 		return
@@ -274,6 +276,9 @@ func main() {
 		}
 		defer reader.Close()
 		imgPath = reader.URI().Path()
+		ext := filepath.Ext(imgPath)
+		basenameSearchStr = filepath.Base(imgPath)
+		basenameSearchStr = strings.TrimSuffix(basenameSearchStr, ext)
 		big, img = ov.LoadImage(reader)
 		stack.Objects[0] = img // the bottom of the stack, at position [0], is the image.
 		stack.Refresh()
