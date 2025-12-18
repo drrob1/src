@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/storage"
 )
 
 /*
@@ -19,9 +20,14 @@ type nameFilterType struct {
 	search string
 }
 
-func (f nameFilterType) Matches(u fyne.URI) bool { // why does this need to be a pointer?
+func (f nameFilterType) Matches(u fyne.URI) bool { //  I'm going to add check against a directory
 	// base name without directories
 	name := u.Name()
+
+	isDir, _ := storage.CanList(u) // this doesn't prevent the directories from being populated also
+	if isDir {
+		return false
+	}
 
 	// for case-insensitive substring match:
 	return strings.Contains(
