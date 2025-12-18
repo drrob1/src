@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 
@@ -69,11 +70,14 @@ import (
 				I don't like the built-in fyne open dialog.  There is no way to narrow down the search.  I will use Junie AI chat to learn how to create a custom dialog.
   17 Dec 25 -- Separated out the AI-generated code for a custom menu to open files, so I can try to understand it better.
 				I still don't understand it well.  So I asked perplexity.  I think I understand it now.  It's all about the SetFilter function that must return a bool.
+  18 Dec 25 -- Added code to make sure it's a picture file.
 */
 
-const lastModified = "17 Dec 25"
+const lastModified = "18 Dec 25"
 const width = 800
 const height = 600
+
+var picRegexp *regexp.Regexp = regexp.MustCompile(`(?i)\.(jpg|jpeg|png|gif|bmp|webp)$`) // I added this line to make the search case insensitive, by AI.
 
 type Overlay struct {
 	widget.BaseWidget
@@ -280,7 +284,7 @@ func main() {
 	openBtnFunc := func() { // I want to specify starting directory 1st
 		openDialog := dialog.NewFileOpen(fileOpenFunc, w)
 		openDialog.SetLocation(curURI)
-		openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"}))
+		// openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"})) This line was ignored.  Can't have 2 filtering cond's.
 		openDialog.SetFilter(&nameFilterType{search: basenameSearchStr}) // I hope if this is empty, then it matches everything.  And I hope I can have 2 filtering conditions.
 		openDialog.Show()
 	}

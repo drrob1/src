@@ -10,6 +10,7 @@ import (
 /*
   17 Dec 25 -- I separated out the AI-generated code for a custom menu to open files, so I can try to understand it better.
 				I still don't understand it well.  So I asked perplexity.  I think I understand it now.  It's all about the SetFilter function that must return a bool.
+  18 Dec 25 -- Added code to make sure it's a picture file.
 */
 
 type FileFilterI interface {
@@ -26,6 +27,10 @@ func (f nameFilterType) Matches(u fyne.URI) bool { //  I'm going to add check ag
 
 	isDir, _ := storage.CanList(u) // this doesn't prevent the directories from being populated also
 	if isDir {
+		return false
+	}
+	isPic := picRegexp.MatchString(name)
+	if !isPic {
 		return false
 	}
 
