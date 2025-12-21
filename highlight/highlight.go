@@ -73,9 +73,10 @@ import (
 				I still don't understand it well.  So I asked perplexity.  I think I understand it now.  It's all about the SetFilter function that must return a bool.
   18 Dec 25 -- Added code to make sure it's a picture file, using the regexp below.  Now I'm adding the code to only show files that match the current base name, still using the
 				standard dialog (that I hate).  It takes the base name of the file opened by the open file button function.
+  21 Dec 25 -- Added dialog.ShowInformation so that I know what filename it was saved under.
 */
 
-const lastModified = "18 Dec 25"
+const lastModified = "21 Dec 25"
 const width = 800
 const height = 600
 
@@ -201,7 +202,9 @@ func (t *Overlay) SaveBig(big image.Image, path string) error {
 	// b := strings.TrimSuffix(base, filepath.Ext(base)) is an alternate way to get the base name.
 	ext := filepath.Ext(path)
 	baseName := path[:len(path)-len(ext)]
-	err := imaging.Save(dimg, baseName+"_"+s+ext)
+	savedFilename := baseName + "_" + s + ext
+	dialog.ShowInformation("Saved Filename is", savedFilename, w)
+	err := imaging.Save(dimg, savedFilename)
 	return err // my simplification.  A linter told me to return err instead of if err != nil return err and then return nil.
 }
 
@@ -222,10 +225,11 @@ func (t *Overlay) LoadImage(r io.Reader) (image.Image, *canvas.Image) {
 	return big, img
 }
 
+var w fyne.Window // global so other functions have access to it.
 func main() {
 	a := app.NewWithID("com.example.Image_Highlighter")
 	s := fmt.Sprintf("Image Highlighter, last modified %s, compiled with %s", lastModified, runtime.Version())
-	w := a.NewWindow(s)
+	w = a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
 	ov := NewOverlay()
 	img := &canvas.Image{}

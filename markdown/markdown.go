@@ -94,7 +94,8 @@ func main() {
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
 	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
-	grid := container.NewAdaptiveGrid(2, editWidget, previewWidget)
+	//grid := container.NewAdaptiveGrid(2, editWidget, previewWidget)  I don't need an adaptive grid here; Andy was just demo'ing it for the talk.
+	grid := container.NewGridWithColumns(2, editWidget, previewWidget)
 	vbox := container.NewVBox(buttons, grid)
 
 	w.SetContent(vbox)
