@@ -15,6 +15,7 @@ import (
 
 const width = 800
 const height = 680
+const minRowsVisible = 30
 
 func main() {
 	var path, basenameSearchStr string
@@ -22,6 +23,7 @@ func main() {
 	w := a.NewWindow("Markdown Editor")
 
 	editWidget := widget.NewMultiLineEntry()
+	editWidget.SetMinRowsVisible(minRowsVisible)        // got this from perplexity
 	previewWidget := widget.NewRichTextFromMarkdown("") // empty string just to initialize it
 	editWidget.OnChanged = previewWidget.ParseMarkdown
 
@@ -94,9 +96,10 @@ func main() {
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
 	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
-	//grid := container.NewAdaptiveGrid(2, editWidget, previewWidget)  I don't need an adaptive grid here; Andy was just demo'ing it for the talk.
-	grid := container.NewGridWithColumns(2, editWidget, previewWidget)
+	editWidget.Resize(fyne.NewSize(width/2, height-50)) // AI wrote these params.  I'll see what it does.
+	grid := container.NewAdaptiveGrid(2, editWidget, previewWidget)
 	vbox := container.NewVBox(buttons, grid)
+	//vbox := container.NewVBox(grid, buttons) // didn't matter
 
 	w.SetContent(vbox)
 
