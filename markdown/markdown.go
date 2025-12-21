@@ -17,6 +17,10 @@ const width = 800
 const height = 680
 const minRowsVisible = 30
 
+/*
+  21 Dec 25 -- Andy Williams gave a talk at GopherCon UK in 2024 that I heard yesterday.  I created this from his talk, after expanding the minimal code he gave there.
+*/
+
 func main() {
 	var path, basenameSearchStr string
 	a := app.New()
