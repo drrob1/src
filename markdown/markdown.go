@@ -68,7 +68,7 @@ func main() {
 		openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".md", ".markdown"}))
 		openDialog.Show()
 	}
-	openBtn := widget.NewButton("Open Image", openBtnFunc)
+	openBtn := widget.NewButton("Open markdown file", openBtnFunc)
 
 	showSaveFunc := func(win fyne.Window, data []byte) {
 		writeCallback := func(wr fyne.URIWriteCloser, err error) {
@@ -95,7 +95,7 @@ func main() {
 	saveBtnFunc := func() {
 		showSaveFunc(w, []byte(editWidget.Text))
 	}
-	saveBtn := widget.NewButton("Save Image", saveBtnFunc)
+	saveBtn := widget.NewButton("Save markdown file", saveBtnFunc)
 
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
