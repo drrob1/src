@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,6 +68,20 @@ func NewOpenFileDialogWithPrefix(parent fyne.Window, prefix string, exts []strin
 			}
 		},
 	)
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		dialog.ShowError(err, w)
+		return
+	}
+	curURI, err = listableFromPath(workingDir)
+	if err != nil {
+		dialog.ShowError(err, w)
+		return
+	}
+
+	fmt.Printf("workingDir is %s, current URI path is %s, URI name is %s\n\n", workingDir, curURI.Path(), curURI.Name())
+	dialog.ShowInformation("current URI path", curURI.Path(), parent)
 
 	refreshList := func() {
 		items = items[:0]
@@ -151,6 +166,7 @@ func NewOpenFileDialogWithPrefix(parent fyne.Window, prefix string, exts []strin
 			onOpen(selected.uri)
 		}
 	}, parent)
+	dlg.Resize(fyne.NewSize(width, height))
 
 	refreshList()
 	dlg.Show()

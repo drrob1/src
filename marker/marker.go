@@ -145,14 +145,6 @@ func NewOverlay() *Overlay {
 	return &over // pointer semantics
 }
 
-//func NewOverlay() *Overlay { Original function.  I rewrote it in the format recommended by Bill Kennedy.
-//	over := &Overlay{}
-//	over.ExtendBaseWidget(over)
-//	over.con = container.NewWithoutLayout()
-//	over.rect = NewRect()
-//	return over // pointer semantics
-//}
-
 func (t *Overlay) CreateRenderer() fyne.WidgetRenderer { // This uses the container's standard renderer.   So now creating the customized widget is done.
 	return widget.NewSimpleRenderer(t.con)
 }
@@ -203,6 +195,8 @@ func (t *Overlay) SaveBig(big image.Image, path string) error {
 	// b := strings.TrimSuffix(base, filepath.Ext(base)) is an alternate way to get the base name.
 	ext := filepath.Ext(path)
 	baseName := path[:len(path)-len(ext)]
+	savedFilename := baseName + "_" + s + ext
+	dialog.ShowInformation("Saved Filename is", savedFilename, w)
 	err := imaging.Save(dimg, baseName+"_"+s+ext)
 	return err // my simplification.  A linter told me to return err instead of if err != nil return err and then return nil.
 }
@@ -224,10 +218,11 @@ func (t *Overlay) LoadImage(r io.Reader) (image.Image, *canvas.Image) {
 	return big, img
 }
 
+var w fyne.Window // global so other functions have access to it.
 func main() {
 	a := app.NewWithID("com.example.Image_Highlighter")
 	s := fmt.Sprintf("Image Highlighter, last modified %s, compiled with %s", lastModified, runtime.Version())
-	w := a.NewWindow(s)
+	w = a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
 	ov := NewOverlay()
 	img := &canvas.Image{}
@@ -272,6 +267,33 @@ func main() {
 		return
 	}
 
+	/*
+	   Usage in your app (e.g., in marker.go):
+	*/
+	openFunc2 := func(r fyne.URI) {
+		if r == nil {
+			return
+		}
+		f, er := storage.Reader(r)
+		if er != nil {
+			dialog.ShowError(er, w)
+			return
+		}
+		defer f.Close()
+
+		imgPath = r.Path()
+		ext := filepath.Ext(imgPath)
+		basenameSearchStr = filepath.Base(imgPath)
+		basenameSearchStr = strings.TrimSuffix(basenameSearchStr, ext)
+		big, img = ov.LoadImage(f)
+		stack.Objects[0] = img // the bottom of the stack, at position [0], is the image.
+		stack.Refresh()
+	}
+
+	openBtn2 := widget.NewButton("Open…2", func() {
+		NewOpenFileDialogWithPrefix(w, basenameSearchStr, []string{".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}, openFunc2)
+	})
+
 	fileOpenFunc := func(reader fyne.URIReadCloser, err error) { // this closure gets called AFTER the user has selected a file from the fyne dialog.
 		if err != nil || reader == nil {
 			return
@@ -304,7 +326,7 @@ func main() {
 
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
-	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
+	buttons := container.NewHBox(openBtn, openBtn2, saveBtn, quitBtn)
 
 	w.SetContent(container.NewVBox(buttons, stack))
 
