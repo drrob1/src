@@ -76,9 +76,10 @@ import (
   19 Dec 25 -- Now called marker.go, from highlight.go.  The magazine article wanted it called marker after all.  I'm going to keep highlight as working code, and play more here.
                 And I included the contents of fileopenstuff.go here, so I don't have a separate file here, so far.
   22 Dec 25 -- Junie told me that I can resize dialog boxes from code.  So I resized both the built-in file open dialog box and the custom box.  I like the custom box better
+  23 Dec 25 -- I'm using storage.NewFileURI instead of the routine AI wrote for me a little while ago, in fileio.go.
 */
 
-const lastModified = "22 Dec 25"
+const lastModified = "23 Dec 25"
 const width = 800
 const height = 600
 
