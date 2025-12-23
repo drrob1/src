@@ -75,9 +75,10 @@ import (
 				standard dialog (that I hate).  It takes the base name of the file opened by the open file button function.
   19 Dec 25 -- Now called marker.go, from highlight.go.  The magazine article wanted it called marker after all.  I'm going to keep highlight as working code, and play more here.
                 And I included the contents of fileopenstuff.go here, so I don't have a separate file here, so far.
+  22 Dec 25 -- Junie told me that I can resize dialog boxes from code.  So I resized both the built-in file open dialog box and the custom box.  I like the custom box better
 */
 
-const lastModified = "20 Dec 25"
+const lastModified = "22 Dec 25"
 const width = 800
 const height = 600
 
@@ -315,7 +316,7 @@ func main() {
 		openDialog.SetLocation(curURI)
 		// openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"})) This line was ignored.  Can't have 2 filtering cond's.
 		openDialog.SetFilter(&nameFilterType{search: basenameSearchStr}) // I hope if this is empty, then it matches everything.  And I hope I can have 2 filtering conditions.
-		openDialog.Resize(fyne.NewSize(width, height))
+		openDialog.Resize(fyne.NewSize(width, width))
 		openDialog.Show()
 	}
 	openBtn := widget.NewButton("Open Image", openBtnFunc)

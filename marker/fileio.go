@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,8 +79,8 @@ func NewOpenFileDialogWithPrefix(parent fyne.Window, prefix string, exts []strin
 		return
 	}
 
-	fmt.Printf("workingDir is %s, current URI path is %s, URI name is %s\n\n", workingDir, curURI.Path(), curURI.Name())
-	dialog.ShowInformation("current URI path", curURI.Path(), parent)
+	//fmt.Printf("workingDir is %s, current URI path is %s, URI name is %s\n\n", workingDir, curURI.Path(), curURI.Name())  Don't need this anymore, as I've found the issue.
+	//dialog.ShowInformation("current URI path", curURI.Path(), parent)  My curURI was being reassigned in code below, that I've commented out.
 
 	refreshList := func() {
 		items = items[:0]
@@ -112,12 +111,12 @@ func NewOpenFileDialogWithPrefix(parent fyne.Window, prefix string, exts []strin
 		pathLabel.SetText(curURI.Path())
 	}
 
-	// pick a sensible starting directory (caller could set something else)
-	if home, err := os.UserHomeDir(); err == nil {
-		curURI = storage.NewFileURI(home)
-	} else {
-		curURI = storage.NewFileURI(".")
-	}
+	// pick a sensible starting directory (caller could set something else)  Nope, I've set this above to the current working directory.
+	//if home, err := os.UserHomeDir(); err == nil {
+	//	curURI = storage.NewFileURI(home)
+	//} else {
+	//	curURI = storage.NewFileURI(".")
+	//}
 
 	openBtn := widget.NewButton("Open", func() {
 		if selected != nil && !selected.isDir {
