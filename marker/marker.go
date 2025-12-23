@@ -315,6 +315,7 @@ func main() {
 		openDialog.SetLocation(curURI)
 		// openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"})) This line was ignored.  Can't have 2 filtering cond's.
 		openDialog.SetFilter(&nameFilterType{search: basenameSearchStr}) // I hope if this is empty, then it matches everything.  And I hope I can have 2 filtering conditions.
+		openDialog.Resize(fyne.NewSize(width, height))
 		openDialog.Show()
 	}
 	openBtn := widget.NewButton("Open Image", openBtnFunc)
