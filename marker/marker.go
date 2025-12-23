@@ -73,6 +73,7 @@ import (
 				I still don't understand it well.  So I asked perplexity.  I think I understand it now.  It's all about the SetFilter function that must return a bool.
   18 Dec 25 -- Added code to make sure it's a picture file, using the regexp below.  Now I'm adding the code to only show files that match the current base name, still using the
 				standard dialog (that I hate).  It takes the base name of the file opened by the open file button function.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   19 Dec 25 -- Now called marker.go, from highlight.go.  The magazine article wanted it called marker after all.  I'm going to keep highlight as working code, and play more here.
                 And I included the contents of fileopenstuff.go here, so I don't have a separate file here, so far.
   22 Dec 25 -- Junie told me that I can resize dialog boxes from code.  So I resized both the built-in file open dialog box and the custom box.  I like the custom box better
