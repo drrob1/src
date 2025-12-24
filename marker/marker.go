@@ -223,8 +223,8 @@ func (t *Overlay) LoadImage(r io.Reader) (image.Image, *canvas.Image) {
 
 var w fyne.Window // global so other functions have access to it.
 func main() {
-	a := app.NewWithID("com.example.Image_Highlighter")
-	s := fmt.Sprintf("Image Highlighter, last modified %s, compiled with %s", lastModified, runtime.Version())
+	a := app.NewWithID("com.example.Image_Marker_Highlighter")
+	s := fmt.Sprintf("Image Marker Highlighter, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w = a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
 	ov := NewOverlay()
@@ -271,7 +271,7 @@ func main() {
 	}
 
 	/*
-	   Usage in your app (e.g., in marker.go):
+	   Usaging the custom open file dialog box
 	*/
 	openFunc2 := func(r fyne.URI) {
 		if r == nil {
@@ -317,7 +317,7 @@ func main() {
 		openDialog := dialog.NewFileOpen(fileOpenFunc, w)
 		openDialog.SetLocation(curURI)
 		// openDialog.SetFilter(storage.NewExtensionFileFilter([]string{".jpg", ".jpeg", ".png", ".gif", ".bmp", "webp"})) This line was ignored.  Can't have 2 filtering cond's.
-		openDialog.SetFilter(&nameFilterType{search: basenameSearchStr}) // I hope if this is empty, then it matches everything.  And I hope I can have 2 filtering conditions.
+		openDialog.SetFilter(&nameFilterType{search: basenameSearchStr}) // I hope if this is empty, then it matches everything.
 		openDialog.Resize(fyne.NewSize(width, width))
 		openDialog.Show()
 	}
