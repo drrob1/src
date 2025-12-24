@@ -251,13 +251,13 @@ func main() {
 	entry := widget.NewEntryWithData(basenameSearchStr)
 	entry.PlaceHolder = "Search for file                 "
 	entry.Resize(fyne.NewSize(200, 25)) // these numbers were set by AI
-	entryLabel := widget.NewLabel("Search for file:")
-	entryContainer := container.NewHBox(entryLabel, entry)
-	entryContainer.Resize(fyne.NewSize(300, 25))
-	entry.OnChanged = func(s string) {
-		entryLabel.SetText(fmt.Sprintf("Search for file: %s", s))
-		entryContainer.Refresh()
-	}
+	//entryLabel := widget.NewLabel("Search for file:")  Wow.  The existence of this label
+	//entryContainer := container.NewHBox(entryLabel, entry)  made the entry box very narrow.
+	//entryContainer.Resize(fyne.NewSize(300, 25))            removing the label allowed the entry box
+	//entry.OnChanged = func(s string) {                      to be as big as it needed to be.
+	//	entryLabel.SetText(fmt.Sprintf("Search for file: %s", s))
+	//	entryContainer.Refresh()
+	//}
 
 	if pflag.NArg() > 0 {
 		imgPath = pflag.Arg(0)
@@ -352,7 +352,7 @@ func main() {
 
 	buttons := container.NewHBox(openBtn, openBtn2, saveBtn, quitBtn)
 
-	w.SetContent(container.NewVBox(entryContainer, buttons, stack))
+	w.SetContent(container.NewVBox(entry, buttons, stack))
 
 	w.ShowAndRun()
 
