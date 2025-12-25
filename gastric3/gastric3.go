@@ -80,7 +80,7 @@ REVISION HISTORY
 22 Oct 21 -- Removed ioutil, which was deprecated as of Go 1.16.
 23 Oct 21 -- Stopped pre-allocating the slice of file contents.
 11 Apr 22 -- Modernizing the filepicker output.  Changed from bytes.buffer to bytes.reader.  Added comment characters of # and / like for BJ strategy files.
-19 Jul 24 -- Adding use of MultiWriter for both file and screen output.  And modified code to comply w/ new API for tknptr, ie, New instead of NewToken.
+19 Jul 24 -- Adding use of MultiWriter for both file and screen output.  And modified code to comply w/ new API for tknptr, i.e., New instead of NewToken.
 			Decided to not add MultiWriter, as I prefer having different output to file and screen.  To the screen I'm using %.0f to simplify the output.
 			Adding color fmt routines.
 20 Jul 24 -- Writing to the file is now using %.0f instead of %.2f.  It does not make sense to report fractional minutes, not even in the results file.
