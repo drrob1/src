@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -28,6 +29,7 @@ const minRowsVisible = 40
 
 func main() {
 	a := app.NewWithID("com.example.Gastric_Emptying_GUI")
+	a.SetIcon(theme.FyneLogo())
 	s := fmt.Sprintf("Gastric Emptying v 3, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
