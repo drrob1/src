@@ -17,6 +17,7 @@ import (
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/spf13/pflag"
 	"gonum.org/v1/gonum/stat"
 	//
 	"src/filepicker"
@@ -52,7 +53,7 @@ REVISION HISTORY
 27 Sep 17 -- It works after I fixed some typos.  And I changed the order of the output values.
  2 Oct 17 -- Discovered that in very normal patients, counts are low enough for stdev to be neg.  I can't allow that!
              And error in X (time) will be same %-age as in Y.  And StDevY cannot be larger than y.
- 3 Oct 17 -- Added separate StDevTime constant, and set a minimum of 2.  Output optimized for Windows since that
+ 3 Oct 17 -- Added separate StDevTime constant and set a minimum of 2.  Output optimized for Windows since that
              is where it will be used in "production."
 18 Oct 17 -- Added filepicker
 -------------------------------------------------------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ REVISION HISTORY
 18 Jun 18 -- Added some comments regarding my thoughts and observations, and decided to return FittedData3 so I can get R2.
              And screen output will be shorter than file output.
 20 Jun 18 -- Added comments regarding reference normal.
-21 Jun 18 -- Added first non digit token on line will skip that line.  So entire line can be easily commented out.
+21 Jun 18 -- Added first non-digit token on line will skip that line.  So entire line can be easily commented out.
  4 Nov 18 -- Realized that the intercept is log(counts), so exp(counts) is worth displaying.
  6 Nov 18 -- Will also account for a lag time.
 19 Nov 19 -- Will start coding an automatic detection for the lag period by looking for a local peak in counts.
@@ -73,8 +74,8 @@ REVISION HISTORY
 29 Dec 20 -- Now that new Siemens camera is installed, I want to be able to use both heads and the geometric mean.
              So I have to read both count points on the line, assuming first is anterior and 2nd is posterior.
              And changed to more idiomatic Go for the slices.
-20 Jan 21 -- Will issue a warning if a line does not have at least 2 points.  And it's inauguration day.  But that's not important now.
-10 Aug 21 -- Fixed minor output bug in format statement for a line only output to the file and not to screen.  Forgot to use exp() and newline char.
+20 Jan 21 -- Will issue a warning if a line does not have at least 2 points.  And it's Inauguration Day.  But that's not important now.
+10 Aug 21 -- Fixed minor output bug in a format statement for a line-only output to the file and not to screen.  Forgot to use exp() and newline char.
                and converted to modules.
 22 Oct 21 -- Removed ioutil, which was deprecated as of Go 1.16.
 23 Oct 21 -- Stopped pre-allocating the slice of file contents.
@@ -83,9 +84,11 @@ REVISION HISTORY
 			Decided to not add MultiWriter, as I prefer having different output to file and screen.  To the screen I'm using %.0f to simplify the output.
 			Adding color fmt routines.
 20 Jul 24 -- Writing to the file is now using %.0f instead of %.2f.  It does not make sense to report fractional minutes, not even in the results file.
+25 Dec 25 -- I'm changing the prompt for the peak value, in that it won't prompt the user for the peak value if it's already known.  This is useful for
+			   using fyne to create a more graphical user interface.  And I'm adding pflag package.
 */
 
-const LastAltered = "July 20, 2024"
+const LastAltered = "Dec 25, 2025"
 
 /*
   Normal values from source that I don't remember anymore.  Applies to a solid meal, not a liquid meal.
@@ -150,6 +153,10 @@ func main() {
 	var point Point
 	var err, bufioErr error
 	var BaseFilename string
+
+	var pauseFlag bool // this is to be used for pausing at peak value for confirmation.  I am making it a flag because I want to allow this to be automatic by default, for fyne GUI interface.
+	pflag.BoolVarP(&pauseFlag, "pause", "p", false, "Pause at peak value for confirmation.  Default is false.")
+	pflag.Parse()
 
 	ln2 := math.Log(2)
 	rows := make([]Point, 0, MaxCol)
@@ -358,7 +365,7 @@ func main() {
 	writerune()
 	check(bufioErr)
 
-	// Now to calculate regressions
+	// Now to calculate linear regressions
 
 	stdslope, stdintercept, stdr2 := StdLR(rows)
 	stdhalflife := -ln2 / stdslope
@@ -437,14 +444,15 @@ func main() {
 	// Separating output from peak, so it's easier to read.
 	// ask me about lag time for this patient.
 
-	proposedPeak := FindLocalCountsPeak(rows)
-	fmt.Print(" Enter point number to use as peak.  Default is [", proposedPeak, "]  ")
+	peakPt := FindLocalCountsPeak(rows)
 
-	// Will try a new way to scan and process input
-	peakPt := 0
-	n, err := fmt.Scanf("%d\n", &peakPt) // fmt.Scan functions read from os.Stdin
-	if n < 1 || err != nil {
-		peakPt = proposedPeak
+	// only ask user if the peak is correct if the pauseFlag is true
+	if pauseFlag {
+		fmt.Print(" Enter point number to use as peak.  Default is [", peakPt, "]  ")
+		n, err := fmt.Scanf("%d\n", &peakPt) // fmt.Scan functions read from os.Stdin
+		if n > 0 && err == nil {
+			peakPt = n
+		}
 	}
 	fmt.Print(" Will use point [", peakPt, "] as peak point.")
 	fmt.Println()
@@ -780,7 +788,7 @@ func gcf(a, x float64) (float64, float64) {
 // -------------------------------------------- Version 2 -----------------------------
 // ------------------------------------------------------------------------------------
 //
-// Section 15.3 -- Straight line data with errors in both coordinates.  P 660 ff.
+// Section 15.3 -- Straight line data with errors in both coordinates.  In "Numerical Recipes"  P 660 ff.
 
 // subroutine fitexy(x, y, sigx, sigy, a, b, siga, sigb, chi2, q float64, ndat int) is fortran signature.  Calculates errors in X and Y.
 func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
@@ -788,7 +796,7 @@ func fitexy(rows []Point) FittedData2 { // (a, b, siga, sigb, chi2, q float64) {
 	var result2 FittedData2
 	// REAL x(ndat),y(ndat),sigx(ndat),sigy(ndat),a,b,siga,sigb,chi2,q,POTN,PI,BIG,ACC
 	//	const NMAX = 1000.  Will use MaxN that I defined above.
-	var PI float64 = math.Pi
+	var PI = math.Pi
 	var r2 float64
 
 	// Uses avevar,brent,chixy,fit,gammq,mnbrak,zbrent
@@ -921,8 +929,8 @@ func chixy(bang float64, row []Point) float64 {
 } // end chixy
 
 func avevar(points []Point) (float64, float64, float64, float64) { // return mean, variance of both x and y.
-	var avex, avey, // ave of x and y which is lny
-		variancex, variancey, // variance of x and y
+	var avex, avey,                                                // ave of x and y which is lny
+		variancex, variancey,                                      // variance of x and y
 		epx, epy float64 // ep of x and y
 
 	for j := range points { // for j :=  0; j < n; j++ {
@@ -1439,7 +1447,7 @@ func readLine(r *bytes.Reader) (string, error) {
 // ----------------------------------------------------------------------
 
 func discardRestOfLine(r *bytes.Reader) { // To allow comments on a line, I have to discard rest of line from the bytes.Reader
-	for { // keep swallowing characters until EOL or an error.
+	for {                                 // keep swallowing characters until EOL or an error.
 		rn, _, err := r.ReadRune()
 		if err != nil {
 			return
