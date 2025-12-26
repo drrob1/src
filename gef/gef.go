@@ -22,6 +22,8 @@ import (
                 My intention is to enter the data in a multiline entry box, save it to a gastric file, run gastric3, and then show the output.
                 I may show both the standard output and the gastric file in separate widgets.
 				Then I added an open file button, so I can use a file I've already created.  Primarily for testing.
+  26 Dec 25 -- At work, when I made a desktop shortcut, the pgm couldn't find gastric3.exe.  Fixed.
+				It does work if started from the command line.
 */
 
 const lastModified = "Dec 26, 2025"
@@ -141,7 +143,12 @@ func main() {
 			return
 		}
 
-		cmdPath := whichexec.Find("gastric3.exe", "")
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("Error from os.UserHomeDir: %v", err), w)
+			return
+		}
+		cmdPath := whichexec.Find("gastric3.exe", homeDir)
 		if cmdPath == "" {
 			dialog.ShowError(fmt.Errorf("could not find gastric3.exe"), w)
 			return
