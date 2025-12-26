@@ -2,6 +2,7 @@ package main // gef.go, meaning gastric emptying in fyne
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -18,8 +19,9 @@ import (
 
 /*
   25 Dec 25 -- This is going to be a GUI interface for my gastric emptying pgm, currently at version 3.
-                 My intention is to enter the data in a multiline entry box, save it to a gastric file, run gastric3, and then show the output.
-                 I may show both the standard output and the gastric file in separate widgets.
+                My intention is to enter the data in a multiline entry box, save it to a gastric file, run gastric3, and then show the output.
+                I may show both the standard output and the gastric file in separate widgets.
+				Then I added an open file button, so I can use a file I've already created.  Primarily for testing.
 */
 
 const lastModified = "Dec 25, 2025"
@@ -27,11 +29,13 @@ const width = 1600
 const height = 900
 const minRowsVisible = 40
 
+var w fyne.Window // global so other functions have access to it.
+
 func main() {
 	a := app.NewWithID("com.example.Gastric_Emptying_GUI")
 	a.SetIcon(theme.FyneLogo())
 	s := fmt.Sprintf("Gastric Emptying v 3, last modified %s, compiled with %s", lastModified, runtime.Version())
-	w := a.NewWindow(s)
+	w = a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
 
 	editWidget := widget.NewMultiLineEntry() // for entering the gastric emptying data
@@ -68,6 +72,33 @@ func main() {
 	}
 
 	var filenameToSave string
+
+	//   Using the custom open file dialog box
+	openFileFunc := func(r fyne.URI) {
+		if r == nil {
+			return
+		}
+		f, er := storage.Reader(r)
+		if er != nil {
+			dialog.ShowError(er, w)
+			return
+		}
+		defer f.Close()
+
+		filenameToSave = r.Path()
+		filenameWidget.SetText(filenameToSave)
+
+		data, err := io.ReadAll(f)
+		if err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+		editWidget.SetText(string(data))
+	}
+
+	openFileBtn := widget.NewButton("Open gastric data file", func() {
+		NewOpenFileDialogWithPrefix(w, "gastric", []string{".txt", ".text"}, openFileFunc)
+	})
 
 	showSaveFunc := func(win fyne.Window, data []byte) {
 		writeCallback := func(wr fyne.URIWriteCloser, err error) {
@@ -142,9 +173,7 @@ func main() {
 
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
-	buttons := container.NewHBox(saveBtn, gastricBtn, quitBtn)
-	//hbox := container.NewHBox(editWidget, outputWidget)
-	//vbox := container.NewVBox(buttons, filenameWidget, editWidget, outputWidget)
+	buttons := container.NewHBox(openFileBtn, saveBtn, gastricBtn, quitBtn)
 	gridbox := container.NewGridWithColumns(2, editWidget, outputWidget)
 	vbox := container.NewVBox(buttons, filenameWidget, gridbox)
 	w.SetContent(vbox)
