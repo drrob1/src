@@ -24,7 +24,7 @@ import (
 				Then I added an open file button, so I can use a file I've already created.  Primarily for testing.
 */
 
-const lastModified = "Dec 25, 2025"
+const lastModified = "Dec 26, 2025"
 const width = 1600
 const height = 900
 const minRowsVisible = 40
@@ -151,7 +151,7 @@ func main() {
 			return
 		}
 
-		screen := bytes.NewBuffer(make([]byte, 0, 1024))
+		screen := bytes.NewBuffer(make([]byte, 0, 2048))
 		if err != nil {
 			dialog.ShowError(fmt.Errorf("error creating gastricoutputfile.out: %v", err), w)
 			return
