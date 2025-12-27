@@ -148,7 +148,8 @@ func main() {
 			dialog.ShowError(fmt.Errorf("Error from os.UserHomeDir: %v", err), w)
 			return
 		}
-		cmdPath := whichexec.Find("gastric3.exe", homeDir)
+		//cmdPath := whichexec.Find("gastric3.exe", homeDir)  I forgot that I don't need the .exe part, that's automatically added on Windows.
+		cmdPath := whichexec.Find("gastric3", homeDir)
 		if cmdPath == "" {
 			dialog.ShowError(fmt.Errorf("could not find gastric3.exe"), w)
 			return
