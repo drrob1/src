@@ -1,6 +1,7 @@
 package main // gef.go, meaning gastric emptying in fyne
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -24,18 +24,25 @@ import (
 				Then I added an open file button, so I can use a file I've already created.  Primarily for testing.
   26 Dec 25 -- At work, when I made a desktop shortcut, the pgm couldn't find gastric3.exe.  Fixed.
 				It does work if started from the command line.
+  29 Dec 25 -- Trying embedding an icon of a stomach.  I found a relevant image on the internet and then converted it to .png using Irfanview.
 */
 
-const lastModified = "Dec 26, 2025"
+const lastModified = "Dec 29, 2025"
 const width = 1600
 const height = 900
 const minRowsVisible = 40
 
 var w fyne.Window // global so other functions have access to it.
 
+//go:embed assets/stomach-4.png
+var stomachIcon []byte
+
 func main() {
 	a := app.NewWithID("com.example.Gastric_Emptying_GUI")
-	a.SetIcon(theme.FyneLogo())
+
+	stomIconRes := fyne.NewStaticResource("stomach-4.png", stomachIcon)
+	a.SetIcon(stomIconRes)
+	//a.SetIcon(theme.FyneLogo())
 	s := fmt.Sprintf("Gastric Emptying v 3, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w = a.NewWindow(s)
 	w.Resize(fyne.NewSize(width, height))
