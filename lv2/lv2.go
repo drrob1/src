@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
 	"math/rand/v2"
 	"os"
@@ -18,6 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 /*
@@ -86,6 +87,7 @@ REVISION HISTORY
 21 Nov 24 -- Added '\' as a character to be removed when constructing the output filename.
  7 Jun 25 -- Adding the ability to exclude a regexp.
 				Nevermind.  It's already here.  It excludes a filename, as done in rex and dsrt, for quite a while now.
+30 Dec 25 -- Exapnded the forced regexp.
 */
 
 /*
@@ -94,13 +96,13 @@ REVISION HISTORY
 	<title>Playlist</title>
 	<trackList>
 		<track>
-			<location>file:///E:/Movie/Wooden-Horse-Bondage-Vibrator-Vol02-1_54_59-Pornhub.mp4</location>
+			<location>file:///F:/Movie/Wooden-Horse-Vol02-1_54_59.mp4</location>
 			<extension application="http://www.videolan.org/vlc/playlist/0">
 				<vlc:id>0</vlc:id>
 			</extension>
 		</track>
 		<track>
-			<location>file:///E:/Movie/asian-orgasm-in-box-Pornhub.com.mp4</location>
+			<location>file:///F:/Movie/in-box.mp4</location>
 			<extension application="http://www.videolan.org/vlc/playlist/0">
 				<vlc:id>1</vlc:id>
 			</extension>
@@ -112,7 +114,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "June 7, 2025"
+const lastModified = "Dec 30, 2025"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -150,10 +152,10 @@ func main() {
 		"femdom|tntu",
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
 		"^[0-9]+[0-9]",
-		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse",
+		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse|cumbot|perfectslave",
 		"spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb",
-		"vib|forced|abuse|torture",
-		//                                                                                  "^\b+\b",  This doesn't work
+		"vib|forced|abuse|torture|cumbot|perfectslave",
+		//                                                                                  "^\b+\b",  This doesn't work, probably because I need to double the backslashes
 	}
 
 	flag.Usage = func() {
