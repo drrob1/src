@@ -153,7 +153,7 @@ func main() {
 		"fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas|fit18",
 		"^[0-9]+[0-9]",
 		"wmbcv|^tbc|^fiterotic|^bjv|hardtied|vib|ethnick|chair|orgasmabuse|cumbot|perfectslave",
-		"spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb",
+		"spandex|camel|yoga|miamix|^amg|^sporty|balle|dancerb|^ct",
 		"vib|forced|abuse|torture|cumbot|perfectslave",
 		//                                                                                  "^\b+\b",  This doesn't work, probably because I need to double the backslashes
 	}
