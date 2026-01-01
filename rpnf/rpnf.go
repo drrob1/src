@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/gob"
 	"errors"
 	"flag"
@@ -66,9 +67,10 @@ import (
 				The input is handled in keyTyped and its brothers.  The explicit go routine is in DoIt, which starts the concurrent code to handle the input.
 30 Nov 25 -- I'm fixing some fyne errors that were flagged now that I've updated to fyne v 2.7.1 from 2.2.3.  I upgraded fyne so that I could play w/ code from Linux Magazine.
 				Now I'm using perplexity to help me define a dark theme.
+ 1 Jan 26 -- Added icon to fyne app.
 */
 
-const lastModified = "Nov 30, 2025"
+const lastModified = "Jan 1, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -86,6 +88,9 @@ var input, nameLabelInput *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
 var yellow = color.NRGBA{R: 255, G: 255, B: 0, A: 255}
+
+//go:embed calc.png
+var calcIcon []byte
 
 // These are not used, but I'm leaving them here for reference.
 // var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}
@@ -156,6 +161,7 @@ func main() {
 		fmt.Printf(" rpnf.go, using fyne.io v2.  Last modified %s, compiled using %s.\n", lastModified, runtime.Version())
 	}
 
+	calcIconRes := fyne.NewStaticResource("calc.png", calcIcon)
 	var Stk hpcalc2.StackType // used when it's time to write out the stack upon exit.
 	var err error
 	DisplayTape = make([]string, 0, 100)
@@ -207,6 +213,7 @@ func main() {
 
 	globalA = app.New()
 	globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.
+	globalA.SetIcon(calcIconRes)
 	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
