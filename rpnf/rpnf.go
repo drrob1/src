@@ -299,7 +299,9 @@ func Doit() {
 					resultToOutput = strings.Join(stringslice, "\n")
 				}
 				populateUI()
-				globalW.Show()
+				fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.  I wonder if this was the cause of some of the freezes I was seeing recently
+					globalW.Show()
+				})
 				continue
 			}
 
@@ -349,7 +351,7 @@ func Doit() {
 					}
 					hpcalc2.PUSHX(Storage[i].Value)
 				} else if rtkn.Str == "FROMCLIP" {
-					// contents := globalW.Clipboard().Content()  This was flagged by a linter as deprecated.
+					//                                       contents := globalW.Clipboard().Content()  This was flagged by a linter as deprecated.
 					contents := globalA.Clipboard().Content() // added Nov 30, 2025.
 					contents = strings.TrimSpace(contents)
 					f, err := strconv.ParseFloat(contents, 64)
@@ -361,7 +363,7 @@ func Doit() {
 					}
 				} else if rtkn.Str == "TOCLIP" {
 					rStr := strconv.FormatFloat(hpcalc2.READX(), 'g', hpcalc2.SigFig(), 64)
-					// globalW.Clipboard().SetContent(rStr)  Flagged by a linter as deprecated.
+					//                                      globalW.Clipboard().SetContent(rStr)  Flagged by a linter as deprecated.
 					globalA.Clipboard().SetContent(rStr) // added Nov 30, 2025.
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
 					outputMode = outputfix
