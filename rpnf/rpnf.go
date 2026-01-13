@@ -68,9 +68,11 @@ import (
 30 Nov 25 -- I'm fixing some fyne errors that were flagged now that I've updated to fyne v 2.7.1 from 2.2.3.  I upgraded fyne so that I could play w/ code from Linux Magazine.
 				Now I'm using perplexity to help me define a dark theme.
  1 Jan 26 -- Added icon to fyne app.
+11 Jan 26 -- Added another fyne.Go func to populate the UI.  I got another warning message about it.  Near the top of the Doit func.
+
 */
 
-const lastModified = "Jan 1, 2026"
+const lastModified = "Jan 11, 2026"
 
 const ( // output modes
 	outputfix = iota
