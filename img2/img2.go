@@ -75,9 +75,10 @@ REVISION HISTORY
  1 Nov 25 -- Updated the comments below.  And I'm adding here that the core of this app uses container.NewBorder to place elements top, bottom and the image in the center.
 				There is no explicit go routine here to handle the input; input is handled by keyTyped which is implicitly concurrent code.
  1 Dec 25 -- Added fyne.Do, as was supposed to happen all along.
+18 Jan 26 -- Now centering the output in loadTheImage.  Tested in img.go and it works, so I'm porting it here.
 */
 
-const LastModified = "Dec 1, 2025"
+const LastModified = "Jan 18, 2026"
 const textboxheight = 20
 
 // const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -390,6 +391,7 @@ func loadTheImage() {
 		globalW.SetContent(GUI)
 		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight)))
 		globalW.SetTitle(title)
+		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
 	})
 

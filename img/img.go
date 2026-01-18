@@ -79,9 +79,10 @@ REVISION HISTORY
 22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 23 Jul 25 -- Got idea to save an image in its current size and degree of rotation.  This may take some time to get right.
  1 Dec 25 -- Added fyne.Do, as was supposed to happen all along.
+18 Jan 26 -- Added CenterOnScreen() to the window in the loadTheImage routine.
 */
 
-const LastModified = "Dec 1, 2025"
+const LastModified = "Jan 18, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -204,8 +205,6 @@ func main() {
 		index = <-indexChan // syntax to read from a channel, using the channel operator as a unary operator.
 	}
 
-	//globalW.CenterOnScreen()
-
 	if index < 0 {
 		index = 0
 	}
@@ -324,6 +323,7 @@ func loadTheImage(idx int) {
 		globalW.SetContent(loadedimg)
 		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 		globalW.SetTitle(title)
+		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
 	})
 

@@ -59,11 +59,12 @@ REVISION HISTORY
 			Added the rotateAndLoadImage and imgImage procedures, modified keyTyped and loadTheImage.  Fetching the image names is done w/ one goroutine; this is fast enough.
 22 Feb 25 -- Added '=' to mean set scaleFactor=1 and zero the rotatedTimes variable.
 24 Jul 25 -- Added ability to save an image in its current size and degree of rotation.  Developed first in img.go.
-26 Jul 25 -- Using a differnt method to trim off ext of base filename, just to see if it works.
+26 Jul 25 -- Using a different method to trim off ext of base filename, just to see if it works.  It does.
  1 Dec 25 -- Added fyne.Do, as was supposed to happen long ago.
+18 Jan 26 -- Now centering output in loadTheImage.  Tested in img.go and it works, so I'm porting it here.
 */
 
-const LastModified = "Dec 1, 2025"
+const LastModified = "Jan 18, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -274,6 +275,7 @@ func loadTheImage() {
 		globalW.SetContent(loadedimg)
 		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 		globalW.SetTitle(title)
+		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
 	})
 
