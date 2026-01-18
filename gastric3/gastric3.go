@@ -7,7 +7,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -86,9 +88,11 @@ REVISION HISTORY
 20 Jul 24 -- Writing to the file is now using %.0f instead of %.2f.  It does not make sense to report fractional minutes, not even in the results file.
 25 Dec 25 -- I'm changing the prompt for the peak value, in that it won't prompt the user for the peak value if it's already known.  This is useful for
 			   using fyne to create a more graphical user interface.  And I'm adding pflag package.
+18 Jan 26 -- Need to fix a bug in that the last line is not read if it is not terminated by newline.  This is because ReadByte does not return an error if it
+			   reaches the end of the file, but instead returns io.EOF.  So I need to check for io.EOF and return the string if the buffer is not empty.
 */
 
-const LastAltered = "Dec 25, 2025"
+const LastAltered = "Jan 18, 2026"
 
 /*
   Normal values from source that I don't remember anymore.  Applies to a solid meal, not a liquid meal.
@@ -234,7 +238,7 @@ func main() {
 
 	byteSlice, err := os.ReadFile(Filename)
 	if err != nil {
-		fmt.Println(" Error", err, " from iotuil.ReadFile when reading", Filename, ".  Exiting.")
+		fmt.Println(" Error", err, " from os.ReadFile when reading", Filename, ".  Exiting.")
 		os.Exit(1)
 	}
 
@@ -587,7 +591,7 @@ func fit(rows []Point) FittedData {
 		subroutine fit(x,y,ndata,sig,mwt,a,b,siga,sigb,chi2,q) is the Fortran signature.
 		   Based on Numerical Recipies code of same name on p 508-9 in Fortran, 1st ed,
 		   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
-		   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering. (C) 1986, Cambridge University Press.
+		   William H Press, Brian P Flannery, Saul A Teukolsky, William T Vettering. (C) 1986, Cambridge University Press.
 		   y = a + bx.  And it returns stdeva, stdevb, and goodness of fit param q.
 	*/
 	var SumXoverSumWt, SumX, SumY, Sumt2, SumWt, chi2, a, b float64
@@ -629,7 +633,7 @@ func fitfull(row []Point, weighted bool) FittedData {
 	/*
 	   Based on Numerical Recipies code of same name on p 508-9 in Fortran,
 	   and p 771 in Pascal.  "Numerical Recipies: The Art of Scientific Computing",
-	   William H.  Press, Brian P.  Flannery, Saul A.  Teukolsky, William T.  Vettering. (C) 1986, Cambridge University Press.
+	   William H.  Press, Brian P. Flannery, Saul A. Teukolsky, William T. Vettering. (C) 1986, Cambridge University Press.
 	   I think the docs are wrong.  The equation is y = a + bx, ie, b is Slope.  I'll make that switch now.
 	*/
 	var wt, a, b, t, q, sxoss, sx, sy, st2, ss, sigdat, chi2 float64
@@ -1424,6 +1428,9 @@ func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
 		byt, err := r.ReadByte() // byte is a reserved word for a variable type.
+		if errors.Is(err, io.EOF) && sb.Len() > 0 {
+			return strings.TrimSpace(sb.String()), nil
+		}
 		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}

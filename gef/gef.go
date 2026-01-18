@@ -25,9 +25,10 @@ import (
   26 Dec 25 -- At work, when I made a desktop shortcut, the pgm couldn't find gastric3.exe.  Fixed.
 				It does work if started from the command line.
   29 Dec 25 -- Trying embedding an icon of a stomach.  I found a relevant image on the internet and then converted it to .png using Irfanview.
+  18 Jan 26 -- Added a default file name for the save dialog, using the SetFileName method.
 */
 
-const lastModified = "Dec 29, 2025"
+const lastModified = "Jan 18, 2026"
 const width = 1600
 const height = 900
 const minRowsVisible = 40
@@ -131,6 +132,7 @@ func main() {
 		wrDialog := dialog.NewFileSave(writeCallback, win)
 		wrDialog.SetLocation(curURI)
 		wrDialog.SetFilter(storage.NewExtensionFileFilter([]string{".txt", ".text"}))
+		wrDialog.SetFileName("gastric-.txt") // this is a template file name to be set by user
 		wrDialog.Show()
 	}
 
