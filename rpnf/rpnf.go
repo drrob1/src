@@ -69,10 +69,10 @@ import (
 				Now I'm using perplexity to help me define a dark theme.
  1 Jan 26 -- Added icon to fyne app.
 11 Jan 26 -- Added another fyne.Go func to populate the UI.  I got another warning message about it.  Near the top of the Doit func.
-
+18 Jan 26 -- Added fyne.Do to center the help window on screen.
 */
 
-const lastModified = "Jan 11, 2026"
+const lastModified = "Jan 18, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -778,15 +778,18 @@ func showHelp(extra []string) {
 	helpStr := strings.Join(ss, "\n")
 	helpLabel := widget.NewLabel(helpStr)
 
+	helpScroll := container.NewScroll(helpLabel)
+	fyne.DoAndWait(func() { // added because of error in fyne call thread, these should have been called in fyne.Do
+		helpWindow = globalA.NewWindow("Help")
+		helpWindow.SetContent(helpScroll)
+		helpWindow.Canvas().SetOnTypedKey(keyTypedHelp)
+		helpWindow.Resize(fyne.NewSize(1000, 900))
+		helpWindow.CenterOnScreen() // suggested by AI
+		helpWindow.Show()
+	})
 	//dialog.ShowCustom("", "OK", helpLabel, globalW) // empty title
 	//dialog.ShowInformation("", helpStr, globalW)  // empty title  I don't like its look, as each line is centered and not left aligned.
 	//helpScroll := container.NewVScroll(helpLabel)
-	helpScroll := container.NewScroll(helpLabel)
-	helpWindow = globalA.NewWindow("Help")
-	helpWindow.SetContent(helpScroll)
-	helpWindow.Canvas().SetOnTypedKey(keyTypedHelp)
-	helpWindow.Resize(fyne.NewSize(1000, 900))
-	helpWindow.Show()
 	//dialog.ShowCustom("", "OK", helpScroll, globalW)
 	//dialog.ShowCustom("Help text", "OK", helpLabel, globalW)
 	//helpRichText := widget.NewRichTextWithText(helpStr)
