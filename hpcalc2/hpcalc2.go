@@ -109,7 +109,7 @@ REVISION HISTORY
 11 Dec 20 -- Fixed a line in the help command reporting this module as hpcalc instead of hpcalc2.
 12 Dec 20 -- Adding mappedReg stuff.  And new commands mapsho, mapsto, maprcl, mapdel and mapclose.
 14 Dec 20 -- Decided to sort mapsho output.
-17 Dec 20 -- Will implement mapped register recall using abbreviations, ie, match prefix against a sorted list of the available mapped registers.
+17 Dec 20 -- Will implement mapped register recall using abbreviations, i.e., match prefix against a sorted list of the available mapped registers.
                and added C2F, F2C
 21 Dec 20 -- Changed MAPRCL abbreviation concept from strings.HasPrefix to strings.Contains, so substrings are matched instead of just prefixes.
 30 Jan 21 -- Results of the converstions functions also push their result onto the stack.
@@ -158,9 +158,10 @@ REVISION HISTORY
  7 May 25 -- Altered the undoMatrixStack function by removing a step I don't remember why I did.  Then I remember and I put it back.
 				And I fixed the bug in undo from when I completely changed the undo-redo code in Apr 2024.  More descriptive comments are below.
  8 May 25 -- Increased the initial capacity of the undo slice.
+20 Jan 26 -- Fixing a line of the help text.
 */
 
-const LastAlteredDate = "8 May 2025"
+const LastAlteredDate = "20 Jan 2026"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -484,7 +485,7 @@ func AddCommas(instr string) string {
 
 func CropNStr(instr string) string {
 
-	//   A bug is if there is no decimal pt and there is a 0 in ones place, then that will no longer be
+	//   A bug is if there is no decimal pt and there is a 0 in one's place, then that will no longer be
 	//   removed.
 	//   Another bug if in scientific notation.
 
@@ -675,7 +676,7 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 	return 0, false
 } // IsPrime
 
-// usqrt -- estimates a sqrt by dividing and averaging using a uint.
+// usqrt -- estimates a sqrt by dividing and averaging using uint.
 func usqrt(u uint) uint {
 
 	sqrt := u / 2
@@ -991,7 +992,7 @@ outerloop:
 	case tknptr.ALLELSE:
 		cmdnum := cmdMap[tkn.Str]
 		if cmdnum == 0 && len(tkn.Str) > 2 {
-			TokenStrShortened := tkn.Str[:3] // First 3 characters, ie, characters at positions 0, 1 and 2
+			TokenStrShortened := tkn.Str[:3] // First 3 characters, i.e., characters at positions 0, 1 and 2
 			cmdnum = cmdMap[TokenStrShortened]
 		}
 		if cmdnum == 0 {
@@ -1075,7 +1076,7 @@ outerloop:
 			ss = append(ss, " SIN,COS,TAN,ARCTAN,ARCSIN,ARCCOS -- In deg.")
 			ss = append(ss, " D2R, R2D -- perform degrees <--> radians conversion of the X register.")
 			ss = append(ss, fmt.Sprintf(" JUL -- Return Julian date number of Z month, Y day, X year.  Pop stack x2.  Pivot is %d for 2 digit years.", julPivot))
-			ss = append(ss, " TODAY, T -- Return Julian date number of today's date.  Pop stack x2.")
+			ss = append(ss, " TODAY, T -- Return Julian date number of today's date in X register.")
 			ss = append(ss, " GREG-- Return Z month, Y day, X year of Julian date number in X.")
 			ss = append(ss, " DOW -- Return day number 0..6 of julian date number in X register.")
 			ss = append(ss, " HEX -- Round X register to a long_integer and output it in hex format.")

@@ -22,6 +22,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	//"fyne.io/fyne/v2/data/binding"
@@ -217,10 +218,32 @@ func main() {
 	globalA = app.New()
 	globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.
 	globalA.SetIcon(calcIconRes)
-	globalW = globalA.NewWindow("rpnf calculator using fyne")
+	globalW = globalA.NewWindow("rpnf, fyne GUI rpn calculator")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
+	lightTheme = false
 
-	menuItem1 := fyne.NewMenuItem("Help", func() {
+	menuItem1 := fyne.NewMenuItem("To Clipboard", func() {
+		rStr := strconv.FormatFloat(hpcalc2.READX(), 'g', hpcalc2.SigFig(), 64)
+		globalA.Clipboard().SetContent(rStr) // added to a menu item Jan 20, 2026.
+	})
+
+	menuItem2 := fyne.NewMenuItem("From Clipboard", func() {
+		contents := globalA.Clipboard().Content() // added here in a menu item Jan 20, 2026.
+		contents = strings.TrimSpace(contents)
+		f, err := strconv.ParseFloat(contents, 64)
+		if err == nil {
+			hpcalc2.PUSHX(f)
+		} else {
+			msg := fmt.Sprintf("Error from conversion of clipboard.  Clipboard=%q, err=%v.", contents, err)
+			dialog.ShowInformation("Clipboard Error", msg, globalW)
+		}
+		populateUI()
+		fyne.Do(func() {
+			globalW.Show()
+		})
+	})
+
+	menuItem3 := fyne.NewMenuItem("Help", func() {
 		extra := make([]string, 0, 10)
 		extra = append(extra, "STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
 		extra = append(extra, "OutputFixed (fix), OutputFloat (float, real), OutputGen (gen) -- set OutputMode to fixed, float or gen.")
@@ -230,7 +253,20 @@ func main() {
 		extra = append(extra, str)
 		showHelp(extra)
 	})
-	newMenu := fyne.NewMenu("Help", menuItem1)
+
+	menuItem4 := fyne.NewMenuItem("About", func() {
+		_, stringslice = hpcalc2.GetResult("about")
+		str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
+		stringslice = append(stringslice, str)
+
+		str = fmt.Sprintf(" %s timestamp is %s.\n Full exec name is %s.", execFI.Name(), execTimeStamp, execname)
+		stringslice = append(stringslice, str)
+
+		combinedString := strings.Join(stringslice, "\n")
+		dialog.ShowInformation("About rpnf", combinedString, globalW)
+
+	})
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem3, menuItem4)
 	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
 	globalW.SetMainMenu(menu)
 
@@ -380,8 +416,8 @@ func Doit() {
 					}
 				} else if rtkn.Str == "TOCLIP" {
 					rStr := strconv.FormatFloat(hpcalc2.READX(), 'g', hpcalc2.SigFig(), 64)
-					//                                      globalW.Clipboard().SetContent(rStr)  Flagged by a linter as deprecated.
 					globalA.Clipboard().SetContent(rStr) // added Nov 30, 2025.
+					//                                      globalW.Clipboard().SetContent(rStr)  Flagged by a linter as deprecated.
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFI") {
 					outputMode = outputfix
 				} else if strings.HasPrefix(rtkn.Str, "OUTPUTFL") || strings.HasPrefix(rtkn.Str, "OUTPUTR") || rtkn.Str == "REAL" || rtkn.Str == "FLOAT" {
