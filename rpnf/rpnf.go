@@ -70,9 +70,10 @@ import (
  1 Jan 26 -- Added icon to fyne app.
 11 Jan 26 -- Added another fyne.Go func to populate the UI.  I got another warning message about it.  Near the top of the Doit func.
 18 Jan 26 -- Added fyne.Do to center the help window on screen.
+20 Jan 26 -- Adding a menu.
 */
 
-const lastModified = "Jan 18, 2026"
+const lastModified = "Jan 20, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -171,7 +172,7 @@ func main() {
 	theFileExists := true
 	inbufChan = make(chan string, 10)
 
-	//homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
+	//                                   homeDir, err = os.UserHomeDir() // this function became available as of Go 1.12
 	homeDir, err = os.UserConfigDir() // this function became available as of Go 1.12
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error from os.UserConfigDir() is", err)
@@ -218,6 +219,20 @@ func main() {
 	globalA.SetIcon(calcIconRes)
 	globalW = globalA.NewWindow("rpnf calculator using fyne")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
+
+	menuItem1 := fyne.NewMenuItem("Help", func() {
+		extra := make([]string, 0, 10)
+		extra = append(extra, "STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
+		extra = append(extra, "OutputFixed (fix), OutputFloat (float, real), OutputGen (gen) -- set OutputMode to fixed, float or gen.")
+		extra = append(extra, "SigN, FixN -- set significant figures for displayed numbers to N.  Default is -1.")
+		extra = append(extra, "dark, light -- set Fyne theme to dark or light.")
+		str := fmt.Sprintf("%s last modified on %s and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
+		extra = append(extra, str)
+		showHelp(extra)
+	})
+	newMenu := fyne.NewMenu("Help", menuItem1)
+	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
+	globalW.SetMainMenu(menu)
 
 	execname, _ = os.Executable()
 	execFI, _ = os.Stat(execname)
