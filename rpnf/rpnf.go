@@ -243,6 +243,21 @@ func main() {
 		})
 	})
 
+	menuItem2a := fyne.NewMenuItem("Fix 10", func() {
+		hpcalc2.SetSigFig(10)
+		populateUI()
+		fyne.Do(func() {
+			globalW.Show()
+		})
+	})
+	menuItem2b := fyne.NewMenuItem("Fix 12", func() {
+		hpcalc2.SetSigFig(12)
+		populateUI()
+		fyne.Do(func() {
+			globalW.Show()
+		})
+	})
+
 	menuItem3 := fyne.NewMenuItem("Help", func() {
 		extra := make([]string, 0, 10)
 		extra = append(extra, "STOn,RCLn  -- store/recall the X register to/from the register indicated by n.")
@@ -266,7 +281,7 @@ func main() {
 		dialog.ShowInformation("About rpnf", combinedString, globalW)
 
 	})
-	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem3, menuItem4)
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem3, menuItem4)
 	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
 	globalW.SetMainMenu(menu)
 

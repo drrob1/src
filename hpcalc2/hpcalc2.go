@@ -95,7 +95,7 @@ REVISION HISTORY
 22 Mar 20 -- Shortened PrimeFac to PrimeF, just like the C++ version I wrote for Qt.  And fix bug of primefac of zero or a number near zero.
  7 Apr 20 -- Decided to comment out the break statements in the GetResult case statement, which is held over from my C++ code.  Doesn't belong here.
  9 Apr 20 -- Switched to tknptr from tokenize package.  I guess mostly to test it.  I should have done this when I first wrote it.
-15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', ie, string is in scientific notation.
+15 Apr 20 -- Fixed AddCommas to ignore the string if there is an 'E', i.e., string is in scientific notation.
 25 Jun 20 -- Changed vol command to take numbers in x,y,z and compute volume, and added dia command to get diameter of a sphere with volume in X.
  3 Jul 20 -- Added cbrt as synonym for curt.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -158,7 +158,7 @@ REVISION HISTORY
  7 May 25 -- Altered the undoMatrixStack function by removing a step I don't remember why I did.  Then I remember and I put it back.
 				And I fixed the bug in undo from when I completely changed the undo-redo code in Apr 2024.  More descriptive comments are below.
  8 May 25 -- Increased the initial capacity of the undo slice.
-20 Jan 26 -- Fixing a line of the help text.
+20 Jan 26 -- Fixing a line of the help text.  And wrote SetSigFig function, to be used by a menu item in rpnf.
 */
 
 const LastAlteredDate = "20 Jan 2026"
@@ -183,7 +183,7 @@ const Top = T1
 const Bottom = X
 const numOfFermatTests = 100 // Will set this at top of package so it's easy to change later.  // 20 gives a similar chance of being struck by lightning/yr, 30 gives better odds of winning powerball than the numbers not being prime.
 
-var StackRegNamesString []string = []string{" X", " Y", " Z", "T5", "T4", "T3", "T2", "T1"}
+var StackRegNamesString = []string{" X", " Y", " Z", "T5", "T4", "T3", "T2", "T1"}
 
 // var FSATypeString []string = []string{"DELIM", "OP", "DGT", "AllElse"}  I am getting an unused variable, as the debugging statements are likely commented out.
 var cmdMap map[string]int
@@ -454,7 +454,7 @@ func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 
 func AddCommas(instr string) string {
 	var i, decptposn int
-	var Comma []byte = []byte{','}
+	var Comma = []byte{','}
 
 	capstr := strings.ToUpper(instr)
 
@@ -542,7 +542,7 @@ func DumpStackFloat() []string {
 	for SRN = T1; SRN >= X; SRN-- {
 		str = strconv.FormatFloat(Stack[SRN], 'e', sigfig, 64)
 		//		str = CropNStr(str)  makes no sense for numbers in exponential format
-		//		if Stack[SRN] > 10000 {
+		//		if Stack[SRN] > 10_000 {
 		//			str = AddCommas(str)
 		//		}
 		ss = append(ss, fmt.Sprintf("%2s: %20.9e %s %s", StackRegNamesString[SRN], Stack[SRN], SpaceFiller, str))
@@ -659,7 +659,7 @@ func NextPrimeFac(n, startfac uint) (uint, bool) { // note that this is the reve
 	// This returns a prime factor or zero, and a bool which is true when the function returns a prime factor.
 	// It will return false when there are no more prime factors.
 
-	var t uint = startfac
+	t := startfac
 
 	UintSqrt := usqrt(n)
 
@@ -1416,7 +1416,7 @@ outerloop:
 			//	str = strings.ReplaceAll(str, "\r", "")
 			//	str = strings.ReplaceAll(str, ",", "")
 			//	str = strings.ReplaceAll(str, " ", "")
-			//	s = s + fmt.Sprintln(", after post processing the string becomes", str)
+			//	s = s + fmt.Sprintln(", after post-processing the string becomes", str)
 			//	ss = append(ss, s)
 			//	R, err := strconv.ParseFloat(str, 64)
 			//	if err != nil {
@@ -1644,7 +1644,7 @@ outerloop:
 
 			}
 
-		case 650: // CLEAN and CLEAN4.  As of 11/23/24, it's really just all CLEAN now.  More precisely, CLE followed by last character determines value of N.
+		case 650: // CLEAN and CLEAN4.  As of 11/23/24, it's really just all CLEAN now.  More precisely, CLE followed by the last character determines the value of N.
 			PushMatrixStacks()
 			LastX = Stack[X]
 			ch := tkn.Str[len(tkn.Str)-1] // ie, the last character.
@@ -1693,6 +1693,8 @@ func getMapRegName(cmd string) string {
 	mappedregname = strings.TrimSpace(mappedregname) // if there are any spaces at beginning or end, trim them off
 	return mappedregname
 }
+
+// ----------------------------------------------------------- MakeSubst --------------------------------------------
 
 // MakeSubst -- Now uses a strings replace function.
 func MakeSubst(instr string) string {
@@ -1758,6 +1760,15 @@ func getFullMatchingName(abbrev string) string {
 
 func SigFig() int {
 	return sigfig
+}
+
+// ----------------------------------------------------------- SetSigFig --------------------------------------
+
+func SetSigFig(sf int) {
+	if sf < 0 || sf > 20 {
+		sigfig = -1
+	}
+	sigfig = sf
 }
 
 // ----------------------------------------------------------- isProbablyPrime -----------------------------
