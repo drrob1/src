@@ -161,7 +161,7 @@ REVISION HISTORY
 20 Jan 26 -- Fixing a line of the help text.  And wrote SetSigFig function, to be used by a menu item in rpnf.
 */
 
-const LastAlteredDate = "20 Jan 2026"
+const LastAlteredDate = "21 Jan 2026"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -1765,7 +1765,7 @@ func SigFig() int {
 // ----------------------------------------------------------- SetSigFig --------------------------------------
 
 func SetSigFig(sf int) {
-	if sf < 0 || sf > 20 {
+	if sf < 0 || sf > 15 {
 		sigfig = -1
 	}
 	sigfig = sf

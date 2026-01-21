@@ -72,9 +72,10 @@ import (
 11 Jan 26 -- Added another fyne.Go func to populate the UI.  I got another warning message about it.  Near the top of the Doit func.
 18 Jan 26 -- Added fyne.Do to center the help window on screen.
 20 Jan 26 -- Adding a menu.
+21 Jan 26 -- Trying canvas.Text for the help window.  Nope, it didn't work.  All text came out on 1 line.
 */
 
-const lastModified = "Jan 20, 2026"
+const lastModified = "Jan 21, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -129,7 +130,7 @@ const DisplayTapeFilename = "displaytape.txt"
 var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
 var verboseFlag = flag.Bool("v", false, "Verbose mode enabled.")
 var screenWidth = flag.Float64("sw", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
-var screenHeight = flag.Float64("sh", 1000, "screen height for the resizze method in Doit.")
+var screenHeight = flag.Float64("sh", 1000, "screen height for the resize method in Doit.")
 
 var execname, execTimeStamp string
 var execFI os.FileInfo
@@ -238,24 +239,24 @@ func main() {
 			dialog.ShowInformation("Clipboard Error", msg, globalW)
 		}
 		populateUI()
-		fyne.Do(func() {
-			globalW.Show()
-		})
+		globalW.Show()
+		//fyne.Do(func() {
+		//})
 	})
 
 	menuItem2a := fyne.NewMenuItem("Fix 10", func() {
 		hpcalc2.SetSigFig(10)
 		populateUI()
-		fyne.Do(func() {
-			globalW.Show()
-		})
+		globalW.Show()
+		//fyne.Do(func() {
+		//})
 	})
 	menuItem2b := fyne.NewMenuItem("Fix 12", func() {
 		hpcalc2.SetSigFig(12)
 		populateUI()
-		fyne.Do(func() {
-			globalW.Show()
-		})
+		globalW.Show()
+		//fyne.Do(func() {
+		//})
 	})
 
 	menuItem3 := fyne.NewMenuItem("Help", func() {
@@ -279,7 +280,6 @@ func main() {
 
 		combinedString := strings.Join(stringslice, "\n")
 		dialog.ShowInformation("About rpnf", combinedString, globalW)
-
 	})
 	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem3, menuItem4)
 	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
@@ -843,6 +843,14 @@ func showHelp(extra []string) {
 	ss = append(ss, extra...)
 	helpStr := strings.Join(ss, "\n")
 	helpLabel := widget.NewLabel(helpStr)
+	//helpLabel := canvas.Text{  This didn't work.  All the text was on 1 very long line.
+	//	Alignment:  0,
+	//	Color:      color.White,
+	//	Text:       helpStr,
+	//	TextSize:   14,
+	//	TextStyle:  fyne.TextStyle{Bold: true},
+	//	FontSource: nil,
+	//}
 
 	helpScroll := container.NewScroll(helpLabel)
 	fyne.DoAndWait(func() { // added because of error in fyne call thread, these should have been called in fyne.Do
