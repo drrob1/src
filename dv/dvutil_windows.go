@@ -26,11 +26,12 @@ REVISION HISTORY
 				To really be able to do that, I need to return the dirname from the getFileInfosFromCommandLine call.  And then pass that into the displayFileInfos call.
 17 Sep 25 -- In the case of a symlink, will now display what the symlink points to.
  3 Oct 25 -- Adding non-concurrent routine to getFileInfosFromCommandLine.  It uses os.Stat instead of os.Lstat.
- 4 Oct 25 -- Added ThirdFileInfosFromCommandLine.  It's not concurrent, and keeps os.Lstat.
+ 4 Oct 25 -- Added ThirdFileInfosFromCommandLine.  It's not concurrent and keeps os.Lstat.
  8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
 				the slice.  Now to address this in the display routine.
- 9 Oct 25 -- I figured out that at work, the hard linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
+ 9 Oct 25 -- I figured out that at work, the hard-linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
 				retrieved first by filename and then individually calling Lstat, it is considered a regular file.  I'm going to display this correctly at work.
+21 Jan 26 -- Fixed a bug in DisplayFileInfos() where it was not correctly handling hardlinked files that are not directories.
 */
 
 // getFileInfosFromCommandLine() will return a slice of FileInfos after the filter and exclude expression are processed, and that match a pattern if given.
@@ -414,8 +415,8 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 		} else if dirList && f.IsDir() {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
 			lnCount++
-		} else { // I found out that at work, a hardlinked file is not a regular file, directory nor a symlink.  So I have to check for that.
-			if !filenameToBeListedFlag { // involves the -D switch.  If this is true, then don't list the file.
+		} else {                                       // I found out that at work, a hardlinked file is not a regular file, directory nor a symlink.  So I have to check for that.
+			if !filenameToBeListedFlag || !f.IsDir() { // involves the -D or -d switchs.
 				continue
 			}
 			var color ct.Color
