@@ -192,9 +192,10 @@ REVISION HISTORY
  9 Oct 25 -- I figured out that at work, the hard linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
 				retrieved first by filename and then individually calling Lstat, it is considered a regular file.  I'm going to display this correctly at work.
 10 Oct 25 -- I'm using {} to indicate a hard link.
+21 Jan 26 -- Fixed a bug in dvutil_windows.go.  Comment there explains it.
 */
 
-const LastAltered = "10 Oct 2025"
+const LastAltered = "21 Jan 2026"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
