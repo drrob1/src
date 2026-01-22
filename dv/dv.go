@@ -195,7 +195,7 @@ REVISION HISTORY
 21 Jan 26 -- Fixed a bug in dvutil_windows.go.  Comment there explains it.
 */
 
-const LastAltered = "21 Jan 2026"
+const LastAltered = "22 Jan 2026"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.

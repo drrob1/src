@@ -416,7 +416,7 @@ func displayFileInfos(fiSlice []os.FileInfo, dirName string) {
 			fmt.Printf("%17s %s (%s)\n", sizestr, s, f.Name())
 			lnCount++
 		} else { // I found out that at work, a hardlinked file is not a regular file, directory nor a symlink.  So I have to check for that.
-			if !filenameToBeListedFlag || !f.IsDir() { // involves the -D or -d switchs.
+			if !filenameToBeListedFlag || f.IsDir() { // involves the -D or -d switchs and are not a hardlink.
 				continue
 			}
 			var color ct.Color
