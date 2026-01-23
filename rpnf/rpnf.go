@@ -73,9 +73,10 @@ import (
 18 Jan 26 -- Added fyne.Do to center the help window on screen.
 20 Jan 26 -- Adding a menu.
 21 Jan 26 -- Trying canvas.Text for the help window.  Nope, it didn't work.  All text came out on 1 line.
+23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
 */
 
-const lastModified = "Jan 21, 2026"
+const lastModified = "Jan 23, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -245,6 +246,7 @@ func main() {
 	})
 
 	menuItem2a := fyne.NewMenuItem("Fix 10", func() {
+		hpcalc2.GetResult("fix")
 		hpcalc2.SetSigFig(10)
 		populateUI()
 		globalW.Show()
@@ -252,11 +254,28 @@ func main() {
 		//})
 	})
 	menuItem2b := fyne.NewMenuItem("Fix 12", func() {
+		hpcalc2.GetResult("fix")
 		hpcalc2.SetSigFig(12)
 		populateUI()
 		globalW.Show()
 		//fyne.Do(func() {
 		//})
+	})
+
+	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() {
+		hpcalc2.GetResult("fix")
+		onConfirmCallback := func(sigfigStr string) {
+			sigfig, err := strconv.Atoi(sigfigStr)
+			if err != nil {
+				dialog.ShowError(err, globalW)
+				return
+			}
+			//fmt.Printf("on confirm callback sigfig=%d\n", sigfig)
+			hpcalc2.SetSigFig(sigfig)
+			populateUI()
+			globalW.Show()
+		}
+		dialog.ShowEntryDialog("Enter sigfig", "SigFig is:", onConfirmCallback, globalW)
 	})
 
 	menuItem3 := fyne.NewMenuItem("Help", func() {
@@ -281,7 +300,7 @@ func main() {
 		combinedString := strings.Join(stringslice, "\n")
 		dialog.ShowInformation("About rpnf", combinedString, globalW)
 	})
-	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem3, menuItem4)
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem2C, menuItem3, menuItem4)
 	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
 	globalW.SetMainMenu(menu)
 
