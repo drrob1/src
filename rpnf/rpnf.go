@@ -76,7 +76,7 @@ import (
 23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
 */
 
-const lastModified = "Jan 23, 2026"
+const lastModified = "Jan 24, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -429,7 +429,7 @@ func Doit() {
 					extra = append(extra, "dark, light -- set Fyne theme to dark or light.")
 					str := fmt.Sprintf("%s last modified on %s and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
 					extra = append(extra, str)
-					showHelp(extra)
+					showHelp(extra) // maybe I won't get an error from fyne.DoAndWait if I go showHelp.  No error, but the help window poped under the main window.  I removed the go call.
 				} else if rtkn.Str == "ZEROREG" {
 					for c := range Storage {
 						Storage[c].Value = 0
@@ -741,9 +741,6 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 // ---------------------------------------------------------- keyTypedHelp --------------------------------------------
 func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
 	switch e.Name {
-	//case fyne.KeySpace:
-	//	globalW.Canvas().Focus(input)
-	//	input.TypedRune(' ')
 
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		helpWindow.Close()
@@ -751,11 +748,11 @@ func keyTypedHelp(e *fyne.KeyEvent) { // Maybe better to first call input.TypedR
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalA.Quit()
 
-	default:
+		//default:
 		//input.TypedRune(rune(e.Name[0]))  ignore the key but change focus to the main window
-		globalW.Canvas().Focus(input)
+		//globalW.Canvas().Focus(input)  There is no input field here.  I wonder if that's causing some unwanted behavior.
 	}
-} // end keyTypedHelp
+}
 
 // ---------------------------------------------------------- keyTypedPopup --------------------------------------------
 func keyTypedPopup(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
@@ -878,7 +875,6 @@ func OutputRegToString() string {
 // --------------------------------------------------------- showHelp ------------------------------------------
 
 func showHelp(extra []string) {
-	//time.Sleep(5 * time.Second)
 	_, ss := hpcalc2.GetResult("help")
 	ss = append(ss, extra...)
 	helpStr := strings.Join(ss, "\n")
@@ -893,12 +889,15 @@ func showHelp(extra []string) {
 	//}
 
 	helpScroll := container.NewScroll(helpLabel)
-	fyne.DoAndWait(func() { // added because of error in fyne call thread, these should have been called in fyne.Do
+	// added because of error in fyne call thread, these should have been called in fyne.Do.  I did fyne.DoAndWait but got errors from that being in main go routine,
+	// I guess because it blocks the main thread.
+	fyne.Do(func() {
 		helpWindow = globalA.NewWindow("Help")
-		helpWindow.SetContent(helpScroll)
 		helpWindow.Canvas().SetOnTypedKey(keyTypedHelp)
 		helpWindow.Resize(fyne.NewSize(1000, 900))
+		helpWindow.SetContent(helpScroll)
 		helpWindow.CenterOnScreen() // suggested by AI
+		helpWindow.RequestFocus()
 		helpWindow.Show()
 	})
 	//dialog.ShowCustom("", "OK", helpLabel, globalW) // empty title
