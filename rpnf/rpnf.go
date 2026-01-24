@@ -262,7 +262,7 @@ func main() {
 		//})
 	})
 
-	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() {
+	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() { // but dialog.ShowEntryDialog is depracated
 		hpcalc2.GetResult("fix")
 		onConfirmCallback := func(sigfigStr string) {
 			sigfig, err := strconv.Atoi(sigfigStr)
@@ -270,12 +270,33 @@ func main() {
 				dialog.ShowError(err, globalW)
 				return
 			}
-			//fmt.Printf("on confirm callback sigfig=%d\n", sigfig)
 			hpcalc2.SetSigFig(sigfig)
 			populateUI()
 			globalW.Show()
 		}
 		dialog.ShowEntryDialog("Enter sigfig", "SigFig is:", onConfirmCallback, globalW)
+	})
+
+	menuItem2D := fyne.NewMenuItem("Fix with ShowForm", func() { // needed because dialog.ShowEntryDialog is depracated
+		hpcalc2.GetResult("fix")
+		entry := widget.NewEntry()
+		entry.SetPlaceHolder("Enter sigfig")
+		items := []*widget.FormItem{widget.NewFormItem("SigFig", entry)}
+		formCallBackFunc := func(confirmed bool) {
+			if !confirmed {
+				return
+			}
+			sigfigStr := entry.Text
+			sigfig, err := strconv.Atoi(sigfigStr)
+			if err != nil {
+				dialog.ShowError(err, globalW)
+				return
+			}
+			hpcalc2.SetSigFig(sigfig)
+			populateUI()
+			globalW.Show()
+		}
+		dialog.ShowForm("Enter Sigfig", "OK", "Cancel", items, formCallBackFunc, globalW)
 	})
 
 	menuItem3 := fyne.NewMenuItem("Help", func() {
@@ -300,7 +321,7 @@ func main() {
 		combinedString := strings.Join(stringslice, "\n")
 		dialog.ShowInformation("About rpnf", combinedString, globalW)
 	})
-	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem2C, menuItem3, menuItem4)
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem2C, menuItem2D, menuItem3, menuItem4)
 	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
 	globalW.SetMainMenu(menu)
 
