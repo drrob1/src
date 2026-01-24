@@ -89,7 +89,7 @@ var outputMode int
 var divider = "-------------------------------------------------------------------------------------------------------"
 
 var globalA fyne.App
-var globalW, helpWindow, popupName fyne.Window
+var globalW, helpWindow, popupName fyne.Window // the popupName is how I get the name for a register save operation.
 var input, nameLabelInput *widget.Entry
 
 var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
