@@ -113,6 +113,7 @@ type register struct {
 	Name  string
 }
 
+// I don't think I like the dark theme, probably because I haven't fully implemented it.  The menu colors are too low contrast.  I'll leave it here but not use it, on or about line 226.
 type myDarkTheme struct {
 }
 
@@ -140,9 +141,14 @@ func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) 
 	if name == theme.ColorNameBackground {
 		// dark background for dark variant, maybe slightly lighter for light variant
 		if variant == theme.VariantDark {
-			return color.RGBA{R: 0x12, G: 0x12, B: 0x12, A: 0xff}
+			return color.RGBA{R: 18, G: 18, B: 18, A: 255}
 		}
-		return color.RGBA{R: 0x22, G: 0x22, B: 0x22, A: 0xff}
+		return color.RGBA{R: 34, G: 34, B: 34, A: 255}
+	} else if name == theme.ColorNameForeground {
+		if variant == theme.VariantDark {
+			return color.RGBA{R: 238, G: 238, B: 238, A: 255} // I think this is an offwhite
+		}
+		return color.RGBA{R: 255, G: 255, B: 255, A: 255} // bright white, I think
 	}
 	return theme.DefaultTheme().Color(name, variant)
 }
@@ -182,7 +188,8 @@ func main() {
 	}
 	windowsFlag = runtime.GOOS == "windows"
 	if windowsFlag {
-		lightTheme = true
+		//lightTheme = true
+		lightTheme = false // well, this is the default now
 	}
 
 	StorageFullFilename := homeDir + string(os.PathSeparator) + Storage1FileName
@@ -217,10 +224,11 @@ func main() {
 	}
 
 	globalA = app.New()
-	globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.
+	//globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.  And removed Jan 24, 2026.
 	globalA.SetIcon(calcIconRes)
 	globalW = globalA.NewWindow("rpnf, fyne GUI rpn calculator")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
+	fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
 	lightTheme = false
 
 	menuItem1 := fyne.NewMenuItem("To Clipboard", func() {
