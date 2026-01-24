@@ -160,7 +160,6 @@ func (m myDarkTheme) Size(name fyne.ThemeSizeName) float32 {
 }
 
 func main() {
-
 	flag.Parse()
 
 	if *verboseFlag {
@@ -258,8 +257,6 @@ func main() {
 		hpcalc2.SetSigFig(12)
 		populateUI()
 		globalW.Show()
-		//fyne.Do(func() {
-		//})
 	})
 
 	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() { // but dialog.ShowEntryDialog is depracated
@@ -889,13 +886,15 @@ func showHelp(extra []string) {
 	//}
 
 	helpScroll := container.NewScroll(helpLabel)
-	// added because of error in fyne call thread, these should have been called in fyne.Do.  I did fyne.DoAndWait but got errors from that being in main go routine,
+	//dummyInput := widget.NewEntry() // trying to force focus on this window, so maybe if I have an input field, it will work.  Nope, it doesn't so I took it out.
+
+	// added fyne.Do because of error in fyne call thread, these should have been called in fyne.Do.  I did fyne.DoAndWait but got errors from that being in main go routine,
 	// I guess because it blocks the main thread.
 	fyne.Do(func() {
 		helpWindow = globalA.NewWindow("Help")
 		helpWindow.Canvas().SetOnTypedKey(keyTypedHelp)
-		helpWindow.Resize(fyne.NewSize(1000, 900))
 		helpWindow.SetContent(helpScroll)
+		helpWindow.Resize(fyne.NewSize(1200, 950))
 		helpWindow.CenterOnScreen() // suggested by AI
 		helpWindow.RequestFocus()
 		helpWindow.Show()
