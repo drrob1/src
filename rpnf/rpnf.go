@@ -77,7 +77,7 @@ import (
 26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
 */
 
-const lastModified = "Jan 24, 2026"
+const lastModified = "Jan 26, 2026"
 
 const ( // output modes
 	outputfix = iota
