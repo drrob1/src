@@ -74,6 +74,7 @@ import (
 20 Jan 26 -- Adding a menu.
 21 Jan 26 -- Trying canvas.Text for the help window.  Nope, it didn't work.  All text came out on 1 line.
 23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
+26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
 */
 
 const lastModified = "Jan 24, 2026"
@@ -137,19 +138,24 @@ var screenHeight = flag.Float64("sh", 1000, "screen height for the resize method
 var execname, execTimeStamp string
 var execFI os.FileInfo
 
-func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	if name == theme.ColorNameBackground {
-		// dark background for dark variant, maybe slightly lighter for light variant
-		if variant == theme.VariantDark {
-			return color.RGBA{R: 18, G: 18, B: 18, A: 255}
-		}
-		return color.RGBA{R: 34, G: 34, B: 34, A: 255}
-	} else if name == theme.ColorNameForeground {
-		if variant == theme.VariantDark {
-			return color.RGBA{R: 238, G: 238, B: 238, A: 255} // I think this is an offwhite
-		}
-		return color.RGBA{R: 255, G: 255, B: 255, A: 255} // bright white, I think
-	}
+//func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color { // this changes the colors of the dark theme.  I don't want that.
+//	if name == theme.ColorNameBackground {
+//		// dark background for dark variant, maybe slightly lighter for light variant
+//		if variant == theme.VariantDark {
+//			return color.RGBA{R: 18, G: 18, B: 18, A: 255}
+//		}
+//		return color.RGBA{R: 34, G: 34, B: 34, A: 255}
+//	} else if name == theme.ColorNameForeground {
+//		if variant == theme.VariantDark {
+//			return color.RGBA{R: 238, G: 238, B: 238, A: 255} // I think this is an offwhite
+//		}
+//		return color.RGBA{R: 255, G: 255, B: 255, A: 255} // bright white, I think
+//	}
+//	return theme.DefaultTheme().Color(name, variant)
+//}
+
+func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color { // I want the default theme to be the dark variant, and I think this does that.
+	variant = theme.VariantDark
 	return theme.DefaultTheme().Color(name, variant)
 }
 
@@ -224,11 +230,11 @@ func main() {
 	}
 
 	globalA = app.New()
-	//globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.  And removed Jan 24, 2026.
+	globalA.Settings().SetTheme(&myDarkTheme{}) // added Nov 30, 2025.  And removed Jan 24, 2026.  And added back Jan 26, 2026.
 	globalA.SetIcon(calcIconRes)
 	globalW = globalA.NewWindow("rpnf, fyne GUI rpn calculator")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
-	fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+	//       fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
 	lightTheme = false
 
 	menuItem1 := fyne.NewMenuItem("To Clipboard", func() {
@@ -248,8 +254,6 @@ func main() {
 		}
 		populateUI()
 		globalW.Show()
-		//fyne.Do(func() {
-		//})
 	})
 
 	menuItem2a := fyne.NewMenuItem("Fix 10", func() {
