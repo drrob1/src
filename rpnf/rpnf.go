@@ -75,9 +75,10 @@ import (
 21 Jan 26 -- Trying canvas.Text for the help window.  Nope, it didn't work.  All text came out on 1 line.
 23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
 26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
+28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
 */
 
-const lastModified = "Jan 26, 2026"
+const lastModified = "Jan 28, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -271,7 +272,7 @@ func main() {
 		globalW.Show()
 	})
 
-	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() { // but dialog.ShowEntryDialog is depracated
+	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() { // this dialog.ShowEntryDialog is depracated so I'm trying the replacement, below.
 		hpcalc2.GetResult("fix")
 		onConfirmCallback := func(sigfigStr string) {
 			sigfig, err := strconv.Atoi(sigfigStr)
@@ -794,7 +795,7 @@ func keyTypedPopup(e *fyne.KeyEvent) { // Maybe better to first call input.Typed
 
 // --------------------------------------------------------- getNameFromPopup ------------------------------------------
 
-func getNameFromPopup() {
+func getNameFromPopup() { // used by the STO command to get the name to use for the register
 	nameLabelInput = widget.NewEntry()
 	nameLabelInput.PlaceHolder = "Enter name label for register"
 	enterFunc := func(s string) {
@@ -803,13 +804,15 @@ func getNameFromPopup() {
 	}
 	nameLabelInput.OnSubmitted = enterFunc
 
-	popupName = globalA.NewWindow("Get Name Label for register")
+	fyne.Do(func() {
+		popupName = globalA.NewWindow("Get Name Label for register")
 
-	popupName.SetContent(nameLabelInput)
-	popupName.Canvas().SetOnTypedKey(keyTypedPopup)
-	popupName.Resize(fyne.NewSize(500, 200))
-	popupName.Show()
-	//return  redundant
+		popupName.SetContent(nameLabelInput)
+		popupName.Canvas().SetOnTypedKey(keyTypedPopup)
+		popupName.Resize(fyne.NewSize(500, 200))
+		popupName.CenterOnScreen() // added Jan 28, 2026
+		popupName.Show()
+	})
 } // end getNameFromPopup
 
 // ------------------------------------------------------- check -------------------------------
@@ -888,6 +891,7 @@ func showHelp(extra []string) {
 	ss = append(ss, extra...)
 	helpStr := strings.Join(ss, "\n")
 	helpLabel := widget.NewLabel(helpStr)
+	helpLabel.TextStyle = fyne.TextStyle{Bold: true}
 	//helpLabel := canvas.Text{  This didn't work.  All the text was on 1 very long line.
 	//	Alignment:  0,
 	//	Color:      color.White,
