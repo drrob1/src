@@ -27,17 +27,18 @@ const width = 800
 const height = 680
 const minRowsVisible = 30
 
-//go:embed gear.ico
+//go:embed gear.png
 var gearIcon []byte
 
 func main() {
 	var path, basenameSearchStr string
 	a := app.New()
+	gearIconRes := fyne.NewStaticResource("gear.png", gearIcon)
+	a.SetIcon(gearIconRes)
+
 	s := fmt.Sprintf("Markdown Editor v 1, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
 
-	gearIconRes := fyne.NewStaticResource("gear.ico", gearIcon)
-	a.SetIcon(gearIconRes)
 	editWidget := widget.NewMultiLineEntry()
 	editWidget.SetMinRowsVisible(minRowsVisible)        // got this from perplexity
 	previewWidget := widget.NewRichTextFromMarkdown("") // empty string just to initialize it
