@@ -1,8 +1,11 @@
 package main
 
 import (
+	_ "embed"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -13,19 +16,28 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+/*
+  21 Dec 25 -- Andy Williams gave a talk at GopherCon UK in 2024 that I heard yesterday.  I created this from his talk, after expanding the minimal code he gave there.
+  29 Jan 26 -- Added the gear icon.
+*/
+
+const lastModified = "Jan 29, 2026"
+
 const width = 800
 const height = 680
 const minRowsVisible = 30
 
-/*
-  21 Dec 25 -- Andy Williams gave a talk at GopherCon UK in 2024 that I heard yesterday.  I created this from his talk, after expanding the minimal code he gave there.
-*/
+//go:embed gear.ico
+var gearIcon []byte
 
 func main() {
 	var path, basenameSearchStr string
 	a := app.New()
-	w := a.NewWindow("Markdown Editor")
+	s := fmt.Sprintf("Markdown Editor v 1, last modified %s, compiled with %s", lastModified, runtime.Version())
+	w := a.NewWindow(s)
 
+	gearIconRes := fyne.NewStaticResource("gear.ico", gearIcon)
+	a.SetIcon(gearIconRes)
 	editWidget := widget.NewMultiLineEntry()
 	editWidget.SetMinRowsVisible(minRowsVisible)        // got this from perplexity
 	previewWidget := widget.NewRichTextFromMarkdown("") // empty string just to initialize it
