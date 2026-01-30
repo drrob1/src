@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,9 +20,10 @@ import (
 /*
   21 Dec 25 -- Andy Williams gave a talk at GopherCon UK in 2024 that I heard yesterday.  I created this from his talk, after expanding the minimal code he gave there.
   29 Jan 26 -- Added the gear icon.
+  30 Jan 26 -- Now reading a file actually works.  Before, it didn't.
 */
 
-const lastModified = "Jan 29, 2026"
+const lastModified = "Jan 30, 2026"
 
 const width = 800
 const height = 680
@@ -73,6 +75,12 @@ func main() {
 		ext := filepath.Ext(path)
 		basenameSearchStr = filepath.Base(path)
 		basenameSearchStr = strings.TrimSuffix(basenameSearchStr, ext)
+		contents, err := io.ReadAll(reader)
+		if err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+		editWidget.SetText(string(contents))
 	}
 
 	openBtnFunc := func() { // I want to specify starting directory 1st
