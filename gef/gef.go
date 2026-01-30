@@ -84,7 +84,7 @@ func main() {
 	var filenameToSave string
 
 	//   Using the custom open file dialog box
-	openFileFunc := func(r fyne.URI) {
+	openFileFunc := func(r fyne.URI) { // looks like a fyne.URI is different from a ReadClosure.  So I do have to open it as a file, first.
 		if r == nil {
 			return
 		}
