@@ -1,4 +1,4 @@
-// rexv.go from rex.go -- directory sort using a regular expression pattern on the filename
+// rexv.go from rex.go -- directory sort using a regular expression pattern on the filename.  This uses viper.
 
 package main
 
@@ -148,9 +148,12 @@ Revision History
 22 Jun 25 -- Porting code I just wrote for dv and rex to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
 				Here I'm using a procedure variable to track whether color should be output.
 17 Sep 25 -- Will display more info for symlinks, i.e., the target of the symlink and the correct size.  Ported here from rex.go 1/17/26.
+31 Jan 26 -- Since I don't use this as much as rex, I'm going to change the algorithm here so that it only calls Stat on matched filenames, not up front.  I hope this is faster.
+				Looks like I already did this some time ago.  I have a vague memory that before I used concurrency, the linux version would take ~8 sec when searching dsm, but
+				the Windows version would take ~1 sec.  Adding concurrency made it ~1 sec on linux but didn't really change on Windows.  So nothing to do here, after all.
 */
 
-const LastAltered = "Sept 17, 2025"
+const LastAltered = "Jan 31, 2026"
 
 type dirAliasMapType map[string]string
 
@@ -788,7 +791,9 @@ func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The
 		}()
 	}
 
-	go func() { // collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?  I figured it out, by closing the channel after all work is sent to it.
+	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
+	// I figured it out, by closing the channel after all work is sent to it.
+	go func() {
 		for fi := range fiChan {
 			fiSlice = append(fiSlice, fi)
 			if fi.Mode().IsRegular() && showGrandTotal {
