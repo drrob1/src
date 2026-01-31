@@ -151,6 +151,7 @@ Revision History
 31 Jan 26 -- Since I don't use this as much as rex, I'm going to change the algorithm here so that it only calls Stat on matched filenames, not up front.  I hope this is faster.
 				Looks like I already did this some time ago.  I have a vague memory that before I used concurrency, the linux version would take ~8 sec when searching dsm, but
 				the Windows version would take ~1 sec.  Adding concurrency made it ~1 sec on linux but didn't really change on Windows.  So nothing to do here, after all.
+				I'll make fetch a param.
 */
 
 const LastAltered = "Jan 31, 2026"
@@ -170,7 +171,7 @@ const min3Width = 170
 const configShortName = "rexv"
 
 const multiplier = 10 // used for the worker pool pattern in MyReadDir
-const fetch = 1000    // used for the concurrency pattern in MyReadDir
+var fetch int         // used for the concurrency pattern in MyReadDir
 var numWorkers = runtime.NumCPU() * multiplier
 
 var excludeRegex *regexp.Regexp
@@ -265,6 +266,9 @@ func main() {
 	flag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 50 screens by default.  Intended to be used w/ the scroll back buffer.")
 
 	flag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
+
+	flag.IntVarP(&fetch, "fetch", "f", 1000, "Number of files to fetch at a time.  Used in MyReadDir.")
+	viper.SetDefault("fetch", fetch)
 
 	flag.Usage = func() { // must be above the Parse() to work.
 		fmt.Printf(" %s last altered %s, and compiled with %s. \n", os.Args[0], LastAltered, runtime.Version())
