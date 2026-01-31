@@ -31,11 +31,11 @@ Revision History
 ----------------
 20 Apr 17 -- Started writing dsize rtn, based on dirlist.go
 21 Apr 17 -- Now tweaking the output format.  And used flag package.  One as a pointer and one as a value, just to learn them.
-22 Apr 17 -- Coded the use of the first non flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
+22 Apr 17 -- Coded the use of the first non-flag commandline param,  which is all I need.  Note that the flag must appear before the non-flag param, else the flag is ignored.
 22 Apr 17 -- Now writing dsrt, to function similarly to dsort.
 24 Apr 17 -- Now adding file matching, like "dir" or "ls" does.
 25 Apr 17 -- Now adding sort by size as an option, like -s, and commas
-26 Apr 17 -- Noticed that the match routine is case sensitive.  I don't like that.
+26 Apr 17 -- Noticed that the match routine is case-sensitive.  I don't like that.
 27 Apr 17 -- commandline now allows a file spec.  I intend this for Windows.  I'll see how it goes.
 19 May 17 -- Will now show the uid:gid for linux.
 20 May 17 -- Turns out that (*syscall.Stat_t) only compiles on linux.  Time for platform specific code.
@@ -78,7 +78,7 @@ Revision History
 22 Jul 19 -- Added a winflag check so don't scan commandline on linux looking for : or ~.
  9 Sep 19 -- From Israel: Fixing issue on linux when entering a directory param.  And added test flag.  And added sortfcn.
 22 Sep 19 -- Changed the error message under linux and have only 1 item on command line.  Error condition is likely file not found.
- 4 Oct 19 -- No longer need platform specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
+ 4 Oct 19 -- No longer need platform-specific code.  So I added GetUserGroupStrLinux.  And then learned that it won't compile on Windows.
                So as long as I want the exact same code for both platforms, I do need platform specific code.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
  5 Oct 19 -- Started writing this as regex.go.  Will not display uid:gid.  If need that, need to use dsrt.  And doesn't have -x flag to exclude.
@@ -92,7 +92,7 @@ Revision History
 20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
                  I found these to be much faster when I changed dsrt.go.
 15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
-17 Jan 21 -- Adding -x flag, for an exclude pattern, ie, if this pattern matches, don't print.
+17 Jan 21 -- Adding -x flag, for an exclude pattern, i.e., if this pattern matches, don't print.
 31 Jan 21 -- Adding color.
 13 Feb 21 -- Swapping white and cyan.
 15 Feb 21 -- Swapping yellow and white so yellow is mb and white is gb.
@@ -148,6 +148,7 @@ Revision History
 21 Jun 25 -- Porting code I just wrote for dv to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
 22 Jun 25 -- Ported code I wrote for rexv, myPrintf, to here.
 17 Sep 25 -- Starting to display more info for symlinks, ie, the target of the symlink and the correct size.
+31 Jan 26 -- Fixed some comments so that Goland stops complaining.
 */
 
 const LastAltered = "Sep 18, 2025"
@@ -307,12 +308,12 @@ func main() {
 
 	var TotalFlag = flag.BoolP("total", "t", false, "include grand total of directory") // Removed 8/27/23, added back 5/4/24
 
-	//flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")  Never used anyways
+	//flag.BoolVar(&verboseFlag, "test", false, "enter a testing mode to println more variables")  Never used anyway
 	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "enter a verbose (testing) mode to println more variables")
 
 	var longflag = flag.BoolP("long", "l", false, "long file size format.") // Ptr
 
-	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex to be entered after prompt")  Never used this way anyways
+	//flag.BoolVar(&excludeFlag, "exclude", false, "exclude regex to be entered after prompt")  Never used this way anyway
 	flag.StringVarP(&excludeRegexPattern, "exclude", "x", "", "regex entered on command line to be excluded from output.")
 
 	var extflag = flag.Bool("e", false, "only print if there is no extension, like a binary file")
@@ -434,12 +435,12 @@ func main() {
 	if len(excludeRegexPattern) > 0 {
 		excludeRegexPattern = strings.ToLower(excludeRegexPattern)
 		excludeRegex, err = regexp.Compile(excludeRegexPattern)
+		excludeFlag = true
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println(" ignoring exclude regular expression.")
 			excludeFlag = false
 		}
-		excludeFlag = true
 	} else if excludeFlag {
 		myPrintf(ct.Yellow, winFlag, " Enter regex pattern to be excluded: ")
 		fmt.Scanln(&excludeRegexPattern)
@@ -458,7 +459,7 @@ func main() {
 
 	showGrandTotal = *TotalFlag || dsrtParam.totalFlag // added 09/12/2018 12:32:23 PM, and removed 8/27/23.
 
-	inputRegExStr := ""
+	var inputRegExStr string
 	workingDir, er := os.Getwd()
 	if er != nil {
 		fmt.Fprintf(os.Stderr, " Error from Getwd() is %v\n", er)
@@ -687,7 +688,7 @@ func ProcessEnvironString(dsrtEnv, dswEnv string) DsrtParamType { // use system 
 
 	if dswEnv == "" {
 		dsrtparam.w = 0 // redundant
-	} else { // dswStr not in environ, ie not ok
+	} else { // dswStr not in environ, i.e., not ok
 		n, err := strconv.Atoi(dswEnv)
 		if err == nil {
 			dsrtparam.w = n
