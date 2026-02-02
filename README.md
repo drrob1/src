@@ -1,5 +1,5 @@
 ## gocode
-All of my go code as of July 28, 2025
+All of my go code as of Feb 2, 2026
 
 1.  sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.  Multisha, consha, csha, fsha and fsha3 do this w/ conconcurrency.
 2.  rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
@@ -10,8 +10,8 @@ All of my go code as of July 28, 2025
 7.  launchv -- takes a regexp, shuffles the matches and starts vlc w/ the first n files on the command line
 8.  lv2 -- takes a regexp, shuffles the matches, writes an .xspf file and starts vlc to use that file.
 9.  cal -- Simple CLI program that creates a file for paper output, a year on a page, and a 2nd file to import into Excel to be used to make a schedule.
-10. calg -- Displays 6 months of a calendar just using colortext.  Writes schedule template using hardcoded names.
-11. calgo -- calendar pgm written in Go based on calg code.  Writes schedule template using a config file for the names.
+10. calg -- Displays 6 months of a calendar just using colortext.  Writes schedule template using hardcoded Names.
+11. calgo -- calendar pgm written in Go based on calg code.  Writes schedule template using a config file for the Names.
 12. oldcalgo -- calendar pgm written in Go using tcell.  Name implies it's not up to date.
 12. caltcell -- calendar pgm written in Go using tcell.  Not up to date.
 13. dsrt -- directory sort program.  Sorted by mod timestamp or size.
@@ -19,7 +19,7 @@ All of my go code as of July 28, 2025
 14. ds -- truncated directory sort intended for narrow terminal windows or columns
 15. dvfirst -- directory sort program based on dsrt, but using viper for its options
 16. dv -- directory sort program based on fdsrt, using viper for its options.
-15. rex -- uses regular expressions to match the file names.
+15. rex -- uses regular expressions to match the file Names.
 16. rexv -- same as rex, but uses viper for options and initializations.
 16. ofx2csv -- takes open financial exchange datafile and writes in csv format.
 17. fromfx, fromfx2, queuefx -- takes qfx, ofx or qbo bank file and writes xls, csv, xlsx and directly to sqlite3 .db formats.

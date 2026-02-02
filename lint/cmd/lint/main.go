@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"runtime"
 	"src/lint"
-	"src/list"
 	"src/whichexec"
 	"strconv"
 	"strings"
@@ -120,7 +119,7 @@ import (
    1 Feb 26 -- I'm starting to think about using fyne to make this a GUI pgm.  I may have to convert much of this code to functions that are merely connected together in main.go,
 				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-   2 Feb 26 -- Now only contains main() and calls package lint.
+   2 Feb 26 -- Now only contains main() and calls package lint.  A sticking point in the conversion to separate pacckages was the globals.  When I copied those correctly, the code started working.
 */
 
 const lastModified = "2 Feb 2026"
@@ -161,9 +160,6 @@ func main() {
 		verboseFlag = true
 	}
 
-	list.VeryVerboseFlag = veryVerboseFlag
-	list.VerboseFlag = verboseFlag
-
 	if *u1 {
 		whichURL = 1
 	} else if *u2 {
@@ -183,8 +179,13 @@ func main() {
 		}
 	}
 	if verboseFlag {
-		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirFromConfigFile)
+		fmt.Printf(" After findAndReadConfIni, Start Directory: %s, NArg(): %d\n", startDirFromConfigFile, flag.NArg())
 	}
+
+	lint.VeryVerboseFlag = veryVerboseFlag
+	lint.VerboseFlag = verboseFlag
+	lint.StartDirFromConfigFile = startDirFromConfigFile
+	lint.MonthsThreshold = monthsThreshold
 
 	if flag.NArg() == 0 {
 		//if includeODrive {  O: drive is gone as of 8/8/25.
@@ -251,6 +252,10 @@ func main() {
 		//		fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
 		//	}
 		//}
+		if verboseFlag {
+			fmt.Printf("main ln ~257: VerboseFlag is true, NArg() is zero, and startdirectoryFromConfigFile = %s, about to call GetFilenames() \n",
+				startDirFromConfigFile)
+		}
 
 		filenames, err := lint.GetFilenames()
 		if err != nil {
@@ -298,6 +303,7 @@ func main() {
 		fmt.Printf(" doc names extracted from %s length: %d\n", filename, len(names))
 		fmt.Printf(" names: %#v\n\n", names)
 	}
+	lint.Names = names
 
 	// detecting and reporting likely spelling errors based on the soundex algorithm
 

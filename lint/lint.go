@@ -21,6 +21,7 @@ import (
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
 	"github.com/umahmood/soundex"
@@ -62,7 +63,7 @@ import (
 ----------------------------------------------------------------------------------------------------
   28 Jan 25 -- Now called lint2, and added detection of having the late doc also be on fluoro.  That happened today at Flushing, and it was a mistake.
 				I think I can do it without much difficulty.
-  29 Jan 25 -- I'm going to make the week a 2D array and use a map to get the names from the row #.  Just to see if it will work.  It does.
+  29 Jan 25 -- I'm going to make the week a 2D array and use a map to get the Names from the row #.  Just to see if it will work.  It does.
 				Now I'm going to try to see if a remote doc is on fluoro, like there was today.
   30 Jan 25 -- And I shortened the main loop looking for vacation docs assigned to clinical work.
 ----------------------------------------------------------------------------------------------------
@@ -86,7 +87,7 @@ import (
    8 May 25 -- Fixed the help message.
   26 May 25 -- When I installed this on Caity's computer, I got the idea that I should filter out the files that Excel controls, i.e., those that begin w/ ~, tilda.
   31 May 25 -- Changed an error message.
-   2 Aug 25 -- Completed getdocnames yesterday which extracts the names from the schedule itself.  This way I don't need to specify them in the config file, making this routine
+   2 Aug 25 -- Completed getdocnames yesterday which extracts the Names from the schedule itself.  This way I don't need to specify them in the config file, making this routine
 				more robust.  I'm going to add it.  I have to ignore the line of the config file that begins w/ "off".  I have to check what the code does if there is no
 				startdirectory line in the config file, or the line has invalid syntax (like not beginning w/ the correctly spelled keyword).
 				Processing the config file used to do so by using global var's.  I'm changing that to use params.  This way, I can ignore a return param if I want to.
@@ -115,7 +116,7 @@ import (
    1 Sep 25 -- The department changed the format for the schedule, highlighting on call and weekend docs.  I'll need to change the code to use the new format.
    8 Sep 25 -- I got them to add back an indication of who's off, but it's all in 1 box in the Friday column.  I have to think about this, and wonder about it changing again.
 				And the numbering changed.  I have to move weekdayOncall, which used to be at the top, and is now near the bottom.  Basically, I have to completely change
-				WhosOnVacationToday.  When I do that, then the rest of the code should be ok.  I already changed some of the const names for the sections to be covered.
+				WhosOnVacationToday.  When I do that, then the rest of the code should be ok.  I already changed some of the const Names for the sections to be covered.
 				Previously, scanXLSfile processes the file and displays the error messages.  Main sets up the data structures leading into scanXLSfile.  scanXLSfile was able to
 				read each day separately, which worked before.  Now, the off data is in Friday's column.  So would have to read the whole file, and then process the off data.
    9 Sep 25 -- I'm coming back to do these changes in lint.go itself.  I'll stop using extractoff.go.  My plan is to create the vacation string slice in the format that it used to be in,
@@ -194,7 +195,9 @@ type VacStructType struct {
 }
 type VacStructArrayType [6]VacStructType
 
-var names = make([]string, 0, numOfDocs)
+//var names = make([]string, 0, numOfDocs)  Old definition.
+
+var Names []string
 
 var CategoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
@@ -224,7 +227,7 @@ func FindAndReadConfIni() ([]string, string, error) {
 		}
 	}
 
-	docNames := make([]string, 0, numOfDocs) // a list of all the doc's last names as read from the config file.
+	docNames := make([]string, 0, numOfDocs) // a list of all the doc's last Names as read from the config file.
 	var startDirectory string
 	// now need to process the config file using code from fansha.
 	fileByteSlice, err := os.ReadFile(fullFile)
@@ -323,13 +326,13 @@ func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) {
 
 // WhosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.  This is not needed now, as it's function is replaced by populateVacStruct func.
 func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
-	// this function is to return a slice of names that are on vacation for this day
+	// this function is to return a slice of Names that are on vacation for this day
 	vacationString := strings.ToLower(week[dayCol][mdOff])
 
 	mdsOff := make([]string, 0, numOfDocs) // Actually, never more than 10 off, but religious holidays can have a lot off.
 
-	// search for matching names
-	for _, vacationName := range names { // names is a global
+	// search for matching Names
+	for _, vacationName := range Names { // Names is a global
 		DayOff[vacationName] = false
 		if strings.Contains(vacationString, vacationName) {
 			DayOff[vacationName] = true
@@ -340,13 +343,13 @@ func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an
 }
 
 func whosLateToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
-	// this function is to return a slice of names that are on the late shift for today.  Only 2 per day are late.
+	// this function is to return a slice of Names that are on the late shift for today.  Only 2 per day are late.
 
 	lateString := strings.ToLower(week[dayCol][late])
 
 	lateDocs := make([]string, 0, 2)
-	// search for matching names
-	for _, lateName := range names { // names is a global
+	// search for matching Names
+	for _, lateName := range Names { // Names is a global
 		if strings.Contains(lateString, lateName) {
 			lateDocs = append(lateDocs, lateName)
 		}
@@ -355,11 +358,11 @@ func whosLateToday(week WorkWeekType, dayCol int) []string { // week is an array
 }
 
 func whosRemoteToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
-	// this function is to return a slice of names that are working remotely today.
+	// this function is to return a slice of Names that are working remotely today.
 	const remoteMarkerString = "(*R)"
 
-	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but names can be duplicated.
-	// search for matching names
+	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but Names can be duplicated.
+	// search for matching Names
 	for _, cell := range week[dayCol] {
 		cell = strings.ReplaceAll(cell, "   ", " ")
 		cell = strings.ReplaceAll(cell, "  ", " ")
@@ -384,6 +387,9 @@ func whosRemoteToday(week WorkWeekType, dayCol int) []string { // week is an arr
 func GetFilenames() ([]string, error) { // this will search Documents and OneDrive directories using a walk function.  And also the directory specified in a config file.
 	var filenames []string
 
+	if VerboseFlag {
+		fmt.Printf(" GetFilenames() called with VerboseFlag: %t, StartDirFromConfigFile: %s, NArg(): %d\n", VerboseFlag, StartDirFromConfigFile, flag.NArg())
+	}
 	if StartDirFromConfigFile != "" {
 		filenamesStartDir, err := walkRegexFullFilenames(StartDirFromConfigFile)
 		if err != nil {
@@ -475,12 +481,12 @@ func main() {
 
 	fmt.Printf(" lint V 3.0 for the weekly schedule, last modified %s\n", lastModified)
 
-	_, StartDirFromConfigFile, err = FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
+	_, StartDirFromConfigFile, err = FindAndReadConfIni() // ignore the doc Names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
 		if *verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
 			fmt.Printf(" Warning from FindAndReadConfIni: %s.  Ignoring. \n", err)
 			ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
-			//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
+			//   return  No longer need the Names from the file.  And don't absolutely need startDirectory.
 		}
 	}
 	if *verboseFlag {
@@ -590,19 +596,19 @@ func main() {
 	}
 	fmt.Println()
 
-	names, err = getDocNames(filename)
+	Names, err = getDocNames(filename)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error from getDocNames: %s.  Exiting \n", err)
 		return
 	}
 	if *verboseFlag {
-		fmt.Printf(" doc names extracted from %s length: %d\n", filename, len(names))
-		fmt.Printf(" names: %#v\n\n", names)
+		fmt.Printf(" doc Names extracted from %s length: %d\n", filename, len(Names))
+		fmt.Printf(" Names: %#v\n\n", Names)
 	}
 
 	// detecting and reporting likely spelling errors based on the soundex algorithm
 
-	soundx := getSoundex(names)
+	soundx := getSoundex(Names)
 	spellingErrors := showSpellingErrors(soundx)
 	if len(spellingErrors) > 0 {
 		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling error(s) detected in %s: ", len(spellingErrors)/2, filename)
@@ -740,7 +746,7 @@ func ScanXLSfile(filename string) error {
 	//	return err
 	//}
 
-	// Who's on vacation for each day, and then check the rest of that day to see if any of these names exist in any other row.
+	// Who's on vacation for each day, and then check the rest of that day to see if any of these Names exist in any other row.
 	for dayCol := 1; dayCol < len(wholeWorkWeek); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
 		//mdsOffToday := vacationArray[dayCol].docsAreOff // the vacationArray contains a slice of the docs who are off, organized by day.  But the need for this code is gone.  So, this code is now obsolete as of Sep 11, 2025.  It took long enough to debug for it to be obsolete and useless.
 		//ctfmt.Printf(ct.Cyan, true, "mdsOffToday on day %d is %#v\n", dayCol, mdsOffToday)
@@ -765,7 +771,7 @@ func ScanXLSfile(filename string) error {
 			fmt.Printf("\n Late shift docs on day %d are %#v\n", dayCol, lateDocsToday)
 		}
 
-		// Now, mdsOffToday is a slice of several names of who is off today.
+		// Now, mdsOffToday is a slice of several Names of who is off today.
 
 		for _, name := range mdsOffToday {
 			for i := neuro; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
@@ -775,7 +781,7 @@ func ScanXLSfile(filename string) error {
 			}
 		}
 
-		// Now, lateDocsToday is a slice of two names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
+		// Now, lateDocsToday is a slice of two Names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
 		for _, name := range lateDocsToday {
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
@@ -813,19 +819,16 @@ func ScanXLSfile(filename string) error {
 //	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
 func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
 
-	if startdirectory == "" {
-		return nil, errors.New("startdirectory is empty")
-	}
-
 	if VerboseFlag {
 		fmt.Printf(" walkRegexFullFilenames, startdirectory: %s\n", startdirectory)
 	}
 
-	// compile the regular expression
-	regex, err := regexp.Compile("week.*xls.?$")
-	if err != nil {
-		return nil, err
+	if startdirectory == "" {
+		return nil, errors.New("startdirectory is empty")
 	}
+
+	// compile the regular expression
+	regex := regexp.MustCompile("week.*xls.?$")
 
 	// define the timestamp constraint of >= this monthyear.  No, >= 1 month ago.
 	t0 := time.Now()
@@ -901,7 +904,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			fileDataChan <- filedata
 		}
 
-		// I now have a walk function that has collected all matching names in this fpath into a slice of fileInfos.
+		// I now have a walk function that has collected all matching Names in this fpath into a slice of fileInfos.
 		// Now what do I do now?  I want, after the call to the walk function, to have a slice of full filenames that match the constraints of name and timestamp.
 		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if thay match the timestamp constraint.
 		// I may need a go routine to collect all these slices into 1 slice to be sorted.  And I don't have a full filename in this slice.  I still have to
@@ -911,7 +914,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
 		// and another to signal when all of these local slices have been appended to the master filedata slice.
 		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
-		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory names, it produces any file entries
+		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory Names, it produces any file entries
 		// with each iteration.  So opening a directory here and fetching all the entries is not correct.  I have to change this to work on individual entries.
 		// Now it works.  The walk function gets the needed filenames, checks against the regex and sends down the channel if the file matches.
 		// This routine then sorts the []FileDataType and checks against the date threshold constraint when converting to []string.
@@ -925,7 +928,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		fmt.Printf(" WalkDir startDirectory: %s\n", startdirectory)
 	}
 
-	err = filepath.WalkDir(startdirectory, walkDirFunction)
+	err := filepath.WalkDir(startdirectory, walkDirFunction)
 	if err != nil {
 		return nil, err
 	}
@@ -989,7 +992,7 @@ func excludeMe(s string) bool {
 	return dgtRegexp.MatchString(s)
 }
 
-// GetDocNames -- takes a filename and returns a slice of doc names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
+// GetDocNames -- takes a filename and returns a slice of doc Names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
 func GetDocNames(fn string) ([]string, error) {
 	docNamesSlice := make([]string, 0, maxDimensions)
 	workBook, err := xlsx.OpenFile(fn)
@@ -1006,6 +1009,7 @@ func GetDocNames(fn string) ([]string, error) {
 			}
 			s := cell.String()
 			s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces, else the comma creates a false spelling error.
+			s = strings.ReplaceAll(s, ".", " ") // replace periods with spaces, intended to catch dr.name, without a space which confuses this algorithm.
 			fields := strings.Fields(s)
 			for _, field := range fields {
 				field = strings.ToLower(field)
