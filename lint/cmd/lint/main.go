@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"src/lint"
+	"src/list"
 	"src/whichexec"
 	"strconv"
 	"strings"
@@ -124,14 +124,14 @@ import (
 */
 
 const lastModified = "2 Feb 2026"
-const conf = "lint.conf"
-const ini = "lint.ini"
-const numOfDocs = 40 // used to dimension a string slice.
-const maxDimensions = 200
 
-var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
+//const conf = "lint.conf"
+//const ini = "lint.ini"
+//const numOfDocs = 40 // used to dimension a string slice.
+//const maxDimensions = 200
+//var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 
-var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
+var verboseFlag bool
 var veryVerboseFlag bool
 var monthsThreshold int
 var startDirFromConfigFile string // this needs to be a global, esp for the walk function.
@@ -140,6 +140,7 @@ func main() {
 	var err error
 	var noUpgradeLint bool
 	var whichURL int
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose debugging output")
 	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
 	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
 	flag.BoolVarP(&noUpgradeLint, "noupgrade", "n", false, "do not upgrade lint.exe")
@@ -148,16 +149,20 @@ func main() {
 	u2 := flag.BoolP("u2", "2", false, "Shortcut for -u 2")
 
 	flag.Usage = func() {
-		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastModified, runtime.Version())
+		fmt.Printf(" %s last modified main.go %s and lint.go %s, compiled with %s, using pflag.\n", os.Args[0],
+			lastModified, lint.LastModified, runtime.Version())
 		fmt.Printf(" Usage: %s <weekly xlsx file> \n", os.Args[0])
-		fmt.Printf(" Needs lint.conf or lint.ini, and looks in current, home and config directories.\n")
-		fmt.Printf(" first line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
+		fmt.Printf(" Looks for lint.conf or lint.ini in current, home and config directories.\n")
+		fmt.Printf(" First line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	if veryVerboseFlag {
-		*verboseFlag = true
+		verboseFlag = true
 	}
+
+	list.VeryVerboseFlag = veryVerboseFlag
+	list.VerboseFlag = verboseFlag
 
 	if *u1 {
 		whichURL = 1
@@ -167,17 +172,17 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint V 3.0 for the weekly schedule, last modified %s\n", lastModified)
+	fmt.Printf(" lint V 3.1 for the weekly schedule, last modified %s\n", lastModified)
 
 	_, startDirFromConfigFile, err = lint.FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
-		if *verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
+		if verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
 			fmt.Printf(" Warning from findAndReadConfIni: %s.  Ignoring. \n", err)
 			ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
 			//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
 		}
 	}
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirFromConfigFile)
 	}
 
@@ -279,7 +284,7 @@ func main() {
 		filename = flag.Arg(0)
 	}
 
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" spreadsheet picked is %s\n", filename)
 	}
 	fmt.Println()
@@ -289,7 +294,7 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " Error from getDocNames: %s.  Exiting \n", err)
 		return
 	}
-	if *verboseFlag {
+	if verboseFlag {
 		fmt.Printf(" doc names extracted from %s length: %d\n", filename, len(names))
 		fmt.Printf(" names: %#v\n\n", names)
 	}
@@ -328,14 +333,14 @@ func main() {
 		ctfmt.Printf(ct.Red, true, "\n\n Error getting working directory: %s.  Contact Rob Solomon\n\n", err)
 		return
 	}
-	fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe") // have to search for upgradelint, as at home it's likely in the go/bin directory.
+	// fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe") // not needed now that I'm using whichexec to find it.
 	upgradeExecPath := whichexec.Find("upgradelint.exe", workingDir)
-	if *verboseFlag {
-		fmt.Printf(" workingDir=%s, fullUpgradeLintPath=%s, upgradeExecPath=%s\n", workingDir, fullUpgradeLintPath, upgradeExecPath)
+	if verboseFlag {
+		fmt.Printf(" workingDir=%s, upgradeExecPath=%s\n", workingDir, upgradeExecPath)
 	}
 
 	variadicArgs := make([]string, 0, 2)
-	if *verboseFlag {
+	if verboseFlag {
 		variadicArgs = append(variadicArgs, "-v")
 	}
 	if whichURL > 0 {

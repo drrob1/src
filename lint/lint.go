@@ -1,4 +1,5 @@
-package lint // lint.go, from lint2.go from lint.go
+// Package lint: lint.go, from lint2.go from lint.go
+package lint
 
 import (
 	"bytes"
@@ -20,7 +21,6 @@ import (
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	flag "github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"github.com/tealeg/xlsx/v3"
 	"github.com/umahmood/soundex"
@@ -132,7 +132,7 @@ import (
    2 Feb 26 -- Now package lint, called by package main in cmd/main.go
 */
 
-const lastModified = "2 Feb 2026"
+const LastModified = "2 Feb 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -203,9 +203,8 @@ var CategoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", 
 var DayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var DayOff = make(map[string]bool) // only used in FindAndReadConfIni when verboseFlag is set
 
-var VerboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
-
 var NumLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
+var VerboseFlag bool
 var VeryVerboseFlag bool
 var MonthsThreshold int
 var StartDirFromConfigFile string // this needs to be a global, esp for the walk function.
@@ -217,7 +216,7 @@ func FindAndReadConfIni() ([]string, string, error) {
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
 		if !found {
-			if *VerboseFlag {
+			if VerboseFlag {
 				return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
 			} else {
 				return nil, "", nil
@@ -264,7 +263,7 @@ func FindAndReadConfIni() ([]string, string, error) {
 
 		sort.Strings(docNames)
 
-		if *VerboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" Sorted Names: %#v\n\n", docNames)
 		}
 	} else if paramName == "startdirectory" { // only have 1 line in the config file, and it's for startdirectory
@@ -280,11 +279,11 @@ func FindAndReadConfIni() ([]string, string, error) {
 
 	// Now to process setting startdirectory
 
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" In FindAndReadConfIni before 2nd ReadLine. BytesReader.Len=%d, and .size=%d\n", bytesReader.Len(), bytesReader.Size())
 	}
 	inputLine, err = misc.ReadLine(bytesReader)
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" In FindAndReadConfIni after 2nd ReadLine BytesReader.Len=%d, and .size=%d, inputline=%q\n",
 			bytesReader.Len(), bytesReader.Size(), inputLine)
 	}
@@ -393,11 +392,11 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 		}
 		if len(filenamesStartDir) > 0 {
 			filenames = append(filenames, filenamesStartDir...)
-			if *VerboseFlag {
+			if VerboseFlag {
 				fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
 			}
 		}
-		if *VerboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
 		}
 	}
@@ -408,13 +407,13 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 	}
 
 	docs := filepath.Join(homeDir, "Documents") // this walks this directory below to collect filenames
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 	}
 	filenamesDocs, err := walkRegexFullFilenames(docs)
 	if err == nil {
 		filenames = append(filenames, filenamesDocs...)
-		if *VerboseFlag {
+		if VerboseFlag {
 			fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
 		}
 	} else {
@@ -422,19 +421,19 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 	}
 
 	oneDriveString := os.Getenv("OneDrive")
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
 	}
 	filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
 	if err != nil {
 		return nil, err
 	}
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
 	}
 
 	filenames = append(filenames, filenamesOneDrive...)
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
 	}
 
@@ -685,7 +684,7 @@ func ScanXLSfile(filename string) error {
 
 	// wholeWorkWeek is now fully populated w/ the data from the Excel file.
 
-	if *VerboseFlag {
+	if VerboseFlag {
 		var vacationArray VacStructArrayType // don't need this visible outside this block, as the format was changed again as of Sep 11, 2025.
 		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
 		for i, day := range wholeWorkWeek {
@@ -818,7 +817,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		return nil, errors.New("startdirectory is empty")
 	}
 
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" walkRegexFullFilenames, startdirectory: %s\n", startdirectory)
 	}
 
@@ -855,7 +854,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			}
 		}
 		if err != nil {
-			if *VerboseFlag {
+			if VerboseFlag {
 				fmt.Printf(" Error from walkDirFunction: %s\n", err)
 			}
 			return filepath.SkipDir
@@ -896,7 +895,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 				FFname:    fpath, // filepath.Join(fpath, de.Name()) doesn't work, because it turns out that fpath is the full path and filename
 				Timestamp: fi.ModTime(),
 			}
-			if *VerboseFlag {
+			if VerboseFlag {
 				fmt.Printf(" matches the regexp: filedata.timestamp is %s\n", filedata.Timestamp)
 			}
 			fileDataChan <- filedata
@@ -922,7 +921,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 
 	//  As of Aug 8, 2025 or so, the O: drive went away.  So I'm not going to use it.
 
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" WalkDir startDirectory: %s\n", startdirectory)
 	}
 
@@ -939,7 +938,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 	}
 	sort.Slice(FDSlice, lessFunc)
 
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" in walkRegexFullFilenames after sort.Slice.  Len=%d\n  FDSlice %#v\n", len(FDSlice), FDSlice)
 	}
 
@@ -956,7 +955,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			break // Made observation that in a sorted list the first file before the threshold timestamp ends the search.
 		}
 	}
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" In walkRegexFullFilenames.  len(stringSlice) = %d\n stringSlice=%v\n", len(stringSlice), stringSlice)
 	}
 	return stringSlice, nil
@@ -1018,13 +1017,13 @@ func GetDocNames(fn string) ([]string, error) {
 		}
 	}
 	sort.Strings(docNamesSlice)
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" in getDocNames: raw docNamesSlice is %#v\n", docNamesSlice)
 	}
 
 	docNamesSlice = slices.Compact(docNamesSlice) // slices package became available with Go 1.20-ish
 
-	if *VerboseFlag {
+	if VerboseFlag {
 		fmt.Printf(" in getDocNames: compacted docNamesSlice is %#v\n", docNamesSlice)
 	}
 
@@ -1082,7 +1081,7 @@ func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
 	docsOffStringForEntireWeek = strings.ReplaceAll(docsOffStringForEntireWeek, ",", "") // remove commas from off box text
 	vacDocsTokensForEntireWeek := tknptr.TokenSlice(docsOffStringForEntireWeek)
 	//ctfmt.Printf(ct.Yellow, true, "in populateVacStruct; length of tokens from off box extracted from Friday's box: %d \n tokens: \n", len(vacDocsTokensForEntireWeek))
-	if *VerboseFlag {
+	if VerboseFlag {
 		for i, docToken := range vacDocsTokensForEntireWeek {
 			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
 		}
