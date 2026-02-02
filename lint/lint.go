@@ -1,4 +1,4 @@
-package main // lint.go, from lint2.go from lint.go
+package lint // lint.go, from lint2.go from lint.go
 
 import (
 	"bytes"
@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"slices"
 	"sort"
 	"src/misc"
@@ -117,12 +115,12 @@ import (
    1 Sep 25 -- The department changed the format for the schedule, highlighting on call and weekend docs.  I'll need to change the code to use the new format.
    8 Sep 25 -- I got them to add back an indication of who's off, but it's all in 1 box in the Friday column.  I have to think about this, and wonder about it changing again.
 				And the numbering changed.  I have to move weekdayOncall, which used to be at the top, and is now near the bottom.  Basically, I have to completely change
-				whosOnVacationToday.  When I do that, then the rest of the code should be ok.  I already changed some of the const names for the sections to be covered.
+				WhosOnVacationToday.  When I do that, then the rest of the code should be ok.  I already changed some of the const names for the sections to be covered.
 				Previously, scanXLSfile processes the file and displays the error messages.  Main sets up the data structures leading into scanXLSfile.  scanXLSfile was able to
 				read each day separately, which worked before.  Now, the off data is in Friday's column.  So would have to read the whole file, and then process the off data.
    9 Sep 25 -- I'm coming back to do these changes in lint.go itself.  I'll stop using extractoff.go.  My plan is to create the vacation string slice in the format that it used to be in,
-				and then pass that to whosOnVacationToday.  And then I'll have to change the code to use the new format.
-				Currently, whosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
+				and then pass that to WhosOnVacationToday.  And then I'll have to change the code to use the new format.
+				Currently, WhosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
   11 Sep 25 -- My plan is to populate a vacationStructSlice with the data from docsOffStringForWeek.  I need year from index 2 from each dayType.
                  The populateVacStructSlice function is working.  And now the vacation scanning, late doc on fluoro, and remote doc on fluoro are all working.  Hooray!
   12 Sep 25 -- I got the format Greg and Carol made working last night.  And, as I suspected would happen, it was changed this morning.  Anyway, I'm glad I got it working as it was a challenge for me.
@@ -130,10 +128,11 @@ import (
                  I'll tag this lint v3.0 in git when I'm comfortable that I won't need v3.0.1, etc.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    1 Feb 26 -- I'm starting to think about using fyne to make this a GUI pgm.  I may have to convert much of this code to functions that are merely connected together in main.go,
-				which will be in ./cmd/main.go
+				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
+   2 Feb 26 -- Now package lint, called by package main in cmd/main.go
 */
 
-const lastModified = "1 Feb 2026"
+const lastModified = "2 Feb 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -170,59 +169,55 @@ const (
 	sunday
 )
 
-var dayNamesString = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+var DayNamesString = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 
-type dayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
+type DayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
 
-type fileDataType struct { // used for the walk function.
-	name      string // base name of the file
-	ffname    string // full filename
-	timestamp time.Time
+type FileDataType struct { // used for the walk function.
+	Name      string // base name of the file
+	FFname    string // full filename
+	Timestamp time.Time
 }
 
-type workWeekType [6]dayType
+type WorkWeekType [6]DayType
 
-type soundexSlice struct {
+type SoundexSlice struct {
 	s      string
 	soundx string
 }
 
-type vacStructType struct {
-	date       string // from the schedule, for internal consistency
+type VacStructType struct {
+	Date       string // from the schedule, for internal consistency
 	MFStr      string // Monday-Friday day of the week, for internal consistency
 	MF         int
-	docsAreOff []string
+	DocsAreOff []string
 }
-type vacStructArrayType [6]vacStructType
+type VacStructArrayType [6]VacStructType
 
 var names = make([]string, 0, numOfDocs)
 
-// old var categoryNamesList = []string{"0", "1", "2", "weekday On Call", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-//
-//	"MSK", "Mammo", "Bone Density", "late", "weekend moonlighters", "weekend JH", "weekend FH", "weekend IR", "MD's Off"} // 0, 1 and 2 are unused
-var categoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
+var CategoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
 	"On-Call IR", "On-Call MD"} // 0 and 1 are unused
 
-var dayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verboseFlag is set
+var DayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+var DayOff = make(map[string]bool) // only used in FindAndReadConfIni when verboseFlag is set
 
-var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
+var VerboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
 
-// var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, i.e., search only Documents on c: for current user.") Not relevant as o: drive is gone.
-var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
-var veryVerboseFlag bool
-var monthsThreshold int
-var startDirFromConfigFile string // this needs to be a global, esp for the walk function.
+var NumLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
+var VeryVerboseFlag bool
+var MonthsThreshold int
+var StartDirFromConfigFile string // this needs to be a global, esp for the walk function.
 
-// findAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
-func findAndReadConfIni() ([]string, string, error) {
+// FindAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
+func FindAndReadConfIni() ([]string, string, error) {
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
 	fullFile, found := whichexec.FindConfig(conf)
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
 		if !found {
-			if *verboseFlag {
+			if *VerboseFlag {
 				return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
 			} else {
 				return nil, "", nil
@@ -250,17 +245,17 @@ func findAndReadConfIni() ([]string, string, error) {
 	tokenslice := tknptr.TokenSlice(inputLine)
 	paramName := strings.ToLower(tokenslice[0].Str)
 	if paramName == "off" {
-		if veryVerboseFlag {
+		if VeryVerboseFlag {
 			fmt.Printf(" Found config file: %s, containing %s\n", fullFile, inputLine)
 		}
 		for _, token := range tokenslice[1:] {
 			lower := strings.ToLower(token.Str)
 			docNames = append(docNames, lower)
-			dayOff[lower] = false // this is a map[string]bool
+			DayOff[lower] = false // this is a map[string]bool
 		}
-		if veryVerboseFlag {
+		if VeryVerboseFlag {
 			fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
-			for doc, vacay := range dayOff {
+			for doc, vacay := range DayOff {
 				fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
 			}
 			fmt.Println()
@@ -269,7 +264,7 @@ func findAndReadConfIni() ([]string, string, error) {
 
 		sort.Strings(docNames)
 
-		if *verboseFlag {
+		if *VerboseFlag {
 			fmt.Printf(" Sorted Names: %#v\n\n", docNames)
 		}
 	} else if paramName == "startdirectory" { // only have 1 line in the config file, and it's for startdirectory
@@ -285,12 +280,12 @@ func findAndReadConfIni() ([]string, string, error) {
 
 	// Now to process setting startdirectory
 
-	if *verboseFlag {
-		fmt.Printf(" In findAndReadConfIni before 2nd ReadLine. BytesReader.Len=%d, and .size=%d\n", bytesReader.Len(), bytesReader.Size())
+	if *VerboseFlag {
+		fmt.Printf(" In FindAndReadConfIni before 2nd ReadLine. BytesReader.Len=%d, and .size=%d\n", bytesReader.Len(), bytesReader.Size())
 	}
 	inputLine, err = misc.ReadLine(bytesReader)
-	if *verboseFlag {
-		fmt.Printf(" In findAndReadConfIni after 2nd ReadLine BytesReader.Len=%d, and .size=%d, inputline=%q\n",
+	if *VerboseFlag {
+		fmt.Printf(" In FindAndReadConfIni after 2nd ReadLine BytesReader.Len=%d, and .size=%d, inputline=%q\n",
 			bytesReader.Len(), bytesReader.Size(), inputLine)
 	}
 	if err != nil {
@@ -310,14 +305,14 @@ func findAndReadConfIni() ([]string, string, error) {
 	return docNames, startDirectory, nil
 }
 
-func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
-	var day dayType
+func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) {
+	var day DayType
 	sheets := wb.Sheets
 
 	for i := dateLine; i < totalAmt; i++ {
 		cell, err := sheets[0].Cell(i, col) // always sheet[0]
 		if err != nil {
-			return dayType{}, err
+			return DayType{}, err
 		}
 
 		s := cell.String()
@@ -327,8 +322,8 @@ func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 	return day, nil
 }
 
-// whosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.  This is not needed now, as it's function is replaced by populateVacStruct func.
-func whosOnVacationToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+// WhosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.  This is not needed now, as it's function is replaced by populateVacStruct func.
+func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on vacation for this day
 	vacationString := strings.ToLower(week[dayCol][mdOff])
 
@@ -336,16 +331,16 @@ func whosOnVacationToday(week workWeekType, dayCol int) []string { // week is an
 
 	// search for matching names
 	for _, vacationName := range names { // names is a global
-		dayOff[vacationName] = false
+		DayOff[vacationName] = false
 		if strings.Contains(vacationString, vacationName) {
-			dayOff[vacationName] = true
+			DayOff[vacationName] = true
 			mdsOff = append(mdsOff, vacationName)
 		}
 	}
 	return mdsOff
 }
 
-func whosLateToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+func whosLateToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are on the late shift for today.  Only 2 per day are late.
 
 	lateString := strings.ToLower(week[dayCol][late])
@@ -360,7 +355,7 @@ func whosLateToday(week workWeekType, dayCol int) []string { // week is an array
 	return lateDocs
 }
 
-func whosRemoteToday(week workWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+func whosRemoteToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of names that are working remotely today.
 	const remoteMarkerString = "(*R)"
 
@@ -390,19 +385,19 @@ func whosRemoteToday(week workWeekType, dayCol int) []string { // week is an arr
 func GetFilenames() ([]string, error) { // this will search Documents and OneDrive directories using a walk function.  And also the directory specified in a config file.
 	var filenames []string
 
-	if startDirFromConfigFile != "" {
-		filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
+	if StartDirFromConfigFile != "" {
+		filenamesStartDir, err := walkRegexFullFilenames(StartDirFromConfigFile)
 		if err != nil {
 			ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
-				startDirFromConfigFile, err)
+				StartDirFromConfigFile, err)
 		}
 		if len(filenamesStartDir) > 0 {
 			filenames = append(filenames, filenamesStartDir...)
-			if *verboseFlag {
+			if *VerboseFlag {
 				fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
 			}
 		}
-		if *verboseFlag {
+		if *VerboseFlag {
 			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
 		}
 	}
@@ -413,13 +408,13 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 	}
 
 	docs := filepath.Join(homeDir, "Documents") // this walks this directory below to collect filenames
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 	}
 	filenamesDocs, err := walkRegexFullFilenames(docs)
 	if err == nil {
 		filenames = append(filenames, filenamesDocs...)
-		if *verboseFlag {
+		if *VerboseFlag {
 			fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
 		}
 	} else {
@@ -427,25 +422,27 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 	}
 
 	oneDriveString := os.Getenv("OneDrive")
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
 	}
 	filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
 	if err != nil {
 		return nil, err
 	}
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
 	}
 
 	filenames = append(filenames, filenamesOneDrive...)
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
 	}
 
 	return filenames, nil
 }
 
+/*
+Commenting out main() because it is to be moved to a separate main.go, in prep for lintf or lintgui.  I haven't decided what I'm going to call it yet.
 func main() {
 	var err error
 	var noUpgradeLint bool
@@ -479,16 +476,16 @@ func main() {
 
 	fmt.Printf(" lint V 3.0 for the weekly schedule, last modified %s\n", lastModified)
 
-	_, startDirFromConfigFile, err = findAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
+	_, StartDirFromConfigFile, err = FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
 		if *verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
-			fmt.Printf(" Warning from findAndReadConfIni: %s.  Ignoring. \n", err)
+			fmt.Printf(" Warning from FindAndReadConfIni: %s.  Ignoring. \n", err)
 			ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
 			//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
 		}
 	}
 	if *verboseFlag {
-		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirFromConfigFile)
+		fmt.Printf(" After FindAndReadConfIni, Start Directory: %s\n", StartDirFromConfigFile)
 	}
 
 	if flag.NArg() == 0 {
@@ -503,11 +500,11 @@ func main() {
 		//	}
 		//}
 
-		//if startDirFromConfigFile != "" {
-		//	filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
+		//if StartDirFromConfigFile != "" {
+		//	filenamesStartDir, err := walkRegexFullFilenames(StartDirFromConfigFile)
 		//	if err != nil {
 		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
-		//			startDirFromConfigFile, err)
+		//			StartDirFromConfigFile, err)
 		//	}
 		//	if len(filenamesStartDir) > 0 {
 		//		filenames = append(filenames, filenamesStartDir...)
@@ -662,11 +659,12 @@ func main() {
 		ctfmt.Printf(ct.Red, true, "\n\n Error starting upgradelint: %s.  Contact Rob Solomon\n\n", err)
 	}
 }
+*/
 
-// scanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
+// ScanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
 //
 //	Does not need to return anything except error to main.
-func scanXLSfile(filename string) error {
+func ScanXLSfile(filename string) error {
 	// First this reads the entire file into the array for the entire work week.
 
 	workBook, err := xlsx.OpenFile(filename)
@@ -676,9 +674,9 @@ func scanXLSfile(filename string) error {
 	}
 
 	// Populate the wholeWorkWeek's schedule
-	var wholeWorkWeek workWeekType       // [6]dayType  Only need 5 workdays.  Element 0 is not used.
+	var wholeWorkWeek WorkWeekType       // [6]dayType  Only need 5 workdays.  Element 0 is not used.
 	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
-		wholeWorkWeek[i], err = readEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
+		wholeWorkWeek[i], err = ReadEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
 			continue
@@ -687,8 +685,8 @@ func scanXLSfile(filename string) error {
 
 	// wholeWorkWeek is now fully populated w/ the data from the Excel file.
 
-	if *verboseFlag {
-		var vacationArray vacStructArrayType // don't need this visible outside this block, as the format was changed again as of Sep 11, 2025.
+	if *VerboseFlag {
+		var vacationArray VacStructArrayType // don't need this visible outside this block, as the format was changed again as of Sep 11, 2025.
 		ctfmt.Printf(ct.Green, true, "Week schedule populated and output follows\n")
 		for i, day := range wholeWorkWeek {
 			fmt.Printf("Day %d: %#v \n", i, day)
@@ -696,7 +694,7 @@ func scanXLSfile(filename string) error {
 		fmt.Printf("\n\n")
 
 		fmt.Printf(" Now testing docsOffStringForWeek \n")
-		docsOffStringForWeek, er := extractOff(wholeWorkWeek)
+		docsOffStringForWeek, er := ExtractOff(wholeWorkWeek)
 		if er != nil {
 			fmt.Printf("Error extracting off: %s\n", er)
 			return er
@@ -713,7 +711,7 @@ func scanXLSfile(filename string) error {
 		fmt.Printf("\n\n Now to test extractYearFromSchedule \n")
 
 		for day := range wholeWorkWeek { // this tests the extractYearFromSchedule function
-			yearStr, e := extractYearFromSchedule(wholeWorkWeek, day) // when day == 0 the string is empty, so just remember that.
+			yearStr, e := ExtractYearFromSchedule(wholeWorkWeek, day) // when day == 0 the string is empty, so just remember that.
 			if e != nil {
 				fmt.Printf("Error extracting year from day %d: %s\n", day, e)
 				continue
@@ -747,13 +745,13 @@ func scanXLSfile(filename string) error {
 	for dayCol := 1; dayCol < len(wholeWorkWeek); dayCol++ { // col 0 is empty and does not represent a day, dayCol 1 is Monday, ..., dayCol 5 is Friday
 		//mdsOffToday := vacationArray[dayCol].docsAreOff // the vacationArray contains a slice of the docs who are off, organized by day.  But the need for this code is gone.  So, this code is now obsolete as of Sep 11, 2025.  It took long enough to debug for it to be obsolete and useless.
 		//ctfmt.Printf(ct.Cyan, true, "mdsOffToday on day %d is %#v\n", dayCol, mdsOffToday)
-		mdsOffToday := whosOnVacationToday(wholeWorkWeek, dayCol) //Old way of determining who is off is back.  Now stop using the vacationArray.
+		mdsOffToday := WhosOnVacationToday(wholeWorkWeek, dayCol) //Old way of determining who is off is back.  Now stop using the vacationArray.
 		lateDocsToday := whosLateToday(wholeWorkWeek, dayCol)
 
-		if veryVerboseFlag {
+		if VeryVerboseFlag {
 			fmt.Printf(" mdsOffToday on day %d is/are %#v\n", dayCol, mdsOffToday)
 			i := 0
-			for doc, vacay := range dayOff {
+			for doc, vacay := range DayOff {
 				if i%10 == 9 {
 					fmt.Printf("\n")
 				}
@@ -773,7 +771,7 @@ func scanXLSfile(filename string) error {
 		for _, name := range mdsOffToday {
 			for i := neuro; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
-					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), dayNames[dayCol], categoryNamesList[i])
+					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i])
 				}
 			}
 		}
@@ -781,28 +779,28 @@ func scanXLSfile(filename string) error {
 		// Now, lateDocsToday is a slice of two names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
 		for _, name := range lateDocsToday {
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
-				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
-				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 			}
 		}
 
 		// Determine if the fluoro doc for today is remote
 		remoteNames := whosRemoteToday(wholeWorkWeek, dayCol)
 		for _, name := range remoteNames {
-			if veryVerboseFlag {
+			if VeryVerboseFlag {
 				fmt.Printf(" Remote doc for today: %s, FluoroJH: %s, FluoroFH: %s\n", name, wholeWorkWeek[dayCol][fluoroJH], wholeWorkWeek[dayCol][fluoroFH])
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
-				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
-				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), dayNames[dayCol])
+				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 			}
 		}
 
-		if veryVerboseFlag {
+		if VeryVerboseFlag {
 			if pause() {
 				return errors.New("exit from pause")
 			}
@@ -820,7 +818,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		return nil, errors.New("startdirectory is empty")
 	}
 
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" walkRegexFullFilenames, startdirectory: %s\n", startdirectory)
 	}
 
@@ -832,13 +830,13 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 
 	// define the timestamp constraint of >= this monthyear.  No, >= 1 month ago.
 	t0 := time.Now()
-	threshold := t0.AddDate(0, -monthsThreshold, 0) // threshhold is months ago set by a commandline flag.  Default is 1 month.
+	threshold := t0.AddDate(0, -MonthsThreshold, 0) // threshhold is months ago set by a commandline flag.  Default is 1 month.
 	timeout := t0.Add(5 * time.Minute)
 
 	// set up channel to receive FDSlices and append them to a master file data slice
 	boolChan := make(chan bool)                 // unbuffered
-	fileDataChan := make(chan fileDataType, 10) // a magic number I pulled out of the air
-	FDSlice := make([]fileDataType, 0, 100)     // a magic number here, for now
+	fileDataChan := make(chan FileDataType, 10) // a magic number I pulled out of the air
+	FDSlice := make([]FileDataType, 0, 100)     // a magic number here, for now
 	receiverFunc := func() {
 		for fd := range fileDataChan { // fd is of type filedatatype
 			FDSlice = append(FDSlice, fd)
@@ -849,7 +847,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 
 	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
-		if veryVerboseFlag {
+		if VeryVerboseFlag {
 			if err != nil {
 				fmt.Printf(" WalkDir fpath %s, de.Name %s, err %v \n", fpath, de.Name(), err.Error())
 			} else {
@@ -857,19 +855,19 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 			}
 		}
 		if err != nil {
-			if *verboseFlag {
+			if *VerboseFlag {
 				fmt.Printf(" Error from walkDirFunction: %s\n", err)
 			}
 			return filepath.SkipDir
 		}
 		if de.IsDir() {
-			if veryVerboseFlag {
+			if VeryVerboseFlag {
 				fmt.Printf(" de.IsDir() is true, fpath = %q, de.Name=%s\n", fpath, de.Name())
 			}
 			return nil // allow walk function to drill down itself
 		}
 		if de.Name() == ".git" { // only if full directory name is .git, then skip this directory.  This is a hack.  I don't want to skip the entire directory.
-			if veryVerboseFlag {
+			if VeryVerboseFlag {
 				fmt.Printf(" fpath contains .git, fpath = %q, de.Name=%s\n", fpath, de.Name())
 			}
 			return filepath.SkipDir
@@ -893,13 +891,13 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 				return err
 			}
 
-			filedata := fileDataType{
-				name:      de.Name(),
-				ffname:    fpath, // filepath.Join(fpath, de.Name()) doesn't work, because it turns out that fpath is the full path and filename
-				timestamp: fi.ModTime(),
+			filedata := FileDataType{
+				Name:      de.Name(),
+				FFname:    fpath, // filepath.Join(fpath, de.Name()) doesn't work, because it turns out that fpath is the full path and filename
+				Timestamp: fi.ModTime(),
 			}
-			if *verboseFlag {
-				fmt.Printf(" matches the regexp: filedata.timestamp is %s\n", filedata.timestamp)
+			if *VerboseFlag {
+				fmt.Printf(" matches the regexp: filedata.timestamp is %s\n", filedata.Timestamp)
 			}
 			fileDataChan <- filedata
 		}
@@ -924,7 +922,7 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 
 	//  As of Aug 8, 2025 or so, the O: drive went away.  So I'm not going to use it.
 
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" WalkDir startDirectory: %s\n", startdirectory)
 	}
 
@@ -937,28 +935,28 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 
 	lessFunc := func(i, j int) bool {
 		//return masterFDSlice[i].timestamp.UnixNano() > masterFDSlice[j].timestamp.UnixNano() // this works
-		return FDSlice[i].timestamp.After(FDSlice[j].timestamp) // I want to see if this will work.  It does, and TRUE means time[i] is after time[j].
+		return FDSlice[i].Timestamp.After(FDSlice[j].Timestamp) // I want to see if this will work.  It does, and TRUE means time[i] is after time[j].
 	}
 	sort.Slice(FDSlice, lessFunc)
 
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" in walkRegexFullFilenames after sort.Slice.  Len=%d\n  FDSlice %#v\n", len(FDSlice), FDSlice)
 	}
 
 	stringSlice := make([]string, 0, len(FDSlice))
 	var count int
 	for _, f := range FDSlice {
-		if f.timestamp.After(threshold) {
-			stringSlice = append(stringSlice, f.ffname) // needs to preserve case of filename for linux
+		if f.Timestamp.After(threshold) {
+			stringSlice = append(stringSlice, f.FFname) // needs to preserve case of filename for linux
 			count++
-			if count >= numLines {
+			if count >= NumLines {
 				break
 			}
 		} else {
 			break // Made observation that in a sorted list the first file before the threshold timestamp ends the search.
 		}
 	}
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" In walkRegexFullFilenames.  len(stringSlice) = %d\n stringSlice=%v\n", len(stringSlice), stringSlice)
 	}
 	return stringSlice, nil
@@ -992,8 +990,8 @@ func excludeMe(s string) bool {
 	return dgtRegexp.MatchString(s)
 }
 
-// getDocNames -- takes a filename and returns a slice of doc names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
-func getDocNames(fn string) ([]string, error) {
+// GetDocNames -- takes a filename and returns a slice of doc names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
+func GetDocNames(fn string) ([]string, error) {
 	docNamesSlice := make([]string, 0, maxDimensions)
 	workBook, err := xlsx.OpenFile(fn)
 	if err != nil {
@@ -1020,22 +1018,22 @@ func getDocNames(fn string) ([]string, error) {
 		}
 	}
 	sort.Strings(docNamesSlice)
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" in getDocNames: raw docNamesSlice is %#v\n", docNamesSlice)
 	}
 
 	docNamesSlice = slices.Compact(docNamesSlice) // slices package became available with Go 1.20-ish
 
-	if *verboseFlag {
+	if *VerboseFlag {
 		fmt.Printf(" in getDocNames: compacted docNamesSlice is %#v\n", docNamesSlice)
 	}
 
 	return docNamesSlice, nil
 }
 
-func getSoundex(input []string) []soundexSlice {
-	out := make([]soundexSlice, 0, len(input))
-	var sound soundexSlice
+func GetSoundex(input []string) []SoundexSlice {
+	out := make([]SoundexSlice, 0, len(input))
+	var sound SoundexSlice
 	for _, inp := range input {
 		if inp == "choi" { // choi and chiu have the same result.  So only 1 can be used.
 			continue
@@ -1047,7 +1045,7 @@ func getSoundex(input []string) []soundexSlice {
 	return out
 }
 
-func showSpellingErrors(in []soundexSlice) []string {
+func ShowSpellingErrors(in []SoundexSlice) []string {
 	out := make([]string, 0, len(in))
 
 	for i := 1; i < len(in); i++ {
@@ -1059,12 +1057,12 @@ func showSpellingErrors(in []soundexSlice) []string {
 	return out
 }
 
-func extractOff(week workWeekType) (string, error) {
+func ExtractOff(week WorkWeekType) (string, error) {
 	s := week[friday][mdOff]
 	return s, nil
 }
 
-func extractYearFromSchedule(week workWeekType, day int) (string, error) {
+func ExtractYearFromSchedule(week WorkWeekType, day int) (string, error) {
 	yearStr := week[day][dateLine] // should be Month Day, 4 digit Year
 	if yearStr == "" {
 		return "", errors.New("yearStr is empty")
@@ -1076,22 +1074,22 @@ func extractYearFromSchedule(week workWeekType, day int) (string, error) {
 	return field[2], nil // this is the 3rd field
 }
 
-func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
-	docsOffStringForEntireWeek, err := extractOff(wholeWorkWeek)
+func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
+	docsOffStringForEntireWeek, err := ExtractOff(wholeWorkWeek)
 	if err != nil {
-		return vacStructArrayType{}, err
+		return VacStructArrayType{}, err
 	}
 	docsOffStringForEntireWeek = strings.ReplaceAll(docsOffStringForEntireWeek, ",", "") // remove commas from off box text
 	vacDocsTokensForEntireWeek := tknptr.TokenSlice(docsOffStringForEntireWeek)
 	//ctfmt.Printf(ct.Yellow, true, "in populateVacStruct; length of tokens from off box extracted from Friday's box: %d \n tokens: \n", len(vacDocsTokensForEntireWeek))
-	if *verboseFlag {
+	if *VerboseFlag {
 		for i, docToken := range vacDocsTokensForEntireWeek {
 			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
 		}
 		fmt.Printf("\n\n")
 	}
 
-	var vacStructArray vacStructArrayType
+	var vacStructArray VacStructArrayType
 
 	dayNum := 1 // start on Monday
 	docNameStrSlice := make([]string, 0, numOfDocs)
@@ -1118,20 +1116,20 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 			d := docToken.Isum
 			i++ // this points to the colon to be ignored
 			sb.WriteString("/")
-			yearStr, er := extractYearFromSchedule(wholeWorkWeek, dayNum)
+			yearStr, er := ExtractYearFromSchedule(wholeWorkWeek, dayNum)
 			if er != nil {
-				return vacStructArrayType{}, er
+				return VacStructArrayType{}, er
 			}
 			sb.WriteString(yearStr) // now should have a complete date string in format m/d/yyyy
-			vacStructArray[dayNum].date = sb.String()
+			vacStructArray[dayNum].Date = sb.String()
 			year, err := strconv.Atoi(yearStr)
 			if err != nil {
-				return vacStructArrayType{}, err
+				return VacStructArrayType{}, err
 			}
 			juldate := timlibg.JULIAN(m, d, year)
 			dayOfWeekNum := juldate % 7
 			vacStructArray[dayNum].MF = dayOfWeekNum
-			vacStructArray[dayNum].MFStr = dayNamesString[dayOfWeekNum]
+			vacStructArray[dayNum].MFStr = DayNamesString[dayOfWeekNum]
 			i++ // now points to the token after the colon
 			docToken = vacDocsTokensForEntireWeek[i]
 			//ctfmt.Printf(ct.Green, true, "debugging string tokens in date processing section: token[%d]: %s\n", i, docToken.Str)
@@ -1141,11 +1139,11 @@ func populateVacStruct(wholeWorkWeek workWeekType) (vacStructArrayType, error) {
 			//ctfmt.Printf(ct.Green, true, "debugging string tokens in ALLELSE section: token[%d]: %s\n docNameStrSlice: %#v\n", i, docToken.Str, docNameStrSlice)
 			i++
 			if i >= len(vacDocsTokensForEntireWeek) { // if reached the end of the slice, then this is the last doc name.  And exit the for loop.
-				vacStructArray[dayNum].docsAreOff = docNameStrSlice
+				vacStructArray[dayNum].DocsAreOff = docNameStrSlice
 				break
 			}
 			if vacDocsTokensForEntireWeek[i].State != tknptr.ALLELSE { // if not end of slice, and next token is not a string for a doc name, then this is the last doc name for this day.
-				vacStructArray[dayNum].docsAreOff = docNameStrSlice
+				vacStructArray[dayNum].DocsAreOff = docNameStrSlice
 				dayNum++
 				docNameStrSlice = make([]string, 0, numOfDocs) // clear it for the next day.
 			}
