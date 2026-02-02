@@ -128,9 +128,12 @@ import (
   12 Sep 25 -- I got the format Greg and Carol made working last night.  And, as I suspected would happen, it was changed this morning.  Anyway, I'm glad I got it working as it was a challenge for me.
                  Since the new format is very similar to the original format, I think it will be easy to implement that.  It was.
                  I'll tag this lint v3.0 in git when I'm comfortable that I won't need v3.0.1, etc.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+   1 Feb 26 -- I'm starting to think about using fyne to make this a GUI pgm.  I may have to convert much of this code to functions that are merely connected together in main.go,
+				which will be in ./cmd/main.go
 */
 
-const lastModified = "12 Sep 2025"
+const lastModified = "1 Feb 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -206,7 +209,7 @@ var dayOff = make(map[string]bool) // only used in findAndReadConfIni when verbo
 
 var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode")
 
-// var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, ie, search only Documents on c: for current user.")  Not relevant as o: drive is gone.
+// var conlyFlag = flag.BoolP("conly", "c", false, "Conly mode, i.e., search only Documents on c: for current user.") Not relevant as o: drive is gone.
 var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 var veryVerboseFlag bool
 var monthsThreshold int
@@ -319,7 +322,7 @@ func readEntireDay(wb *xlsx.File, col int) (dayType, error) {
 
 		s := cell.String()
 		s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces
-		day[i] = cell.String()
+		day[i] = s
 	}
 	return day, nil
 }
@@ -384,6 +387,65 @@ func whosRemoteToday(week workWeekType, dayCol int) []string { // week is an arr
 	return remoteDocs
 }
 
+func GetFilenames() ([]string, error) { // this will search Documents and OneDrive directories using a walk function.  And also the directory specified in a config file.
+	var filenames []string
+
+	if startDirFromConfigFile != "" {
+		filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
+		if err != nil {
+			ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
+				startDirFromConfigFile, err)
+		}
+		if len(filenamesStartDir) > 0 {
+			filenames = append(filenames, filenamesStartDir...)
+			if *verboseFlag {
+				fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
+			}
+		}
+		if *verboseFlag {
+			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
+		}
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	docs := filepath.Join(homeDir, "Documents") // this walks this directory below to collect filenames
+	if *verboseFlag {
+		fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
+	}
+	filenamesDocs, err := walkRegexFullFilenames(docs)
+	if err == nil {
+		filenames = append(filenames, filenamesDocs...)
+		if *verboseFlag {
+			fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
+		}
+	} else {
+		return nil, err
+	}
+
+	oneDriveString := os.Getenv("OneDrive")
+	if *verboseFlag {
+		fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
+	}
+	filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
+	if err != nil {
+		return nil, err
+	}
+	if *verboseFlag {
+		fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
+	}
+
+	filenames = append(filenames, filenamesOneDrive...)
+	if *verboseFlag {
+		fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
+	}
+
+	return filenames, nil
+}
+
 func main() {
 	var err error
 	var noUpgradeLint bool
@@ -429,10 +491,6 @@ func main() {
 		fmt.Printf(" After findAndReadConfIni, Start Directory: %s\n", startDirFromConfigFile)
 	}
 
-	var filenames []string
-	var homeDir string
-	var docs string
-
 	if flag.NArg() == 0 {
 		//if includeODrive {  O: drive is gone as of 8/8/25.
 		//	filenames, err = walkRegexFullFilenames() // function is below.  "o:\\week.*xls.?$"
@@ -445,58 +503,64 @@ func main() {
 		//	}
 		//}
 
-		if startDirFromConfigFile != "" {
-			filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
-			if err != nil {
-				ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
-					startDirFromConfigFile, err)
-			}
-			if len(filenamesStartDir) > 0 {
-				filenames = append(filenames, filenamesStartDir...)
-				if *verboseFlag {
-					fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
-				}
-			}
-			if *verboseFlag {
-				fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
-			}
-		}
+		//if startDirFromConfigFile != "" {
+		//	filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
+		//	if err != nil {
+		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
+		//			startDirFromConfigFile, err)
+		//	}
+		//	if len(filenamesStartDir) > 0 {
+		//		filenames = append(filenames, filenamesStartDir...)
+		//		if *verboseFlag {
+		//			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
+		//		}
+		//	}
+		//	if *verboseFlag {
+		//		fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
+		//	}
+		//}
+		//
+		//homeDir, err = os.UserHomeDir()
+		//if err != nil {
+		//	fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
+		//	return
+		//}
+		////                               docs = filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")  Don't want the regex as part of this expression.
+		//docs = filepath.Join(homeDir, "Documents") // this walks this directory below to collect filenames
+		//if *verboseFlag {
+		//	fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
+		//}
+		//oneDriveString := os.Getenv("OneDrive")
+		//if *verboseFlag {
+		//	fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
+		//}
+		//filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
+		//if err != nil {
+		//	fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignoring \n", oneDriveString, err)
+		//}
+		//if *verboseFlag {
+		//	fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
+		//}
+		//
+		//filenames = append(filenames, filenamesOneDrive...)
+		//if *verboseFlag {
+		//	fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
+		//}
+		//
+		//filenamesDocs, err := walkRegexFullFilenames(docs)
+		//if err != nil {
+		//	fmt.Printf(" Error from walkRegesFullFilenames(%s) is %s.  Ignored \n", docs, err)
+		//} else {
+		//	filenames = append(filenames, filenamesDocs...)
+		//	if *verboseFlag {
+		//		fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
+		//	}
+		//}
 
-		homeDir, err = os.UserHomeDir()
+		filenames, err := GetFilenames()
 		if err != nil {
-			fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
+			fmt.Printf(" Error from GetFilenames is %s.  Exiting \n", err)
 			return
-		}
-		//                               docs = filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")  Don't want the regex as part of this expression.
-		docs = filepath.Join(homeDir, "Documents")
-		if *verboseFlag {
-			fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
-		}
-		oneDriveString := os.Getenv("OneDrive")
-		if *verboseFlag {
-			fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
-		}
-		filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
-		if err != nil {
-			fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignoring \n", oneDriveString, err)
-		}
-		if *verboseFlag {
-			fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
-		}
-
-		filenames = append(filenames, filenamesOneDrive...)
-		if *verboseFlag {
-			fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
-		}
-
-		filenamesDocs, err := walkRegexFullFilenames(docs)
-		if err != nil {
-			fmt.Printf(" Error from walkRegesFullFilenames(%s) is %s.  Ignored \n", docs, err)
-		} else {
-			filenames = append(filenames, filenamesDocs...)
-			if *verboseFlag {
-				fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
-			}
 		}
 
 		for i := 0; i < min(len(filenames), 26); i++ {
@@ -574,9 +638,10 @@ func main() {
 		ctfmt.Printf(ct.Red, true, "\n\n Error getting working directory: %s.  Contact Rob Solomon\n\n", err)
 		return
 	}
-	fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe")
+	fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe") // have to search for upgradelint, as at home it's likely in the go/bin directory.
+	upgradeExecPath := whichexec.Find("upgradelint.exe", workingDir)
 	if *verboseFlag {
-		fmt.Printf(" workingDir=%s, fullUpgradeLintPath=%s\n", workingDir, fullUpgradeLintPath)
+		fmt.Printf(" workingDir=%s, fullUpgradeLintPath=%s, upgradeExecPath=%s\n", workingDir, fullUpgradeLintPath, upgradeExecPath)
 	}
 
 	variadicArgs := make([]string, 0, 2)
@@ -587,7 +652,8 @@ func main() {
 		variadicArgs = append(variadicArgs, "-u", strconv.Itoa(whichURL))
 	}
 
-	execcmd := exec.Command(fullUpgradeLintPath, variadicArgs...)
+	// execcmd := exec.Command(fullUpgradeLintPath, variadicArgs...)
+	execcmd := exec.Command(upgradeExecPath, variadicArgs...)
 	execcmd.Stdin = os.Stdin
 	execcmd.Stdout = os.Stdout
 	execcmd.Stderr = os.Stderr
@@ -748,7 +814,7 @@ func scanXLSfile(filename string) error {
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
 //
 //	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
-func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice
+func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
 
 	if startdirectory == "" {
 		return nil, errors.New("startdirectory is empty")
