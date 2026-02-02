@@ -34,7 +34,7 @@ import (
 
                A running program can't update itself, so this has to be a separate program that will download the latest version of lint.exe and upgrade it.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-  10 Aug 25 -- Now called upgradelint.go.
+  10 Aug 25 -- Now called upgradelint.go.  It uses makeinfofile to create the needed hashes to verify the downloaded file.
   11 Aug 25 -- Added sleep to give lint time to exit.
   16 Aug 25 -- Added flags to use the other websites as backup, which have to get passed into upgradelint.go from lint.go.
   18 Aug 25 -- Added code to reset the file pointer after computing sha1 and before computing sha256.  This fixes the bug in computing sha256.
