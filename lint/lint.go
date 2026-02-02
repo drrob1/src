@@ -124,7 +124,7 @@ import (
 				and then pass that to whosOnVacationToday.  And then I'll have to change the code to use the new format.
 				Currently, whosOnVacationToday is returning a slice of strings just for that day of current interest.  I'll need to return this, but do it differently.  I don't know how, yet.
   11 Sep 25 -- My plan is to populate a vacationStructSlice with the data from docsOffStringForWeek.  I need year from index 2 from each dayType.
-                 The populateVacStructSlice function is working.  And now the vacation scanning, late doc on fluoro, and remote doc on fluoro are all working.  Hurray!
+                 The populateVacStructSlice function is working.  And now the vacation scanning, late doc on fluoro, and remote doc on fluoro are all working.  Hooray!
   12 Sep 25 -- I got the format Greg and Carol made working last night.  And, as I suspected would happen, it was changed this morning.  Anyway, I'm glad I got it working as it was a challenge for me.
                  Since the new format is very similar to the original format, I think it will be easy to implement that.  It was.
                  I'll tag this lint v3.0 in git when I'm comfortable that I won't need v3.0.1, etc.
