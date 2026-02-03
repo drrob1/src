@@ -131,9 +131,10 @@ import (
    1 Feb 26 -- I'm starting to think about using fyne to make this a GUI pgm.  I may have to convert much of this code to functions that are merely connected together in main.go,
 				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
    2 Feb 26 -- Now package lint, called by package main in cmd/main.go
+   3 Feb 26 -- Added func init() to initialize doc names.  Nevermind, I can't.  It needs a filename to extract the doc names from.  So that has to be done after a filename is selected.
 */
 
-const LastModified = "2 Feb 2026"
+const LastModified = "3 Feb 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
