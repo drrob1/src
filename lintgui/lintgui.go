@@ -20,7 +20,7 @@ import (
    3 Feb 26 -- First started writing this.
    4 Feb 26 -- GUI is still not quite right, but it's working.  And there should only be 1 button to check both spelling and the schedule.
 				I'll have to proceed with the other tasks tomorrow.
-
+				Turns out that I can't automatically check the schedule file yet, because of dependencies.  IE, need to pick a schedule file first, before checking it.
 */
 
 const lastModified = "4 Feb 2026"
