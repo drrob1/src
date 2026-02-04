@@ -668,8 +668,10 @@ func main() {
 */
 
 // ScanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
-//	Used to not need to return anything except error to main.
-//  Now that I'm changing this include lintGUI, I need to change the signature of this routine.  It has to return a []string of messages that can be sent to display or a fyne widget.
+//
+//		Used to not need to return anything except error to main.
+//	 Now that I'm changing this include lintGUI, I need to change the signature of this routine.  It has to return a []string of messages that can be sent to display or a fyne widget.
+//
 // For now, it still displays some strings to the terminal.
 func ScanXLSfile(filename string) ([]string, error) {
 	var messages []string
@@ -778,7 +780,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 		for _, name := range mdsOffToday {
 			for i := neuro; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
-					msg := fmt.Sprintf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i])
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i])
 					messages = append(messages, msg)
 				}
 			}
@@ -788,12 +790,12 @@ func ScanXLSfile(filename string) ([]string, error) {
 		for _, name := range lateDocsToday {
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
-				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro JH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
-				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro FH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
 			}
 		}
@@ -806,12 +808,12 @@ func ScanXLSfile(filename string) ([]string, error) {
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
-				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro JH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
-				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro FH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
 			}
 		}
@@ -826,6 +828,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 }
 
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
+//
 //	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
 func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
 

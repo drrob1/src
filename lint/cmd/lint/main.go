@@ -120,9 +120,10 @@ import (
 				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    2 Feb 26 -- Now only contains main() and calls package lint.  A sticking point in the conversion to separate pacckages was the globals.  When I copied those correctly, the code started working.
+   3 Feb 26 -- In the process of writing lintGUI, I had to change the scanXLSfile function to return a slice of messages.  So now I'm refactoring here to test them.
 */
 
-const lastModified = "2 Feb 2026"
+const lastModified = "3 Feb 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
@@ -319,7 +320,13 @@ func main() {
 
 	// scan the xlsx schedule file
 
-	err = lint.ScanXLSfile(filename)
+	messages, err := lint.ScanXLSfile(filename)
+	if len(messages) > 0 {
+		ctfmt.Printf(ct.Cyan, true, "\n\n %d message(s) generated from %s: \n", len(messages), filename)
+		for _, msg := range messages {
+			ctfmt.Printf(ct.Yellow, true, " %s \n", msg)
+		}
+	}
 
 	if err == nil {
 		ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n\n", filename)
