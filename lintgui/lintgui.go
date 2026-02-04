@@ -36,7 +36,7 @@ func main() {
 	a.SetIcon(scheduleIconRes)
 	s := fmt.Sprintf("Lint GUI, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
-	w.Resize(fyne.NewSize(600, 600))
+	w.Resize(fyne.NewSize(900, 700))
 
 	_, startDirFromConfigFile, err := lint.FindAndReadConfIni()
 	if err != nil {
@@ -117,6 +117,7 @@ func main() {
 	// Pick a weekly schedule file
 	pickedFilenameLabel := widget.NewLabel("Pick a filename:")
 	pickedFilenameLabel.Resize(fyne.Size{Width: 150, Height: 300})
+	selectFilename.SetMinRowsVisible(10) // no difference
 	selectFilename.OnChanged = func(s string) {
 		pickedFilename = s
 		pickedFilenameLabel.SetText(filepath.Base(s))
@@ -141,10 +142,12 @@ func main() {
 
 	leftHandColumn := container.NewVBox(monthContainer, pickedFilenameLabel, selectFilename)
 	rightHandColumn := container.NewVBox(spellingBtn, spellingErrorsLabel, scheduleBtn, messagesLabel, quitBtn)
-	combinedColumn := container.NewHBox(leftHandColumn, rightHandColumn)
+	//combinedColumn := container.NewHBox(leftHandColumn, rightHandColumn)
+	grid := container.NewAdaptiveGrid(2, leftHandColumn, rightHandColumn)
+	grid.Resize(fyne.NewSize(800, 800))
 
 	w.SetContent(
-		combinedColumn,
+		grid,
 	)
 	w.ShowAndRun()
 
