@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"src/lint"
 	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -56,29 +58,61 @@ func main() {
 		filenames = filenames[:26] // these are to be displayed in a select box
 	}
 
+	spellingErrorsLabel := widget.NewLabel("Spelling Errors go here.") // defined here but used in section below that says check spelling
+	spellingErrorsLabel.Wrapping = fyne.TextWrapWord
+
+	// Pick a weekly schedule file
 	var pickedFilename string
 	pickedFilenameLabel := widget.NewLabel("Pick a filename:")
 	selectFilename := widget.NewSelectEntry(filenames)
-	selectFilename.Resize(fyne.Size{Width: 30, Height: 300})
+	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	selectFilename.OnChanged = func(s string) {
 		pickedFilename = s
-		fmt.Printf("line ~65: selectFilename.OnChanged called with %s, and pickedFilename is %s\n", s, pickedFilename)
+		pickedFilenameLabel.SetText(filepath.Base(s))
+		pickedFilenameLabel.Resize(fyne.Size{Width: 150, Height: 300})
+		pickedFilenameLabel.Refresh()
+		spellingErrorsLabel.SetText("")
+		spellingErrorsLabel.Refresh()
+		fmt.Printf("line ~75: selectFilename.OnChanged called with %s, and pickedFilename is %s\n", s, pickedFilename)
 		docNames, err := lint.GetDocNames(pickedFilename)
 		if err != nil {
-			fmt.Printf("line ~70: Error from GetDocNames is %v\n", err)
+			fmt.Printf("line ~78: Error from GetDocNames is %v\n", err)
 			dialog.ShowError(err, w)
 		}
 		lint.Names = docNames
-		fmt.Printf("line ~74: DocNames is %#v\n", lint.Names)
+		fmt.Printf("line ~82: DocNames is %#v\n", lint.Names)
 	}
 	selectFilename.Show()
 
+	// check spelling
+	spellingBtn := widget.NewButton("Check Spelling", func() {
+		soundx := lint.GetSoundex(lint.Names)
+		spellingErrors := lint.ShowSpellingErrors(soundx)
+		fmt.Printf("line ~82: spellingErrors is %#v\n", spellingErrors)
+		if len(spellingErrors) > 0 {
+			spellingErrorsLabel.SetText(strings.Join(spellingErrors, "\n"))
+			spellingErrorsLabel.Resize(fyne.NewSize(50, 300))
+			spellingErrorsLabel.Refresh()
+		}
+	})
+
+	// check the weekly schedule Excel file
+	scheduleBtn := widget.NewButton("Check Schedule", func() {
+		err = lint.ScanXLSfile(pickedFilename)
+		if err != nil {
+			fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)
+			dialog.ShowError(err, w)
+		}
+	})
+
+	quitBtn := widget.NewButton("Quit", func() { a.Quit() })
+
+	leftHandColumn := container.NewVBox(monthContainer, pickedFilenameLabel, selectFilename)
+	rightHandColumn := container.NewVBox(spellingErrorsLabel, spellingBtn, scheduleBtn, quitBtn)
+	combinedColumn := container.NewHBox(leftHandColumn, rightHandColumn)
+
 	w.SetContent(
-		container.NewVBox(
-			monthContainer,
-			pickedFilenameLabel,
-			selectFilename,
-		),
+		combinedColumn,
 	)
 	w.ShowAndRun()
 
