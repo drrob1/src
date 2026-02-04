@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -21,15 +22,20 @@ import (
 
 const lastModified = "4 Feb 2026"
 
+//go:embed schedule.png
+var scheduleIcon []byte
+
 func main() {
+	scheduleIconRes := fyne.NewStaticResource("schedule.png", scheduleIcon)
 	a := app.NewWithID("com.example.lintgui")
+	a.SetIcon(scheduleIconRes)
 	s := fmt.Sprintf("Lint GUI, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(600, 600))
 
 	_, startDirFromConfigFile, err := lint.FindAndReadConfIni()
 	if err != nil {
-		fmt.Printf("line ~30: Error from FindAndReadConfIni is %v\n", err)
+		//fmt.Printf("line ~30: Error from FindAndReadConfIni is %v\n", err)
 		dialog.ShowError(err, w)
 	}
 	lint.StartDirFromConfigFile = startDirFromConfigFile
@@ -41,17 +47,17 @@ func main() {
 	monthsThresholdEntry.OnChanged = func(s string) {
 		lint.MonthsThreshold, err = strconv.Atoi(s)
 		if err != nil {
-			fmt.Printf("line ~42: Message converting months threshold to int is %v\n", err)
+			//fmt.Printf("line ~42: Message converting months threshold to int is %v\n", err)
 			//dialog.ShowError(err, w)  I'm getting spurious errors here while I'm changing the text.
 			lint.MonthsThreshold = 1
 		}
-		fmt.Printf("line ~46: monthsThresholdEntry changed to %d\n", lint.MonthsThreshold)
+		//fmt.Printf("line ~46: monthsThresholdEntry changed to %d\n", lint.MonthsThreshold)
 	}
 	monthContainer := container.NewHBox(monthsThresholdLabel, monthsThresholdEntry)
 
 	filenames, err := lint.GetFilenames()
 	if err != nil {
-		fmt.Printf("line ~52: Error from GetFilenames is %v\n", err)
+		//fmt.Printf("line ~52: Error from GetFilenames is %v\n", err)
 		dialog.ShowError(err, w)
 	}
 	if len(filenames) > 26 {
@@ -61,26 +67,32 @@ func main() {
 	spellingErrorsLabel := widget.NewLabel("Spelling Errors go here.") // defined here but used in section below that says check spelling
 	spellingErrorsLabel.Wrapping = fyne.TextWrapWord
 
+	messagesLabel := widget.NewLabel("Messages go here.")
+	messagesLabel.TextStyle.Bold = true
+
 	// Pick a weekly schedule file
 	var pickedFilename string
 	pickedFilenameLabel := widget.NewLabel("Pick a filename:")
+	pickedFilenameLabel.Resize(fyne.Size{Width: 150, Height: 300})
 	selectFilename := widget.NewSelectEntry(filenames)
 	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	selectFilename.OnChanged = func(s string) {
 		pickedFilename = s
 		pickedFilenameLabel.SetText(filepath.Base(s))
-		pickedFilenameLabel.Resize(fyne.Size{Width: 150, Height: 300})
+		pickedFilenameLabel.Resize(fyne.Size{Width: 250, Height: 300})
 		pickedFilenameLabel.Refresh()
 		spellingErrorsLabel.SetText("")
 		spellingErrorsLabel.Refresh()
-		fmt.Printf("line ~75: selectFilename.OnChanged called with %s, and pickedFilename is %s\n", s, pickedFilename)
+		messagesLabel.SetText("")
+		messagesLabel.Refresh()
+		//fmt.Printf("line ~75: selectFilename.OnChanged called with %s, and pickedFilename is %s\n", s, pickedFilename)
 		docNames, err := lint.GetDocNames(pickedFilename)
 		if err != nil {
-			fmt.Printf("line ~78: Error from GetDocNames is %v\n", err)
+			//fmt.Printf("line ~78: Error from GetDocNames is %v\n", err)
 			dialog.ShowError(err, w)
 		}
 		lint.Names = docNames
-		fmt.Printf("line ~82: DocNames is %#v\n", lint.Names)
+		//fmt.Printf("line ~82: DocNames is %#v\n", lint.Names)
 	}
 	selectFilename.Show()
 
@@ -88,7 +100,7 @@ func main() {
 	spellingBtn := widget.NewButton("Check Spelling", func() {
 		soundx := lint.GetSoundex(lint.Names)
 		spellingErrors := lint.ShowSpellingErrors(soundx)
-		fmt.Printf("line ~82: spellingErrors is %#v\n", spellingErrors)
+		//fmt.Printf("line ~82: spellingErrors is %#v\n", spellingErrors)
 		if len(spellingErrors) > 0 {
 			spellingErrorsLabel.SetText(strings.Join(spellingErrors, "\n"))
 			spellingErrorsLabel.Resize(fyne.NewSize(50, 300))
@@ -98,17 +110,27 @@ func main() {
 
 	// check the weekly schedule Excel file
 	scheduleBtn := widget.NewButton("Check Schedule", func() {
-		err = lint.ScanXLSfile(pickedFilename)
+		msg, err := lint.ScanXLSfile(pickedFilename)
 		if err != nil {
-			fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)
+			//fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)
 			dialog.ShowError(err, w)
+		}
+		if len(msg) > 1 {
+			msgJoined := strings.Join(msg, "\n")
+			messagesLabel.SetText(msgJoined)
+			messagesLabel.Resize(fyne.NewSize(150, 300))
+			messagesLabel.Refresh()
+		} else {
+			messagesLabel.SetText("No warnings found in schedule.")
+			messagesLabel.Resize(fyne.NewSize(150, 300))
+			messagesLabel.Refresh()
 		}
 	})
 
 	quitBtn := widget.NewButton("Quit", func() { a.Quit() })
 
 	leftHandColumn := container.NewVBox(monthContainer, pickedFilenameLabel, selectFilename)
-	rightHandColumn := container.NewVBox(spellingErrorsLabel, spellingBtn, scheduleBtn, quitBtn)
+	rightHandColumn := container.NewVBox(spellingBtn, spellingErrorsLabel, scheduleBtn, messagesLabel, quitBtn)
 	combinedColumn := container.NewHBox(leftHandColumn, rightHandColumn)
 
 	w.SetContent(
