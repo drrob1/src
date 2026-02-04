@@ -18,6 +18,9 @@ import (
 
 /*
    3 Feb 26 -- First started writing this.
+   4 Feb 26 -- GUI is still not quite right, but it's working.  And there should only be 1 button to check both spelling and the schedule.
+				I'll have to proceed with the other tasks tomorrow.
+
 */
 
 const lastModified = "4 Feb 2026"
@@ -70,6 +73,16 @@ func main() {
 	messagesLabel := widget.NewLabel("Messages go here.")
 	messagesLabel.TextStyle.Bold = true
 
+	spellingFcn := func() { // move this here so it can be called from the scheduleCheckFcn
+		soundx := lint.GetSoundex(lint.Names)
+		spellingErrors := lint.ShowSpellingErrors(soundx)
+		//fmt.Printf("line ~82: spellingErrors is %#v\n", spellingErrors)
+		if len(spellingErrors) > 0 {
+			spellingErrorsLabel.SetText(strings.Join(spellingErrors, "\n"))
+			spellingErrorsLabel.Resize(fyne.NewSize(50, 300))
+			spellingErrorsLabel.Refresh()
+		}
+	}
 	// Pick a weekly schedule file
 	var pickedFilename string
 	pickedFilenameLabel := widget.NewLabel("Pick a filename:")
@@ -92,24 +105,16 @@ func main() {
 			dialog.ShowError(err, w)
 		}
 		lint.Names = docNames
-		//fmt.Printf("line ~82: DocNames is %#v\n", lint.Names)
+
+		spellingFcn()
 	}
 	selectFilename.Show()
 
 	// check spelling
-	spellingBtn := widget.NewButton("Check Spelling", func() {
-		soundx := lint.GetSoundex(lint.Names)
-		spellingErrors := lint.ShowSpellingErrors(soundx)
-		//fmt.Printf("line ~82: spellingErrors is %#v\n", spellingErrors)
-		if len(spellingErrors) > 0 {
-			spellingErrorsLabel.SetText(strings.Join(spellingErrors, "\n"))
-			spellingErrorsLabel.Resize(fyne.NewSize(50, 300))
-			spellingErrorsLabel.Refresh()
-		}
-	})
+	spellingBtn := widget.NewButton("Check Spelling", spellingFcn)
 
 	// check the weekly schedule Excel file
-	scheduleBtn := widget.NewButton("Check Schedule", func() {
+	scheduleCheckFcn := func() {
 		msg, err := lint.ScanXLSfile(pickedFilename)
 		if err != nil {
 			//fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)
@@ -125,7 +130,8 @@ func main() {
 			messagesLabel.Resize(fyne.NewSize(150, 300))
 			messagesLabel.Refresh()
 		}
-	})
+	}
+	scheduleBtn := widget.NewButton("Check Schedule", scheduleCheckFcn)
 
 	quitBtn := widget.NewButton("Quit", func() { a.Quit() })
 
