@@ -668,15 +668,18 @@ func main() {
 */
 
 // ScanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
-//
-//	Does not need to return anything except error to main.
-func ScanXLSfile(filename string) error {
+//	Used to not need to return anything except error to main.
+//  Now that I'm changing this include lintGUI, I need to change the signature of this routine.  It has to return a []string of messages that can be sent to display or a fyne widget.
+// For now, it still displays some strings to the terminal.
+func ScanXLSfile(filename string) ([]string, error) {
+	var messages []string
+
 	// First this reads the entire file into the array for the entire work week.
 
 	workBook, err := xlsx.OpenFile(filename)
 	if err != nil {
 		//fmt.Printf("Error opening Excel file %s in directory %s: %s\n", filename, workingDir, err)
-		return err
+		return nil, err
 	}
 
 	// Populate the wholeWorkWeek's schedule
@@ -703,7 +706,7 @@ func ScanXLSfile(filename string) error {
 		docsOffStringForWeek, er := ExtractOff(wholeWorkWeek)
 		if er != nil {
 			fmt.Printf("Error extracting off: %s\n", er)
-			return er
+			return nil, er
 		}
 		ctfmt.Printf(ct.Green, true, "docs off box extracted from Friday, as one line: %q\n", docsOffStringForWeek)
 		ctfmt.Printf(ct.Cyan, true, "docs off box extracted from Friday, processing new line characters: %s\n", docsOffStringForWeek)
@@ -729,7 +732,7 @@ func ScanXLSfile(filename string) error {
 		vacationArray, err = populateVacStruct(wholeWorkWeek)
 		if err != nil {
 			fmt.Printf("Error populating vacation array: %s\n", err)
-			return err
+			return nil, err
 		}
 		ctfmt.Printf(ct.Cyan, true, "Vacation array populated and output follows\n")
 		for i, vac := range vacationArray {
@@ -737,8 +740,6 @@ func ScanXLSfile(filename string) error {
 		}
 
 		fmt.Printf("\n\n")
-
-		//return errors.New("still writing and debugging, early exit from scanXLSfile")
 	}
 	// Removed as the schedule format was changed again as of Sep 11, 2025.
 	//vacationArray, err = populateVacStruct(wholeWorkWeek)
@@ -766,7 +767,7 @@ func ScanXLSfile(filename string) error {
 			}
 			fmt.Printf("\n")
 			if pause() {
-				return errors.New("exit from pause")
+				return nil, errors.New("exit from pause")
 			}
 
 			fmt.Printf("\n Late shift docs on day %d are %#v\n", dayCol, lateDocsToday)
@@ -777,7 +778,8 @@ func ScanXLSfile(filename string) error {
 		for _, name := range mdsOffToday {
 			for i := neuro; i < mdOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
-					fmt.Printf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i])
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s\n", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i])
+					messages = append(messages, msg)
 				}
 			}
 		}
@@ -786,9 +788,13 @@ func ScanXLSfile(filename string) error {
 		for _, name := range lateDocsToday {
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				messages = append(messages, msg)
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				messages = append(messages, msg)
 			}
 		}
 
@@ -800,23 +806,26 @@ func ScanXLSfile(filename string) error {
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				messages = append(messages, msg)
 			}
 			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
+				messages = append(messages, msg)
 			}
 		}
 
 		if VeryVerboseFlag {
 			if pause() {
-				return errors.New("exit from pause")
+				return nil, errors.New("exit from pause")
 			}
 		}
 	}
-	return nil
+	return messages, nil
 }
 
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
-//
 //	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
 func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
 
