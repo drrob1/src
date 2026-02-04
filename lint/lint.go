@@ -134,7 +134,7 @@ import (
    3 Feb 26 -- Added func init() to initialize doc names.  Nevermind, I can't.  It needs a filename to extract the doc names from.  So that has to be done after a filename is selected.
 */
 
-const LastModified = "3 Feb 2026"
+const LastModified = "4 Feb 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.

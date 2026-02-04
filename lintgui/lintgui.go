@@ -21,6 +21,7 @@ import (
    4 Feb 26 -- GUI is still not quite right, but it's working.  And there should only be 1 button to check both spelling and the schedule.
 				I'll have to proceed with the other tasks tomorrow.
 				Turns out that I can't automatically check the schedule file yet, because of dependencies.  IE, need to pick a schedule file first, before checking it.
+				I figured it out.  It was a matter of making sure the correct variables were defined near the top, so they would be defined before they were used, even if they were not yet set.
 */
 
 const lastModified = "4 Feb 2026"
@@ -29,6 +30,7 @@ const lastModified = "4 Feb 2026"
 var scheduleIcon []byte
 
 func main() {
+	var pickedFilename string
 	scheduleIconRes := fyne.NewStaticResource("schedule.png", scheduleIcon)
 	a := app.NewWithID("com.example.lintgui")
 	a.SetIcon(scheduleIconRes)
@@ -73,6 +75,9 @@ func main() {
 	messagesLabel := widget.NewLabel("Messages go here.")
 	messagesLabel.TextStyle.Bold = true
 
+	selectFilename := widget.NewSelectEntry(filenames)
+	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
+
 	spellingFcn := func() { // move this here so it can be called from the scheduleCheckFcn
 		soundx := lint.GetSoundex(lint.Names)
 		spellingErrors := lint.ShowSpellingErrors(soundx)
@@ -83,12 +88,35 @@ func main() {
 			spellingErrorsLabel.Refresh()
 		}
 	}
+
+	// check spelling
+	spellingBtn := widget.NewButton("Check Spelling", spellingFcn)
+
+	// check the weekly schedule Excel file
+	scheduleCheckFcn := func() {
+		msg, err := lint.ScanXLSfile(pickedFilename)
+		if err != nil {
+			//fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)
+			dialog.ShowError(err, w)
+		}
+		if len(msg) > 0 {
+			msgJoined := strings.Join(msg, "\n")
+			messagesLabel.SetText(msgJoined)
+			messagesLabel.Resize(fyne.NewSize(150, 300))
+			messagesLabel.Refresh()
+		} else {
+			messagesLabel.SetText("No warnings found in schedule.")
+			messagesLabel.Resize(fyne.NewSize(150, 300))
+			messagesLabel.Refresh()
+		}
+	}
+	scheduleBtn := widget.NewButton("Check Schedule", scheduleCheckFcn)
+
+	quitBtn := widget.NewButton("Quit", func() { a.Quit() })
+
 	// Pick a weekly schedule file
-	var pickedFilename string
 	pickedFilenameLabel := widget.NewLabel("Pick a filename:")
 	pickedFilenameLabel.Resize(fyne.Size{Width: 150, Height: 300})
-	selectFilename := widget.NewSelectEntry(filenames)
-	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	selectFilename.OnChanged = func(s string) {
 		pickedFilename = s
 		pickedFilenameLabel.SetText(filepath.Base(s))
@@ -107,33 +135,9 @@ func main() {
 		lint.Names = docNames
 
 		spellingFcn()
+		scheduleCheckFcn()
 	}
 	selectFilename.Show()
-
-	// check spelling
-	spellingBtn := widget.NewButton("Check Spelling", spellingFcn)
-
-	// check the weekly schedule Excel file
-	scheduleCheckFcn := func() {
-		msg, err := lint.ScanXLSfile(pickedFilename)
-		if err != nil {
-			//fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)
-			dialog.ShowError(err, w)
-		}
-		if len(msg) > 1 {
-			msgJoined := strings.Join(msg, "\n")
-			messagesLabel.SetText(msgJoined)
-			messagesLabel.Resize(fyne.NewSize(150, 300))
-			messagesLabel.Refresh()
-		} else {
-			messagesLabel.SetText("No warnings found in schedule.")
-			messagesLabel.Resize(fyne.NewSize(150, 300))
-			messagesLabel.Refresh()
-		}
-	}
-	scheduleBtn := widget.NewButton("Check Schedule", scheduleCheckFcn)
-
-	quitBtn := widget.NewButton("Quit", func() { a.Quit() })
 
 	leftHandColumn := container.NewVBox(monthContainer, pickedFilenameLabel, selectFilename)
 	rightHandColumn := container.NewVBox(spellingBtn, spellingErrorsLabel, scheduleBtn, messagesLabel, quitBtn)
