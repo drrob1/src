@@ -121,10 +121,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    2 Feb 26 -- Now only contains main() and calls package lint.  A sticking point in the conversion to separate pacckages was the globals.  When I copied those correctly, the code started working.
    3 Feb 26 -- In the process of writing lintGUI, I had to change the scanXLSfile function to return a slice of messages.  So now I'm refactoring here to test them.
-   6 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
+   7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
 */
 
-const lastModified = "6 Feb 2026"
+const lastModified = "7 Feb 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
