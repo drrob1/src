@@ -22,9 +22,10 @@ import (
 				I'll have to proceed with the other tasks tomorrow.
 				Turns out that I can't automatically check the schedule file yet, because of dependencies.  IE, need to pick a schedule file first, before checking it.
 				I figured it out.  It was a matter of making sure the correct variables were defined near the top, so they would be defined before they were used, even if they were not yet set.
+   6 Feb 26 -- Removed the subslice operation that limited to 26 filenames for display in the select box.
 */
 
-const lastModified = "4 Feb 2026"
+const lastModified = "6 Feb 2026"
 
 //go:embed schedule.png
 var scheduleIcon []byte
@@ -65,9 +66,9 @@ func main() {
 		//fmt.Printf("line ~52: Error from GetFilenames is %v\n", err)
 		dialog.ShowError(err, w)
 	}
-	if len(filenames) > 26 {
-		filenames = filenames[:26] // these are to be displayed in a select box
-	}
+	//if len(filenames) > 26 {  I don't think this is necessary anymore.
+	//	filenames = filenames[:26] // these are to be displayed in a select box
+	//}
 
 	spellingErrorsLabel := widget.NewLabel("Spelling Errors go here.") // defined here but used in section below that says check spelling
 	spellingErrorsLabel.Wrapping = fyne.TextWrapWord
