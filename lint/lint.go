@@ -132,9 +132,9 @@ import (
 				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
    2 Feb 26 -- Now package lint, called by package main in cmd/main.go
    3 Feb 26 -- Added func init() to initialize doc names.  Nevermind, I can't.  It needs a filename to extract the doc names from.  So that has to be done after a filename is selected.
-   7 Feb 26 -- Up til now, the walk function returns a slice of strings containing the schedule names.  The function walks the directory tree starting at the specified directory and
-                returns a slice of strings containing the names of all schedule files.  I want the final slice to be sorted by datetime, newest first.  So I'm going to change the
-                walk function to return a slice of fileDataType that can be sorted.  I'll return a slice of strings at the last stage.  And I changed its name to GetScheduleFilenames.
+   7 Feb 26 -- Up til now, the walk function returns a slice of strings containing the schedule names.  The function walked the directory tree starting at the specified directory and
+                used to return a slice of strings containing the names of all schedule files.  I changed the final slice to be sorted by datetime, newest first.  So I changed the
+                walk function to return a sorted slice of fileDataType that can be sorted.  I'll return a slice of strings at the last stage.  And I changed its name to GetScheduleFilenames.
 */
 
 const LastModified = "6 Feb 2026"
@@ -964,13 +964,15 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
 		// While debugging this code, I came across the fact that I've misunderstood what the walk fcn does.  It doesn't just produce directory Names, it produces any file entries
 		// with each iteration.  So opening a directory here and fetching all the entries is not correct.  I have to change this to work on individual entries.
-		// Now it works.  The walk function gets the needed filenames, checks against the regex and sends down the channel if the file matches.
-		// This routine then sorts the []FileDataType and checks against the date threshold constraint when converting to []string.
+		// Now it works.  The walk function gets the needed filenames, checks against the regex and date constraint and sends down the channel if the file passes these checks.
+		// This routine then sorts the []FileDataType and used to check against the date threshold constraint when converting to []string, but I changed that Feb 2026 so that the
+		// check against the date constraint happens in the walk fcn.  And the walk fcn now returns a sorted slice of fileDataType.  This gets converted to []string
+		// in the outer wrapping function.
 
 		return nil
 	}
 
-	//  As of Aug 8, 2025 or so, the O: drive went away.  So I'm not going to use it.
+	//  As of Aug 8, 2025 or so, the O: drive went away.  So I'm not going to search it.
 
 	if VerboseFlag {
 		fmt.Printf(" WalkDir startDirectory: %s\n", startdirectory)
