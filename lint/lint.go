@@ -132,9 +132,12 @@ import (
 				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
    2 Feb 26 -- Now package lint, called by package main in cmd/main.go
    3 Feb 26 -- Added func init() to initialize doc names.  Nevermind, I can't.  It needs a filename to extract the doc names from.  So that has to be done after a filename is selected.
+   7 Feb 26 -- Up til now, the walk function returns a slice of strings containing the schedule names.  The function walks the directory tree starting at the specified directory and
+                returns a slice of strings containing the names of all schedule files.  I want the final slice to be sorted by datetime, newest first.  So I'm going to change the
+                walk function to return a slice of fileDataType that can be sorted.  I'll return a slice of strings at the last stage.  And I changed its name to GetScheduleFilenames.
 */
 
-const LastModified = "4 Feb 2026"
+const LastModified = "6 Feb 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -385,8 +388,8 @@ func whosRemoteToday(week WorkWeekType, dayCol int) []string { // week is an arr
 	return remoteDocs
 }
 
-func GetFilenames() ([]string, error) { // this will search Documents and OneDrive directories using a walk function.  And also the directory specified in a config file.
-	var filenames []string
+func GetScheduleFilenames() ([]string, error) { // this will search Documents and OneDrive directories using a walk function.  And also the directory specified in a config file.
+	var fnData []FileDataType
 
 	if VerboseFlag {
 		fmt.Printf(" GetFilenames() called with VerboseFlag: %t, StartDirFromConfigFile: %s, NArg(): %d\n", VerboseFlag, StartDirFromConfigFile, flag.NArg())
@@ -398,13 +401,11 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 				StartDirFromConfigFile, err)
 		}
 		if len(filenamesStartDir) > 0 {
-			filenames = append(filenames, filenamesStartDir...)
+			// filenames = append(filenames, filenamesStartDir...)  old way using slice of strings
+			fnData = append(fnData, filenamesStartDir...)
 			if VerboseFlag {
-				fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
+				fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(fnData))
 			}
-		}
-		if VerboseFlag {
-			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
 		}
 	}
 
@@ -418,13 +419,13 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 		fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
 	}
 	filenamesDocs, err := walkRegexFullFilenames(docs)
-	if err == nil {
-		filenames = append(filenames, filenamesDocs...)
-		if VerboseFlag {
-			fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
-		}
-	} else {
+	if err != nil {
 		return nil, err
+	}
+
+	fnData = append(fnData, filenamesDocs...)
+	if VerboseFlag {
+		fmt.Printf(" Filenames Data length after append from %s: %d\n", docs, len(fnData))
 	}
 
 	oneDriveString := os.Getenv("OneDrive")
@@ -436,15 +437,43 @@ func GetFilenames() ([]string, error) { // this will search Documents and OneDri
 		return nil, err
 	}
 	if VerboseFlag {
-		fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
+		fmt.Printf(" FilenamesDocs data length: %d\n", len(filenamesOneDrive))
 	}
 
-	filenames = append(filenames, filenamesOneDrive...)
+	fnData = append(fnData, filenamesOneDrive...)
 	if VerboseFlag {
-		fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
+		fmt.Printf(" Filenames data length after append from %s: %d\n", filenamesOneDrive, len(fnData))
 	}
 
-	return filenames, nil
+	if VerboseFlag {
+		fmt.Printf(" Before sort: Filenames data length after append from all sources: %d\n", len(fnData))
+		for _, fn := range fnData {
+			fmt.Printf("%s, ", fn.FFname)
+		}
+		fmt.Println()
+	}
+	lessFunc := func(i, j int) bool {
+		return fnData[i].Timestamp.After(fnData[j].Timestamp) // I want to see if this will work.  It does, and TRUE means time[i] is after time[j].
+	}
+	sort.Slice(fnData, lessFunc)
+	if VerboseFlag {
+		fmt.Printf(" After sort: Filenames data length after append from all sources: %d\n", len(fnData))
+		for _, fn := range fnData {
+			fmt.Printf("%s, ", fn.FFname)
+		}
+		fmt.Println()
+	}
+
+	// After sorting the names by date stamp, now ready to create the string slice of matching schedule names.
+	filenamesStrings := make([]string, 0, len(fnData))
+	for _, fn := range fnData {
+		filenamesStrings = append(filenamesStrings, fn.FFname)
+		if VerboseFlag {
+			fmt.Printf(" FilenamesStrings: %s\n", fn.FFname)
+		}
+	}
+
+	return filenamesStrings, nil
 }
 
 /*
@@ -830,7 +859,9 @@ func ScanXLSfile(filename string) ([]string, error) {
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
 //
 //	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
-func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
+//
+// func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
+func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
 
 	if VerboseFlag {
 		fmt.Printf(" walkRegexFullFilenames, startdirectory: %s\n", startdirectory)
@@ -906,12 +937,16 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 				return err
 			}
 
+			if fi.ModTime().Before(threshold) { // ignore files that are older than the threshold.
+				return nil
+			}
+
 			filedata := FileDataType{
 				Name:      de.Name(),
 				FFname:    fpath, // filepath.Join(fpath, de.Name()) doesn't work, because it turns out that fpath is the full path and filename
 				Timestamp: fi.ModTime(),
 			}
-			if VerboseFlag {
+			if VeryVerboseFlag {
 				fmt.Printf(" matches the regexp: filedata.timestamp is %s\n", filedata.Timestamp)
 			}
 			fileDataChan <- filedata
@@ -958,23 +993,23 @@ func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This r
 		fmt.Printf(" in walkRegexFullFilenames after sort.Slice.  Len=%d\n  FDSlice %#v\n", len(FDSlice), FDSlice)
 	}
 
-	stringSlice := make([]string, 0, len(FDSlice))
-	var count int
-	for _, f := range FDSlice {
-		if f.Timestamp.After(threshold) {
-			stringSlice = append(stringSlice, f.FFname) // needs to preserve case of filename for linux
-			count++
-			if count >= NumLines {
-				break
-			}
-		} else {
-			break // Made observation that in a sorted list the first file before the threshold timestamp ends the search.
-		}
-	}
+	//stringSlice := make([]string, 0, len(FDSlice))  Move the test for time into the walk function.
+	//var count int
+	//for _, f := range FDSlice {
+	//	if f.Timestamp.After(threshold) {
+	//		stringSlice = append(stringSlice, f.FFname) // needs to preserve case of filename for linux
+	//		count++
+	//		if count >= NumLines {
+	//			break
+	//		}
+	//	} else {
+	//		break // Made observation that in a sorted list the first file before the threshold timestamp ends the search.
+	//	}
+	//}
 	if VerboseFlag {
-		fmt.Printf(" In walkRegexFullFilenames.  len(stringSlice) = %d\n stringSlice=%v\n", len(stringSlice), stringSlice)
+		fmt.Printf(" In walkRegexFullFilenames.  len(stringSlice) = %d\n stringSlice=%v\n", len(FDSlice), FDSlice)
 	}
-	return stringSlice, nil
+	return FDSlice, nil
 } // end walkRegexFullFilenames
 
 func pause() bool {
