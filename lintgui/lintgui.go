@@ -23,15 +23,21 @@ import (
 				Turns out that I can't automatically check the schedule file yet, because of dependencies.  IE, need to pick a schedule file first, before checking it.
 				I figured it out.  It was a matter of making sure the correct variables were defined near the top, so they would be defined before they were used, even if they were not yet set.
    6 Feb 26 -- Removed the subslice operation that limited to 26 filenames for display in the select box.
+   7 Feb 26 -- Entire list is now sorted by date stamp.  And I got monthsThresholdEntry working.
 */
 
-const lastModified = "6 Feb 2026"
+const lastModified = "7 Feb 2026"
 
 //go:embed schedule.png
 var scheduleIcon []byte
 
 func main() {
 	var pickedFilename string
+
+	// forgot to run the config init.  This picks up an additional start directory.
+	_, startDirFromConfigFile, _ := lint.FindAndReadConfIni() // I don't care if the file isn't there.
+	lint.StartDirFromConfigFile = startDirFromConfigFile
+
 	scheduleIconRes := fyne.NewStaticResource("schedule.png", scheduleIcon)
 	a := app.NewWithID("com.example.lintgui")
 	a.SetIcon(scheduleIconRes)
@@ -50,34 +56,32 @@ func main() {
 	monthsThresholdEntry := widget.NewEntry()
 	monthsThresholdEntry.SetText("1") // default value
 	lint.MonthsThreshold = 1
-	monthsThresholdEntry.OnChanged = func(s string) {
-		lint.MonthsThreshold, err = strconv.Atoi(s)
-		if err != nil {
-			//fmt.Printf("line ~42: Message converting months threshold to int is %v\n", err)
-			//dialog.ShowError(err, w)  I'm getting spurious errors here while I'm changing the text.
-			lint.MonthsThreshold = 1
-		}
-		//fmt.Printf("line ~46: monthsThresholdEntry changed to %d\n", lint.MonthsThreshold)
-	}
-	monthContainer := container.NewHBox(monthsThresholdLabel, monthsThresholdEntry)
-
-	filenames, err := lint.GetFilenames()
+	filenames, err := lint.GetScheduleFilenames()
 	if err != nil {
-		//fmt.Printf("line ~52: Error from GetFilenames is %v\n", err)
 		dialog.ShowError(err, w)
 	}
-	//if len(filenames) > 26 {  I don't think this is necessary anymore.
-	//	filenames = filenames[:26] // these are to be displayed in a select box
-	//}
+	selectFilename := widget.NewSelectEntry(filenames)
+	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
+	monthsThresholdEntry.OnChanged = func(s string) {
+		lint.MonthsThreshold, err = strconv.Atoi(s)
+		fmt.Printf("line ~63: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
+		if err != nil {
+			lint.MonthsThreshold = 1
+		}
+		filenames, err = lint.GetScheduleFilenames()
+		if err != nil {
+			dialog.ShowError(err, w)
+		}
+		selectFilename.SetOptions(filenames)
+		selectFilename.Refresh()
+	}
+	monthContainer := container.NewHBox(monthsThresholdLabel, monthsThresholdEntry)
 
 	spellingErrorsLabel := widget.NewLabel("Spelling Errors go here.") // defined here but used in section below that says check spelling
 	spellingErrorsLabel.Wrapping = fyne.TextWrapWord
 
 	messagesLabel := widget.NewLabel("Messages go here.")
 	messagesLabel.TextStyle.Bold = true
-
-	selectFilename := widget.NewSelectEntry(filenames)
-	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 
 	spellingFcn := func() { // move this here so it can be called from the scheduleCheckFcn
 		soundx := lint.GetSoundex(lint.Names)
