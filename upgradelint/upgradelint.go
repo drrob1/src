@@ -134,6 +134,8 @@ func main() {
 		io.WriteString(os.Stdout, "\n") // This works to get a prompt.
 		os.Exit(0)
 	}
+	fmt.Printf(" Hit <enter> \n\n")
+	io.WriteString(os.Stdout, "\n") // This works to get a prompt.
 
 downloadMe:
 	// Need to download the latest version of lint.exe and check its hashes.
