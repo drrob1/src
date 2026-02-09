@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/spf13/pflag"
 )
 
 /*
@@ -24,19 +25,31 @@ import (
 				I figured it out.  It was a matter of making sure the correct variables were defined near the top, so they would be defined before they were used, even if they were not yet set.
    6 Feb 26 -- Removed the subslice operation that limited to 26 filenames for display in the select box.
    7 Feb 26 -- Entire list is now sorted by date stamp.  And I got monthsThresholdEntry working.
+   8 Feb 26 -- Adding verboseFlag and veryVerboseFlag.  The shortcut doesn't have these, but if the pgm is started on the command line, then these are available.
 */
 
-const lastModified = "7 Feb 2026"
+const lastModified = "8 Feb 2026"
 
 //go:embed schedule.png
 var scheduleIcon []byte
 
 func main() {
+	var verboseFlag, veryVerboseFlag bool
 	var pickedFilename string
+
+	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode")
+	pflag.BoolVarP(&veryVerboseFlag, "veryverbose", "V", false, "very verbose mode")
+	pflag.Parse()
+
+	if veryVerboseFlag {
+		verboseFlag = true
+	}
 
 	// forgot to run the config init.  This picks up an additional start directory.
 	_, startDirFromConfigFile, _ := lint.FindAndReadConfIni() // I don't care if the file isn't there.
 	lint.StartDirFromConfigFile = startDirFromConfigFile
+	lint.VerboseFlag = verboseFlag
+	lint.VeryVerboseFlag = veryVerboseFlag
 
 	scheduleIconRes := fyne.NewStaticResource("schedule.png", scheduleIcon)
 	a := app.NewWithID("com.example.lintgui")
@@ -64,9 +77,12 @@ func main() {
 	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	monthsThresholdEntry.OnChanged = func(s string) {
 		lint.MonthsThreshold, err = strconv.Atoi(s)
-		fmt.Printf("line ~63: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
 		if err != nil {
 			lint.MonthsThreshold = 1
+			dialog.ShowError(err, w)
+		}
+		if verboseFlag {
+			fmt.Printf("line ~63: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
 		}
 		filenames, err = lint.GetScheduleFilenames()
 		if err != nil {
