@@ -76,9 +76,10 @@ import (
 23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
 26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
+10 Feb 26 -- Added a dividing line, as I saw from the youtube tutorials.  It may take a bit of time to get right.
 */
 
-const lastModified = "Jan 28, 2026"
+const lastModified = "Feb 10, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -985,7 +986,13 @@ func populateUI() {
 	maplabel := widget.NewLabel(mapJoined)
 	rightColumn := container.NewVBox(paddingLabel, displayLabel, maplabel)
 
-	combinedColumns := container.NewHBox(leftColumn, rightColumn)
+	line1 := canvas.NewLine(color.NRGBA{R: 255, G: 0, B: 0, A: 255}) // red line
+	line1.Position1 = fyne.NewPos(0, 100)
+	line1.Position2 = fyne.NewPos(0, 700)
+	line1.StrokeWidth = 3
+	lineContainer := container.NewWithoutLayout(line1)
+
+	combinedColumns := container.NewHBox(leftColumn, lineContainer, rightColumn)
 
 	fyne.Do(func() { // I was getting warnings from fyne that this was being called from a non-GUI thread.
 		// safe to touch widgets here
