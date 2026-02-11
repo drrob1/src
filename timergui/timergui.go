@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
+	"io"
+	"runtime"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -9,6 +13,9 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/mp3"
+	"github.com/faiface/beep/speaker"
 )
 
 /*
@@ -18,20 +25,42 @@ import (
 
 const lastAltered = "11 Feb 26"
 
+//go:embed road-runner-beep-beep.mp3
+var beepBeep []byte
+
 func main() {
+	var streamer beep.StreamSeekCloser
+	var format beep.Format
+	var err error
 
 	a := app.NewWithID("")
-	w := a.NewWindow("Simple Timer")
+	s := fmt.Sprintf("Simple Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
+	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
+
+	if streamer == nil {
+		f := io.NopCloser(bytes.NewReader(beepBeep))
+		streamer, format, err = mp3.Decode(f)
+		if err != nil {
+			dialog.ShowError(err, w)
+		}
+		//defer streamer.Close()  I don't think I need this because the mp3 is embedded.
+
+		err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/2))
+		if err != nil {
+			fmt.Printf("Error from speaker.Init is %s\n", err)
+			dialog.ShowError(err, w)
+		}
+	}
 
 	durationEntry := widget.NewEntry()
 
 	timerLabel := widget.NewLabel("...")
 
 	startTimerFunc := func() {
-		duration, err := time.ParseDuration(durationEntry.Text)
-		if err != nil {
-			dialog.ShowError(err, w)
+		duration, er := time.ParseDuration(durationEntry.Text)
+		if er != nil {
+			dialog.ShowError(er, w)
 		}
 		remaining := int(duration.Seconds())
 		for remaining > 0 {
@@ -42,9 +71,10 @@ func main() {
 			fyne.Do(func() {
 				w.SetTitle(s1)
 				timerLabel.SetText(s2)
-				// timerLabel.Refresh()  this isn't in the example, and it works.
+				// timerLabel.Refresh()  this isn't in the example, and it works without it so I'm leaving it out.
 			})
 		}
+		speaker.Play(streamer)
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
 		})
