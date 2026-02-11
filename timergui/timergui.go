@@ -25,7 +25,6 @@ func main() {
 	w.Resize(fyne.NewSize(400, 400))
 
 	durationEntry := widget.NewEntry()
-	durationEntry.SetPlaceHolder(" Enter a duration string")
 
 	timerLabel := widget.NewLabel("...")
 
@@ -49,6 +48,11 @@ func main() {
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
 		})
+	}
+
+	durationEntry.SetPlaceHolder(" Enter a duration string")
+	durationEntry.OnSubmitted = func(_ string) {
+		go startTimerFunc()
 	}
 
 	startTimerBtn := widget.NewButton("Start timer", func() {
