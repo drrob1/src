@@ -21,10 +21,10 @@ func main() {
 	w := a.NewWindow("Simple Timer")
 	w.Resize(fyne.NewSize(400, 400))
 
-	timerLabel := widget.NewLabel("Time remaining: 10 seconds")
+	timerLabel := widget.NewLabel("Time remaining: 2 minutes")
 
 	go func() {
-		remaining := 10
+		remaining := 120
 		for remaining > 0 {
 			time.Sleep(1 * time.Second)
 			remaining--
