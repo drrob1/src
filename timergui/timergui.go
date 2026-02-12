@@ -38,7 +38,11 @@ func main() {
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
 
-	if streamer == nil {
+	durationEntry := widget.NewEntry()
+
+	timerLabel := widget.NewLabel("...")
+
+	startTimerFunc := func() {
 		f := io.NopCloser(bytes.NewReader(beepBeep))
 		streamer, format, err = mp3.Decode(f)
 		if err != nil {
@@ -51,13 +55,6 @@ func main() {
 			fmt.Printf("Error from speaker.Init is %s\n", err)
 			dialog.ShowError(err, w)
 		}
-	}
-
-	durationEntry := widget.NewEntry()
-
-	timerLabel := widget.NewLabel("...")
-
-	startTimerFunc := func() {
 		duration, er := time.ParseDuration(durationEntry.Text)
 		if er != nil {
 			dialog.ShowError(er, w)
