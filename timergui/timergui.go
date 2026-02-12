@@ -16,11 +16,13 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
+	"github.com/spf13/pflag"
 )
 
 /*
   10 Feb 26 -- Created this program to test the timer.  The example doesn't include a refresh, or fyne.Do.  It works so it doesn't need the refresh().
 				It can be easily modified to allow user-settable timer duration.
+  11 Feb 26 -- Added beep-beep sound for timer completion.  And I added an optional command line param to mean seconds.
 */
 
 const lastAltered = "11 Feb 26"
@@ -33,6 +35,7 @@ func main() {
 	var format beep.Format
 	var err error
 
+	pflag.Parse()
 	a := app.NewWithID("")
 	s := fmt.Sprintf("Simple Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
 	w := a.NewWindow(s)
@@ -62,7 +65,6 @@ func main() {
 		remaining := int(duration.Seconds())
 		for remaining > 0 {
 			time.Sleep(1 * time.Second)
-			remaining--
 			s1 := fmt.Sprintf("%d", remaining)
 			s2 := fmt.Sprintf("Time remaining: %d seconds", remaining)
 			fyne.Do(func() {
@@ -70,6 +72,7 @@ func main() {
 				timerLabel.SetText(s2)
 				// timerLabel.Refresh()  this isn't in the example, and it works without it so I'm leaving it out.
 			})
+			remaining--
 		}
 		speaker.Play(streamer)
 		fyne.Do(func() {
@@ -79,6 +82,10 @@ func main() {
 
 	durationEntry.SetPlaceHolder(" Enter a duration string")
 	durationEntry.OnSubmitted = func(_ string) {
+		go startTimerFunc()
+	}
+	if pflag.NArg() > 0 {
+		durationEntry.Text = pflag.Arg(0) + "s"
 		go startTimerFunc()
 	}
 
