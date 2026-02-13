@@ -122,9 +122,10 @@ import (
    2 Feb 26 -- Now only contains main() and calls package lint.  A sticking point in the conversion to separate pacckages was the globals.  When I copied those correctly, the code started working.
    3 Feb 26 -- In the process of writing lintGUI, I had to change the scanXLSfile function to return a slice of messages.  So now I'm refactoring here to test them.
    7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
+  13 Feb 26 -- Added rowOffset to allow for a date row in the schedule to the lint library.  Here, I added a message for the lint library last modified date.
 */
 
-const lastModified = "7 Feb 2026"
+const lastModified = "13 Feb 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
@@ -170,7 +171,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint V 3.1 for the weekly schedule, last modified %s\n", lastModified)
+	fmt.Printf(" lint V 3.1 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, lint.LastModified)
 
 	_, startDirFromConfigFile, err = lint.FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
