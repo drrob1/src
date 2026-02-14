@@ -747,7 +747,9 @@ func ScanXLSfile(filename string) ([]string, error) {
 		return nil, err
 	}
 	rowOffset-- // subtract one because I need the offset for the dateLine.
-	fmt.Printf(" dateLine rowOffset = %d\n", rowOffset)
+	if VerboseFlag {
+		fmt.Printf(" dateLine rowOffset = %d\n", rowOffset)
+	}
 
 	// Populate the wholeWorkWeek's schedule
 	var wholeWorkWeek WorkWeekType       // [6]dayType  Only need 5 workdays.  Element 0 is not used.
@@ -845,7 +847,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 		for _, name := range mdsOffToday {
 			for i := neuro + rowOffset; i < mdOff+rowOffset; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
-					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i+rowOffset])
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i-rowOffset])
 					messages = append(messages, msg)
 				}
 			}
@@ -1161,7 +1163,11 @@ func ExtractYearFromSchedule(week WorkWeekType, day int) (string, error) {
 	if len(field) < 3 {
 		return "", fmt.Errorf("len(fields) < 3, it is %d", len(field))
 	}
-	return field[2], nil // this is the 3rd field
+	possible := field[2] // this is the 3rd field
+	if possible > "2020" {
+		return possible, nil
+	}
+	return field[3], nil // this is the 4th field
 }
 
 func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
