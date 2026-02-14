@@ -78,8 +78,8 @@ func main() {
 			remaining--
 		}
 		//speaker.Play(streamer)  this would only play the sound once per loading it.  Using the buffer means I can load once and replay many.
-		beepBuffer := buffer.Streamer(0, buffer.Len())
-		speaker.Play(beepBuffer)
+		beepStreamer := buffer.Streamer(0, buffer.Len())
+		speaker.Play(beepStreamer)
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
 		})
