@@ -23,9 +23,10 @@ import (
   10 Feb 26 -- Created this program to test the timer.  The example doesn't include a refresh, or fyne.Do.  It works so it doesn't need the refresh().
 				It can be easily modified to allow user-settable timer duration.
   11 Feb 26 -- Added beep-beep sound for timer completion.  And I added an optional command line param to mean seconds.
+  14 Feb 26 -- Learned how to use a sound buffer to replay the sound.
 */
 
-const lastAltered = "11 Feb 26"
+const lastAltered = "14 Feb 26"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -41,23 +42,25 @@ func main() {
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
 
+	f := io.NopCloser(bytes.NewReader(beepBeep))
+	streamer, format, err = mp3.Decode(f)
+	if err != nil {
+		dialog.ShowError(err, w)
+	}
+	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/2))
+	if err != nil {
+		fmt.Printf("Error from speaker.Init is %s\n", err)
+		dialog.ShowError(err, w)
+	}
+	buffer := beep.NewBuffer(format)
+	buffer.Append(streamer)
+	streamer.Close()
+
 	durationEntry := widget.NewEntry()
 
 	timerLabel := widget.NewLabel("...")
 
 	startTimerFunc := func() {
-		f := io.NopCloser(bytes.NewReader(beepBeep))
-		streamer, format, err = mp3.Decode(f)
-		if err != nil {
-			dialog.ShowError(err, w)
-		}
-		//defer streamer.Close()  I don't think I need this because the mp3 is embedded.
-
-		err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/2))
-		if err != nil {
-			fmt.Printf("Error from speaker.Init is %s\n", err)
-			dialog.ShowError(err, w)
-		}
 		duration, er := time.ParseDuration(durationEntry.Text)
 		if er != nil {
 			dialog.ShowError(er, w)
@@ -70,11 +73,13 @@ func main() {
 			fyne.Do(func() {
 				w.SetTitle(s1)
 				timerLabel.SetText(s2)
-				// timerLabel.Refresh()  this isn't in the example, and it works without it so I'm leaving it out.
+				// timerLabel.Refresh()  this isn't in the example, and it works without it, so I'm leaving it out.
 			})
 			remaining--
 		}
-		speaker.Play(streamer)
+		//speaker.Play(streamer)  this would only play the sound once per loading it.  Using the buffer means I can load once and replay many.
+		beepBuffer := buffer.Streamer(0, buffer.Len())
+		speaker.Play(beepBuffer)
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
 		})
