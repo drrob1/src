@@ -26,6 +26,7 @@ import (
    6 Feb 26 -- Removed the subslice operation that limited to 26 filenames for display in the select box.
    7 Feb 26 -- Entire list is now sorted by date stamp.  And I got monthsThresholdEntry working.
    8 Feb 26 -- Adding verboseFlag and veryVerboseFlag.  The shortcut doesn't have these, but if the pgm is started on the command line, then these are available.
+  13 Feb 26 -- Removed redundant call to FindAndReadConfIni
 */
 
 const lastModified = "8 Feb 2026"
@@ -45,7 +46,6 @@ func main() {
 		verboseFlag = true
 	}
 
-	// forgot to run the config init.  This picks up an additional start directory.
 	_, startDirFromConfigFile, _ := lint.FindAndReadConfIni() // I don't care if the file isn't there.
 	lint.StartDirFromConfigFile = startDirFromConfigFile
 	lint.VerboseFlag = verboseFlag
@@ -58,12 +58,12 @@ func main() {
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(900, 700))
 
-	_, startDirFromConfigFile, err := lint.FindAndReadConfIni()
-	if err != nil {
-		//fmt.Printf("line ~30: Error from FindAndReadConfIni is %v\n", err)
-		dialog.ShowError(err, w)
-	}
-	lint.StartDirFromConfigFile = startDirFromConfigFile
+	//_, startDirFromConfigFile, err := lint.FindAndReadConfIni()
+	//if err != nil {
+	//	//fmt.Printf("line ~30: Error from FindAndReadConfIni is %v\n", err)
+	//	dialog.ShowError(err, w)
+	//}
+	//lint.StartDirFromConfigFile = startDirFromConfigFile
 
 	monthsThresholdLabel := widget.NewLabel("Months Threshold:")
 	monthsThresholdEntry := widget.NewEntry()
