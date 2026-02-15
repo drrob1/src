@@ -25,9 +25,10 @@ import (
 				It can be easily modified to allow user-settable timer duration.
   11 Feb 26 -- Added beep-beep sound for timer completion.  And I added an optional command line param to mean seconds.
   14 Feb 26 -- Learned how to use a sound buffer to replay the sound.  And added beeep
+  15 Feb 26 -- Added an exit beep sound, adding a lower note, and shortened the durations.
 */
 
-const lastAltered = "14 Feb 26"
+const lastAltered = "15 Feb 26"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -126,4 +127,17 @@ func main() {
 	c := container.NewVBox(durationEntry, timerLabel, startTimerBtn, quitBtn)
 	w.SetContent(c)
 	w.ShowAndRun()
+
+	err = beeep.Beep(261.6256, 250) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
+	if err != nil {
+		dialog.ShowError(err, w)
+	}
+	err = beeep.Beep(440, 250) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+	if err != nil {
+		dialog.ShowError(err, w)
+	}
+	err = beeep.Beep(220, 250) // frequency in Hz, duration in milliseconds.  A.
+	if err != nil {
+		dialog.ShowError(err, w)
+	}
 }
