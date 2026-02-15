@@ -16,6 +16,7 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
+	"github.com/gen2brain/beeep"
 	"github.com/spf13/pflag"
 )
 
@@ -23,7 +24,7 @@ import (
   10 Feb 26 -- Created this program to test the timer.  The example doesn't include a refresh, or fyne.Do.  It works so it doesn't need the refresh().
 				It can be easily modified to allow user-settable timer duration.
   11 Feb 26 -- Added beep-beep sound for timer completion.  And I added an optional command line param to mean seconds.
-  14 Feb 26 -- Learned how to use a sound buffer to replay the sound.
+  14 Feb 26 -- Learned how to use a sound buffer to replay the sound.  And added beeep
 */
 
 const lastAltered = "14 Feb 26"
@@ -83,6 +84,16 @@ func main() {
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
 		})
+		err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
+		if err != nil {
+			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			dialog.ShowError(err, w)
+		}
+		err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+		if err != nil {
+			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			dialog.ShowError(err, w)
+		}
 	}
 
 	durationEntry.SetPlaceHolder(" Enter a duration string")
@@ -99,6 +110,16 @@ func main() {
 	})
 
 	quitBtn := widget.NewButton("Quit", func() {
+		err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
+		if err != nil {
+			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			dialog.ShowError(err, w)
+		}
+		err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+		if err != nil {
+			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			dialog.ShowError(err, w)
+		}
 		w.Close()
 	})
 
