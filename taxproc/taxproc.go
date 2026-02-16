@@ -61,6 +61,9 @@ import (
   16 Feb 26 -- Updated message to make clear that it takes a taxesyy.xlsm file as input.  I don't remove the macros or change the format of the file.
 				I had trouble today, turned out to be because of missing entry for amount.  I got an error from the FormatFloat function.  But I didn't know where.
 				So now I added verboseFlag to show the row output before processing.  When it stops and shows the error, I can see that it's the next row w/ a problem.
+				I can't tell if I have to remove the empty rows until the database ends.  I don't remember about this.  Now I see, on line 109 below, if there is a blank date,
+				then the reading loop breaks.  The problem I have w/ the taxes25 file is that I'm making entries when I send a file to Billy but I don't intend for these
+				entries to be extracted.  Maybe all I need is a blank row to end the reading loop and then have my notes about sending to Billy after a blank line.
 */
 
 const lastModified = "16 Feb 26"
