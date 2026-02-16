@@ -28,12 +28,16 @@ import (
   14 Feb 26 -- Learned how to use a sound buffer to replay the sound.  And added beeep
   15 Feb 26 -- Added an exit beep sound, adding a lower note, and shortened the durations.  And in the evening I switched the entry field w/ the display label.
   16 Feb 26 -- Uses unicode.IsLetter to determine whether the "s" has to be appended to the duration string on the command line.  If not, it can already have a letter which may not be "s".
+				And added a clock icon.
 */
 
 const lastAltered = "16 Feb 26"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
+
+//go:embed clock-clipart.png
+var clockIcon []byte
 
 func main() {
 	var streamer beep.StreamSeekCloser
@@ -42,6 +46,10 @@ func main() {
 
 	pflag.Parse()
 	a := app.NewWithID("")
+
+	clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
+	a.SetIcon(clockIconRes)
+
 	s := fmt.Sprintf("Simple Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
@@ -116,11 +124,6 @@ func main() {
 	})
 
 	quitBtn := widget.NewButton("Quit", func() {
-		err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
-		if err != nil {
-			fmt.Printf("Error from beeep.Beep is %s\n", err)
-			dialog.ShowError(err, w)
-		}
 		err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
 		if err != nil {
 			fmt.Printf("Error from beeep.Beep is %s\n", err)
