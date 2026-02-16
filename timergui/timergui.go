@@ -25,7 +25,7 @@ import (
 				It can be easily modified to allow user-settable timer duration.
   11 Feb 26 -- Added beep-beep sound for timer completion.  And I added an optional command line param to mean seconds.
   14 Feb 26 -- Learned how to use a sound buffer to replay the sound.  And added beeep
-  15 Feb 26 -- Added an exit beep sound, adding a lower note, and shortened the durations.
+  15 Feb 26 -- Added an exit beep sound, adding a lower note, and shortened the durations.  And in the evening I switched the entry field w/ the display label.
 */
 
 const lastAltered = "15 Feb 26"
@@ -124,7 +124,7 @@ func main() {
 		w.Close()
 	})
 
-	c := container.NewVBox(durationEntry, timerLabel, startTimerBtn, quitBtn)
+	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, quitBtn)
 	w.SetContent(c)
 	w.ShowAndRun()
 
