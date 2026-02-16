@@ -189,7 +189,7 @@ func main() {
 	SQliteDBname = "taxes.db"
 
 	fmt.Printf(" Tax Proc, last modified %s, exec binary time stamp is %s, SQLiteDBname = %s\n", lastModified, ExecTimeStamp, SQliteDBname)
-	fmt.Printf(" Select a taxesyy.xlsm file, without altering its format or structure. \n")
+	fmt.Printf(" Select a taxesyy.xlsm file, without altering its format or structure.  If there are rows to not be extracted, put them at the bottom after a blank line.\n")
 
 	var filename, ans string
 
