@@ -7,6 +7,7 @@ import (
 	"io"
 	"runtime"
 	"time"
+	"unicode"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -26,9 +27,10 @@ import (
   11 Feb 26 -- Added beep-beep sound for timer completion.  And I added an optional command line param to mean seconds.
   14 Feb 26 -- Learned how to use a sound buffer to replay the sound.  And added beeep
   15 Feb 26 -- Added an exit beep sound, adding a lower note, and shortened the durations.  And in the evening I switched the entry field w/ the display label.
+  16 Feb 26 -- Uses unicode.IsLetter to determine whether the "s" has to be appended to the duration string on the command line.  If not, it can already have a letter which may not be "s".
 */
 
-const lastAltered = "15 Feb 26"
+const lastAltered = "16 Feb 26"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -79,7 +81,7 @@ func main() {
 			})
 			remaining--
 		}
-		//speaker.Play(streamer)  this would only play the sound once per loading it.  Using the buffer means I can load once and replay many.
+		//                                                speaker.Play(streamer)  this would only play the sound once per loading it.  Using the buffer means I can load once and replay many.
 		beepStreamer := buffer.Streamer(0, buffer.Len())
 		speaker.Play(beepStreamer)
 		fyne.Do(func() {
@@ -102,7 +104,10 @@ func main() {
 		go startTimerFunc()
 	}
 	if pflag.NArg() > 0 {
-		durationEntry.Text = pflag.Arg(0) + "s"
+		durationEntry.Text = pflag.Arg(0)
+		if !unicode.IsLetter(rune(durationEntry.Text[len(durationEntry.Text)-1])) {
+			durationEntry.Text += "s"
+		}
 		go startTimerFunc()
 	}
 
