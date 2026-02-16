@@ -4,9 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/tealeg/xlsx/v3"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/tealeg/xlsx/v3"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -55,10 +56,14 @@ import (
                taxes.db fields are Date (DATETIME), Descr (TEXT), Amount (REAL), Comment (TEXT).
    9 Nov 24 -- Added Floor to correct small floating point errors automatically
   10 Nov 24 -- Now that it works, I'm going to see if I can get it to work using the xlsx methods instead of my own timlibg methods to convert to/from Excel date julian numbers.
-                 And I'm using strings.TrimSpaces on the description and comment fields.  This is so that the HasPrefix looking for "gas" will succeed if I have a stray " " in the beginning of the cell.
+                And I'm using strings.TrimSpaces on the description and comment fields.  This is so that the HasPrefix looking for "gas" will succeed if I have a stray " " in
+				the beginning of the cell.
+  16 Feb 26 -- Updated message to make clear that it takes a taxesyy.xlsm file as input.  I don't remove the macros or change the format of the file.
+				I had trouble today, turned out to be because of missing entry for amount.  I got an error from the FormatFloat function.  But I didn't know where.
+				So now I added verboseFlag to show the row output before processing.  When it stops and shows the error, I can see that it's the next row w/ a problem.
 */
 
-const lastModified = "10 Nov 24"
+const lastModified = "16 Feb 26"
 const tempFilename = "debugTaxes.txt"
 
 type taxType struct {
@@ -95,6 +100,9 @@ func readTaxes(xl string) ([]taxType, error) {
 		row, err := sheets[0].Row(i)
 		if err != nil {
 			return nil, err
+		}
+		if *verboseFlag {
+			ctfmt.Printf(ct.Cyan, false, "Processing row %d: row : %v\n", i, row)
 		}
 		XLdateStr := row.GetCell(0).Value
 		if XLdateStr == "" {
@@ -178,6 +186,7 @@ func main() {
 	SQliteDBname = "taxes.db"
 
 	fmt.Printf(" Tax Proc, last modified %s, exec binary time stamp is %s, SQLiteDBname = %s\n", lastModified, ExecTimeStamp, SQliteDBname)
+	fmt.Printf(" Select a taxesyy.xlsm file, without altering its format or structure. \n")
 
 	var filename, ans string
 
