@@ -24,7 +24,7 @@ REVISION HISTORY
 18 Feb 26 -- Debugging case where upgradelint.exe is in the working directory, and it won't start via exec cmd.
 */
 
-const LastAltered = "18 Feb 2026"
+const LastAltered = "19 Feb 2026"
 
 var onWin = runtime.GOOS == "windows"
 
@@ -52,14 +52,14 @@ func Find(file, morePath string) string {
 	if VerboseFlag {
 		fmt.Printf("\n In Find after split list: there are %d path strings; PATH: \n", len(pathSplit))
 		for i, directory := range pathSplit {
-			fmt.Printf(" %s   ", directory)
+			fmt.Printf(" %q   ", directory)
 			if i%5 == 4 {
 				fmt.Println()
 			}
 		}
 	}
 
-	for _, directory := range pathSplit {
+	for i, directory := range pathSplit {
 		fullPath := filepath.Join(directory, file)
 
 		// Does it exist?
@@ -71,12 +71,11 @@ func Find(file, morePath string) string {
 		// So it exists.
 
 		if VerboseFlag {
-			fmt.Printf("\n In Find loop: Found file %s in directory %q, fullpath %s\n", file, directory, fullPath)
+			fmt.Printf("\n In Find loop: i = %d, found file %s in directory %q, fullpath %s\n", i, file, directory, fullPath)
 		}
 
-		if !strings.Contains(fullPath, string(filepath.Separator)) { // then it doesn't have the full path.  I don't know why.
-			//  fullPath = "./" + fullPath
-			fullPath, err = filepath.Abs(fullPath) // I would rather return this than just a dot reference.
+		if directory == "" || directory == " " || !strings.Contains(directory, string(filepath.Separator)) {
+			fullPath, err = filepath.Abs(fullPath) // then it doesn't have the full path.  It's because there is an empty directory in the path, symbolized by ;;.
 			if err != nil {
 				panic(err)
 			}
