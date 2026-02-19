@@ -50,7 +50,13 @@ func Find(file, morePath string) string {
 	pathSplit := filepath.SplitList(path)
 
 	if VerboseFlag {
-		fmt.Printf("\n In Find after split list: there are %d path strings; PATH is %v\n", len(pathSplit), pathSplit)
+		fmt.Printf("\n In Find after split list: there are %d path strings; PATH: \n", len(pathSplit))
+		for i, directory := range pathSplit {
+			fmt.Printf(" %s   ", directory)
+			if i%5 == 4 {
+				fmt.Println()
+			}
+		}
 	}
 
 	for _, directory := range pathSplit {
