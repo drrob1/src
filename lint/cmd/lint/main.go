@@ -123,9 +123,10 @@ import (
    3 Feb 26 -- In the process of writing lintGUI, I had to change the scanXLSfile function to return a slice of messages.  So now I'm refactoring here to test them.
    7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
   13 Feb 26 -- Added rowOffset to allow for a date row in the schedule to the lint library.  Here, I added a message for the lint library last modified date.
+  18 Feb 26 -- Debugging problem w/ not finding upgradelint.exe
 */
 
-const lastModified = "13 Feb 2026"
+const lastModified = "18 Feb 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
@@ -189,6 +190,7 @@ func main() {
 	lint.VerboseFlag = verboseFlag
 	lint.StartDirFromConfigFile = startDirFromConfigFile
 	lint.MonthsThreshold = monthsThreshold
+	whichexec.VerboseFlag = verboseFlag
 
 	if flag.NArg() == 0 {
 		//if includeODrive {  O: drive is gone as of 8/8/25.

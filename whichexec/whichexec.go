@@ -21,9 +21,10 @@ REVISION HISTORY
 29 Apr 24 -- Added option to search more directories.  IE, more directories option is appended to the system path for the search.  This is different from findExec.
              And the format of the more string is that it's parsed like a PATH string, so it can contain multiple directories to be searched, separated by the appropriate character for that OS.
 29 Sep 24 -- Added FindConfig
+18 Feb 26 -- Debugging case where upgradelint.exe is in the working directory, and it won't start via exec cmd.
 */
 
-const LastAltered = "29 Sep 2024"
+const LastAltered = "18 Feb 2026"
 
 var onWin = runtime.GOOS == "windows"
 
@@ -34,35 +35,52 @@ func Find(file, morePath string) string {
 		fmt.Printf("In Find: Finding file %s\n", file)
 	}
 	path := os.Getenv("PATH")
-	pathSplit := filepath.SplitList(path)
+
+	if onWin && !strings.HasSuffix(file, ".exe") {
+		file += ".exe"
+	}
+
+	if VerboseFlag {
+		fmt.Printf("In whichexec.Find.  file = %s, before split list: PATH is %s\n", file, path)
+	}
+
 	if morePath != "" {
-		moreSplit := filepath.SplitList(morePath)
-		pathSplit = append(pathSplit, moreSplit...)
+		path = path + string(filepath.ListSeparator) + morePath
+	}
+	pathSplit := filepath.SplitList(path)
+
+	if VerboseFlag {
+		fmt.Printf("\n In Find after split list: there are %d path strings; PATH is %v\n", len(pathSplit), pathSplit)
 	}
 
 	for _, directory := range pathSplit {
 		fullPath := filepath.Join(directory, file)
-		if runtime.GOOS == "windows" && !strings.HasSuffix(fullPath, ".exe") {
-			fullPath += ".exe"
-		}
 
 		// Does it exist?
 		fileInfo, err := os.Stat(fullPath)
-		if err != nil {
+		if err != nil { // file not found in this directory
 			continue
 		}
 
-		if onWin {
-			//f := strings.ToLower(fullPath)  // don't need to compare against the filename, because Stat was already called on this name.
-			//fn := strings.ToLower(file)
-			//if strings.HasSuffix(fullPath, "exe") && strings.Contains(f, fn) {
-			if strings.HasSuffix(fullPath, "exe") {
-				return fullPath
-			} else {
-				continue
+		// So it exists.
+
+		if VerboseFlag {
+			fmt.Printf("\n In Find loop: Found file %s in directory %q, fullpath %s\n", file, directory, fullPath)
+		}
+
+		if !strings.Contains(fullPath, string(filepath.Separator)) { // then it doesn't have the full path.  I don't know why.
+			//  fullPath = "./" + fullPath
+			fullPath, err = filepath.Abs(fullPath) // I would rather return this than just a dot reference.
+			if err != nil {
+				panic(err)
 			}
 		}
-		// now not windows
+
+		if onWin {
+			return fullPath
+		}
+
+		// not windows if get here
 		mode := fileInfo.Mode()
 		// Is it a regular file?
 		if !mode.IsRegular() {
