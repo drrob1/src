@@ -27,6 +27,7 @@ import (
     24 May 24 -- Adding the comments so that go doc will work.
      7 Nov 24 -- Adding converting to/from Excel-based date numbers.  Day zero was 12/31/1899, so day one was 1/1/1900.
 	28 Nov 25 -- Fixed bug in JULIAN because "y" was not assigned correctly.
+    20 Feb 26 -- Added SecToHMS
 */
 
 // DateTimeType -- fields are Rawtime, Month, Day, Year, Hours, Minutes, Seconds, Nanosec, MonthStr and DayOfWeekStr.
@@ -172,7 +173,7 @@ func GREGORIAN(Juldate int) (M, D, Y int) {
 	return
 } // GREGORIAN
 
-// FromExcelToJul will take the 5 digit date number from Excel, and return my 6-digit number that is typically 730,000+.
+// FromExcelToJul will take the 5-digit date number from Excel, and return my 6-digit number that is typically 730,000+.
 func FromExcelToJul(xl int) int {
 	juldate := xl + 693594
 	return juldate
@@ -191,6 +192,15 @@ func FromExcelToDateOnly(xl int) string {
 
 	s := fmt.Sprintf("%04d-%02d-%02d", y, m, d)
 	return s
+}
+
+// SecToHMS converts seconds to hours, minutes, seconds.  Written entirely by AI.
+func SecToHMS(seconds int) (hours, minutes, secs int) {
+	hours = seconds / 3600
+	seconds %= 3600
+	minutes = seconds / 60
+	secs = seconds % 60
+	return
 }
 
 // END timlibg

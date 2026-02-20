@@ -28,3 +28,25 @@ func TestJulian(t *testing.T) { // these all pass
 		}
 	}
 }
+
+func TestSecToHMS(t *testing.T) { // these tests were mostly written by AI.
+	var tests = []struct {
+		seconds int
+		Hours   int
+		Minutes int
+		Seconds int
+	}{
+		{3661, 1, 1, 1},
+		{61, 0, 1, 1},
+		{121, 0, 2, 1},
+		{3601, 1, 0, 1},
+	}
+	fmt.Printf("Testing SecToHMS() with %d tests\n", len(tests))
+
+	for _, test := range tests {
+		Hours, Minutes, Seconds := SecToHMS(test.seconds)
+		if Hours != test.Hours || Minutes != test.Minutes || Seconds != test.Seconds {
+			t.Errorf("SecToHMS(%d) = %d:%d:%d, want %d:%d:%d", test.seconds, Hours, Minutes, Seconds, test.Hours, test.Minutes, test.Seconds)
+		}
+	}
+}
