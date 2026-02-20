@@ -31,9 +31,11 @@ import (
 				And added a clock icon.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   19 Feb 26 -- Now called uptimer, and will count up.
+  20 Feb 26 -- Added a default.
 */
 
 const lastAltered = "20 Feb 2026"
+const defaultDuration = "1m"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -75,6 +77,9 @@ func main() {
 	timerLabel := widget.NewLabel("...")
 
 	startTimerFunc := func() {
+		if durationEntry.Text == "" {
+			durationEntry.Text = defaultDuration
+		}
 		duration, er := time.ParseDuration(durationEntry.Text)
 		if er != nil {
 			dialog.ShowError(er, w)
