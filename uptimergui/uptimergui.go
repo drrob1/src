@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"src/timlibg"
 	"time"
 	"unicode"
 
@@ -31,7 +32,7 @@ import (
 				And added a clock icon.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   19 Feb 26 -- Now called uptimer, and will count up.
-  20 Feb 26 -- Added a default.
+  20 Feb 26 -- Added a default and use of SecToHMS.
 */
 
 const lastAltered = "20 Feb 2026"
@@ -84,18 +85,19 @@ func main() {
 		if er != nil {
 			dialog.ShowError(er, w)
 		}
-		remaining := 1
+		upTimer := 1
 		alarmDuration := int(duration.Seconds())
 		for {
 			time.Sleep(1 * time.Second)
-			s1 := fmt.Sprintf("%d", remaining)
-			s2 := fmt.Sprintf("Time remaining: %d seconds", remaining)
+			s1 := fmt.Sprintf("%d", upTimer)
+			h, m, s := timlibg.SecToHMS(upTimer)
+			s2 := fmt.Sprintf("UpTime: %dh %dm %ds", h, m, s)
 			fyne.Do(func() {
 				w.SetTitle(s1)
 				timerLabel.SetText(s2)
 			})
-			remaining++
-			if remaining%alarmDuration == 0 {
+			upTimer++
+			if upTimer%alarmDuration == 0 {
 				beepStreamer := buffer.Streamer(0, buffer.Len())
 				speaker.Play(beepStreamer)
 				fyne.Do(func() {
