@@ -100,9 +100,6 @@ func main() {
 			if upTimer%alarmDuration == 0 {
 				beepStreamer := buffer.Streamer(0, buffer.Len())
 				speaker.Play(beepStreamer)
-				fyne.Do(func() {
-					timerLabel.SetText("Time's up")
-				})
 				err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
 				if err != nil {
 					fmt.Printf("Error from beeep.Beep is %s\n", err)
