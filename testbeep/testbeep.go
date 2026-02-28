@@ -13,10 +13,13 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"github.com/faiface/beep"
-	"github.com/faiface/beep/mp3"
-	"github.com/faiface/beep/speaker"
+	//fbeep "github.com/faiface/beep"
+	//fmp3 "github.com/faiface/beep/mp3"
+	//fspeaker "github.com/faiface/beep/speaker"
 	"github.com/gen2brain/beeep"
+	"github.com/gopxl/beep"
+	"github.com/gopxl/beep/mp3"
+	"github.com/gopxl/beep/speaker"
 	"github.com/spf13/pflag"
 )
 
