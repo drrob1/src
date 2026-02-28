@@ -16,7 +16,7 @@ import (
 	//fbeep "github.com/faiface/beep"
 	//fmp3 "github.com/faiface/beep/mp3"
 	//fspeaker "github.com/faiface/beep/speaker"
-	"github.com/gen2brain/beeep"
+	//"github.com/gen2brain/beeep"
 	"github.com/gopxl/beep"
 	"github.com/gopxl/beep/mp3"
 	"github.com/gopxl/beep/speaker"
@@ -77,21 +77,22 @@ func main() {
 		speaker.Play(beepStreamer)
 	}
 
-	beeepFunc := func() {
-		err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
-		if err != nil {
-			fmt.Printf("Error from beeep.Beep is %s\n", err)
-			dialog.ShowError(err, w)
-		}
-		err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
-		if err != nil {
-			fmt.Printf("Error from beeep.Beep is %s\n", err)
-			dialog.ShowError(err, w)
-		}
-	}
+	//beeepFunc := func() {
+	//	err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
+	//	if err != nil {
+	//		fmt.Printf("Error from beeep.Beep is %s\n", err)
+	//		dialog.ShowError(err, w)
+	//	}
+	//	err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+	//	if err != nil {
+	//		fmt.Printf("Error from beeep.Beep is %s\n", err)
+	//		dialog.ShowError(err, w)
+	//	}
+	//}
 
 	beepBeepBtn := widget.NewButton("Road Runner beep beep", beepBeepFunc)
-	beeepBtn := widget.NewButton("Beep", beeepFunc)
+	//beeepBtn := widget.NewButton("Beep", beeepFunc)
+	beeepBtn := widget.NewButton("Beep", nil)
 
 	quitBtn := widget.NewButton("Quit", func() {
 		w.Close()
