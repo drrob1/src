@@ -32,7 +32,7 @@ import (
   16 Feb 26 -- Uses unicode.IsLetter to determine whether the "s" has to be appended to the duration string on the command line.  If not, it can already have a letter which may not be "s".
 				And added a clock icon.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-  27 Feb 26 -- Now called testbeep.  I want to see what's failing on linux.
+  27 Feb 26 -- Now called testbeep.  I want to see what's failing on linux.  None of the sound packages work on linux.  faiface, gopxl, beeep don't work.
 */
 
 const lastAltered = "27 Feb 26"
