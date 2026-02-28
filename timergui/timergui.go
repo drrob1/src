@@ -29,9 +29,10 @@ import (
   15 Feb 26 -- Added an exit beep sound, adding a lower note, and shortened the durations.  And in the evening I switched the entry field w/ the display label.
   16 Feb 26 -- Uses unicode.IsLetter to determine whether the "s" has to be appended to the duration string on the command line.  If not, it can already have a letter which may not be "s".
 				And added a clock icon.
+  28 Feb 26 -- This doesn't run on linux, it seems the init part fails.  I'll separate this into a windows and linux versions.
 */
 
-const lastAltered = "16 Feb 26"
+const lastAltered = "28 Feb 26"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -39,11 +40,30 @@ var beepBeep []byte
 //go:embed clock-clipart.png
 var clockIcon []byte
 
-func main() {
-	var streamer beep.StreamSeekCloser
-	var format beep.Format
-	var err error
+func roadRunnerInit() (beep.StreamSeeker, error) {
+	f := io.NopCloser(bytes.NewReader(beepBeep))
+	streamer, format, err := mp3.Decode(f)
+	if err != nil {
+		return nil, err
+	}
+	defer streamer.Close()
+	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/2))
+	if err != nil {
+		return nil, err
+	}
+	buffer := beep.NewBuffer(format)
+	buffer.Append(streamer)
 
+	beepStreamer := buffer.Streamer(0, buffer.Len())
+	return beepStreamer, nil
+}
+
+func beeepTones(frequency float64, duration int) error { // frequency in Hz, duration in milliseconds.
+	err := beeep.Beep(frequency, duration)
+	return err
+}
+
+func main() {
 	pflag.Parse()
 	a := app.NewWithID("")
 
@@ -54,19 +74,11 @@ func main() {
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
 
-	f := io.NopCloser(bytes.NewReader(beepBeep))
-	streamer, format, err = mp3.Decode(f)
+	roadRunnerBufStreamer, err := roadRunnerInit()
 	if err != nil {
+		fmt.Printf("Error from roadRunnerInit is %s\n", err)
 		dialog.ShowError(err, w)
 	}
-	err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/2))
-	if err != nil {
-		fmt.Printf("Error from speaker.Init is %s\n", err)
-		dialog.ShowError(err, w)
-	}
-	buffer := beep.NewBuffer(format)
-	buffer.Append(streamer)
-	streamer.Close()
 
 	durationEntry := widget.NewEntry()
 
@@ -89,20 +101,19 @@ func main() {
 			})
 			remaining--
 		}
-		//                                                speaker.Play(streamer)  this would only play the sound once per loading it.  Using the buffer means I can load once and replay many.
-		beepStreamer := buffer.Streamer(0, buffer.Len())
-		speaker.Play(beepStreamer)
+
+		speaker.Play(roadRunnerBufStreamer)
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
 		})
-		err = beeep.Beep(261.6256, 500) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
+		err = beeepTones(261.6256, 500) // Middle C, also called C4, or c' 1 line octave
 		if err != nil {
-			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			fmt.Printf("Error from beeep.Beep in beeepTones is %s\n", err)
 			dialog.ShowError(err, w)
 		}
-		err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+		err = beeepTones(440, 500) // A4, a' or high A.
 		if err != nil {
-			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			fmt.Printf("Error from beeep.Beep in beeepTones is %s\n", err)
 			dialog.ShowError(err, w)
 		}
 	}
@@ -124,9 +135,9 @@ func main() {
 	})
 
 	quitBtn := widget.NewButton("Quit", func() {
-		err = beeep.Beep(440, 500) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+		err = beeepTones(440, 500) // A4, a' or high A.
 		if err != nil {
-			fmt.Printf("Error from beeep.Beep is %s\n", err)
+			fmt.Printf("Error from beeep.Beep in beeepTones is %s\n", err)
 			dialog.ShowError(err, w)
 		}
 		w.Close()
@@ -136,15 +147,15 @@ func main() {
 	w.SetContent(c)
 	w.ShowAndRun()
 
-	err = beeep.Beep(261.6256, 250) // frequency in Hz, duration in milliseconds.  Middle C, also called C4, or c' 1 line octave
+	err = beeepTones(261.6256, 250) // Middle C, also called C4, or c' 1 line octave
 	if err != nil {
 		dialog.ShowError(err, w)
 	}
-	err = beeep.Beep(440, 250) // frequency in Hz, duration in milliseconds.  A4, a' or high A.
+	err = beeepTones(440, 250) // A4, a' or high A.
 	if err != nil {
 		dialog.ShowError(err, w)
 	}
-	err = beeep.Beep(220, 250) // frequency in Hz, duration in milliseconds.  A.
+	err = beeepTones(220, 250) // A.
 	if err != nil {
 		dialog.ShowError(err, w)
 	}
