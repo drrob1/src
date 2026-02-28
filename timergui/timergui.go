@@ -30,6 +30,7 @@ import (
   16 Feb 26 -- Uses unicode.IsLetter to determine whether the "s" has to be appended to the duration string on the command line.  If not, it can already have a letter which may not be "s".
 				And added a clock icon.
   28 Feb 26 -- This doesn't run on linux, it seems the init part fails.  I'll separate this into a windows and linux versions.
+				I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I'll try to fix that.
 */
 
 const lastAltered = "28 Feb 26"
@@ -67,8 +68,10 @@ func main() {
 	pflag.Parse()
 	a := app.NewWithID("")
 
-	clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
-	a.SetIcon(clockIconRes)
+	if runtime.GOOS == "windows" { // since it works on Windows, I'll only not use this on linux.
+		clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
+		a.SetIcon(clockIconRes)
+	}
 
 	s := fmt.Sprintf("Simple Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
 	w := a.NewWindow(s)
