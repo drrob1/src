@@ -33,9 +33,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   19 Feb 26 -- Now called uptimer, and will count up.
   20 Feb 26 -- Added a default and use of SecToHMS.
+  28 Feb 26 -- I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I fixed it by only loading the icon on Windows.
 */
 
-const lastAltered = "20 Feb 2026"
+const lastAltered = "28 Feb 2026"
 const defaultDuration = "1m"
 
 //go:embed road-runner-beep-beep.mp3
@@ -52,8 +53,10 @@ func main() {
 	pflag.Parse()
 	a := app.NewWithID("")
 
-	clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
-	a.SetIcon(clockIconRes)
+	if runtime.GOOS == "windows" {
+		clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
+		a.SetIcon(clockIconRes)
+	}
 
 	s := fmt.Sprintf("Simple Up Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
 	w := a.NewWindow(s)
