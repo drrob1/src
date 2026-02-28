@@ -33,9 +33,11 @@ import (
 				And added a clock icon.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   27 Feb 26 -- Now called testbeep.  I want to see what's failing on linux.  None of the sound packages work on linux.  faiface, gopxl, beeep don't work.
+  28 Feb 26 -- I used perplexity to find the problem.  It was that the icon was too big.  I used GIMP to make it 64x64, copied it to the directory here, and now this program works.
+                The tones are still not heard, but the road runner beep beep sound is heard.
 */
 
-const lastAltered = "27 Feb 26"
+const lastAltered = "28 Feb 26"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
