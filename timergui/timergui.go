@@ -36,6 +36,9 @@ import (
                 So today, I'm going to work on a button to stop the timer go routine.  I'll do it w/ a boolean channel.  A context may also do it, but I would have to research that a bit more.
 				I got the stop channel working.  I'm going to see if I can also get a context working.
 				I got the context working.  But I noticced that once the cancel is triggered, it can't be cleared to restart the timer.  So using the stop channel is better.
+				I asked perplexity, and it told me that once a context has been canceled, it can't be uncancled.  But a new context can be created and used to restart the timer.
+                Do I have to use a different name, or can I create another context using the same name?  Reusing the same name is allowed, and it works.
+
 */
 
 const lastAltered = "1 Mar 2026"
@@ -176,6 +179,11 @@ func main() {
 		cancel()
 	})
 
+	resetContextBtn := widget.NewButton("Reset context", func() {
+		ctx = context.Background()
+		ctx, cancel = context.WithCancel(ctx)
+	})
+
 	quitBtn := widget.NewButton("Quit", func() {
 		err = beeepTones(440, 500) // A4, a' or high A.
 		if err != nil {
@@ -185,7 +193,7 @@ func main() {
 		w.Close()
 	})
 
-	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, cancelTimerBtn, quitBtn)
+	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, cancelTimerBtn, resetContextBtn, quitBtn)
 	w.SetContent(c)
 	w.ShowAndRun()
 
