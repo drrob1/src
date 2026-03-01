@@ -139,7 +139,7 @@ func main() {
 			case <-ctx.Done():
 				fmt.Println("ctx.Done() received")
 				fyne.Do(func() {
-					w.SetTitle("Timer stopped")
+					w.SetTitle("Timer canceled")
 					s2 := fmt.Sprintf("Timer canceled at %d seconds", remaining)
 					timerLabel.SetText(s2)
 				})
