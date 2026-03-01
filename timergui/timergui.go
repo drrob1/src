@@ -39,7 +39,7 @@ import (
 				I asked perplexity, and it told me that once a context has been canceled, it can't be uncanceled.  But a new context can be created and used to restart the timer.
                 Do I have to use a different name, or can I create another context using the same name?  Reusing the same name is allowed, and it works.
                 On linux, I'll load the smaller icon.
-
+				Now that I know how to reset the context, I'll do it automatically, using a 2 sec pause to give the context time to cancel the timer.
 */
 
 const lastAltered = "1 Mar 2026"
@@ -184,6 +184,9 @@ func main() {
 
 	cancelTimerBtn := widget.NewButton("Cancel timer", func() {
 		cancel()
+		time.Sleep(2 * time.Second) // this is working, too
+		ctx = context.Background()
+		ctx, cancel = context.WithCancel(ctx)
 	})
 
 	resetContextBtn := widget.NewButton("Reset context", func() {
