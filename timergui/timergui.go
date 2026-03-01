@@ -35,9 +35,10 @@ import (
    1 Mar 26 -- I worked out yesterday, in testbeep.go, that I needed to make the clock png smaller.  I used GIMP to make it 64x64, and that worked.
                 So today, I'm going to work on a button to stop the timer go routine.  I'll do it w/ a boolean channel.  A context may also do it, but I would have to research that a bit more.
 				I got the stop channel working.  I'm going to see if I can also get a context working.
-				I got the context working.  But I noticced that once the cancel is triggered, it can't be cleared to restart the timer.  So using the stop channel is better.
-				I asked perplexity, and it told me that once a context has been canceled, it can't be uncancled.  But a new context can be created and used to restart the timer.
+				I got the context working.  But I noticed that once the cancel is triggered, it can't be cleared to restart the timer.  So using the stop channel is better.
+				I asked perplexity, and it told me that once a context has been canceled, it can't be uncanceled.  But a new context can be created and used to restart the timer.
                 Do I have to use a different name, or can I create another context using the same name?  Reusing the same name is allowed, and it works.
+                On linux, I'll load the smaller icon.
 
 */
 
@@ -48,6 +49,9 @@ var beepBeep []byte
 
 //go:embed clock-clipart.png
 var clockIcon []byte
+
+//go:embed clock-clipart-64.png
+var clockIcon64 []byte
 
 var stopTimerChan chan bool
 
@@ -80,6 +84,9 @@ func main() {
 
 	if runtime.GOOS == "windows" { // since it works on Windows, I'll only not use this on linux.
 		clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
+		a.SetIcon(clockIconRes)
+	} else if runtime.GOOS == "linux" {
+		clockIconRes := fyne.NewStaticResource("clock-clipart-64.png", clockIcon64)
 		a.SetIcon(clockIconRes)
 	}
 
