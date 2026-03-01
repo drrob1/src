@@ -40,6 +40,7 @@ import (
                 Do I have to use a different name, or can I create another context using the same name?  Reusing the same name is allowed, and it works.
                 On linux, I'll load the smaller icon.
 				Now that I know how to reset the context, I'll do it automatically, using a 2 sec pause to give the context time to cancel the timer.
+                Now adding pause/resume functionality.
 */
 
 const lastAltered = "1 Mar 2026"
@@ -108,6 +109,8 @@ func main() {
 
 	timerLabel := widget.NewLabel("...")
 
+	running := true // for whether the timer is paused or not.
+
 	startTimerFunc := func() {
 		duration, er := time.ParseDuration(durationEntry.Text)
 		if er != nil {
@@ -143,7 +146,9 @@ func main() {
 			default: // I tested this and it works w/ this clause, but it doesn't work w/o it.
 				// do nothing
 			}
-			remaining--
+			if running {
+				remaining--
+			}
 		}
 
 		speaker.Play(roadRunnerBufStreamer)
@@ -194,6 +199,19 @@ func main() {
 		ctx, cancel = context.WithCancel(ctx)
 	})
 
+	pauseResumeBtn := widget.NewButton("Pause/Resume", func() {
+		running = !running
+		if running {
+			fyne.Do(func() {
+				w.SetTitle("Timer resumed")
+			})
+		} else {
+			fyne.Do(func() {
+				w.SetTitle("Timer paused")
+			})
+		}
+	})
+
 	quitBtn := widget.NewButton("Quit", func() {
 		err = beeepTones(440, 500) // A4, a' or high A.
 		if err != nil {
@@ -203,7 +221,7 @@ func main() {
 		w.Close()
 	})
 
-	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, cancelTimerBtn, resetContextBtn, quitBtn)
+	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, cancelTimerBtn, resetContextBtn, pauseResumeBtn, quitBtn)
 	w.SetContent(c)
 	w.ShowAndRun()
 
