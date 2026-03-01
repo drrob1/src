@@ -31,15 +31,19 @@ import (
 				And added a clock icon.
   28 Feb 26 -- This doesn't run on linux, it seems the init part fails.  I'll separate this into a windows and linux versions.
 				I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I fixed it by only loading the icon on Windows.
+   1 Mar 26 -- I worked out yesterday, in testbeep.go, that I needed to make the clock png smaller.  I used GIMP to make it 64x64, and that worked.
+                So today, I'm going to work on a button to stop the timer go routine.  I'll do it w/ a boolean channel.  A context may also do it, but I would have to research that a bit more.
 */
 
-const lastAltered = "28 Feb 26"
+const lastAltered = "1 Mar 2026"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
 
 //go:embed clock-clipart.png
 var clockIcon []byte
+
+var stopTimerChan chan bool
 
 func roadRunnerInit() (beep.StreamSeeker, error) {
 	f := io.NopCloser(bytes.NewReader(beepBeep))
@@ -77,6 +81,8 @@ func main() {
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
 
+	stopTimerChan = make(chan bool, 1)
+
 	roadRunnerBufStreamer, err := roadRunnerInit()
 	if err != nil {
 		fmt.Printf("Error from roadRunnerInit is %s\n", err)
@@ -102,6 +108,17 @@ func main() {
 				timerLabel.SetText(s2)
 				// timerLabel.Refresh()  this isn't in the example, and it works without it, so I'm leaving it out.
 			})
+			select {
+			case <-stopTimerChan:
+				fmt.Println("stopTimerChan received")
+				fyne.Do(func() {
+					w.SetTitle("Timer stopped")
+					timerLabel.SetText("Timer stopped")
+				})
+				return
+			default: // I may not need this w/ a buffered channel, but I'm leaving it in for now.
+				// do nothing
+			}
 			remaining--
 		}
 
@@ -137,6 +154,10 @@ func main() {
 		go startTimerFunc()
 	})
 
+	stopTimerBtn := widget.NewButton("Stop timer", func() {
+		stopTimerChan <- true
+	})
+
 	quitBtn := widget.NewButton("Quit", func() {
 		err = beeepTones(440, 500) // A4, a' or high A.
 		if err != nil {
@@ -146,7 +167,7 @@ func main() {
 		w.Close()
 	})
 
-	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, quitBtn)
+	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, quitBtn)
 	w.SetContent(c)
 	w.ShowAndRun()
 
