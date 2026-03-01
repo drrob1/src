@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"io"
@@ -30,9 +31,11 @@ import (
   16 Feb 26 -- Uses unicode.IsLetter to determine whether the "s" has to be appended to the duration string on the command line.  If not, it can already have a letter which may not be "s".
 				And added a clock icon.
   28 Feb 26 -- This doesn't run on linux, it seems the init part fails.  I'll separate this into a windows and linux versions.
-				I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I fixed it by only loading the icon on Windows.
+				I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I fixed it by only loading the icon on Windows.  It wasn't the beep after all.
    1 Mar 26 -- I worked out yesterday, in testbeep.go, that I needed to make the clock png smaller.  I used GIMP to make it 64x64, and that worked.
                 So today, I'm going to work on a button to stop the timer go routine.  I'll do it w/ a boolean channel.  A context may also do it, but I would have to research that a bit more.
+				I got the stop channel working.  I'm going to see if I can also get a context working.
+				I got the context working.  But I noticced that once the cancel is triggered, it can't be cleared to restart the timer.  So using the stop channel is better.
 */
 
 const lastAltered = "1 Mar 2026"
@@ -82,6 +85,8 @@ func main() {
 	w.Resize(fyne.NewSize(400, 400))
 
 	stopTimerChan = make(chan bool, 1)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
 
 	roadRunnerBufStreamer, err := roadRunnerInit()
 	if err != nil {
@@ -114,6 +119,14 @@ func main() {
 				fyne.Do(func() {
 					w.SetTitle("Timer stopped")
 					s2 := fmt.Sprintf("Timer stopped at %d seconds", remaining)
+					timerLabel.SetText(s2)
+				})
+				return
+			case <-ctx.Done():
+				fmt.Println("ctx.Done() received")
+				fyne.Do(func() {
+					w.SetTitle("Timer stopped")
+					s2 := fmt.Sprintf("Timer canceled at %d seconds", remaining)
 					timerLabel.SetText(s2)
 				})
 				return
@@ -159,6 +172,10 @@ func main() {
 		stopTimerChan <- true
 	})
 
+	cancelTimerBtn := widget.NewButton("Cancel timer", func() {
+		cancel()
+	})
+
 	quitBtn := widget.NewButton("Quit", func() {
 		err = beeepTones(440, 500) // A4, a' or high A.
 		if err != nil {
@@ -168,7 +185,7 @@ func main() {
 		w.Close()
 	})
 
-	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, quitBtn)
+	c := container.NewVBox(timerLabel, durationEntry, startTimerBtn, stopTimerBtn, cancelTimerBtn, quitBtn)
 	w.SetContent(c)
 	w.ShowAndRun()
 
