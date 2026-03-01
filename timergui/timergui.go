@@ -113,10 +113,11 @@ func main() {
 				fmt.Println("stopTimerChan received")
 				fyne.Do(func() {
 					w.SetTitle("Timer stopped")
-					timerLabel.SetText("Timer stopped")
+					s2 := fmt.Sprintf("Timer stopped at %d seconds", remaining)
+					timerLabel.SetText(s2)
 				})
 				return
-			default: // I may not need this w/ a buffered channel, but I'm leaving it in for now.
+			default: // I tested this and it works w/ this clause, but it doesn't work w/o it.
 				// do nothing
 			}
 			remaining--
