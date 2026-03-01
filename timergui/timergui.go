@@ -117,6 +117,7 @@ func main() {
 			dialog.ShowError(er, w)
 		}
 		remaining := int(duration.Seconds())
+		running = true
 		for remaining > 0 {
 			time.Sleep(1 * time.Second)
 			s1 := fmt.Sprintf("%d", remaining)
