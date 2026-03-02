@@ -95,9 +95,8 @@ func main() {
 		if er != nil {
 			dialog.ShowError(er, w)
 		}
-		upTimer := 1
 		alarmDuration := int(duration.Seconds())
-		for {
+		for upTimer := 1; ; upTimer++ {
 			time.Sleep(1 * time.Second)
 			h, m, s := timlibg.SecToHMS(upTimer)
 			s1 := fmt.Sprintf("%dh %dm %ds", h, m, s)
@@ -106,7 +105,6 @@ func main() {
 				w.SetTitle(s1)
 				timerLabel.SetText(s2)
 			})
-			upTimer++
 			if upTimer%alarmDuration == 0 {
 				beepStreamBuf := buffer.Streamer(0, buffer.Len())
 				speaker.Play(beepStreamBuf)
