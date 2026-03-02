@@ -34,9 +34,10 @@ import (
   19 Feb 26 -- Now called uptimer, and will count up.
   20 Feb 26 -- Added a default and use of SecToHMS.
   28 Feb 26 -- I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I fixed it by only loading the icon on Windows.
+   2 Mar 26 -- The window title will show the duration in HH:MM:SS format, and added the small icon for linux.
 */
 
-const lastAltered = "28 Feb 2026"
+const lastAltered = "2 March 2026"
 const defaultDuration = "1m"
 
 //go:embed road-runner-beep-beep.mp3
@@ -44,6 +45,9 @@ var beepBeep []byte
 
 //go:embed clock-clipart.png
 var clockIcon []byte
+
+//go:embed clock-clipart-64.png
+var clockIcon64 []byte
 
 func main() {
 	var streamer beep.StreamSeekCloser
@@ -55,6 +59,9 @@ func main() {
 
 	if runtime.GOOS == "windows" {
 		clockIconRes := fyne.NewStaticResource("clock-clipart.png", clockIcon)
+		a.SetIcon(clockIconRes)
+	} else if runtime.GOOS == "linux" {
+		clockIconRes := fyne.NewStaticResource("clock-clipart-64.png", clockIcon64)
 		a.SetIcon(clockIconRes)
 	}
 
@@ -92,8 +99,8 @@ func main() {
 		alarmDuration := int(duration.Seconds())
 		for {
 			time.Sleep(1 * time.Second)
-			s1 := fmt.Sprintf("%d", upTimer)
 			h, m, s := timlibg.SecToHMS(upTimer)
+			s1 := fmt.Sprintf("%dh %dm %ds", h, m, s)
 			s2 := fmt.Sprintf("UpTime: %dh %dm %ds", h, m, s)
 			fyne.Do(func() {
 				w.SetTitle(s1)
