@@ -41,9 +41,10 @@ import (
                 On linux, I'll load the smaller icon.
 				Now that I know how to reset the context, I'll do it automatically, using a 2 sec pause to give the context time to cancel the timer.
                 Now adding pause/resume functionality.
+  7 Mar 26 -- Added keyboard exit code
 */
 
-const lastAltered = "1 Mar 2026"
+const lastAltered = "7 Mar 2026"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -94,6 +95,15 @@ func main() {
 	s := fmt.Sprintf("Simple Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
+
+	typedKey := func(ev *fyne.KeyEvent) { // I separated this out so I can more easily understand it.
+		key := string(ev.Name)
+		switch key {
+		case "Q", "Escape", "X":
+			a.Quit()
+		}
+	}
+	w.Canvas().SetOnTypedKey(typedKey)
 
 	stopTimerChan = make(chan bool, 1)
 	ctx := context.Background()

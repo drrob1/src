@@ -35,9 +35,10 @@ import (
   20 Feb 26 -- Added a default and use of SecToHMS.
   28 Feb 26 -- I decided to ask perplexity for help.  It narrowed it down to possibly a bad window icon.  I fixed it by only loading the icon on Windows.
    2 Mar 26 -- The window title will show the duration in HH:MM:SS format, and added the small icon for linux.
+   7 Mar 26 -- Added keyboard handling for Q, Escape, and X to quit.
 */
 
-const lastAltered = "2 March 2026"
+const lastAltered = "7 March 2026"
 const defaultDuration = "1m"
 
 //go:embed road-runner-beep-beep.mp3
@@ -68,6 +69,15 @@ func main() {
 	s := fmt.Sprintf("Simple Up Timer, Last altered: %s, compiled with %s", lastAltered, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(400, 400))
+
+	typedKey := func(ev *fyne.KeyEvent) { // I separated this out so I can more easily understand it.
+		key := string(ev.Name)
+		switch key {
+		case "Q", "Escape", "X":
+			a.Quit()
+		}
+	}
+	w.Canvas().SetOnTypedKey(typedKey)
 
 	f := io.NopCloser(bytes.NewReader(beepBeep))
 	streamer, format, err = mp3.Decode(f)
