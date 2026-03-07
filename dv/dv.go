@@ -92,7 +92,7 @@ REVISION HISTORY
 15 Jan 21 -- Adding -x flag, to exclude a regex.  When it works here, I'll add it to other pgms.
 31 Jan 21 -- Adding color.
 13 Feb 21 -- Switching cyan and white.
-15 Feb 21 -- Switching yellow and white so yellow is mb and white is gb
+15 Feb 21 -- Switching yellow and white, so yellow is mb and white is gb
 27 Feb 21 -- Found an optimization when writing getdir about GrandTotals
  1 Mar 21 -- Made sure all error messages are written to Stderr.
  2 Mar 21 -- Added use of runtime.Version(), which I read about in Go Standard Library Cookbook.
@@ -127,7 +127,7 @@ REVISION HISTORY
  6 Feb 23 -- Directory aliases still don't work perfectly.  I'm going to debug this a bit more.  Nevermind, the problem was a bad directory alias that mapped to the wrong drive letter.
  7 Feb 23 -- I found an area in dsrtutil_linux.go where I didn't close a file that needed to be closed.  I fixed that.
 15 Feb 23 -- Added showing the timestamp of the binary.  And then removed it when I saw that it's already there in the verbose output.  And I tweaked the beginning verbose output.
-12 Apr 23 -- Fixing a panic when run in a docker image.  Issue is in GetIDName.  I'll fix the bug and change this name to be more idiomatic in Go, ie, idName.
+12 Apr 23 -- Fixing a panic when run in a docker image.  Issue is in GetIDName.  I'll fix the bug and change this name to be more idiomatic in Go, i.e., idName.
 14 Apr 23 -- Tweaked output of the error in idName, formerly GetIDName.
 18 Apr 23 -- Removed the error message in idName
 28 Jun 23 -- Starting to think about a scroll switch, which will allow screen by screen output until I stop it, probably by hitting <ESC> or 'q'.
@@ -138,7 +138,7 @@ REVISION HISTORY
 30 Jun 23 -- I'm adding -a flag, to mean all.  It will be equivalent to 100 screens, or setting nscreen to 100.  For now.  Changed to default of 50 a few days later.
  2 Jul 23 -- I'm going to change the environ var number to mean number of screens when the allFlag is used.  Not today, it's too late.  I'll start this tomorrow.
                 I'll leave -N to mean lines/screen, as there's no point in having a command line switch to change that;  I could just use the nscreen option directly.
-                I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var along the lines of allScreens, defaulting to 50 or so.
+                I have to change dsrtparam.numlines, and the processing section for numlines.  I think I'll create a var like allScreens, defaulting to 50 or so.
  3 Jul 23 -- Added environment var h to mean halfFlag.
  4 Jul 23 -- Improved ProcessEnvironString.
 18 Feb 24 -- Changed a message to make it clear that this sorts on mod date, and removed the unused sizeFlag.
@@ -150,11 +150,11 @@ REVISION HISTORY
              The coordination with a wait group and the done channel works, but is slightly slower than dsrt.  This is w/ fetch = 1000.  It's worse when fetch=100.  And maybe also
              slightly worse when fetch = 2000.  I'll leave it at 1000, and stop working on this.
              At least I got it to work.
-             When run in jpg1 w/ 23,000 files, and jpg2 w/ 13000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
-             When run on thelio and logged into the /mnt/misc dir w/ 23000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
+             When run in jpg1 w/ 23,000 files, and jpg2 w/ 13,000 files, this rtn is slightly faster.  From 13 ms w/ dsrt, to 12 ms w/ fdsrt.
+             When run on thelio and logged into the /mnt/misc dir w/ 23,000 files, dsrt is ~6 sec and fdsrt is ~1 sec, so here it's much faster.  In a directory w/ only 300 files, this rtn is ~2x slower.
              So this is more complicated after all.
  3 May 24 -- I moved the IncludeThis test into the worker goroutines.  That's where it belongs.  Now the timing may be slightly faster than dsrt, here on Win11
-             I'm going to continue development after all.  On windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
+             I'm going to continue development after all.  On Windows, I'll write a handler that allows a match to occur.  This does not make sense on bash, so this will only apply to Windows.
              And glob option is removed.  It's too complex to add and I never use it.  It will stay in dsrt.go.
  7 Jun 24 -- Edited some comments and changed the final message.
  8 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable now interpreted as nscreens instead of nlines (off the top of my head).
@@ -189,13 +189,14 @@ REVISION HISTORY
  8 Oct 25 -- I found out that the missing file, j.mdb, is in the slice after all.  It's just not being displayed.  All this time I've been thinking that it's not in
 				the slice.  Now to address this in the display routine.
 				I decided to write out the entire FI slice to a debugging file.  And made allScreens = 5000
- 9 Oct 25 -- I figured out that at work, the hard linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
+ 9 Oct 25 -- I figured out that at work, the hard-linked j.mdb in Documents is not a regular file, directory nor a symlink, when fetched by MyReadDir.  However, when
 				retrieved first by filename and then individually calling Lstat, it is considered a regular file.  I'm going to display this correctly at work.
 10 Oct 25 -- I'm using {} to indicate a hard link.
 21 Jan 26 -- Fixed a bug in dvutil_windows.go.  Comment there explains it.
+ 7 Mar 26 -- Copied routines from dvutil_windows.go, so this would compile on linux also.  It seems that I broke that compatibility when I was chasing down problems I saw at work.
 */
 
-const LastAltered = "22 Jan 2026"
+const LastAltered = "7 March 2026"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -326,7 +327,8 @@ func main() {
 	mFlag := pflag.BoolP("max", "m", false, "Set maximum height, usually 50 lines")
 
 	pflag.BoolVarP(&allFlag, "all", "a", false, "Equivalent to 100_000 screens by default.  Intended to be used w/ the scroll back buffer.")
-	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.  Currently set to 100,000 screens.")
+	// 5000 screens, times 40 lines per screen, is 200,000 lines.  I'm sure that's enough
+	pflag.IntVar(&allScreens, "allscreens", allScreens, "Number of screens to display when all option is selected.  Currently set to 5000 screens here.")
 
 	pflag.BoolVar(&fastFlag, "fast", false, "Fast debugging flag.  Used (so far) in MyReadDir.")
 
