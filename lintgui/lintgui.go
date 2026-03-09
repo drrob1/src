@@ -27,9 +27,10 @@ import (
    7 Feb 26 -- Entire list is now sorted by date stamp.  And I got monthsThresholdEntry working.
    8 Feb 26 -- Adding verboseFlag and veryVerboseFlag.  The shortcut doesn't have these, but if the pgm is started on the command line, then these are available.
   13 Feb 26 -- Removed redundant call to FindAndReadConfIni
+   8 Mar 26 -- Added keyboard shortcuts for quit.
 */
 
-const lastModified = "8 Feb 2026"
+const lastModified = "8 March 2026"
 
 //go:embed schedule.png
 var scheduleIcon []byte
@@ -58,12 +59,19 @@ func main() {
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(900, 700))
 
-	//_, startDirFromConfigFile, err := lint.FindAndReadConfIni()
-	//if err != nil {
-	//	//fmt.Printf("line ~30: Error from FindAndReadConfIni is %v\n", err)
-	//	dialog.ShowError(err, w)
-	//}
-	//lint.StartDirFromConfigFile = startDirFromConfigFile
+	typedKey := func(ev *fyne.KeyEvent) { // copied from markdown.go which is from an article in Linux Magazine.
+		key := string(ev.Name)
+		switch key { // these are all synonyms, but I'm doing this to see if it works.
+		case "Q":
+			a.Quit()
+		case "Escape":
+			w.Close()
+		case "X":
+			w.Close()
+			// return doesn't work here to exit.  os.Exit would probably work, but I don't want to do that.
+		}
+	}
+	w.Canvas().SetOnTypedKey(typedKey)
 
 	monthsThresholdLabel := widget.NewLabel("Months Threshold:")
 	monthsThresholdEntry := widget.NewEntry()
@@ -82,7 +90,7 @@ func main() {
 			dialog.ShowError(err, w)
 		}
 		if verboseFlag {
-			fmt.Printf("line ~63: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
+			fmt.Printf("line ~92: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
 		}
 		filenames, err = lint.GetScheduleFilenames()
 		if err != nil {
