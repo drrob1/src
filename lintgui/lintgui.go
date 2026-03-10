@@ -28,9 +28,10 @@ import (
    8 Feb 26 -- Adding verboseFlag and veryVerboseFlag.  The shortcut doesn't have these, but if the pgm is started on the command line, then these are available.
   13 Feb 26 -- Removed redundant call to FindAndReadConfIni
    8 Mar 26 -- Added keyboard shortcuts for quit.
+  10 Mar 26 -- Added test against empty string for monthsThresholdEntry.OnChanged
 */
 
-const lastModified = "8 March 2026"
+const lastModified = "10 March 2026"
 
 //go:embed schedule.png
 var scheduleIcon []byte
@@ -84,20 +85,23 @@ func main() {
 	selectFilename := widget.NewSelectEntry(filenames)
 	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	monthsThresholdEntry.OnChanged = func(s string) {
-		lint.MonthsThreshold, err = strconv.Atoi(s)
-		if err != nil {
-			lint.MonthsThreshold = 1
-			dialog.ShowError(err, w)
+		if s != "" {
+			s = strings.TrimSpace(s)
+			lint.MonthsThreshold, err = strconv.Atoi(s)
+			if err != nil {
+				lint.MonthsThreshold = 1
+				dialog.ShowError(err, w)
+			}
+			if verboseFlag {
+				fmt.Printf("line ~92: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
+			}
+			filenames, err = lint.GetScheduleFilenames()
+			if err != nil {
+				dialog.ShowError(err, w)
+			}
+			selectFilename.SetOptions(filenames)
+			selectFilename.Refresh()
 		}
-		if verboseFlag {
-			fmt.Printf("line ~92: monthsThresholdEntry.OnChanged called with %s, and lint.MonthsThreshold is %d\n", s, lint.MonthsThreshold)
-		}
-		filenames, err = lint.GetScheduleFilenames()
-		if err != nil {
-			dialog.ShowError(err, w)
-		}
-		selectFilename.SetOptions(filenames)
-		selectFilename.Refresh()
 	}
 	monthContainer := container.NewHBox(monthsThresholdLabel, monthsThresholdEntry)
 
