@@ -139,9 +139,10 @@ import (
                 that the problem is that there is a change in the numbering of the rows in the file.  I have to check for and handle that.  I saw that the row that includes the dates
 				is sometimes row 3 and sometimes included as row 2 as part of the assignments row that also has the days of the week.  I have to determine what the rowOffset
 				is for this sheet, and use that when I reference a row.  It's too late now to code this, so I'll start tomorrow (I hope).
+  14 Mar 26 -- Today is Pi day, but that's not important now.  If there is no doc name before the (*R) string, then "Dr." becomes the doctor name.  I'm working on fixing this now.
 */
 
-const LastModified = "13 Feb 2026"
+const LastModified = "14 Mar 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -379,17 +380,26 @@ func whosRemoteToday(week WorkWeekType, dayCol int) []string { // week is an arr
 	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but Names can be duplicated.
 	// search for matching Names
 	for _, cell := range week[dayCol] {
+		if VerboseFlag { // tracking down what happens if there is no doc name before the (*R) string
+			fmt.Printf(" In whosRemoteToday -- Cell: %#v\n", cell)
+		}
 		cell = strings.ReplaceAll(cell, "   ", " ")
 		cell = strings.ReplaceAll(cell, "  ", " ")
 		cell = strings.ReplaceAll(cell, "  ", " ")
 		cell = strings.ReplaceAll(cell, "  ", " ") // really really really make sure that extra spaces are removed.
 		fields := strings.Split(cell, " ")
+		if VerboseFlag { // tracking down what happens if there is no doc name before the (*R) string
+			fmt.Printf(" In whosRemoteToday -- Fields: %#v\n", fields)
+		}
 
 		for i, field := range fields {
 			field = strings.TrimSpace(field)
 			if strings.Contains(field, remoteMarkerString) {
 				j := i - 1
 				prevField := strings.ToLower(fields[j])
+				if prevField == "dr." { // skip if there is no doc name in this cell
+					continue
+				}
 				remoteDocs = append(remoteDocs, prevField)
 			}
 		}
