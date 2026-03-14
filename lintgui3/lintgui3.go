@@ -30,7 +30,8 @@ import (
    8 Mar 26 -- Added keyboard shortcuts for quit.
   10 Mar 26 -- Added test against empty string for monthsThresholdEntry.OnChanged
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-  14 Mar 26 -- Today is Pi day, but that's not important now.  Now called lingui2, and I want to see if I can use a fyne.list instead of the select entry.
+  14 Mar 26 -- Now called lintgui3, and I'm testing the use of a select box instead of a select entry box.  And today's Pi day, but that's not important right now.
+				Turns out that I like the look of this the best of the 3 versions.
 */
 
 const lastModified = "14 March 2026"
@@ -58,17 +59,20 @@ func main() {
 	scheduleIconRes := fyne.NewStaticResource("schedule.png", scheduleIcon)
 	a := app.NewWithID("com.example.lintgui")
 	a.SetIcon(scheduleIconRes)
-	s := fmt.Sprintf("Lint GUI 2, last modified %s, compiled with %s", lastModified, runtime.Version())
+	s := fmt.Sprintf("Lint GUI 3, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(900, 700))
 
-	typedKey := func(ev *fyne.KeyEvent) {
+	typedKey := func(ev *fyne.KeyEvent) { // copied from markdown.go which is from an article in Linux Magazine.
 		key := string(ev.Name)
 		switch key { // these are all synonyms, but I'm doing this to see if it works.
 		case "Q":
 			a.Quit()
-		case "Escape", "X":
+		case "Escape":
 			w.Close()
+		case "X":
+			w.Close()
+			// return doesn't work here to exit.  os.Exit would probably work, but I don't want to do that.
 		}
 	}
 	w.Canvas().SetOnTypedKey(typedKey)
@@ -81,21 +85,9 @@ func main() {
 	if err != nil {
 		dialog.ShowError(err, w)
 	}
-	selectFilenameList := widget.NewList(
-		func() int {
-			return len(filenames)
-		},
-		func() fyne.CanvasObject {
-			return widget.NewLabel("weekly schedule filename") // placeholder text
-		},
-		func(i int, o fyne.CanvasObject) {
-			filename := o.(*widget.Label)
-			filename.SetText(filenames[i])
-		},
-	)
-	//selectFilenameList.Resize(fyne.NewSize(150, 400))  ignored, that's why I need the scrollContainer
-	scrollContainer := container.NewVScroll(selectFilenameList)
-	scrollContainer.SetMinSize(fyne.NewSize(150, 400))
+	// selectFilename := widget.NewSelectEntry(filenames)  as per lintGUI
+	selectFilename := widget.NewSelect(filenames, nil) // I'll define it as nil now, and add it later.  I hope this works.
+	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	monthsThresholdEntry.OnChanged = func(s string) {
 		if s != "" {
 			s = strings.TrimSpace(s)
@@ -111,8 +103,8 @@ func main() {
 			if err != nil {
 				dialog.ShowError(err, w)
 			}
-			//selectFilenameList.SetOptions(filenames)  This, or an equivalent, may not be needed
-			selectFilenameList.Refresh()
+			selectFilename.SetOptions(filenames)
+			selectFilename.Refresh()
 		}
 	}
 	monthContainer := container.NewHBox(monthsThresholdLabel, monthsThresholdEntry)
@@ -126,7 +118,7 @@ func main() {
 	spellingFcn := func() { // move this here so it can be called from the scheduleCheckFcn
 		soundx := lint.GetSoundex(lint.Names)
 		spellingErrors := lint.ShowSpellingErrors(soundx)
-		//fmt.Printf("line ~129: spellingErrors is %#v\n", spellingErrors)
+		//fmt.Printf("line ~82: spellingErrors is %#v\n", spellingErrors)
 		if len(spellingErrors) > 0 {
 			spellingErrorsLabel.SetText(strings.Join(spellingErrors, "\n"))
 			spellingErrorsLabel.Resize(fyne.NewSize(50, 300))
@@ -162,16 +154,16 @@ func main() {
 	// Pick a weekly schedule file
 	pickedFilenameLabel := widget.NewLabel("Pick a filename:")
 	pickedFilenameLabel.Resize(fyne.Size{Width: 150, Height: 300})
-	selectFilenameList.OnSelected = func(id int) {
-		pickedFilename = filenames[id]
-		pickedFilenameLabel.SetText(filepath.Base(pickedFilename))
+	selectFilename.OnChanged = func(s string) { // does this work?  I set it to nil in the definition above, but I'm assigning it here now.  I'll see.  Hey, it does work.  I stumbled into this one.  Great!
+		pickedFilename = s
+		pickedFilenameLabel.SetText(filepath.Base(s))
 		pickedFilenameLabel.Resize(fyne.Size{Width: 250, Height: 300})
 		pickedFilenameLabel.Refresh()
 		spellingErrorsLabel.SetText("")
 		spellingErrorsLabel.Refresh()
 		messagesLabel.SetText("")
 		messagesLabel.Refresh()
-		//fmt.Printf("line ~174: selectFilenameList.OnSelected called with %d, and pickedFilename is %s\n", id, pickedFilename)
+		//fmt.Printf("line ~75: selectFilename.OnChanged called with %s, and pickedFilename is %s\n", s, pickedFilename)
 		docNames, err := lint.GetDocNames(pickedFilename)
 		if err != nil {
 			//fmt.Printf("line ~78: Error from GetDocNames is %v\n", err)
@@ -182,22 +174,17 @@ func main() {
 		spellingFcn()
 		scheduleCheckFcn()
 	}
-	selectFilenameList.Show()
+	selectFilename.Show()
 
-	if len(filenames) > 0 {
-		selectFilenameList.Select(0)
-	}
-
-	leftHandColumn := container.NewVBox(monthContainer, pickedFilenameLabel, scrollContainer)
-	selectFilenameList.Refresh()
+	leftHandColumn := container.NewVBox(monthContainer, pickedFilenameLabel, selectFilename)
 	rightHandColumn := container.NewVBox(spellingBtn, spellingErrorsLabel, scheduleBtn, messagesLabel, quitBtn)
+	//combinedColumn := container.NewHBox(leftHandColumn, rightHandColumn)
 	grid := container.NewAdaptiveGrid(2, leftHandColumn, rightHandColumn)
 	grid.Resize(fyne.NewSize(800, 800))
 
 	w.SetContent(
 		grid,
 	)
-	w.CenterOnScreen() // added 3/14/26 as I'm playing w/ a list instead of a select box.
 	w.ShowAndRun()
 
 }
