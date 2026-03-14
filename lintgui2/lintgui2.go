@@ -95,7 +95,7 @@ func main() {
 	)
 	//selectFilenameList.Resize(fyne.NewSize(150, 400))  ignored, that's why I need the scrollContainer
 	scrollContainer := container.NewVScroll(selectFilenameList)
-	scrollContainer.SetMinSize(fyne.NewSize(150, 500))
+	scrollContainer.SetMinSize(fyne.NewSize(150, 400))
 	monthsThresholdEntry.OnChanged = func(s string) {
 		if s != "" {
 			s = strings.TrimSpace(s)
