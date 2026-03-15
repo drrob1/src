@@ -30,7 +30,7 @@ import (
    8 Mar 26 -- Added keyboard shortcuts for quit.
   10 Mar 26 -- Added test against empty string for monthsThresholdEntry.OnChanged
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-  14 Mar 26 -- Today is Pi day, but that's not important now.  Now called lingui2, and I want to see if I can use a fyne.list instead of the select entry.
+  14 Mar 26 -- Today is Pi day, but that's not important now.  Now called lingui2, and I want to see if I can use a fyne.List instead of the select entry.
 */
 
 const lastModified = "14 March 2026"
