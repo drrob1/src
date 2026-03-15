@@ -64,7 +64,7 @@ import (
   20 Feb 23 -- Minor edit in verification messages.
   22 Feb 23 -- Now called copyingC, as I intend to write a concurrent version of the copying logic, based on the copyC family of routines.
                  And timeFudgeFactor is now 10 ms, down from 100 ms.
-  23 Feb 23 -- Fixed an obvious bug that's rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
+  23 Feb 23 -- Fixed an obvious bug rarely encountered in validating the output destDirs.  And added verFlag as an abbreviation for verify
   27 Feb 23 -- Fixed a bug first discovered in copyc1, in the verifyChannel.  And also a bug in the verify logic.
   14 Mar 23 -- Removed some comments.  And changed number of go routines to be the lesser of NumCPU() and len(fileList)
   15 Mar 23 -- Number of go routines should be the lesser of NumCPU() and the product of len(fileList) * len(targetDirs).
@@ -85,9 +85,10 @@ import (
   28 Jul 24 -- Fixed a data race by ErrNotNew not being global.  It should never have been global.
    3 May 25 -- Changed how dest errors are displayed, to make them more obvious.
   22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
+  15 Mar 26 -- Changed wording of final message.  And yesterday was Pi day, but that's not important now.
 */
 
-const LastAltered = "Sep 22, 2025" //
+const LastAltered = "March 15, 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -423,7 +424,7 @@ func main() {
 		ctfmt.Printf(ct.Green, onWin, "\n Successfully copied %d files.", succeeded)
 	}
 	if failed > 0 {
-		ctfmt.Printf(ct.Red, onWin, "  Failed to copy %d files.", failed)
+		ctfmt.Printf(ct.Red, onWin, "  Didn't copy %d files.", failed)
 	}
 	ctfmt.Printf(ct.Yellow, onWin, "  Elapsed time is %s.\n\n", time.Since(start))
 } // end main

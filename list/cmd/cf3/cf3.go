@@ -122,9 +122,10 @@ import (
                 number of seconds since January 1, 1970 UTC.  I'll test on Windows.  It works.  I'll test on Linux.  It works.  But I can't interchange cf, cf2 and cf3.
                 By adding the fudge factor back, then I can interchange them.  I did that and it works.
   22 Sep 25 -- I decided to remove the fudge factor, for all of my routines.
+  15 Mar 26 -- Changed wording of final message.  And yesterday was Pi day, but that's not important now.  Nevermind.  This isn't the one I want to change.
 */
 
-const LastAltered = "22 Sep 2025" //
+const LastAltered = "15 March 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
