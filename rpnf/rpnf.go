@@ -78,7 +78,7 @@ import (
 26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
 10 Feb 26 -- Added a dividing line, as I saw from the YouTube tutorials.  It may take a bit of time to get right.
-16 Mar 26 -- Cosmetic changes to UI.  And added pflag imported as flag.
+16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Working on adding ability to change screen size by a menu item.
 */
 
 const lastModified = "Mar 16, 2026"
@@ -335,7 +335,16 @@ func main() {
 		combinedString := strings.Join(stringslice, "\n")
 		dialog.ShowInformation("About rpnf", combinedString, globalW)
 	})
-	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem2C, menuItem2D, menuItem3, menuItem4)
+
+	menuItem5 := fyne.NewMenuItem("Show sccreen dimensions", func() {
+		x := globalW.Canvas().Size().Width  // this is the number set by a resize
+		y := globalW.Canvas().Size().Height // this is the number set by a resize
+		str := fmt.Sprintf("Window size is %.0f x %.0f", x, y)
+		dialog.ShowInformation("Screen dimensions rpnf", str, globalW)
+	})
+
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem2C, menuItem2D, menuItem3,
+		menuItem4, menuItem5)
 	menu := fyne.NewMainMenu(newMenu) // looks like an item labeled Quit is always added to the first element
 	globalW.SetMainMenu(menu)
 
