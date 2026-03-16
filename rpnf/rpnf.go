@@ -308,7 +308,9 @@ func main() {
 			}
 			*screenHeight -= reduceAmt
 			populateUI()
-			globalW.Show()
+			fyne.Do(func() { // I'm trying this because of weird behavior on laptop.
+				globalW.Show()
+			})
 		}
 		entry.OnSubmitted = func(s string) { // I want to be able to use the <enter> key.
 			if len(s) == 0 {
