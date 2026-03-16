@@ -137,8 +137,8 @@ const DisplayTapeFilename = "displaytape.txt"
 
 var nofileflag = flag.BoolP("nofile", "n", false, "no files read or written.") // pointer
 var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode enabled.")
-var screenWidth = flag.Float64("sw", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
-var screenHeight = flag.Float64("sh", 1000, "screen height for the resize method in Doit.")
+var screenWidth = flag.Float64P("sw", "w", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
+var screenHeight = flag.Float64P("sh", "h", 1000, "screen height for the resize method in Doit.")
 
 var execname, execTimeStamp string
 var execFI os.FileInfo
@@ -276,7 +276,7 @@ func main() {
 		globalW.Show()
 	})
 
-	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() { // this dialog.ShowEntryDialog is depracated so I'm trying the replacement, below.
+	menuItem2C := fyne.NewMenuItem("Fix with Entry Dialog", func() {
 		hpcalc2.GetResult("fix")
 		onConfirmCallback := func(sigfigStr string) {
 			sigfig, err := strconv.Atoi(sigfigStr)
@@ -291,26 +291,35 @@ func main() {
 		dialog.ShowEntryDialog("Enter sigfig", "SigFig is:", onConfirmCallback, globalW)
 	})
 
-	menuItem2D := fyne.NewMenuItem("Fix with ShowForm", func() { // needed because dialog.ShowEntryDialog is depracated
-		hpcalc2.GetResult("fix")
+	menuItem2D := fyne.NewMenuItem("Reduce height", func() { // dialog.ShowEntryDialog is depracated, so will use a form.
 		entry := widget.NewEntry()
-		entry.SetPlaceHolder("Enter sigfig")
-		items := []*widget.FormItem{widget.NewFormItem("SigFig", entry)}
-		formCallBackFunc := func(confirmed bool) {
-			if !confirmed {
-				return
-			}
-			sigfigStr := entry.Text
-			sigfig, err := strconv.Atoi(sigfigStr)
+		entry.SetPlaceHolder("amt")
+		entry.Resize(fyne.NewSize(150, 20))
+		items := []*widget.FormItem{widget.NewFormItem("reduce ht", entry)}
+		reduceFcn := func() {
+			reduceAmtStr := entry.Text
+			reduceAmt, err := strconv.ParseFloat(reduceAmtStr, 64)
 			if err != nil {
 				dialog.ShowError(err, globalW)
 				return
 			}
-			hpcalc2.SetSigFig(sigfig)
+			*screenHeight -= reduceAmt
 			populateUI()
 			globalW.Show()
 		}
-		dialog.ShowForm("Enter Sigfig", "OK", "Cancel", items, formCallBackFunc, globalW)
+		entry.OnSubmitted = func(s string) { // I want to be able to use the <enter> key.
+			if len(s) == 0 {
+				return
+			}
+			reduceFcn()
+		}
+		formCallBackFunc := func(confirmed bool) {
+			if !confirmed {
+				return
+			}
+			reduceFcn()
+		}
+		dialog.ShowForm("Enter reduce amt", "OK", "Cancel", items, formCallBackFunc, globalW)
 	})
 
 	menuItem3 := fyne.NewMenuItem("Help", func() {
@@ -337,8 +346,8 @@ func main() {
 	})
 
 	menuItem5 := fyne.NewMenuItem("Show sccreen dimensions", func() {
-		x := globalW.Canvas().Size().Width  // this is the number set by a resize
-		y := globalW.Canvas().Size().Height // this is the number set by a resize
+		x := globalW.Canvas().Size().Width  // this is the number set after a resize
+		y := globalW.Canvas().Size().Height // this is the number set after a resize
 		str := fmt.Sprintf("Window size is %.0f x %.0f", x, y)
 		dialog.ShowInformation("Screen dimensions rpnf", str, globalW)
 	})
