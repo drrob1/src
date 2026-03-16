@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/gob"
 	"errors"
-	"flag"
 	"fmt"
 	"image/color"
 	"os"
@@ -17,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -76,10 +77,11 @@ import (
 23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
 26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
-10 Feb 26 -- Added a dividing line, as I saw from the youtube tutorials.  It may take a bit of time to get right.
+10 Feb 26 -- Added a dividing line, as I saw from the YouTube tutorials.  It may take a bit of time to get right.
+16 Mar 26 -- Cosmetic changes to UI.  And added pflag imported as flag.
 */
 
-const lastModified = "Feb 10, 2026"
+const lastModified = "Mar 16, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -87,9 +89,9 @@ const ( // output modes
 	outputgen
 )
 
-var outputMode int
+const divider = "-------------------------------------------------------------------------------------------------------"
 
-var divider = "-------------------------------------------------------------------------------------------------------"
+var outputMode int
 
 var globalA fyne.App
 var globalW, helpWindow, popupName fyne.Window // the popupName is how I get the name for a register save operation.
@@ -116,7 +118,8 @@ type register struct {
 	Name  string
 }
 
-// I don't think I like the dark theme, probably because I haven't fully implemented it.  The menu colors are too low contrast.  I'll leave it here but not use it, on or about line 226.
+// I don't think I like the dark theme, probably because I haven't fully implemented it.  The menu colors are too low contrast.
+// Nevermind.  I didn't properly implement it before.  Now I do.
 type myDarkTheme struct {
 }
 
@@ -132,8 +135,8 @@ const Storage2FileName = "RPNfyneStorage2.gob"
 const Storage3FileName = "RPNfyneStorage3.gob"
 const DisplayTapeFilename = "displaytape.txt"
 
-var nofileflag = flag.Bool("n", false, "no files read or written.") // pointer
-var verboseFlag = flag.Bool("v", false, "Verbose mode enabled.")
+var nofileflag = flag.BoolP("nofile", "n", false, "no files read or written.") // pointer
+var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode enabled.")
 var screenWidth = flag.Float64("sw", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
 var screenHeight = flag.Float64("sh", 1000, "screen height for the resize method in Doit.")
 
@@ -156,7 +159,7 @@ var execFI os.FileInfo
 //	return theme.DefaultTheme().Color(name, variant)
 //}
 
-func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color { // I want the default theme to be the dark variant, and I think this does that.
+func (m myDarkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color { // I want the default theme to be the dark variant, and this does that.  Yay!
 	variant = theme.VariantDark
 	return theme.DefaultTheme().Color(name, variant)
 }
