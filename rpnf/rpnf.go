@@ -351,10 +351,12 @@ func main() {
 	})
 
 	menuItem5 := fyne.NewMenuItem("Show sccreen dimensions", func() {
-		x := globalW.Canvas().Size().Width  // this is the number set after a resize
-		y := globalW.Canvas().Size().Height // this is the number set after a resize
+		x := globalW.Canvas().Size().Width  // this is the number actually set
+		y := globalW.Canvas().Size().Height // this is the number actually set
 		str := fmt.Sprintf("Window size is %.0f x %.0f", x, y)
 		dialog.ShowInformation("Screen dimensions rpnf", str, globalW)
+		*screenWidth = float64(x)
+		*screenHeight = float64(y)
 	})
 
 	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2, menuItem2a, menuItem2b, menuItem2C, menuItem2D, menuItem3,
