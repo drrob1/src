@@ -308,7 +308,7 @@ func main() {
 			}
 			*screenHeight -= reduceAmt
 			populateUI()
-			fyne.Do(func() { // I'm trying this because of weird behavior on laptop.
+			fyne.Do(func() { // I'm trying this because of weird behavior on laptop.  This didn't matter.  I think it comes up when the height is larger than the screen allows.
 				globalW.Show()
 			})
 		}
@@ -1014,7 +1014,8 @@ func populateUI() {
 
 	line1 := canvas.NewLine(color.NRGBA{R: 255, G: 0, B: 0, A: 255}) // red line
 	line1.Position1 = fyne.NewPos(0, 100)
-	line1.Position2 = fyne.NewPos(0, 700)
+	//    line1.Position2 = fyne.NewPos(0, 700)  Now that it works, and I'm allowing the height to be changed, I need to consider that here.  I'm not going to use a constant magic number.
+	line1.Position2 = fyne.NewPos(0, float32(*screenHeight-300.0))
 	line1.StrokeWidth = 3
 	lineContainer := container.NewWithoutLayout(line1)
 
