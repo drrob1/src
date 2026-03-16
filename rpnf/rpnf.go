@@ -78,7 +78,7 @@ import (
 26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
 10 Feb 26 -- Added a dividing line, as I saw from the YouTube tutorials.  It may take a bit of time to get right.
-16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Working on adding ability to change screen size by a menu item.
+16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Added ability to reduce screen size by a menu item.
 */
 
 const lastModified = "Mar 16, 2026"
@@ -294,9 +294,12 @@ func main() {
 	menuItem2D := fyne.NewMenuItem("Reduce height", func() { // dialog.ShowEntryDialog is depracated, so will use a form.
 		entry := widget.NewEntry()
 		entry.SetPlaceHolder("amt")
-		entry.Resize(fyne.NewSize(150, 20))
+		entry.Resize(fyne.NewSize(150, 20)) // this doesn't seem to work
 		items := []*widget.FormItem{widget.NewFormItem("reduce ht", entry)}
 		reduceFcn := func() {
+			if len(entry.Text) == 0 {
+				return
+			}
 			reduceAmtStr := entry.Text
 			reduceAmt, err := strconv.ParseFloat(reduceAmtStr, 64)
 			if err != nil {
