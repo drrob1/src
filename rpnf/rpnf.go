@@ -79,9 +79,10 @@ import (
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
 10 Feb 26 -- Added a dividing line, as I saw from the YouTube tutorials.  It may take a bit of time to get right.
 16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Added ability to reduce screen size by a menu item.
+17 Mar 26 -- Will automatically change the screen size based on what Fyne says it is.  This change is coded in keyTyped, and uses doOnce.
 */
 
-const lastModified = "Mar 16, 2026"
+const lastModified = "March 17, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -92,6 +93,8 @@ const ( // output modes
 const divider = "-------------------------------------------------------------------------------------------------------"
 
 var outputMode int
+
+var doOnce bool = true
 
 var globalA fyne.App
 var globalW, helpWindow, popupName fyne.Window // the popupName is how I get the name for a register save operation.
@@ -266,8 +269,6 @@ func main() {
 		hpcalc2.SetSigFig(10)
 		populateUI()
 		globalW.Show()
-		//fyne.Do(func() {
-		//})
 	})
 	menuItem2b := fyne.NewMenuItem("Fix 12", func() {
 		hpcalc2.GetResult("fix")
@@ -733,6 +734,19 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		return
 	case fyne.KeyEnter, fyne.KeyReturn:
 		inbufChan <- input.Text
+		if doOnce {
+			doOnce = false                               // this is the only place that this variable is set
+			x := float64(globalW.Canvas().Size().Width)  // this is the number actually set
+			y := float64(globalW.Canvas().Size().Height) // this is the number actually set
+			if x < *screenWidth {
+				fmt.Printf("screenWidth was %.0f and will be set to %.0f\n", *screenWidth, x)
+				*screenWidth = x // this is the number actually set
+			}
+			if y < *screenHeight {
+				fmt.Printf("screenHeight was %.0f and will be set to %.0f\n", *screenHeight, y)
+				*screenHeight = y // this is the number actually set
+			}
+		}
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
