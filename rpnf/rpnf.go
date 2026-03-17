@@ -663,6 +663,20 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.  inbufChan is the string chan that is used to return these strings to be processed.
+	if doOnce {
+		doOnce = false                               // this is the only place that this variable is set
+		x := float64(globalW.Canvas().Size().Width)  // this is the number actually set
+		y := float64(globalW.Canvas().Size().Height) // this is the number actually set
+		if x < *screenWidth {
+			fmt.Printf("screenWidth was %.0f and will be set to %.0f\n", *screenWidth, x)
+			*screenWidth = x // this is the number actually set
+		}
+		if y < *screenHeight {
+			fmt.Printf("screenHeight was %.0f and will be set to %.0f\n", *screenHeight, y)
+			*screenHeight = y // this is the number actually set
+		}
+	}
+
 	switch e.Name {
 	case fyne.KeyUp: // stack up
 		if len(input.Text) > 0 {
@@ -734,19 +748,6 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		return
 	case fyne.KeyEnter, fyne.KeyReturn:
 		inbufChan <- input.Text
-		if doOnce {
-			doOnce = false                               // this is the only place that this variable is set
-			x := float64(globalW.Canvas().Size().Width)  // this is the number actually set
-			y := float64(globalW.Canvas().Size().Height) // this is the number actually set
-			if x < *screenWidth {
-				fmt.Printf("screenWidth was %.0f and will be set to %.0f\n", *screenWidth, x)
-				*screenWidth = x // this is the number actually set
-			}
-			if y < *screenHeight {
-				fmt.Printf("screenHeight was %.0f and will be set to %.0f\n", *screenHeight, y)
-				*screenHeight = y // this is the number actually set
-			}
-		}
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
