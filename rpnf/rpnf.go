@@ -663,7 +663,7 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.  inbufChan is the string chan that is used to return these strings to be processed.
-	if doOnce {
+	if doOnce {                   // putting this test here gives the best results for me.  It gets tested against any key press.
 		doOnce = false                               // this is the only place that this variable is set
 		x := float64(globalW.Canvas().Size().Width)  // this is the number actually set
 		y := float64(globalW.Canvas().Size().Height) // this is the number actually set
