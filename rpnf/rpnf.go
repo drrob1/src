@@ -350,7 +350,7 @@ func main() {
 		dialog.ShowInformation("About rpnf", combinedString, globalW)
 	})
 
-	menuItem5 := fyne.NewMenuItem("Show sccreen dimensions", func() {
+	menuItem5 := fyne.NewMenuItem("Show screen dimensions", func() {
 		x := globalW.Canvas().Size().Width  // this is the number actually set
 		y := globalW.Canvas().Size().Height // this is the number actually set
 		str := fmt.Sprintf("Window size is %.0f x %.0f", x, y)
