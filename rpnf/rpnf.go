@@ -668,11 +668,11 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		x := float64(globalW.Canvas().Size().Width)  // this is the number actually set
 		y := float64(globalW.Canvas().Size().Height) // this is the number actually set
 		if x < *screenWidth {
-			fmt.Printf("screenWidth was %.0f and will be set to %.0f\n", *screenWidth, x)
+			fmt.Printf("screenWidth was %.0f and will be set to %.0f\n", *screenWidth, x-10)
 			*screenWidth = x - 10
 		}
 		if y < *screenHeight {
-			fmt.Printf("screenHeight was %.0f and will be set to %.0f\n", *screenHeight, y)
+			fmt.Printf("screenHeight was %.0f and will be set to %.0f\n", *screenHeight, y-10)
 			*screenHeight = y - 10
 		}
 	}
