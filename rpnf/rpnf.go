@@ -82,7 +82,7 @@ import (
 17 Mar 26 -- Will automatically change the screen size based on what Fyne says it is.  This change is coded in keyTyped, and uses doOnce.
 */
 
-const lastModified = "March 17, 2026"
+const lastModified = "March 18, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -141,7 +141,7 @@ const DisplayTapeFilename = "displaytape.txt"
 var nofileflag = flag.BoolP("nofile", "n", false, "no files read or written.") // pointer
 var verboseFlag = flag.BoolP("verbose", "v", false, "Verbose mode enabled.")
 var screenWidth = flag.Float64P("sw", "w", 950, "Screen Width for the resize method in Doit.") // needed by distortion on H97N
-var screenHeight = flag.Float64P("sh", "h", 1000, "screen height for the resize method in Doit.")
+var screenHeight = flag.Float64P("sh", "h", 950, "screen height for the resize method in Doit.")
 
 var execname, execTimeStamp string
 var execFI os.FileInfo
@@ -669,11 +669,11 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		y := float64(globalW.Canvas().Size().Height) // this is the number actually set
 		if x < *screenWidth {
 			fmt.Printf("screenWidth was %.0f and will be set to %.0f\n", *screenWidth, x)
-			*screenWidth = x // this is the number actually set
+			*screenWidth = x - 10
 		}
 		if y < *screenHeight {
 			fmt.Printf("screenHeight was %.0f and will be set to %.0f\n", *screenHeight, y)
-			*screenHeight = y // this is the number actually set
+			*screenHeight = y - 10
 		}
 	}
 
