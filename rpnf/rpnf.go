@@ -676,7 +676,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 			*screenHeight = y - 10
 		}
 	}
-
+	
 	switch e.Name {
 	case fyne.KeyUp: // stack up
 		if len(input.Text) > 0 {
