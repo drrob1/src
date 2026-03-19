@@ -81,6 +81,7 @@ REVISION HISTORY
  1 Dec 25 -- Added fyne.Do, as was supposed to happen all along.
 18 Jan 26 -- Added CenterOnScreen() to the window in the loadTheImage routine.
 18 Mar 26 -- Adding an automatic scaling of the image to fit the screen size.
+19 Mar 26 -- Enhanced the usage message, shown when using the -h or --help flags.
 */
 
 const LastModified = "Mar 19, 2026"
@@ -142,6 +143,16 @@ func main() {
 		fmt.Printf(" z = zoom and also toggles sticky.\n")
 		fmt.Printf(" v = verbose.\n")
 		fmt.Printf(" r = rotate 90º clockwise.\n")
+		fmt.Printf(" s = save current state of image.  Equivalent to w.\n")
+		fmt.Printf(" w = write current state of image.  Equivalent to s.\n")
+		fmt.Printf(" 0,1,2,3,4 = rotate to that position.  0 and 4 are equivalent for starting position.\n")
+		fmt.Printf(" home, end = beginning and end of slice of images.\n")
+		fmt.Printf(" left, right = previous and next image.\n")
+		fmt.Printf(" up, down = previous and next image.\n")
+		fmt.Printf(" q,x,escape = quit.\n")
+		fmt.Printf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).\n")
+		fmt.Printf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).\n")
+		fmt.Printf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.\n")
 		flag.PrintDefaults()
 	}
 
