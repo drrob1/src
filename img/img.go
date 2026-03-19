@@ -83,7 +83,7 @@ REVISION HISTORY
 18 Mar 26 -- Adding an automatic scaling of the image to fit the screen size.
 */
 
-const LastModified = "Mar 18, 2026"
+const LastModified = "Mar 19, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -285,7 +285,10 @@ func loadTheImage(idx int) {
 			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvasheight = %.2f, canvaswidth = %.2f, title = %s\n",
 				imgHeight, imgWidth, globalW.Canvas().Size().Height, globalW.Canvas().Size().Width, title)
 		}
-		scaleFactor = math.Min(heightScale, widthScale)
+		minFac := math.Min(heightScale, widthScale)
+		if minFac < 1 { // only autosize images when they're too large to display without it.
+			scaleFactor = minFac
+		}
 	}
 
 	if scaleFactor != 1 {
