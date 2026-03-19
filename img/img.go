@@ -106,7 +106,7 @@ var globalA fyne.App
 var globalW fyne.Window
 var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag.")
 var zoomFlag = flag.BoolP("zoom", "z", false, "set zoom flag to allow zooming up a lot.")
-var stickyFlag = flag.BoolP("sticky", "s", true, "sticky flag for keeping zoom factor among images.") // defaults to on as of 8/21/23
+var stickyFlag = flag.BoolP("sticky", "s", false, "sticky flag for keeping zoom factor among images.") // defaults to on as of 8/21/23; now off after I added autoscaling 3/18/26.
 var reverseFlag = flag.BoolP("reverse", "r", false, "reverse sort flag, ie, oldest first.")
 var sticky bool
 var scaleFactor float64 = 1
