@@ -80,9 +80,10 @@ REVISION HISTORY
 23 Jul 25 -- Got idea to save an image in its current size and degree of rotation.  This may take some time to get right.
  1 Dec 25 -- Added fyne.Do, as was supposed to happen all along.
 18 Jan 26 -- Added CenterOnScreen() to the window in the loadTheImage routine.
+18 Mar 26 -- Adding an automatic scaling of the image to fit the screen size.
 */
 
-const LastModified = "Jan 18, 2026"
+const LastModified = "Mar 18, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -92,8 +93,10 @@ const (
 	lastImgCmd
 )
 
-// const maxWidth = 1800 // actual resolution is 1920 x 1080   \ unused
-// const maxHeight = 900 // actual resolution is 1920 x 1080   /
+const toleranceFactor = 1e-5
+
+const maxWidth = 1800 // actual resolution is 1920 x 1080   \ unused
+const maxHeight = 900 // actual resolution is 1920 x 1080   /
 
 var index int
 var loadedimg *canvas.Image
@@ -268,18 +271,22 @@ func loadTheImage(idx int) {
 	if *verboseFlag {
 		fmt.Println(title)
 	}
-	/*  According to Andy, this is unnecessary.
-	if imgWidth > maxWidth {
-		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-		title = title + "; resized."
-	} else if imgHeight > maxHeight {
-		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-		title = title + "; resized."
+
+	// normalize the image to screen size
+	// This code does work for this one big image, but then it leaves the sccale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
+	// It works as long as I turn off the sticky factor.
+
+	if scaleFactor == 1 {
+		var heightScale, widthScale float64
+		widthScale = float64(maxWidth) / float64(imgWidth)    // maxWidth is 1800 at the moment
+		heightScale = float64(maxHeight) / float64(imgHeight) // maxHeight is 900 at the moment
+		if *verboseFlag {
+			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, maxwidth = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
+			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvasheight = %.2f, canvaswidth = %.2f, title = %s\n",
+				imgHeight, imgWidth, globalW.Canvas().Size().Height, globalW.Canvas().Size().Width, title)
+		}
+		scaleFactor = math.Min(heightScale, widthScale)
 	}
-	bounds = img.Bounds()
-	imgHeight = bounds.Max.Y
-	imgWidth = bounds.Max.X
-	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
