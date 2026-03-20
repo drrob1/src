@@ -82,9 +82,10 @@ REVISION HISTORY
 18 Jan 26 -- Added CenterOnScreen() to the window in the loadTheImage routine.
 18 Mar 26 -- Adding an automatic scaling of the image to fit the screen size.
 19 Mar 26 -- Enhanced the usage message, shown when using the -h or --help flags.
+20 Mar 26 -- Adding '9' to mean scaleFactor 0.99
 */
 
-const LastModified = "Mar 19, 2026"
+const LastModified = "Mar 20, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -93,8 +94,6 @@ const (
 	loadImgCmd
 	lastImgCmd
 )
-
-const toleranceFactor = 1e-5
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080   \ unused
 const maxHeight = 900 // actual resolution is 1920 x 1080   /
@@ -569,6 +568,9 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.Key4, fyne.Key0:
 		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
 		rotateAndLoadTheImage(index, 0)
+	case fyne.Key9:
+		scaleFactor = 0.99
+		keyCmdChan <- loadImgCmd
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
