@@ -258,7 +258,6 @@ func main() {
 		fmt.Printf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).\n")
 		fmt.Printf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).\n")
 		fmt.Printf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.\n")
-		fmt.Printf(" '9' = reset scale factor to 0.99 and zero the rotatedTimes variable.\n")
 		flag.PrintDefaults()
 	}
 	//flag.Usage = func() { old usage information that wasn't updated as I added more functions.

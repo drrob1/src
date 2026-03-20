@@ -62,9 +62,10 @@ REVISION HISTORY
 26 Jul 25 -- Using a different method to trim off ext of base filename, just to see if it works.  It does.
  1 Dec 25 -- Added fyne.Do, as was supposed to happen long ago.
 18 Jan 26 -- Now centering output in loadTheImage.  Tested in img.go and it works, so I'm porting it here.
+20 Mar 26 -- I cconfirmed in img2 that resizing the image to fit the screen works.  And updated the usage message
 */
 
-const LastModified = "Jan 18, 2026"
+const LastModified = "March 20, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -73,6 +74,9 @@ const (
 	loadImgCmd
 	lastImgCmd
 )
+
+const maxWidth = 1800 // actual resolution is 1920 x 1080
+const maxHeight = 900 // actual resolution is 1920 x 1080
 
 var index int
 var loadedimg *canvas.Image
@@ -108,11 +112,34 @@ func isImage(file string) bool {
 func main() {
 	var err error
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version())
-		fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " z = zoom and also toggles sticky.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), " v = verbose.\n")
+		executable, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		ExecFI, _ := os.Stat(executable)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		fmt.Printf(" %s last altered %s, compiled with %s, and linked %s. \n",
+			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
+		fmt.Printf(" Usage information:\n")
+		fmt.Printf(" z = zoom and also toggles sticky.\n")
+		fmt.Printf(" v = verbose.\n")
+		fmt.Printf(" r = rotate 90º clockwise.\n")
+		fmt.Printf(" s = save current state of image.  Equivalent to w.\n")
+		fmt.Printf(" w = write current state of image.  Equivalent to s.\n")
+		fmt.Printf(" 0,1,2,3,4 = rotate to that position.  0 and 4 are equivalent for starting position.\n")
+		fmt.Printf(" home, end = beginning and end of slice of images.\n")
+		fmt.Printf(" left, right = previous and next image.\n")
+		fmt.Printf(" up, down = previous and next image.\n")
+		fmt.Printf(" q,x,escape = quit.\n")
+		fmt.Printf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).\n")
+		fmt.Printf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).\n")
+		fmt.Printf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.\n")
 		flag.PrintDefaults()
+		//fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version()) old way to do this, which is inadequate.
+		//fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
+		//fmt.Fprintf(flag.CommandLine.Output(), " z = zoom and also toggles sticky.\n")
+		//fmt.Fprintf(flag.CommandLine.Output(), " v = verbose.\n")
+		//flag.PrintDefaults()
 	}
 
 	flag.Parse()
@@ -270,10 +297,12 @@ func loadTheImage() {
 
 	atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
 
+	minWidth := min(imgWidth, maxWidth) // added Mar 20, 2026, after shown to work in img2.
+	minHeight := min(imgHeight, maxHeight)
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
 		globalW.SetContent(loadedimg)
-		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 		globalW.SetTitle(title)
 		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
