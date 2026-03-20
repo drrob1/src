@@ -244,7 +244,7 @@ func loadTheImage() {
 	imgWidth := bounds.Max.X
 
 	//              title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s, %d x %d, SF=%2f; %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
+	title := fmt.Sprintf("%s, %d x %d, SF=%.2f; %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title, "and cwd=", cwd)
 	}
@@ -274,8 +274,7 @@ func loadTheImage() {
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		//                                     title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-		title = fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)
+		//                     title = fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)  I'm leaving the title as it was.  I don't remember why I have this line.  Removed 3/20/26.
 	}
 
 	if *verboseFlag {
