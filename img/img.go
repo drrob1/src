@@ -152,6 +152,7 @@ func main() {
 		fmt.Printf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).\n")
 		fmt.Printf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).\n")
 		fmt.Printf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.\n")
+		fmt.Printf(" '9' = reset scale factor to 0.99 and zero the rotatedTimes variable.\n")
 		flag.PrintDefaults()
 	}
 
@@ -341,7 +342,7 @@ func loadTheImage(idx int) {
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
 		globalW.SetContent(loadedimg)
-		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight))) // if I don't resize, the image is much too small to be seen.  See img2 for a different way to handle this.
 		globalW.SetTitle(title)
 		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
@@ -570,6 +571,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		rotateAndLoadTheImage(index, 0)
 	case fyne.Key9:
 		scaleFactor = 0.99
+		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
 		keyCmdChan <- loadImgCmd
 
 	default:
