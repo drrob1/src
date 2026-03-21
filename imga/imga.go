@@ -316,7 +316,7 @@ func filenameAlphaIndex(files sort.StringSlice, name string, intchan chan int) {
 		return
 	}
 	index := sort.SearchStrings(files, name)
-	if index == len(files) { // this will not catch many not found errors, but I don't know what else to look for
+	if index == len(files) {
 		index = -1
 	}
 	intchan <- index
