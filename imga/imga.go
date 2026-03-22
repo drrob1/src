@@ -248,18 +248,6 @@ func loadTheImage() {
 	if *verboseFlag {
 		fmt.Println(title, "and cwd=", cwd)
 	}
-	/* redundant code
-	if imgWidth > maxWidth {
-		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-		title = title + "; resized."
-	} else if imgHeight > maxHeight {
-		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-		title = title + "; resized."
-	}
-	bounds = img.Bounds()
-	imgHeight = bounds.Max.Y
-	imgWidth = bounds.Max.X
-	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.

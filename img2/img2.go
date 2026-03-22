@@ -302,7 +302,6 @@ func main() {
 
 	imgFilename := flag.Arg(0)
 	baseFilename := filepath.Base(imgFilename)
-	//ctfmt.Printf(ct.Red, true, " imgFilename = %s, baseFilename = %s\n", imgFilename, baseFilename)
 
 	if flag.NArg() >= 1 {
 		go filenameIndex(imageInfo, baseFilename, indexChan)
@@ -357,25 +356,11 @@ func loadTheImage() {
 	}
 	imgHeight := img.Bounds().Max.Y
 	imgWidth := img.Bounds().Max.X
-	//bounds := img.Bounds()
-	//imgHeight := bounds.Max.Y
-	//imgWidth := bounds.Max.X
 
-	//                             title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s", imgname, imgWidth, imgHeight, imgFmtName, cwd)
 	title := fmt.Sprintf("%s: %s %d x %d, SF=%.2f ", imgFmtName, imgName, imgWidth, imgHeight, scaleFactor)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
-
-	/*  Andy said that this code is not needed.
-	if imgWidth > maxWidth {
-		img = resize.Resize(maxWidth, 0, img, resize.Lanczos3)
-		title = title + "; resized."
-	} else if imgHeight > maxHeight {
-		img = resize.Resize(0, maxHeight, img, resize.Lanczos3)
-		title = title + "; resized."
-	}
-	*/
 
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
@@ -419,8 +404,7 @@ func loadTheImage() {
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
 		globalW.SetContent(GUI)
-		// globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight+textboxheight))) // if I don't do this, the image is too small to be seen.
-		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
+		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight))) // if I don't do this, the image is too small to be seen.
 		globalW.SetTitle(title)
 		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()

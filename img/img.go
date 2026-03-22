@@ -86,7 +86,7 @@ REVISION HISTORY
 */
 
 const LastModified = "Mar 20, 2026"
-const keyCmdChanSize = 20
+const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
 	prevImgCmd
@@ -315,7 +315,6 @@ func loadTheImage(idx int) {
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
 		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgFmtName)
 	}
 
@@ -342,7 +341,7 @@ func loadTheImage(idx int) {
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
 		globalW.SetContent(loadedimg)
-		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight))) // if I don't resize, the image is much too small to be seen.  See img2 for a different way to handle this.
+		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight))) // if I don't resize, the image is much too small to be seen.  See img2 or imga for a different way to handle this.
 		globalW.SetTitle(title)
 		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
@@ -359,7 +358,6 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 		}
 	}
 	intchan <- -1
-	//return  also redundant
 }
 
 // ------------------------------- MyReadDirForImages -----------------------------------
@@ -408,7 +406,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 	}
 
 	imageInfoChan <- fi
-	// return  also redundant
+
 } // MyReadDirForImages
 
 // ------------------------------------------------------- isSorted -----------------------------------------------
@@ -430,7 +428,7 @@ func nextImage() {
 		index--
 	}
 	loadTheImage(index)
-	// return  also redundant
+
 } // end nextImage
 
 // ------------------------------------------ prevImage -------------------------------------------------------
@@ -441,7 +439,7 @@ func prevImage() {
 		index++
 	}
 	loadTheImage(index)
-	// return  also redundant
+
 } // end prevImage
 
 // ------------------------------------------ firstImage -----------------------------------------------------
@@ -476,52 +474,52 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		if !sticky {
 			scaleFactor = 1
 		}
-		//prevImage()
+		//                                prevImage()
 		keyCmdChan <- prevImgCmd
 	case fyne.KeyDown:
 		if !sticky {
 			scaleFactor = 1
 		}
-		//nextImage()
+		//                                nextImage()
 		keyCmdChan <- nextImgCmd
 	case fyne.KeyLeft:
 		if !sticky {
 			scaleFactor = 1
 		}
-		//prevImage()
+		//                                prevImage()
 		keyCmdChan <- prevImgCmd
 	case fyne.KeyRight:
 		if !sticky {
 			scaleFactor = 1
 		}
-		//nextImage()
+		//                               nextImage()
 		keyCmdChan <- nextImgCmd
 	case fyne.KeyEscape, fyne.KeyQ, fyne.KeyX:
 		globalW.Close() // quits the app if this is the last window, which it is.
-		//		globalA.Quit()
+		//		                         globalA.Quit()
 	case fyne.KeyHome:
 		if !sticky {
 			scaleFactor = 1
 		}
-		//firstImage()
+		//                               firstImage()
 		keyCmdChan <- firstImgCmd
 	case fyne.KeyEnd:
 		if !sticky {
 			scaleFactor = 1
 		}
-		//lastImage()
+		//                               lastImage()
 		keyCmdChan <- lastImgCmd
 	case fyne.KeyPageUp:
 		scaleFactor *= 1.1 // I'm reversing what I did before.  PageUp now scales up
-		//loadTheImage()
+		//                               loadTheImage()
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyPageDown:
 		scaleFactor *= 0.9 // I'm reversing what I did before.  PageDn now scales down
-		//loadTheImage()
+		//                               loadTheImage()
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyPlus, fyne.KeyAsterisk:
 		scaleFactor *= 1.1
-		//loadTheImage()
+		//                               loadTheImage()
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
 		scaleFactor = 1
@@ -529,21 +527,21 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
-		//loadTheImage()
+		//                               loadTheImage()
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		if !sticky {
 			scaleFactor = 1
 		}
-		//nextImage()
+		//                              nextImage()
 		keyCmdChan <- nextImgCmd
 	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
-		//prevImage()
+		//                              prevImage()
 		keyCmdChan <- prevImgCmd
 	case fyne.KeySlash:
 		scaleFactor *= 0.9
-		//loadTheImage()
+		//                             loadTheImage()
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyV:
 		*verboseFlag = !*verboseFlag
