@@ -5,19 +5,8 @@ import (
 	"image"
 	"image/gif"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/storage"
-	"github.com/disintegration/imaging"
-	"github.com/nfnt/resize"
-	flag "github.com/spf13/pflag"
-	_ "golang.org/x/image/webp"
-	//_ "image/gif"
 	"image/jpeg"
-	//_ "image/jpeg"
 	"image/png"
-	//_ "image/png"
 	"math"
 	"os"
 	"path/filepath"
@@ -26,13 +15,15 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-	//ct "github.com/daviddengcn/go-colortext"
-	//ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	//"fyne.io/fyne/v2/internal/widget"
-	//"fyne.io/fyne/v2/layout"
-	//"fyne.io/fyne/v2/container"
-	//"image/color"
-	//"github.com/disintegration/imaging"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/storage"
+	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
+	flag "github.com/spf13/pflag"
+	_ "golang.org/x/image/webp"
 )
 
 // Based on Go GUI with Fyne, Chap 4.
@@ -83,9 +74,10 @@ REVISION HISTORY
 18 Mar 26 -- Adding an automatic scaling of the image to fit the screen size.
 19 Mar 26 -- Enhanced the usage message, shown when using the -h or --help flags.
 20 Mar 26 -- Adding '9' to mean scaleFactor 0.99
+22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 */
 
-const LastModified = "Mar 20, 2026"
+const LastModified = "Mar 22, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -97,6 +89,8 @@ const (
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080   \ unused
 const maxHeight = 900 // actual resolution is 1920 x 1080   /
+
+const dateFormatStr = "1/2/06"
 
 var index int
 var loadedimg *canvas.Image
@@ -278,7 +272,8 @@ func loadTheImage(idx int) {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf(" %s %s, %d x %d, SF=%.2f \n", imgFmtName, imgName, imgWidth, imgHeight, scaleFactor)
+	dateStr := imageInfo[idx].ModTime().Format(dateFormatStr)
+	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f %s %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -315,7 +310,8 @@ func loadTheImage(idx int) {
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgFmtName)
+		dateStr = imageInfo[idx].ModTime().Format(dateFormatStr)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
 	}
 
 	if *verboseFlag {
@@ -645,7 +641,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	dateStr := imageInfo[idx].ModTime().Format(dateFormatStr)
+	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -663,7 +660,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		bounds = imgImg.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		title = fmt.Sprintf("%s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr)
+		fmt.Println(title)
 	}
 
 	if *verboseFlag {

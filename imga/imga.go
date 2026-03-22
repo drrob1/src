@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -63,9 +64,10 @@ REVISION HISTORY
  1 Dec 25 -- Added fyne.Do, as was supposed to happen long ago.
 18 Jan 26 -- Now centering output in loadTheImage.  Tested in img.go and it works, so I'm porting it here.
 20 Mar 26 -- I cconfirmed in img2 that resizing the image to fit the screen works.  And updated the usage message
+22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 */
 
-const LastModified = "March 20, 2026"
+const LastModified = "March 22, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -77,6 +79,8 @@ const (
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
+
+const dateFormatStr = "1/2/06"
 
 var index int
 var loadedimg *canvas.Image
@@ -225,7 +229,24 @@ func processKeys() {
 // --------------------------------------------------- loadTheImage ------------------------------
 func loadTheImage() {
 	imgname := imageInfo[index]
-	fullfilename := cwd + string(filepath.Separator) + imgname
+	imgFI, err := os.Stat(imgname)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, " Error from os.Stat of", imgname, "is", err)
+		dialog.ShowError(err, globalW)
+	}
+	if imgFI.IsDir() { // added by AI.  I'll leave it for now.
+		fmt.Fprintln(os.Stderr, imgname, "is a directory.")
+	}
+	if *verboseFlag {
+		fmt.Println("imgname=", imgname)
+	}
+	// fullfilename := cwd + string(filepath.Separator) + imgname  old way of getting this.  I prefer to use the std library.
+	fullfilename, err := filepath.Abs(imgname)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, " Error from filepath.Abs of", imgname, "is", err)
+		dialog.ShowError(err, globalW)
+		return
+	}
 	imageURI := storage.NewFileURI(fullfilename)
 	imgRead, err := storage.Reader(imageURI)
 	if err != nil {
@@ -243,10 +264,10 @@ func loadTheImage() {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	//              title := fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-	title := fmt.Sprintf("%s, %d x %d, SF=%.2f; %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgFmtName)
+	imgDateStr := imgFI.ModTime().Format(dateFormatStr)
+	title := fmt.Sprintf("%s, %d x %d, SF=%.2f; %s %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgDateStr, imgFmtName)
 	if *verboseFlag {
-		fmt.Println(title, "and cwd=", cwd)
+		fmt.Println(title, "and cwd=", cwd, "and fullfilename", fullfilename)
 	}
 
 	if scaleFactor != 1 {
@@ -262,7 +283,7 @@ func loadTheImage() {
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		//                     title = fmt.Sprintf("%s, %d x %d, type=%s \n", imgname, imgWidth, imgHeight, imgFmtName)  I'm leaving the title as it was.  I don't remember why I have this line.  Removed 3/20/26.
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f; %s %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgDateStr, imgFmtName)
 	}
 
 	if *verboseFlag {
@@ -584,6 +605,14 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	fullFilename, err := filepath.Abs(imgName)
 	if err != nil {
 		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
+		dialog.ShowError(err, globalW)
+		return
+	}
+	imgFI, err := os.Stat(imgName)
+	if err != nil {
+		fmt.Printf(" loadTheImage(%d): os.Stat error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
+		dialog.ShowError(err, globalW)
+		return
 	}
 
 	imgRead, err := imaging.Open(fullFilename)
@@ -605,7 +634,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	imgDateStr := imgFI.ModTime().Format(dateFormatStr)
+	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgDateStr)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -623,8 +653,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		bounds = imgImg.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-		title = fmt.Sprintf("%s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgDateStr)
 	}
 
 	if *verboseFlag {

@@ -78,13 +78,16 @@ REVISION HISTORY
 18 Jan 26 -- Now centering the output in loadTheImage.  Tested in img.go and it works, so I'm porting it here.
 20 Mar 26 -- Playing w/ another way to handle large images, involving the resize of the image to fit the screen.  It works.
 				And updated the usage message
+22 Mar 26 -- Changed how the title is constructed, added a date to the title, and changed the color of the text at the bottom to black.  It looks much better to me now.
 */
 
-const LastModified = "March 20, 2026"
+const LastModified = "March 22, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
+
+const dateFormatStr = "1/2/06"
 
 type ImageWidget struct {
 	widget.BaseWidget
@@ -211,12 +214,15 @@ var imageAsDisplayed image.Image
 var scaleFactor float64 = 1
 var shiftState bool // it must be global to preserve state btwn key presses.
 
-var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
-
+// I decided to use black, which is color.Black.  I don't have to make it myself by mixing the colors.
 //var red = color.NRGBA{R: 100, G: 0, B: 0, A: 255}  not used, but I'm keeping these here for reference.
 //var blue = color.NRGBA{R: 0, G: 0, B: 100, A: 255}
 //var gray = color.Gray{Y: 100}
 //var cyan = color.NRGBA{R: 0, G: 255, B: 255, A: 255}
+//var red = color.NRGBA{R: 255, G: 0, B: 0, A: 255}
+//var blue = color.NRGBA{R: 0, G: 0, B: 255, A: 255}
+//var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
+//var yellow = color.NRGBA{R: 255, G: 255, B: 0, A: 255}
 
 // isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -357,7 +363,8 @@ func loadTheImage() {
 	imgHeight := img.Bounds().Max.Y
 	imgWidth := img.Bounds().Max.X
 
-	title := fmt.Sprintf("%s: %s %d x %d, SF=%.2f ", imgFmtName, imgName, imgWidth, imgHeight, scaleFactor)
+	dateStr := imageInfo[index].ModTime().Format(dateFormatStr)
+	title := fmt.Sprintf("%s %d x %d, SF=%.2f %s %s ", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -383,8 +390,8 @@ func loadTheImage() {
 		fmt.Println()
 	}
 
-	labelStr := fmt.Sprintf("%s %s; %dw x %dh", imgFmtName, imgName, imgWidth, imgHeight)
-	label := canvas.NewText(labelStr, green)
+	labelStr := fmt.Sprintf("%s; %dw x %dh %s %s", imgName, imgWidth, imgHeight, dateStr, imgFmtName)
+	label := canvas.NewText(labelStr, color.Black)
 	label.TextStyle.Bold = true
 	label.Alignment = fyne.TextAlignCenter
 
@@ -668,7 +675,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	imgHeight := bounds.Max.Y
 	imgWidth := bounds.Max.X
 
-	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+	dateStr := imageInfo[idx].ModTime().Format(dateFormatStr)
+	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -686,8 +694,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		bounds = imgImg.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		//                                title = fmt.Sprintf("%s width=%d, height=%d, type=%s and cwd=%s\n", imgname, imgWidth, imgHeight, imgFmtName, cwd)
-		title = fmt.Sprintf("%s, %d x %d, SF=%.2f \n", imgName, imgWidth, imgHeight, scaleFactor)
+		title = fmt.Sprintf("%s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr)
 	}
 
 	if *verboseFlag {
