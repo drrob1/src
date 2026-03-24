@@ -65,9 +65,10 @@ REVISION HISTORY
 18 Jan 26 -- Now centering output in loadTheImage.  Tested in img.go and it works, so I'm porting it here.
 20 Mar 26 -- I cconfirmed in img2 that resizing the image to fit the screen works.  And updated the usage message
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
+24 Mar 26 -- Added menu, icon and playing w/ rich text widget.
 */
 
-const LastModified = "March 22, 2026"
+const LastModified = "March 24, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota

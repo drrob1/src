@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"image"
 	"image/gif"
@@ -76,7 +77,7 @@ REVISION HISTORY
 19 Mar 26 -- Enhanced the usage message, shown when using the -h or --help flags.
 20 Mar 26 -- Adding '9' to mean scaleFactor 0.99
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
-24 Mar 26 -- Adding a menu for help, about and quit.
+24 Mar 26 -- Adding a menu for help, about and quit.  And added an icon.
 */
 
 const LastModified = "Mar 24, 2026"
@@ -110,6 +111,9 @@ var shiftState bool
 var keyCmdChan chan int
 var rotatedTimes int64 // used in keyTyped.  And atomicadd so need this type.
 var imageAsDisplayed image.Image
+
+//go:embed pictureIcon-64x64.png
+var pictureIcon []byte
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -199,7 +203,10 @@ func main() {
 		fmt.Println(str)
 	}
 
+	picIconRes := fyne.NewStaticResource("pictureIcon", pictureIcon)
+
 	globalA = app.New() // this line must appear before any other uses of fyne.
+	globalA.SetIcon(picIconRes)
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
