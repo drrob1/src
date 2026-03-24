@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/color"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
@@ -13,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"src/misc"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -79,13 +79,17 @@ REVISION HISTORY
 20 Mar 26 -- Playing w/ another way to handle large images, involving the resize of the image to fit the screen.  It works.
 				And updated the usage message
 22 Mar 26 -- Changed how the title is constructed, added a date to the title, and changed the color of the text at the bottom to black.  It looks much better to me now.
+23 Mar 26 -- Will use misc.getMagnitudeString from dv.go.  And will set a min size as well as a max size.
+
 */
 
-const LastModified = "March 22, 2026"
+const LastModified = "March 23, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
+const minWidth = 450
+const minHeight = 300
 
 const dateFormatStr = "1/2/06"
 
@@ -364,7 +368,7 @@ func loadTheImage() {
 	imgWidth := img.Bounds().Max.X
 
 	dateStr := imageInfo[index].ModTime().Format(dateFormatStr)
-	title := fmt.Sprintf("%s %d x %d, SF=%.2f %s %s ", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
+	title := fmt.Sprintf("%s: %d x %d, SF=%.2f, %s, %s ", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
 	if *verboseFlag {
 		fmt.Println(title)
 	}
@@ -390,10 +394,12 @@ func loadTheImage() {
 		fmt.Println()
 	}
 
-	labelStr := fmt.Sprintf("%s; %dw x %dh %s %s", imgName, imgWidth, imgHeight, dateStr, imgFmtName)
-	label := canvas.NewText(labelStr, color.Black)
-	label.TextStyle.Bold = true
-	label.Alignment = fyne.TextAlignCenter
+	sizeStr := misc.GetMagnitudeString(imageInfo[index].Size())
+	labelStr := fmt.Sprintf("%s: %dw x %dh; %s, %s", imgName, imgWidth, imgHeight, dateStr, sizeStr)
+	// label := canvas.NewText(labelStr, color.Black)
+	//label.TextStyle.Bold = true
+	//label.Alignment = fyne.TextAlignCenter
+	label := widget.NewLabel(labelStr)
 
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.ScaleMode = canvas.ImageScaleFastest
@@ -406,8 +412,11 @@ func loadTheImage() {
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
 
-	minWidth := min(imgWidth, maxWidth)
-	minHeight := min(imgHeight+textboxheight, maxHeight)
+	maxWidth := min(imgWidth, maxWidth)
+	maxHeight := min(imgHeight+textboxheight, maxHeight)
+	minWidth := max(maxWidth, minWidth)
+	minHeight := max(maxHeight, minHeight)
+
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
 		globalW.SetContent(GUI)

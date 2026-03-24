@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/rand/v2"
@@ -21,6 +22,7 @@ REVISION HISTORY
 24 May 24 -- Adding comments that can be processed by go doc.
  9 Nov 24 -- Added Floor function to automatically correct small floating point errors.  It works in hpcalc2, so I copied it here, too.
 24 Nov 24 -- Enhanced Floor function to validate the places param.
+23 Mar 26 -- Copied getMagnitudeString from dv.go.
 */
 
 // MakeSubst -- input a string, output a string that substitutes '=' -> '+' and ';' -> '*'
@@ -145,4 +147,28 @@ func Floor(real, places float64) float64 {
 		result *= -1
 	}
 	return result
+}
+
+// GetMagnitudeString -- Intended for the FileInfo size field.  Put here so the img routines can use it.  Copied from dv.go.
+func GetMagnitudeString(j int64) string {
+	var s1 string
+	var f float64
+	//var color ct.Color
+	switch {
+	case j > 1_000_000_000_000: // 1 trillion, or TB
+		f = float64(j) / 1_000_000_000_000
+		s1 = fmt.Sprintf("%.4g TB", f)
+	case j > 1_000_000_000: // 1 billion, or GB
+		f = float64(j) / 1_000_000_000
+		s1 = fmt.Sprintf("%.4g GB", f)
+	case j > 1_000_000: // 1 million, or MB
+		f = float64(j) / 1_000_000
+		s1 = fmt.Sprintf("%.4g mb", f)
+	case j > 1000: // KB
+		f = float64(j) / 1000
+		s1 = fmt.Sprintf("%.3g kb", f)
+	default:
+		s1 = fmt.Sprintf("%3d bytes", j)
+	}
+	return s1
 }
