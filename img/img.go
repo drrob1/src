@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
@@ -75,9 +76,10 @@ REVISION HISTORY
 19 Mar 26 -- Enhanced the usage message, shown when using the -h or --help flags.
 20 Mar 26 -- Adding '9' to mean scaleFactor 0.99
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
+24 Mar 26 -- Adding a menu for help, about and quit.
 */
 
-const LastModified = "Mar 22, 2026"
+const LastModified = "Mar 24, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -123,30 +125,55 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
-	flag.Usage = func() {
+	stringSlice := make([]string, 0, 20)
+
+	helpFunc := func() {
 		executable, err := os.Executable()
 		if err != nil {
 			panic(err)
 		}
 		ExecFI, _ := os.Stat(executable)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Printf(" %s last altered %s, compiled with %s, and linked %s. \n",
+		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.\n\n",
 			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
-		fmt.Printf(" Usage information:\n")
-		fmt.Printf(" z = zoom and also toggles sticky.\n")
-		fmt.Printf(" v = verbose.\n")
-		fmt.Printf(" r = rotate 90º clockwise.\n")
-		fmt.Printf(" s = save current state of image.  Equivalent to w.\n")
-		fmt.Printf(" w = write current state of image.  Equivalent to s.\n")
-		fmt.Printf(" 0,1,2,3,4 = rotate to that position.  0 and 4 are equivalent for starting position.\n")
-		fmt.Printf(" home, end = beginning and end of slice of images.\n")
-		fmt.Printf(" left, right = previous and next image.\n")
-		fmt.Printf(" up, down = previous and next image.\n")
-		fmt.Printf(" q,x,escape = quit.\n")
-		fmt.Printf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).\n")
-		fmt.Printf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).\n")
-		fmt.Printf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.\n")
-		fmt.Printf(" '9' = reset scale factor to 0.99 and zero the rotatedTimes variable.\n")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" Usage information:")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" z = zoom and also toggles sticky.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" v = verbose.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" r = rotate 90º clockwise.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" s = save current state of image.  Equivalent to w.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" w = write current state of image.  Equivalent to s.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" 0,1,2,3,4 = rotate to that position.  0 and 4 are equivalent for starting position.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" home, end = beginning and end of slice of images.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" left, right = previous and next image.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" up, down = previous and next image.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" q,x,escape = quit.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" '9' = reset scale factor to 0.99 and zero the rotatedTimes variable.")
+		stringSlice = append(stringSlice, s)
+	}
+
+	flag.Usage = func() {
+		helpFunc()
+		combinedStr := strings.Join(stringSlice, "\n")
+		fmt.Println(combinedStr)
+		fmt.Println()
 		flag.PrintDefaults()
 	}
 
@@ -187,6 +214,27 @@ func main() {
 		}
 		fmt.Println()
 	}
+
+	menuItem1 := fyne.NewMenuItem("About", func() {
+		executable, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		ExecFI, _ := os.Stat(executable)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.",
+			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
+		dialog.ShowInformation("About", s, globalW)
+	})
+
+	menuItem2 := fyne.NewMenuItem("Help", func() {
+		helpFunc()
+		CombinedStr := strings.Join(stringSlice, "\n")
+		dialog.ShowInformation("Help", CombinedStr, globalW)
+	})
+
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2)
+	globalW.SetMainMenu(fyne.NewMainMenu(newMenu))
 
 	// I have code here to read an image, show it's params, but not use that info after it's written to the screen.  I'll change this so all populating the main display window is done from
 	// the loadTheImage routine.  I used to do it here first before going into the keystroke loop.  I don't need that anymore.  It's much more flexible if I don't do that, so then I can
