@@ -81,10 +81,10 @@ REVISION HISTORY
 22 Mar 26 -- Changed how the title is constructed, added a date to the title, and changed the color of the text at the bottom to black.  It looks much better to me now.
 23 Mar 26 -- Will use misc.getMagnitudeString from dv.go.  And will set a min size as well as a max size.
 24 Mar 26 -- The large image code was not also included in the rotation routine.  Now it is.
-
+25 Mar 26 -- Moved the go routine to read the files to the top of main().
 */
 
-const LastModified = "March 24, 2026"
+const LastModified = "March 25, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -246,6 +246,18 @@ func isImage(file string) bool {
 // main --------------------------------------------------
 func main() {
 	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	indexChan := make(chan int, 1)
+	imgFileInfoChan := make(chan []os.FileInfo, 1) // buffered channel
+
+	go MyReadDirForImages(cwd, imgFileInfoChan)
+
 	flag.Usage = func() {
 		executable, err := os.Executable()
 		if err != nil {
@@ -286,18 +298,6 @@ func main() {
 	if *verboseFlag {
 		fmt.Println(str) // this works as intended
 	}
-
-	cwd, err = os.Getwd()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	indexChan := make(chan int, 1)
-	imgFileInfoChan := make(chan []os.FileInfo, 1) // buffered channel
-
-	go MyReadDirForImages(cwd, imgFileInfoChan)
 
 	if *verboseFlag {
 		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
@@ -353,7 +353,7 @@ func loadTheImage() {
 		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
 		return
 	}
-	//defer imgRead.Close() // moved based on static linter.  Not needed with imaging.Open
+	defer imgRead.Close() // moved based on static linter.  Not needed with imaging.Open, but this uses storage.Reader, so it does need to close it.
 
 	_, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.  Changed this line 2/22/25.
 	if err != nil {
@@ -397,10 +397,10 @@ func loadTheImage() {
 
 	sizeStr := misc.GetMagnitudeString(imageInfo[index].Size())
 	labelStr := fmt.Sprintf("%s: %dw x %dh; %s, %s", imgName, imgWidth, imgHeight, dateStr, sizeStr)
-	// label := canvas.NewText(labelStr, color.Black)
-	//label.TextStyle.Bold = true
-	//label.Alignment = fyne.TextAlignCenter
 	label := widget.NewLabel(labelStr)
+	//                                                                   label := canvas.NewText(labelStr, color.Black)
+	//                                                                   label.TextStyle.Bold = true
+	//                                                                   label.Alignment = fyne.TextAlignCenter
 
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.ScaleMode = canvas.ImageScaleFastest

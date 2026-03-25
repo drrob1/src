@@ -78,9 +78,10 @@ REVISION HISTORY
 20 Mar 26 -- Adding '9' to mean scaleFactor 0.99
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 24 Mar 26 -- Adding a menu for help, about and quit.  And added an icon.
+25 Mar 26 -- Moved the go routine that reads the file names and infos to the top of main().
 */
 
-const LastModified = "Mar 24, 2026"
+const LastModified = "Mar 25, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -129,6 +130,12 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
+	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make its buffer a size of 1.
+	go MyReadDirForImages(cwd, imgFileInfoChan)    // this go routine is started here, and in a few lines the channel read is assigned to the global imageInfo.
+
+	keyCmdChan = make(chan int, keyCmdChanSize)
+	indexChan := make(chan int, 1) // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
+
 	stringSlice := make([]string, 0, 20)
 
 	helpFunc := func() {
@@ -192,11 +199,6 @@ func main() {
 		fmt.Printf(" os.Getwd failed w/ error of %s\n", err)
 		os.Exit(1)
 	}
-
-	keyCmdChan = make(chan int, keyCmdChanSize)
-	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
-	indexChan := make(chan int, 1)                 // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
-	go MyReadDirForImages(cwd, imgFileInfoChan)    // this go routine is started here, and in a few lines the channel read is assigned to the global imageInfo.
 
 	str := fmt.Sprintf("Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {

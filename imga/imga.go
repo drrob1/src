@@ -72,9 +72,10 @@ REVISION HISTORY
 20 Mar 26 -- I cconfirmed in img2 that resizing the image to fit the screen works.  And updated the usage message
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 24 Mar 26 -- Added menu, icon and playing w/ rich text widget.
+25 Mar 26 -- Moved the go routine for reading the images to the top of main().
 */
 
-const LastModified = "March 24, 2026"
+const LastModified = "March 25, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -131,6 +132,19 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	indexChan := make(chan int, 1)
+	keyCmdChan = make(chan int, keyCmdChanSize)
+	imgFileInfoChan := make(chan []string, 1) // unbuffered channel increases latency.  Will make it buffered w/ a size of one.
+
+	go MyReadDirForImagesAlphabetically(cwd, imgFileInfoChan)
+
 	stringSlice := make([]string, 0, 20)
 
 	helpFunc := func() {
@@ -190,19 +204,6 @@ func main() {
 	if *verboseFlag {
 		fmt.Println(str) // this works as intended
 	}
-
-	cwd, err = os.Getwd()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	indexChan := make(chan int, 1)
-	keyCmdChan = make(chan int, keyCmdChanSize)
-	imgFileInfoChan := make(chan []string, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
-
-	go MyReadDirForImagesAlphabetically(cwd, imgFileInfoChan)
 
 	if *verboseFlag {
 		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
