@@ -1,9 +1,11 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"image"
+	"image/color"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
@@ -12,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"src/misc"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -19,8 +22,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/disintegration/imaging"
@@ -80,6 +86,8 @@ const (
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
+const minWidth = 450
+const minHeight = 300
 
 const dateFormatStr = "1/2/06"
 
@@ -89,6 +97,7 @@ var cwd string
 var imageInfo sort.StringSlice
 var globalA fyne.App
 var globalW fyne.Window
+var GUI fyne.CanvasObject
 var verboseFlag = flag.Bool("v", false, "verbose flag")
 var zoomFlag = flag.Bool("z", false, "set zoom flag to allow zooming up a lot")
 var stickyFlag = flag.Bool("sticky", true, "sticky flag for keeping zoom factor among images.") // default changed to true 8/21/23
@@ -98,6 +107,12 @@ var shiftState bool
 var keyCmdChan chan int
 var rotatedCtr int64 // used in keyTyped.  And atomicadd so need this type.
 var imageAsDisplayed image.Image
+
+var green = color.NRGBA{R: 0, G: 100, B: 0, A: 255}
+var yellow = color.NRGBA{R: 255, G: 255, B: 0, A: 255}
+
+//go:embed pictureIcon-64x64.png
+var pictureIcon []byte
 
 // -------------------------------------------------------- isNotImageStr ----------------------------------------
 func isNotImageStr(name string) bool {
@@ -116,35 +131,56 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
-	flag.Usage = func() {
+	stringSlice := make([]string, 0, 20)
+
+	helpFunc := func() {
 		executable, err := os.Executable()
 		if err != nil {
 			panic(err)
 		}
 		ExecFI, _ := os.Stat(executable)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		fmt.Printf(" %s last altered %s, compiled with %s, and linked %s. \n",
+		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.\n\n",
 			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
-		fmt.Printf(" Usage information:\n")
-		fmt.Printf(" z = zoom and also toggles sticky.\n")
-		fmt.Printf(" v = verbose.\n")
-		fmt.Printf(" r = rotate 90º clockwise.\n")
-		fmt.Printf(" s = save current state of image.  Equivalent to w.\n")
-		fmt.Printf(" w = write current state of image.  Equivalent to s.\n")
-		fmt.Printf(" 0,1,2,3,4 = rotate to that position.  0 and 4 are equivalent for starting position.\n")
-		fmt.Printf(" home, end = beginning and end of slice of images.\n")
-		fmt.Printf(" left, right = previous and next image.\n")
-		fmt.Printf(" up, down = previous and next image.\n")
-		fmt.Printf(" q,x,escape = quit.\n")
-		fmt.Printf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).\n")
-		fmt.Printf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).\n")
-		fmt.Printf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.\n")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" Usage information:")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" z = zoom and also toggles sticky.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" v = verbose.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" r = rotate 90º clockwise.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" s = save current state of image.  Equivalent to w.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" w = write current state of image.  Equivalent to s.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" 0,1,2,3,4 = rotate to that position.  0 and 4 are equivalent for starting position.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" home, end = beginning and end of slice of images.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" left, right = previous and next image.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" up, down = previous and next image.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" q,x,escape = quit.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" PgUp, PgDn = scale up (blow up, make bigger) and scale down (make smaller).")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" '+', '-' = scale up (blow up, make bigger) and scale down (make smaller).")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" '=' = reset scale factor to 1 and zero the rotatedTimes variable.")
+		stringSlice = append(stringSlice, s)
+		s = fmt.Sprintf(" '9' = reset scale factor to 0.99 and zero the rotatedTimes variable.")
+		stringSlice = append(stringSlice, s)
+	}
+
+	flag.Usage = func() {
+		helpFunc()
+		combinedStr := strings.Join(stringSlice, "\n")
+		fmt.Println(combinedStr)
+		fmt.Println()
 		flag.PrintDefaults()
-		//fmt.Fprintf(flag.CommandLine.Output(), " %s last altered %s, and compiled with %s. \n", os.Args[0], LastModified, runtime.Version()) old way to do this, which is inadequate.
-		//fmt.Fprintf(flag.CommandLine.Output(), " Usage information:\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " z = zoom and also toggles sticky.\n")
-		//fmt.Fprintf(flag.CommandLine.Output(), " v = verbose.\n")
-		//flag.PrintDefaults()
 	}
 
 	flag.Parse()
@@ -171,7 +207,11 @@ func main() {
 	if *verboseFlag {
 		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
 	}
+
+	picIconRes := fyne.NewStaticResource("pictureIcon", pictureIcon)
+
 	globalA = app.New() // this line must appear before any other uses of fyne.
+	globalA.SetIcon(picIconRes)
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
@@ -182,6 +222,27 @@ func main() {
 
 	imgFilename := flag.Arg(0)
 	baseFilename := filepath.Base(imgFilename)
+
+	menuItem1 := fyne.NewMenuItem("About", func() {
+		executable, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		ExecFI, _ := os.Stat(executable)
+		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.",
+			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
+		dialog.ShowInformation("About", s, globalW)
+	})
+
+	menuItem2 := fyne.NewMenuItem("Help", func() {
+		helpFunc()
+		CombinedStr := strings.Join(stringSlice, "\n")
+		dialog.ShowInformation("Help", CombinedStr, globalW)
+	})
+
+	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2)
+	globalW.SetMainMenu(fyne.NewMainMenu(newMenu))
 
 	if flag.NArg() >= 1 {
 		go filenameAlphaIndex(imageInfo, baseFilename, indexChan)
@@ -295,6 +356,16 @@ func loadTheImage() {
 		fmt.Println()
 	}
 
+	sizeStr := misc.GetMagnitudeString(imgFI.Size())
+	labelStr := fmt.Sprintf("%s: %dw x %dh; %s, %s", imgname, imgWidth, imgHeight, imgDateStr, sizeStr)
+	label := widget.NewRichText(
+		&widget.TextSegment{
+			//Style: widget.RichTextStyle{ColorName: theme.ColorNamePrimary},  this was a medium dark blue that I didn't like.
+			Style: widget.RichTextStyle{ColorName: theme.ColorNameWarning}, // this is like an orange, which is better.
+			Text:  labelStr,
+		},
+	)
+
 	loadedimg = canvas.NewImageFromImage(img)
 	loadedimg.ScaleMode = canvas.ImageScaleSmooth
 	if !*zoomFlag {
@@ -304,13 +375,18 @@ func loadTheImage() {
 
 	imageAsDisplayed = loadedimg.Image
 
-	atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
+	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
+	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 
-	minWidth := min(imgWidth, maxWidth) // added Mar 20, 2026, after shown to work in img2.
-	minHeight := min(imgHeight, maxHeight)
+	maxWidth := min(imgWidth, maxWidth)
+	maxHeight := min(imgHeight, maxHeight)
+	minWidth := max(maxWidth, minWidth)
+	minHeight := max(maxHeight, minHeight)
+
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
-		globalW.SetContent(loadedimg)
+		// globalW.SetContent(loadedimg)
+		globalW.SetContent(GUI)
 		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 		globalW.SetTitle(title)
 		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
