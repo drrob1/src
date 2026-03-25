@@ -751,8 +751,13 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
+	maxWidth := min(imgWidth, maxWidth)
+	maxHeight := min(imgHeight, maxHeight)
+	minWidth := max(maxWidth, minWidth)
+	minHeight := max(maxHeight, minHeight)
+
 	globalW.SetContent(canvasImage)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 	globalW.SetTitle(title)
 	globalW.Show()
 
