@@ -120,8 +120,8 @@ func isNotImageStr(name string) bool {
 }
 
 // ----------------------------------isImage ----------------------------------------------
-func isImage(file string) bool {
-	ext := strings.ToLower(filepath.Ext(file))
+func isImage(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
 	ext = strings.ToLower(ext)
 
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp"
@@ -317,75 +317,7 @@ func loadTheImage() {
 	rotatedCtr = 0 // reset this counter when load a fresh image.
 
 	displayImage(img, fullfilename, imgFmtName)
-	//bounds := img.Bounds()
-	//imgHeight := bounds.Max.Y
-	//imgWidth := bounds.Max.X
-	//
-	//imgDateStr := imgFI.ModTime().Format(dateFormatStr)
-	//title := fmt.Sprintf("%s, %d x %d, SF=%.2f; %s %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgDateStr, imgFmtName)
-	//if *verboseFlag {
-	//	fmt.Println(title, "and cwd=", cwd, "and fullfilename", fullfilename)
-	//}
-	//
-	//if scaleFactor != 1 {
-	//	if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
-	//		scaledHeight := float64(imgHeight) * scaleFactor
-	//		intHeight := uint(math.Round(scaledHeight))
-	//		img = resize.Resize(0, intHeight, img, resize.Lanczos3)
-	//	} else {
-	//		scaledWidth := float64(imgWidth) * scaleFactor
-	//		intWidth := uint(math.Round(scaledWidth))
-	//		img = resize.Resize(intWidth, 0, img, resize.Lanczos3)
-	//	}
-	//	bounds = img.Bounds()
-	//	imgHeight = bounds.Max.Y
-	//	imgWidth = bounds.Max.X
-	//	title = fmt.Sprintf("%s, %d x %d, SF=%.2f; %s %s \n", imgname, imgWidth, imgHeight, scaleFactor, imgDateStr, imgFmtName)
-	//}
-	//
-	//if *verboseFlag {
-	//	bounds = img.Bounds()
-	//	imgHeight = bounds.Max.Y
-	//	imgWidth = bounds.Max.X
-	//	fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
-	//	fmt.Println()
-	//}
-	//
-	//sizeStr := misc.GetMagnitudeString(imgFI.Size())
-	//labelStr := fmt.Sprintf("%s: %dw x %dh; %s, %s", imgname, imgWidth, imgHeight, imgDateStr, sizeStr)
-	//label := widget.NewRichText(
-	//	&widget.TextSegment{
-	//		//Style: widget.RichTextStyle{ColorName: theme.ColorNamePrimary},  this was a medium dark blue that I didn't like.
-	//		Style: widget.RichTextStyle{ColorName: theme.ColorNameWarning}, // this is like an orange, which is better.
-	//		Text:  labelStr,
-	//	},
-	//)
-	//
-	//loadedimg = canvas.NewImageFromImage(img)
-	//loadedimg.ScaleMode = canvas.ImageScaleSmooth
-	//if !*zoomFlag {
-	//	loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
-	//	//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
-	//}
-	//
-	//imageAsDisplayed = loadedimg.Image
-	//
-	//atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
-	//GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
-	//
-	//maxWidth := min(imgWidth, maxWidth)
-	//maxHeight := min(imgHeight, maxHeight)
-	//minWidth := max(maxWidth, minWidth)
-	//minHeight := max(maxHeight, minHeight)
-	//
-	//fyne.Do(func() {
-	//	globalW.SetContent(GUI)
-	//	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
-	//	globalW.SetTitle(title)
-	//	globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
-	//	globalW.Show()
-	//})
-	//
+
 } // end loadTheImage
 
 func displayImage(img image.Image, fullImgName string, imgFmtName string) {
@@ -458,12 +390,13 @@ func displayImage(img image.Image, fullImgName string, imgFmtName string) {
 	minWidth := max(maxWidth, minWidth)
 	minHeight := max(maxHeight, minHeight)
 
-	// Don't need fyne.Do here because these are not run from a go routine.
-	globalW.SetContent(GUI)
-	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
-	globalW.SetTitle(title)
-	globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
-	globalW.Show()
+	fyne.Do(func() {
+		globalW.SetContent(GUI)
+		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
+		globalW.SetTitle(title)
+		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
+		globalW.Show()
+	})
 
 }
 
@@ -481,19 +414,6 @@ func filenameAlphaIndex(files sort.StringSlice, name string, intchan chan int) {
 	// return
 }
 
-/*
-// ------------------------------- filenameIndex --------------------------------------
-func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
-	for i, fi := range fileinfos {
-		if fi.Name() == name {
-			intchan <- i
-			return
-		}
-	}
-	intchan <- -1
-	return
-}
-*/
 // ------------------------------- MyReadDirForImagesAlphabetically -----------------------------------
 
 func MyReadDirForImagesAlphabetically(dir string, imageInfoChan chan []string) {
@@ -527,68 +447,6 @@ func MyReadDirForImagesAlphabetically(dir string, imageInfoChan chan []string) {
 	imageInfoChan <- imgNamesSlice
 	// return
 } // MyReadDirForImagesAlphabetically
-/*
-// ------------------------------- MyReadDirForImages -----------------------------------
-
-func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
-	dirname, err := os.Open(dir)
-	if err != nil {
-		return
-	}
-	defer dirname.Close()
-
-	names, err := dirname.Readdirnames(0) // zero means read all names into the returned []string
-	if err != nil {
-		return
-	}
-
-	fi := make([]os.FileInfo, 0, len(names))
-	for _, name := range names {
-		if isImage(name) {
-			imgInfo, err := os.Lstat(name)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, " Error from os.Lstat ", err)
-				continue
-			}
-			fi = append(fi, imgInfo)
-		}
-	}
-
-	t0 := time.Now()
-	sortfcn := func(i, j int) bool {
-		return fi[i].ModTime().After(fi[j].ModTime()) // I want a newest-first sort.  Changed 12/20/20
-	}
-
-	sort.Slice(fi, sortfcn)
-	elapsedtime := time.Since(t0)
-
-	if *verboseFlag {
-		fmt.Printf(" Length of the image fileinfo slice is %d, and sorted in %s\n", len(fi), elapsedtime.String())
-		fmt.Println()
-	}
-
-	imageInfoChan <- fi
-	return
-} // MyReadDirForImages
-
-// ------------------------------------------------------- isSorted -----------------------------------------------
-func isSorted(slice []os.FileInfo) bool {
-	for i := 0; i < len(slice)-1; i++ {
-		if slice[i].ModTime().Before(slice[i+1].ModTime()) {
-			fmt.Println(" debugging: i=", i, "Name[i]=", slice[i].Name(), " and Name[i+1]=", slice[i+1].Name())
-			return false
-		}
-	}
-	return true
-}
-
-
-*/
-
-// ------------------------------------------------------- isSorted -----------------------------------------------
-//func isSortedAlpha(slice sort.StringSlice) bool {
-//	return sort.IsSorted(slice)
-//}
 
 // ---------------------------------------------- nextImage -----------------------------------------------------
 func nextImage() {
@@ -767,7 +625,6 @@ func rotateAndLoadTheImage(idx int, repeat int64) { // doesn't work yet in that 
 	}
 
 	var rotatedImg *image.NRGBA
-	//var imgImg image.Image
 	imgImg := imgRead
 
 	//                             fmt.Printf(" rotateAndLoadTheImage(%d): imgName=%s, fullFilename is %s, repeat counter is %d \n", idx, imgName, fullFilename, repeat)
@@ -779,60 +636,6 @@ func rotateAndLoadTheImage(idx int, repeat int64) { // doesn't work yet in that 
 
 	displayImage(imgImg, fullFilename, "") // we don't have the imgFmtName here.  So I'm ignoring it.
 
-	//bounds := imgImg.Bounds()
-	//imgHeight := bounds.Max.Y
-	//imgWidth := bounds.Max.X
-	//
-	//imgDateStr := imgFI.ModTime().Format(dateFormatStr)
-	//title := fmt.Sprintf(" %s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgDateStr)
-	//if *verboseFlag {
-	//	fmt.Println(title)
-	//}
-	//
-	//if scaleFactor != 1 {
-	//	if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
-	//		scaledHeight := float64(imgHeight) * scaleFactor
-	//		intHeight := uint(math.Round(scaledHeight))
-	//		imgImg = resize.Resize(0, intHeight, imgImg, resize.Lanczos3)
-	//	} else {
-	//		scaledWidth := float64(imgWidth) * scaleFactor
-	//		intWidth := uint(math.Round(scaledWidth))
-	//		imgImg = resize.Resize(intWidth, 0, imgImg, resize.Lanczos3)
-	//	}
-	//	bounds = imgImg.Bounds()
-	//	imgHeight = bounds.Max.Y
-	//	imgWidth = bounds.Max.X
-	//	title = fmt.Sprintf("%s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, imgDateStr)
-	//}
-	//
-	//if *verboseFlag {
-	//	bounds = imgImg.Bounds()
-	//	imgHeight = bounds.Max.Y
-	//	imgWidth = bounds.Max.X
-	//	fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
-	//	fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
-	//	fmt.Println()
-	//}
-	//
-	//imageAsDisplayed = imgImg
-	//
-	//canvasImage := canvas.NewImageFromImage(imgImg)
-	//canvasImage.ScaleMode = canvas.ImageScaleSmooth
-	//if !*zoomFlag {
-	//	canvasImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
-	//	//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
-	//}
-	//
-	//maxWidth := min(imgWidth, maxWidth)
-	//maxHeight := min(imgHeight, maxHeight)
-	//minWidth := max(maxWidth, minWidth)
-	//minHeight := max(maxHeight, minHeight)
-	//
-	//globalW.SetContent(canvasImage)
-	//globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
-	//globalW.SetTitle(title)
-	//globalW.Show()
-	//
 } // end rotateAndLoadTheImage
 
 func imgImage(img *image.NRGBA) image.Image {
