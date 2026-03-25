@@ -194,9 +194,10 @@ REVISION HISTORY
 10 Oct 25 -- I'm using {} to indicate a hard link.
 21 Jan 26 -- Fixed a bug in dvutil_windows.go.  Comment there explains it.
  7 Mar 26 -- Copied routines from dvutil_windows.go, so this would compile on linux also.  It seems that I broke that compatibility when I was chasing down problems I saw at work.
+25 Mar 26 -- getMagnitudeString is a helper function to format file sizes in a human-readable format.  And now MB and KB are capitalized for consistency.
 */
 
-const LastAltered = "7 March 2026"
+const LastAltered = "25 March 2026"
 
 // Outline
 // getFileInfosFromCommandLine will return a slice of FileInfos after the filter and exclude expression are processed.
@@ -929,27 +930,27 @@ func getMagnitudeString(j int64) (string, ct.Color) {
 		color = ct.White
 	case j > 100_000_000: // 100 million
 		f = float64(j) / 1_000_000
-		s1 = fmt.Sprintf("    %.4g mb", f)
+		s1 = fmt.Sprintf("    %.4g MB", f)
 		color = ct.Yellow
 	case j > 10_000_000: // 10 million
 		f = float64(j) / 1_000_000
-		s1 = fmt.Sprintf("     %.4g mb", f)
+		s1 = fmt.Sprintf("     %.4g MB", f)
 		color = ct.Yellow
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1000000
-		s1 = fmt.Sprintf("      %.4g mb", f)
+		s1 = fmt.Sprintf("      %.4g MB", f)
 		color = ct.Yellow
 	case j > 100_000: // 100 thousand
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("       %.4g kb", f)
+		s1 = fmt.Sprintf("       %.4g KB", f)
 		color = ct.Cyan
 	case j > 10_000: // 10 thousand
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("        %.4g kb", f)
+		s1 = fmt.Sprintf("        %.4g KB", f)
 		color = ct.Cyan
 	case j > 1000: // KB
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("         %.3g kb", f)
+		s1 = fmt.Sprintf("         %.3g KB", f)
 		color = ct.Cyan
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)

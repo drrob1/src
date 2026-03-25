@@ -163,10 +163,10 @@ func GetMagnitudeString(j int64) string {
 		s1 = fmt.Sprintf("%.4g GB", f)
 	case j > 1_000_000: // 1 million, or MB
 		f = float64(j) / 1_000_000
-		s1 = fmt.Sprintf("%.4g mb", f)
+		s1 = fmt.Sprintf("%.4g MB", f)
 	case j > 1000: // KB
 		f = float64(j) / 1000
-		s1 = fmt.Sprintf("%.3g kb", f)
+		s1 = fmt.Sprintf("%.3g KB", f)
 	default:
 		s1 = fmt.Sprintf("%3d bytes", j)
 	}
