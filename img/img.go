@@ -130,6 +130,13 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
+	fmt.Printf(" Image Viewer last modified %s, compiled using %s\n", LastModified, runtime.Version())
+	cwd, err = os.Getwd()
+	if err != nil {
+		fmt.Printf(" os.Getwd failed w/ error of %s\n", err)
+		os.Exit(1)
+	}
+
 	imgFileInfoChan := make(chan []os.FileInfo, 1) // unbuffered channel increases latency.  Will make its buffer a size of 1.
 	go MyReadDirForImages(cwd, imgFileInfoChan)    // this go routine is started here, and in a few lines the channel read is assigned to the global imageInfo.
 
@@ -193,12 +200,6 @@ func main() {
 
 	// Set up the slice of imgFileInfo, which is []os.FileInfo, sorted w/ newest first.  This slice is set up as a go routine and the result is passed back here in a channel.
 	// And define the 3 channels to be used here.  One is a keystroke channel, another is the imgFileInfo channel, and the 3rd is a image # channel.
-
-	cwd, err = os.Getwd()
-	if err != nil {
-		fmt.Printf(" os.Getwd failed w/ error of %s\n", err)
-		os.Exit(1)
-	}
 
 	str := fmt.Sprintf("Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {
@@ -416,6 +417,10 @@ func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 // ------------------------------- MyReadDirForImages -----------------------------------
 
 func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
+	if dir == "" {
+		dir = "."
+	}
+
 	dirname, err := os.Open(dir)
 	if err != nil {
 		return
