@@ -15,7 +15,6 @@ import (
 	"sort"
 	"src/misc"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -131,6 +130,19 @@ func isImage(file string) bool {
 // ---------------------------------------------------- main --------------------------------------------------
 func main() {
 	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	indexChan := make(chan int, 1)
+	keyCmdChan = make(chan int, keyCmdChanSize)
+	imgFileInfoChan := make(chan []string, 1) // unbuffered channel increases latency.  Will make it buffered.
+
+	go MyReadDirForImagesAlphabetically(cwd, imgFileInfoChan)
+
 	stringSlice := make([]string, 0, 20)
 
 	helpFunc := func() {
@@ -190,19 +202,6 @@ func main() {
 	if *verboseFlag {
 		fmt.Println(str) // this works as intended
 	}
-
-	cwd, err = os.Getwd()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " os.Getwd() err is %s.\n", err)
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	indexChan := make(chan int, 1)
-	keyCmdChan = make(chan int, keyCmdChanSize)
-	imgFileInfoChan := make(chan []string, 1) // unbuffered channel increases latency.  Will make it buffered now.  It only needs a buffer of 1 because it only receives once.
-
-	go MyReadDirForImagesAlphabetically(cwd, imgFileInfoChan)
 
 	if *verboseFlag {
 		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
@@ -314,6 +313,8 @@ func loadTheImage() {
 		fmt.Fprintln(os.Stderr, " Error from image.Decode is", err)
 		os.Exit(1)
 	}
+
+	rotatedCtr = 0 // reset this counter when load a fresh image.
 
 	displayImage(img, fullfilename, imgFmtName)
 	//bounds := img.Bounds()
@@ -450,7 +451,6 @@ func displayImage(img image.Image, fullImgName string, imgFmtName string) {
 
 	imageAsDisplayed = loadedimg.Image
 
-	atomic.StoreInt64(&rotatedCtr, 0)                           // reset this counter when load a fresh image.
 	GUI := container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 
 	maxWidth := min(imgWidth, maxWidth)
@@ -683,9 +683,9 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
 		keyCmdChan <- loadImgCmd
-	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
+	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had from the beginning.  So it goes.
 		scaleFactor = 1
-		atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
+		rotatedCtr = 0 // reset this counter when load a fresh image.
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyEnter, fyne.KeyReturn, fyne.KeySpace:
 		if !sticky {
@@ -708,7 +708,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
 		}
 	case fyne.KeyR:
-		atomic.AddInt64(&rotatedCtr, 1)
+		//                              fmt.Printf(" r key kit.  Before increment operator.  RotatedCounter is now %d\n", rotatedCtr)
+		rotatedCtr++
+		rotatedCtr = rotatedCtr % 4
+		//                              fmt.Printf(" r key kit.  After increment operator.  RotatedCounter is now %d\n", rotatedCtr)
 		rotateAndLoadTheImage(index, rotatedCtr) // index and rotatedCtr are global
 	case fyne.Key1:
 		rotatedCtr = 1
@@ -720,8 +723,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		rotatedCtr = 3
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
-		atomic.StoreInt64(&rotatedCtr, 0) // reset this counter when load a fresh image.
-		rotateAndLoadTheImage(index, 4)
+		rotatedCtr = 0
+		rotateAndLoadTheImage(index, 0)
 
 	default:
 		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
@@ -764,8 +767,10 @@ func rotateAndLoadTheImage(idx int, repeat int64) { // doesn't work yet in that 
 	}
 
 	var rotatedImg *image.NRGBA
-	var imgImg image.Image
+	//var imgImg image.Image
+	imgImg := imgRead
 
+	//                             fmt.Printf(" rotateAndLoadTheImage(%d): imgName=%s, fullFilename is %s, repeat counter is %d \n", idx, imgName, fullFilename, repeat)
 	for range repeat {
 		rotatedImg = imaging.Rotate90(imgRead)
 		imgImg = imgImage(rotatedImg) // need to convert from *image.NRGBA to image.Image
