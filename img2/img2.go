@@ -80,10 +80,11 @@ REVISION HISTORY
 				And updated the usage message
 22 Mar 26 -- Changed how the title is constructed, added a date to the title, and changed the color of the text at the bottom to black.  It looks much better to me now.
 23 Mar 26 -- Will use misc.getMagnitudeString from dv.go.  And will set a min size as well as a max size.
+24 Mar 26 -- The large image code was not also included in the rotation routine.  Now it is.
 
 */
 
-const LastModified = "March 23, 2026"
+const LastModified = "March 24, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -724,8 +725,13 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
+	maxWidth := min(imgWidth, maxWidth)
+	maxHeight := min(imgHeight+textboxheight, maxHeight)
+	minWidth := max(maxWidth, minWidth)
+	minHeight := max(maxHeight, minHeight)
+
 	globalW.SetContent(canvasImage)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 	globalW.SetTitle(title)
 	globalW.Show()
 
