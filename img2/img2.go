@@ -85,6 +85,7 @@ REVISION HISTORY
 */
 
 // Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
+// Does not use a loop to rotate the image.  It uses imaging.Rotate.
 
 const LastModified = "March 25, 2026"
 const textboxheight = 20

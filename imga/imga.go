@@ -73,10 +73,11 @@ REVISION HISTORY
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 24 Mar 26 -- Added menu, icon and playing w/ rich text widget.
 25 Mar 26 -- Moved the go routine for reading the images to the top of main().
-26 Mar 26 -- Added imaging.Open with autoOrientation option in RotateAndLoadTheImage.
+26 Mar 26 -- Added imaging.Open with autoOrientation option in RotateAndLoadTheImage.  And fixed an initializion bug in the image rotate loop that I discovered and fixed first in imgb.go.
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
+// Uses a loop to rotate the image.
 
 const LastModified = "March 26, 2026"
 const keyCmdChanSize = 20
@@ -703,7 +704,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	}
 
 	var rotatedImg *image.NRGBA
-	var imgImg image.Image
+	imgImg := imgRead
 
 	for range repeat {
 		rotatedImg = imaging.Rotate90(imgRead)

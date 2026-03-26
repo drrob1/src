@@ -76,6 +76,7 @@ REVISION HISTORY
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
+// Uses a loop to rotate the image.
 
 const LastModified = "March 26, 2026"
 const keyCmdChanSize = 20
