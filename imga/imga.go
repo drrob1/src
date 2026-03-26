@@ -73,9 +73,12 @@ REVISION HISTORY
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 24 Mar 26 -- Added menu, icon and playing w/ rich text widget.
 25 Mar 26 -- Moved the go routine for reading the images to the top of main().
+26 Mar 26 -- Added imaging.Open with autoOrientation option in RotateAndLoadTheImage.
 */
 
-const LastModified = "March 25, 2026"
+// Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
+
+const LastModified = "March 26, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -693,7 +696,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		return
 	}
 
-	imgRead, err := imaging.Open(fullFilename)
+	imgRead, err := imaging.Open(fullFilename, imaging.AutoOrientation(true))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
 		return

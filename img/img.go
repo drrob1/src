@@ -81,6 +81,8 @@ REVISION HISTORY
 25 Mar 26 -- Moved the go routine that reads the file names and infos to the top of main().
 */
 
+// Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
+
 const LastModified = "Mar 25, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
@@ -306,7 +308,6 @@ func processKeys() {
 
 // loadTheImage -- loads the image given by the index
 func loadTheImage(idx int) {
-	//                                          imgname := imageInfo[index].Name()  where index was a global.  I changed taking input from a global.
 	imgName := imageInfo[idx].Name()
 	fullFilename, err := filepath.Abs(imgName)
 	if err != nil {

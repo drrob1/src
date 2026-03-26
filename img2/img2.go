@@ -84,6 +84,8 @@ REVISION HISTORY
 25 Mar 26 -- Moved the go routine to read the files to the top of main().
 */
 
+// Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
+
 const LastModified = "March 25, 2026"
 const textboxheight = 20
 
