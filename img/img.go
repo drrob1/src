@@ -79,12 +79,14 @@ REVISION HISTORY
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 24 Mar 26 -- Adding a menu for help, about and quit.  And added an icon.
 25 Mar 26 -- Moved the go routine that reads the file names and infos to the top of main().
+26 Mar 26 -- Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
+
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
 // Does not use a loop to rotate the image.  It uses a switch-case statement.
 
-const LastModified = "Mar 25, 2026"
+const LastModified = "Mar 26, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -749,6 +751,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	globalW.SetContent(canvasImage)
 	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
 	globalW.SetTitle(title)
+	globalW.CenterOnScreen()
 	globalW.Show()
 
 } // end rotateAndLoadTheImage

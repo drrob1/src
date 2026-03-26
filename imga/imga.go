@@ -73,7 +73,8 @@ REVISION HISTORY
 22 Mar 26 -- Changed how the title is constructed and added a date to the title.
 24 Mar 26 -- Added menu, icon and playing w/ rich text widget.
 25 Mar 26 -- Moved the go routine for reading the images to the top of main().
-26 Mar 26 -- Added imaging.Open with autoOrientation option in RotateAndLoadTheImage.  And fixed an initializion bug in the image rotate loop that I discovered and fixed first in imgb.go.
+26 Mar 26 -- Added imaging.Open with autoOrientation option in RotateAndLoadTheImage.  Fixed an initializion bug in the image rotate loop that I discovered and fixed first in imgb.go.
+			 Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
@@ -764,6 +765,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	globalW.SetContent(canvasImage)
 	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 	globalW.SetTitle(title)
+	globalW.CenterOnScreen()
 	globalW.Show()
 
 } // end rotateAndLoadTheImage

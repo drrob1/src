@@ -82,12 +82,13 @@ REVISION HISTORY
 23 Mar 26 -- Will use misc.getMagnitudeString from dv.go.  And will set a min size as well as a max size.
 24 Mar 26 -- The large image code was not also included in the rotation routine.  Now it is.
 25 Mar 26 -- Moved the go routine to read the files to the top of main().
+26 Mar 26 -- Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
 */
 
 // Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
 // Does not use a loop to rotate the image.  It uses imaging.Rotate.
 
-const LastModified = "March 25, 2026"
+const LastModified = "March 26, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -736,6 +737,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	globalW.SetContent(canvasImage)
 	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 	globalW.SetTitle(title)
+	globalW.CenterOnScreen()
 	globalW.Show()
 
 } // end rotateAndLoadTheImage

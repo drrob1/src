@@ -398,10 +398,9 @@ func displayImage(img image.Image, fullImgName string, imgFmtName string) {
 		globalW.SetContent(GUI)
 		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
 		globalW.SetTitle(title)
-		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
+		globalW.CenterOnScreen()
 		globalW.Show()
 	})
-
 }
 
 // ------------------------------- filenameAlphaIndex --------------------------------------
