@@ -87,6 +87,7 @@ REVISION HISTORY
 // Does not use a loop to rotate the image.  It uses a switch-case statement.
 // It auto-scales the image based on a ratio to fit the screen size.
 // It uses a go routine to process the keys.  I wrote that to increase responsiveness.  I think it worked.  But it added complexity.  I didn't do this in the other pgms.
+// And since I update the screen from a go routine, fyne.Do(func() {}) is needed for these operations.  I found that if I try to use fyne.Do() in the main thread, that crashes.
 
 const LastModified = "Mar 27, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
