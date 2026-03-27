@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"image"
@@ -83,20 +84,25 @@ REVISION HISTORY
 25 Mar 26 -- Moved the go routine to read the files to the top of main().
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 26 Mar 26 -- Now called img3.go, and I intend to remove loadTheImage and only use rotateAndLoadTheImage.
+27 Mar 26 -- Added the icon to the program.
 */
 
 // Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
 // Does not use a loop to rotate the image.  It uses imaging.Rotate.
 // It uses the max and min screen sizes to determine the size of the image in the last Resize step.
 // And now it only uses rotateAndLoadTheImage and not loadTheImage.
+// It does not use a go routine to process the keys.
 
-const LastModified = "March 26, 2026"
+const LastModified = "March 27, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
 const maxHeight = 900 // actual resolution is 1920 x 1080
 const minWidth = 450
 const minHeight = 300
+
+//go:embed pictureIcon-64x64.png
+var pictureIcon []byte
 
 const dateFormatStr = "1/2/06"
 
@@ -244,7 +250,11 @@ func main() {
 	if *verboseFlag {
 		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
 	}
+
+	picIconRes := fyne.NewStaticResource("pictureIcon", pictureIcon)
+
 	globalA = app.New() // this line must appear before any other uses of fyne.
+	globalA.SetIcon(picIconRes)
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
@@ -280,97 +290,6 @@ func main() {
 	globalW.ShowAndRun()
 
 } // end main
-
-// loadTheImage -- Here, it's replaced entirely by rotateAndLoadTheImage.
-//func loadTheImage() {
-//	imgName := imageInfo[index].Name()
-//	//                                       fullfilename := cwd + string(filepath.Separator) + imgname
-//	fullFilename, err := filepath.Abs(imgName)
-//	if err != nil {
-//		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", index, err, imgName, fullFilename)
-//
-//	}
-//	imageURI := storage.NewFileURI(fullFilename)
-//	imgRead, err := storage.Reader(imageURI)
-//	if err != nil {
-//		fmt.Fprintln(os.Stderr, " Error from storage.Reader of", fullFilename, "is", err)
-//		return
-//	}
-//	defer imgRead.Close() // moved based on static linter.  Not needed with imaging.Open, but this uses storage.Reader, so it does need to close it.
-//
-//	_, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.  Changed this line 2/22/25.
-//	if err != nil {
-//		fmt.Fprintf(os.Stderr, " Error from image.Decode is %s.  Skipped.\n", err)
-//		return
-//	}
-//	img, err := imaging.Open(fullFilename, imaging.AutoOrientation(true)) // added 2/22/25
-//	if err != nil {
-//		fmt.Printf(" Error from imaging.Open is %s.  Skipped.\n", err)
-//		return
-//	}
-//	imgHeight := img.Bounds().Max.Y
-//	imgWidth := img.Bounds().Max.X
-//
-//	dateStr := imageInfo[index].ModTime().Format(dateFormatStr)
-//	title := fmt.Sprintf("%s: %d x %d, SF=%.2f, %s, %s ", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
-//	if *verboseFlag {
-//		fmt.Println(title)
-//	}
-//
-//	if scaleFactor != 1 {
-//		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
-//			scaledHeight := float64(imgHeight) * scaleFactor
-//			intHeight := uint(math.Round(scaledHeight))
-//			img = resize.Resize(0, intHeight, img, resize.Lanczos3)
-//		} else {
-//			scaledWidth := float64(imgWidth) * scaleFactor
-//			intWidth := uint(math.Round(scaledWidth))
-//			img = resize.Resize(intWidth, 0, img, resize.Lanczos3)
-//		}
-//		imgHeight = img.Bounds().Max.Y
-//		imgWidth = img.Bounds().Max.X
-//	}
-//
-//	if *verboseFlag {
-//		imgHeight = img.Bounds().Max.Y
-//		imgWidth = img.Bounds().Max.X
-//		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
-//		fmt.Println()
-//	}
-//
-//	sizeStr := misc.GetMagnitudeString(imageInfo[index].Size())
-//	labelStr := fmt.Sprintf("%s: %dw x %dh; %s, %s", imgName, imgWidth, imgHeight, dateStr, sizeStr)
-//	label := widget.NewLabel(labelStr)
-//	//                                                                   label := canvas.NewText(labelStr, color.Black)
-//	//                                                                   label.TextStyle.Bold = true
-//	//                                                                   label.Alignment = fyne.TextAlignCenter
-//
-//	loadedimg = canvas.NewImageFromImage(img)
-//	loadedimg.ScaleMode = canvas.ImageScaleFastest
-//	if !*zoomFlag {
-//		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
-//	}
-//
-//	imageAsDisplayed = loadedimg.Image // this is for the saveImage function.
-//
-//	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
-//	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
-//
-//	maxWidth := min(imgWidth, maxWidth)
-//	maxHeight := min(imgHeight+textboxheight, maxHeight)
-//	minWidth := max(maxWidth, minWidth)
-//	minHeight := max(maxHeight, minHeight)
-//
-//	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
-//		// safe to touch widgets here
-//		globalW.SetContent(GUI)
-//		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight))) // if I don't do this, the image is too small to be seen.
-//		globalW.SetTitle(title)
-//		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
-//		globalW.Show()
-//	})
-//
-//} // end loadTheImage
 
 // filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {

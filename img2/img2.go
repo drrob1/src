@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"image"
@@ -83,13 +84,15 @@ REVISION HISTORY
 24 Mar 26 -- The large image code was not also included in the rotation routine.  Now it is.
 25 Mar 26 -- Moved the go routine to read the files to the top of main().
 26 Mar 26 -- Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
+27 Mar 26 -- Added a picture icon to the window.
 */
 
 // Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
 // Does not use a loop to rotate the image.  It uses imaging.Rotate.
 // It uses the max and min screen sizes to determine the size of the image in the last Resize step.
+// It does not use a go routine to process the keys.
 
-const LastModified = "March 26, 2026"
+const LastModified = "March 27, 2026"
 const textboxheight = 20
 
 const maxWidth = 1800 // actual resolution is 1920 x 1080
@@ -98,6 +101,9 @@ const minWidth = 450
 const minHeight = 300
 
 const dateFormatStr = "1/2/06"
+
+//go:embed pictureIcon-64x64.png
+var pictureIcon []byte
 
 type ImageWidget struct {
 	widget.BaseWidget
@@ -307,7 +313,11 @@ func main() {
 	if *verboseFlag {
 		ctfmt.Printf(ct.Red, true, " cwd = %s\n", cwd)
 	}
+
+	picIconRes := fyne.NewStaticResource("pictureIcon", pictureIcon)
+
 	globalA = app.New() // this line must appear before any other uses of fyne.
+	globalA.SetIcon(picIconRes)
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
