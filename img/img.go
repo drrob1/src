@@ -85,6 +85,7 @@ REVISION HISTORY
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
 // Does not use a loop to rotate the image.  It uses a switch-case statement.
+// It auto-scales the image based on a ratio to fit the screen size.
 
 const LastModified = "Mar 26, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel

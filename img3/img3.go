@@ -87,6 +87,7 @@ REVISION HISTORY
 
 // Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
 // Does not use a loop to rotate the image.  It uses imaging.Rotate.
+// It uses the max and min screen sizes to determine the size of the image in the last Resize step.
 // And now it only uses rotateAndLoadTheImage and not loadTheImage.
 
 const LastModified = "March 26, 2026"
