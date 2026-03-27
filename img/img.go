@@ -80,7 +80,7 @@ REVISION HISTORY
 24 Mar 26 -- Adding a menu for help, about and quit.  And added an icon.
 25 Mar 26 -- Moved the go routine that reads the file names and infos to the top of main().
 26 Mar 26 -- Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
-
+27 Mar 26 -- Rearranged code to initialize imageInfo slice and check for verbosity after menu setup.
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
@@ -88,7 +88,7 @@ REVISION HISTORY
 // It auto-scales the image based on a ratio to fit the screen size.
 // It uses a go routine to process the keys.  I wrote that to increase responsiveness.  I think it worked.  But it added complexity.  I didn't do this in the other pgms.
 
-const LastModified = "Mar 26, 2026"
+const LastModified = "Mar 27, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -220,18 +220,6 @@ func main() {
 	globalW = globalA.NewWindow(str)
 	globalW.Canvas().SetOnTypedKey(keyTyped)
 
-	// This is how I initialize the imageInfo slice of FileInfos
-	imageInfo = <-imgFileInfoChan // reading from a channel into a global slice here.  Channel read is a unary use of the channel operator.  I hope this does not introduce latency.
-
-	if *verboseFlag {
-		if isSorted(imageInfo) {
-			fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
-		} else {
-			fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
-		}
-		fmt.Println()
-	}
-
 	menuItem1 := fyne.NewMenuItem("About", func() {
 		executable, err := os.Executable()
 		if err != nil {
@@ -252,6 +240,18 @@ func main() {
 
 	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2)
 	globalW.SetMainMenu(fyne.NewMainMenu(newMenu))
+
+	// This is how I initialize the imageInfo slice of FileInfos
+	imageInfo = <-imgFileInfoChan // reading from a channel into a global slice here.  Channel read is a unary use of the channel operator.  I hope this does not introduce latency.
+
+	if *verboseFlag {
+		if isSorted(imageInfo) {
+			fmt.Println(" imageInfo slice of FileInfo is sorted.  Length is", len(imageInfo))
+		} else {
+			fmt.Println(" imageInfo slice of FileInfo is NOT sorted.  Length is", len(imageInfo))
+		}
+		fmt.Println()
+	}
 
 	// I have code here to read an image, show it's params, but not use that info after it's written to the screen.  I'll change this so all populating the main display window is done from
 	// the loadTheImage routine.  I used to do it here first before going into the keystroke loop.  I don't need that anymore.  It's much more flexible if I don't do that, so then I can
