@@ -82,7 +82,7 @@ REVISION HISTORY
 // It uses the max and min screen sizes to determine the size of the image in the last Resize step.
 // It uses a go routine to process the keys.  I wrote that to increase responsiveness.  I think it worked, but it added complexity.  I didn't do this in all of the other pgms.
 
-const LastModified = "March 26, 2026"
+const LastModified = "March 28, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -92,10 +92,10 @@ const (
 	lastImgCmd
 )
 
-const maxWidth = 1800 // actual resolution is 1920 x 1080
-const maxHeight = 900 // actual resolution is 1920 x 1080
-const minWidth = 450
-const minHeight = 300
+const maxWidthC = 1800 // actual resolution is 1920 x 1080
+const maxHeightC = 900 // actual resolution is 1920 x 1080
+const minWidthC = 450
+const minHeightC = 300
 
 const dateFormatStr = "1/2/06"
 
@@ -386,10 +386,10 @@ func loadTheImage() {
 	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 
-	maxWidth := min(imgWidth, maxWidth)
-	maxHeight := min(imgHeight, maxHeight)
-	minWidth := max(maxWidth, minWidth)
-	minHeight := max(maxHeight, minHeight)
+	maxWidth := min(imgWidth, maxWidthC)
+	maxHeight := min(imgHeight, maxHeightC)
+	minWidth := max(maxWidth, minWidthC)
+	minHeight := max(maxHeight, minHeightC)
 
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
@@ -759,10 +759,10 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
-	maxWidth := min(imgWidth, maxWidth)
-	maxHeight := min(imgHeight, maxHeight)
-	minWidth := max(maxWidth, minWidth)
-	minHeight := max(maxHeight, minHeight)
+	maxWidth := min(imgWidth, maxWidthC)
+	maxHeight := min(imgHeight, maxHeightC)
+	minWidth := max(maxWidth, minWidthC)
+	minHeight := max(maxHeight, minHeightC)
 
 	globalW.SetContent(canvasImage)
 	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))

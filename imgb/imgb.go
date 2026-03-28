@@ -80,7 +80,7 @@ REVISION HISTORY
 // It uses the max and min screen sizes to determine the size of the image in the last Resize step.
 // It uses a go routine to process the keys.  I wrote that to increase responsiveness.  I think it worked, but it added complexity.  I didn't do this in all of the other pgms.
 
-const LastModified = "March 26, 2026"
+const LastModified = "March 28, 2026"
 const keyCmdChanSize = 20
 const (
 	firstImgCmd = iota
@@ -90,10 +90,10 @@ const (
 	lastImgCmd
 )
 
-const maxWidth = 1800 // actual resolution is 1920 x 1080
-const maxHeight = 900 // actual resolution is 1920 x 1080
-const minWidth = 450
-const minHeight = 300
+const maxWidthC = 1800 // actual resolution is 1920 x 1080
+const maxHeightC = 900 // actual resolution is 1920 x 1080
+const minWidthC = 450
+const minHeightC = 300
 
 const dateFormatStr = "1/2/06"
 
@@ -391,10 +391,10 @@ func displayImage(img image.Image, fullImgName string, imgFmtName string) {
 
 	GUI := container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 
-	maxWidth := min(imgWidth, maxWidth)
-	maxHeight := min(imgHeight, maxHeight)
-	minWidth := max(maxWidth, minWidth)
-	minHeight := max(maxHeight, minHeight)
+	maxWidth := min(imgWidth, maxWidthC)
+	maxHeight := min(imgHeight, maxHeightC)
+	minWidth := max(maxWidth, minWidthC)
+	minHeight := max(maxHeight, minHeightC)
 
 	fyne.Do(func() {
 		globalW.SetContent(GUI)

@@ -95,13 +95,13 @@ REVISION HISTORY
 // And now it only uses rotateAndLoadTheImage and not loadTheImage.
 // It does not use a go routine to process the keys.
 
-const LastModified = "March 27, 2026"
+const LastModified = "March 28, 2026"
 const textboxheight = 20
 
-const maxWidth = 1800 // actual resolution is 1920 x 1080
-const maxHeight = 900 // actual resolution is 1920 x 1080
-const minWidth = 450
-const minHeight = 300
+const maxWidthC = 1800 // actual resolution is 1920 x 1080
+const maxHeightC = 900 // actual resolution is 1920 x 1080
+const minWidthC = 450
+const minHeightC = 300
 
 //go:embed pictureIcon-64x64.png
 var pictureIcon []byte
@@ -625,10 +625,10 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 
 	imageAsDisplayed = imgImg
 
-	maxwidth := min(imgWidth, maxWidth)
-	maxheight := min(imgHeight+textboxheight, maxHeight)
-	minwidth := max(maxwidth, minWidth)
-	minheight := max(maxheight, minHeight)
+	maxwidth := min(imgWidth, maxWidthC)
+	maxheight := min(imgHeight+textboxheight, maxHeightC)
+	minwidth := max(maxwidth, minWidthC)
+	minheight := max(maxheight, minHeightC)
 
 	canvasImage := canvas.NewImageFromImage(imgImg)
 	canvasImage.ScaleMode = canvas.ImageScaleSmooth

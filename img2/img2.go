@@ -92,13 +92,13 @@ REVISION HISTORY
 // It uses the max and min screen sizes to determine the size of the image in the last Resize step.
 // It does not use a go routine to process the keys.
 
-const LastModified = "March 27, 2026"
+const LastModified = "March 28, 2026"
 const textboxheight = 20
 
-const maxWidth = 1800 // actual resolution is 1920 x 1080
-const maxHeight = 900 // actual resolution is 1920 x 1080
-const minWidth = 450
-const minHeight = 300
+const maxWidthC = 1800 // actual resolution is 1920 x 1080
+const maxHeightC = 900 // actual resolution is 1920 x 1080
+const minWidthC = 450
+const minHeightC = 300
 
 const dateFormatStr = "1/2/06"
 
@@ -428,15 +428,15 @@ func loadTheImage() {
 	GUI = container.NewBorder(nil, label, nil, nil, loadedimg) // top, bottom, left, right, center
 	atomic.StoreInt64(&rotatedCtr, 0)                          // reset this counter when load a fresh image.
 
-	maxWidth := min(imgWidth, maxWidth)
-	maxHeight := min(imgHeight+textboxheight, maxHeight)
-	minWidth := max(maxWidth, minWidth)
-	minHeight := max(maxHeight, minHeight)
+	maxwidth := min(imgWidth, maxWidthC)
+	maxheight := min(imgHeight+textboxheight, maxHeightC)
+	minwidth := max(maxwidth, minWidthC)
+	minheight := max(maxheight, minHeightC)
 
 	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
 		// safe to touch widgets here
 		globalW.SetContent(GUI)
-		globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight))) // if I don't do this, the image is too small to be seen.
+		globalW.Resize(fyne.NewSize(float32(minwidth), float32(minheight))) // if I don't do this, the image is too small to be seen.
 		globalW.SetTitle(title)
 		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
 		globalW.Show()
@@ -740,10 +740,10 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
 	}
 
-	maxWidth := min(imgWidth, maxWidth)
-	maxHeight := min(imgHeight+textboxheight, maxHeight)
-	minWidth := max(maxWidth, minWidth)
-	minHeight := max(maxHeight, minHeight)
+	maxWidth := min(imgWidth, maxWidthC)
+	maxHeight := min(imgHeight+textboxheight, maxHeightC)
+	minWidth := max(maxWidth, minWidthC)
+	minHeight := max(maxHeight, minHeightC)
 
 	globalW.SetContent(canvasImage)
 	globalW.Resize(fyne.NewSize(float32(minWidth), float32(minHeight)))
