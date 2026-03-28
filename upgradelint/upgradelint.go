@@ -43,12 +43,13 @@ import (
 				And now I learned that I have to erase the old lint.exe in the configDir before downlading the new one.
   18 Sep 25 -- Trying to see if ending w/ io.WriteString(os.Stdout, "\n\n") will fix the problem of not getting a prompt.
   22 Sep 25 -- Added back final prompt to hit <enter>.
+  28 Mar 26 -- Changed the default URL to be the one from hostgator, robsolomon.name.  And it works.
 */
 
-const lastAltered = "22 Sep 2025"
+const lastAltered = "28 March 2026"
 const urlRwsNet = "http://drrws.net/"               // from 1and1, which is now ionos.
 const urlRobSolomonName = "http://robsolomon.name/" // hostgator
-const urlRwsCom = "http://drrws.com/"               // from SimpleNetHosting
+const urlRwsCom = "http://drrws.com/"               // from TotalChoiceHosting, formerly SimpleNetHosting
 const lintExe = "lint.exe"
 const lintInfo = "lint.info"
 
@@ -56,7 +57,7 @@ var verboseFlag = flag.BoolP("verbose", "v", false, "verbose flag")
 var whichURL int
 
 func main() {
-	flag.IntVarP(&whichURL, "url", "u", 0, "which URL to use.  0 is 1and1, 2 is hostgator, 3 is SimpleNetHosting")
+	flag.IntVarP(&whichURL, "url", "u", 1, "which URL to use.  0 is 1and1, 2 is hostgator, 3 is SimpleNetHosting")
 	u1 := flag.BoolP("u1", "1", false, "Shortcut for -u 1")
 	u2 := flag.BoolP("u2", "2", false, "Shortcut for -u 2")
 	flag.Parse()
