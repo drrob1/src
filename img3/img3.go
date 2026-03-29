@@ -89,6 +89,10 @@ REVISION HISTORY
 				Then after work, I added a menu and changed how the display is constructed.  I use a vbox instead of a border.
 29 Mar 26 -- Fixed a bug in help function that kept appending to stringSlice instead of clearing it each time thru help.
 			And I lowered the maxHeightC to 800 so I could see the bottom label.
+			And then I realized that my laptop screen size is small, so making the max and min dimensions constants won't work for that.  I asked perplexity how to
+			get the screen size programatically.  It said that the canvas has a method called Size() that returns the width and height of the canvas.
+			But it doesn't do what I want, so nevermind.
+
 
 */
 
@@ -101,10 +105,14 @@ REVISION HISTORY
 const LastModified = "March 29, 2026"
 const textboxheight = 20
 
-const maxWidthC = 1800 // actual resolution is 1920 x 1080
-const maxHeightC = 800 // actual resolution is 1920 x 1080
-const minWidthC = 450
-const minHeightC = 300
+// const maxWidthC = 1800 // actual resolution is 1920 x 1080
+// const maxHeightC = 800 // actual resolution is 1920 x 1080
+// const minWidthC = 450
+// const minHeightC = 300
+var maxWidth float64 = 1800 // automatic setting of these didn't work, so I'm hardcoding them again
+var maxHeight float64 = 800
+var minWidth float64 = 450
+var minHeight float64 = 300
 
 //go:embed pictureIcon-64x64.png
 var pictureIcon []byte
@@ -340,6 +348,11 @@ func main() {
 	//loadTheImage()
 	rotateAndLoadTheImage(index, 0)
 
+	go func() {
+		time.Sleep(500 * time.Millisecond) // let the window render
+		size := globalW.Canvas().Size()
+		fmt.Printf("startup screen width = %g, height = %g\n", size.Width, size.Height)
+	}()
 	globalW.ShowAndRun()
 
 } // end main
@@ -629,10 +642,21 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 
 	imageAsDisplayed = imgImg
 
-	maxwidth := min(imgWidth, maxWidthC)
-	maxheight := min(imgHeight+textboxheight, maxHeightC)
-	minwidth := max(maxwidth, minWidthC)
-	minheight := max(maxheight, minHeightC)
+	//time.Sleep(100 * time.Millisecond) // need screen to display the image.  Otherwise, it's too fast.
+	//maxWidth = math.Round(float64(globalW.Canvas().Size().Width * 0.9))  Doesn't work, so nevermind.
+	//minWidth = math.Round(float64(globalW.Canvas().Size().Width * 0.25))
+	//maxHeight = math.Round(float64(globalW.Canvas().Size().Height * 0.9))
+	//minHeight = math.Round(float64(globalW.Canvas().Size().Height * 0.25))
+
+	maxwidth := min(float64(imgWidth), maxWidth)
+	maxheight := min(float64(imgHeight+textboxheight), maxHeight)
+	minwidth := max(maxwidth, minWidth)
+	minheight := max(maxheight, minHeight)
+
+	if *verboseFlag {
+		fmt.Printf(" maxWidth = %.2f, maxHeight = %.2f, minWidth = %.2f, minHeight = %.2f\n", maxWidth, maxHeight, minWidth, minHeight)
+		fmt.Printf(" maxwidth = %.2f, maxheight = %.2f, minwidth = %.2f, minheight = %.2f\n", maxwidth, maxheight, minwidth, minheight)
+	}
 
 	canvasImage := canvas.NewImageFromImage(imgImg)
 	canvasImage.ScaleMode = canvas.ImageScaleSmooth
