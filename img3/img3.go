@@ -88,6 +88,7 @@ REVISION HISTORY
 27 Mar 26 -- Added the icon to the program.
 				Then after work, I added a menu and changed how the display is constructed.  I use a vbox instead of a border.
 29 Mar 26 -- Fixed a bug in help function that kept appending to stringSlice instead of clearing it each time thru help.
+			And I lowered the maxHeightC to 800 so I could see the bottom label.
 
 */
 
