@@ -151,7 +151,7 @@ func main() {
 	keyCmdChan = make(chan int, keyCmdChanSize)
 	indexChan := make(chan int, 1) // I'm now making this buffered as I don't need a guarantee of receipt.  This may reduce latency.
 
-	stringSlice := make([]string, 0, 20)
+	var stringSlice []string
 
 	helpFunc := func() {
 		executable, err := os.Executable()
@@ -160,6 +160,7 @@ func main() {
 		}
 		ExecFI, _ := os.Stat(executable)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		stringSlice = make([]string, 0, 20) // need to clear it each time thru help, else it gets appended to and duplicated, triplicated, etc.
 		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.\n\n",
 			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
 		stringSlice = append(stringSlice, s)
@@ -730,6 +731,25 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		fmt.Println(title)
 	}
 
+	// normalize the image to screen size
+	// This code does work for this one big image, but then it leaves the sccale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
+	// It works as long as I turn off the sticky factor.
+
+	if scaleFactor == 1 {
+		var heightScale, widthScale float64
+		widthScale = float64(maxWidth) / float64(imgWidth)    // maxWidth is 1800 at the moment
+		heightScale = float64(maxHeight) / float64(imgHeight) // maxHeight is 900 at the moment
+		if *verboseFlag {
+			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, maxwidth = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
+			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvasheight = %.2f, canvaswidth = %.2f, title = %s\n",
+				imgHeight, imgWidth, globalW.Canvas().Size().Height, globalW.Canvas().Size().Width, title)
+		}
+		minFac := min(heightScale, widthScale)
+		if minFac < 1 { // only autosize images when they're too large to display without it.
+			scaleFactor = minFac
+		}
+	}
+
 	if scaleFactor != 1 {
 		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
 			scaledHeight := float64(imgHeight) * scaleFactor
@@ -744,7 +764,6 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
 		title = fmt.Sprintf("%s, %d x %d, SF=%.2f %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr)
-		fmt.Println(title)
 	}
 
 	if *verboseFlag {
@@ -753,6 +772,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		imgWidth = bounds.Max.X
 		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
 		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
+		fmt.Printf("title: %s\n", title)
 		fmt.Println()
 	}
 
@@ -765,11 +785,13 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 
 	imageAsDisplayed = canvasImage.Image
 
-	globalW.SetContent(canvasImage)
-	globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
-	globalW.SetTitle(title)
-	globalW.CenterOnScreen()
-	globalW.Show()
+	fyne.Do(func() {
+		globalW.SetContent(canvasImage)
+		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight)))
+		globalW.SetTitle(title)
+		globalW.CenterOnScreen()
+		globalW.Show()
+	})
 
 } // end rotateAndLoadTheImage
 

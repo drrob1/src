@@ -87,6 +87,8 @@ REVISION HISTORY
 26 Mar 26 -- Now called img3.go, and I intend to remove loadTheImage and only use rotateAndLoadTheImage.
 27 Mar 26 -- Added the icon to the program.
 				Then after work, I added a menu and changed how the display is constructed.  I use a vbox instead of a border.
+29 Mar 26 -- Fixed a bug in help function that kept appending to stringSlice instead of clearing it each time thru help.
+
 */
 
 // Uses imaging.Open with autoOrientation option in both loadTheImage and RotateAndLoadTheImage.
@@ -95,11 +97,11 @@ REVISION HISTORY
 // And now it only uses rotateAndLoadTheImage and not loadTheImage.
 // It does not use a go routine to process the keys.
 
-const LastModified = "March 28, 2026"
+const LastModified = "March 29, 2026"
 const textboxheight = 20
 
 const maxWidthC = 1800 // actual resolution is 1920 x 1080
-const maxHeightC = 900 // actual resolution is 1920 x 1080
+const maxHeightC = 800 // actual resolution is 1920 x 1080
 const minWidthC = 450
 const minHeightC = 300
 
@@ -215,7 +217,7 @@ func main() {
 
 	go MyReadDirForImages(cwd, imgFileInfoChan)
 
-	stringSlice := make([]string, 0, 20)
+	var stringSlice []string
 
 	helpFunc := func() {
 		executable, err := os.Executable()
@@ -224,6 +226,7 @@ func main() {
 		}
 		ExecFI, _ := os.Stat(executable)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
+		stringSlice = make([]string, 0, 20)
 		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.\n\n",
 			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
 		stringSlice = append(stringSlice, s)
