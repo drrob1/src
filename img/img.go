@@ -14,18 +14,17 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
 	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
 	flag "github.com/spf13/pflag"
 	_ "golang.org/x/image/webp"
+	//"fyne.io/fyne/v2/storage"
 )
 
 // Based on Go GUI with Fyne, Chap 4.
@@ -81,6 +80,7 @@ REVISION HISTORY
 25 Mar 26 -- Moved the go routine that reads the file names and infos to the top of main().
 26 Mar 26 -- Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
 27 Mar 26 -- Rearranged code to initialize imageInfo slice and check for verbosity after menu setup.
+29 Mar 26 -- Changed rotateAndLoadTheImage() to handle rotation and loading of images, and removed loadTheImage() as redundant.
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
@@ -89,7 +89,7 @@ REVISION HISTORY
 // It uses a go routine to process the keys.  I wrote that to increase responsiveness.  I think it worked.  But it added complexity.  I didn't do this in the other pgms.
 // And since I update the screen from a go routine, fyne.Do(func() {}) is needed for these operations.  I found that if I try to use fyne.Do() in the main thread, that crashes.
 
-const LastModified = "Mar 27, 2026"
+const LastModified = "Mar 29, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -282,9 +282,10 @@ func main() {
 	if index < 0 {
 		index = 0
 	}
-	loadTheImage(index)
-	//globalW.SetFullScreen(true)
-	//globalW.SetFullScreen(false)
+	//                                         loadTheImage(index)
+	rotateAndLoadTheImage(index, 0)
+	//                                         globalW.SetFullScreen(true)
+	//                                         globalW.SetFullScreen(false)
 
 	go processKeys()
 
@@ -305,7 +306,8 @@ func processKeys() {
 		case nextImgCmd:
 			nextImage()
 		case loadImgCmd:
-			loadTheImage(index)
+			//loadTheImage(index)
+			rotateAndLoadTheImage(index, 0)
 		case lastImgCmd:
 			lastImage()
 		}
@@ -313,6 +315,7 @@ func processKeys() {
 }
 
 // loadTheImage -- loads the image given by the index
+/*
 func loadTheImage(idx int) {
 	imgName := imageInfo[idx].Name()
 	fullFilename, err := filepath.Abs(imgName)
@@ -410,6 +413,8 @@ func loadTheImage(idx int) {
 
 } // end loadTheImage
 
+*/
+
 // ------------------------------- filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
 	for i, fi := range fileinfos {
@@ -492,7 +497,8 @@ func nextImage() {
 	if index >= len(imageInfo) {
 		index--
 	}
-	loadTheImage(index)
+	//loadTheImage(index)
+	rotateAndLoadTheImage(index, 0)
 
 } // end nextImage
 
@@ -503,20 +509,23 @@ func prevImage() {
 	if index < 0 {
 		index++
 	}
-	loadTheImage(index)
+	//loadTheImage(index)
+	rotateAndLoadTheImage(index, 0)
 
 } // end prevImage
 
 // ------------------------------------------ firstImage -----------------------------------------------------
 func firstImage() {
 	index = 0
-	loadTheImage(index)
+	//loadTheImage(index)
+	rotateAndLoadTheImage(index, 0)
 }
 
 // ------------------------------------------ lastImage ---------------------------------------------------------
 func lastImage() {
 	index = len(imageInfo) - 1
-	loadTheImage(index)
+	//loadTheImage(index)
+	rotateAndLoadTheImage(index, 0)
 }
 
 // ------------------------------------------------------------ keyTyped ------------------------------
@@ -586,9 +595,10 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		scaleFactor *= 1.1
 		//                               loadTheImage()
 		keyCmdChan <- loadImgCmd
-	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had the from the beginning.  So it goes.
+	case fyne.KeyEqual: // first added Feb 22, 2025.  I thought I had this from the beginning.  So it goes.
 		scaleFactor = 1
-		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
+		//atomic.StoreInt64(&rotatedTimes, 0) Don't need atomic operations
+		rotatedTimes = 0 // reset this counter when load a fresh image.
 		keyCmdChan <- loadImgCmd
 	case fyne.KeyMinus:
 		scaleFactor *= 0.9
@@ -618,7 +628,8 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 			fmt.Println(" Sticky is now", sticky, "and scaleFactor is", scaleFactor)
 		}
 	case fyne.KeyR:
-		atomic.AddInt64(&rotatedTimes, 1)
+		//atomic.AddInt64(&rotatedTimes, 1)  don't need atomic operations.
+		rotatedTimes++
 		rotateAndLoadTheImage(index, rotatedTimes) // index and rotatedTimes are global
 	case fyne.Key1:
 		rotatedTimes = 1
@@ -630,11 +641,13 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		rotatedTimes = 3
 		rotateAndLoadTheImage(index, 3)
 	case fyne.Key4, fyne.Key0:
-		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
+		//atomic.StoreInt64(&rotatedTimes, 0) Don't need atomic operations
+		rotatedTimes = 0 // reset this counter when load a fresh image.
 		rotateAndLoadTheImage(index, 0)
 	case fyne.Key9:
 		scaleFactor = 0.99
-		atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
+		//atomic.StoreInt64(&rotatedTimes, 0) Don't need atomic operations
+		rotatedTimes = 0 // reset this counter when load a fresh image.
 		keyCmdChan <- loadImgCmd
 
 	default:
@@ -692,7 +705,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	//	imgRead = imgImg
 	//}
 	repeat = repeat % 4 // modulus operator
-	switch repeat {     // trying a new way, just to see if it works
+	rotatedTimes = repeat
+	switch repeat { // trying a new way, just to see if it works
 	case 0:
 		imgImg = imgRead
 	case 1:
