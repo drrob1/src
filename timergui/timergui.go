@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"src/timlibg"
 	"time"
 	"unicode"
 
@@ -42,6 +43,7 @@ import (
 				Now that I know how to reset the context, I'll do it automatically, using a 2 sec pause to give the context time to cancel the timer.
                 Now adding pause/resume functionality.
   7 Mar 26 -- Added keyboard exit code
+ 29 Mar 26 -- Changed to show time in hr min sec format instead of just seconds.
 */
 
 const lastAltered = "7 Mar 2026"
@@ -130,12 +132,12 @@ func main() {
 		running = true
 		for remaining > 0 {
 			time.Sleep(1 * time.Second)
-			s1 := fmt.Sprintf("%d", remaining)
-			s2 := fmt.Sprintf("Time remaining: %d seconds", remaining)
+			h, m, s := timlibg.SecToHMS(remaining)
+			s1 := fmt.Sprintf("%dh %dm %ds", h, m, s)
+			s2 := fmt.Sprintf("UpTime: %dh %dm %ds", h, m, s)
 			fyne.Do(func() {
 				w.SetTitle(s1)
 				timerLabel.SetText(s2)
-				// timerLabel.Refresh()  this isn't in the example, and it works without it, so I'm leaving it out.
 			})
 			select {
 			case <-stopTimerChan:
@@ -154,7 +156,7 @@ func main() {
 					timerLabel.SetText(s2)
 				})
 				return
-			default: // I tested this and it works w/ this clause, but it doesn't work w/o it.
+			default: // I tested this and it works w/ this clause, but it doesn't work without it.
 				// do nothing
 			}
 			if running {
