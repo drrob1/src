@@ -8,8 +8,8 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"gonum.org/v1/gonum/stat"
 	"io"
 	"math"
 	"os"
@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gonum.org/v1/gonum/stat"
 	//
 	"src/filepicker"
 	"src/getcommandline"
@@ -80,9 +82,12 @@ REVISION HISTORY
 			Decided to not add MultiWriter, as I prefer having different output to file and screen.  To the screen I'm using %.0f to simplify the output.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 19 Jul 24 -- Now called gastric3a, and I will use MultiWriter for both file and screen output.  I don't need output to a hundreth of a minute anyway, as that's silly.
+30 Mar 26 -- Need to fix a bug in that the last line is not read if it is not terminated by newline.  This is because ReadByte does not return an error if it
+			   reaches the end of the file, but instead returns io.EOF.  So I need to check for io.EOF and return the string if the buffer is not empty.
+				And I want to see if a different way of using the multiwriter works, too.
 */
 
-const LastAltered = "July 19, 2024"
+const LastAltered = "March 30, 2026"
 
 /*
   Normal values from source that I don't remember anymore.
@@ -314,7 +319,8 @@ func main() {
 		if bufioErr != nil {
 			return
 		}
-		_, bufioErr = io.Copy(multiWriter, strings.NewReader(s))
+		//_, bufioErr = io.Copy(multiWriter, strings.NewReader(s)) // this works, but I want to see if a different way of using the multiwriter works, too.
+		_, bufioErr = strings.NewReader(s).WriteTo(multiWriter) //  turns out that the AI populated this line for me.  And it does work.
 	}
 
 	writerune := func() { // this is also a closure.
@@ -1423,13 +1429,9 @@ func readLine(r *bytes.Reader) (string, error) {
 	var sb strings.Builder
 	for {
 		byt, err := r.ReadByte() // byte is a reserved word for a variable type.
-		/*		if verboseFlag {
-					fmt.Printf(" %c %v ", byt, err)
-					pause()
-				}
-		*/ //if err == io.EOF {  I have to return io.EOF so the EOF will be properly detected as such.
-		//	return strings.TrimSpace(sb.String()), nil
-		//} else
+		if errors.Is(err, io.EOF) && sb.Len() > 0 {
+			return strings.TrimSpace(sb.String()), nil
+		}
 		if err != nil {
 			return strings.TrimSpace(sb.String()), err
 		}
