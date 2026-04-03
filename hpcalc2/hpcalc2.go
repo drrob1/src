@@ -159,9 +159,10 @@ REVISION HISTORY
 				And I fixed the bug in undo from when I completely changed the undo-redo code in Apr 2024.  More descriptive comments are below.
  8 May 25 -- Increased the initial capacity of the undo slice.
 20 Jan 26 -- Fixing a line of the help text.  And wrote SetSigFig function, to be used by a menu item in rpnf.
+ 3 Apr 26 -- Exported MapWriteAndClose function, to be used by map commands in the client programs.
 */
 
-const LastAlteredDate = "21 Jan 2026"
+const LastAlteredDate = "3 Apr 2026"
 
 const HeaderDivider = "+-------------------+------------------------------+"
 const SpaceFiller = "     |     "
@@ -358,7 +359,7 @@ func init() {
 
 // -----------------------------------------------------mapWriteAndClose --------------------------------------------------------------------
 
-func mapWriteAndClose() {
+func MapWriteAndClose() {
 	//fullmappedRegFilename := homedir + string(os.PathSeparator) + mappedRegFilename  this is global as of 6/23/23
 	//mappedRegFile, err := os.OpenFile(fullMappedRegFilename, os.O_CREATE | os.O_APPEND, 0666)
 	mappedRegFile, err := os.Create(fullMappedRegFilename) // open for writing.  6/24/23: I'm truncating the file each time I write it, but since I write the map from memory, this works.
@@ -497,7 +498,7 @@ func CropNStr(instr string) string {
 	}
 
 	if strings.LastIndex(instr, ".") < 0 {
-		return instr // ie, instr is unchanged.
+		return instr // i.e., instr is unchanged.
 	}
 	upperbound := len(instr) - 1
 	for i = upperbound; (i >= 0) && (instr[i] == '0'); i-- {
@@ -850,7 +851,7 @@ func mapRoutines(s string) (float64, []string) {
 			return 0, ss
 		}
 		mappedReg[regName] = READX()
-		mapWriteAndClose()
+		MapWriteAndClose()
 		_, stringresult := mapRoutines("sho")
 		ss = append(ss, stringresult...)
 
@@ -901,7 +902,7 @@ func mapRoutines(s string) (float64, []string) {
 		delete(mappedReg, regName) // if regName is not in the map, this does nothing but does not panic.
 		s := fmt.Sprint("deleted ", regName)
 		ss = append(ss, s)
-		mapWriteAndClose() // added 6/19/21
+		MapWriteAndClose() // added 6/19/21
 		_, stringresult := mapRoutines("sho")
 		ss = append(ss, stringresult...)
 
@@ -1578,7 +1579,7 @@ outerloop:
 					break outerloop
 				}
 				mappedReg[regName] = READX()
-				mapWriteAndClose() // added 6/19/21
+				MapWriteAndClose() // added 6/19/21
 				_, stringresult := GetResult("mapsho")
 				ss = append(ss, stringresult...)
 
@@ -1638,7 +1639,7 @@ outerloop:
 				delete(mappedReg, regName) // if key is not in the map, this does nothing but does not panic.
 				s := fmt.Sprint("deleted ", regName)
 				ss = append(ss, s)
-				mapWriteAndClose() // added 6/19/21
+				MapWriteAndClose() // added 6/19/21
 				_, stringresult := GetResult("mapsho")
 				ss = append(ss, stringresult...)
 
@@ -1650,7 +1651,7 @@ outerloop:
 			ch := tkn.Str[len(tkn.Str)-1] // ie, the last character.
 			places := GetRegIdx(ch)
 			placesReal := float64(places)
-			if places > 10 { // If greater than this max value, make it 10, ie default is 10.
+			if places > 10 { // If greater than this max value, make it 10, i.e., default is 10.
 				placesReal = float64(10)
 			}
 			x := Floor(Stack[X], placesReal) // this is to correct the small floating point errors, to the specified number of decimal places.  Floor is my function, defined above.
@@ -1801,7 +1802,7 @@ func fastExpMod(num, pow, mod int) int { // pow can't be negative, or else it wi
 		panic(s)
 	}
 	for pow > 0 {
-		if pow%2 == 1 { // ie, if pow is odd
+		if pow%2 == 1 { // i.e., if pow is odd
 			Z = (Z * num) % mod // Z = Z * R
 		}
 		num = (num * num) % mod // R = R squared

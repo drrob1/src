@@ -7,7 +7,6 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
 	"log"
 	"os"
 	"runtime"
@@ -16,15 +15,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
+
 	//"getcommandline"
 	hpcalc "src/hpcalc2"
 	"src/tokenize"
 	//	runewidth "github.com/mattn/go-runewidth"  Not needed after I simplified puts()
 )
 
-const LastAltered = "24 July 2021"
-
-// runtime.GOOS returns either linux or windows.  I have not tested mac.  I want either $HOME or %userprofile to set the write dir.
+// runtime.GOOS returns either linux or windows.  I have not tested Mac.  I want either $HOME or %userprofile to set the write dir.
 
 /*
 This module uses the HPCALC module to simulate an RPN type calculator.
@@ -121,6 +120,8 @@ REVISION HISTORY
 17 Jun 21 -- Converted to modules, and added the stuff I've learned over the last 4 months.
 24 Jul 21 -- tcell v2 is now imported.
 */
+
+const LastAltered = "24 July 2021"
 
 const InputPrompt = " Enter calculation, HELP or <return> to exit: "
 
@@ -411,7 +412,7 @@ func main() {
 	INBUF = strings.ToUpper(INBUF)
 
 	hpcalc.PushMatrixStacks()
-	defer hpcalc.mapWriteAndClose()
+	defer hpcalc.MapWriteAndClose()
 
 	for len(INBUF) > 0 { // Main processing loop
 		// check for new use history command patterned after bash, ie, using ! to start it.
