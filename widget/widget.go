@@ -8,6 +8,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+/*
+  4 Apr 26 -- From the Fyne book, 2nd ed.
+ */
+
 func makeUI() fyne.CanvasObject {
 	f := binding.NewFloat()
 

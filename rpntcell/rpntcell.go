@@ -32,7 +32,7 @@ REVISION HISTORY
  1 Dec 89 -- Changed prompt.
 24 Dec 91 -- Converted to M-2 V 4.00.  Changed params to GETRESULT.
 25 Jul 93 -- Output result without trailing insignificant zeros, imported UL2, and changed prompt again.
- 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (ie, Avogadro's Number).
+ 3 Mar 96 -- Fixed bug in string display if real2str fails because number is too large (i.e., Avogadro's Number).
 18 May 03 -- First Win32 version.  And changed name.
  1 Apr 13 -- Back to console mode pgm that will read from the cmdline.  Intended to be a quick and useful little utility.
 		                   And will save/restore the stack to/from a file.
@@ -50,9 +50,9 @@ REVISION HISTORY
 13 Apr 16 -- Adding undo and redo commands, which operate on the entire stack not just X register.
  2 Jul 16 -- Fixed help to include PI command, and changed pivot for JUL command.  See hpcalcc.cpp
  7 Jul 16 -- Added UP command to hpcalcc.cpp
- 8 Jul 16 -- Added display of stack dump to always happen, and a start up message.
+ 8 Jul 16 -- Added display of stack dump to always happen, and a start-up message.
 22 Aug 16 -- Started conversion to Go, as rpn.go.
- 8 Sep 16 -- Finished coding rpn.go, started 26 Aug 16 as rpng.go, adding functionality from hppanel, ie, persistant storage, a display tape and operator substitutions = or + and ; for *.
+ 8 Sep 16 -- Finished coding rpn.go, started 26 Aug 16 as rpng.go, adding functionality from hppanel, i.e., persistant storage, a display tape and operator substitutions = or + and ; for *.
 11 Sep 16 -- Changed stack and storage files to use gob package and only use one Storage file.
  1 Oct 16 -- Made the stack display when the program starts.
  4 Oct 16 -- Made the storage registers display when the program starts.
@@ -415,7 +415,7 @@ func main() {
 	defer hpcalc.MapWriteAndClose()
 
 	for len(INBUF) > 0 { // Main processing loop
-		// check for new use history command patterned after bash, ie, using ! to start it.
+		// check for new use history command patterned after bash, i.e., using ! to start it.
 		INBUF = strings.ToUpper(INBUF)
 		if strings.HasPrefix(INBUF, "!") {
 			i := 0
@@ -498,7 +498,7 @@ func main() {
 		} else if INBUF == "HELP" || INBUF == "?" || INBUF == "H" {
 			WriteHelp(StartCol+2, StartRow)
 		} else if strings.HasPrefix(INBUF, "DUMP") {
-			// do nothing, ie, don't send it into hpcalc.GetResult
+			// do nothing, i.e., don't send it into hpcalc.GetResult
 
 		} else if strings.HasPrefix(INBUF, "OUTPUTFI") { // allow outputfix, etc
 			outputmode = outputfix
@@ -997,7 +997,7 @@ func WriteHelp(x, y int) { // starts w/ help text from hpcalc, and then adds hel
 	// helpstringslice = append(helpstringslice, " toclip, fromclip -- access to clip is by shelling out to xclip or tcc.") moved to hpcalc2 Nov 2020
 
 	// Will always open this file in the current working directory instead of the HomeDir.
-	// This is different than rpnterm, which only writes this file if it's not already there.
+	// This is different from rpnterm, which only writes this file if it's not already there.
 	HelpOut, err := os.Create(HelpFileName)
 	check(err)
 	defer HelpOut.Close()
