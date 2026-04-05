@@ -85,7 +85,7 @@ func main() {
 	if err != nil {
 		dialog.ShowError(err, w)
 	}
-	// selectFilename := widget.NewSelectEntry(filenames)  as per lintGUI
+	//                                               selectFilename := widget.NewSelectEntry(filenames)  as per lintGUI
 	selectFilename := widget.NewSelect(filenames, nil) // I'll define it as nil now, and add it later.  I hope this works.
 	selectFilename.Resize(fyne.Size{Width: 150, Height: 300})
 	monthsThresholdEntry.OnChanged = func(s string) {
