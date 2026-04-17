@@ -9,7 +9,7 @@ import (
 )
 
 /*
-  From Mastring Go, 4th ed, by Mihalis Tsoukalos, published by Packtpub (c) 2024
+  From Mastering Go, 4th ed, by Mihalis Tsoukalos, published by Packtpub (c) 2024
     Author: Mihalis Tsoukalos
   This is a rewrite of findExec, but without its limitations.
   It will take as its first param the exec binary to search for, and the remaining are directories to search.  If there are none given, it will search PATH by default.
