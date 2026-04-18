@@ -1,7 +1,7 @@
 ## gocode
-All of my go code as of Feb 2, 2026
+All of my go code as of Apr 17, 2026
 
-1.  sha -- easier way for me to validate d/l file hashes that works the same on linux and windows.  Multisha, consha, csha, fsha and fsha3 do this w/ conconcurrency.
+1.  sha, etc. -- easier way for me to validate d/l file hashes that works the same on linux and windows.  Multisha, consha, csha, fsha and fsha3 do this w/ conconcurrency.
 2.  rpn, rpn2, rpng -- RPN style calculator like the HP-25 that I used while in college.  Has CLI.
 3.  rpnterm -- Same RPN style calculator but written to use termbox-go.  Not up to date as I switched to rpntcell.
 4.  rpnt -- Same RPN style calculator but written to use tcell, but doesn't play nice w/ tcmd by JPSoft
