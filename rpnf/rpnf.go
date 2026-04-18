@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image/color"
 	"os"
+	"path/filepath"
 	"runtime"
 	"src/hpcalc2"
 	"src/makesubst"
@@ -34,7 +35,7 @@ import (
 /*
  From Fyne GUI book by Andrew Williams, (C) 2021 Packtpub.
  5 Sep 21 -- Started playing w/ the UI for rpn calculator.  I already have the code that works, so I just need the UI and some support code.
- 8 Sep 21 -- Working as expected.  By george I think I've done it!
+ 8 Sep 21 -- Working as expected.  By George, I think I've done it!
  9 Sep 21 -- Using the direct clipboard functions from fyne instead of the shelling out done in hpcal2.  Andy Williams had to help me for me to get this right.
 10 Sep 21 -- Adding a way to have input box get input without having to click in it.  And it works!
 13 Sep 21 -- After Andy wrote back as how to code what I want, I had already taken a stab at it.
@@ -79,10 +80,11 @@ import (
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
 10 Feb 26 -- Added a dividing line, as I saw from the YouTube tutorials.  It may take a bit of time to get right.
 16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Added ability to reduce screen size by a menu item.
-17 Mar 26 -- Will automatically change the screen size based on what Fyne says it is.  This change is coded in keyTyped, and uses doOnce.
+17 Mar 26 -- Will automatically change the screen size based on what Fyne says it is.  This change is coded in keyTyped, and uses doOnce.  I don't think this does what I wanted it to.
+18 Apr 26 -- I decided that I don't want the display.txt files littered throughout the filesystem.  I'm going to put it in the config dir.
 */
 
-const lastModified = "March 18, 2026"
+const lastModified = "April 18, 2026"
 
 const ( // output modes
 	outputfix = iota
@@ -206,9 +208,10 @@ func main() {
 		lightTheme = false // well, this is the default now
 	}
 
-	StorageFullFilename := homeDir + string(os.PathSeparator) + Storage1FileName
-	Storage2FullFilename := homeDir + string(os.PathSeparator) + Storage2FileName
-	Storage3FullFilename := homeDir + string(os.PathSeparator) + Storage3FileName
+	// StorageFullFilename := homeDir + string(os.PathSeparator) + Storage1FileName
+	StorageFullFilename := filepath.Join(homeDir, Storage1FileName)
+	Storage2FullFilename := filepath.Join(homeDir, Storage2FileName)
+	Storage3FullFilename := filepath.Join(homeDir, Storage3FileName)
 
 	var thefile *os.File
 
@@ -409,7 +412,9 @@ func main() {
 	}
 
 	// Will open this file in the current working directory instead of the HomeDir.
-	DisplayTapeFile, err := os.OpenFile(DisplayTapeFilename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	// Changed Apr 19, 2026.
+	DisplayFile := filepath.Join(homeDir, DisplayTapeFilename)
+	DisplayTapeFile, err := os.OpenFile(DisplayFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(" Error while opening DisplayTapeFilename", err)
 		os.Exit(1)
@@ -455,7 +460,7 @@ func Doit() {
 
 			INBUF = strings.ToUpper(INBUF)
 			DisplayTape = append(DisplayTape, INBUF) // This is an easy way to capture everything.
-			// These commands are not run thru hpcalc as they are processed before calling it.
+			// These commands are not run through hpcalc as they are processed before calling it.
 			realtknslice := tknptr.RealTokenSlice(INBUF)
 			INBUF = "" // do this to stop endless processing of the same value of INBUF in a concurrent model.
 			stringslice = nil
@@ -546,7 +551,7 @@ func Doit() {
 					str = fmt.Sprintf(" %s timestamp is %s.\n Full exec name is %s.", execFI.Name(), execTimeStamp, execname)
 					stringslice = append(stringslice, str)
 
-				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc sets output mode AND number of significant figures.
+				} else if strings.HasPrefix(rtkn.Str, "FIX") { // so fix, fixed, etc. sets output mode AND number of significant figures.
 					outputMode = outputfix
 				}
 				resultToOutput = "" // clears any old messages.
@@ -663,7 +668,7 @@ func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune,
 
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.  inbufChan is the string chan that is used to return these strings to be processed.
-	if doOnce {                   // putting this test here gives the best results for me.  It gets tested against any key press.
+	if doOnce { // putting this test here gives the best results for me.  It gets tested against any key press.
 		doOnce = false                               // this is the only place that this variable is set
 		x := float64(globalW.Canvas().Size().Width)  // this is the number actually set
 		y := float64(globalW.Canvas().Size().Height) // this is the number actually set
@@ -688,7 +693,7 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		if len(input.Text) > 0 {
 			inbufChan <- input.Text
 		}
-		inbufChan <- "POP" // I'm sending a command thru instead of calling PopX so that UNDO will work correctly.
+		inbufChan <- "POP" // I'm sending a command through instead of calling PopX so that UNDO will work correctly.
 		return
 	case fyne.KeyLeft: // swap X, Y
 		if len(input.Text) > 0 {
