@@ -7,11 +7,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"src/tknptr"
+
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"github.com/dimiro1/banner"
 	"github.com/mattn/go-colorable"
-	"src/tknptr"
 
 	//	"io/ioutil"
 	"os"
@@ -216,7 +217,7 @@ func main() {
 	}
 
 	// Now that I've got this working, I'm taking notes.  The binary.Write appends to the buf after each
-	// call, since I'm not doing anthing to the bytes.Buffer to reset it.  I don't need a separate slice of
+	// call, since I'm not doing anything to the bytes.Buffer to reset it.  I don't need a separate slice of
 	// bytes to accumulate the stack for output.  I just have to reverse the order I write them out so that
 	// they are read in correctly, without reversing the stack after each write.  I could reset the
 	// buf.Bytes each time if I wanted.  I tested that and it works.  But it is unnecessary for my needs so
