@@ -21,9 +21,10 @@ import (
   21 Dec 25 -- Andy Williams gave a talk at GopherCon UK in 2024 that I heard yesterday.  I created this from his talk, after expanding the minimal code he gave there.
   29 Jan 26 -- Added the gear icon.
   30 Jan 26 -- Now reading a file actually works.  Before, it didn't.
+  18 Apr 26 -- Now allows a file on the command line
 */
 
-const lastModified = "Jan 30, 2026"
+const lastModified = "April 18, 2026"
 
 const width = 800
 const height = 680
@@ -97,7 +98,7 @@ func main() {
 				dialog.ShowError(err, win)
 				return
 			}
-			if wr == nil { // user cancelled
+			if wr == nil { // user canceled
 				return
 			}
 			defer wr.Close()
@@ -127,6 +128,20 @@ func main() {
 	//vbox := container.NewVBox(grid, buttons) // didn't matter
 
 	w.SetContent(vbox)
+
+	// Check for a file on the command line
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+		ext := filepath.Ext(path)
+		basenameSearchStr = filepath.Base(path)
+		basenameSearchStr = strings.TrimSuffix(basenameSearchStr, ext)
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			dialog.ShowError(err, w)
+		} else {
+			editWidget.SetText(string(contents))
+		}
+	}
 
 	w.Resize(fyne.NewSize(width, height))
 	w.Canvas().Focus(editWidget)
