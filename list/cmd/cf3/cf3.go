@@ -442,7 +442,7 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start).Round(time.Microsecond), goRtnsNum, os.Args[0])
+	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start).Round(time.Millisecond), goRtnsNum, os.Args[0])
 
 	if onWin { // because tcc can get confused about its color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
 		ctfmt.Printf(ct.White, onWin, " Total files processed is %d\n", succeeded+failed)
