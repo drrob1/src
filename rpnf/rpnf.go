@@ -245,7 +245,7 @@ func main() {
 	globalA.SetIcon(calcIconRes)
 	globalW = globalA.NewWindow("rpnf, fyne GUI rpn calculator")
 	globalW.Canvas().SetOnTypedKey(keyTyped)
-	//       fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+	//       fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is deprecated and will be removed in v3.
 	lightTheme = false
 
 	menuItem1 := fyne.NewMenuItem("To Clipboard", func() {
@@ -292,10 +292,10 @@ func main() {
 			populateUI()
 			globalW.Show()
 		}
-		dialog.ShowEntryDialog("Enter sigfig", "SigFig is:", onConfirmCallback, globalW)
+		dialog.ShowEntryDialog("Enter SigFig", "SigFig is:", onConfirmCallback, globalW)
 	})
 
-	menuItem2D := fyne.NewMenuItem("Reduce height", func() { // dialog.ShowEntryDialog is depracated, so will use a form.
+	menuItem2D := fyne.NewMenuItem("Reduce height", func() { // dialog.ShowEntryDialog is deprecated, so will use a form.
 		entry := widget.NewEntry()
 		entry.SetPlaceHolder("amt")
 		entry.Resize(fyne.NewSize(150, 20)) // this doesn't seem to work
