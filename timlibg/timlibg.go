@@ -23,17 +23,19 @@ import (
      9 Jul 16 -- Fixed bug in Gregorian in which there is an infinite loop if juldate is too small.
      6 Aug 16 -- Started converting to Go.
     13 Apr 17 -- golint complained, so I added some comments
-     6 Aug 23 -- The julian date number is of type int.  This is a reminder comment.
+     6 Aug 23 -- The Julian date number is of type int.  This is a reminder comment.
     24 May 24 -- Adding the comments so that go doc will work.
      7 Nov 24 -- Adding converting to/from Excel-based date numbers.  Day zero was 12/31/1899, so day one was 1/1/1900.
 	28 Nov 25 -- Fixed bug in JULIAN because "y" was not assigned correctly.
     20 Feb 26 -- Added SecToHMS
+	19 Apr 26 -- Added WeekDayNum and YearDayNum based on functions in the time package.  And added Julian and Gregorian that wrap their respective functions.
 */
 
-// DateTimeType -- fields are Rawtime, Month, Day, Year, Hours, Minutes, Seconds, Nanosec, MonthStr and DayOfWeekStr.
+// DateTimeType -- fields are Rawtime, Month, Day, Year, Hours, Minutes, Seconds, Nanosec, WeekDayNum, YearDayNum, MonthStr and DayOfWeekStr.
 type DateTimeType struct {
 	Rawtime                                   time.Time
 	Month, Day, Year, Hours, Minutes, Seconds int
+	WeekDayNum, YearDayNum                    int // WeekDayNum, sun=0, sat=6.  YearDayNum returns 1..365 or in a leap year it returns 1..366
 	Nanosec                                   int64
 	MonthStr, DayOfWeekStr                    string
 }
@@ -83,7 +85,26 @@ func GetDateTime() DateTimeType {
 	DateTime.Nanosec = DateTime.Rawtime.UnixNano()
 	DateTime.MonthStr = DateTime.Rawtime.Month().String()
 	DateTime.DayOfWeekStr = DayNames[JULIAN(DateTime.Month, DateTime.Day, DateTime.Year)%7]
+	DateTime.YearDayNum = DateTime.Rawtime.YearDay()
+	DateTime.WeekDayNum = int(DateTime.Rawtime.Weekday())
 	return DateTime
+	/*
+		type Weekday int
+
+		A Weekday specifies a day of the week (Sunday = 0, ...).
+
+		const (
+			Sunday Weekday = iota
+			Monday
+			Tuesday
+			Wednesday
+			Thursday
+			Friday
+			Saturday
+		)
+
+		func (t Time) Weekday() Weekday -> it returns 0 for Sunday ..  6 for Saturday based on t.
+	*/
 } // GetDateTime
 
 // ***************************************** MDY2STR ***************************************************
@@ -99,6 +120,14 @@ func MDY2STR(M, D, Y int) string {
 	IntermedStr := MSTR + DateSepChar + DSTR + DateSepChar + YSTR
 	return IntermedStr
 } // MDY2STR
+
+func Julian(m, d, y int) int {
+	return JULIAN(m, d, y)
+}
+
+func Gregorian(juldate int) (int, int, int) {
+	return GREGORIAN(juldate)
+}
 
 // ----------------------------------------------- JULIAN
 
