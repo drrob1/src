@@ -86,14 +86,16 @@ import (
    3 May 25 -- Changed how dest errors are displayed, to make them more obvious.
   22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
   15 Mar 26 -- Changed wording of final message.  And yesterday was Pi day, but that's not important now.
+  19 Apr 26 -- Added time.Round(duration) on the closing message.  I'm rounding to microsecs.
 */
 
-const LastAltered = "March 15, 2026" //
+const LastAltered = "April 19, 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 * time.Millisecond
+
+//const timeFudgeFactor = 1 * time.Millisecond
 
 type cfType struct { // copy file type
 	srcFile string
@@ -364,7 +366,7 @@ func main() {
 					msgChan <- msg
 				}
 				//fmt.Printf(" after msg sent to msgChan, and about to return")
-				// I just learned that I can't have a return inside of the channel receive loop.  That stops the message receiving loop.  I need to use "continue" instead.
+				// I just learned that I can't have a return inside the channel receive loop.  That stops the message receiving loop.  I need to use "continue" instead.
 				// None of the message receiving go routines here have a return statement inside them.
 				// I think I've gotten caught by this before.  Hopefully, I'll remember for the next time!
 			}
@@ -426,7 +428,7 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, "  Didn't copy %d files.", failed)
 	}
-	ctfmt.Printf(ct.Yellow, onWin, "  Elapsed time is %s.\n\n", time.Since(start))
+	ctfmt.Printf(ct.Yellow, onWin, "  Elapsed time is %s.\n\n", time.Since(start).Round(time.Microsecond))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
@@ -668,11 +670,11 @@ func validateTarget(dir string) (string, error) {
 	return outDir, nil
 } // validateTarget
 
-func min(n1, n2 int) int {
-	if n1 < n2 {
-		return n1
-	}
-	return n2
-}
+//func min(n1, n2 int) int {  obsolete as this is a build in function as of Go 1.22
+//	if n1 < n2 {
+//		return n1
+//	}
+//	return n2
+//}
 
 //   if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
