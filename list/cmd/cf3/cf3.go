@@ -23,12 +23,12 @@ import (
 /*
   REVISION HISTORY
   -------- -------
-  18 Dec 22 -- First got idea for this routine.  It will be based on the linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
+  18 Dec 22 -- First got idea for this routine.  It will be based on the Linux scripts I wrote years ago, makelist, copylist, movelist, runlist and renlist.
                  This is going to take a while.
   20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
                  And how am I going to handle collisions?
   22 Dec 22 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                 So I'm propagating that change thru.
+                 So I'm propagating that change through.
   25 Dec 22 -- Moving the file selection stuff to list.go
   26 Dec 22 -- Shortened the messages.
                  Now called copyc, meaning copy concurrently.  I'm going for it.  I'll need a channel for cfType and the returned msg string for either success or failure message.
@@ -48,7 +48,7 @@ import (
   22 Jan 23 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
   23 Jan 23 -- Changing time on destination file(s) to match the source file(s).  And fixing the date comparison for replacement copies, from .After() to not .Before().
   27 Jan 23 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
-  30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
+  30 Jan 23 -- Will add 1 sec to file timestamp on Linux.  This is to prevent recopying the same file over itself (I hope).
                   I added timeFudgeFactor.
   31 Jan 23 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
   12 Feb 23 -- Adding verify option (finally).  In testing later in the day, I got a sync failed because host is down error.  I'm making sync errors a different color now.
@@ -123,16 +123,18 @@ import (
                 By adding the fudge factor back, then I can interchange them.  I did that and it works.
   22 Sep 25 -- I decided to remove the fudge factor, for all of my routines.
   15 Mar 26 -- Changed wording of final message.  And yesterday was Pi day, but that's not important now.  Nevermind.  This isn't the one I want to change.
+  19 Apr 26 -- Added time.Round(duration), after spotting it in the docs (for the first time).  I added it to green messages only.
 */
 
-const LastAltered = "15 March 2026" //
+const LastAltered = "19 April 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 * time.Microsecond // this is as small as is reasonable.  See above notes.
 const fanoutMax = 900
 const configFilename = "cf3.yaml"
+
+// const timeFudgeFactor = 1 * time.Microsecond // this is as small as is reasonable.  See above notes.
 
 type msgType struct {
 	s           string
@@ -157,7 +159,7 @@ var multiplier int
 func main() {
 	var totalBytesCopied int64
 	t1 := time.Now()
-	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on windows.
+	winflag := runtime.GOOS == "windows" // this is needed because I use it in the color statements, so the colors are bolded only on Windows.
 	execName, err := os.Executable()
 	if err != nil {
 		fmt.Printf(" Error from os.Executable() is: %s.  This will be ignored.\n", err)
@@ -313,7 +315,7 @@ func main() {
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
 
-	ctfmt.Printf(ct.Green, winflag, "%50s Set up time is %s \n", " ", time.Since(t1))
+	ctfmt.Printf(ct.Green, winflag, "%50s Set up time is %s \n", " ", time.Since(t1).Round(time.Microsecond))
 
 	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
@@ -361,6 +363,7 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " os.Open(%s) failed w/ error %s.  Exiting\n", destDir, err)
 		return
 	}
+	defer d.Close()
 	fi, err := d.Stat()
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " %s.Stat() failed w/ error %s.  Exiting\n", d.Name(), err)
@@ -439,9 +442,9 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtnsNum, os.Args[0])
+	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start).Round(time.Microsecond), goRtnsNum, os.Args[0])
 
-	if onWin { // because tcc can get confused about it's color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
+	if onWin { // because tcc can get confused about its color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
 		ctfmt.Printf(ct.White, onWin, " Total files processed is %d\n", succeeded+failed)
 	}
 } // end main
@@ -647,7 +650,7 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
+				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0).Round(time.Microsecond), srcFile, destDir),
 				e:           nil,
 				color:       ct.Green,
 				elapsed:     time.Since(t0),
@@ -671,7 +674,7 @@ func copyAFile(srcFile, destDir string) {
 		}
 	}
 
-	elapsed := time.Since(t0)
+	elapsed := time.Since(t0).Round(time.Microsecond)
 	msg := msgType{
 		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
 		e:           nil,
@@ -682,7 +685,4 @@ func copyAFile(srcFile, destDir string) {
 		bytesCopied: n,
 	}
 	msgChan <- msg
-	// return  this is redundant.
 } // end CopyAFile
-
-//    if !outFI.ModTime().Before(inFI.ModTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.  So don't copy the file.
