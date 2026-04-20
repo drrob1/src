@@ -651,7 +651,7 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0).Round(time.Microsecond), srcFile, destDir),
+				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0).Round(time.Millisecond), srcFile, destDir),
 				e:           nil,
 				color:       ct.Green,
 				elapsed:     time.Since(t0),
@@ -661,21 +661,20 @@ func copyAFile(srcFile, destDir string) {
 			}
 			msgChan <- msg
 			return
-		} else {
-			msg := msgType{
-				s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
-				e:        nil,
-				color:    ct.Red,
-				elapsed:  time.Since(t0),
-				success:  false,
-				verified: false,
-			}
-			msgChan <- msg
-			return
 		}
+		msg := msgType{ // essentially an else clause of the above if result statement.  Flagged by GoLand.
+			s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
+			e:        nil,
+			color:    ct.Red,
+			elapsed:  time.Since(t0),
+			success:  false,
+			verified: false,
+		}
+		msgChan <- msg
+		return
 	}
 
-	elapsed := time.Since(t0).Round(time.Microsecond)
+	elapsed := time.Since(t0).Round(time.Millisecond)
 	msg := msgType{
 		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
 		e:           nil,

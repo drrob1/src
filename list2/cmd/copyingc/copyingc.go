@@ -428,7 +428,7 @@ func main() {
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, "  Didn't copy %d files.", failed)
 	}
-	ctfmt.Printf(ct.Yellow, onWin, "  Elapsed time is %s.\n\n", time.Since(start).Round(time.Microsecond))
+	ctfmt.Printf(ct.Yellow, onWin, "  Elapsed time is %s.\n\n", time.Since(start).Round(time.Millisecond))
 } // end main
 
 // ------------------------------------ Copy ----------------------------------------------
