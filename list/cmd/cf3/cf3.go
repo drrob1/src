@@ -507,7 +507,7 @@ func copyAFile(srcFile, destDir string) {
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
-				elapsed: time.Since(t0),
+				elapsed: time.Since(t0).Round(time.Millisecond),
 				color:   ct.Red,
 				success: false,
 			}
