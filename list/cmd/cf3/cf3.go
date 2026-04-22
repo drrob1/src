@@ -124,7 +124,7 @@ import (
   22 Sep 25 -- I decided to remove the fudge factor, for all of my routines.
   15 Mar 26 -- Changed wording of final message.  And yesterday was Pi day, but that's not important now.  Nevermind.  This isn't the one I want to change.
   19 Apr 26 -- Added time.Round(duration), after spotting it in the docs (for the first time).  I added it to green messages only.
-  20 Apr 26 -- Added time.Round(time.Millisecond) to the no newer message.  I don't need to see that in nanoseconds.
+  20 Apr 26 -- Added time.Round(time.Millisecond) to the not newer message.  I don't need to see that in nanoseconds.
 */
 
 const LastAltered = "20 April 2026" //
