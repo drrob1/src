@@ -44,9 +44,10 @@ import (
                 Now adding pause/resume functionality.
   7 Mar 26 -- Added keyboard exit code
  29 Mar 26 -- Changed to show time in hr min sec format instead of just seconds.
+ 21 Apr 26 -- When time's up, it doesn't show 1 sec left.
 */
 
-const lastAltered = "7 Mar 2026"
+const lastAltered = "21 April 2026"
 
 //go:embed road-runner-beep-beep.mp3
 var beepBeep []byte
@@ -156,7 +157,7 @@ func main() {
 					timerLabel.SetText(s2)
 				})
 				return
-			default: // I tested this and it works w/ this clause, but it doesn't work without it.
+			default: // I tested this, and it works w/ this clause, but it doesn't work without it.
 				// do nothing
 			}
 			if running {
@@ -167,6 +168,7 @@ func main() {
 		speaker.Play(roadRunnerBufStreamer)
 		fyne.Do(func() {
 			timerLabel.SetText("Time's up")
+			w.SetTitle("Timer's up")
 		})
 		err = beeepTones(261.6256, 500) // Middle C, also called C4, or c' 1 line octave
 		if err != nil {
