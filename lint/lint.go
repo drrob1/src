@@ -140,9 +140,10 @@ import (
 				is sometimes row 3 and sometimes included as row 2 as part of the assignments row that also has the days of the week.  I have to determine what the rowOffset
 				is for this sheet, and use that when I reference a row.  It's too late now to code this, so I'll start tomorrow (I hope).
   14 Mar 26 -- Today is Pi day, but that's not important now.  If there is no doc name before the (*R) string, then "Dr." becomes the doctor name.  I'm working on fixing this now.
+   9 May 26 -- It seems that the schedule switched the ON-CALL Radiologist and Late MD rows.  So I have to account for that here now.  I'll do that in the definition of the row names.
 */
 
-const LastModified = "14 Mar 2026"
+const LastModified = "9 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -162,8 +163,8 @@ const (
 	msk // includes X-ray In/Outpatient and off-sites
 	mammo
 	boneDensity
+	late // switched with oncallradiologist discovered May 9, 2026.
 	oncallradiologist
-	late
 	mdOff
 	bluebarweekendcoverage
 	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
@@ -758,7 +759,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 	}
 	rowOffset-- // subtract one because I need the offset for the dateLine.
 	if VerboseFlag {
-		fmt.Printf(" dateLine rowOffset = %d\n", rowOffset)
+		ctfmt.Printf(ct.Yellow, true, " dateLine rowOffset = %d\n", rowOffset)
 	}
 
 	// Populate the wholeWorkWeek's schedule
@@ -1003,11 +1004,11 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 
 		// I now have a walk function that has collected all matching Names in this fpath into a slice of fileInfos.
 		// Now what do I do now?  I want, after the call to the walk function, to have a slice of full filenames that match the constraints of name and timestamp.
-		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if thay match the timestamp constraint.
+		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if they match the timestamp constraint.
 		// I may need a go routine to collect all these slices into 1 slice to be sorted.  And I don't have a full filename in this slice.  I still have to
 		// construct that.
 		// Maybe I need a struct that has full filename and the timestamp, ie, fileInfo.ModTime(), which is of type time.Time.  I did this, and I call it fileDataType.
-		// Then I made FileDataSliceType I call FDSliceType.  Then I made a masterFDSlice and a FDSlice channel so the walk function sends a slice of filedatas to the
+		// Then I made FileDataSliceType I call FDSliceType.  Then I made a masterFDSlice and a FDSlice channel so the walk function sends a slice of filedata to the
 		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
 		// and another to signal when all of these local slices have been appended to the master filedata slice.
 		// Then I sort the master filedata slice and then only take at most the top 15 to be returned to the caller.
@@ -1181,7 +1182,7 @@ func ExtractYearFromSchedule(week WorkWeekType, day int) (string, error) {
 }
 
 func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
-	docsOffStringForEntireWeek, err := ExtractOff(wholeWorkWeek)
+	docsOffStringForEntireWeek, err := ExtractOff(wholeWorkWeek) // debugging step, only shows Friday
 	if err != nil {
 		return VacStructArrayType{}, err
 	}
@@ -1199,7 +1200,7 @@ func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
 
 	dayNum := 1 // start on Monday
 	docNameStrSlice := make([]string, 0, numOfDocs)
-	for i := 1; i < len(vacDocsTokensForEntireWeek); { // note that this for does not include the first element, or an increment.  I'll handle the increment in the body of the for.
+	for i := 0; i < len(vacDocsTokensForEntireWeek); { // note that this for does not include an increment.  I'll handle the increment in the body of the for.
 		var sb strings.Builder
 		docToken := vacDocsTokensForEntireWeek[i]
 		if docToken.State == tknptr.DGT { // month number is first.
@@ -1258,5 +1259,12 @@ func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
 			i++
 		}
 	}
+	if VerboseFlag {
+		for i, docToken := range vacDocsTokensForEntireWeek {
+			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
+		}
+		fmt.Printf("\n\n")
+	}
+
 	return vacStructArray, nil
 }
