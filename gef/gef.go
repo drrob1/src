@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"src/whichexec"
 
@@ -26,9 +27,10 @@ import (
 				It does work if started from the command line.
   29 Dec 25 -- Trying embedding an icon of a stomach.  I found a relevant image on the internet and then converted it to .png using Irfanview.
   18 Jan 26 -- Added a default file name for the save dialog, using the SetFileName method.
+  10 May 26 -- Added a change directory to ~/Documents.  This came up at work that it's needed, as it started in a Windows directory by default.
 */
 
-const lastModified = "Jan 18, 2026"
+const lastModified = "May 10, 2026"
 const width = 1600
 const height = 900
 const minRowsVisible = 40
@@ -39,6 +41,19 @@ var w fyne.Window // global so other functions have access to it.
 var stomachIcon []byte
 
 func main() {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	docs := filepath.Join(homeDir, "Documents")
+	err = os.Chdir(docs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	a := app.NewWithID("com.example.Gastric_Emptying_GUI")
 
 	stomIconRes := fyne.NewStaticResource("stomach-4.png", stomachIcon)
@@ -116,7 +131,7 @@ func main() {
 				dialog.ShowError(err, win)
 				return
 			}
-			if wr == nil { // user cancelled
+			if wr == nil { // user canceled
 				return
 			}
 			defer wr.Close()
@@ -148,13 +163,13 @@ func main() {
 		}
 		_, err = os.Stat(filenameToSave)
 		if err != nil {
-			dialog.ShowError(fmt.Errorf("File %s does not exist.", filenameToSave), w)
+			dialog.ShowError(fmt.Errorf("file %s does not exist", filenameToSave), w)
 			return
 		}
 
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			dialog.ShowError(fmt.Errorf("Error from os.UserHomeDir: %v", err), w)
+			dialog.ShowError(fmt.Errorf("error from os.UserHomeDir: %v", err), w)
 			return
 		}
 		//cmdPath := whichexec.Find("gastric3.exe", homeDir)  I forgot that I don't need the .exe part, that's automatically added on Windows.
