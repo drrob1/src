@@ -29,9 +29,10 @@ import (
   13 Feb 26 -- Removed redundant call to FindAndReadConfIni
    8 Mar 26 -- Added keyboard shortcuts for quit.
   10 Mar 26 -- Added test against empty string for monthsThresholdEntry.OnChanged
+   9 May 26 -- Ported code that checks the schedule for format changes to here.  Written and debugged in lint.go and lint-main.go
 */
 
-const lastModified = "10 March 2026"
+const lastModified = "9 May 2026"
 
 //go:embed schedule.png
 var scheduleIcon []byte
@@ -127,6 +128,17 @@ func main() {
 
 	// check the weekly schedule Excel file
 	scheduleCheckFcn := func() {
+		mismatched, err := lint.CheckRowNames(pickedFilename)
+		if err != nil {
+			dialog.ShowError(err, w)
+			fmt.Printf(" Warning from CheckRowNames: %s\n", err)
+		}
+		if mismatched {
+			er := fmt.Errorf("warning from CheckRowNames is that there is a mismatch and results may be unreliable")
+			dialog.ShowError(er, w)
+			fmt.Printf(" Warning from CheckRowNames: %s\n", er)
+		}
+
 		msg, err := lint.ScanXLSfile(pickedFilename)
 		if err != nil {
 			//fmt.Printf("line ~91: Error from ScanXLSfile is %v\n", err)

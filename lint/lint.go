@@ -32,7 +32,7 @@ import (
   26 Sep 24 -- Started first version.  Intended as a linter for the weekly work schedule.  It will need a .conf or .ini file to establish the suitable params.
                It will need lists to specify who can be covering a specific area, and to make sure that if someone is on vacation, their name does not appear anywhere else
                for that day.  So I'll need categories in the .conf or .ini file, such as:
-				weekdayOncall row 3
+				dateLine row 3
 				neuro row 4
 				body row 5
 				ER row 6
@@ -172,8 +172,8 @@ const (
 	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
-var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "MSK", "mammo",
-	"density", "late", "on-call", "out"}
+var rowNames = []string{"", "neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
+	"density", "late", "on-call", "out"} // there's an off-by-one error I'm fixing now.
 
 const (
 	monday = iota + 1
@@ -925,12 +925,13 @@ func CheckRowNames(filename string) (bool, error) {
 	rowOffset-- // really need offset for the dateLine
 
 	sheets := workBook.Sheets
-	for i := dateLine + rowOffset; i < totalAmt+rowOffset; i++ {
+	for i := neuro + rowOffset; i < mdOff+rowOffset; i++ {
 		cell, err := sheets[0].Cell(i, 0) // need assignment name column
 		if err != nil {
 			return false, err
 		}
 		s := strings.ToLower(cell.String())
+		//fmt.Printf("rowOffSet=%d, Cell(%d) = %s, matching rowNames is %s\n", rowOffset, i, s, rowNames[i-rowOffset])  ok, it's working.  I can comment this line out now.
 		if !strings.Contains(s, rowNames[i-rowOffset]) {
 			return true, nil
 		}

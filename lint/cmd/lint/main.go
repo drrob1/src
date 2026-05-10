@@ -124,10 +124,10 @@ import (
    7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
   13 Feb 26 -- Added rowOffset to allow for a date row in the schedule to the lint library.  Here, I added a message for the lint library last modified date.
   18 Feb 26 -- Debugging problem w/ not finding upgradelint.exe
-   7 May 26 -- Added use of lint.CheckRowNames.
+   9 May 26 -- Added use of lint.CheckRowNames.
 */
 
-const lastModified = "7 May 2026"
+const lastModified = "9 May 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
