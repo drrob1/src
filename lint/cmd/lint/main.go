@@ -124,9 +124,10 @@ import (
    7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
   13 Feb 26 -- Added rowOffset to allow for a date row in the schedule to the lint library.  Here, I added a message for the lint library last modified date.
   18 Feb 26 -- Debugging problem w/ not finding upgradelint.exe
+   7 May 26 -- Added use of lint.CheckRowNames.
 */
 
-const lastModified = "18 Feb 2026"
+const lastModified = "7 May 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
@@ -172,7 +173,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint V 3.1 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, lint.LastModified)
+	fmt.Printf(" lint V 3.2 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, lint.LastModified)
 
 	_, startDirFromConfigFile, err = lint.FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
@@ -310,7 +311,7 @@ func main() {
 	}
 	lint.Names = names
 
-	// detecting and reporting likely spelling errors based on the soundex algorithm
+	// detecting and reporting likely spelling errors based on the Soundex algorithm
 
 	soundx := lint.GetSoundex(names)
 	spellingErrors := lint.ShowSpellingErrors(soundx)
@@ -320,6 +321,19 @@ func main() {
 			ctfmt.Printf(ct.Red, true, " %s  ", spell)
 		}
 		fmt.Printf("\n\n\n")
+	}
+
+	// Check to see if there schedule format has changed
+	mismatched, err := lint.CheckRowNames(filename)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from CheckRowNames: %s.  Exiting \n", err)
+		return
+	}
+
+	if mismatched {
+		ctfmt.Printf(ct.Green, true, "\n\n Warning: CheckRowNames is mismatched.  Results may not be reliable.\n")
+		ctfmt.Printf(ct.Magenta, true, " Warning: CheckRowNames is mismatched.  Results may not be reliable.\n")
+		ctfmt.Printf(ct.Cyan, true, " Warning: CheckRowNames is mismatched.  Results may not be reliable.\n\n\n")
 	}
 
 	// scan the xlsx schedule file

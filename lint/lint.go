@@ -141,6 +141,8 @@ import (
 				is for this sheet, and use that when I reference a row.  It's too late now to code this, so I'll start tomorrow (I hope).
   14 Mar 26 -- Today is Pi day, but that's not important now.  If there is no doc name before the (*R) string, then "Dr." becomes the doctor name.  I'm working on fixing this now.
    9 May 26 -- It seems that the schedule switched the ON-CALL Radiologist and Late MD rows.  So I have to account for that here now.  I'll do that in the definition of the row names.
+				I decided too check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
+				I have to use the rowoffset.
 */
 
 const LastModified = "9 May 2026"
@@ -169,6 +171,9 @@ const (
 	bluebarweekendcoverage
 	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
+
+var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "MSK", "mammo",
+	"density", "late", "on-call", "out"}
 
 const (
 	monday = iota + 1
@@ -904,6 +909,34 @@ func ScanXLSfile(filename string) ([]string, error) {
 		}
 	}
 	return messages, nil
+}
+
+// CheckRowNames -- true means there's a mismatch, i.e., an unexpected result.
+func CheckRowNames(filename string) (bool, error) {
+	workBook, err := xlsx.OpenFile(filename)
+	if err != nil {
+		return false, err
+	}
+
+	rowOffset, err = GetNeuroRowOffset(workBook)
+	if err != nil {
+		return false, err
+	}
+	rowOffset-- // really need offset for the dateLine
+
+	sheets := workBook.Sheets
+	for i := dateLine + rowOffset; i < totalAmt+rowOffset; i++ {
+		cell, err := sheets[0].Cell(i, 0) // need assignment name column
+		if err != nil {
+			return false, err
+		}
+		s := strings.ToLower(cell.String())
+		if !strings.Contains(s, rowNames[i-rowOffset]) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
