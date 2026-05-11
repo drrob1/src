@@ -330,7 +330,11 @@ func main() {
 	}
 
 	if mismatched {
-		ctfmt.Printf(ct.Red, true, "\n\n Warning: CheckRowNames is mismatched.  Results may not be reliable.\n\n\n")
+		ctfmt.Printf(ct.White, true, "\n********************************************************************")
+		ctfmt.Printf(ct.Red, true, "\n Warning: ")
+		ctfmt.Printf(ct.White, true, "CheckRowNames is mismatched.  Results may not be reliable.")
+		ctfmt.Printf(ct.Red, true, "  Warning: \n")
+		ctfmt.Printf(ct.White, true, "*******************************************************************\n")
 	}
 
 	// scan the xlsx schedule file

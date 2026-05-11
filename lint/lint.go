@@ -237,9 +237,8 @@ func FindAndReadConfIni() ([]string, string, error) {
 		if !found {
 			if VerboseFlag {
 				return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
-			} else {
-				return nil, "", nil
 			}
+			return nil, "", nil
 		}
 	}
 
@@ -515,232 +514,13 @@ func GetNeuroRowOffset(wb *xlsx.File) (int, error) {
 	return 0, fmt.Errorf("neuro row not found")
 }
 
-/*
-Commenting out main() because it is to be moved to a separate main.go, in prep for lintf or lintgui.  I haven't decided what I'm going to call it yet.
-func main() {
-	var err error
-	var noUpgradeLint bool
-	var whichURL int
-	flag.BoolVarP(&veryVerboseFlag, "vv", "w", false, "very verbose debugging output")
-	flag.IntVarP(&monthsThreshold, "months", "m", 1, "months threshold for schedule files")
-	flag.BoolVarP(&noUpgradeLint, "noupgrade", "n", false, "do not upgrade lint.exe")
-	flag.IntVarP(&whichURL, "url", "u", 0, "which URL to use for the auto updating of lint.exe")
-	u1 := flag.BoolP("u1", "1", false, "Shortcut for -u 1")
-	u2 := flag.BoolP("u2", "2", false, "Shortcut for -u 2")
-
-	flag.Usage = func() {
-		fmt.Printf(" %s last modified %s, compiled with %s, using pflag.\n", os.Args[0], lastModified, runtime.Version())
-		fmt.Printf(" Usage: %s <weekly xlsx file> \n", os.Args[0])
-		fmt.Printf(" Needs lint.conf or lint.ini, and looks in current, home and config directories.\n")
-		fmt.Printf(" first line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-	if veryVerboseFlag {
-		*verboseFlag = true
-	}
-
-	if *u1 {
-		whichURL = 1
-	} else if *u2 {
-		whichURL = 2
-	}
-
-	var filename, ans string
-
-	fmt.Printf(" lint V 3.0 for the weekly schedule, last modified %s\n", lastModified)
-
-	_, StartDirFromConfigFile, err = FindAndReadConfIni() // ignore the doc Names list from the config file, as that's now extracted from the schedule itself.
-	if err != nil {
-		if *verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
-			fmt.Printf(" Warning from FindAndReadConfIni: %s.  Ignoring. \n", err)
-			ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
-			//   return  No longer need the Names from the file.  And don't absolutely need startDirectory.
-		}
-	}
-	if *verboseFlag {
-		fmt.Printf(" After FindAndReadConfIni, Start Directory: %s\n", StartDirFromConfigFile)
-	}
-
-	if flag.NArg() == 0 {
-		//if includeODrive {  O: drive is gone as of 8/8/25.
-		//	filenames, err = walkRegexFullFilenames() // function is below.  "o:\\week.*xls.?$"
-		//	if err != nil {
-		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames is %s.  Exiting \n", err)
-		//		return
-		//	}
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length from o drive: %d\n", len(filenames))
-		//	}
-		//}
-
-		//if StartDirFromConfigFile != "" {
-		//	filenamesStartDir, err := walkRegexFullFilenames(StartDirFromConfigFile)
-		//	if err != nil {
-		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
-		//			StartDirFromConfigFile, err)
-		//	}
-		//	if len(filenamesStartDir) > 0 {
-		//		filenames = append(filenames, filenamesStartDir...)
-		//		if *verboseFlag {
-		//			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
-		//		}
-		//	}
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
-		//	}
-		//}
-		//
-		//homeDir, err = os.UserHomeDir()
-		//if err != nil {
-		//	fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
-		//	return
-		//}
-		////                               docs = filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")  Don't want the regex as part of this expression.
-		//docs = filepath.Join(homeDir, "Documents") // this walks this directory below to collect filenames
-		//if *verboseFlag {
-		//	fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
-		//}
-		//oneDriveString := os.Getenv("OneDrive")
-		//if *verboseFlag {
-		//	fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
-		//}
-		//filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
-		//if err != nil {
-		//	fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignoring \n", oneDriveString, err)
-		//}
-		//if *verboseFlag {
-		//	fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
-		//}
-		//
-		//filenames = append(filenames, filenamesOneDrive...)
-		//if *verboseFlag {
-		//	fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
-		//}
-		//
-		//filenamesDocs, err := walkRegexFullFilenames(docs)
-		//if err != nil {
-		//	fmt.Printf(" Error from walkRegesFullFilenames(%s) is %s.  Ignored \n", docs, err)
-		//} else {
-		//	filenames = append(filenames, filenamesDocs...)
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
-		//	}
-		//}
-
-		filenames, err := GetFilenames()
-		if err != nil {
-			fmt.Printf(" Error from GetFilenames is %s.  Exiting \n", err)
-			return
-		}
-
-		for i := 0; i < min(len(filenames), 26); i++ {
-			fmt.Printf("filename[%d, %c] is %s\n", i, i+'a', filenames[i])
-		}
-		fmt.Print(" Enter filename choice : ")
-		n, err := fmt.Scanln(&ans)
-		if n == 0 || err != nil {
-			ans = "0"
-		} else if ans == "999" || ans == "." || ans == "," || ans == ";" {
-			fmt.Println(" No files entered.  Exiting.")
-			return
-		}
-		i, e := strconv.Atoi(ans)
-		if e == nil {
-			filename = filenames[i]
-		} else {
-			s := strings.ToUpper(ans)
-			s = strings.TrimSpace(s)
-			s0 := s[0]
-			i = int(s0 - 'A')
-			filename = filenames[i]
-		}
-		fmt.Println(" Picked spreadsheet is", filename)
-	} else { // will use filename entered on commandline
-		filename = flag.Arg(0)
-	}
-
-	if *verboseFlag {
-		fmt.Printf(" spreadsheet picked is %s\n", filename)
-	}
-	fmt.Println()
-
-	Names, err = getDocNames(filename)
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error from getDocNames: %s.  Exiting \n", err)
-		return
-	}
-	if *verboseFlag {
-		fmt.Printf(" doc Names extracted from %s length: %d\n", filename, len(Names))
-		fmt.Printf(" Names: %#v\n\n", Names)
-	}
-
-	// detecting and reporting likely spelling errors based on the soundex algorithm
-
-	soundx := getSoundex(Names)
-	spellingErrors := showSpellingErrors(soundx)
-	if len(spellingErrors) > 0 {
-		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling error(s) detected in %s: ", len(spellingErrors)/2, filename)
-		for _, spell := range spellingErrors {
-			ctfmt.Printf(ct.Red, true, " %s  ", spell)
-		}
-		fmt.Printf("\n\n\n")
-	}
-
-	// scan the xlsx schedule file
-
-	err = scanXLSfile(filename)
-
-	if err == nil {
-		ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n\n", filename)
-	} else {
-		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s is %s\n\n", filename, err)
-		return
-	}
-
-	if noUpgradeLint {
-		return
-	} // this flag is a param above.
-
-	// Time to run the updatelist cmd.
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, "\n\n Error getting working directory: %s.  Contact Rob Solomon\n\n", err)
-		return
-	}
-	fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe") // have to search for upgradelint, as at home it's likely in the go/bin directory.
-	upgradeExecPath := whichexec.Find("upgradelint.exe", workingDir)
-	if *verboseFlag {
-		fmt.Printf(" workingDir=%s, fullUpgradeLintPath=%s, upgradeExecPath=%s\n", workingDir, fullUpgradeLintPath, upgradeExecPath)
-	}
-
-	variadicArgs := make([]string, 0, 2)
-	if *verboseFlag {
-		variadicArgs = append(variadicArgs, "-v")
-	}
-	if whichURL > 0 {
-		variadicArgs = append(variadicArgs, "-u", strconv.Itoa(whichURL))
-	}
-
-	// execcmd := exec.Command(fullUpgradeLintPath, variadicArgs...)
-	execcmd := exec.Command(upgradeExecPath, variadicArgs...)
-	execcmd.Stdin = os.Stdin
-	execcmd.Stdout = os.Stdout
-	execcmd.Stderr = os.Stderr
-	err = execcmd.Start()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, "\n\n Error starting upgradelint: %s.  Contact Rob Solomon\n\n", err)
-	}
-}
-*/
-
 // ScanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
 //
 //		Used to not need to return anything except error to main.
-//	 Now that I'm changing this include lintGUI, I need to change the signature of this routine.  It has to return a []string of messages that can be sent to display or a fyne widget.
+//	 Now that I'm changing this to include lintGUI, I need to change the signature of this routine.  It has to return a []string of messages that
+//	 can be sent to display or a fyne widget.
 //
-// For now, it still displays some strings to the terminal.
+// For now, it still writes some strings to the terminal.
 func ScanXLSfile(filename string) ([]string, error) {
 	var messages []string
 
@@ -936,9 +716,7 @@ func CheckRowNames(filename string) (bool, error) {
 
 // getRegexFullFilenames -- uses a regular expression to determine a match, by using regex.MatchString.  Processes directory info and uses dirEntry type.
 //
-//	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilda, ~, are skipped, as these are temporary files created by Excel.
-//
-// func walkRegexFullFilenames(startdirectory string) ([]string, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
+//	Needs a walk function to find what it is looking for.  See top comments.  Filenames beginning w/ a tilde, ~, are skipped, as these are temporary files created by Excel.
 func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // This rtn sorts using sort.Slice, and only returns filenames within the time constraint.
 
 	if VerboseFlag {
@@ -954,7 +732,7 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 
 	// define the timestamp constraint of >= this monthyear.  No, >= 1 month ago.
 	t0 := time.Now()
-	threshold := t0.AddDate(0, -MonthsThreshold, 0) // threshhold is months ago set by a commandline flag.  Default is 1 month.
+	threshold := t0.AddDate(0, -MonthsThreshold, 0) // threshold is months ago set by a commandline flag.  Default is 1 month.
 	timeout := t0.Add(5 * time.Minute)
 
 	// set up channel to receive FDSlices and append them to a master file data slice
@@ -967,7 +745,7 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 		}
 		boolChan <- true // pause until this go routine completes its work
 	}
-	go receiverFunc() // keep receiving on the receiver chan and appending to the master slice
+	go receiverFunc() // keep receiving on the receiver channel and appending to the master slice
 
 	// Put walk func here.  It has to check the directory entry it gets, then search for all filenames that meet the regex and timestamp constraints.
 	walkDirFunction := func(fpath string, de os.DirEntry, err error) error {
@@ -1073,19 +851,6 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 		fmt.Printf(" in walkRegexFullFilenames after sort.Slice.  Len=%d\n  FDSlice %#v\n", len(FDSlice), FDSlice)
 	}
 
-	//stringSlice := make([]string, 0, len(FDSlice))  Move the test for time into the walk function.
-	//var count int
-	//for _, f := range FDSlice {
-	//	if f.Timestamp.After(threshold) {
-	//		stringSlice = append(stringSlice, f.FFname) // needs to preserve case of filename for linux
-	//		count++
-	//		if count >= NumLines {
-	//			break
-	//		}
-	//	} else {
-	//		break // Made observation that in a sorted list the first file before the threshold timestamp ends the search.
-	//	}
-	//}
 	if VerboseFlag {
 		fmt.Printf(" In walkRegexFullFilenames.  len(stringSlice) = %d\n stringSlice=%v\n", len(FDSlice), FDSlice)
 	}
@@ -1296,3 +1061,5 @@ func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {
 
 	return vacStructArray, nil
 }
+
+//Commented out main() because it is to be moved to a separate main.go, in prep for lintgui.  I haven't decided what I'm going to call it yet.
