@@ -165,15 +165,15 @@ const (
 	msk // includes X-ray In/Outpatient and off-sites
 	mammo
 	boneDensity
-	late // switched with oncallradiologist discovered May 9, 2026.
-	oncallradiologist
+	late              // switched with oncallradiologist discovered May 9, 2026.
+	oncallradiologist // switch with late discovered May 9, 2026.
 	mdOff
 	bluebarweekendcoverage
 	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
-var rowNames = []string{"", "neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "out"} // there's an off-by-one error I'm fixing now.
+var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
+	"density", "late", "on-call", "out"}
 
 const (
 	monday = iota + 1
@@ -215,10 +215,6 @@ type VacStructArrayType [6]VacStructType
 
 var Names []string
 
-//var CategoryNamesList = []string{"0", "1", "date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-//	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
-//	"On-Call IR", "On-Call MD"} // 0 and 1 are unused
-
 // CategoryNamesList now has to be indexed using the rowOffset.
 var CategoryNamesList = []string{"date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
@@ -226,8 +222,6 @@ var CategoryNamesList = []string{"date", "Neuro", "Body", "ER/Xrays", "IR", "Nuc
 
 var DayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var DayOff = make(map[string]bool) // only used in FindAndReadConfIni when verboseFlag is set
-
-// var NumLines = 15 // not used since I wrote lintGUI
 
 var VerboseFlag bool
 var VeryVerboseFlag bool
@@ -922,7 +916,7 @@ func CheckRowNames(filename string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	rowOffset-- // really need offset for the dateLine
+	//rowOffset-- // really need offset for the dateLine
 
 	sheets := workBook.Sheets
 	for i := neuro + rowOffset; i < mdOff+rowOffset; i++ {
@@ -1121,12 +1115,12 @@ func excludeMe(s string) bool {
 		}
 	}
 
-	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this exprn.
+	dgtRegexp := regexp.MustCompile(`\d`) // any digit character will match this expression.
 
 	return dgtRegexp.MatchString(s)
 }
 
-// GetDocNames -- takes a filename and returns a slice of doc Names extracted from the Excel weekly schedule file.  The slice is sorted.  The slice is sorted by the first word of the doc name.
+// GetDocNames -- takes a filename and returns a slice of doc Names extracted from the Excel weekly schedule file.  The slice is sorted by the first word of the doc name.
 func GetDocNames(fn string) ([]string, error) {
 	docNamesSlice := make([]string, 0, maxDimensions)
 	workBook, err := xlsx.OpenFile(fn)
