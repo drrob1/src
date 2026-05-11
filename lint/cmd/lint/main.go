@@ -127,13 +127,12 @@ import (
    9 May 26 -- Added use of lint.CheckRowNames.
 */
 
-const lastModified = "9 May 2026"
+const lastModified = "11 May 2026"
 
 //const conf = "lint.conf"
 //const ini = "lint.ini"
 //const numOfDocs = 40 // used to dimension a string slice.
 //const maxDimensions = 200
-//var numLines = 15 // I don't expect to need more than these, as I display only the first 26 elements (a-z) so far.
 
 var verboseFlag bool
 var veryVerboseFlag bool
@@ -331,9 +330,7 @@ func main() {
 	}
 
 	if mismatched {
-		ctfmt.Printf(ct.Green, true, "\n\n Warning: CheckRowNames is mismatched.  Results may not be reliable.\n")
-		ctfmt.Printf(ct.Magenta, true, " Warning: CheckRowNames is mismatched.  Results may not be reliable.\n")
-		ctfmt.Printf(ct.Cyan, true, " Warning: CheckRowNames is mismatched.  Results may not be reliable.\n\n\n")
+		ctfmt.Printf(ct.Red, true, "\n\n Warning: CheckRowNames is mismatched.  Results may not be reliable.\n\n\n")
 	}
 
 	// scan the xlsx schedule file
