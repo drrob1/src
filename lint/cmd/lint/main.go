@@ -141,7 +141,7 @@ func main() {
 	// Then, uses the Soundex algorithm to check spelling.  After all, the string matching used here depends on all names spelled correctly.  A problem is that there are
 	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
 	// Then, call CheckRowNames.  This routine reads the schedule file's 1st column.
-	// Then, call ScanXLSFile.  This routine reads the schedule file by columns
+	// Then, call ScanXLSFile.  This routine reads the schedule file by columns to check who's late or remote for the fluoro check, and on vacation to check if also assigned to work.
 	var err error
 	var noUpgradeLint bool
 	var whichURL int
