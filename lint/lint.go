@@ -173,7 +173,7 @@ const (
 )
 
 var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "out"}
+	"density", "late", "on-call", "out"} // used by CheckRowNames.
 
 const (
 	monday = iota + 1
@@ -210,8 +210,6 @@ type VacStructType struct {
 	DocsAreOff []string
 }
 type VacStructArrayType [6]VacStructType
-
-//var names = make([]string, 0, numOfDocs)  Old definition.
 
 var Names []string
 
@@ -322,7 +320,7 @@ func FindAndReadConfIni() ([]string, string, error) {
 	return docNames, startDirectory, nil
 }
 
-func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) {
+func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) { // reads a column of the schedule.
 	var day DayType
 	sheets := wb.Sheets
 
@@ -886,6 +884,8 @@ func excludeMe(s string) bool {
 }
 
 // GetDocNames -- takes a filename and returns a slice of doc Names extracted from the Excel weekly schedule file.  The slice is sorted by the first word of the doc name.
+//
+//	This reads the entire file by rows.
 func GetDocNames(fn string) ([]string, error) {
 	docNamesSlice := make([]string, 0, maxDimensions)
 	workBook, err := xlsx.OpenFile(fn)

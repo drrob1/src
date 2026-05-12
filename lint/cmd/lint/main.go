@@ -121,7 +121,7 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    2 Feb 26 -- Now only contains main() and calls package lint.  A sticking point in the conversion to separate pacckages was the globals.  When I copied those correctly, the code started working.
    3 Feb 26 -- In the process of writing lintGUI, I had to change the scanXLSfile function to return a slice of messages.  So now I'm refactoring here to test them.
-   7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returns slice of names is sorted by date stamp.
+   7 Feb 26 -- Changed GetFilenames to GetScheduleFilenames.  Also changed when the schedule filenames are sorted.  Now, the entire returned slice of names is sorted by date stamp.
   13 Feb 26 -- Added rowOffset to allow for a date row in the schedule to the lint library.  Here, I added a message for the lint library last modified date.
   18 Feb 26 -- Debugging problem w/ not finding upgradelint.exe
    9 May 26 -- Added use of lint.CheckRowNames.
@@ -129,17 +129,19 @@ import (
 
 const lastModified = "11 May 2026"
 
-//const conf = "lint.conf"
-//const ini = "lint.ini"
-//const numOfDocs = 40 // used to dimension a string slice.
-//const maxDimensions = 200
-
 var verboseFlag bool
 var veryVerboseFlag bool
 var monthsThreshold int
 var startDirFromConfigFile string // this needs to be a global, esp for the walk function.
 
 func main() {
+	// I'm going to outline how this pgm works, so I remember.
+	// First, there's code to determine which schedule file to process.  A walk function assists w/ this.
+	// Then, GetDocNames is called to retrieve all names in the schedule, sorted alphabetically.  The schedule file is read by rows in this routine.
+	// Then, uses the Soundex algorithm to check spelling.  After all, the string matching used here depends on all names spelled correctly.  A problem is that there are
+	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
+	// Then, call CheckRowNames.  This routine reads the schedule file's 1st column.
+	// Then, call ScanXLSFile.  This routine reads the schedule file by columns
 	var err error
 	var noUpgradeLint bool
 	var whichURL int
@@ -365,7 +367,7 @@ func main() {
 		ctfmt.Printf(ct.Red, true, "\n\n Error getting working directory: %s.  Contact Rob Solomon\n\n", err)
 		return
 	}
-	// fullUpgradeLintPath := filepath.Join(workingDir, "upgradelint.exe") // not needed now that I'm using whichexec to find it.
+
 	upgradeExecPath := whichexec.Find("upgradelint.exe", workingDir)
 	if verboseFlag {
 		fmt.Printf(" workingDir=%s, upgradeExecPath=%s\n", workingDir, upgradeExecPath)
