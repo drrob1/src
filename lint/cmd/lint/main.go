@@ -117,7 +117,7 @@ import (
                  I'll tag this lint v3.0 in git when I'm comfortable that I won't need v3.0.1, etc.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    1 Feb 26 -- I'm starting to think about using fyne to make this a GUI pgm.  I may have to convert much of this code to functions that are merely connected together in main.go,
-				which will be in ./cmd/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
+				which will be in ./lint/cmd/lint/main.go.  The code works as is.  Time to refactor to package lint and have package main be in main.go separately.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
    2 Feb 26 -- Now only contains main() and calls package lint.  A sticking point in the conversion to separate pacckages was the globals.  When I copied those correctly, the code started working.
    3 Feb 26 -- In the process of writing lintGUI, I had to change the scanXLSfile function to return a slice of messages.  So now I'm refactoring here to test them.
@@ -142,6 +142,7 @@ func main() {
 	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
 	// Then, call CheckRowNames.  This routine reads the schedule file's 1st column.
 	// Then, call ScanXLSFile.  This routine reads the schedule file by columns to check who's late or remote for the fluoro check, and on vacation to check if also assigned to work.
+	// I extract the year from the schedule, but I don't remember why.  Looks like it's used to determine the day of week, as in Monday..Friday.
 	var err error
 	var noUpgradeLint bool
 	var whichURL int
