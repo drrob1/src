@@ -260,12 +260,15 @@ func main() {
 
 	// now to display the workweek
 
-	fmt.Printf(" SectionMap\n  %v\n", newlint.SectionMap)
+	fmt.Printf(" Raw SectionMap\n  %v\n", newlint.SectionMap)
+
+	sectionMap := newlint.ShowSectionMap()
+	fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
 
 	for i, w := range workWeek {
-		fmt.Printf(" Length of Row %d is %d\n", i, len(w))
+		debugFileBuf.WriteString(fmt.Sprintf(" Length of Row %d is %d\n", i, len(w)))
 		for j, d := range w {
-			fmt.Printf(" Day(%d,%d) is %v\n", i, j, d)
+			debugFileBuf.WriteString(fmt.Sprintf(" Day(%d,%d) is %v\n", i, j, d))
 		}
 	}
 

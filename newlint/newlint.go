@@ -142,7 +142,7 @@ import (
 				is for this sheet, and use that when I reference a row.  It's too late now to code this, so I'll start tomorrow (I hope).
   14 Mar 26 -- Today is Pi day, but that's not important now.  If there is no doc name before the (*R) string, then "Dr." becomes the doctor name.  I'm working on fixing this now.
    9 May 26 -- It seems that the schedule switched the ON-CALL Radiologist and Late MD rows.  So I have to account for that here now.  I'll do that in the definition of the row names.
-				I decided too check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
+				I decided to check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
 				I have to use the rowoffset.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   12 May 26 -- Now called newlint, copied from lint.go.  My plan is to read the xlsx file once into a variable, and then all other readings will occur from that variable.
@@ -177,8 +177,8 @@ const (
 	totalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
-var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "out"} // used by CheckRowNames.
+var rowNames = []string{"neuro", "body", "stats", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
+	"density", "late", "on-call", "office"} // used by CheckRowNames.
 
 const (
 	monday = iota + 1
@@ -195,9 +195,9 @@ var rowOffset int
 
 type DayType [23]string // There are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
 
-// looks like I have the matrix organized around columns which are days.  I need to change that to sections.
+// looks like I have the matrix organized around columns which are days.  I need to change that to rows which are sections.
 type sectionRowType [6]string
-type WorkWeekType [30]sectionRowType
+type WorkWeekType [totalAmt]sectionRowType
 
 type FileDataType struct { // used for the walk function.
 	Name      string // base name of the file
@@ -250,7 +250,8 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 	defer debugFile.Close()
 	debugFileBuf = bufio.NewWriter(debugFile)
 	defer debugFileBuf.Flush()
-	debugFileBuf.WriteString("-----------------------------------------------------------------------------------------------\nReadInXLSfile: " + fn + "\n")
+	debugFileBuf.WriteString(time.Now().Format(time.DateTime) + "-----------------------------------------------------------------------------------------------\nReadInXLSfile: " +
+		fn + "\n")
 
 	workBook, err := xlsx.OpenFile(fn)
 	if err != nil {
@@ -260,12 +261,12 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 
 	// Experimenting with reading an entire row at a time.  Nope, that doesn't work because then it's left as a *Cell.  I need them to all be strings, so I'll convert to strings now.
 	var workWeek WorkWeekType
-	for i := neuro + rowOffset; i < sheet.MaxRow; i++ {
+	for i := neuro + rowOffset; i < totalAmt; i++ {
 		row, er := sheet.Row(i)
 		if er != nil {
 			return WorkWeekType{}, er // return an empty work week.
 		}
-		sectionNameStr := row.GetCell(0).String()
+		sectionNameStr := strings.ToLower(row.GetCell(0).String())
 		if sectionNameStr == "" { // skip entries w/ nothing in the 1st column, the assignment column on the schedule.
 			continue
 		}
@@ -278,20 +279,34 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 				debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d\n", sectName, i, len(SectionMap)))
 			}
 		}
-		// I need to put
+
 		for col := 1; col < 6; col++ { // Columns are Monday - Friday
 			s := row.GetCell(col).String()
 			workWeek[i][col] = s
+			str = fmt.Sprintf("  workWeek[%d][%d] = %q\n", i, col, s)
+			debugFileBuf.WriteString(str)
 		}
 	}
 	return workWeek, nil
 }
 
-func ShowSectionMap() {
+type MapSliceType struct {
+	s   string
+	val int
+}
+
+func ShowSectionMap() []MapSliceType {
+	mapSlice := make([]MapSliceType, 0, len(SectionMap))
 	fmt.Printf(" SectionMap: \n")
 	for sectName, row := range SectionMap {
-		fmt.Printf("  %s: %d\n", sectName, row)
+		v := MapSliceType{s: sectName, val: row}
+		mapSlice = append(mapSlice, v)
 	}
+	lessFcn := func(i, j int) bool {
+		return mapSlice[i].val < mapSlice[j].val
+	}
+	sort.Slice(mapSlice, lessFcn)
+	return mapSlice
 }
 
 // FindAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
