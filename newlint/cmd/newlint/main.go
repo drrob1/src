@@ -248,13 +248,8 @@ func main() {
 	}
 
 	// now to display the workweek
-	fmt.Printf(" Length of work week is %d\n", len(workWeek))
-	for i, w := range workWeek {
-		fmt.Printf(" Length of week %d is %d\n", i, len(w))
-		for j, d := range w {
-			fmt.Printf(" Length of day %d is %d\n", j, len(d))
-		}
-	}
+
+	fmt.Printf(" SectionMap\n  %v\n", newlint.SectionMap)
 
 	for i, w := range workWeek {
 		fmt.Printf(" Length of Row %d is %d\n", i, len(w))

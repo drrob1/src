@@ -193,13 +193,15 @@ var rowOffset int
 
 type DayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
 
+// looks like I have the matrix organized around columns which are days.  I need to change that to sections.
+type sectionRowType [6]string
+type WorkWeekType [30]sectionRowType
+
 type FileDataType struct { // used for the walk function.
 	Name      string // base name of the file
 	FFname    string // full filename
 	Timestamp time.Time
 }
-
-type WorkWeekType [6]DayType
 
 type SoundexSlice struct {
 	s      string
@@ -266,6 +268,13 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 		}
 	}
 	return workWeek, nil
+}
+
+func ShowSectionMap() {
+	fmt.Printf(" SectionMap: \n")
+	for sectName, row := range SectionMap {
+		fmt.Printf("  %s: %d\n", sectName, row)
+	}
 }
 
 // FindAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
@@ -584,7 +593,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 	// Populate the wholeWorkWeek's schedule
 	var wholeWorkWeek WorkWeekType       // [6]dayType  Only need 5 workdays.  Element 0 is not used.
 	for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
-		wholeWorkWeek[i], err = ReadEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
+		//wholeWorkWeek[i], err = ReadEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
 		if err != nil {
 			fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
 			continue
