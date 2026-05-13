@@ -669,7 +669,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 		for _, name := range mdsOffToday {
 			for i := neuro + rowOffset; i < mdOff+rowOffset; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
-					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesList[i-rowOffset])
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesListForDisplay[i-rowOffset])
 					messages = append(messages, msg)
 				}
 			}

@@ -3,9 +3,9 @@ package main // newlint-main from lint-main.go, from lint2.go from lint.go
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
 	"src/lint"
+	"src/newlint"
 	"src/whichexec"
 	"strconv"
 	"strings"
@@ -14,6 +14,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	flag "github.com/spf13/pflag"
 	//"flag"
+	//"os/exec"
 )
 
 /*
@@ -198,72 +199,8 @@ func main() {
 	whichexec.VerboseFlag = verboseFlag
 
 	if flag.NArg() == 0 {
-		//if includeODrive {  O: drive is gone as of 8/8/25.
-		//	filenames, err = walkRegexFullFilenames() // function is below.  "o:\\week.*xls.?$"
-		//	if err != nil {
-		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames is %s.  Exiting \n", err)
-		//		return
-		//	}
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length from o drive: %d\n", len(filenames))
-		//	}
-		//}
-
-		//if startDirFromConfigFile != "" {
-		//	filenamesStartDir, err := walkRegexFullFilenames(startDirFromConfigFile)
-		//	if err != nil {
-		//		ctfmt.Printf(ct.Red, false, " Error from walkRegexFullFilenames(%s) is %s.  Ignoring. \n",
-		//			startDirFromConfigFile, err)
-		//	}
-		//	if len(filenamesStartDir) > 0 {
-		//		filenames = append(filenames, filenamesStartDir...)
-		//		if *verboseFlag {
-		//			fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
-		//		}
-		//	}
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length after append %s: %d\n", filenamesStartDir, len(filenames))
-		//	}
-		//}
-		//
-		//homeDir, err = os.UserHomeDir()
-		//if err != nil {
-		//	fmt.Printf(" Error from os.UserHomeDir: %s\n", err)
-		//	return
-		//}
-		////                               docs = filepath.Join(filepath.Join(homeDir, "Documents"), "week.*xls.?$")  Don't want the regex as part of this expression.
-		//docs = filepath.Join(homeDir, "Documents") // this walks this directory below to collect filenames
-		//if *verboseFlag {
-		//	fmt.Printf(" homedir=%q, Joined Documents: %q\n", homeDir, docs)
-		//}
-		//oneDriveString := os.Getenv("OneDrive")
-		//if *verboseFlag {
-		//	fmt.Printf(" oneDriveString = %s  \n", oneDriveString)
-		//}
-		//filenamesOneDrive, err := walkRegexFullFilenames(oneDriveString)
-		//if err != nil {
-		//	fmt.Printf(" Error from walkRegexFullFilenames(%s) is %s.  Ignoring \n", oneDriveString, err)
-		//}
-		//if *verboseFlag {
-		//	fmt.Printf(" FilenamesDocs length: %d\n", len(filenamesOneDrive))
-		//}
-		//
-		//filenames = append(filenames, filenamesOneDrive...)
-		//if *verboseFlag {
-		//	fmt.Printf(" Filenames length after append %s: %d\n", filenamesOneDrive, len(filenames))
-		//}
-		//
-		//filenamesDocs, err := walkRegexFullFilenames(docs)
-		//if err != nil {
-		//	fmt.Printf(" Error from walkRegesFullFilenames(%s) is %s.  Ignored \n", docs, err)
-		//} else {
-		//	filenames = append(filenames, filenamesDocs...)
-		//	if *verboseFlag {
-		//		fmt.Printf(" Filenames length after append %s: %d\n", docs, len(filenames))
-		//	}
-		//}
 		if verboseFlag {
-			fmt.Printf("main ln ~257: VerboseFlag is true, NArg() is zero, and startdirectoryFromConfigFile = %s, about to call GetFilenames() \n",
+			fmt.Printf("main ln ~202: VerboseFlag is true, NArg() is zero, and startdirectoryFromConfigFile = %s, about to call GetFilenames() \n",
 				startDirFromConfigFile)
 		}
 
@@ -304,93 +241,28 @@ func main() {
 	}
 	fmt.Println()
 
-	names, err := lint.GetDocNames(filename)
+	workWeek, err := newlint.ReadInXLSfile(filename)
 	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error from getDocNames: %s.  Exiting \n", err)
-		return
-	}
-	if verboseFlag {
-		fmt.Printf(" doc names extracted from %s length: %d\n", filename, len(names))
-		fmt.Printf(" names: %#v\n\n", names)
-	}
-	lint.Names = names
-
-	// detecting and reporting likely spelling errors based on the Soundex algorithm
-
-	soundx := lint.GetSoundex(names)
-	spellingErrors := lint.ShowSpellingErrors(soundx)
-	if len(spellingErrors) > 0 {
-		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling error(s) detected in %s: ", len(spellingErrors)/2, filename)
-		for _, spell := range spellingErrors {
-			ctfmt.Printf(ct.Red, true, " %s  ", spell)
-		}
-		fmt.Printf("\n\n\n")
-	}
-
-	// Check to see if there schedule format has changed
-	mismatched, err := lint.CheckRowNames(filename)
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, " Error from CheckRowNames: %s.  Exiting \n", err)
+		fmt.Printf(" Error from ReadInXLSfile is %s.  Exiting \n", err)
 		return
 	}
 
-	if mismatched {
-		ctfmt.Printf(ct.White, true, "\n********************************************************************")
-		ctfmt.Printf(ct.Red, true, "\n Warning: ")
-		ctfmt.Printf(ct.White, true, "CheckRowNames is mismatched.  Results may not be reliable.")
-		ctfmt.Printf(ct.Red, true, "  Warning: \n")
-		ctfmt.Printf(ct.White, true, "*******************************************************************\n")
-	}
-
-	// scan the xlsx schedule file
-
-	messages, err := lint.ScanXLSfile(filename)
-	if len(messages) > 0 {
-		ctfmt.Printf(ct.Cyan, true, "\n\n %d message(s) generated from %s: \n", len(messages), filename)
-		for _, msg := range messages {
-			ctfmt.Printf(ct.Yellow, true, " %s \n", msg)
+	// now to display the workweek
+	fmt.Printf(" Length of work week is %d\n", len(workWeek))
+	for i, w := range workWeek {
+		fmt.Printf(" Length of week %d is %d\n", i, len(w))
+		for j, d := range w {
+			fmt.Printf(" Length of day %d is %d\n", j, len(d))
 		}
 	}
 
-	if err == nil {
-		ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n\n", filename)
-	} else {
-		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s is %s\n\n", filename, err)
-		return
+	for i, w := range workWeek {
+		fmt.Printf(" Length of Row %d is %d\n", i, len(w))
+		for j, d := range w {
+			fmt.Printf(" Day(%d,%d) is %v\n", i, j, d)
+		}
 	}
 
-	if noUpgradeLint {
-		return
-	} // this flag is a param above.
-
-	// Time to run the updatelist cmd.
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, "\n\n Error getting working directory: %s.  Contact Rob Solomon\n\n", err)
-		return
-	}
-
-	upgradeExecPath := whichexec.Find("upgradelint.exe", workingDir)
-	if verboseFlag {
-		fmt.Printf(" workingDir=%s, upgradeExecPath=%s\n", workingDir, upgradeExecPath)
-	}
-
-	variadicArgs := make([]string, 0, 2)
-	if verboseFlag {
-		variadicArgs = append(variadicArgs, "-v")
-	}
-	if whichURL > 0 {
-		variadicArgs = append(variadicArgs, "-u", strconv.Itoa(whichURL))
-	}
-
-	// execcmd := exec.Command(fullUpgradeLintPath, variadicArgs...)
-	execcmd := exec.Command(upgradeExecPath, variadicArgs...)
-	execcmd.Stdin = os.Stdin
-	execcmd.Stdout = os.Stdout
-	execcmd.Stderr = os.Stderr
-	err = execcmd.Start()
-	if err != nil {
-		ctfmt.Printf(ct.Red, true, "\n\n Error starting upgradelint: %s.  Contact Rob Solomon\n\n", err)
-	}
+	fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
+	os.Exit(0)
 }
