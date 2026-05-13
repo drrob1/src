@@ -205,7 +205,7 @@ func main() {
 	pflag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
 	pflag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
 
-	//var excludeFlag bool  not used anymore, now I can test exclude regex against nil.
+	//var excludeFlag bool not used anymore, now I can test exclude regex against nil.
 	//pflag.BoolVar(&excludeFlag, "exclude", false, "exclude regex entered after prompt")
 	var excludeRegex *regexp.Regexp
 	var excludeRegexPattern string

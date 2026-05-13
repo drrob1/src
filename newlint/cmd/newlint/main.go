@@ -1,6 +1,7 @@
 package main // newlint-main from lint-main.go, from lint2.go from lint.go
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"runtime"
@@ -131,6 +132,7 @@ import (
 */
 
 const lastModified = "13 May 2026"
+const debugFilename = "newlint-debug.out"
 
 var verboseFlag bool
 var veryVerboseFlag bool
@@ -159,7 +161,7 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Printf(" %s last modified main.go %s and lint.go %s, compiled with %s, using pflag.\n", os.Args[0],
-			lastModified, lint.LastModified, runtime.Version())
+			lastModified, newlint.LastModified, runtime.Version())
 		fmt.Printf(" Usage: %s <weekly xlsx file> \n", os.Args[0])
 		fmt.Printf(" Looks for lint.conf or lint.ini in current, home and config directories.\n")
 		fmt.Printf(" First line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
@@ -178,25 +180,34 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" lint V 3.2 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, lint.LastModified)
+	fmt.Printf(" newlint V 0.0 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, newlint.LastModified)
 
 	_, startDirFromConfigFile, err = lint.FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
-		if verboseFlag { // only show this message if verbose flag is set.  Otherwise, it's too much.
+		if verboseFlag { // only show this message if the verbose flag is set.  Otherwise, it's too much.
 			fmt.Printf(" Warning from findAndReadConfIni: %s.  Ignoring. \n", err)
 			ctfmt.Printf(ct.Red, true, " Warning message from findAndReadConfINI: %s. \n", err)
-			//   return  No longer need the names from the file.  And don't absolutely need startDirectory.
+			//   return No longer need the names from the file.  And don't absolutely need startDirectory.
 		}
 	}
 	if verboseFlag {
 		fmt.Printf(" After findAndReadConfIni, Start Directory: %s, NArg(): %d\n", startDirFromConfigFile, flag.NArg())
 	}
 
-	lint.VeryVerboseFlag = veryVerboseFlag
-	lint.VerboseFlag = verboseFlag
-	lint.StartDirFromConfigFile = startDirFromConfigFile
-	lint.MonthsThreshold = monthsThreshold
+	newlint.VeryVerboseFlag = veryVerboseFlag
+	newlint.VerboseFlag = verboseFlag
+	newlint.StartDirFromConfigFile = startDirFromConfigFile
+	newlint.MonthsThreshold = monthsThreshold
 	whichexec.VerboseFlag = verboseFlag
+
+	debugFile, err := os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Printf(" Error opening debug file %s: %s. Exiting \n", debugFilename, err)
+		return
+	}
+	defer debugFile.Close()
+	debugFileBuf := bufio.NewWriter(debugFile)
+	defer debugFileBuf.Flush()
 
 	if flag.NArg() == 0 {
 		if verboseFlag {

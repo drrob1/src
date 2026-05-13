@@ -2,6 +2,7 @@
 package newlint
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -148,14 +149,15 @@ import (
 				In lint.go, I read the xlsx file 3 times, first to extract the doctor names, then to check the row names, and finally to analyze the schedule.
 */
 
-const LastModified = "12 May 2026"
+const LastModified = "13 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
 const maxDimensions = 200
+const debugFilename = "newlint.debug"
 
 const (
-	dateLine = iota // need this to get the year.  As of 2-26-26, I'm adding a fudge factor to allow for the change in row numbering.
+	dateLine = iota // Need this to get the year.  As of 2-26-26, I'm adding a fudge factor to allow for the change in row numbering.
 	neuro
 	body
 	erXrays
@@ -172,7 +174,7 @@ const (
 	oncallradiologist // switch with late discovered May 9, 2026.
 	mdOff
 	bluebarweekendcoverage
-	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
+	totalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
 var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
@@ -191,7 +193,7 @@ const (
 var DayNamesString = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var rowOffset int
 
-type DayType [23]string // there are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
+type DayType [23]string // There are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
 
 // looks like I have the matrix organized around columns which are days.  I need to change that to sections.
 type sectionRowType [6]string
@@ -231,13 +233,25 @@ var VerboseFlag bool
 var VeryVerboseFlag bool
 var MonthsThreshold int
 var StartDirFromConfigFile string // this needs to be a global, esp for the walk function.
+var debugFile *os.File
+var debugFileBuf *bufio.Writer
 
-func init() {
-	SectionMap = make(map[string]int, len(rowNames)) // Pre-allocating enough space for the named sections.
-}
+//func init() {  Not doing this now so the length of the map makes sense for debugging.
+//	SectionMap = make(map[string]int, len(rowNames)) // Pre-allocating enough space for the named sections.
+//}
 
 // ReadInXLSfile returns the entire work week as a matrix of strings.  Now I have to test it.
 func ReadInXLSfile(fn string) (WorkWeekType, error) {
+	debugFile, err := os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Printf("Error opening debug file: %s\n", err)
+		return WorkWeekType{}, err
+	}
+	defer debugFile.Close()
+	debugFileBuf = bufio.NewWriter(debugFile)
+	defer debugFileBuf.Flush()
+	debugFileBuf.WriteString("-----------------------------------------------------------------------------------------------\nReadInXLSfile: " + fn + "\n")
+
 	workBook, err := xlsx.OpenFile(fn)
 	if err != nil {
 		return WorkWeekType{}, err // return an empty work week.
@@ -255,10 +269,13 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 		if sectionNameStr == "" { // skip entries w/ nothing in the 1st column, the assignment column on the schedule.
 			continue
 		}
+		str := fmt.Sprintf("Row %d: %s\n", i, sectionNameStr)
+		debugFileBuf.WriteString(str)
 		for _, sectName := range rowNames {
 			if strings.Contains(sectionNameStr, sectName) {
 				SectionMap[sectName] = i // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
 				workWeek[i][0] = sectName
+				debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d\n", sectName, i, len(SectionMap)))
 			}
 		}
 		// I need to put
