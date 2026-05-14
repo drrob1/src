@@ -143,6 +143,7 @@ var startDirFromConfigFile string // this needs to be a global, esp for the walk
 func main() {
 	// I'm going to outline how this pgm works, so I remember.
 	// First, there's code to determine which schedule file to process.  A walk function assists w/ this.
+	// Then, ReadInXLSfile is called, to read the schedule file by rows.  This is the 1st change in newlint.
 	// Then, GetDocNames is called to retrieve all names in the schedule, sorted alphabetically.  The schedule file is read by rows in this routine.
 	// Then, uses the Soundex algorithm to check spelling.  After all, the string matching used here depends on all names spelled correctly.  A problem is that there are
 	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
@@ -270,12 +271,11 @@ func main() {
 	fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
 
 	debugFileBuf.WriteString(fmt.Sprintf(" len(workWeek) is %d, len(workWeek[0]) is %d\n", len(workWeek), len(workWeek[0])))
-	for row := 0; row < len(workWeek); row++ {
-		w := workWeek[row]
+	for row, w := range workWeek {
 		for col, d := range w {
 			debugFileBuf.WriteString(fmt.Sprintf(" item(%d,%d) is %v\n", row, col, d))
 		}
-		debugFileBuf.WriteString("\n")
+		debugFileBuf.WriteString("\n\n\n")
 	}
 
 	fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
