@@ -178,7 +178,7 @@ const (
 )
 
 var rowNames = []string{"neuro", "body", "stats", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "office"} // used by CheckRowNames.
+	"density", "late", "on-call", "office"} // used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office"
 
 const (
 	monday = iota + 1
@@ -197,7 +197,7 @@ type DayType [23]string // There are a few unused entries here.  This goes from 
 
 // looks like I have the matrix organized around columns which are days.  I need to change that to rows which are sections.
 type sectionRowType [6]string
-type WorkWeekType [totalAmt]sectionRowType
+type WorkWeekType [totalAmt + neuro]sectionRowType // here the value of neuro acts as the offset.
 
 type FileDataType struct { // used for the walk function.
 	Name      string // base name of the file
@@ -236,7 +236,7 @@ var StartDirFromConfigFile string // this needs to be a global, esp for the walk
 var debugFile *os.File
 var debugFileBuf *bufio.Writer
 
-//func init() {  Not doing this now so the length of the map makes sense for debugging.
+//func init() {  Not doing this now, so the length of the map makes sense for debugging.
 //	SectionMap = make(map[string]int, len(rowNames)) // Pre-allocating enough space for the named sections.
 //}
 
@@ -250,7 +250,7 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 	defer debugFile.Close()
 	debugFileBuf = bufio.NewWriter(debugFile)
 	defer debugFileBuf.Flush()
-	debugFileBuf.WriteString(time.Now().Format(time.DateTime) + "-----------------------------------------------------------------------------------------------\nReadInXLSfile: " +
+	debugFileBuf.WriteString(time.Now().Format(time.DateTime) + "\n\n\n-------------------------------- newlint.go ---------------------------------------------------------------\nReadInXLSfile: " +
 		fn + "\n")
 
 	workBook, err := xlsx.OpenFile(fn)
@@ -261,7 +261,7 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 
 	// Experimenting with reading an entire row at a time.  Nope, that doesn't work because then it's left as a *Cell.  I need them to all be strings, so I'll convert to strings now.
 	var workWeek WorkWeekType
-	for i := neuro + rowOffset; i < totalAmt; i++ {
+	for i := neuro + rowOffset; i < totalAmt+neuro; i++ { // value of neuro acts as the offset.
 		row, er := sheet.Row(i)
 		if er != nil {
 			return WorkWeekType{}, er // return an empty work week.
@@ -273,9 +273,9 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 		str := fmt.Sprintf("Row %d: %s\n", i, sectionNameStr)
 		debugFileBuf.WriteString(str)
 		for _, sectName := range rowNames {
+			workWeek[i][0] = sectName // save the item whether it matches or not.  E.g.: ASSIGNMENTS
 			if strings.Contains(sectionNameStr, sectName) {
 				SectionMap[sectName] = i // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
-				workWeek[i][0] = sectName
 				debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d\n", sectName, i, len(SectionMap)))
 			}
 		}

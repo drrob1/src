@@ -10,6 +10,7 @@ import (
 	"src/whichexec"
 	"strconv"
 	"strings"
+	"time"
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
@@ -215,7 +216,7 @@ func main() {
 				startDirFromConfigFile)
 		}
 
-		filenames, err := lint.GetScheduleFilenames()
+		filenames, err := newlint.GetScheduleFilenames()
 		if err != nil {
 			fmt.Printf(" Error from GetFilenames is %s.  Exiting \n", err)
 			return
@@ -252,6 +253,9 @@ func main() {
 	}
 	fmt.Println()
 
+	debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + "----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
+		filename + "\n")
+
 	workWeek, err := newlint.ReadInXLSfile(filename)
 	if err != nil {
 		fmt.Printf(" Error from ReadInXLSfile is %s.  Exiting \n", err)
@@ -266,10 +270,10 @@ func main() {
 	fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
 
 	for i, w := range workWeek {
-		debugFileBuf.WriteString(fmt.Sprintf(" Length of Row %d is %d\n", i, len(w)))
 		for j, d := range w {
 			debugFileBuf.WriteString(fmt.Sprintf(" Day(%d,%d) is %v\n", i, j, d))
 		}
+		debugFileBuf.WriteString("\n")
 	}
 
 	fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
