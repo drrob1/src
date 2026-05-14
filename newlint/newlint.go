@@ -147,6 +147,7 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   12 May 26 -- Now called newlint, copied from lint.go.  My plan is to read the xlsx file once into a variable, and then all other readings will occur from that variable.
 				In lint.go, I read the xlsx file 3 times, first to extract the doctor names, then to check the row names, and finally to analyze the schedule.
+				As of May 14, 2026, the only routine here that is debugged is ReadInXLSfile.
 */
 
 const LastModified = "14 May 2026"
