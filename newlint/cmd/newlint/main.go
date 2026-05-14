@@ -132,8 +132,8 @@ import (
   13 May 26 -- Now newlint-main.go.  Barely complete.
 */
 
-const lastModified = "13 May 2026"
-const debugFilename = "newlint-debug.out"
+const lastModified = "14 May 2026"
+const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
 var veryVerboseFlag bool
@@ -253,7 +253,7 @@ func main() {
 	}
 	fmt.Println()
 
-	debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + "----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
+	debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " ----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
 		filename + "\n")
 
 	workWeek, err := newlint.ReadInXLSfile(filename)
@@ -269,13 +269,17 @@ func main() {
 	sectionMap := newlint.ShowSectionMap()
 	fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
 
-	for i, w := range workWeek {
-		for j, d := range w {
-			debugFileBuf.WriteString(fmt.Sprintf(" Day(%d,%d) is %v\n", i, j, d))
+	debugFileBuf.WriteString(fmt.Sprintf(" len(workWeek) is %d, len(workWeek[0]) is %d\n", len(workWeek), len(workWeek[0])))
+	for row := 0; row < len(workWeek); row++ {
+		w := workWeek[row]
+		for col, d := range w {
+			debugFileBuf.WriteString(fmt.Sprintf(" item(%d,%d) is %v\n", row, col, d))
 		}
 		debugFileBuf.WriteString("\n")
 	}
 
 	fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
-	os.Exit(0)
+	fmt.Printf(" I'm going to show the workWeek matrix again\n")
+
+	fmt.Printf(" Raw workWeek\n  %#v\n", workWeek)
 }

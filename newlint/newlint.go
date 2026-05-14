@@ -149,7 +149,7 @@ import (
 				In lint.go, I read the xlsx file 3 times, first to extract the doctor names, then to check the row names, and finally to analyze the schedule.
 */
 
-const LastModified = "13 May 2026"
+const LastModified = "14 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -157,24 +157,25 @@ const maxDimensions = 200
 const debugFilename = "newlint.debug"
 
 const (
-	dateLine = iota // Need this to get the year.  As of 2-26-26, I'm adding a fudge factor to allow for the change in row numbering.
-	neuro
-	body
-	erXrays
-	ir
-	nuclear
-	us
-	peds
-	fluoroJH
-	fluoroFH
-	msk // includes X-ray In/Outpatient and off-sites
-	mammo
-	boneDensity
-	late              // switched with oncallradiologist discovered May 9, 2026.
-	oncallradiologist // switch with late discovered May 9, 2026.
-	mdOff
-	bluebarweekendcoverage
-	totalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
+	DateLine = iota // Need this to get the year.  As of 2-26-26, I'm adding a fudge factor to allow for the change in row numbering.
+	Neuro
+	Body
+	ErXrays
+	Ir
+	Nuclear
+	US
+	Peds
+	FluoroJH
+	FluoroFH
+	MSK // includes X-ray In/Outpatient and off-sites
+	Mammo
+	BoneDensity
+	Late              // switched with oncallradiologist discovered May 9, 2026.
+	Oncallradiologist // switch with late discovered May 9, 2026.
+	MDOff
+	Bluebarweekendcoverage
+	FudgeFactor
+	TotalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
 var rowNames = []string{"neuro", "body", "stats", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
@@ -197,7 +198,7 @@ type DayType [23]string // There are a few unused entries here.  This goes from 
 
 // looks like I have the matrix organized around columns which are days.  I need to change that to rows which are sections.
 type sectionRowType [6]string
-type WorkWeekType [totalAmt + neuro]sectionRowType // here the value of neuro acts as the offset.
+type WorkWeekType [TotalAmt]sectionRowType // here the value of neuro acts as the offset.
 
 type FileDataType struct { // used for the walk function.
 	Name      string // base name of the file
@@ -227,7 +228,9 @@ var CategoryNamesListForDisplay = []string{"date", "Neuro", "Body", "ER/Xrays", 
 
 var DayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var DayOff = make(map[string]bool)    // only used in FindAndReadConfIni when verboseFlag is set
-var SectionMap = make(map[string]int) // used to map the section names to the row numbers.
+var SectionMap = make(map[string]int) // used to map the section names to the row numbers.  Turns out that I don't think I need this (after debugging it).  STV vector below is enough.
+var STV [TotalAmt]int                 // Section Translation Vector, used to translate schedule indicies starting at 0 to the row numbers in the xlsx file which typically start at 3.
+var VacStructArray VacStructArrayType
 
 var VerboseFlag bool
 var VeryVerboseFlag bool
@@ -236,9 +239,9 @@ var StartDirFromConfigFile string // this needs to be a global, esp for the walk
 var debugFile *os.File
 var debugFileBuf *bufio.Writer
 
-//func init() {  Not doing this now, so the length of the map makes sense for debugging.
-//	SectionMap = make(map[string]int, len(rowNames)) // Pre-allocating enough space for the named sections.
-//}
+func init() {
+	SectionMap = make(map[string]int, len(rowNames)) // Pre-allocating enough space for the named sections.
+}
 
 // ReadInXLSfile returns the entire work week as a matrix of strings.  Now I have to test it.
 func ReadInXLSfile(fn string) (WorkWeekType, error) {
@@ -250,7 +253,7 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 	defer debugFile.Close()
 	debugFileBuf = bufio.NewWriter(debugFile)
 	defer debugFileBuf.Flush()
-	debugFileBuf.WriteString(time.Now().Format(time.DateTime) + "\n\n\n-------------------------------- newlint.go ---------------------------------------------------------------\nReadInXLSfile: " +
+	debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " -------------------------------- newlint.go ---------------------------------------------------------------\nReadInXLSfile: " +
 		fn + "\n")
 
 	workBook, err := xlsx.OpenFile(fn)
@@ -261,7 +264,7 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 
 	// Experimenting with reading an entire row at a time.  Nope, that doesn't work because then it's left as a *Cell.  I need them to all be strings, so I'll convert to strings now.
 	var workWeek WorkWeekType
-	for i := neuro + rowOffset; i < totalAmt+neuro; i++ { // value of neuro acts as the offset.
+	for i := Neuro; i < TotalAmt; i++ {
 		row, er := sheet.Row(i)
 		if er != nil {
 			return WorkWeekType{}, er // return an empty work week.
@@ -272,11 +275,12 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 		}
 		str := fmt.Sprintf("Row %d: %s\n", i, sectionNameStr)
 		debugFileBuf.WriteString(str)
-		for _, sectName := range rowNames {
-			workWeek[i][0] = sectName // save the item whether it matches or not.  E.g.: ASSIGNMENTS
+		for j, sectName := range rowNames {
 			if strings.Contains(sectionNameStr, sectName) {
-				SectionMap[sectName] = i // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
-				debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d\n", sectName, i, len(SectionMap)))
+				workWeek[i][0] = sectName // save the item whether it matches or not.  E.g.: ASSIGNMENTS
+				SectionMap[sectName] = i  // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
+				STV[j] = i
+				debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d, STV[%d] = %d\n", sectName, i, len(SectionMap), j, i))
 			}
 		}
 
@@ -407,7 +411,7 @@ func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) { // reads a column 
 	var day DayType
 	sheets := wb.Sheets
 
-	for i := dateLine + rowOffset; i < totalAmt+rowOffset; i++ {
+	for i := DateLine + rowOffset; i < TotalAmt+rowOffset; i++ {
 		cell, err := sheets[0].Cell(i, col) // always sheet[0]
 		if err != nil {
 			return DayType{}, err
@@ -423,7 +427,7 @@ func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) { // reads a column 
 // WhosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.  This is not needed now, as it's function is replaced by populateVacStruct func.
 func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of Names that are on vacation for this day
-	vacationString := strings.ToLower(week[dayCol][mdOff+rowOffset])
+	vacationString := strings.ToLower(week[dayCol][MDOff+rowOffset])
 
 	mdsOff := make([]string, 0, numOfDocs) // Actually, never more than 10 off, but religious holidays can have a lot off.
 
@@ -441,7 +445,7 @@ func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an
 func whosLateToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of Names that are on the late shift for today.  Only 2 per day are late.
 
-	lateString := strings.ToLower(week[dayCol][late+rowOffset])
+	lateString := strings.ToLower(week[dayCol][Late+rowOffset])
 
 	lateDocs := make([]string, 0, 2)
 	// search for matching Names
@@ -708,7 +712,7 @@ func ScanXLSfile(filename string) ([]string, error) {
 		// Now, mdsOffToday is a slice of several Names of who is off today.
 
 		for _, name := range mdsOffToday {
-			for i := neuro + rowOffset; i < mdOff+rowOffset; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
+			for i := Neuro + rowOffset; i < MDOff+rowOffset; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if lower := strings.ToLower(wholeWorkWeek[dayCol][i]); strings.Contains(lower, name) {
 					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNames[dayCol], CategoryNamesListForDisplay[i-rowOffset])
 					messages = append(messages, msg)
@@ -718,12 +722,12 @@ func ScanXLSfile(filename string) ([]string, error) {
 
 		// Now, lateDocsToday is a slice of two Names of who is covering the late shift today.  Only checks against fluoro, as that's not good scheduling
 		for _, name := range lateDocsToday {
-			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH+rowOffset]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][FluoroJH+rowOffset]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro JH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
 			}
-			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH+rowOffset]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][FluoroFH+rowOffset]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Cyan, true, " %s is late on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 				msg := fmt.Sprintf(" %s is late on %s, but is on fluoro FH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
@@ -735,14 +739,14 @@ func ScanXLSfile(filename string) ([]string, error) {
 		for _, name := range remoteNames {
 			if VeryVerboseFlag {
 				fmt.Printf(" Remote doc for today: %s, FluoroJH: %s, FluoroFH: %s\n",
-					name, wholeWorkWeek[dayCol][fluoroJH+rowOffset], wholeWorkWeek[dayCol][fluoroFH+rowOffset])
+					name, wholeWorkWeek[dayCol][FluoroJH+rowOffset], wholeWorkWeek[dayCol][FluoroFH+rowOffset])
 			}
-			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroJH+rowOffset]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][FluoroJH+rowOffset]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro JH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro JH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
 			}
-			if lower := strings.ToLower(wholeWorkWeek[dayCol][fluoroFH+rowOffset]); strings.Contains(lower, name) {
+			if lower := strings.ToLower(wholeWorkWeek[dayCol][FluoroFH+rowOffset]); strings.Contains(lower, name) {
 				ctfmt.Printf(ct.Yellow, true, " %s is remote on %s, but is on fluoro FH\n", strcase.UpperCamelCase(name), DayNames[dayCol])
 				msg := fmt.Sprintf(" %s is remote on %s, but is on fluoro FH", strcase.UpperCamelCase(name), DayNames[dayCol])
 				messages = append(messages, msg)
@@ -772,7 +776,7 @@ func CheckRowNames(filename string) (bool, error) {
 	//rowOffset-- // really need offset for the dateLine
 
 	sheet := workBook.Sheets[0]
-	for i := neuro + rowOffset; i < mdOff+rowOffset; i++ {
+	for i := Neuro + rowOffset; i < MDOff+rowOffset; i++ {
 		cell, err := sheet.Cell(i, 0) // need assignment name column
 		if err != nil {
 			return false, err
@@ -969,7 +973,7 @@ func GetDocNames(fn string) ([]string, error) {
 	}
 	sheet := workBook.Sheets[0]
 
-	for row := neuro + rowOffset; row < totalAmt+rowOffset; row++ {
+	for row := Neuro + rowOffset; row < TotalAmt+rowOffset; row++ {
 		for col := 1; col < 6; col++ {
 			cell, err := sheet.Cell(row, col)
 			if err != nil {
@@ -1029,12 +1033,12 @@ func ShowSpellingErrors(in []SoundexSlice) []string {
 }
 
 func ExtractOff(week WorkWeekType) (string, error) {
-	s := week[friday][mdOff+rowOffset]
+	s := week[friday][MDOff+rowOffset]
 	return s, nil
 }
 
 func ExtractYearFromSchedule(week WorkWeekType, day int) (string, error) {
-	yearStr := week[day][dateLine+rowOffset] // should be Month Day, 4 digit Year
+	yearStr := week[day][DateLine+rowOffset] // should be Month Day, 4 digit Year
 	if yearStr == "" {
 		return "", errors.New("yearStr is empty")
 	}
