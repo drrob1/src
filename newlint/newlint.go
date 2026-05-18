@@ -247,16 +247,19 @@ func init() {
 
 // ReadInXLSfile returns the entire work week as a matrix of strings.  Now I have to test it.
 func ReadInXLSfile(fn string) (WorkWeekType, error) {
-	debugFile, err := os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Printf("Error opening debug file: %s\n", err)
-		return WorkWeekType{}, err
+	var err error
+	if VerboseFlag {
+		debugFile, err = os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Printf("Error opening debug file: %s\n", err)
+			return WorkWeekType{}, err
+		}
+		defer debugFile.Close()
+		debugFileBuf = bufio.NewWriter(debugFile)
+		defer debugFileBuf.Flush()
+		debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " -------------------------------- newlint.go ---------------------------------------------------------------\nReadInXLSfile: " +
+			fn + "\n")
 	}
-	defer debugFile.Close()
-	debugFileBuf = bufio.NewWriter(debugFile)
-	defer debugFileBuf.Flush()
-	debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " -------------------------------- newlint.go ---------------------------------------------------------------\nReadInXLSfile: " +
-		fn + "\n")
 
 	workBook, err := xlsx.OpenFile(fn)
 	if err != nil {
@@ -264,7 +267,8 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 	}
 	sheet := workBook.Sheets[0]
 
-	// Experimenting with reading an entire row at a time.  Nope, that doesn't work because then it's left as a *Cell.  I need them to all be strings, so I'll convert to strings now.
+	// Experimenting with reading an entire row at a time.
+	// Nope, that doesn't work because then it's left as a *Cell.  I need them to all be strings, so I'll convert to strings now.
 	var workWeek WorkWeekType
 	for i := Neuro; i < TotalAmt; i++ {
 		row, er := sheet.Row(i)
@@ -275,22 +279,28 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 		if sectionNameStr == "" { // skip entries w/ nothing in the 1st column, the assignment column on the schedule.
 			continue
 		}
-		str := fmt.Sprintf("Row %d: %s\n", i, sectionNameStr)
-		debugFileBuf.WriteString(str)
+		if VerboseFlag {
+			str := fmt.Sprintf("Row %d: %s\n", i, sectionNameStr)
+			debugFileBuf.WriteString(str)
+		}
 		for j, sectName := range rowNames {
 			if strings.Contains(sectionNameStr, sectName) {
 				workWeek[i][0] = sectName // save the item whether it matches or not.  E.g.: ASSIGNMENTS
 				SectionMap[sectName] = i  // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
 				STV[j] = i
-				debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d, STV[%d] = %d\n", sectName, i, len(SectionMap), j, i))
+				if VerboseFlag {
+					debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d, STV[%d] = %d\n", sectName, i, len(SectionMap), j, i))
+				}
 			}
 		}
 
 		for col := 1; col < 6; col++ { // Columns are Monday - Friday
 			s := row.GetCell(col).String()
 			workWeek[i][col] = s
-			str = fmt.Sprintf("  workWeek[%d][%d] = %q\n", i, col, s)
-			debugFileBuf.WriteString(str)
+			if VerboseFlag {
+				str := fmt.Sprintf("  workWeek[%d][%d] = %q\n", i, col, s)
+				debugFileBuf.WriteString(str)
+			}
 		}
 	}
 	return workWeek, nil
@@ -944,7 +954,7 @@ func pause() bool {
 }
 
 func excludeMe(s string) bool {
-	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&"}
+	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment"}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
 			return true
@@ -963,24 +973,28 @@ func excludeMe(s string) bool {
 	return dgtRegexp.MatchString(s)
 }
 
-// GetDocNames -- takes a filename and returns a slice of doc Names extracted from the Excel weekly schedule file.  The slice is sorted by the first word of the doc name.
+// GetDocNames -- takes a filename and returns a slice of doc Names extracted from the Excel weekly schedule file which is now entirely read into workWeek.
 //
-//	This reads the entire file by rows.
-func GetDocNames(fn string) ([]string, error) {
+//	               The slice is sorted by the first word of the doc name.
+//
+//		This used to read the entire file by rows, so now it is passed in as a WorkWeekType.
+func GetDocNames(workWeek WorkWeekType) ([]string, error) {
 	docNamesSlice := make([]string, 0, maxDimensions)
-	workBook, err := xlsx.OpenFile(fn)
-	if err != nil {
-		return nil, err
-	}
-	sheet := workBook.Sheets[0]
+	//workBook, err := xlsx.OpenFile(fn)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//sheet := workBook.Sheets[0]
 
-	for row := Neuro + rowOffset; row < TotalAmt+rowOffset; row++ {
+	//for row := Neuro + rowOffset; row < TotalAmt+rowOffset; row++  old line
+	for row := STV[Neuro]; row < TotalAmt; row++ {
 		for col := 1; col < 6; col++ {
-			cell, err := sheet.Cell(row, col)
-			if err != nil {
-				return nil, err
-			}
-			s := cell.String()
+			//cell, err := sheet.Cell(row, col) old lines of code
+			//if err != nil {
+			//	return nil, err
+			//}
+			//s := cell.String() old line of code
+			s := workWeek[row][col]
 			s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces, else the comma creates a false spelling error.
 			s = strings.ReplaceAll(s, ".", " ") // replace periods with spaces, intended to catch dr.name, without a space which confuses this algorithm.
 			fields := strings.Fields(s)

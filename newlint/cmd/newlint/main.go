@@ -146,6 +146,7 @@ func main() {
 	// First, there's code to determine which schedule file to process.  A walk function assists w/ this.
 	// Then, ReadInXLSfile is called, to read the schedule file by rows.  This is the 1st change in newlint.
 	// Then, FindAndReadConfIni is called to read the config file, which contains the start directory for the walk function.  This is the 2nd change in newlint, removing doc names.
+	//       I put the debugging output statements in a VerboseFlag.
 	// Then, GetDocNames is called to retrieve all names in the schedule, sorted alphabetically.  The schedule file is read by rows in this routine.
 	// Then, uses the Soundex algorithm to check spelling.  After all, the string matching used here depends on all names spelled correctly.  A problem is that there are
 	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
@@ -204,18 +205,23 @@ func main() {
 	newlint.MonthsThreshold = monthsThreshold
 	whichexec.VerboseFlag = verboseFlag
 
-	debugFile, err := os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Printf(" Error opening debug file %s: %s. Exiting \n", debugFilename, err)
-		return
+	var debugFile *os.File
+	var debugFileBuf *bufio.Writer
+
+	if verboseFlag {
+		debugFile, err = os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Printf(" Error opening debug file %s: %s. Exiting \n", debugFilename, err)
+			return
+		}
+		defer debugFile.Close()
+		debugFileBuf = bufio.NewWriter(debugFile)
+		defer debugFileBuf.Flush()
 	}
-	defer debugFile.Close()
-	debugFileBuf := bufio.NewWriter(debugFile)
-	defer debugFileBuf.Flush()
 
 	if flag.NArg() == 0 {
 		if verboseFlag {
-			fmt.Printf("main ln ~202: VerboseFlag is true, NArg() is zero, and startdirectoryFromConfigFile = %s, about to call GetFilenames() \n",
+			fmt.Printf("main ln ~223: VerboseFlag is true, NArg() is zero, and startdirectoryFromConfigFile = %s, about to call GetFilenames() \n",
 				startDirFromConfigFile)
 		}
 
@@ -256,8 +262,10 @@ func main() {
 	}
 	fmt.Println()
 
-	debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " ----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
-		filename + "\n")
+	if verboseFlag {
+		debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " ----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
+			filename + "\n")
+	}
 
 	workWeek, err := newlint.ReadInXLSfile(filename)
 	if err != nil {
@@ -266,24 +274,27 @@ func main() {
 	}
 
 	// now to display the workweek
-
-	fmt.Printf(" Raw SectionMap\n  %v\n", newlint.SectionMap)
-
 	sectionMap := newlint.ShowSectionMap()
-	fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
 
-	debugFileBuf.WriteString(fmt.Sprintf(" len(workWeek) is %d, len(workWeek[0]) is %d\n", len(workWeek), len(workWeek[0])))
-	for row, w := range workWeek {
-		for col, d := range w {
-			debugFileBuf.WriteString(fmt.Sprintf(" item(%d,%d) is %v\n", row, col, d))
+	if verboseFlag {
+
+		fmt.Printf(" Raw SectionMap\n  %v\n", newlint.SectionMap)
+
+		fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
+
+		debugFileBuf.WriteString(fmt.Sprintf(" len(workWeek) is %d, len(workWeek[0]) is %d\n", len(workWeek), len(workWeek[0])))
+		for row, w := range workWeek {
+			for col, d := range w {
+				debugFileBuf.WriteString(fmt.Sprintf(" item(%d,%d) is %v\n", row, col, d))
+			}
+			debugFileBuf.WriteString("\n\n\n")
 		}
-		debugFileBuf.WriteString("\n\n\n")
+
+		fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
+		fmt.Printf(" I'm going to show the workWeek matrix again\n")
+
+		fmt.Printf(" Raw workWeek\n  %#v\n", workWeek)
 	}
-
-	fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
-	fmt.Printf(" I'm going to show the workWeek matrix again\n")
-
-	fmt.Printf(" Raw workWeek\n  %#v\n", workWeek)
 
 	// Finished reading the weekly xlsx file.
 	// Now call FindAndReadConfIni to get the start directory.
@@ -293,4 +304,24 @@ func main() {
 		fmt.Printf(" Error from FindAndReadConfIni is %s.  Ignoring \n", err)
 	}
 	fmt.Printf(" Start Directory: %q\n", startDir)
+
+	names, err := newlint.GetDocNames(workWeek)
+	if err != nil {
+		fmt.Printf(" Error from GetDocNames is %s.  Exiting. \n", err)
+		return
+	}
+	fmt.Printf(" Doc Names: %v\n", names)
+
+	// detecting and reporting likely spelling errors based on the Soundex algorithm
+
+	soundx := newlint.GetSoundex(names)
+	spellingErrors := newlint.ShowSpellingErrors(soundx)
+	if len(spellingErrors) > 0 {
+		ctfmt.Printf(ct.Cyan, true, "\n\n %d spelling error(s) detected in %s: ", len(spellingErrors)/2, filename)
+		for _, spell := range spellingErrors {
+			ctfmt.Printf(ct.Red, true, " %s  ", spell)
+		}
+		fmt.Printf("\n\n\n")
+	}
+
 }
