@@ -130,9 +130,10 @@ import (
    9 May 26 -- Added use of lint.CheckRowNames.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   13 May 26 -- Now newlint-main.go.  Barely complete.
+  17 May 26 -- Rewrote FindAndReadConfIni.
 */
 
-const lastModified = "14 May 2026"
+const lastModified = "18 May 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
@@ -144,6 +145,7 @@ func main() {
 	// I'm going to outline how this pgm works, so I remember.
 	// First, there's code to determine which schedule file to process.  A walk function assists w/ this.
 	// Then, ReadInXLSfile is called, to read the schedule file by rows.  This is the 1st change in newlint.
+	// Then, FindAndReadConfIni is called to read the config file, which contains the start directory for the walk function.  This is the 2nd change in newlint, removing doc names.
 	// Then, GetDocNames is called to retrieve all names in the schedule, sorted alphabetically.  The schedule file is read by rows in this routine.
 	// Then, uses the Soundex algorithm to check spelling.  After all, the string matching used here depends on all names spelled correctly.  A problem is that there are
 	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
@@ -282,4 +284,13 @@ func main() {
 	fmt.Printf(" I'm going to show the workWeek matrix again\n")
 
 	fmt.Printf(" Raw workWeek\n  %#v\n", workWeek)
+
+	// Finished reading the weekly xlsx file.
+	// Now call FindAndReadConfIni to get the start directory.
+
+	startDir, err := newlint.FindAndReadConfIni()
+	if err != nil {
+		fmt.Printf(" Error from FindAndReadConfIni is %s.  Ignoring \n", err)
+	}
+	fmt.Printf(" Start Directory: %q\n", startDir)
 }

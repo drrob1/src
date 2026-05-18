@@ -148,9 +148,10 @@ import (
   12 May 26 -- Now called newlint, copied from lint.go.  My plan is to read the xlsx file once into a variable, and then all other readings will occur from that variable.
 				In lint.go, I read the xlsx file 3 times, first to extract the doctor names, then to check the row names, and finally to analyze the schedule.
 				As of May 14, 2026, the only routine here that is debugged is ReadInXLSfile.
+  17 May 26 -- Starting on findAndReadConfIni.  I'm going to remove the doc names and only recognize a start directory.  That keywork will not have to appear, but if it's there, it must be first on the line.
 */
 
-const LastModified = "14 May 2026"
+const LastModified = "18 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -314,31 +315,30 @@ func ShowSectionMap() []MapSliceType {
 	return mapSlice
 }
 
-// FindAndReadConfIni now returns a string slice of the docNames it found, a string representing the startdirectory, and an error.
-func FindAndReadConfIni() ([]string, string, error) {
+// FindAndReadConfIni used to return a string slice of the docNames it found, a string representing the startdirectory, and an error.  I removed the doc names and only recognize a start directory.  That keywork will not have to appear, but if it's there, it must be first on the line.
+func FindAndReadConfIni() (string, error) {
 	// will search first for conf and then for ini file in this order of directories: current, home, config.
 	fullFile, found := whichexec.FindConfig(conf)
 	if !found {
 		fullFile, found = whichexec.FindConfig(ini)
 		if !found {
 			if VerboseFlag {
-				return nil, "", fmt.Errorf("%s or %s not found", conf, ini)
+				return "", fmt.Errorf("%s or %s not found", conf, ini)
 			}
-			return nil, "", nil
+			return "", nil
 		}
 	}
 
-	docNames := make([]string, 0, numOfDocs) // a list of all the doc's last Names as read from the config file.
+	// docNames := make([]string, 0, numOfDocs) // a list of all the doc's last Names as read from the config file.  Removed May 2026.  But if found, ignore it.
 	var startDirectory string
-	// now need to process the config file using code from fansha.
 	fileByteSlice, err := os.ReadFile(fullFile)
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 	bytesReader := bytes.NewReader(fileByteSlice)
 	inputLine, err := misc.ReadLine(bytesReader)
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 
 	// remove any commas
@@ -347,38 +347,38 @@ func FindAndReadConfIni() ([]string, string, error) {
 	// will use my tknptr stuff here.
 	tokenslice := tknptr.TokenSlice(inputLine)
 	paramName := strings.ToLower(tokenslice[0].Str)
-	if paramName == "off" {
+	if paramName == "off" { // meaning, docs who are off.
 		if VeryVerboseFlag {
 			fmt.Printf(" Found config file: %s, containing %s\n", fullFile, inputLine)
 		}
-		for _, token := range tokenslice[1:] {
-			lower := strings.ToLower(token.Str)
-			docNames = append(docNames, lower)
-			DayOff[lower] = false // this is a map[string]bool
-		}
+		//for _, token := range tokenslice[1:] { removed May 2026
+		//	lower := strings.ToLower(token.Str)
+		//	docNames = append(docNames, lower)
+		//	DayOff[lower] = false // this is a map[string]bool
+		//}
 		if VeryVerboseFlag {
 			fmt.Printf(" Loaded config file: %s, containing %s\n", fullFile, inputLine)
 			for doc, vacay := range DayOff {
 				fmt.Printf(" dayOff[%s]: %t, ", doc, vacay)
 			}
 			fmt.Println()
-			fmt.Printf(" Names unsorted: %#v\n", docNames)
+			//fmt.Printf(" Names unsorted: %#v\n", docNames)
 		}
 
-		sort.Strings(docNames)
+		//sort.Strings(docNames)
 
-		if VerboseFlag {
-			fmt.Printf(" Sorted Names: %#v\n\n", docNames)
-		}
+		//if VerboseFlag {
+		//	fmt.Printf(" Sorted Names: %#v\n\n", docNames)
+		//}
 	} else if paramName == "startdirectory" { // only have 1 line in the config file, and it's for startdirectory
 		trimmedInputLine, ok := strings.CutPrefix(inputLine, "startdirectory") // CutPrefix became available as of Go 1.20
 		if ok {
 			startDirectory = trimmedInputLine
 			startDirectory = strings.TrimSpace(startDirectory)
 		}
-		return docNames, startDirectory, nil
+		return startDirectory, nil
 	} else {
-		return nil, "", fmt.Errorf("first line of config file must be 'off' or 'startdirectory'")
+		return "", fmt.Errorf("first line of config file must be 'off' or 'startdirectory'")
 	}
 
 	// Now to process setting startdirectory
@@ -394,9 +394,9 @@ func FindAndReadConfIni() ([]string, string, error) {
 	if err != nil {
 		fmt.Printf(" Error reading 2nd config line: %s\n", err)
 		if errors.Is(err, io.EOF) {
-			return docNames, "", nil
+			return "", nil
 		}
-		return docNames, "", err
+		return "", err
 	}
 
 	trimmedInputLine, ok := strings.CutPrefix(inputLine, "startdirectory") // CutPrefix became available as of Go 1.20
@@ -405,7 +405,7 @@ func FindAndReadConfIni() ([]string, string, error) {
 		startDirectory = strings.TrimSpace(startDirectory)
 	}
 
-	return docNames, startDirectory, nil
+	return startDirectory, nil
 }
 
 func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) { // reads a column of the schedule.
