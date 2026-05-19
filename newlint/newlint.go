@@ -176,6 +176,7 @@ const (
 	MDOff
 	Bluebarweekendcoverage
 	FudgeFactor
+	FudgeFac
 	TotalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
@@ -478,7 +479,7 @@ func whosLateToday(week WorkWeekType, dayCol int) []string { // week is an array
 
 func whosRemoteToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	// this function is to return a slice of Names that are working remotely today.
-	const remoteMarkerString = "(*R)"
+	const remoteMarkerString = "(*r)"
 
 	remoteDocs := make([]string, 0, 10) // Never more than 5 are allowed, but Names can be duplicated.
 	// search for matching Names

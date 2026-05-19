@@ -133,7 +133,7 @@ import (
   17 May 26 -- Rewrote FindAndReadConfIni.
 */
 
-const lastModified = "18 May 2026"
+const lastModified = "19 May 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
@@ -280,6 +280,15 @@ func main() {
 		fmt.Printf(" Raw SectionMap\n  %v\n", newlint.SectionMap)
 
 		fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
+
+		fmt.Printf(" Section Translation Vector STV:\n")
+		for i, j := range newlint.STV {
+			fmt.Printf(" STV[%d]: %d |", i, j)
+			if i%10 == 9 {
+				fmt.Printf("\n")
+			}
+		}
+		fmt.Printf("\n")
 
 		debugFileBuf.WriteString(fmt.Sprintf(" len(workWeek) is %d, len(workWeek[0]) is %d\n", len(workWeek), len(workWeek[0])))
 		for row, w := range workWeek {
