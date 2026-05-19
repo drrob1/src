@@ -150,9 +150,9 @@ func main() {
 	// Then, GetDocNames is called to retrieve all names in the schedule, sorted alphabetically.  The schedule file is read by rows in this routine.
 	// Then, uses the Soundex algorithm to check spelling.  After all, the string matching used here depends on all names spelled correctly.  A problem is that there are
 	//       doc names that collide.  Choi and Chiu, and Ahmed and Ahmadi?
-	// Then, call CheckRowNames.  This routine reads the schedule file's 1st column.
+	// (Then, in lint CheckRowNames is called.  This routine reads the schedule file's 1st column to check it.  That's not needed here.)
 	// Then, call ScanXLSFile.  This routine reads the schedule file by columns to check who's late or remote for the fluoro check, and on vacation to check if also assigned to work.
-	// I extract the year from the schedule, but I don't remember why.  Looks like it's used to determine the day of week, as in Monday..Friday.
+	// I used to extract the year from the schedule, but I don't remember why.  I removed it from here.
 	var err error
 	var noUpgradeLint bool
 	var whichURL int
@@ -277,7 +277,6 @@ func main() {
 	sectionMap := newlint.ShowSectionMap()
 
 	if verboseFlag {
-
 		fmt.Printf(" Raw SectionMap\n  %v\n", newlint.SectionMap)
 
 		fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
@@ -290,7 +289,7 @@ func main() {
 			debugFileBuf.WriteString("\n\n\n")
 		}
 
-		fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
+		//fmt.Printf(" Time to exit, as I'm just testing ReadInXLSfile\n")
 		fmt.Printf(" I'm going to show the workWeek matrix again\n")
 
 		fmt.Printf(" Raw workWeek\n  %#v\n", workWeek)
@@ -322,6 +321,23 @@ func main() {
 			ctfmt.Printf(ct.Red, true, " %s  ", spell)
 		}
 		fmt.Printf("\n\n\n")
+	}
+
+	// scan the xlsx schedule file
+
+	messages, err := newlint.ScanXLSfile(workWeek)
+	if len(messages) > 0 {
+		ctfmt.Printf(ct.Cyan, true, "\n\n %d message(s) generated from %s: \n", len(messages), filename)
+		for _, msg := range messages {
+			ctfmt.Printf(ct.Yellow, true, " %s \n", msg)
+		}
+	}
+
+	if err == nil {
+		ctfmt.Printf(ct.Green, true, "\n\n Finished scanning %s\n\n", filename)
+	} else {
+		ctfmt.Printf(ct.Red, true, "\n\n Error scanning %s is %s\n\n", filename, err)
+		return
 	}
 
 }
