@@ -149,7 +149,7 @@ import (
   17 May 26 -- Starting on findAndReadConfIni.  I'm going to remove the doc names and only recognize a start directory.  That keywork will not have to appear, but if it's there, it must be first on the line.
 */
 
-const LastModified = "18 May 2026"
+const LastModified = "19 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -320,7 +320,7 @@ type MapSliceType struct {
 
 func ShowSectionMap() []MapSliceType {
 	mapSlice := make([]MapSliceType, 0, len(SectionMap))
-	fmt.Printf(" SectionMap: \n")
+	//fmt.Printf(" SectionMap: \n")
 	for sectName, row := range SectionMap {
 		v := MapSliceType{s: sectName, val: row}
 		mapSlice = append(mapSlice, v)
