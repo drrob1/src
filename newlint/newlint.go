@@ -146,8 +146,9 @@ import (
   12 May 26 -- Now called newlint, copied from lint.go.  My plan is to read the xlsx file once into a variable, and then all other readings will occur from that variable.
 				In lint.go, I read the xlsx file 3 times, first to extract the doctor names, then to check the row names, and finally to analyze the schedule.
 				As of May 14, 2026, the only routine here that is debugged is ReadInXLSfile.
-  17 May 26 -- Starting on findAndReadConfIni.  I'm going to remove the doc names and only recognize a start directory.  That keywork will not have to appear, but if it's there, it must be first on the line.
-  18 May 26 -- Completed the code.  It seems to be working, but I have to more thoroughly test it w/ specifically constructed test files.
+  17 May 26 -- Starting on findAndReadConfIni.  I ended up not changing the format of this file.
+  20 May 26 -- Completed the code.  It seems to be working, but I have to more thoroughly test it w/ specifically constructed test files.
+				The main capability I added is to be a little more flexible in the order of the rows in the xlsx file.  This is done w/ the STV, the section translation vector.
 */
 
 const LastModified = "20 May 2026"
