@@ -147,9 +147,10 @@ import (
 				In lint.go, I read the xlsx file 3 times, first to extract the doctor names, then to check the row names, and finally to analyze the schedule.
 				As of May 14, 2026, the only routine here that is debugged is ReadInXLSfile.
   17 May 26 -- Starting on findAndReadConfIni.  I'm going to remove the doc names and only recognize a start directory.  That keywork will not have to appear, but if it's there, it must be first on the line.
+  18 May 26 -- Completed the code.  It seems to be working, but I have to more thoroughly test it w/ specifically constructed test files.
 */
 
-const LastModified = "19 May 2026"
+const LastModified = "20 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
