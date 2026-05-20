@@ -318,6 +318,7 @@ func main() {
 		fmt.Printf(" Error from GetDocNames is %s.  Exiting. \n", err)
 		return
 	}
+	newlint.Names = names
 	fmt.Printf(" Doc Names: %v\n", names)
 
 	// detecting and reporting likely spelling errors based on the Soundex algorithm

@@ -437,23 +437,37 @@ func FindAndReadConfIni() (string, error) {
 
 // WhosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.
 func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
+	if VerboseFlag {
+		var err error
+		debugFile, err = os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Printf("Error opening debug file: %s\n", err)
+			return nil
+		}
+		defer debugFile.Close()
+		debugFileBuf = bufio.NewWriter(debugFile)
+		defer debugFileBuf.Flush()
+	}
+
 	// this function is to return a slice of Names that are on vacation for this day
 	vacationString := week[STV[MDOff]][dayCol]
 	if VerboseFlag {
-		ctfmt.Printf(ct.Yellow, true, " %s: STV[%d]=%d  vacationString is %q\n", DayNamesString[dayCol], MDOff, STV[MDOff], vacationString)
+		ctfmt.Printf(ct.Yellow, true, " %s: STV[%d]=%d  vacationString on %q\n", DayNamesString[dayCol], MDOff, STV[MDOff], vacationString)
+		debugFileBuf.WriteString(fmt.Sprintf(" %s: STV[%d]=%d  vacationString on %q\n", DayNamesString[dayCol], MDOff, STV[MDOff], vacationString))
 	}
 
 	mdsOff := make([]string, 0, numOfDocs) // Actually, never more than 10 off, but religious holidays can have a lot off.
 
 	// search for matching Names
-	for _, vacationName := range Names { // Names is a global
-		if strings.Contains(vacationString, vacationName) {
-			mdsOff = append(mdsOff, vacationName)
+	for _, indivName := range Names { // Names is a global
+		if strings.Contains(vacationString, indivName) {
+			mdsOff = append(mdsOff, indivName)
 		}
 	}
 
 	if VerboseFlag {
-		ctfmt.Printf(ct.Yellow, true, " WhosOnVacationToday is %s, mdsOff: %#v\n", DayNamesString[dayCol], mdsOff)
+		debugFileBuf.WriteString(fmt.Sprintf(" WhosOnVacationToday on %s, mdsOff: %#v\n\n", DayNamesString[dayCol], mdsOff))
+		ctfmt.Printf(ct.Yellow, true, " WhosOnVacationToday on %s, mdsOff: %#v\n", DayNamesString[dayCol], mdsOff)
 	}
 
 	return mdsOff
@@ -640,38 +654,24 @@ func GetScheduleFilenames() ([]string, error) { // this will search Documents an
 // For now, it still writes some strings to the terminal.
 // func ScanXLSfile(filename string) ([]string, error) old signature
 func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
+	if VerboseFlag {
+		var err error
+		debugFile, err = os.OpenFile(debugFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Printf("Error opening debug file: %s\n", err)
+			return nil, err
+		}
+		defer debugFile.Close()
+		debugFileBuf = bufio.NewWriter(debugFile)
+		defer debugFileBuf.Flush()
+	}
+
 	var messages []string
 
-	// First this reads the entire file into the array for the entire work week.
-
-	//workBook, err := xlsx.OpenFile(filename)
-	//if err != nil {
-	//	//fmt.Printf("Error opening Excel file %s in directory %s: %s\n", filename, workingDir, err)
-	//	return nil, err
-	//}
-	//
-	//rowOffset, err = GetNeuroRowOffset(workBook)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//rowOffset-- // subtract one because I need the offset for the dateLine.
-	rowOffset = STV[Neuro] - 1
+	rowOffset = STV[Neuro]
 	if VerboseFlag {
 		ctfmt.Printf(ct.Yellow, true, " Neuro rowOffset = %d\n", rowOffset)
 	}
-
-	// Populate the wholeWorkWeek's schedule
-	// already done
-	//var wholeWorkWeek WorkWeekType       // [6]dayType  Only need 5 workdays.  Element 0 is not used.
-	//for i := monday; i < saturday; i++ { // Monday = 1, Friday = 5
-	//	wholeWorkWeek[i], err = ReadEntireDay(workBook, i) // the subscripts are reversed, as a column represents a day.  Each row is a different subspeciality.
-	//	if err != nil {
-	//		fmt.Printf("Error reading day %d: %s, skipping\n", i, err)
-	//		continue
-	//	}
-	//}
-
-	// wholeWorkWeek is now fully populated w/ the data from the Excel file.
 
 	// Who's on vacation for each day, and then check the rest of that day to see if any of these Names exist in any other row.
 	for dayCol := monday; dayCol < saturday; dayCol++ {
@@ -679,16 +679,24 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 		lateDocsToday := whosLateToday(workWeek, dayCol)
 		remoteNames := whosRemoteToday(workWeek, dayCol)
 		if VerboseFlag {
-			ctfmt.Printf(ct.Yellow, true, " mdsOffToday on %s is/are %#v\n", DayNamesString[dayCol], mdsOffToday)
+			ctfmt.Printf(ct.Yellow, true, " In ScanXLSfile: mdsOffToday on %s is/are %#v\n", DayNamesString[dayCol], mdsOffToday)
 			ctfmt.Printf(ct.Yellow, true, " Late shift docs on %s are %#v\n", DayNamesString[dayCol], lateDocsToday)
 			ctfmt.Printf(ct.Yellow, true, " Remote docs on %s are %#v\n", DayNamesString[dayCol], remoteNames)
+			debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: mdsOffToday on %s is/are %#v\n", DayNamesString[dayCol], mdsOffToday))
 		}
 
 		// mdsOffToday is a slice of several Names of whom is off today.
 
-		for _, name := range mdsOffToday {
+		for _, name := range mdsOffToday { // Only use STV in the for loop conditions, not in the body.  That would be usint STV twice which is not what's intended.
 			for i := STV[Neuro]; i < STV[MDOff]; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
-				if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name) {
+				if VerboseFlag {
+					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: checking i= %d, dayCol %d, name %s\n", i, dayCol, name))
+					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol]))
+					fmt.Printf(" In ScanXLSfile: checking i= %d, dayCol %d, name %s\n", i, dayCol, name)
+					fmt.Printf(" In ScanXLSfile: STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
+				}
+				//if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name)
+				if lower := strings.ToLower(workWeek[i][dayCol]); strings.Contains(lower, name) {
 					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i-rowOffset])
 					messages = append(messages, msg)
 				}
