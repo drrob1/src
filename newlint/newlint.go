@@ -687,17 +687,18 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 
 		// mdsOffToday is a slice of several Names of whom is off today.
 
-		for _, name := range mdsOffToday { // Only use STV in the for loop conditions, not in the body.  That would be usint STV twice which is not what's intended.
-			for i := STV[Neuro]; i < STV[MDOff]; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
+		for _, name := range mdsOffToday {
+			//for i := STV[Neuro]; i < STV[MDOff]; i++ // Only use STV in the body, not in the loop condition.  That would be using STV twice which is not what's intended.
+			for i := Neuro; i < MDOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if VerboseFlag {
 					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: checking i= %d, dayCol %d, name %s\n", i, dayCol, name))
 					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol]))
 					fmt.Printf(" In ScanXLSfile: checking i= %d, dayCol %d, name %s\n", i, dayCol, name)
 					fmt.Printf(" In ScanXLSfile: STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
 				}
-				//if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name)
-				if lower := strings.ToLower(workWeek[i][dayCol]); strings.Contains(lower, name) {
-					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i-rowOffset])
+				if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name) {
+					//msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i-rowOffset])  old code
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i])
 					messages = append(messages, msg)
 				}
 			}
