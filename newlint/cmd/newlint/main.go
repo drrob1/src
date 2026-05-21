@@ -133,7 +133,7 @@ import (
   17 May 26 -- Rewrote FindAndReadConfIni.
 */
 
-const lastModified = "19 May 2026"
+const lastModified = "20 May 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
