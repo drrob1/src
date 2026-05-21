@@ -230,7 +230,7 @@ type VacStructType struct {
 var Names []string // all doc names on the schedule are in this slice.
 
 // CategoryNamesListForDisplay is how a section name is displayed to the user.
-var CategoryNamesListForDisplay = []string{"date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
+var CategoryNamesListForDisplay = []string{"Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
 	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
 	"On-Call IR", "On-Call MD"}
 
@@ -693,15 +693,18 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 			//for i := STV[Neuro]; i < STV[MDOff]; i++ // Only use STV in the body, not in the loop condition.  That would be using STV twice which is not what's intended.
 			for i := Neuro; i < MDOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
 				if VerboseFlag {
-					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: checking i= %d, dayCol %d, name %s\n", i, dayCol, name))
-					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol]))
-					fmt.Printf(" In ScanXLSfile: checking i= %d, dayCol %d, name %s\n", i, dayCol, name)
-					fmt.Printf(" In ScanXLSfile: STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
+					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: checking i= %d, dayCol %d, MDOff %s, ", i, dayCol, name))
+					debugFileBuf.WriteString(fmt.Sprintf(" STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol]))
+					fmt.Printf(" In ScanXLSfile: checking i= %d, dayCol %d, MDOff %s, ", i, dayCol, name)
+					fmt.Printf(" STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
 				}
 				if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name) {
 					//msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i-rowOffset])  old code
 					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i])
 					messages = append(messages, msg)
+					if VerboseFlag {
+						ctfmt.Printf(ct.Yellow, true, " Matched: %s\n", msg)
+					}
 				}
 			}
 		}
