@@ -133,7 +133,7 @@ import (
   17 May 26 -- Rewrote FindAndReadConfIni.
 */
 
-const lastModified = "20 May 2026"
+const lastModified = "19 May 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
@@ -320,7 +320,7 @@ func main() {
 		return
 	}
 	newlint.Names = names
-	fmt.Printf(" Doc Names: %v\n", names)
+	fmt.Printf(" There are %d Doc Names: %v\n", len(names), names)
 
 	// detecting and reporting likely spelling errors based on the Soundex algorithm
 
