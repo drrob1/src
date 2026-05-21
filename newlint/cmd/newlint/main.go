@@ -169,7 +169,8 @@ func main() {
 			lastModified, newlint.LastModified, runtime.Version())
 		fmt.Printf(" Usage: %s <weekly xlsx file> \n", os.Args[0])
 		fmt.Printf(" Looks for lint.conf or lint.ini in current, home and config directories.\n")
-		fmt.Printf(" First line must begin with off, and 2nd line, if present, must begin with startdirectory.\n")
+		fmt.Printf(" Ignores line that begins with off, and line must begin with startdirectory.\n")
+		fmt.Printf(" This pgm can compensate for simple section switches in the row sections. \n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
