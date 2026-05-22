@@ -131,9 +131,10 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   13 May 26 -- Now newlint-main.go.  Barely complete.
   17 May 26 -- Rewrote FindAndReadConfIni.
+  22 May 26 -- Changed output color of picked file name.
 */
 
-const lastModified = "19 May 2026"
+const lastModified = "22 May 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
@@ -253,14 +254,11 @@ func main() {
 			i = int(s0 - 'A')
 			filename = filenames[i]
 		}
-		fmt.Println(" Picked spreadsheet is", filename)
 	} else { // will use filename entered on commandline
 		filename = flag.Arg(0)
 	}
+	ctfmt.Println(ct.Yellow, true, "  Spreadsheet is", filename)
 
-	if verboseFlag {
-		fmt.Printf(" spreadsheet picked is %s\n", filename)
-	}
 	fmt.Println()
 
 	if verboseFlag {
