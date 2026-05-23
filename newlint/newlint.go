@@ -150,9 +150,10 @@ import (
   20 May 26 -- Completed the code.  It seems to be working, but I have to more thoroughly test it w/ specifically constructed test files.
 				The main capability I added is to be a little more flexible in the order of the rows in the xlsx file.  This is done w/ the STV, the section translation vector.
   21 May 26 -- Added more words to be excluded from doc names.
+  23 May 26 -- Added moonlight and moonlighter to the list of words to exclude from doc names.
 */
 
-const LastModified = "21 May 2026"
+const LastModified = "23 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -932,8 +933,8 @@ func pause() bool {
 }
 
 func excludeMe(s string) bool {
-	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
-		"film", "needed", "neuro"}
+	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
+		"film", "needed", "neuro", "moonlight", "moonlighter"}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
 			return true
