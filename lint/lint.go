@@ -143,9 +143,10 @@ import (
    9 May 26 -- It seems that the schedule switched the ON-CALL Radiologist and Late MD rows.  So I have to account for that here now.  I'll do that in the definition of the row names.
 				I decided too check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
 				I have to use the rowoffset.
+  24 May 26 -- Added more strings to the equalMeStrings array to exclude more strings that are not doctor names.  Backported from newlint.go.
 */
 
-const LastModified = "9 May 2026"
+const LastModified = "24 May 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -864,7 +865,8 @@ func pause() bool {
 }
 
 func excludeMe(s string) bool {
-	var equalMeStrings = []string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&"}
+	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
+		"film", "needed", "neuro", "moonlight", "moonlighter"}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
 			return true
