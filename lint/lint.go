@@ -141,7 +141,7 @@ import (
 				is for this sheet, and use that when I reference a row.  It's too late now to code this, so I'll start tomorrow (I hope).
   14 Mar 26 -- Today is Pi day, but that's not important now.  If there is no doc name before the (*R) string, then "Dr." becomes the doctor name.  I'm working on fixing this now.
    9 May 26 -- It seems that the schedule switched the ON-CALL Radiologist and Late MD rows.  So I have to account for that here now.  I'll do that in the definition of the row names.
-				I decided too check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
+				I decided to check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
 				I have to use the rowoffset.
   24 May 26 -- Added more strings to the equalMeStrings array to exclude more strings that are not doctor names.  Backported from newlint.go.
 */
