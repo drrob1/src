@@ -16,14 +16,14 @@ import (
   26 Nov 25 -- First started writing this.  It is to calculate how much RAI to order when we have to decay the pill on site.
 				It needs the desired date and dose, and the ordering date which is the calibration date.  I will confirm that the dates are within a month of each other,
 				and make sure that the calibration date is before the treating date.
-    I did some of my own algrebra, and I came up w/ two different calculations to get the same answer.  I'll use both here to compare.
+    I did some of my own algebra, and I came up w/ two different calculations to get the same answer.  I'll use both here to compare.
 
                        A                      (lambda * time)
          A   =   -----------------    =  A * e                   where lambda = ln(2) / halflife.  For I-131, halflife = 8.0249 days.
           0      (-lambda * time)
                 e
 
-   Notice that the sign of the exponent in the factor is different btwn the 2 expressions
+   Notice that the sign of the exponent in the factor is different between the 2 expressions
 
   28 Nov 25 -- Decided to use my own TimLibg routines as they're more flexible.  The time package cannot handle either a 4-digit year or a 2-digit year.  My routines can.
 				And if no year is entered, then the current year is assumed.
