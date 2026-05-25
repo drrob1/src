@@ -652,9 +652,6 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	//if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above, but only if I use nanosecond precision.  If I use microsecond precision, then the time fudge factor is not needed.
-	//	t = t.Add(timeFudgeFactor) // I'm now using seconds precision.  The fudge factor is only needed to maintain compatibility with cf and cf2.  I decided to remove it for all of my routines, starting w/ cf3.
-	//}
 
 	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
 	if err != nil {
