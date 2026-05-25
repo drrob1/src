@@ -1,4 +1,4 @@
-package main // cf3, from cf2, from cf, for copy fanout.  This one is truly a fanout pattern and now adds viper.
+package main // cf4 from cf3, from cf2, from cf, for copy fanout.  This one is truly a fanout pattern and now adds viper.
 
 import (
 	"fmt"
@@ -127,6 +127,8 @@ import (
   20 Apr 26 -- Added time.Round(time.Millisecond) to the not newer message.  I don't need to see that in nanoseconds.
   25 May 26 -- Getting error of "path cannot be traversed because it contains untrusted mount points."  Perplexity said this is a security feature in windows.  A solution
                 is to check for a symlink and copy the primary file using code provided by Perplexity.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+  25 May 26 -- Now called cf4.  I intend this to debug the code needed to deal with symlinks without errors, then port that back to cf3.
 */
 
 const LastAltered = "25 May 2026" //
@@ -235,8 +237,6 @@ func main() {
 		return
 	}
 
-	list.SymFlag = *symFlag
-
 	// viper stuff
 	err = viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
@@ -317,6 +317,7 @@ func main() {
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
+	list.SymFlag = *symFlag // only in cf3 and cf4
 
 	ctfmt.Printf(ct.Green, winflag, "%50s Set up time is %s \n", " ", time.Since(t1).Round(time.Microsecond))
 
@@ -464,12 +465,39 @@ func copyAFile(srcFile, destDir string) {
 	// is detected as always later.  The solution was to not use nanoseconds for the time comparison, but instead use seconds.
 	// 25 May 2026 -- Adding detection of copying a symlink so to avoid the error described in the top comments.
 
+	origName := srcFile
 	t0 := time.Now()
+	inFI, err := os.Lstat(srcFile)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       fmt.Errorf("os.Lstat elapsed %s: %s", time.Since(t0), err),
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	if inFI.Mode()&os.ModeSymlink != 0 {
+		resolved, err := filepath.EvalSymlinks(srcFile)
+		if err != nil {
+			msg := msgType{
+				s:       "",
+				e:       fmt.Errorf("filepath.EvalSymlinks elapsed %s: %s", time.Since(t0), err),
+				color:   ct.Red,
+				success: false,
+			}
+			msgChan <- msg
+			return
+		}
+		srcFile = resolved
+	}
+
 	in, err := os.Open(srcFile)
 	if err != nil {
 		msg := msgType{
 			s:       "",
-			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
+			e:       fmt.Errorf("os.Open elapsed %s: %s", time.Since(t0), err),
 			color:   ct.Red,
 			success: false,
 		}
@@ -500,9 +528,10 @@ func copyAFile(srcFile, destDir string) {
 		return
 	}
 
-	baseFile := filepath.Base(srcFile)
+	//baseFile := filepath.Base(srcFile)
+	baseFile := filepath.Base(origName)
 	outName := filepath.Join(destDir, baseFile)
-	inFI, _ := in.Stat()
+	//inFI, _ := in.Stat() old way of doing it, before I needed to check for symlinks.  Now inFI is defined above.
 	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
@@ -681,7 +710,7 @@ func copyAFile(srcFile, destDir string) {
 
 	elapsed := time.Since(t0).Round(time.Millisecond)
 	msg := msgType{
-		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
+		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, origName, destDir),
 		e:           nil,
 		color:       ct.Green,
 		elapsed:     elapsed,
