@@ -6,8 +6,8 @@ import (
 	"bufio"
 	"encoding/gob"
 	"fmt"
-	"getcommandline"
 	"os"
+	"src/getcommandline"
 	"strconv"
 )
 
@@ -331,7 +331,7 @@ func NextPrimeFac(n, startfac uint64) (uint64, bool) { // note that this is the 
 	return 0, false
 } // NextPrimeFac
 
-//----------------------------------------------- usqrt ---------------------------
+// ----------------------------------------------- usqrt ---------------------------
 func usqrt(u uint64) uint64 {
 
 	sqrt := u / 2
