@@ -144,16 +144,16 @@ func main() {
 		nukeCmd.Stderr = &w2
 		nukeCmd.Run()
 		if w1.Len() < 1000 {
-			fmt.Printf(" Output from nuke /usr/local/go is %s\n", w1.String())
+			ctfmt.Printf(ct.Red, true, " Output from nuke /usr/local/go is %s\n", w1.String())
 		} else {
-			fmt.Printf(" Output frum nuke /usr/local/go is %d characters long, which is long enough for me to say it was successful.\n", w1.Len())
+			ctfmt.Printf(ct.Green, true, " Output frum nuke /usr/local/go is %d characters long, which is long enough for me to say it was successful.\n", w1.Len())
 			fmt.Printf(" Beginning of output is:\n%s\n", w1.String()[:500])
 		}
 
 		if w2.Len() == 0 {
-			fmt.Printf(" There were no errors from doas nuke go/\n")
+			ctfmt.Printf(ct.Green, true, " There were no errors from doas nuke go/\n")
 		} else {
-			fmt.Printf(" nuke go Stderr: %s \n\n", w2.String())
+			ctfmt.Printf(ct.Red, true, " nuke go Stderr: %s \n\n", w2.String())
 		}
 	}
 
