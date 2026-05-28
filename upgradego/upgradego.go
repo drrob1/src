@@ -8,6 +8,9 @@ import (
 	"src/filepicker"
 	"strconv"
 	"strings"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 /*
@@ -22,9 +25,10 @@ import (
                 It must be because of today's date.  :=)
                 I'll check to make sure the answer is in bounds
    7 Feb 24 -- Instead of using a []byte for the Stdout and Stderr, I'll see what happens if I use a strings.builder.
+  27 May 26 -- Will colorize the final message.
 */
 
-const lastUpdated = "Feb 7, 2024"
+const lastUpdated = "May 27, 2026"
 
 func main() {
 	execName, _ := os.Executable()
@@ -134,7 +138,7 @@ func main() {
 	//}
 
 	if !skipNuke {
-		nukeCmd := exec.Command("doas", "rm", "-rfv", "go/") // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
+		nukeCmd := exec.Command("doas", "rm", "-rfv", "go/") // this is like the JSON command syntax used in docker to not need a shell to interpret commands.
 		nukeCmd.Stdin = os.Stdin
 		nukeCmd.Stdout = &w1
 		nukeCmd.Stderr = &w2
@@ -190,7 +194,7 @@ func main() {
 	//	os.Exit(1)
 	//}
 
-	tarCmd := exec.Command("doas", tarArg...) // this is like the JSON command syntax that is used in docker to not need a shell to interpret commands.
+	tarCmd := exec.Command("doas", tarArg...) // this is like the JSON command syntax used in docker to not need a shell to interpret commands.
 
 	w1.Reset()
 	w2.Reset()
@@ -201,21 +205,21 @@ func main() {
 	tarCmd.Run()
 
 	if w1.Len() == 0 {
-		fmt.Printf(" There was no output sent to Stdout from the untar %s command\n", fullFileName)
+		ctfmt.Printf(ct.Green, true, " There was no output sent to Stdout from the untar %s command\n", fullFileName)
 	} else {
-		fmt.Printf(" %q\n was returned in Stdout from the untar %s command \n", w1.String(), fullFileName)
+		ctfmt.Printf(ct.Red, true, " %q\n was returned in Stdout from the untar %s command \n", w1.String(), fullFileName)
 	}
 	if w2.Len() == 0 {
-		fmt.Printf(" There was no output sent to Stderr from the untar %s command\n", fullFileName)
+		ctfmt.Printf(ct.Green, true, " There was no output sent to Stderr from the untar %s command\n", fullFileName)
 	} else {
-		fmt.Printf(" %q\n was returned in Stderr from the untar %s command \n", w2.String(), fullFileName)
+		ctfmt.Printf(ct.Red, true, " %q\n was returned in Stderr from the untar %s command \n", w2.String(), fullFileName)
 	}
 
-	fmt.Printf("\n Bye-Bye.  Hope it worked.\n\n")
+	ctfmt.Printf(ct.Yellow, true, "\n Bye-Bye.  Hope it worked.\n\n")
 }
 
 // ------------------------------------------- min -------------------------------------------------------------------------
-//func min(x, y int) int {  Not needed now that there are built in generic functions called min() and max(), as of Go 1.21.
+//func min(x, y int) int {  Not needed now that there are built-in generic functions called min() and max(), as of Go 1.21.
 //	if x < y {
 //		return x
 //	}
