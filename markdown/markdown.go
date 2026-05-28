@@ -22,9 +22,10 @@ import (
   29 Jan 26 -- Added the gear icon.
   30 Jan 26 -- Now reading a file actually works.  Before, it didn't.
   18 Apr 26 -- Now allows a file on the command line
+  27 May 26 -- Need preview output to be vertically scrollable.  I think I'll use a ScrollContainer.'
 */
 
-const lastModified = "April 18, 2026"
+const lastModified = "May 27, 2026"
 
 const width = 800
 const height = 680
@@ -123,7 +124,9 @@ func main() {
 
 	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
 	editWidget.Resize(fyne.NewSize(width/2, height-50)) // AI wrote these params.  I'll see what it does.
-	grid := container.NewAdaptiveGrid(2, editWidget, previewWidget)
+	scrollable := container.NewVScroll(previewWidget)
+	grid := container.NewAdaptiveGrid(2, editWidget, scrollable) // also too wide, so it doesn't matter
+	//                                                                      grid := container.NewGridWithColumns(2, editWidget, scrollable)  too wide
 	vbox := container.NewVBox(buttons, grid)
 	//vbox := container.NewVBox(grid, buttons) // didn't matter
 
