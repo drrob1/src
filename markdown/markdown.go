@@ -23,13 +23,14 @@ import (
   30 Jan 26 -- Now reading a file actually works.  Before, it didn't.
   18 Apr 26 -- Now allows a file on the command line
   27 May 26 -- Need preview output to be vertically scrollable.  I think I'll use a ScrollContainer.'
+  31 May 26 -- Made ScrollContainer both horiz and vert scrollable, and added w.CenterOnScreen().
 */
 
-const lastModified = "May 27, 2026"
+const lastModified = "May 30, 2026"
 
 const width = 800
 const height = 680
-const minRowsVisible = 30
+const minRowsVisible = 40
 
 //go:embed gear.png
 var gearIcon []byte
@@ -42,8 +43,9 @@ func main() {
 
 	s := fmt.Sprintf("Markdown Editor v 1, last modified %s, compiled with %s", lastModified, runtime.Version())
 	w := a.NewWindow(s)
+	w.CenterOnScreen()
 
-	editWidget := widget.NewMultiLineEntry()
+	editWidget := widget.NewMultiLineEntry()            // automatically horiz and vert scrollable
 	editWidget.SetMinRowsVisible(minRowsVisible)        // got this from perplexity
 	previewWidget := widget.NewRichTextFromMarkdown("") // empty string just to initialize it
 	editWidget.OnChanged = previewWidget.ParseMarkdown
@@ -123,12 +125,14 @@ func main() {
 	quitBtn := widget.NewButton("Quit", func() { os.Exit(0) })
 
 	buttons := container.NewHBox(openBtn, saveBtn, quitBtn)
-	editWidget.Resize(fyne.NewSize(width/2, height-50)) // AI wrote these params.  I'll see what it does.
-	scrollable := container.NewVScroll(previewWidget)
-	grid := container.NewAdaptiveGrid(2, editWidget, scrollable) // also too wide, so it doesn't matter
-	//                                                                      grid := container.NewGridWithColumns(2, editWidget, scrollable)  too wide
+	//    editWidget.Resize(fyne.NewSize(width/2, height-50)) // AI wrote these params.  I'll see what it does.
+	//    scrollable := container.NewVScroll(previewWidget)
+	scrollablePreview := container.NewScroll(previewWidget) // allows vert and horiz scrolling, so it's not too wide anymore.
+	//grid := container.NewAdaptiveGrid(2, editWidget, scrollablePreview)
+	grid := container.NewGridWithColumns(2, editWidget, scrollablePreview)
 	vbox := container.NewVBox(buttons, grid)
 	//vbox := container.NewVBox(grid, buttons) // didn't matter
+	vbox.Resize(fyne.NewSize(width, height))
 
 	w.SetContent(vbox)
 
