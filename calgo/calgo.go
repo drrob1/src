@@ -877,17 +877,18 @@ func main() {
 
 	// flag definitions and processing
 
-	var helpflag = flag.Bool("h", false, "print help message.") // pointer
-	var HelpFlag bool
-	flag.BoolVar(&HelpFlag, "help", false, "print help message.")
+	var helpflag = flag.BoolP("help", "h", false, "print help message.") // pointer
+	//var HelpFlag bool
+	//flag.BoolVar(&HelpFlag, "help", false, "print help message.")
 
 	flag.BoolVar(&verboseFlag, "test", false, "test mode flag.")
-	flag.BoolVar(&verboseFlag, "v", false, "Verbose (test) mode.")
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose (test) mode.")
 
-	flag.BoolVar(&outputFlag, "o", false, "output the cal files, which now needs this flag to be output.")
+	flag.BoolVarP(&outputFlag, "output", "o", false, "output the cal files, which now needs this flag to be output.")
 	flag.Parse()
 
-	if *helpflag || HelpFlag {
+	//if *helpflag || HelpFlag
+	if *helpflag {
 		fmt.Println()
 		fmt.Println(" Calendar Printing Program, last altered", lastCompiled)
 		fmt.Println(" Usage: calgo [flags] year month or month year, where month must be a month name string.")
