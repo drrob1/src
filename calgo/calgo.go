@@ -6,11 +6,7 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/tealeg/xlsx/v3"
 	"log"
 	"os"
 	"os/exec" // for the Clear screen functions.
@@ -23,6 +19,11 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
+	"github.com/tealeg/xlsx/v3"
 )
 
 /*
@@ -83,9 +84,10 @@ import (
 				At the moment, the only difference btwn calg and calgo is that calg hard codes the names, and calgo uses a config file to get the names.
 				I did git tag calgo-tcell for the old code, and git tag calgo-new for this code.  I preserved the old version as oldcalgo.exe
  22 Mar 25 -- Pgm won't work without the config file.  That's not what I want.  I'll make it work without one; of course, it can't output the files without it.
+  1 Jun 26 -- Now using pflag for command line flags, imported as flag.
 */
 
-const lastCompiled = "Mar 22, 2025"
+const lastCompiled = "June 1, 2026"
 
 // BLANKCHR is used in DAY2STR.
 const BLANKCHR = ' '
