@@ -30,12 +30,12 @@ import (
   REVISION HISTORY
   ----------------
    6 Apr 88 -- 1) Converted to M2 V3.03.
-               2) Response to 12 page question is now echoed to the terminal.
+               2) Response to 12-page question is now echoed to the terminal.
                3) Module name changed to CAL so not to conflict with the Logitech's CALENDAR library module.
    4 Nov 90 -- Updated the UTILLIB references to UL2, and recompiled under V3.4.
   28 Oct 91 -- Added FSA parse and indiv month printing abilities.
    2 Nov 91 -- Fixed problem w/ Zeller's congruence when Las2dgts is small enough to make the expression evaluate to a negative value.
-  20 Jan 92 -- First page now does not begin with a FF.
+  20 Jan 92 -- First page now does not begin with an FF.
   9 Nov 16 -- Converting to Go, using a CLI.  Input a year on the commandline, and output two files.
                 A 1-page calendar meant for printing out, and a 12-page calendar meant for importing into Excel.
  10 Nov 16 -- First working version, based on Modula-2 code from 92.
@@ -43,16 +43,16 @@ import (
  12 Nov 16 -- Fixed bug in DATEASSIGN caused by not porting my own Modula-2 code correctly.
 ----------------------------------------------------------------------------------------------------
   3 Mar 17 -- Now calgo, and will use termbox to try to do what CALm2 does.
-  3 Apr 17 -- Came back to this, after going thru Book of R.
+  3 Apr 17 -- Came back to this, after going through Book of R.
   4 Apr 17 -- Will only write the calendar output files if they do not already exist.
-  9 Apr 17 -- For Cal1, now every month also prints the 4 digit year.
+  9 Apr 17 -- For Cal1, now every month also prints the 4-digit year.
  10 Apr 17 -- Will write func AssignYear and allow displaying this year and next year
  12 Apr 17 -- Tweaking display output
  13 Apr 17 -- Golint complained, so I added some comments
  29 Sep 17 -- Changed the output of the final line, and added exec detection code.
   5 Feb 18 -- Will close the calendar files immediately after writing them, instead of waiting for this pgm to exit.
   6 Feb 18 -- Tried to move global variables to main, but had to move them back.
-  8 Feb 18 -- Cleaned up code to be more idiomatic, ie, use slices and not arrays.
+  8 Feb 18 -- Cleaned up code to be more idiomatic, i.e., use slices and not arrays.
  22 Nov 19 -- Adding use of flags.  Decided that will have month only be alphabetic, and year only numeric, so order does not matter.
  25 Dec 19 -- Fixed termbox, I hope.
  10 Jan 20 -- Removed ending termbox.flush and close, as they make windows panic.
@@ -64,7 +64,7 @@ import (
  21 Feb 21 -- Adding a comment field to the datecell struct, so holiday string can be output.  And cleaning up the code a bit.
  22 Feb 21 -- Removing text for Columbus and Veteran Days as these are not hospital holidays.
  23 Mar 21 -- Will allow years from 1800 to 2100.  This came up while reading about Apr 14, 1865, which was a Friday.
-                And discovered a bug when a 4 digit year is entered.
+                And discovered a bug when a 4-digit year is entered.
  18 Jun 21 -- Juneteenth added, as it became a legal federal holiday yesterday, signed into law by Biden.
                 And converted to modules.
   9 Aug 21 -- Added -v to be a synonym of test.
@@ -923,13 +923,13 @@ func main() {
 	}
 
 	// process command line parameters
-	requestedMonthNumber = currentMonthNumber - 1 // default value converted to a zero origin reference.
+	requestedMonthNumber = currentMonthNumber - 1 // default value converted to a zero-origin reference.
 	year = currentYear
 
 	if flag.NArg() > 0 {
 		commandline := flag.Args()
 		if flag.NArg() > 2 {
-			commandline = commandline[:2] // if there are too many params, only use params 0 and 1, ie, up to 2 but not incl'g 2.
+			commandline = commandline[:2] // if there are too many params, only use params 0 and 1, i.e., up to 2 but not incl'g 2.
 		}
 		for _, commandlineparam := range commandline {
 			if unicode.IsDigit(rune(commandlineparam[0])) { // have numeric parameter, must be a year

@@ -1,7 +1,7 @@
 package main // cf, for copy fanout.  It's not a true fanout pattern, but merely a worker pool pattern w/ larger limits.
 
 import (
-	"flag"
+	//  "flag" removed 6/2/26
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +17,7 @@ import (
 
 	ct "github.com/daviddengcn/go-colortext"
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 )
 
@@ -28,7 +29,7 @@ import (
   20 Dec 22 -- It's working.  But now I'll take out all the crap that came over from dsrtutils.  I'll have to do that tomorrow, as it's too late now.
                  And how am I going to handle collisions?
   22 Dec 22 -- I'm going to add a display like dsrt, using color to show sizes.  And I'll display the timestamp.  This means that I changed NewList to return []FileInfoExType.
-                 So I'm propagating that change thru.
+                 So I'm propagating that change through.
   25 Dec 22 -- Moving the file selection stuff to list.go
   26 Dec 22 -- Shortened the messages.
                  Now called copyc, meaning copy concurrently.  I'm going for it.  I'll need a channel for cfType and the returned msg string for either success or failure message.
@@ -91,9 +92,10 @@ import (
   22 Oct 24 -- Will now check to make sure params are present.
    6 Jul 25 -- Will display approx number of bytes copied.
   22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
+   2 Jun 26 -- Added pflag to replace flag, imported as flag.
 */
 
-const LastAltered = "22 Sep 2025" //
+const LastAltered = "2 June 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
