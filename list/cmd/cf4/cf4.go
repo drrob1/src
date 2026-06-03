@@ -1,4 +1,4 @@
-package main // cf4 from cf3, from cf2, from cf, for copy fanout.  This one is truly a fanout pattern and now adds viper.
+package main // cf4 from cf3, from cf2, from cf, for copy fanout.  This one is truly a fanout pattern, adds viper and properly handles symlinks.
 
 import (
 	"fmt"
