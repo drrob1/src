@@ -144,9 +144,10 @@ import (
 				I decided to check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
 				I have to use the rowoffset.
   24 May 26 -- Added more strings to the equalMeStrings array to exclude more strings that are not doctor names.  Backported from newlint.go.
+   3 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
 */
 
-const LastModified = "24 May 2026"
+const LastModified = "3 June 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -167,6 +168,7 @@ const (
 	mammo
 	boneDensity
 	late              // switched with oncallradiologist discovered May 9, 2026.
+	oncallIR          // Added June 3, 2026, because I had to.
 	oncallradiologist // switch with late discovered May 9, 2026.
 	mdOff
 	bluebarweekendcoverage
@@ -174,7 +176,7 @@ const (
 )
 
 var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "out"} // used by CheckRowNames.
+	"density", "late", "on-call", "on-call", "out"} // used by CheckRowNames.  First on-call is for IR, 2nd is for diagnostic.
 
 const (
 	monday = iota + 1
@@ -706,6 +708,7 @@ func CheckRowNames(filename string) (bool, error) {
 		s := strings.ToLower(cell.String())
 		//fmt.Printf("rowOffSet=%d, Cell(%d) = %s, matching rowNames is %s\n", rowOffset, i, s, rowNames[i-rowOffset])  ok, it's working.  I can comment this line out now.
 		if !strings.Contains(s, rowNames[i-rowOffset]) {
+			ctfmt.Printf(ct.Red, false, " rowOffset = %d, Row %d has unexpected name %s, expected %s\n", rowOffset, i, s, rowNames[i-rowOffset])
 			return true, nil
 		}
 	}

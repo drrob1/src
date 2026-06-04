@@ -151,9 +151,10 @@ import (
 				The main capability I added is to be a little more flexible in the order of the rows in the xlsx file.  This is done w/ the STV, the section translation vector.
   21 May 26 -- Added more words to be excluded from doc names.
   23 May 26 -- Added moonlight and moonlighter to the list of words to exclude from doc names.
+   3 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
 */
 
-const LastModified = "23 May 2026"
+const LastModified = "3 June 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -161,8 +162,6 @@ const maxDimensions = 200
 const debugFilename = "newlint.debug"
 
 const (
-	//DateLine = iota // Need this to get the year.  As of 2-26-26, I'm adding a fudge factor to allow for the change in row numbering.
-
 	Neuro = iota
 	Body
 	ErXrays
@@ -176,6 +175,7 @@ const (
 	Mammo
 	BoneDensity
 	Late              // switched with oncallradiologist discovered May 9, 2026.
+	OncallIR          // added June 3, 2026, because I had to.
 	Oncallradiologist // switch with late discovered May 9, 2026.
 	MDOff
 	Bluebarweekendcoverage
@@ -185,7 +185,7 @@ const (
 )
 
 var rowNames = []string{"neuro", "body", "stats", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "office"} // used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office"
+	"density", "late", "on-call", "on-call", "office"} // used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office"
 
 const (
 	monday = iota + 1
