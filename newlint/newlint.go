@@ -151,10 +151,10 @@ import (
 				The main capability I added is to be a little more flexible in the order of the rows in the xlsx file.  This is done w/ the STV, the section translation vector.
   21 May 26 -- Added more words to be excluded from doc names.
   23 May 26 -- Added moonlight and moonlighter to the list of words to exclude from doc names.
-   3 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
+   4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
 */
 
-const LastModified = "3 June 2026"
+const LastModified = "4 June 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.

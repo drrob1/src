@@ -144,10 +144,10 @@ import (
 				I decided to check to see if the rows have changed from what is hard coded.  That will take 2 routines, one to check and the other to see what changed if the check failed.
 				I have to use the rowoffset.
   24 May 26 -- Added more strings to the equalMeStrings array to exclude more strings that are not doctor names.  Backported from newlint.go.
-   3 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
+   4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
 */
 
-const LastModified = "3 June 2026"
+const LastModified = "4 June 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
