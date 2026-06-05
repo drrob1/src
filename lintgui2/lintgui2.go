@@ -58,7 +58,7 @@ func main() {
 	scheduleIconRes := fyne.NewStaticResource("schedule.png", scheduleIcon)
 	a := app.NewWithID("com.example.lintgui")
 	a.SetIcon(scheduleIconRes)
-	s := fmt.Sprintf("Lint GUI 2, last modified %s, compiled with %s", lastModified, runtime.Version())
+	s := fmt.Sprintf("Lint GUI 2, last modified %s, compiled with %s, lint library modified %s", lastModified, runtime.Version(), lint.LastModified)
 	w := a.NewWindow(s)
 	w.Resize(fyne.NewSize(900, 700))
 
