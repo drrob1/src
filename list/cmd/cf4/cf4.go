@@ -455,7 +455,7 @@ func main() {
 
 //	------------------------------------ CopyAFile ----------------------------------------------
 //
-// CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
+// CopyAFile(srcFile, destDir string) where src is a regular, full filename.  destDir is a directory
 func copyAFile(srcFile, destDir string) {
 	// I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
@@ -463,6 +463,7 @@ func copyAFile(srcFile, destDir string) {
 	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
 	// I eventually found the problem: on linux the resolution is too fine-grained but not reproducible in that one function always returns a truncated time, so the real file time
 	// is detected as always later.  The solution was to not use nanoseconds for the time comparison, but instead use seconds.
+	//
 	// 25 May 2026 -- Adding detection of copying a symlink so to avoid the error described in the top comments.
 
 	origName := srcFile

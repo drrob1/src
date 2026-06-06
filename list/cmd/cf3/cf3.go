@@ -127,9 +127,10 @@ import (
   20 Apr 26 -- Added time.Round(time.Millisecond) to the not newer message.  I don't need to see that in nanoseconds.
   25 May 26 -- Getting error of "path cannot be traversed because it contains untrusted mount points."  Perplexity said this is a security feature in windows.  A solution
                 is to check for a symlink and copy the primary file using code provided by Perplexity.
+   6 Jun 26 -- Added detection of copying a symlink so to avoid the error described in the top comments.  I did this by copying CopyAFile from cf4 to here.  It was debugged in cf4.
 */
 
-const LastAltered = "25 May 2026" //
+const LastAltered = "6 June 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -235,8 +236,6 @@ func main() {
 		return
 	}
 
-	list.SymFlag = *symFlag
-
 	// viper stuff
 	err = viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
@@ -317,6 +316,7 @@ func main() {
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
+	list.SymFlag = *symFlag
 
 	ctfmt.Printf(ct.Green, winflag, "%50s Set up time is %s \n", " ", time.Since(t1).Round(time.Microsecond))
 
@@ -454,7 +454,8 @@ func main() {
 
 //	------------------------------------ CopyAFile ----------------------------------------------
 //
-// CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
+// CopyAFile(srcFile, destDir string) where src is a regular, full filename.  destDir is a directory
+
 func copyAFile(srcFile, destDir string) {
 	// I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
@@ -462,14 +463,43 @@ func copyAFile(srcFile, destDir string) {
 	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
 	// I eventually found the problem: on linux the resolution is too fine-grained but not reproducible in that one function always returns a truncated time, so the real file time
 	// is detected as always later.  The solution was to not use nanoseconds for the time comparison, but instead use seconds.
+	//
 	// 25 May 2026 -- Adding detection of copying a symlink so to avoid the error described in the top comments.
+	//  6 Jun 2026 -- Copied here from cf4.
 
+	origName := srcFile
 	t0 := time.Now()
+	inFI, err := os.Lstat(srcFile)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       fmt.Errorf("os.Lstat elapsed %s: %s", time.Since(t0), err),
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	if inFI.Mode()&os.ModeSymlink != 0 {
+		resolved, err := filepath.EvalSymlinks(srcFile)
+		if err != nil {
+			msg := msgType{
+				s:       "",
+				e:       fmt.Errorf("filepath.EvalSymlinks elapsed %s: %s", time.Since(t0), err),
+				color:   ct.Red,
+				success: false,
+			}
+			msgChan <- msg
+			return
+		}
+		srcFile = resolved
+	}
+
 	in, err := os.Open(srcFile)
 	if err != nil {
 		msg := msgType{
 			s:       "",
-			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
+			e:       fmt.Errorf("os.Open elapsed %s: %s", time.Since(t0), err),
 			color:   ct.Red,
 			success: false,
 		}
@@ -500,9 +530,10 @@ func copyAFile(srcFile, destDir string) {
 		return
 	}
 
-	baseFile := filepath.Base(srcFile)
+	//baseFile := filepath.Base(srcFile)
+	baseFile := filepath.Base(origName)
 	outName := filepath.Join(destDir, baseFile)
-	inFI, _ := in.Stat()
+	//inFI, _ := in.Stat() old way of doing it, before I needed to check for symlinks.  Now inFI is defined above.
 	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
@@ -623,9 +654,6 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	//if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above, but only if I use nanosecond precision.  If I use microsecond precision, then the time fudge factor is not needed.
-	//	t = t.Add(timeFudgeFactor) // I'm now using seconds precision.  The fudge factor is only needed to maintain compatibility with cf and cf2.  I decided to remove it for all of my routines, starting w/ cf3.
-	//}
 
 	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
 	if err != nil {
@@ -681,7 +709,7 @@ func copyAFile(srcFile, destDir string) {
 
 	elapsed := time.Since(t0).Round(time.Millisecond)
 	msg := msgType{
-		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
+		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, origName, destDir),
 		e:           nil,
 		color:       ct.Green,
 		elapsed:     elapsed,
@@ -691,3 +719,241 @@ func copyAFile(srcFile, destDir string) {
 	}
 	msgChan <- msg
 } // end CopyAFile
+
+/*
+//func copyAFile(srcFile, destDir string) {
+//	// I have to open the file and write it to copy it.
+//	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
+//	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
+//	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
+//	// I eventually found the problem: on linux the resolution is too fine-grained but not reproducible in that one function always returns a truncated time, so the real file time
+//	// is detected as always later.  The solution was to not use nanoseconds for the time comparison, but instead use seconds.
+//
+//	t0 := time.Now()
+//	in, err := os.Open(srcFile)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//	defer in.Close()
+//
+//	destFI, err := os.Stat(destDir)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//	if !destFI.IsDir() {
+//		msg := msgType{
+//			s:       "",
+//			e:       fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	baseFile := filepath.Base(srcFile)
+//	outName := filepath.Join(destDir, baseFile)
+//	inFI, _ := in.Stat()
+//	inFIsec := inFI.ModTime().Unix()
+//	outFI, err := os.Stat(outName)
+//	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
+//		outFIsec := outFI.ModTime().Unix()
+//		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 sec.  So don't copy the file.
+//			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than in %s", time.Since(t0).Round(time.Millisecond), baseFile, destDir) // now this is not a data race.
+//			msg := msgType{
+//				s:       "",
+//				e:       ErrNotNew,
+//				elapsed: time.Since(t0).Round(time.Millisecond),
+//				color:   ct.Red,
+//				success: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//	}
+//	out, err := os.Create(outName)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//	defer out.Close()
+//
+//	t0 = time.Now() // redefine t0 now that it's going to try to copy the file.
+//	var n int64
+//	n, err = io.Copy(out, in)
+//
+//	if err != nil {
+//		var msg msgType
+//
+//		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+//		if e != nil {
+//			msg = msgType{
+//				s:        "",
+//				e:        e,
+//				color:    ct.Yellow, // so I see it.
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//		er := os.Remove(outName)
+//		if er == nil {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
+//					err, e, outName, outName),
+//				color:    ct.Yellow, // so I see it
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		} else {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+//					err, e, outName, er),
+//				color:    ct.Yellow, // so I see it
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		}
+//		return
+//	} // end if err != nil
+//
+//	err = out.Sync()
+//	if err != nil {
+//		var msg msgType
+//
+//		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+//		er := os.Remove(outName)
+//		if er == nil {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
+//					time.Since(t0), err, e, outName, outName),
+//				color:    ct.Yellow, // yellow to make sure I see it.
+//				elapsed:  time.Since(t0),
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		} else {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+//					time.Since(t0), err, e, outName, er),
+//				color:    ct.Yellow, // yellow to make sure I see it.
+//				elapsed:  time.Since(t0),
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		}
+//		return
+//	}
+//
+//	err = out.Close()
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			elapsed: time.Since(t0),
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	t := inFI.ModTime()
+//	//if runtime.GOOS == "linux" { // The time fudge factor is needed on linux, as explained in the notes above, but only if I use nanosecond precision.  If I use microsecond precision, then the time fudge factor is not needed.
+//	//	t = t.Add(timeFudgeFactor) // I'm now using seconds precision.  The fudge factor is only needed to maintain compatibility with cf and cf2.  I decided to remove it for all of my routines, starting w/ cf3.
+//	//}
+//
+//	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			elapsed: time.Since(t0),
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	if verifyFlag {
+//		result, err := few.Feq32withNames(srcFile, outName)
+//		if err != nil {
+//			msg := msgType{
+//				s:        "",
+//				e:        fmt.Errorf("elapsed %s: ERROR from verify operation is %s", time.Since(t0), err),
+//				color:    ct.Red,
+//				elapsed:  time.Since(t0),
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//		if result {
+//			msg := msgType{
+//				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0).Round(time.Millisecond), srcFile, destDir),
+//				e:           nil,
+//				color:       ct.Green,
+//				elapsed:     time.Since(t0),
+//				success:     true,
+//				verified:    true,
+//				bytesCopied: n,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//		msg := msgType{ // essentially an else clause of the above if result statement.  Flagged by GoLand.
+//			s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
+//			e:        nil,
+//			color:    ct.Red,
+//			elapsed:  time.Since(t0),
+//			success:  false,
+//			verified: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	elapsed := time.Since(t0).Round(time.Millisecond)
+//	msg := msgType{
+//		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, srcFile, destDir),
+//		e:           nil,
+//		color:       ct.Green,
+//		elapsed:     elapsed,
+//		success:     true,
+//		verified:    verifyFlag, // I already know that this flag is false if get here.
+//		bytesCopied: n,
+//	}
+//	msgChan <- msg
+//} // end CopyAFile
+*/
