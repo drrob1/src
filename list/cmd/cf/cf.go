@@ -93,14 +93,17 @@ import (
    6 Jul 25 -- Will display approx number of bytes copied.
   22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
    2 Jun 26 -- Added pflag to replace flag, imported as flag.
+   7 Jun 26 -- Changed CopyAFile to that written and debugged in cf4, to handle symlinks correcctly.  And added the sym flag.
+				Changed completion message to match that of cf3 and cf4.
 */
 
-const LastAltered = "2 June 2026" //
+const LastAltered = "7 June 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
 const sepString = string(filepath.Separator)
-const timeFudgeFactor = 1 * time.Millisecond
+
+//const timeFudgeFactor = 1 * time.Millisecond not used anymore.  See top comments.
 
 type cfType struct { // copy file type
 	srcFile string
@@ -111,6 +114,7 @@ type msgType struct {
 	s           string
 	e           error
 	color       ct.Color
+	elapsed     time.Duration
 	success     bool
 	verified    bool
 	bytesCopied int64
@@ -190,6 +194,8 @@ func main() {
 	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
 	flag.IntVar(&multiplier, "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
+	symFlag := flag.Bool("sym", false, "Copy symlinks only, ie, skip regular files.")
+
 	flag.Parse()
 
 	if flag.NArg() < 2 {
@@ -236,8 +242,8 @@ func main() {
 	list.GlobFlag = globFlag
 	list.ExcludeRex = excludeRegex
 	list.SizeFlag = sizeFlag
+	list.SymFlag = *symFlag
 
-	//               fileList, err := list.New(excludeRegex, sizeFlag, Reverse) // fileList used to be []string, but now it's []FileInfoExType.
 	fileList, err := list.New() // fileList used to be []string, but now it's []FileInfoExType.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, " Error from list.New is %s\n", err)
@@ -354,36 +360,82 @@ func main() {
 		}
 		cfChan <- cf
 	}
-	goRtns := runtime.NumGoroutine()
+	goRtnsNum := runtime.NumGoroutine()
 	close(cfChan)
 	wg.Wait()
 	close(msgChan)
+
 	if succeeded > 0 {
 		magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
-		ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d, ", succeeded)
-		ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
+		ctfmt.Printf(ct.Green, onWin, " Total files copied is %d, ", succeeded)
+		ctfmt.Printf(ct.Magenta, false, "and approx total of bytes copied is ")
+		ctfmt.Printf(magnitudeColor, true, "%s,", magnitudeString)
 	}
 	if failed > 0 {
 		ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
 	}
-	ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
+	ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start).Round(time.Millisecond), goRtnsNum, os.Args[0])
+
+	if onWin { // because tcc can get confused about its color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
+		ctfmt.Printf(ct.White, onWin, " Total files processed is %d\n", succeeded+failed)
+	}
+	//if succeeded > 0 {
+	//	magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
+	//	ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d, ", succeeded)
+	//	ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
+	//}
+	//if failed > 0 {
+	//	ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
+	//}
+	//ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------
 //
-// CopyAFile(srcFile, destDir string) where src is a regular file.  destDir is a directory
+// CopyAFile(srcFile, destDir string) where src is a regular full filename.  destDir is a directory
 func copyAFile(srcFile, destDir string) {
-	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
+	// I have to open the file and write it to copy it.
 	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
 	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
 	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
+	// I eventually found the problem: on linux the resolution is too fine-grained but not reproducible in that one function always returns a truncated time, so the real file time
+	// is detected as always later.  The solution was to not use nanoseconds for the time comparison, but instead use seconds.
+	//
+	// 25 May 2026 -- Adding detection of copying a symlink so to avoid the error described in the top comments in cf4.
 
+	origName := srcFile
 	t0 := time.Now()
+	inFI, err := os.Lstat(srcFile)
+	if err != nil {
+		msg := msgType{
+			s:       "",
+			e:       fmt.Errorf("os.Lstat elapsed %s: %s", time.Since(t0), err),
+			color:   ct.Red,
+			success: false,
+		}
+		msgChan <- msg
+		return
+	}
+	if inFI.Mode()&os.ModeSymlink != 0 {
+		resolved, err := filepath.EvalSymlinks(srcFile)
+		if err != nil {
+			msg := msgType{
+				s:       "",
+				e:       fmt.Errorf("filepath.EvalSymlinks elapsed %s: %s", time.Since(t0), err),
+				color:   ct.Red,
+				success: false,
+			}
+			msgChan <- msg
+			return
+		}
+		srcFile = resolved
+	}
+
 	in, err := os.Open(srcFile)
 	if err != nil {
 		msg := msgType{
 			s:       "",
-			e:       fmt.Errorf("%s", err),
+			e:       fmt.Errorf("os.Open elapsed %s: %s", time.Since(t0), err),
 			color:   ct.Red,
 			success: false,
 		}
@@ -396,7 +448,7 @@ func copyAFile(srcFile, destDir string) {
 	if err != nil {
 		msg := msgType{
 			s:       "",
-			e:       err,
+			e:       fmt.Errorf("elapsed %s: %s", time.Since(t0), err),
 			color:   ct.Red,
 			success: false,
 		}
@@ -414,18 +466,20 @@ func copyAFile(srcFile, destDir string) {
 		return
 	}
 
-	baseFile := filepath.Base(srcFile)
+	//baseFile := filepath.Base(srcFile)
+	baseFile := filepath.Base(origName)
 	outName := filepath.Join(destDir, baseFile)
-	inFI, _ := in.Stat()
+	//inFI, _ := in.Stat() old way of doing it, before I needed to check for symlinks.  Now inFI is defined above.
 	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
 		outFIsec := outFI.ModTime().Unix()
-		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
+		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is the same or newer than the file to be copied here, within 1 sec.  So don't copy the file.
+			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than in %s", time.Since(t0).Round(time.Millisecond), baseFile, destDir) // now this is not a data race.
 			msg := msgType{
 				s:       "",
 				e:       ErrNotNew,
+				elapsed: time.Since(t0).Round(time.Millisecond),
 				color:   ct.Red,
 				success: false,
 			}
@@ -446,19 +500,12 @@ func copyAFile(srcFile, destDir string) {
 	}
 	defer out.Close()
 
-	t0 = time.Now()
+	t0 = time.Now() // redefine t0 now that it's going to try to copy the file.
 	var n int64
 	n, err = io.Copy(out, in)
 
 	if err != nil {
 		var msg msgType
-		//msg := msgType{
-		//	s:       "",
-		//	e:       err,
-		//	color:   ct.Red,
-		//	success: false,
-		//}
-		// msgChan <- msg  Too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		if e != nil {
@@ -476,8 +523,8 @@ func copyAFile(srcFile, destDir string) {
 		if er == nil {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
-					time.Since(t0), err, e, outName, outName),
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
+					err, e, outName, outName),
 				color:    ct.Yellow, // so I see it
 				success:  false,
 				verified: false,
@@ -486,8 +533,8 @@ func copyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-					time.Since(t0), err, e, outName, er),
+				e: fmt.Errorf("ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					err, e, outName, er),
 				color:    ct.Yellow, // so I see it
 				success:  false,
 				verified: false,
@@ -495,27 +542,21 @@ func copyAFile(srcFile, destDir string) {
 			msgChan <- msg
 		}
 		return
-	}
+	} // end if err != nil
 
 	err = out.Sync()
 	if err != nil {
 		var msg msgType
-		//msg := msgType{
-		//	s:       "",
-		//	e:       err,
-		//	color:   ct.Magenta,
-		//	success: false,
-		//}
-		//msgChan <- msg  too soon, it's making the wait group decrement.
 
 		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 		er := os.Remove(outName)
 		if er == nil {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
-					err, e, outName, outName),
+				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
+					time.Since(t0), err, e, outName, outName),
 				color:    ct.Yellow, // yellow to make sure I see it.
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
@@ -523,9 +564,10 @@ func copyAFile(srcFile, destDir string) {
 		} else {
 			msg = msgType{
 				s: "",
-				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-					err, e, outName, er),
+				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					time.Since(t0), err, e, outName, er),
 				color:    ct.Yellow, // yellow to make sure I see it.
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
@@ -540,6 +582,7 @@ func copyAFile(srcFile, destDir string) {
 			s:       "",
 			e:       err,
 			color:   ct.Red,
+			elapsed: time.Since(t0),
 			success: false,
 		}
 		msgChan <- msg
@@ -547,16 +590,14 @@ func copyAFile(srcFile, destDir string) {
 	}
 
 	t := inFI.ModTime()
-	//if runtime.GOOS == "linux" {  Not needed anymore.  Worked out using cf3 and my fstat tool.  See top comments and cf3.
-	//	t = t.Add(timeFudgeFactor)
-	//}
 
-	err = os.Chtimes(outName, t, t)
+	err = os.Chtimes(outName, t, t) // name string, atime time.Time, mtime time.Time.
 	if err != nil {
 		msg := msgType{
 			s:       "",
 			e:       err,
 			color:   ct.Red,
+			elapsed: time.Since(t0),
 			success: false,
 		}
 		msgChan <- msg
@@ -568,8 +609,9 @@ func copyAFile(srcFile, destDir string) {
 		if err != nil {
 			msg := msgType{
 				s:        "",
-				e:        fmt.Errorf("ERROR from verify operation is %s", err),
+				e:        fmt.Errorf("elapsed %s: ERROR from verify operation is %s", time.Since(t0), err),
 				color:    ct.Red,
+				elapsed:  time.Since(t0),
 				success:  false,
 				verified: false,
 			}
@@ -578,37 +620,279 @@ func copyAFile(srcFile, destDir string) {
 		}
 		if result {
 			msg := msgType{
-				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
+				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0).Round(time.Millisecond), srcFile, destDir),
 				e:           nil,
 				color:       ct.Green,
+				elapsed:     time.Since(t0),
 				success:     true,
 				verified:    true,
 				bytesCopied: n,
 			}
 			msgChan <- msg
 			return
-		} else {
-			msg := msgType{
-				s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
-				e:        nil,
-				color:    ct.Red,
-				success:  false,
-				verified: false,
-			}
-			msgChan <- msg
-			return
 		}
+		msg := msgType{ // essentially an else clause of the above if result statement.  Flagged by GoLand.
+			s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
+			e:        nil,
+			color:    ct.Red,
+			elapsed:  time.Since(t0),
+			success:  false,
+			verified: false,
+		}
+		msgChan <- msg
+		return
 	}
 
+	elapsed := time.Since(t0).Round(time.Millisecond)
 	msg := msgType{
-		s:           fmt.Sprintf("elapsed %s: %s copied to %s", time.Since(t0), srcFile, destDir),
+		s:           fmt.Sprintf("elapsed %s: %s copied to %s", elapsed, origName, destDir),
 		e:           nil,
 		color:       ct.Green,
+		elapsed:     elapsed,
 		success:     true,
 		verified:    verifyFlag, // I already know that this flag is false if get here.
 		bytesCopied: n,
 	}
 	msgChan <- msg
 } // end CopyAFile
+
+//func copyAFile(srcFile, destDir string) {
+//	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
+//	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
+//	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
+//	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
+//
+//	t0 := time.Now()
+//	in, err := os.Open(srcFile)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       fmt.Errorf("%s", err),
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//	defer in.Close()
+//
+//	destFI, err := os.Stat(destDir)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//	if !destFI.IsDir() {
+//		msg := msgType{
+//			s:       "",
+//			e:       fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	baseFile := filepath.Base(srcFile)
+//	outName := filepath.Join(destDir, baseFile)
+//	inFI, _ := in.Stat()
+//	inFIsec := inFI.ModTime().Unix()
+//	outFI, err := os.Stat(outName)
+//	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
+//		outFIsec := outFI.ModTime().Unix()
+//		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
+//			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
+//			msg := msgType{
+//				s:       "",
+//				e:       ErrNotNew,
+//				color:   ct.Red,
+//				success: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//	}
+//	out, err := os.Create(outName)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//	defer out.Close()
+//
+//	t0 = time.Now()
+//	var n int64
+//	n, err = io.Copy(out, in)
+//
+//	if err != nil {
+//		var msg msgType
+//		//msg := msgType{
+//		//	s:       "",
+//		//	e:       err,
+//		//	color:   ct.Red,
+//		//	success: false,
+//		//}
+//		// msgChan <- msg  Too soon, it's making the wait group decrement.
+//
+//		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+//		if e != nil {
+//			msg = msgType{
+//				s:        "",
+//				e:        e,
+//				color:    ct.Yellow, // so I see it.
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//		er := os.Remove(outName)
+//		if er == nil {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
+//					time.Since(t0), err, e, outName, outName),
+//				color:    ct.Yellow, // so I see it
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		} else {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+//					time.Since(t0), err, e, outName, er),
+//				color:    ct.Yellow, // so I see it
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		}
+//		return
+//	}
+//
+//	err = out.Sync()
+//	if err != nil {
+//		var msg msgType
+//		//msg := msgType{
+//		//	s:       "",
+//		//	e:       err,
+//		//	color:   ct.Magenta,
+//		//	success: false,
+//		//}
+//		//msgChan <- msg  too soon, it's making the wait group decrement.
+//
+//		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
+//		er := os.Remove(outName)
+//		if er == nil {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
+//					err, e, outName, outName),
+//				color:    ct.Yellow, // yellow to make sure I see it.
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		} else {
+//			msg = msgType{
+//				s: "",
+//				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
+//					err, e, outName, er),
+//				color:    ct.Yellow, // yellow to make sure I see it.
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//		}
+//		return
+//	}
+//
+//	err = out.Close()
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	t := inFI.ModTime()
+//	//if runtime.GOOS == "linux" {  Not needed anymore.  Worked out using cf3 and my fstat tool.  See top comments and cf3.
+//	//	t = t.Add(timeFudgeFactor)
+//	//}
+//
+//	err = os.Chtimes(outName, t, t)
+//	if err != nil {
+//		msg := msgType{
+//			s:       "",
+//			e:       err,
+//			color:   ct.Red,
+//			success: false,
+//		}
+//		msgChan <- msg
+//		return
+//	}
+//
+//	if verifyFlag {
+//		result, err := few.Feq32withNames(srcFile, outName)
+//		if err != nil {
+//			msg := msgType{
+//				s:        "",
+//				e:        fmt.Errorf("ERROR from verify operation is %s", err),
+//				color:    ct.Red,
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//		if result {
+//			msg := msgType{
+//				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
+//				e:           nil,
+//				color:       ct.Green,
+//				success:     true,
+//				verified:    true,
+//				bytesCopied: n,
+//			}
+//			msgChan <- msg
+//			return
+//		} else {
+//			msg := msgType{
+//				s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
+//				e:        nil,
+//				color:    ct.Red,
+//				success:  false,
+//				verified: false,
+//			}
+//			msgChan <- msg
+//			return
+//		}
+//	}
+//
+//	msg := msgType{
+//		s:           fmt.Sprintf("elapsed %s: %s copied to %s", time.Since(t0), srcFile, destDir),
+//		e:           nil,
+//		color:       ct.Green,
+//		success:     true,
+//		verified:    verifyFlag, // I already know that this flag is false if get here.
+//		bytesCopied: n,
+//	}
+//	msgChan <- msg
+//} // end CopyAFile
 
 //    odTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
