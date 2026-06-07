@@ -47,7 +47,7 @@ import (
    7 Jan 23 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 23 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
   23 Jan 23 -- Changing time on destination file(s) to match the source file(s).  And fixing the date comparison for replacement copies, from .After() to not .Before().
-  27 Jan 23 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
+  27 Jan 23 -- Removed comparisons of number of bytes written.  The issue was OS buffering that was fixed by calling Sync(), so comparing bytes didn't work anyway.
   30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                   I added timeFudgeFactor.
   31 Jan 23 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
@@ -294,6 +294,7 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " os.Open(%s) failed w/ error %s.  Exiting\n", destDir, err)
 		return
 	}
+	defer d.Close()
 	fi, err := d.Stat()
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " %s.Stat() failed w/ error %s.  Exiting\n", d.Name(), err)
@@ -389,7 +390,7 @@ func main() {
 	//
 	//ctfmt.Printf(ct.Cyan, onWin, " total elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtnsNum, os.Args[0])
 	//
-	//if onWin { // because tcc can get confused about it's color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
+	//if onWin { // because tcc can get confused about its color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
 	//	ctfmt.Printf(ct.White, onWin, " Total files processed is %d\n", succeeded+failed)
 	//}
 } // end main
