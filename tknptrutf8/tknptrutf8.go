@@ -462,10 +462,8 @@ ExitForLoop:
 		case DELIM: // token.state
 			switch CHAR.State {
 			case DELIM: // NULL char is a special delimiter because it will
-				// immediately cause a return even if there is no token yet,
-				// i.e., the token is only delimiters.  This is because of
-				// the NULL char is the string terminator for general strings
-				// and especially for environment strings, for which this
+				// immediately cause a return even if there is no token yet, i.e., the token is only delimiters.  This is because of
+				// the NULL char is the string terminator for general strings and especially for environment strings, for which this
 				// TOKENIZE module was originally written.
 				if CHAR.Ch == NullChar {
 					break ExitForLoop
