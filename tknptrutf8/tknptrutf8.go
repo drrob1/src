@@ -1,4 +1,4 @@
-package tknptr
+package tknptrutf8 // from tknptr.
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 )
 
 /*
- Copyright (C) 1987-2023  Robert Solomon MD.  All rights reserved.
+ Copyright (C) 1987-2026  Robert Solomon MD.  All rights reserved.
  These routines collectively implement a very good facility to fetch, manipulate, and interpret tokens.
 
 REVISION HISTORY
@@ -24,7 +24,7 @@ REVISION HISTORY
               2.  Changed the method UNGETTKN uses to unget the token.
               3.  Added the MULTSIGN and DIVSIGN OP states.
               4.  Ran M2CHECK and deleted all unreferenced var's.
-              5.  Moved the NEGATV check for contigently making SUM < 0 out
+              5.  Moved the NEGATV check for contingently making SUM < 0 out
                    of the LOOP and deleted the 5 previous statements for all
                    of the different states plus the end-of-line test.
 18 Mar 89 -- Added the GETTKNREAL Procedure.
@@ -74,8 +74,8 @@ REVISION HISTORY
  4 Jul 23 -- I'm adding a much simpler way to get a real token, TokenReal.  This is going to take a while because I'm also listening to Derek Parker's 8 days of debugging.
               And I added '_' following 'E' or 'e' is replaced by '-' before conversion to float.
  9 Jul 23 -- Now to fix hex input, by adding a field to TokenType.
-19 Jul 23 -- Added TokenRealSlice, which uses the new TokenReal(), instead of the old GETTKNREAL().  And I decided to not allow '-' for negative exponents.  I very rarely use E
-				notation, so I want to preserve the use of '-' as an operator.  Underscore, '_', is replaced w/ '-' just before call to strconv.ParseFloat().
+19 Jul 23 -- Added TokenRealSlice, which uses the new TokenReal(), instead of the old GETTKNREAL().  And I decided to not allow '-' for negative exponents.  I very rarely use E notation,
+               so I want to preserve the use of '-' as an operator.  Underscore, '_', is replaced w/ '-' just before call to strconv.ParseFloat().
 23 Jul 23 -- The code is now working as designed, as tested w/ tknptr_test.go and testtokenptr.go.
                The old GETTKNREAL works by using GetToken() to determine the state of the next token.  If it's not a number, that result is returned.  If it's a number, ungettoken is called
                and a real number token is parsed from scratch.  That repeats much of the finite state logic.
@@ -85,10 +85,11 @@ REVISION HISTORY
 24 Jul 23 -- Spoke too soon.  Hex input isn't working correctly.  Gotta fix that now.  And I removed 'h' to indicate hex.  Now only 0x will work, as used in C-ish.
 24 May 24 -- Added comments that will be detected by go doc
 10 Sep 25 -- Added a stringer method for TokenType
-11 Jun 26 -- Using a byte to represent a character is only true for ASCII.  I need to use rune, but I'll do that in a different package.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+11 Jun 26 -- Now called tknptrutf8, so it will use UTF-8.  I'll stop assuming that a character is a byte.
 */
 
-const LastAltered = "10 Sep 2025"
+const LastAltered = "11 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -97,12 +98,12 @@ const (
 	ALLELSE
 )
 
-// TokenType fields are Str, FullStr which includes the minus sign, State, DelimCH, Isum, Rsum, RealFlag, HexFlag.
+// TokenType fields are Str; FullStr which includes the minus sign; and others
 type TokenType struct {
 	Str        string
 	FullString string // includes minus sign character, if present.
 	State      int
-	DelimCH    byte
+	DelimCH    rune
 	DelimState int
 	Isum       int
 	Rsum       float64
@@ -112,14 +113,14 @@ type TokenType struct {
 
 // CharType fields are Ch byte and State int.
 type CharType struct {
-	Ch    byte
+	Ch    rune
 	State int
 } // CharType Record
 
 type BufferState struct {
 	CURPOSN, HOLDCURPOSN, PREVPOSN int
-	lineByteSlice, HoldLineBS      []byte
-	StateMap                       map[byte]int // as of 9/28/20, StateMap is part of this structure.
+	lineRuneSlice, HoldLineBS      []rune
+	StateMap                       map[rune]int // as of 9/28/20, StateMap is part of this structure.
 }
 
 var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
@@ -189,15 +190,15 @@ either escape and allows both quote characters to appear unescaped.
 */
 
 // CAP -- will convert the param to an upper case letter.  It takes a byte and returns a byte.
-func CAP(c byte) byte {
+func CAP(c rune) rune {
 	if (c >= 'a') && (c <= 'z') {
 		c = c - 32
 	}
 	return c
 }
 
-// ----------------------------------------- init --------------------------------------------
 /* removed 9/28/20 when StateMap became part of BufferState
+// ----------------------------------------- init --------------------------------------------
 func init() {
 	StateMap = make(map[byte]int, 128)
 	InitStateMap()
@@ -209,16 +210,16 @@ func init() {
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
 
 func InitStateMap(bs *BufferState) {
-	bs.StateMap = make(map[byte]int, 128)
+	bs.StateMap = make(map[rune]int, 128)
 	//	StateMap[NullChar] = DELIM
 	for i := 0; i < 33; i++ { // note that this includes \t, HT, tab character.
-		bs.StateMap[byte(i)] = DELIM
+		bs.StateMap[rune(i)] = DELIM
 	}
 	for i := 33; i < 128; i++ {
-		bs.StateMap[byte(i)] = ALLELSE // including comma
+		bs.StateMap[rune(i)] = ALLELSE // including comma
 	}
 	for c := Dgt0; c <= Dgt9; c++ {
-		bs.StateMap[byte(c)] = DGT
+		bs.StateMap[c] = DGT // character 'c' is now a rune, so it doesn't need to be converted to a rune
 	}
 	bs.StateMap[' '] = DELIM
 	bs.StateMap[';'] = DELIM
@@ -235,33 +236,7 @@ func InitStateMap(bs *BufferState) {
 } // InitStateMap
 
 /*
-func INITKN(Str string) *BufferState { // not idiomatic so I removed it.
-	// INITIALIZE TOKEN.
-	// The purpose of the initialize token routine is to initialize the
-	// variables used by nxtchr to begin processing a new line.
-	// The buffer on which the tokenizing rtns operate is also initialized.
-	// CURPOSN is initialized to start at the first character on the line.
-	if Str == "" {
-		return nil
-	}
-
-	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
-	InitStateMap(bs)       // It's possible GetTknStr or GetTknEOL changed the StateMap, so will call init.
-	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
-	bs.lineByteSlice = []byte(Str)
-	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied, not just a pointer.
-
-	   //fmt.Println(" In IniTkn and Str is:",Str,", len of Str is: ",len(Str));
-	   //fmt.Print(" In IniTkn and linebyteslice is '",bs.lineByteSlice);
-	   //fmt.Println("', length of lineByteSlice is ",len(bs.lineByteSlice));
-	   //fmt.Println(" In IniTkn and Str is '",Str,"', length= ",len(Str));
-
-	return bs
-} // INITKN
-*/
-
-/*
-func NewToken(Str string) *BufferState { // not idiomatic so I removed it.
+func NewToken(Str string) *BufferState {
 	// INITIALIZE TOKEN, using the Go idiom.
 
 	if Str == "" {
@@ -270,26 +245,25 @@ func NewToken(Str string) *BufferState { // not idiomatic so I removed it.
 	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
 	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
-	bs.lineByteSlice = []byte(Str)
-	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that a value is copied.
+	bs.lineRuneSlice = []byte(Str)
+	copy(bs.HoldLineBS, bs.lineRuneSlice) // make sure that a value is copied.
 	return bs
 } // NewToken, copied from INITKN
 */
 
 // ----------------------------------------- New ----------------------------------------
 
-// New -- input is a string and it returns a *BufferState.  This is the init function call to start tokenizing.  The others have been removed.
-func New(Str string) *BufferState { // constructor, initializer
-	// INITIALIZE TOKEN, using the Go idiom.
+// New -- input is a string, and it returns a *BufferState.  This is the idiomatic function call to start tokenizing.  The others have been removed.
+func New(Str string) *BufferState { // constructor, initializer using idiomatic Go as taught by Bill Kennedy and others.
+	var bufState BufferState
 
-	//bs := &BufferState{}
-	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
-	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
-	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
-	bs.lineByteSlice = []byte(Str)
-	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that the values are copied.
-	return bs
-} // New, copied from NewToken
+	//bs := new(BufferState) // idiomatic Go would write this as &BufferState{}  And I stopped using bs as byteslice because it looks ugly.
+	InitStateMap(&bufState) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
+	bufState.CURPOSN, bufState.PREVPOSN, bufState.HOLDCURPOSN = 0, 0, 0
+	bufState.lineRuneSlice = []rune(Str)
+	copy(bufState.HoldLineBS, bufState.lineRuneSlice) // make sure that the values are copied.
+	return &bufState                                  // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
+} //
 
 //------------------------------ STOTKNPOSN -----------------------------------
 
@@ -298,13 +272,13 @@ func (bs *BufferState) STOTKNPOSN() {
 	// STORE TOKEN POSITION.
 	// This routine will store the value of the curposn into a hold variable for later recall by RCLTKNPOSN.
 
-	if (bs.CURPOSN < 0) || (bs.CURPOSN > len(bs.lineByteSlice)) {
+	if (bs.CURPOSN < 0) || (bs.CURPOSN > len(bs.lineRuneSlice)) {
 		log.SetFlags(log.Llongfile)
 		log.Print(" In StoTknPosn and CurPosn is invalid.")
 		os.Exit(1)
 	}
 	bs.HOLDCURPOSN = bs.CURPOSN
-	copy(bs.HoldLineBS, bs.lineByteSlice) // Need to copy values, else just copy a pointer
+	copy(bs.HoldLineBS, bs.lineRuneSlice) // Need to copy values, else just copy a pointer
 } // STOTKNPOSN
 
 //------------------------------ RCLTKNPOSN ----------------------------------
@@ -330,12 +304,12 @@ func (bs *BufferState) PeekChr() (CharType, bool) {
 	var C CharType
 	var EOL bool
 	EOL = false
-	if bs.CURPOSN >= len(bs.lineByteSlice) {
+	if bs.CURPOSN >= len(bs.lineRuneSlice) {
 		EOL = true
 		//C = CharType{} // This zeros the CharType C by assigning an empty CharType constant literal.  Not necessary, as the var declaration does the same thing.
 		return C, EOL
 	}
-	C.Ch = bs.lineByteSlice[bs.CURPOSN] //  no longer use the Cap function here.
+	C.Ch = bs.lineRuneSlice[bs.CURPOSN] //  no longer use the Cap function here.
 	C.State = bs.StateMap[C.Ch]         // state assignment, here using map access.
 	return C, EOL
 } // PeekCHR
@@ -466,16 +440,15 @@ func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	bs.PREVPOSN = bs.CURPOSN
 	var NEGATV, QUOFLG bool
 	TOKEN = TokenType{}                    // This will zero out all the fields by using a nil struct literal.  It's the default; I put it here so I remember.
-	tokenByteSlice := make([]byte, 0, 200) // to build up the TOKEN.Str field
+	tokenRuneSlice := make([]rune, 0, 200) // to build up the TOKEN.Str field
 
 ExitForLoop:
 	for {
 		CHAR, EOL = bs.GETCHR()
 		if EOL {
-			//          If TKNSTATE is DELIM, then gettkn was called when there were
-			//          no more tokens on line.  Otherwise it means that we have fetched the last
-			//          TOKEN on this line.
-			if (TOKEN.State == DELIM) && (len(tokenByteSlice) == 0) {
+			// If TKNSTATE is DELIM, then gettkn was called when there were no more tokens on the input line.
+			// Otherwise, it means that we have fetched the last TOKEN on this line.
+			if (TOKEN.State == DELIM) && (len(tokenRuneSlice) == 0) {
 				break // with EOL still being true.
 			} else { // now on last token of line, so don't return with EOL set to true.
 				EOL = false
@@ -491,7 +464,7 @@ ExitForLoop:
 			case DELIM: // NULL char is a special delimiter because it will
 				// immediately cause a return even if there is no token yet,
 				// i.e., the token is only delimiters.  This is because of
-				// the NULL char is the string terminater for general strings
+				// the NULL char is the string terminator for general strings
 				// and especially for environment strings, for which this
 				// TOKENIZE module was originally written.
 				if CHAR.Ch == NullChar {
@@ -499,14 +472,14 @@ ExitForLoop:
 				} // goto ExitLoop }
 			case OP: // Delim -> OP means this is the 1st char of the operator token.
 				TOKEN.State = OP
-				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
-				if len(tokenByteSlice) > TKNMAXSIZ {
+				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				if len(tokenRuneSlice) > TKNMAXSIZ {
 					log.SetFlags(log.Llongfile)
 					log.Println(" token too long in GetToken.")
 					os.Exit(1)
 				}
 			case DGT: // Delim -> DGT means this is the 1st dgt for the entered number.
-				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 				TOKEN.State = DGT
 				//bs.StateMap['X'] = DGT
 				//bs.StateMap['x'] = DGT
@@ -527,8 +500,8 @@ ExitForLoop:
 				if QUOFLG { // Do not put the quote character into the token.
 					QUOCHR = rune(CHAR.Ch)
 				} else {
-					tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
-					if len(tokenByteSlice) > TKNMAXSIZ {
+					tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+					if len(tokenRuneSlice) > TKNMAXSIZ {
 						log.SetFlags(log.Llongfile)
 						log.Println(" token too long in GetToken.")
 						os.Exit(1)
@@ -542,21 +515,21 @@ ExitForLoop:
 				bs.UNGETCHR()     // To allow correct processing of op pair that is not a valid op, like +- or =>
 				break ExitForLoop //goto ExitLoop;
 			case OP: // OP -> OP means another operator character found.
-				if len(tokenByteSlice) > OpMaxSize {
+				if len(tokenRuneSlice) > OpMaxSize {
 					bs.UNGETCHR()
 					break ExitForLoop //goto ExitLoop;
 				}
-				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 			case DGT: // OP -> DGT means it may be a sign character for a number token.  If not, have 1 char operator
-				upperbound := len(tokenByteSlice) - 1
-				LastChar := tokenByteSlice[upperbound]
+				upperbound := len(tokenRuneSlice) - 1
+				LastChar := tokenRuneSlice[upperbound]
 				if (LastChar == '+') || (LastChar == '-') {
-					if len(tokenByteSlice) == 1 {
-						if tokenByteSlice[0] == '-' {
+					if len(tokenRuneSlice) == 1 {
+						if tokenRuneSlice[0] == '-' {
 							NEGATV = true
 						}
 						TOKEN.State = DGT
-						tokenByteSlice[0] = CHAR.Ch // OVERWRITE ARITHMETIC SIGN CHARACTER
+						tokenRuneSlice[0] = CHAR.Ch // OVERWRITE ARITHMETIC SIGN CHARACTER
 						if wantReal {
 							bs.StateMap['E'] = DGT
 							bs.StateMap['e'] = DGT
@@ -570,14 +543,14 @@ ExitForLoop:
 						bs.UNGETCHR()                                // UNGET THIS DIGIT CHAR
 						bs.UNGETCHR()                                // THEN UNGET THE ARITH SIGN CHAR
 						CHAR.Ch = LastChar                           // SO DELIMCH CORRECTLY RETURNS THE ARITH SIGN CHAR
-						tokenByteSlice = tokenByteSlice[:upperbound] // recall that upperbound is excluded in this syntax.
+						tokenRuneSlice = tokenRuneSlice[:upperbound] // recall that upperbound is excluded in this syntax.
 						//                  TOKEN.Str = TOKEN.Str[:upperbound]; // del last char of the token which is the sign character
 						break ExitForLoop //goto ExitLoop;
 					} // if length of the token = 1
-				} else { // IF have a sign character as the lastchar
+				} else { // IF have a sign character as the last char
 					bs.UNGETCHR()
 					break ExitForLoop //goto ExitLoop;
-				} // If have a sign character as the lastchar
+				} // If have a sign character as the last char
 			case ALLELSE: // OP -> AllElse
 				bs.UNGETCHR()
 				break ExitForLoop //goto ExitLoop;
@@ -599,7 +572,7 @@ ExitForLoop:
 				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 				break ExitForLoop          //goto ExitLoop;
 			case DGT: // DGT -> DGT so we have another digit.
-				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 				if CAP(CHAR.Ch) == 'E' {
 					bs.StateMap['_'] = DGT // make the underscore to be of DGT type so it will be allowed in the number
 					//bs.StateMap['-'] = DGT // make the minus sign to be of DGT type so it will be allowed in the number.  Nope, changed my mind.  I almost never use E notation.
@@ -646,12 +619,12 @@ ExitForLoop:
 				bs.UNGETCHR()
 				break ExitForLoop //goto ExitLoop;
 			case DGT: // AllElse -> DGT means have alphanumeric token.
-				if len(tokenByteSlice) > TKNMAXSIZ {
+				if len(tokenRuneSlice) > TKNMAXSIZ {
 					log.SetFlags(log.Llongfile)
 					log.Println(" token too long in GetTkn AllELSE to Digit branch.")
 					os.Exit(1)
 				} // if token too long
-				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 				TOKEN.Isum += int(CHAR.Ch)
 			case ALLELSE: // AllElse -> AllELSE
 				if rune(CHAR.Ch) == QUOCHR {
@@ -660,11 +633,11 @@ ExitForLoop:
 					break ExitForLoop
 
 				} else {
-					if len(tokenByteSlice) > TKNMAXSIZ {
+					if len(tokenRuneSlice) > TKNMAXSIZ {
 						log.SetFlags(log.Llongfile)
 						log.Println(" token too long in GetTkn AllElse -> AllElse branch.")
 					} // if token too long
-					tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+					tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 					TOKEN.Isum += int(CHAR.Ch)
 				} // if char is a quote char
 			} // Char.State
@@ -672,9 +645,9 @@ ExitForLoop:
 	} //LOOP to process characters
 
 	if UpperCase {
-		TOKEN.Str = strings.ToUpper(string(tokenByteSlice))
+		TOKEN.Str = strings.ToUpper(string(tokenRuneSlice))
 	} else {
-		TOKEN.Str = string(tokenByteSlice) // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
+		TOKEN.Str = string(tokenRuneSlice) // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
 	}
 	TOKEN.DelimCH = CHAR.Ch
 	TOKEN.DelimState = CHAR.State
@@ -762,14 +735,15 @@ func FromHex(s string) int {
 } // FromHex
 
 // ---------------------------------------- SetMapDelim -----------------------------------------
+
 // SetMapDelim -- input a byte that will be included in the characters that are used as delimiters.
-func (bs *BufferState) SetMapDelim(char byte) {
+func (bs *BufferState) SetMapDelim(char rune) {
 	bs.StateMap[char] = DELIM
 } // SetMapDelim
 
 //-------------------------------------------- TokenReal ---------------------------------------
-// Allows "0x" as hex prefix, as well as "H" as hex suffix.  And idiomatic Go does not have a function begin with Get.
 
+// TokenReal allows "0x" as the hex prefix and it no longer allows "H" as a hex suffix.  And idiomatic Go does not have a function begin with Get.
 // TokenReal -- returns a TokenType and EOL state.  Does process scientific notation by changing the state of certain characters to simplify the code.
 func (bs *BufferState) TokenReal() (TokenType, bool) {
 	var token TokenType
@@ -824,16 +798,16 @@ func (bs *BufferState) GETTKNREAL() (TOKEN TokenType, EOL bool) {
 
 	Len := len(TOKEN.Str)
 	if (TOKEN.State == ALLELSE) && (Len > 1) && (TOKEN.Str[0] == '.') && isdigit(rune(TOKEN.Str[1])) {
-		// Likely have a real number beginning with a decimal point, so fall thru to the digit token
+		// Likely have a real number beginning with a decimal point, so fall through to the digit token
 	} else if TOKEN.State != DGT {
 		return TOKEN, EOL
 	}
 	//
 	// Now must have a digit token.
 	//
-	tokenByteSlice := make([]byte, 0, 200) // to build up the TOKEN.Str field
+	tokenRuneSlice := make([]rune, 0, 200) // to build up the TOKEN.Str field
 	bs.UNGETTKN()
-	TOKEN = TokenType{} // assign nil struct literal to zero all of the fields.
+	TOKEN = TokenType{} // assign nil struct literal to zero all the fields.
 	TOKEN.State = DGT
 	bs.PREVPOSN = bs.CURPOSN
 	HexFlag := false
@@ -844,28 +818,28 @@ ExitLoop:
 		CHAR.Ch = CAP(CHAR.Ch)
 		if EOL {
 			// If TKNSTATE is DELIM, then GETTKN was called when there were
-			// no more tokens on line.  Otherwise it means that we have fetched the last token on this line.
-			if (TOKEN.State == DELIM) && (len(tokenByteSlice) == 0) {
+			// no more tokens on line.  Otherwise, it means that we have fetched the last token on this line.
+			if (TOKEN.State == DELIM) && (len(tokenRuneSlice) == 0) {
 				break // with EOL still being true.
 			} else { // now on last token of line, so don't return with EOL set to true.
 				EOL = false
 			} // if token state is a delim and token str is empty
 		} // IF EOL
 
-		Len = len(tokenByteSlice)
+		Len = len(tokenRuneSlice)
 		switch CHAR.State {
 		case DELIM: // Ignore leading delims
 			if Len > 0 {
 				break ExitLoop
 			} //goto ExitLoop; }
 		case OP:
-			if ((CHAR.Ch != '+') && (CHAR.Ch != '-')) || ((Len > 0) && (tokenByteSlice[Len-1] != 'E')) {
+			if ((CHAR.Ch != '+') && (CHAR.Ch != '-')) || ((Len > 0) && (tokenRuneSlice[Len-1] != 'E')) {
 				bs.UNGETCHR()
 				break ExitLoop // goto ExitLoop;
 			}
-			tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+			tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 		case DGT:
-			tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+			tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 		case ALLELSE:
 			if (CHAR.Ch != '.') && (CHAR.Ch != 'E') && !ishexdigit(rune(CHAR.Ch)) && (CHAR.Ch != 'H') &&
 				(CHAR.Ch != 'X') {
@@ -874,25 +848,25 @@ ExitLoop:
 			} else if CHAR.Ch == 'X' { // have "0x" prefix for a hex number
 				HexFlag = true
 			} else { // this else clause is so that the 'X' of the "0x" prefix does not get appended.
-				tokenByteSlice = append(tokenByteSlice, CHAR.Ch)
+				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 			}
 		} // Char State
 	} // getting characters loop
 
 	TOKEN.DelimCH = CHAR.Ch
 	TOKEN.DelimState = CHAR.State
-	Len = len(tokenByteSlice)
-	TOKEN.Str = string(tokenByteSlice) // An initial assignment that can be changed below.
-	if tokenByteSlice[Len-1] == 'H' {
-		TOKEN.Str = string(tokenByteSlice[:Len-1]) //  must remove the 'H' from .Str field.
+	Len = len(tokenRuneSlice)
+	TOKEN.Str = string(tokenRuneSlice) // An initial assignment that can be changed below.
+	if tokenRuneSlice[Len-1] == 'H' {
+		TOKEN.Str = string(tokenRuneSlice[:Len-1]) //  must remove the 'H' from .Str field.
 		HexFlag = true
 	}
 	if HexFlag {
 		TOKEN.Isum = FromHex(TOKEN.Str)
 		TOKEN.Rsum = float64(TOKEN.Isum)
 	} else {
-		if tokenByteSlice[0] == '.' {
-			TOKEN.Str = "0" + string(tokenByteSlice) // insert leading 0 if number begins with a decimal point.
+		if tokenRuneSlice[0] == '.' {
+			TOKEN.Str = "0" + string(tokenRuneSlice) // insert leading 0 if number begins with a decimal point.
 		}
 		TOKEN.Rsum, _ = strconv.ParseFloat(TOKEN.Str, 64) // If err not nil, R becomes 0 by this routine.  I don't have to do it.
 		if math.Signbit(TOKEN.Rsum) {
@@ -920,7 +894,7 @@ ExitLoop:
 func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	var Char CharType
 	for c := Dgt0; c <= Dgt9; c++ {
-		bs.StateMap[byte(c)] = ALLELSE
+		bs.StateMap[c] = ALLELSE
 	}
 
 	// remember that these map assignments could have been altered by SetMapDelim.  In that case I will not change the StateMap for that character
@@ -965,17 +939,18 @@ func (bs *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EOL bool
 	// Continue building the string as left off from GetToken call.
 	// As of 6/95 this should always return a tknstate of allelse, so return.
 
-	tokenByteSlice := make([]byte, 0, 200)
-	copy(tokenByteSlice, TOKEN.Str)
+	tokenRuneSlice := make([]rune, 0, 200)
+	copy(tokenRuneSlice, []rune(TOKEN.Str))
+
 	for {
 		Char, EOL = bs.GETCHR() // the CAP function is not here anymore.
 		if EOL || ((Char.State == DELIM) && (len(TOKEN.Str) > 0)) {
 			break // Ignore leading delims
 		}
-		tokenByteSlice = append(tokenByteSlice, Char.Ch)
+		tokenRuneSlice = append(tokenRuneSlice, Char.Ch)
 		TOKEN.Isum += int(Char.Ch)
 	} // getting chars
-	TOKEN.Str = string(tokenByteSlice)
+	TOKEN.Str = string(tokenRuneSlice)
 
 	if UpperCase {
 		TOKEN.Str = strings.ToUpper(TOKEN.Str)
@@ -1009,19 +984,19 @@ func (bs *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 
 	var Char CharType
 	bs.PREVPOSN = bs.CURPOSN // So this tkn can be ungotten as well
-	tokenByteSlice := make([]byte, 0, 200)
+	tokenRuneSlice := make([]rune, 0, 200)
 	TOKEN = TokenType{}
 	for {
 		Char, EOL = bs.GETCHR() // the Cap function is not here anymore.
 		if EOL {
 			break
 		} //  No-go.  Need to change this to idiomatic Go, but after debugging the main GetTkn and UnGetTkn rtns.
-		tokenByteSlice = append(tokenByteSlice, Char.Ch)
+		tokenRuneSlice = append(tokenRuneSlice, Char.Ch)
 		//                                                                        TOKEN.Str += string(Char.Ch);
 		TOKEN.Isum += int(Char.Ch)
 		TOKEN.State = ALLELSE
 	}
-	TOKEN.Str = string(tokenByteSlice)
+	TOKEN.Str = string(tokenRuneSlice)
 
 	if UpperCase {
 		TOKEN.Str = strings.ToUpper(TOKEN.Str)
@@ -1071,7 +1046,7 @@ func TokenSlice(str string) []TokenType {
 		return nil
 	}
 	bs := New(str)                        // bs is a buffer state
-	tknslice := make([]TokenType, 0, 100) // arbitrary limit, ie, a magic number as per Rob Pike.
+	tknslice := make([]TokenType, 0, 100) // arbitrary limit, i.e., a magic number as per Rob Pike.
 
 	for {
 		tkn, eol := bs.GetToken(false)
