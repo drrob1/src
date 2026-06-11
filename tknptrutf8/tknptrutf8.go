@@ -1,4 +1,4 @@
-package tknptrutf8 // from tknptr.
+package tknptrutf8 // Package tknptrutf8 from tknptr.
 
 import (
 	"fmt"
