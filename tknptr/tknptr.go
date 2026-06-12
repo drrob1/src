@@ -24,7 +24,7 @@ REVISION HISTORY
               2.  Changed the method UNGETTKN uses to unget the token.
               3.  Added the MULTSIGN and DIVSIGN OP states.
               4.  Ran M2CHECK and deleted all unreferenced var's.
-              5.  Moved the NEGATV check for contigently making SUM < 0 out
+              5.  Moved the NEGATV check for contingently making SUM < 0 out
                    of the LOOP and deleted the 5 previous statements for all
                    of the different states plus the end-of-line test.
 18 Mar 89 -- Added the GETTKNREAL Procedure.
@@ -97,7 +97,7 @@ const (
 	ALLELSE
 )
 
-// TokenType fields are Str, FullStr which includes the minus sign, State, DelimCH, Isum, Rsum, RealFlag, HexFlag.
+// TokenType fields are Str, FullStr which includes the minus sign; and others.
 type TokenType struct {
 	Str        string
 	FullString string // includes minus sign character, if present.

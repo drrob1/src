@@ -109,13 +109,13 @@ type TokenType struct {
 	Rsum       float64
 	RealFlag   bool // flag so integer processing stops when it sees a dot, E or e.
 	HexFlag    bool // only way I know of to signal that the input string is a hex format.
-} // TokenType record
+}
 
-// CharType fields are Ch byte and State int.
+// CharType fields are Ch rune and State int.
 type CharType struct {
 	Ch    rune
 	State int
-} // CharType Record
+}
 
 type BufferState struct {
 	CURPOSN, HOLDCURPOSN, PREVPOSN int
@@ -125,7 +125,7 @@ type BufferState struct {
 
 var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
 
-func (t TokenType) String() string { // satisfies the stringer interface
+func (t TokenType) String() string { // satisfies the stringer interface for TokenType
 	var s string
 	if t.Rsum == 0 {
 		s = fmt.Sprintf("Str: %s, fullStr: %s, State: %s, DelimCh: 0x%02X, DelimState: %s, Isum: %d, Rsum: %g, RealFlag: %t, HexFlag: %t",
@@ -142,7 +142,7 @@ func (t TokenType) String() string { // satisfies the stringer interface
 
 // ---------------------------------------------------------------------
 
-const TKNMAXSIZ = 180
+const TKNMAXSIZ = 256
 const OpMaxSize = 2
 const Dgt0 = '0'
 const Dgt9 = '9'
@@ -163,8 +163,6 @@ const EXPSIGN = '^'
 const PERCNT = '%'
 
 var wantReal bool // used by TokenReal
-
-// These variables are declared here to make the variable global so to maintain their values btwn calls.
 
 // Cap -- will convert a rune to its upper case value.  It takes a rune and returns a rune.
 func Cap(c rune) rune {
@@ -236,19 +234,19 @@ func InitStateMap(bs *BufferState) {
 } // InitStateMap
 
 /*
-func NewToken(Str string) *BufferState {
-	// INITIALIZE TOKEN, using the Go idiom.
+	func NewToken(Str string) *BufferState {
+		// INITIALIZE TOKEN, using the Go idiom.
 
-	if Str == "" {
-		return nil
-	}
-	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
-	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
-	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
-	bs.lineRuneSlice = []byte(Str)
-	copy(bs.HoldLineBS, bs.lineRuneSlice) // make sure that a value is copied.
-	return bs
-} // NewToken, copied from INITKN
+		if Str == "" {
+			return nil
+		}
+		bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
+		InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
+		bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
+		bs.lineByteSlice = []byte(Str)
+		copy(bs.HoldLineBS, bs.lineRuneSlice) // make sure that a value is copied.
+		return bs
+	} // copied from INITKN
 */
 
 // ----------------------------------------- New ----------------------------------------
