@@ -16,6 +16,7 @@ import (
 
 REVISION HISTORY
 ----------------
+1987      -- Modula-2 section
 28 MAY 87 -- Added UNGETTKN capability and no longer exported GETCHR and UNGETCHR.
 29 AUG 87 -- Restored exportation of GETCHR and UNGETCHR.
  3 Mar 88 -- Added the ASCZERO declaration and removed the function call from the DGT conversion loop.
@@ -49,6 +50,7 @@ REVISION HISTORY
  7 Dec 14 -- Removed comma as a delim, making it AllElse so it works as intended for HPCALCC
 28 Dec 14 -- Turns out that CentOS C++ does not support -std=c++11, so I have to remove string.front and string.back member functions.
 18 Jan 15 -- Found bug in which single digits followed by add or subtract are not processed correctly by GETTKNREAL.
+ 6 Aug 16 -- Started conversion to Go, while on board boat to Bermuda.
 19 Aug 16 -- Finished conversion to Go, started 8/6/16 on boat to Bermuda.
 21 Sep 16 -- Now that this code is for case-sensitive filesystem like linux, returning an all-caps token is a bad idea.
                So I added FetchToken, which takes a param of true for cap and false for preserving case.

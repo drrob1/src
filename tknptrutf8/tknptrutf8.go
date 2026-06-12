@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 /*
@@ -16,6 +17,7 @@ import (
 
 REVISION HISTORY
 ----------------
+1987      -- Modula-2 section
 28 MAY 87 -- Added UNGETTKN capability and no longer exported GETCHR and UNGETCHR.
 29 AUG 87 -- Restored exportation of GETCHR and UNGETCHR.
  3 Mar 88 -- Added the ASCZERO declaration and removed the function call from the DGT conversion loop.
@@ -49,6 +51,7 @@ REVISION HISTORY
  7 Dec 14 -- Removed comma as a delim, making it AllElse so it works as intended for HPCALCC
 28 Dec 14 -- Turns out that CentOS C++ does not support -std=c++11, so I have to remove string.front and string.back member functions.
 18 Jan 15 -- Found bug in which single digits followed by add or subtract are not processed correctly by GETTKNREAL.
+ 6 Aug 16 -- Started conversion to Go, while on board boat to Bermuda.
 19 Aug 16 -- Finished conversion to Go, started 8/6/16 on boat to Bermuda.
 21 Sep 16 -- Now that this code is for case-sensitive filesystem like linux, returning an all-caps token is a bad idea.
                So I added FetchToken, which takes a param of true for cap and false for preserving case.
@@ -89,7 +92,7 @@ REVISION HISTORY
 11 Jun 26 -- Now called tknptrutf8, so it will use UTF-8.  I'll stop assuming that a character is a byte.
 */
 
-const LastAltered = "11 June 2026"
+const LastAltered = "12 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -195,15 +198,6 @@ func CAP(c rune) rune {
 	return c
 }
 
-/* removed 9/28/20 when StateMap became part of BufferState
-// ----------------------------------------- init --------------------------------------------
-func init() {
-	StateMap = make(map[byte]int, 128)
-	InitStateMap()
-}
-
-*/
-
 // ------------------------------------ InitStateMap ------------------------------------------------
 // Making sure that the StateMap is at its default values, since a call to GetTokenStr changes some values.
 
@@ -233,29 +227,13 @@ func InitStateMap(bs *BufferState) {
 	bs.StateMap['^'] = OP
 } // InitStateMap
 
-/*
-	func NewToken(Str string) *BufferState {
-		// INITIALIZE TOKEN, using the Go idiom.
-
-		if Str == "" {
-			return nil
-		}
-		bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
-		InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
-		bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
-		bs.lineByteSlice = []byte(Str)
-		copy(bs.HoldLineBS, bs.lineRuneSlice) // make sure that a value is copied.
-		return bs
-	} // copied from INITKN
-*/
-
 // ----------------------------------------- New ----------------------------------------
 
 // New -- input is a string, and it returns a *BufferState.  This is the idiomatic function call to start tokenizing.  The others have been removed.
 func New(Str string) *BufferState { // constructor, initializer using idiomatic Go as taught by Bill Kennedy and others.
 	var bufState BufferState
 
-	//bs := new(BufferState) // idiomatic Go would write this as &BufferState{}  And I stopped using bs as byteslice because it looks ugly.
+	//bs := new(BufferState) // idiomatic Go could write this as &BufferState{}  And I stopped using bs as byteslice because it looks ugly, like bullshit.
 	InitStateMap(&bufState) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bufState.CURPOSN, bufState.PREVPOSN, bufState.HOLDCURPOSN = 0, 0, 0
 	bufState.lineRuneSlice = []rune(Str)
@@ -299,24 +277,25 @@ func (bs *BufferState) RCLTKNPOSN() {
 
 // PeekChr -- Peeks at the next character in the buffer state, returning a CharType and a bool.  The bool is intended for the EOL condition.
 func (bs *BufferState) PeekChr() (CharType, bool) {
-	var C CharType
+	var c CharType
 	var EOL bool
-	EOL = false
+
 	if bs.CURPOSN >= len(bs.lineRuneSlice) {
 		EOL = true
-		//C = CharType{} // This zeros the CharType C by assigning an empty CharType constant literal.  Not necessary, as the var declaration does the same thing.
-		return C, EOL
+		return c, EOL
 	}
-	C.Ch = bs.lineRuneSlice[bs.CURPOSN] //  no longer use the Cap function here.
-	C.State = bs.StateMap[C.Ch]         // state assignment, here using map access.
-	return C, EOL
+	c.Ch = bs.lineRuneSlice[bs.CURPOSN] //  no longer use the Cap function here.
+	c.State = bs.StateMap[c.Ch]         // state assignment, here using map access.
+	return c, EOL
 } // PeekCHR
 
 // ---------------------------- NextChr  -------------------------------------------
 
 // NextChr -- only increments the Current position index.
 func (bs *BufferState) NextChr() {
-	bs.CURPOSN++
+	ch, _ := bs.PeekChr()
+	// bs.CURPOSN++  this assumes all characters are one byte long.
+	bs.CURPOSN += utf8.RuneLen(ch.Ch)
 } // NextChr
 
 // --------------------------------- GetChr --------------------------------
@@ -337,7 +316,9 @@ func (bs *BufferState) UNGETCHR() {
 		log.Print(" CURPOSN out of range in UnGetChr")
 		os.Exit(1)
 	}
-	bs.CURPOSN--
+	ch, _ := bs.PeekChr()
+	// bs.CURPOSN--  assumes that all characters are 1 byte long
+	bs.CURPOSN -= utf8.RuneLen(ch.Ch)
 } // UNGETCHR
 
 // ------------------------------------- GetOpCode ---------------------------------------------
