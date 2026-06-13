@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 )
 
 /*
@@ -90,6 +89,8 @@ REVISION HISTORY
 10 Sep 25 -- Added a stringer method for TokenType
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 11 Jun 26 -- Now called tknptrutf8, so it will use UTF-8.  I'll stop assuming that a character is a byte.
+13 Jun 26 -- Yesterday I used utf8.RuneLen() to increment the pointer to the next character.  That's a mistake as I'm now using runes instead of bytes.  I'll revert back to
+				incrementing or decrementing the pointer by 1.
 */
 
 const LastAltered = "12 June 2026"
@@ -293,9 +294,7 @@ func (bs *BufferState) PeekChr() (CharType, bool) {
 
 // NextChr -- only increments the Current position index.
 func (bs *BufferState) NextChr() {
-	ch, _ := bs.PeekChr()
-	// bs.CURPOSN++  this assumes all characters are one byte long.
-	bs.CURPOSN += utf8.RuneLen(ch.Ch)
+	bs.CURPOSN++
 } // NextChr
 
 // --------------------------------- GetChr --------------------------------
@@ -316,9 +315,7 @@ func (bs *BufferState) UNGETCHR() {
 		log.Print(" CURPOSN out of range in UnGetChr")
 		os.Exit(1)
 	}
-	ch, _ := bs.PeekChr()
-	// bs.CURPOSN--  assumes that all characters are 1 byte long
-	bs.CURPOSN -= utf8.RuneLen(ch.Ch)
+	bs.CURPOSN--
 } // UNGETCHR
 
 // ------------------------------------- GetOpCode ---------------------------------------------
