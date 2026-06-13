@@ -85,6 +85,7 @@ import (
    9 Apr 24 -- Found an error in CopyAFile, in that I don't check for an error when I close the file.
                Listening to Miki Tebeka from Ardan Labs, he said that for I/O bound, you can spin up more goroutines than runtime.NumCPU() indicates.
                But for CPU bound, there's no advantage to exceeding that number.
+------------------------------------------------------------------------------------------------------------------------------------------------------
   10 Apr 24 -- Now called cf, for copy fanout.  I'll use a multiplier, default 10, and set by a param in flag package.  I'm going to see if more is better for this I/O bound task.
   15 Jun 24 -- Changed completion message.
    6 July 24-- Changed startup message.
@@ -95,9 +96,10 @@ import (
    2 Jun 26 -- Added pflag to replace flag, imported as flag.
    7 Jun 26 -- Changed CopyAFile to that written and debugged in cf4, to handle symlinks correcctly.  And added the sym flag.
 				Changed completion message to match that of cf3 and cf4.
+  13 Jun 26 -- Changed some of the flags so I could use single dash abbrev single character flags.
 */
 
-const LastAltered = "7 June 2026" //
+const LastAltered = "13 June 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -165,15 +167,15 @@ func main() {
 	}
 
 	var revFlag bool
-	flag.BoolVar(&revFlag, "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
+	flag.BoolVarP(&revFlag, "reverse", "r", false, "Reverse the sort, ie, oldest or smallest is first") // Value
 
 	var sizeFlag bool
-	flag.BoolVar(&sizeFlag, "s", false, "sort by size instead of by date")
+	flag.BoolVarP(&sizeFlag, "size", "s", false, "sort by size instead of by date")
 
 	var verboseFlag, veryVerboseFlag bool
 
-	flag.BoolVar(&verboseFlag, "v", false, "verbose mode, which is same as test mode.")
-	flag.BoolVar(&veryVerboseFlag, "vv", false, "Very verbose debugging option.")
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose mode, which is same as test mode.")
+	flag.BoolVarP(&veryVerboseFlag, "veryverbose", "V", false, "Very verbose debugging option.")
 
 	var excludeFlag bool
 	var excludeRegex *regexp.Regexp
@@ -184,15 +186,15 @@ func main() {
 	var filterFlag, noFilterFlag bool
 	var filterStr string
 	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	flag.BoolVar(&filterFlag, "f", false, "filter value to suppress listing individual size below 1 MB.")
+	flag.BoolVar(&filterFlag, "f", false, "filter flag to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
 	var globFlag bool
-	flag.BoolVar(&globFlag, "g", false, "glob flag to use globbing on file matching.")
+	flag.BoolVarP(&globFlag, "glob", "g", false, "glob flag to use globbing on file matching.")
 
 	flag.BoolVar(&verifyFlag, "verify", false, "Verify that destination is same as source.")
 	flag.BoolVar(&verFlag, "ver", false, "Verify copy operation")
-	flag.IntVar(&multiplier, "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
+	flag.IntVarP(&multiplier, "multiplier", "m", 10, "Multiplier of NumCPU() for the worker pool pattern, or limited fanout.  Default is 10.")
 
 	symFlag := flag.Bool("sym", false, "Copy symlinks only, ie, skip regular files.")
 
