@@ -94,7 +94,7 @@ REVISION HISTORY
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 14 Jun 26 -- Now called tknptr2, so it will use UTF-8.  I'll stop assuming that a character is a byte.  I'm going to play with getting string builder and string reader to work.
 			Because I need ungetchar and ungettoken, this may be more work than I need.  So I won't use a string reader for the source runes, but I will use a string builder for the token.
-			It passes the tests in tknptr2_test.go.
+			It passes the tests in tknptr2_test.go, and also in testtokenptr2.
 */
 
 const LastAltered = "14 June 2026"
