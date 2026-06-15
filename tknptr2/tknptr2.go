@@ -1,4 +1,4 @@
-package tknptrutf8 // Package tknptrutf8 from tknptr.
+package tknptr2 // Package tknptr2 from tknptrutf8 from tknptr.
 
 import (
 	"fmt"
@@ -91,9 +91,13 @@ REVISION HISTORY
 11 Jun 26 -- Now called tknptrutf8, so it will use UTF-8.  I'll stop assuming that a character is a byte.
 13 Jun 26 -- Yesterday I used utf8.RuneLen() to increment the pointer to the next character.  That's a mistake as I'm now using runes instead of bytes.  I'll revert back to
 				incrementing or decrementing the pointer by 1.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+14 Jun 26 -- Now called tknptr2, so it will use UTF-8.  I'll stop assuming that a character is a byte.  I'm going to play with getting string builder and string reader to work.
+			Because I need ungetchar and ungettoken, this may be more work than I need.  So I won't use a string reader for the source runes, but I will use a string builder for the token.
+			It passes the tests in tknptr2_test.go.
 */
 
-const LastAltered = "13 June 2026"
+const LastAltered = "14 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -415,8 +419,10 @@ func (bs *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool) {
 
 	bs.PREVPOSN = bs.CURPOSN
 	var NEGATV, QUOFLG bool
-	TOKEN = TokenType{}                    // This will zero out all the fields by using a nil struct literal.  It's the default; I put it here so I remember.
-	tokenRuneSlice := make([]rune, 0, 200) // to build up the TOKEN.Str field
+	TOKEN = TokenType{} // This will zero out all the fields by using a nil struct literal.  It's the default; I put it here so I remember.
+	//tokenRuneSlice := make([]rune, 0, 200) // to build up the TOKEN.Str field
+	var buildingToken strings.Builder
+	buildingToken.Grow(200)
 
 ExitForLoop:
 	for {
@@ -424,12 +430,12 @@ ExitForLoop:
 		if EOL {
 			// If TKNSTATE is DELIM, then gettkn was called when there were no more tokens on the input line.
 			// Otherwise, it means that we have fetched the last TOKEN on this line.
-			if (TOKEN.State == DELIM) && (len(tokenRuneSlice) == 0) {
+			if (TOKEN.State == DELIM) && (buildingToken.Len() == 0) {
 				break // with EOL still being true.
 			} else { // now on last token of line, so don't return with EOL set to true.
 				EOL = false
 			}
-		} // if EOL
+		}
 		if QUOFLG && (CHAR.Ch != NullChar) {
 			CHAR.State = ALLELSE
 		}
@@ -446,24 +452,22 @@ ExitForLoop:
 				} // goto ExitLoop }
 			case OP: // Delim -> OP means this is the 1st char of the operator token.
 				TOKEN.State = OP
-				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
-				if len(tokenRuneSlice) > TKNMAXSIZ {
+				//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				buildingToken.WriteRune(CHAR.Ch)
+				if buildingToken.Len() > TKNMAXSIZ {
 					log.SetFlags(log.Llongfile)
 					log.Println(" token too long in GetToken.")
 					os.Exit(1)
 				}
 			case DGT: // Delim -> DGT means this is the 1st dgt for the entered number.
-				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				buildingToken.WriteRune(CHAR.Ch)
 				TOKEN.State = DGT
-				//bs.StateMap['X'] = DGT
-				//bs.StateMap['x'] = DGT
-				//bs.StateMap['H'] = DGT
-				//bs.StateMap['h'] = DGT
 				if wantReal {
 					bs.StateMap['E'] = DGT
 					bs.StateMap['e'] = DGT
 				}
-				if !unicode.IsDigit(rune(CHAR.Ch)) {
+				if !unicode.IsDigit(CHAR.Ch) {
 					TOKEN.RealFlag = true
 					continue
 				}
@@ -474,8 +478,9 @@ ExitForLoop:
 				if QUOFLG { // Do not put the quote character into the token.
 					QUOCHR = rune(CHAR.Ch)
 				} else {
-					tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
-					if len(tokenRuneSlice) > TKNMAXSIZ {
+					//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+					buildingToken.WriteRune(CHAR.Ch)
+					if buildingToken.Len() > TKNMAXSIZ {
 						log.SetFlags(log.Llongfile)
 						log.Println(" token too long in GetToken.")
 						os.Exit(1)
@@ -489,36 +494,44 @@ ExitForLoop:
 				bs.UNGETCHR()     // To allow correct processing of op pair that is not a valid op, like +- or =>
 				break ExitForLoop //goto ExitLoop;
 			case OP: // OP -> OP means another operator character found.
-				if len(tokenRuneSlice) > OpMaxSize {
+				if buildingToken.Len() > OpMaxSize {
 					bs.UNGETCHR()
 					break ExitForLoop //goto ExitLoop;
 				}
-				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				buildingToken.WriteRune(CHAR.Ch)
 			case DGT: // OP -> DGT means it may be a sign character for a number token.  If not, have 1 char operator
-				upperbound := len(tokenRuneSlice) - 1
-				LastChar := tokenRuneSlice[upperbound]
+				upperbound := buildingToken.Len() - 1
+				LastChar := buildingToken.String()[upperbound]
 				if (LastChar == '+') || (LastChar == '-') {
-					if len(tokenRuneSlice) == 1 {
-						if tokenRuneSlice[0] == '-' {
+					if buildingToken.Len() == 1 {
+						if buildingToken.String()[0] == '-' {
 							NEGATV = true
 						}
 						TOKEN.State = DGT
-						tokenRuneSlice[0] = CHAR.Ch // OVERWRITE ARITHMETIC SIGN CHARACTER
+						// OVERWRITE ARITHMETIC SIGN CHARACTER
+						//tokenRuneSlice[0] = CHAR.Ch
+						buildingToken.Reset()
+						buildingToken.WriteRune(CHAR.Ch)
 						if wantReal {
 							bs.StateMap['E'] = DGT
 							bs.StateMap['e'] = DGT
 						}
-						if !unicode.IsDigit(rune(CHAR.Ch)) {
+						if !unicode.IsDigit(CHAR.Ch) {
 							TOKEN.RealFlag = true
 							continue
 						}
 						TOKEN.Isum = int(CHAR.Ch) - Dgt0
-					} else { // TOKEN length > 1 so must first return valid OP
-						bs.UNGETCHR()                                // UNGET THIS DIGIT CHAR
-						bs.UNGETCHR()                                // THEN UNGET THE ARITH SIGN CHAR
-						CHAR.Ch = LastChar                           // SO DELIMCH CORRECTLY RETURNS THE ARITH SIGN CHAR
-						tokenRuneSlice = tokenRuneSlice[:upperbound] // recall that upperbound is excluded in this syntax.
-						//                  TOKEN.Str = TOKEN.Str[:upperbound]; // del last char of the token which is the sign character
+					} else { // TOKEN length is not 1 so must first return valid OP
+						bs.UNGETCHR()            // UNGET THIS DIGIT CHAR
+						bs.UNGETCHR()            // THEN UNGET THE ARITH SIGN CHAR
+						CHAR.Ch = rune(LastChar) // SO DELIMCH CORRECTLY RETURNS THE ARITH SIGN CHAR
+						//tokenRuneSlice = tokenRuneSlice[:upperbound] // recall that upperbound is excluded in this syntax, so this removes the last char of the token
+						// to remove the last character, I need a few lines of code here.  When I was using rune slice syntax, this just needed one line of code
+						tempStr := buildingToken.String()[:upperbound]
+						buildingToken.Reset()
+						buildingToken.WriteString(tempStr)
+
 						break ExitForLoop //goto ExitLoop;
 					} // if length of the token = 1
 				} else { // IF have a sign character as the last char
@@ -532,21 +545,14 @@ ExitForLoop:
 		case DGT: // tokenstate
 			switch CHAR.State {
 			case DELIM:
-				//bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.  Redundant.
-				//bs.StateMap['.'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['H'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['E'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['X'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['h'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['e'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['x'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 				break ExitForLoop
 			case OP: // DGT -> OP
 				bs.UNGETCHR()
 				bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 				break ExitForLoop          //goto ExitLoop;
 			case DGT: // DGT -> DGT so we have another digit.
-				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				buildingToken.WriteRune(CHAR.Ch)
 				if CAP(CHAR.Ch) == 'E' {
 					bs.StateMap['_'] = DGT // make the underscore to be of DGT type so it will be allowed in the number
 					//bs.StateMap['-'] = DGT // make the minus sign to be of DGT type so it will be allowed in the number.  Nope, changed my mind.  I almost never use E notation.
@@ -593,12 +599,13 @@ ExitForLoop:
 				bs.UNGETCHR()
 				break ExitForLoop //goto ExitLoop;
 			case DGT: // AllElse -> DGT means have alphanumeric token.
-				if len(tokenRuneSlice) > TKNMAXSIZ {
+				if buildingToken.Len() > TKNMAXSIZ {
 					log.SetFlags(log.Llongfile)
 					log.Println(" token too long in GetTkn AllELSE to Digit branch.")
 					os.Exit(1)
 				} // if token too long
-				tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+				buildingToken.WriteRune(CHAR.Ch)
 				TOKEN.Isum += int(CHAR.Ch)
 			case ALLELSE: // AllElse -> AllELSE
 				if rune(CHAR.Ch) == QUOCHR {
@@ -607,11 +614,12 @@ ExitForLoop:
 					break ExitForLoop
 
 				} else {
-					if len(tokenRuneSlice) > TKNMAXSIZ {
+					if buildingToken.Len() > TKNMAXSIZ {
 						log.SetFlags(log.Llongfile)
 						log.Println(" token too long in GetTkn AllElse -> AllElse branch.")
 					} // if token too long
-					tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+					//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
+					buildingToken.WriteRune(CHAR.Ch)
 					TOKEN.Isum += int(CHAR.Ch)
 				} // if char is a quote char
 			} // Char.State
@@ -619,9 +627,9 @@ ExitForLoop:
 	} //LOOP to process characters
 
 	if UpperCase {
-		TOKEN.Str = strings.ToUpper(string(tokenRuneSlice))
+		TOKEN.Str = strings.ToUpper(buildingToken.String())
 	} else {
-		TOKEN.Str = string(tokenRuneSlice) // Trying to apply idiomatic Go guidelines to use byte slice intermediate.
+		TOKEN.Str = buildingToken.String()
 	}
 	TOKEN.DelimCH = CHAR.Ch
 	TOKEN.DelimState = CHAR.State
@@ -667,13 +675,14 @@ ExitForLoop:
 
 //--------------------------------------------------------- GETTKN --------------------------------------
 
-// GETTKN -- returns an upper cased token, and EOL condition.
+// GETTKN -- returns an upper-cased token and EOL condition.
 func (bs *BufferState) GETTKN() (TOKEN TokenType, EOL bool) {
 	TOKEN, EOL = bs.GetToken(true)
 	return TOKEN, EOL
 } // GETTKN
 
 // ---------------------------------- isdigit -----------------------------------------------
+
 // isdigit -- input a rune and return a bool.
 func isdigit(ch rune) bool {
 	isdgt := ch >= Dgt0 && ch <= Dgt9
@@ -1072,4 +1081,4 @@ func TokenRealSlice(str string) []TokenType { // This uses the new TokenReal ins
 	return realTknSlice
 }
 
-// end tknptr
+// end tknptr2
