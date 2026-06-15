@@ -96,7 +96,7 @@ REVISION HISTORY
 			Because I need ungetchar and ungettoken, this may be more work than I need.  So I won't use a string reader for the source runes, but I will use a string builder for the token.
 			It passes the tests in tknptr2_test.go, and also in testtokenptr2.
 15 Jun 26 -- I'm removing HoldLineBS as it's not needed.  That worked.  Now I'm removing HOLDCURPOSN as it's not needed either.  And STOTKNPOSN and RCLTKNPOSN are not used.
-				These all are from the Modula-2 days, and I never examined them.
+				These all are from the Modula-2 days, and I never examined them.  Time to remove them.
 */
 
 const LastAltered = "15 June 2026"
@@ -128,9 +128,9 @@ type CharType struct {
 }
 
 type BufferState struct {
-	CURPOSN /* HOLDCURPOSN, */, PREVPOSN int
-	lineRuneSlice/* HoldLineBS */ []rune
-	StateMap map[rune]int // as of 9/28/20, StateMap is part of this structure.
+	CURPOSN, PREVPOSN int
+	lineRuneSlice     []rune
+	StateMap          map[rune]int // as of 9/28/20, StateMap is part of this structure.
 }
 
 var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
@@ -174,11 +174,11 @@ const PERCNT = '%'
 
 var wantReal bool // used by TokenReal
 
-// Cap -- will convert a rune to its upper case value.  It takes a rune and returns a rune.
-func Cap(c rune) rune {
-	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
-	return r
-} // Cap
+// Cap -- will convert a rune to its upper case value.  It takes a rune and returns a rune.  Not used.
+//func Cap(c rune) rune {
+//	r, _, _, _ := strconv.UnquoteChar(strings.ToUpper(string(c)), 0)
+//	return r
+//} // Cap
 
 /* strconv
   func UnquoteChar
@@ -248,38 +248,6 @@ func New(Str string) *BufferState { // constructor, initializer using idiomatic 
 	//copy(bufState.HoldLineBS, bufState.lineRuneSlice) // make sure that the values are copied.  And as of 6/15/26 I removed it as it's not used.
 	return &bufState // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
 } //
-
-//------------------------------ STOTKNPOSN -----------------------------------
-
-// STOTKNPOSN -- stores the *BufferState, so it can be recalled later.  IIRC, this is an internal function.  And it's not used.
-func (bs *BufferState) STOTKNPOSN() {
-	// STORE TOKEN POSITION.
-	// This routine will store the value of the curposn into a hold variable for later recall by RCLTKNPOSN.
-
-	//if (bs.CURPOSN < 0) || (bs.CURPOSN > len(bs.lineRuneSlice)) {
-	//	log.SetFlags(log.Llongfile)
-	//	log.Print(" In StoTknPosn and CurPosn is invalid.")
-	//	os.Exit(1)
-	//}
-	// bs.HOLDCURPOSN = bs.CURPOSN  Don't need HOLDCURPOSN
-	// copy(bs.HoldLineBS, bs.lineRuneSlice) // Need to copy values, else just copy a pointer.  As of 6/15/26 I removed it as it's not used.
-} // STOTKNPOSN
-
-//------------------------------ RCLTKNPOSN ----------------------------------
-
-// RCLTKNPOSN -- recalls the *BufferState.  IIRC, this is an internal function.  And it's not used.
-func (bs *BufferState) RCLTKNPOSN() {
-	/*
-	   RECALL TOKEN POSITION.
-	   THIS IS THE INVERSE OF THE STOTKNPOSN PROCEDURE.
-	*/
-
-	//if bs.HOLDCURPOSN < 0 /* || (len(bs.HoldLineBS) == 0) || (bs.HOLDCURPOSN > len(bs.HoldLineBS)) */ {
-	//	log.SetFlags(log.Llongfile)
-	//	log.Print(" In RclTknPosn and HoldCurPosn is invalid.")
-	//}
-	//bs.CURPOSN = bs.HOLDCURPOSN
-} // RCLTKNPOSN
 
 // ---------------------------- PeekChr -------------------------------------------
 
