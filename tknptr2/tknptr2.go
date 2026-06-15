@@ -95,6 +95,7 @@ REVISION HISTORY
 14 Jun 26 -- Now called tknptr2, so it will use UTF-8.  I'll stop assuming that a character is a byte.  I'm going to play with getting string builder and string reader to work.
 			Because I need ungetchar and ungettoken, this may be more work than I need.  So I won't use a string reader for the source runes, but I will use a string builder for the token.
 			It passes the tests in tknptr2_test.go, and also in testtokenptr2.
+15 Jun 26 -- I'm removing HoldLineBS as it's not needed.
 */
 
 const LastAltered = "14 June 2026"
@@ -127,8 +128,8 @@ type CharType struct {
 
 type BufferState struct {
 	CURPOSN, HOLDCURPOSN, PREVPOSN int
-	lineRuneSlice, HoldLineBS      []rune
-	StateMap                       map[rune]int // as of 9/28/20, StateMap is part of this structure.
+	lineRuneSlice/* HoldLineBS */ []rune
+	StateMap map[rune]int // as of 9/28/20, StateMap is part of this structure.
 }
 
 var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
@@ -242,8 +243,8 @@ func New(Str string) *BufferState { // constructor, initializer using idiomatic 
 	InitStateMap(&bufState) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bufState.CURPOSN, bufState.PREVPOSN, bufState.HOLDCURPOSN = 0, 0, 0
 	bufState.lineRuneSlice = []rune(Str)
-	copy(bufState.HoldLineBS, bufState.lineRuneSlice) // make sure that the values are copied.
-	return &bufState                                  // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
+	//copy(bufState.HoldLineBS, bufState.lineRuneSlice) // make sure that the values are copied.  And as of 6/15/26 I removed it as it's not used.
+	return &bufState // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
 } //
 
 //------------------------------ STOTKNPOSN -----------------------------------
@@ -259,7 +260,7 @@ func (bs *BufferState) STOTKNPOSN() {
 		os.Exit(1)
 	}
 	bs.HOLDCURPOSN = bs.CURPOSN
-	copy(bs.HoldLineBS, bs.lineRuneSlice) // Need to copy values, else just copy a pointer
+	// copy(bs.HoldLineBS, bs.lineRuneSlice) // Need to copy values, else just copy a pointer.  As of 6/15/26 I removed it as it's not used.
 } // STOTKNPOSN
 
 //------------------------------ RCLTKNPOSN ----------------------------------
@@ -271,7 +272,7 @@ func (bs *BufferState) RCLTKNPOSN() {
 	   THIS IS THE INVERSE OF THE STOTKNPOSN PROCEDURE.
 	*/
 
-	if (bs.HOLDCURPOSN < 0) || (len(bs.HoldLineBS) == 0) || (bs.HOLDCURPOSN > len(bs.HoldLineBS)) {
+	if bs.HOLDCURPOSN < 0 /* || (len(bs.HoldLineBS) == 0) || (bs.HOLDCURPOSN > len(bs.HoldLineBS)) */ {
 		log.SetFlags(log.Llongfile)
 		log.Print(" In RclTknPosn and HoldCurPosn is invalid.")
 	}
