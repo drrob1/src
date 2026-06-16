@@ -92,9 +92,10 @@ REVISION HISTORY
 10 Sep 25 -- Added a stringer method for TokenType
 11 Jun 26 -- Using a byte to represent a character is only true for ASCII.  I need to use rune, but I'll do that in a different package.
 15 Jun 26 -- Removed STOTKNPOSN and RCLTKNPOSN.  These were from the Modula-2 days, were never used, but never removed.  Until now.
+16 Jun 26 -- Removed HOLDCURPOSN and HoldLineBS.  These were from the Modula-2 days, were never used, but never removed.  Until now.
 */
 
-const LastAltered = "15 June 2026"
+const LastAltered = "16 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -123,9 +124,9 @@ type CharType struct {
 } // CharType Record
 
 type BufferState struct {
-	CURPOSN, HOLDCURPOSN, PREVPOSN int
-	lineByteSlice, HoldLineBS      []byte
-	StateMap                       map[byte]int // as of 9/28/20, StateMap is part of this structure.
+	CURPOSN, PREVPOSN int
+	lineByteSlice     []byte
+	StateMap          map[byte]int // as of 9/28/20, StateMap is part of this structure.
 }
 
 var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
@@ -240,9 +241,8 @@ func New(Str string) *BufferState { // constructor, initializer
 	//bs := &BufferState{}
 	bs := new(BufferState) // idiomatic Go would write this as &BufferState{}
 	InitStateMap(bs)       // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
-	bs.CURPOSN, bs.PREVPOSN, bs.HOLDCURPOSN = 0, 0, 0
+	bs.CURPOSN, bs.PREVPOSN = 0, 0
 	bs.lineByteSlice = []byte(Str)
-	copy(bs.HoldLineBS, bs.lineByteSlice) // make sure that the values are copied.
 	return bs
 } // New, copied from NewToken
 
