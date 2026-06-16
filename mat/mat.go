@@ -2,14 +2,15 @@ package mat
 
 import (
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"math"
 	"math/cmplx"
 	"math/rand/v2"
 	"src/vec"
 	"strconv"
 	"strings"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 //               Matrix arithmetic
@@ -130,7 +131,7 @@ func Random(m Matrix2D) {
 }
 
 func Copy(Src Matrix2D) Matrix2D {
-	// Copies an r x c matrix A to B, by doing an element by element copy, ie, a deep copy.  I don't think just copying pointers is correct, which would be a shallow copy.
+	// Copies an r x c matrix A to B, by doing an element-by-element copy, i.e., a deep copy.  I don't think just copying pointers is correct, which would be a shallow copy.
 
 	//var Dest Matrix2D
 	//copy(Dest, Src)  This doesn't work.  I'll restore the previous code.
@@ -215,7 +216,7 @@ func Mul(A, B Matrix2D) Matrix2D {
 	C := NewMatrix(NumRowA, NumColB)
 
 	for i := range A { // ranging over number of rows of A
-		for j := range B[0] { //  and also number of col of B
+		for j := range B[0] { //  and also number of cols of B
 			temp = 0
 			for k := range B { // ranging over number of rows of B
 				temp += A[i][k] * B[k][j]
@@ -341,7 +342,7 @@ func LUFactor(A Matrix2D, perm Permutation) (Matrix2D, bool) { // A is an InOut 
 		// Finish off the calculation of the lower triangular part for this column by scaling by the pivot A[col,col].
 
 		// Remark: if the pivot is still zero at this stage, then all the elements below it are also zero.  The LU
-		// decomposition in this case is not unique - the original matrix is singular, therefore U will also be
+		// decomposition in this case is not unique - the original matrix is singular, therefore, U will also be
 		// singular -- but one solution is to leave all those elements zero.
 
 		temp = A[col][col]
@@ -432,7 +433,7 @@ func GaussJ(A, B Matrix2D) Matrix2D {
 	//fmt.Printf(" W is a copy of A.  W is\n%v\n\n", W)
 	//fmt.Printf(" X is a copy of B.  X is\n%v\n\n", X)
 
-	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However we don't
+	// Remark: we are going to use elementary row operations to turn W into a unit matrix.  However, we don't
 	// bother to store the new 1.0 and 0.0 entries, because those entries will never be fetched again.
 	// We simply base our calculations on the assumption that those values have been stored.
 
@@ -666,8 +667,8 @@ func Balance(A Matrix2D) Matrix2D {
 
 func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 	/*
-		Transforms an NxN matrix into upper Hessenberg form, i.e. all entries below the diagonal zero except for the first subdiagonal.
-		This is an "in-place" calculation, i.e. the answer replaces the original matrix.
+		Transforms an NxN matrix into upper Hessenberg form, i.e., all entries below the diagonal zero except for the first subdiagonal.
+		This is an "in-place" calculation, i.e., the answer replaces the original matrix.
 	*/
 
 	//  CONST small = 1.0E-15;  But for this Go translation, I made it 1e-10
@@ -686,7 +687,7 @@ func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 		   		          A21     A22
 		   		where A11 has (pos+1) rows and columns and is already in upper Hessenberg form; and A21 is zero except for its
 		        last two columns.  This time around the loop, we are going to transform A such that column (pos-1) of A21 is
-		   		reduced to zero.  The transformation will affect only the last column of A11, therefore will not alter its
+		   		reduced to zero.  The transformation will affect only the last column of A11, therefore, will not alter its
 		   		Hessenberg property.
 
 		   		Step 1: we need A[pos,pos-1] to be nonzero.  To keep the calculations as well-conditioned as possible, we
@@ -707,7 +708,7 @@ func Hessenberg(A Matrix2D) Matrix2D { // A is an InOut matrix.
 
 			/*
 				The pivot is essentially zero, so we already have
-				the desired property and no transformation is
+				the desired property, and no transformation is
 				necessary this time.  We simply replace all of the
 				"approximately zero" entries by 0.0.
 			*/
@@ -880,7 +881,7 @@ MainOuterLOOP:
 
 				/*
 				  We're now working on a sub-array [L..last] of size 3x3 or greater.  Our goal is to transform
-				  the matrix so as to reduce the magnitudes of the elements on the first sub-diagonal, so that
+				  the matrix to reduce the magnitudes of the elements on the first sub-diagonal, so that
 				  after one or more iterations one of them will be zero to within machine accuracy.
 
 				  Shortcut: if we can find two consecutive subdiagonal elements whose product is small, we're even better off.
@@ -1042,7 +1043,7 @@ func PrintStringInYellow(s []string) { // not exported, at the moment.
 	}
 }
 
-// MakeZeroWithTol -- Just as it's name says, it take a tolerance factor as its last param.
+// MakeZeroWithTol -- Just as it's name says, it takes a tolerance factor as its last param.
 func MakeZeroWithTol(M Matrix2D, places int, tolerance float64) []string {
 	// Writes the r x c matrix M to a string slice after making small values = 0, where each column occupies a field "places" characters wide.
 
@@ -1070,7 +1071,7 @@ func MakeZeroWithTol(M Matrix2D, places int, tolerance float64) []string {
 	return OutputStringSlice
 } // END WriteZero
 
-// WriteZeroln -- outputs the matrix after setting values below tolerance factor to zero.
+// WriteZeroln -- outputs the matrix after setting values below the tolerance factor to zero.
 func WriteZeroln(M Matrix2D, places int, tol float64) {
 	ss := MakeZeroWithTol(M, places, tol)
 	PrintStringInYellow(ss)
