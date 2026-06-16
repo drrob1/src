@@ -41,17 +41,21 @@ REVISION HISTORY
 30 Jun 03 -- Fixed real tokens so can now again begin w/ decpt, by always writing a leading 0.
 21 Jul 03 -- Fixed bug introduced by above step when a token has leading spaces
  4 Oct 03 -- Fixed bug when neg number is entered using unary minus.
+----------------------------------------------------------------------------------------------------
  9 Oct 13 -- Converted to gm2.
 11 Oct 13 -- Fixed a bug in GETTKNREAL in which number like 1e-1 lost the e.
 12 Oct 13 -- Removed an errant RETURN from GETTKNSTR.
+----------------------------------------------------------------------------------------------------
  3 Feb 14 -- Converted to Ada.  I modernized the data types to be a record type.
 28 Jun 14 -- Backported enhancement to GetOpCode that includes ^, ** and %.
+----------------------------------------------------------------------------------------------------
 19 Nov 14 -- Converted to C++.
  7 Dec 14 -- Removed comma as a delim, making it AllElse so it works as intended for HPCALCC
 28 Dec 14 -- Turns out that CentOS C++ does not support -std=c++11, so I have to remove string.front and string.back member functions.
 18 Jan 15 -- Found bug in which single digits followed by add or subtract are not processed correctly by GETTKNREAL.
+----------------------------------------------------------------------------------------------------
  6 Aug 16 -- Started conversion to Go, while on board boat to Bermuda.
-19 Aug 16 -- Finished conversion to Go, started 8/6/16 on boat to Bermuda.
+19 Aug 16 -- Finished conversion to Go
 21 Sep 16 -- Now that this code is for case-sensitive filesystem like linux, returning an all-caps token is a bad idea.
                So I added FetchToken, which takes a param of true for cap and false for preserving case.
  9 Oct 16 -- Will allow "0x" as prefix for hex, as well as "H" suffix.  An 'x' anywhere in the number will
@@ -235,11 +239,11 @@ func InitStateMap(bs *BufferState) {
 func New(Str string) *BufferState { // constructor, initializer using idiomatic Go as taught by Bill Kennedy and others.
 	var bufState BufferState
 
-	//bs := new(BufferState) // idiomatic Go could write this as &BufferState{}  And I stopped using bs as byteslice because it looks ugly, like bullshit.
+	//                         bs := new(BufferState) // idiomatic Go could write this as &BufferState{}  And I stopped using bs as byteslice because it looks ugly, like bullshit.
 	InitStateMap(&bufState) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bufState.CURPOSN, bufState.PREVPOSN = 0, 0
 	bufState.lineRuneSlice = []rune(Str)
-	// copy(bufState.HoldLineBS, bufState.lineRuneSlice) // make sure that the values are copied.  But HoldLineBS is not used.
+	//                                                   copy(bufState.HoldLineBS, bufState.lineRuneSlice) // make sure that the values are copied.  But HoldLineBS is not used.
 	return &bufState // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
 } //
 
