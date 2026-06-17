@@ -2,6 +2,7 @@ package tknptr2 // Package tknptr2 from tknptrutf8 from tknptr.
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -102,9 +103,10 @@ REVISION HISTORY
 15 Jun 26 -- I'm removing HoldLineBS as it's not needed.  That worked.  Now I'm removing HOLDCURPOSN as it's not needed either.  And STOTKNPOSN and RCLTKNPOSN are not used.
 				These all are from the Modula-2 days, and I never examined them.  Time to remove them.
 17 Jun 26 -- I'm going to play with getting string reader to work.  I'll need 2 string readers in the bufferState, so I can unget a token.  This is the hard part, ungetting a token.
+				I got it to mostly work.  In that go test fails some cases, but testtokenptr2 passes.  I'll stop for now.  I'm going to use tknptr or tknptrutf8 instead.
 */
 
-const LastAltered = "15 June 2026"
+const LastAltered = "17 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -249,7 +251,7 @@ func New(Str string) *BufferState { // constructor, initializer using idiomatic 
 	//bs := new(BufferState) // idiomatic Go could write this as &BufferState{}  And I stopped using bs as byteslice because it looks ugly, like bullshit.
 	InitStateMap(&bufState) // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	// bufState.CURPOSN, bufState.PREVPOSN, bufState.HOLDCURPOSN = 0, 0, 0  Don't need HOLDCURPOSN.
-	bufState.CURPOSN, bufState.PREVPOSN = 0, 0
+	bufState.CURPOSN, bufState.PREVPOSN = 0, 0 // not needed in Go, carried over from Modula-2 then Ada then C++
 	//       bufState.lineRuneSlice = []rune(Str)
 	bufState.strReader1 = strings.NewReader(Str)
 	bufState.strReader2 = strings.NewReader(Str)
@@ -270,6 +272,7 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 		return c, true
 	}
 	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
+	bufState.CURPOSN++
 	return c, EOL
 } // PeekCHR
 
@@ -291,10 +294,12 @@ func (bufState *BufferState) UnGetChar() {
 	err := bufState.strReader1.UnreadRune()
 	if err != nil {
 		log.SetFlags(log.Llongfile)
-		log.Print("Error in UnGetChar: ", err)
-		os.Exit(1)
+		log.Print("Error in UnGetChar: ", err, ", CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
+		//os.Exit(1)
+		fmt.Println()
 	}
-} // UNGETCHR
+	bufState.CURPOSN--
+} // UnGetChar
 
 // ------------------------------------- GetOpCode ---------------------------------------------
 
@@ -391,8 +396,13 @@ func (bufState *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool
 	var CHAR CharType
 	var QUOCHR rune // Holds the active quote char
 
-	//bufState.PREVPOSN = bufState.CURPOSN
-	bufState.strReader2 = bufState.strReader1 // hope this just doesn't copy a pointer
+	bufState.PREVPOSN = bufState.CURPOSN
+	// bufState.strReader2 = bufState.strReader1 // hope this just doesn't copy a pointer.  Nope, it does a shallow copy.
+	bufState.strReader2 = bufState.strReader1
+	_, err := bufState.strReader2.Seek(int64(bufState.CURPOSN), io.SeekStart)
+	if err != nil {
+		log.Fatal(err)
+	}
 	var NEGATV, QUOFLG bool
 	TOKEN = TokenType{} // This will zero out all the fields by using a nil struct literal.  It's the default; I put it here so I remember.
 	//tokenRuneSlice := make([]rune, 0, 200) // to build up the TOKEN.Str field
@@ -466,11 +476,11 @@ ExitForLoop:
 		case OP: // token.state
 			switch CHAR.State {
 			case DELIM:
-				bufState.UNGETCHR() // To allow correct processing of op pair that is not a valid op, like +- or =>
-				break ExitForLoop   //goto ExitLoop;
+				bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>
+				break ExitForLoop    //goto ExitLoop;
 			case OP: // OP -> OP means another operator character found.
 				if buildingToken.Len() > OpMaxSize {
-					bufState.UNGETCHR()
+					bufState.UnGetChar()
 					break ExitForLoop //goto ExitLoop;
 				}
 				//tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
@@ -498,8 +508,8 @@ ExitForLoop:
 						}
 						TOKEN.Isum = int(CHAR.Ch) - Dgt0
 					} else { // TOKEN length is not 1 so must first return valid OP
-						bufState.UNGETCHR()      // UNGET THIS DIGIT CHAR
-						bufState.UNGETCHR()      // THEN UNGET THE ARITH SIGN CHAR
+						bufState.UnGetChar()     // UNGET THIS DIGIT CHAR
+						bufState.UnGetChar()     // THEN UNGET THE ARITH SIGN CHAR
 						CHAR.Ch = rune(LastChar) // SO DELIMCH CORRECTLY RETURNS THE ARITH SIGN CHAR
 						//tokenRuneSlice = tokenRuneSlice[:upperbound] // recall that upperbound is excluded in this syntax, so this removes the last char of the token
 						// to remove the last character, I need a few lines of code here.  When I was using rune slice syntax, this just needed one line of code
@@ -510,11 +520,11 @@ ExitForLoop:
 						break ExitForLoop //goto ExitLoop;
 					} // if length of the token = 1
 				} else { // IF have a sign character as the last char
-					bufState.UNGETCHR()
+					bufState.UnGetChar()
 					break ExitForLoop //goto ExitLoop;
 				} // If have a sign character as the last char
 			case ALLELSE: // OP -> AllElse
-				bufState.UNGETCHR()
+				bufState.UnGetChar()
 				break ExitForLoop //goto ExitLoop;
 			} // Char.State
 		case DGT: // tokenstate
@@ -522,7 +532,7 @@ ExitForLoop:
 			case DELIM:
 				break ExitForLoop
 			case OP: // DGT -> OP
-				bufState.UNGETCHR()
+				bufState.UnGetChar()
 				bufState.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 				break ExitForLoop                //goto ExitLoop;
 			case DGT: // DGT -> DGT so we have another digit.
@@ -562,7 +572,7 @@ ExitForLoop:
 					continue
 				}
 
-				bufState.UNGETCHR()
+				bufState.UnGetChar()
 				break ExitForLoop //goto ExitLoop;
 			} // Char.State
 		case ALLELSE: // tokenstate
@@ -571,7 +581,7 @@ ExitForLoop:
 				//  Always exit if get a NULL char as a delim.  A quoted string can only get here if CH is NULL.
 				break ExitForLoop //goto ExitLoop;
 			case OP:
-				bufState.UNGETCHR()
+				bufState.UnGetChar()
 				break ExitForLoop //goto ExitLoop;
 			case DGT: // AllElse -> DGT means have alphanumeric token.
 				if buildingToken.Len() > TKNMAXSIZ {
@@ -673,7 +683,7 @@ func ishexdigit(ch rune) bool {
 
 } // ishexdigit
 
-//----------------------------------- fromhex -------------------------------------------------
+//----------------------------------- FromHex -------------------------------------------------
 
 // FromHex -- input a string and returns int.
 func FromHex(s string) int {
@@ -701,7 +711,7 @@ func (bufState *BufferState) SetMapDelim(char rune) {
 
 //-------------------------------------------- TokenReal ---------------------------------------
 
-// TokenReal allows "0x" as the hex prefix and it no longer allows "H" as a hex suffix.  And idiomatic Go does not have a function begin with Get.
+// TokenReal allows "0x" as the hex prefix, and it no longer allows "H" as a hex suffix.  And idiomatic Go does not have a function begin with Get.
 // TokenReal -- returns a TokenType and EOL state.  Does process scientific notation by changing the state of certain characters to simplify the code.
 func (bufState *BufferState) TokenReal() (TokenType, bool) {
 	var token TokenType
@@ -772,7 +782,7 @@ func (bufState *BufferState) GETTKNREAL() (TOKEN TokenType, EOL bool) {
 
 ExitLoop:
 	for {
-		CHAR, EOL = bufState.GETCHR()
+		CHAR, EOL = bufState.GetChar()
 		CHAR.Ch = CAP(CHAR.Ch)
 		if EOL {
 			// If TKNSTATE is DELIM, then GETTKN was called when there were
@@ -792,7 +802,7 @@ ExitLoop:
 			} //goto ExitLoop; }
 		case OP:
 			if ((CHAR.Ch != '+') && (CHAR.Ch != '-')) || ((Len > 0) && (tokenRuneSlice[Len-1] != 'E')) {
-				bufState.UNGETCHR()
+				bufState.UnGetChar()
 				break ExitLoop // goto ExitLoop;
 			}
 			tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
@@ -801,7 +811,7 @@ ExitLoop:
 		case ALLELSE:
 			if (CHAR.Ch != '.') && (CHAR.Ch != 'E') && !ishexdigit(rune(CHAR.Ch)) && (CHAR.Ch != 'H') &&
 				(CHAR.Ch != 'X') {
-				bufState.UNGETCHR()
+				bufState.UnGetChar()
 				break ExitLoop // goto ExitLoop;
 			} else if CHAR.Ch == 'X' { // have "0x" prefix for a hex number
 				HexFlag = true
@@ -901,7 +911,7 @@ func (bufState *BufferState) GetTokenString(UpperCase bool) (TOKEN TokenType, EO
 	copy(tokenRuneSlice, []rune(TOKEN.Str))
 
 	for {
-		Char, EOL = bufState.GETCHR() // the CAP function is not here anymore.
+		Char, EOL = bufState.GetChar() // the CAP function is not here anymore.
 		if EOL || ((Char.State == DELIM) && (len(TOKEN.Str) > 0)) {
 			break // Ignore leading delims
 		}
@@ -945,7 +955,7 @@ func (bufState *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL b
 	tokenRuneSlice := make([]rune, 0, 200)
 	TOKEN = TokenType{}
 	for {
-		Char, EOL = bufState.GETCHR() // the Cap function is not here anymore.
+		Char, EOL = bufState.GetChar() // the Cap function is not here anymore.
 		if EOL {
 			break
 		} //  No-go.  Need to change this to idiomatic Go, but after debugging the main GetTkn and UnGetTkn rtns.
@@ -978,6 +988,8 @@ func (bufState *BufferState) GETTKNEOL() (TOKEN TokenType, EOL bool) {
 
 //  UNGETTKN is an internal function
 
+// ---------------------------------------- UNGETTKN --------------------------------------------
+
 func (bufState *BufferState) UNGETTKN() {
 	/*
 	   * UNGET TOKEN ROUTINE.
@@ -994,6 +1006,12 @@ func (bufState *BufferState) UNGETTKN() {
 
 	bufState.CURPOSN = bufState.PREVPOSN
 	bufState.PREVPOSN = 0
+	bufState.strReader1 = bufState.strReader2
+
+	_, err := bufState.strReader1.Seek(int64(bufState.CURPOSN), io.SeekStart)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 //                                        GetTokenSlice, now TokenSlice
