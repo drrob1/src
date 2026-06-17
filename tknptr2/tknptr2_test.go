@@ -295,13 +295,13 @@ func TestMain(m *testing.M) { // this example is in the docs of the testing pack
 
 func TestTokenReal(t *testing.T) { // test ALLELSE FIX keyword, OP of +, and then test the numbers.  DelimCH not important, DelimState not important
 
-	fmt.Printf(" FSA Names are %+v\n", fsaNameType)
+	fmt.Printf(" Last altered %s, FSA Names are %+v\n", LastAltered, fsaNameType)
 
 	for _, tkn := range testRealStrings {
 		bs := New(tkn.inputString)
 		token, EOL := bs.TokenReal()
 		if EOL {
-			t.Errorf(" EOL should have been false, but it's true.  TestString=%q, token=%+v\n", tkn.inputString, token)
+			t.Errorf(" EOL should have been false, but it's true.  TestString=%q, token=%+v \n\n", tkn.inputString, token)
 		}
 
 		fmt.Printf(" InputString = %q, token is %+v\n", tkn.inputString, token)
@@ -312,7 +312,7 @@ func TestTokenReal(t *testing.T) { // test ALLELSE FIX keyword, OP of +, and the
 
 		token, EOL = bs.TokenReal()
 		if !EOL {
-			t.Errorf(" EOL should be true.  It's not.  Look into this.  TestString=%q\n", tkn.inputString)
+			t.Errorf(" EOL should be true.  It's not.  Look into this.  TestString=%q \n\n", tkn.inputString)
 		}
 	}
 }

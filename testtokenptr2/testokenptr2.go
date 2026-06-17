@@ -12,7 +12,7 @@ import (
 	tknptr "src/tknptr2" // so I don't have to change every use of tknptr to tknptr2
 )
 
-const LastAltered = "14 June 2026"
+const LastAltered = "17 June 2026"
 
 /*
 REVISION HISTORY
@@ -79,7 +79,7 @@ func main() {
 		testingstate = 5
 	}
 
-	fmt.Print(" Test Token Ptr last altered ", LastAltered)
+	fmt.Print(" Test Token Ptr2 last altered ", LastAltered)
 	fmt.Print(",  floatflag is ", *floatflag, ", testingstate is ", testingstate, ", mapflag is ", *mapflag)
 	fmt.Println()
 	// var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};

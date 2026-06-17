@@ -104,6 +104,8 @@ REVISION HISTORY
 				These all are from the Modula-2 days, and I never examined them.  Time to remove them.
 17 Jun 26 -- I'm going to play with getting string reader to work.  I'll need 2 string readers in the bufferState, so I can unget a token.  This is the hard part, ungetting a token.
 				I got it to mostly work.  In that go test fails some cases, but testtokenptr2 passes.  I'll stop for now.  I'm going to use tknptr or tknptrutf8 instead.
+				I wonder if 2 consecutive UngetRune calls are not really allowed.  Maybe, as I'm getting errors here that don't occur in the others.  Including an infinite loop when
+				I test with "++".
 */
 
 const LastAltered = "17 June 2026"
@@ -273,8 +275,11 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	}
 	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
 	bufState.CURPOSN++
+	if bufState.CURPOSN > bufState.strReader1.Len() { // sometimes, the EOL condition was not being set correctly.
+		EOL = true
+	}
 	return c, EOL
-} // PeekCHR
+} // GetChar, was PeekCHR
 
 // NextChr -- only increments the Current position index.  Not used now that I'm using string reader.
 //func (bs *BufferState) NextChr() {
