@@ -410,7 +410,7 @@ func (bufState *BufferState) GetToken(UpperCase bool) (TOKEN TokenType, EOL bool
 ExitForLoop:
 	for {
 		CHAR, EOL = bufState.GetChar()
-		fmt.Printf("GetToken first GetChar: CHAR.Ch = %c, EOL = %t, Len of token: %d\n", CHAR.Ch, EOL, buildingToken.Len())
+		//                                        fmt.Printf("GetToken first GetChar: CHAR.Ch = %c, EOL = %t, Len of token: %d\n", CHAR.Ch, EOL, buildingToken.Len())
 		if EOL {
 			// If TKNSTATE is DELIM, then gettkn was called when there were no more tokens on the input line.
 			// Otherwise, it means that we have fetched the last TOKEN on this line.
@@ -443,7 +443,7 @@ ExitForLoop:
 					log.Println(" token too long in GetToken.")
 					os.Exit(1)
 				}
-				fmt.Printf("Delim -> OP.  built token: %s\n", buildingToken.String())
+				//                                                 fmt.Printf("Delim -> OP.  built token: %s\n", buildingToken.String())
 			case DGT: // Delim -> DGT means this is the 1st dgt for the entered number.
 				buildingToken.WriteRune(CHAR.Ch)
 				//      tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
@@ -477,7 +477,7 @@ ExitForLoop:
 			switch CHAR.State {
 			case DELIM:
 				// bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: I don't understand this comment, and this isn't working.  I'll remove this line and see what happens.
-				fmt.Printf("OP -> DELIM.  built token: %s\n", buildingToken.String())
+				//                                         fmt.Printf("OP -> DELIM.  built token: %s\n", buildingToken.String())
 				break ExitForLoop
 			case OP: // OP -> OP means another operator character found.
 				if buildingToken.Len() > OpMaxSize {
@@ -486,7 +486,7 @@ ExitForLoop:
 				}
 				buildingToken.WriteRune(CHAR.Ch)
 				//           tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
-				fmt.Printf("OP -> OP.  built token: %s\n", buildingToken.String())
+				//                                           fmt.Printf("OP -> OP.  built token: %s\n", buildingToken.String())
 			case DGT: // OP -> DGT means it may be a sign character for a number token.  If not, have 1 char operator
 				upperbound := buildingToken.Len() - 1
 				LastChar := buildingToken.String()[upperbound]
@@ -611,7 +611,7 @@ ExitForLoop:
 				} // if char is a quote char
 			} // Char.State
 		} // Token.State
-		fmt.Printf("buildingToken: %s, Char: %c, length: %d\n", buildingToken.String(), CHAR.Ch, buildingToken.Len())
+		//                                     fmt.Printf("buildingToken: %s, Char: %c, length: %d\n", buildingToken.String(), CHAR.Ch, buildingToken.Len())
 	} //LOOP to process characters
 
 	if UpperCase {
