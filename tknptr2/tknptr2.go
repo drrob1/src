@@ -106,9 +106,11 @@ REVISION HISTORY
 				I got it to mostly work.  In that go test fails some cases, but testtokenptr2 passes.  I'll stop for now.  I'm going to use tknptr or tknptrutf8 instead.
 				I wonder if 2 consecutive UngetRune calls are not really allowed.  Maybe, as I'm getting errors here that don't occur in the others.  Including an infinite loop when
 				I test with "++".
+18 Jun 26 -- I fixed the infinite loop.  Turned out to be a bug in determining EOL.  When that worked, I removed strReader2 from the bufferState, as it wasn't needed.
+				The unget token code works with just seeking on strReader.  I'll rename strReader to strReader.
 */
 
-const LastAltered = "17 June 2026"
+const LastAltered = "18 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -138,9 +140,8 @@ type CharType struct {
 
 type BufferState struct {
 	CURPOSN, PREVPOSN int
-	// lineRuneSlice     []rune
-	strReader1, strReader2 *strings.Reader
-	StateMap               map[rune]int // as of 9/28/20, StateMap is part of this structure.
+	strReader         *strings.Reader
+	StateMap          map[rune]int // as of 9/28/20, StateMap is part of this structure.
 }
 
 var FSAnameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
@@ -252,8 +253,7 @@ func New(Str string) *BufferState { // constructor, initializer using idiomatic 
 
 	InitStateMap(&bufState)                    // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bufState.CURPOSN, bufState.PREVPOSN = 0, 0 // not needed in Go, carried over from Modula-2 then Ada then C++
-	bufState.strReader1 = strings.NewReader(Str)
-	bufState.strReader2 = strings.NewReader(Str)
+	bufState.strReader = strings.NewReader(Str)
 	return &bufState // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
 } //
 
@@ -266,11 +266,8 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	var err error
 
 	bufState.CURPOSN++
-	//if bufState.CURPOSN > bufState.strReader1.Len() { // sometimes, the EOL condition was not being set correctly.
-	//	EOL = true
-	//}
 
-	c.Ch, _, err = bufState.strReader1.ReadRune()
+	c.Ch, _, err = bufState.strReader.ReadRune()
 	if err != nil {
 		return c, true
 	}
@@ -293,7 +290,7 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 
 // UnGetChar -- Does what its name says.  Primarily an internal function that decrements the current position index.
 func (bufState *BufferState) UnGetChar() {
-	err := bufState.strReader1.UnreadRune()
+	err := bufState.strReader.UnreadRune()
 	if err != nil {
 		log.SetFlags(log.Llongfile)
 		log.Print("Error in UnGetChar: ", err, ", CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
@@ -461,7 +458,7 @@ ExitForLoop:
 				TOKEN.State = ALLELSE
 				QUOFLG = (CHAR.Ch == SQUOTE) || (CHAR.Ch == DQUOTE)
 				if QUOFLG { // Do not put the quote character into the token.
-					QUOCHR = rune(CHAR.Ch)
+					QUOCHR = CHAR.Ch
 				} else {
 					buildingToken.WriteRune(CHAR.Ch)
 					//               tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
@@ -476,7 +473,7 @@ ExitForLoop:
 		case OP: // token.state
 			switch CHAR.State {
 			case DELIM:
-				// bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: I don't understand this comment, and this isn't working.  I'll remove this line and see what happens.
+				bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: I don't understand this comment, and this isn't working.  I'll remove this line and see what happens.
 				//                                         fmt.Printf("OP -> DELIM.  built token: %s\n", buildingToken.String())
 				break ExitForLoop
 			case OP: // OP -> OP means another operator character found.
@@ -551,7 +548,7 @@ ExitForLoop:
 					bufState.StateMap['E'] = DGT
 					bufState.StateMap['e'] = DGT
 				}
-				if !unicode.IsDigit(rune(CHAR.Ch)) {
+				if !unicode.IsDigit(CHAR.Ch) {
 					TOKEN.RealFlag = true
 					continue
 				}
@@ -595,7 +592,7 @@ ExitForLoop:
 				buildingToken.WriteRune(CHAR.Ch)
 				TOKEN.Isum += int(CHAR.Ch)
 			case ALLELSE: // AllElse -> AllELSE
-				if rune(CHAR.Ch) == QUOCHR {
+				if CHAR.Ch == QUOCHR {
 					QUOFLG = false
 					CHAR.State = DELIM // So that DELIMSTATE will = delim
 					break ExitForLoop
@@ -699,7 +696,7 @@ func FromHex(s string) int {
 			dgtval = int(dgtchar) - Dgt0
 		} else if ishexdigit(dgtchar) {
 			dgtval = int(dgtchar) - OrdinalCapA + 10
-		} // ignore blanks or any other non digit character.  This includes ignoring the trailing 'H'.
+		} // ignore blanks or any other non-digit character.  This includes ignoring the trailing 'H'.
 		result = 16*result + dgtval
 	}
 	return result
@@ -758,7 +755,7 @@ func (bufState *BufferState) TokenReal() (TokenType, bool) {
 // I am copying the working code from TKNRTNS here.  See the comments in tknrtnsa.adb for reason why.
 // Allows "0x" as hex prefix; no longer allows "H" as hex suffix.
 
-// GETTKNREAL -- Returns a TokenType and EOL indicater.  This is the rtn to do this.
+// GETTKNREAL -- Returns a TokenType and EOL indicator.  This is the rtn to do this.
 func (bufState *BufferState) GETTKNREAL() (TOKEN TokenType, EOL bool) {
 	var CHAR CharType
 
@@ -812,7 +809,7 @@ ExitLoop:
 		case DGT:
 			tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
 		case ALLELSE:
-			if (CHAR.Ch != '.') && (CHAR.Ch != 'E') && !ishexdigit(rune(CHAR.Ch)) && (CHAR.Ch != 'H') &&
+			if (CHAR.Ch != '.') && (CHAR.Ch != 'E') && !ishexdigit(CHAR.Ch) && (CHAR.Ch != 'H') &&
 				(CHAR.Ch != 'X') {
 				bufState.UnGetChar()
 				break ExitLoop
@@ -945,7 +942,7 @@ func (bufState *BufferState) GETTKNSTR() (TOKEN TokenType, EOL bool) {
 
 // ---------------------------------------- GetTokenEOL -------------------------------------------
 
-// GetTokenEOL -- returns the rest of the original string as a string, and returns the EOL indicator.
+// GetTokenEOL -- returns the rest of the original string as a string and returns the EOL indicator.
 func (bufState *BufferState) GetTokenEOL(UpperCase bool) (TOKEN TokenType, EOL bool) {
 	// GET ToKeN to EndOfLine.
 	// This will build a token that consists of every character left on the line.
@@ -989,8 +986,6 @@ func (bufState *BufferState) GETTKNEOL() (TOKEN TokenType, EOL bool) {
 	return TOKEN, EOL
 } // GETTKNEOL
 
-//  UNGETTKN is an internal function
-
 // ---------------------------------------- UNGETTKN --------------------------------------------
 
 func (bufState *BufferState) UNGETTKN() {
@@ -1009,8 +1004,7 @@ func (bufState *BufferState) UNGETTKN() {
 
 	bufState.CURPOSN = bufState.PREVPOSN
 	bufState.PREVPOSN = 0
-	bufState.strReader1 = bufState.strReader2
-	_, err := bufState.strReader1.Seek(int64(bufState.CURPOSN), io.SeekStart)
+	_, err := bufState.strReader.Seek(int64(bufState.CURPOSN), io.SeekStart)
 	if err != nil {
 		log.Fatal(err)
 	}
