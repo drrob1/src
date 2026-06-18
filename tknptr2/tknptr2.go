@@ -266,9 +266,9 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	var err error
 
 	bufState.CURPOSN++
-	if bufState.CURPOSN > bufState.strReader1.Len() { // sometimes, the EOL condition was not being set correctly.
-		EOL = true
-	}
+	//if bufState.CURPOSN > bufState.strReader1.Len() { // sometimes, the EOL condition was not being set correctly.
+	//	EOL = true
+	//}
 
 	c.Ch, _, err = bufState.strReader1.ReadRune()
 	if err != nil {
@@ -611,7 +611,7 @@ ExitForLoop:
 				} // if char is a quote char
 			} // Char.State
 		} // Token.State
-		//                                     fmt.Printf("buildingToken: %s, Char: %c, length: %d\n", buildingToken.String(), CHAR.Ch, buildingToken.Len())
+		//                             fmt.Printf("buildingToken: %s, Char: %c, length: %d\n", buildingToken.String(), CHAR.Ch, buildingToken.Len())
 	} //LOOP to process characters
 
 	if UpperCase {
