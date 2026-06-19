@@ -1,4 +1,4 @@
-package tknptr2 // Package tknptr2 from tknptrutf8 from tknptr.
+package tknptr2 // Package tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder.
 
 import (
 	"fmt"
@@ -107,10 +107,16 @@ REVISION HISTORY
 				I wonder if 2 consecutive UngetRune calls are not really allowed.  Maybe, as I'm getting errors here that don't occur in the others.  Including an infinite loop when
 				I test with "++".
 18 Jun 26 -- I fixed the infinite loop.  Turned out to be a bug in determining EOL.  When that worked, I removed strReader2 from the bufferState, as it wasn't needed.
-				The unget token code works with just seeking on strReader.  I'll rename strReader to strReader.
+				The unget token code works with just seeking on strReader.  I'll rename strReader1 to strReader.
+19 Jun 26 -- I figured out that strings.Reader.UngetRune only works with 1 UngetRune call.  So I'll have to use Seek.  Turns out that using strings.Reader and Builder is not the best way to do this.
+			I need to track the position in the string anyway, so using the array approach as I've used since the beginning is the best way.
+			Seek works.  So now I'll add FixToken written in tknptrutf8.
+			One subtle difference here is that I don't return an empty token when I reach EOF; in the others I do.  So I had to change the routines that return a slice of tokens.
+			Oops, I was wrong.  I'll change these back.
+			I'm going to try to trap the error returned by strings.Reader.UngetRune so I can suppress it.  Didn't work.  I'll just suppress all error messages from UnGetChar.
 */
 
-const LastAltered = "18 June 2026"
+const LastAltered = "19 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -269,6 +275,7 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 
 	c.Ch, _, err = bufState.strReader.ReadRune()
 	if err != nil {
+		//fmt.Printf("Error reading rune: %v\n", err)  This is the EOF condition.
 		return c, true
 	}
 	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
@@ -290,16 +297,21 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 
 // UnGetChar -- Does what its name says.  Primarily an internal function that decrements the current position index.
 func (bufState *BufferState) UnGetChar() {
-	err := bufState.strReader.UnreadRune()
-	if err != nil {
-		log.SetFlags(log.Llongfile)
-		log.Print("Error in UnGetChar: ", err, ", CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
-		//os.Exit(1)
-		fmt.Println()
-	}
 	bufState.CURPOSN--
 	if bufState.CURPOSN < 0 {
 		log.Print("Error in UnGetChar: Less-than-Zero; CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
+	}
+	err := bufState.strReader.UnreadRune()
+	if err != nil {
+		//log.SetFlags(log.Llongfile)  I know this is "previous operation was not ReadRune."
+		//log.Print("Error in UnGetChar: ", err, ", CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
+		//fmt.Println()
+		_, err = bufState.strReader.Seek(int64(bufState.CURPOSN), io.SeekStart)
+		if err != nil {
+			log.Print("Error in UnGetChar Seek:  CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN, "; ", err)
+			fmt.Println()
+		}
+		return
 	}
 } // UnGetChar
 
@@ -389,6 +401,50 @@ func (bufState *BufferState) GETOPCODE(Token TokenType) int {
 	} // Length of Token = 1
 	return OpCode
 } // GETOPCODE
+
+func FixToken(t TokenType) TokenType {
+	fixTokenMap := make(map[string]bool, 20)
+	fixTokenMap["<"] = true
+	fixTokenMap[">"] = true
+	fixTokenMap["="] = true
+	fixTokenMap["+"] = true
+	fixTokenMap["-"] = true
+	fixTokenMap["*"] = true
+	fixTokenMap["/"] = true
+	fixTokenMap["^"] = true
+	fixTokenMap["%"] = true
+
+	fixTokenMap["**"] = true
+	fixTokenMap["<>"] = true
+	fixTokenMap["><"] = true
+	fixTokenMap["=="] = true
+	fixTokenMap["+="] = true
+	fixTokenMap["-="] = true
+	fixTokenMap["*="] = true
+	fixTokenMap["/="] = true
+	fixTokenMap["<="] = true
+	fixTokenMap[">="] = true
+	fixTokenMap["^="] = true
+
+	// make sure I make a deep copy of the token param.
+	tkn := TokenType{
+		Str:        t.Str,
+		FullString: t.FullString,
+		State:      t.State,
+		DelimCH:    t.DelimCH,
+		DelimState: t.DelimState,
+		Isum:       t.Isum,
+		Rsum:       t.Rsum,
+		RealFlag:   t.RealFlag,
+		HexFlag:    t.HexFlag,
+	}
+	if fixTokenMap[tkn.Str] { // if the string is valid, return it without fixing it.
+		return tkn
+	}
+	tkn.Str = tkn.Str[:1] // this should only be 1 character left in the string.
+	tkn.FullString = tkn.FullString[:1]
+	return tkn
+} // FixToken
 
 //       ---------------------------=== GetToken ===--------------------------------------
 
@@ -654,6 +710,7 @@ ExitForLoop:
 	//  For OP tokens, must return the opcode as the sum value.  Do this by calling GETOPCODE.
 	if TOKEN.State == OP {
 		TOKEN.Isum = bufState.GETOPCODE(TOKEN) // ungetting the 2nd op char of an invalid pair happens in GetOpCode.  But it doesn't seem to be working.
+		TOKEN = FixToken(TOKEN)                // checks and corrects for invalid pairs of op chars.
 	}
 	return TOKEN, EOL
 } // GetToken
