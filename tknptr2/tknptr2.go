@@ -108,12 +108,14 @@ REVISION HISTORY
 				I test with "++".
 18 Jun 26 -- I fixed the infinite loop.  Turned out to be a bug in determining EOL.  When that worked, I removed strReader2 from the bufferState, as it wasn't needed.
 				The unget token code works with just seeking on strReader.  I'll rename strReader1 to strReader.
-19 Jun 26 -- I figured out that strings.Reader.UngetRune only works with 1 UngetRune call.  So I'll have to use Seek.  Turns out that using strings.Reader and Builder is not the best way to do this.
+19 Jun 26 --.I figured out that strings.Reader.UngetRune only works with 1 UngetRune call.  So I'll have to use Seek.
+			Turns out that using strings.Reader and Builder is not the best way to do this.
 			I need to track the position in the string anyway, so using the array approach as I've used since the beginning is the best way.
 			Seek works.  So now I'll add FixToken written in tknptrutf8.
 			One subtle difference here is that I don't return an empty token when I reach EOF; in the others I do.  So I had to change the routines that return a slice of tokens.
 			Oops, I was wrong.  I'll change these back.
 			I'm going to try to trap the error returned by strings.Reader.UngetRune so I can suppress it.  Didn't work.  I'll just suppress all error messages from UnGetChar.
+			I figured out how to trap the error using strings.Contains(err.Error(), "previous operation was not ReadRune").
 */
 
 const LastAltered = "19 June 2026"
@@ -303,9 +305,11 @@ func (bufState *BufferState) UnGetChar() {
 	}
 	err := bufState.strReader.UnreadRune()
 	if err != nil {
-		//log.SetFlags(log.Llongfile)  I know this is "previous operation was not ReadRune."
-		//log.Print("Error in UnGetChar: ", err, ", CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
-		//fmt.Println()
+		if !strings.Contains(err.Error(), "previous operation was not ReadRune") {
+			log.SetFlags(log.Llongfile)
+			log.Print("Error in UnGetChar: ", err, ", CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
+			fmt.Println()
+		}
 		_, err = bufState.strReader.Seek(int64(bufState.CURPOSN), io.SeekStart)
 		if err != nil {
 			log.Print("Error in UnGetChar Seek:  CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN, "; ", err)
