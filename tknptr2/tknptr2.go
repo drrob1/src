@@ -385,7 +385,7 @@ func (bufState *BufferState) GETOPCODE(Token TokenType) int {
 	} else if (CH1 == EQUALSIGN) && (CH2 == EQUALSIGN) {
 		// do nothing
 	} else { // have invalid pair, like +- or =>.
-		bufState.UnGetChar() // unget the 2nd part of the invalid pair.
+		bufState.UnGetChar() // unget the 2nd part of the invalid pair.  Doesn't seem to be working.
 	} // Length of Token = 1
 	return OpCode
 } // GETOPCODE
@@ -653,7 +653,7 @@ ExitForLoop:
 
 	//  For OP tokens, must return the opcode as the sum value.  Do this by calling GETOPCODE.
 	if TOKEN.State == OP {
-		TOKEN.Isum = bufState.GETOPCODE(TOKEN)
+		TOKEN.Isum = bufState.GETOPCODE(TOKEN) // ungetting the 2nd op char of an invalid pair happens in GetOpCode.  But it doesn't seem to be working.
 	}
 	return TOKEN, EOL
 } // GetToken

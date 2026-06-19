@@ -96,9 +96,10 @@ REVISION HISTORY
 13 Jun 26 -- Yesterday I used utf8.RuneLen() to increment the pointer to the next character.  That's a mistake as I'm now using runes instead of bytes.  I'll revert back to
 				incrementing or decrementing the pointer by 1.
 15 Jun 26 -- Time to remove HOLDCURPOSN, HoldLineBS, STOTKNPOSN and RCLTKNPOSN.  These all are from the Modula-2 days, and I never examined them.  Time to remove them.
+18 Jun 26 -- Handling invalid pairs of op chars happens in GetOpCode.  But it doesn't fix the token.  I'm adding a FixToken() function to handle this.
 */
 
-const LastAltered = "15 June 2026"
+const LastAltered = "18 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -378,6 +379,50 @@ func (bufState *BufferState) GETOPCODE(Token TokenType) int {
 	return OpCode
 } // GETOPCODE
 
+func FixToken(t TokenType) TokenType {
+	fixTokenMap := make(map[string]bool, 20)
+	fixTokenMap["<"] = true
+	fixTokenMap[">"] = true
+	fixTokenMap["="] = true
+	fixTokenMap["+"] = true
+	fixTokenMap["-"] = true
+	fixTokenMap["*"] = true
+	fixTokenMap["/"] = true
+	fixTokenMap["^"] = true
+	fixTokenMap["%"] = true
+
+	fixTokenMap["**"] = true
+	fixTokenMap["<>"] = true
+	fixTokenMap["><"] = true
+	fixTokenMap["=="] = true
+	fixTokenMap["+="] = true
+	fixTokenMap["-="] = true
+	fixTokenMap["*="] = true
+	fixTokenMap["/="] = true
+	fixTokenMap["<="] = true
+	fixTokenMap[">="] = true
+	fixTokenMap["^="] = true
+
+	// make sure I make a deep copy of the token param.
+	tkn := TokenType{
+		Str:        t.Str,
+		FullString: t.FullString,
+		State:      t.State,
+		DelimCH:    t.DelimCH,
+		DelimState: t.DelimState,
+		Isum:       t.Isum,
+		Rsum:       t.Rsum,
+		RealFlag:   t.RealFlag,
+		HexFlag:    t.HexFlag,
+	}
+	if fixTokenMap[tkn.Str] { // if the string is valid, return it without fixing it.
+		return tkn
+	}
+	tkn.Str = tkn.Str[:1] // this should only be 1 character left in the string.
+	tkn.FullString = tkn.FullString[:1]
+	return tkn
+} // FixToken
+
 //       ---------------------------=== GetToken ===--------------------------------------
 
 // GetToken (UpperCase bool) -- returns a TokenType which may be uppercase; EOL will be true when EOL condition is met.  Does not process scientific notation.
@@ -505,14 +550,6 @@ ExitForLoop:
 		case DGT: // tokenstate
 			switch CHAR.State {
 			case DELIM:
-				//bs.StateMap['_'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.  Redundant.
-				//bs.StateMap['.'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['H'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['E'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['X'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['h'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['e'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
-				//bs.StateMap['x'] = ALLELSE // make sure the underscore is back to the type it's supposed to be.
 				break ExitForLoop
 			case OP: // DGT -> OP
 				bufState.UNGETCHR()
@@ -633,7 +670,8 @@ ExitForLoop:
 
 	//  For OP tokens, must return the opcode as the sum value.  Do this by calling GETOPCODE.
 	if TOKEN.State == OP {
-		TOKEN.Isum = bufState.GETOPCODE(TOKEN)
+		TOKEN.Isum = bufState.GETOPCODE(TOKEN) // Handling invalid pairs of op chars happens in GetOpCode.  But it doesn't fix this token.
+		TOKEN = FixToken(TOKEN)                // checks and corrects for invalid pairs of op chars.
 	}
 	return TOKEN, EOL
 } // GetToken
