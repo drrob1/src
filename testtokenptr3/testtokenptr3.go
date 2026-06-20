@@ -41,11 +41,7 @@ REVISION HISTORY
 20 Jun 26 -- Now testing for tknptr3
 */
 
-// var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
-
 func main() {
-	//	                                                            commandline := getcommandline.GetCommandLineString()
-	// 																commandline = strings.ToUpper(commandline)
 	var floatflag = flag.Bool("f", false, "call GetTknReal")  // pointer syntax
 	var realFlag = flag.Bool("r", false, "call TokenReal")    // pointer syntax
 	var noopflag = flag.Bool("noop", false, "Set No OpCodes") // pointer syntax
@@ -83,6 +79,7 @@ func main() {
 	fmt.Print(" Test Token Ptr3 last altered ", LastAltered, ", tknptr3 last altered ", tknptr.LastAltered)
 	fmt.Print(",  floatflag is ", *floatflag, ", testingstate is ", testingstate, ", mapflag is ", *mapflag)
 	fmt.Println()
+	// var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
 	fmt.Printf(" FSAnameType = [...]string{DELIM, OP, DGT, ALLELSE}\n")
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -140,6 +137,7 @@ func main() {
 		}
 		fmt.Println()
 		fmt.Println()
+		// There's a bug here when multiple tokens are on the same line.  This is not the case so far w/ rpn tests.  The letter 'e' is not changed back to ALLELSE as it needs to be.gg
 
 		var EOL bool
 		var token tknptr.TokenType
