@@ -83,12 +83,10 @@ func main() {
 	fmt.Print(" Test Token Ptr3 last altered ", LastAltered, ", tknptr3 last altered ", tknptr.LastAltered)
 	fmt.Print(",  floatflag is ", *floatflag, ", testingstate is ", testingstate, ", mapflag is ", *mapflag)
 	fmt.Println()
-	// var FSAnameType = [...]string{"DELIM","OP","DGT","ALLELSE"};
 	fmt.Printf(" FSAnameType = [...]string{DELIM, OP, DGT, ALLELSE}\n")
 
 	scanner := bufio.NewScanner(os.Stdin)
 	inputline := ""
-	//  scanner.Split(bufio.ScanWords); // testing scanning by words to see what happens.
 	for {
 		fmt.Print(" Input test text: ")
 		scanner.Scan()
@@ -142,7 +140,6 @@ func main() {
 		}
 		fmt.Println()
 		fmt.Println()
-		// There's a bug here when multiple tokens are on the same line.  This is not the case so far w/ rpn tests.  The letter 'e' is not changed back to ALLELSE as it needs to be.gg
 
 		var EOL bool
 		var token tknptr.TokenType
