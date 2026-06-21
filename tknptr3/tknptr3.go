@@ -303,6 +303,7 @@ func (bufState *BufferState) UnGetChar() {
 		fmt.Println()
 	}
 } // UnGetChar
+
 //func (bufState *BufferState) UnGetChar() {
 //	bufState.CURPOSN--
 //	if bufState.CURPOSN < 0 {
