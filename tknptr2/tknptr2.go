@@ -1,4 +1,4 @@
-package tknptr2 // Package tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder.
+package tknptr2 // Package tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder.  Not intended for general use.
 
 import (
 	"fmt"
@@ -108,7 +108,7 @@ REVISION HISTORY
 				I test with "++".
 18 Jun 26 -- I fixed the infinite loop.  Turned out to be a bug in determining EOL.  When that worked, I removed strReader2 from the bufferState, as it wasn't needed.
 				The unget token code works with just seeking on strReader.  I'll rename strReader1 to strReader.
-19 Jun 26 --.I figured out that strings.Reader.UngetRune only works with 1 UngetRune call.  So I'll have to use Seek.
+19 Jun 26 -- I figured out that strings.Reader.UngetRune only works with 1 UngetRune call.  So I'll have to use Seek.
 			Turns out that using strings.Reader and Builder is not the best way to do this.
 			I need to track the position in the string anyway, so using the array approach as I've used since the beginning is the best way.
 			Seek works.  So now I'll add FixToken written in tknptrutf8.

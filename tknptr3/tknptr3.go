@@ -1,4 +1,4 @@
-package tknptr3 // Package tknptr3 from tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder, and now strings.Seek instead of UnReadRune.
+package tknptr3 // Package tknptr3 from tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder, and now strings.Seek instead of UnReadRune.  Not intended for general use.
 
 import (
 	"fmt"
