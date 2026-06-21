@@ -1,4 +1,4 @@
-package tknptr3a // Package tknptr3a from tknptr3 from tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder, and now strings.Seek instead of UnReadRune.
+package tknptr3a // Package tknptr3a from tknptr3 from tknptr2 from tknptrutf8 from tknptr.  This uses strings.Reader and Builder, and now strings.Seek instead of UnReadRune.  Doesn't completely unget tokens, not intended for general use.
 
 import (
 	"fmt"
@@ -119,7 +119,8 @@ REVISION HISTORY
 ----------------------------------------------------------------------------------------------------
 20 Jun 26 -- Now called tknptr3.  I'm going to use strings.Seek instead of UnReadRune.
 ----------------------------------------------------------------------------------------------------
-20 Jun 26 -- Now called tknptr3a, and I'm going to try to figure out why this doesn't work for op characters.
+20 Jun 26 -- Now called tknptr3a, and I'm going to try to figure out why this doesn't work for op characters.  I did, see below comments about this.
+				UnGetToken doesn't work for op characters when I use Seek -1 from the end.  This code is not intended for general use.  It's an exercise for me.
 
 */
 

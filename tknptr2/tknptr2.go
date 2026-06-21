@@ -116,6 +116,7 @@ REVISION HISTORY
 			Oops, I was wrong.  I'll change these back.
 			I'm going to try to trap the error returned by strings.Reader.UngetRune so I can suppress it.  Didn't work.  I'll just suppress all error messages from UnGetChar.
 			I figured out how to trap the error using strings.Contains(err.Error(), "previous operation was not ReadRune").
+			I wrote this as an exercise for me.  Not intended for general use.
 */
 
 const LastAltered = "19 June 2026"
