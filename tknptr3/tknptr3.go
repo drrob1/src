@@ -296,7 +296,7 @@ func (bufState *BufferState) UnGetChar() {
 		log.Print("Error in UnGetChar: Less-than-Zero; CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
 	}
 	n, err := bufState.strReader.Seek(int64(bufState.CURPOSN), io.SeekStart) // this works in all cases.
-	//n, err := bufState.strReader.Seek(-1, io.SeekCurrent) // doesn't work for 1 char tokens.  EOL isn't true when it's supposed to be.  I don't understand this yet.
+	//n, err := bufState.strReader.Seek(-1, io.SeekCurrent) // doesn't work when last token is OP, see tknptr3a.
 	if err != nil {
 		log.SetFlags(log.Llongfile)
 		log.Printf("Error in UnGetChar Seek:  CURPOSN=%d, PrevPosn=%d, SeekPosn=%d; %v\n", bufState.CURPOSN, bufState.PREVPOSN, n, err)

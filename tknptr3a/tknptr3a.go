@@ -299,13 +299,14 @@ func (bufState *BufferState) UnGetChar() {
 		log.Print("Error in UnGetChar: Less-than-Zero; CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
 	}
 	//n, err := bufState.strReader.Seek(int64(bufState.CURPOSN), io.SeekStart) // this works in all cases.
-	n, err := bufState.strReader.Seek(-1, io.SeekCurrent) // doesn't work for 1 char input lines.  EOL isn't true when it's supposed to be.  I don't understand this yet.
+	n, err := bufState.strReader.Seek(-1, io.SeekCurrent) // EOL isn't true when it's supposed to be and the last token on the line is an OP.
 	if err != nil {
 		log.SetFlags(log.Llongfile)
 		log.Printf("Error in UnGetChar Seek:  CURPOSN=%d, PrevPosn=%d, SeekPosn=%d; %v\n", bufState.CURPOSN, bufState.PREVPOSN, n, err)
 		fmt.Println()
 	}
 } // UnGetChar
+
 //func (bufState *BufferState) UnGetChar() {
 //	bufState.CURPOSN--
 //	if bufState.CURPOSN < 0 {
@@ -540,8 +541,10 @@ ExitForLoop:
 		case OP: // token.state
 			switch CHAR.State {
 			case DELIM:
-				bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: I don't understand this comment, and this isn't working.  I'll remove this line and see what happens.
-				//                                         fmt.Printf("OP -> DELIM.  built token: %s\n", buildingToken.String())
+				//bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
+				//                     This UnGetChar() is why an OP at the end of a line does not allow EOL to be set correctly.  Commenting this line out fixes this pblm, but
+				//                     then I can't undo the last token on the line if it's an OP.  I'm going to stop fiddling w/ this now that I've solved it.  I won't be using
+				//						this code for anything anyway.
 				break ExitForLoop
 			case OP: // OP -> OP means another operator character found.
 				if buildingToken.Len() > OpMaxSize {
@@ -549,8 +552,6 @@ ExitForLoop:
 					break ExitForLoop
 				}
 				buildingToken.WriteRune(CHAR.Ch)
-				//           tokenRuneSlice = append(tokenRuneSlice, CHAR.Ch)
-				//                                           fmt.Printf("OP -> OP.  built token: %s\n", buildingToken.String())
 			case DGT: // OP -> DGT means it may be a sign character for a number token.  If not, have 1 char operator
 				upperbound := buildingToken.Len() - 1
 				LastChar := buildingToken.String()[upperbound]
