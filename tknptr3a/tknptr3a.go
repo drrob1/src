@@ -121,10 +121,10 @@ REVISION HISTORY
 ----------------------------------------------------------------------------------------------------
 20 Jun 26 -- Now called tknptr3a, and I'm going to try to figure out why this doesn't work for op characters.  I did, see below comments about this.
 				UnGetToken doesn't work for op characters when I use Seek -1 from the end.  This code is not intended for general use.  It's an exercise for me.
-
+24 Jun 26 -- Got idea for it to work for op characters.  The primary fix is in GetChar, and added a field in bufState to store length of initial string.  It works.
 */
 
-const LastAltered = "20 June 2026"
+const LastAltered = "24 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -154,6 +154,7 @@ type CharType struct {
 
 type BufferState struct {
 	CURPOSN, PREVPOSN int
+	StrLen            int
 	strReader         *strings.Reader
 	StateMap          map[rune]int // as of 9/28/20, StateMap is part of this structure.
 }
@@ -268,7 +269,8 @@ func New(Str string) *BufferState { // constructor, initializer using idiomatic 
 	InitStateMap(&bufState)                    // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
 	bufState.CURPOSN, bufState.PREVPOSN = 0, 0 // not needed in Go, carried over from Modula-2 then Ada then C++
 	bufState.strReader = strings.NewReader(Str)
-	return &bufState // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
+	bufState.StrLen = len(Str) // Added 6/24/26 to fix issue of processing op characters.
+	return &bufState           // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
 } //
 
 // ---------------------------- GetChar -------------------------------------------
@@ -280,6 +282,9 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	var err error
 
 	bufState.CURPOSN++
+	if bufState.CURPOSN > bufState.StrLen {
+		return c, true
+	}
 
 	c.Ch, _, err = bufState.strReader.ReadRune()
 	if err != nil {
@@ -542,10 +547,11 @@ ExitForLoop:
 		case OP: // token.state
 			switch CHAR.State {
 			case DELIM:
-				//bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
+				bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
 				//                     This UnGetChar() is why an OP at the end of a line does not allow EOL to be set correctly.  Commenting this line out fixes this pblm, but
 				//                     then I can't undo the last token on the line if it's an OP.  I'm going to stop fiddling w/ this now that I've solved it.  I won't be using
 				//						this code for anything anyway.
+				//						6/24/26:  fixed by adding a field to bufState to store length of initial string, and then testing against that in GetChar.
 				break ExitForLoop
 			case OP: // OP -> OP means another operator character found.
 				if buildingToken.Len() > OpMaxSize {
