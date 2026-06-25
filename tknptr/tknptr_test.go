@@ -50,7 +50,7 @@ var testRealStrings = []struct {
 		State:      OP,
 		DelimCH:    0,
 		DelimState: DELIM,
-		Isum:       8,
+		Isum:       10,
 		Rsum:       0,
 		RealFlag:   false,
 	}},

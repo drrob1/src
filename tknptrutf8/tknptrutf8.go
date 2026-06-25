@@ -97,9 +97,10 @@ REVISION HISTORY
 				incrementing or decrementing the pointer by 1.
 15 Jun 26 -- Time to remove HOLDCURPOSN, HoldLineBS, STOTKNPOSN and RCLTKNPOSN.  These all are from the Modula-2 days, and I never examined them.  Time to remove them.
 18 Jun 26 -- Handling invalid pairs of op chars happens in GetOpCode.  But it doesn't fix the token.  I'm adding a FixToken() function to handle this.
+25 Jun 26 -- Found bug in GetChar in tknptr2, 3 and 3a, but not here.
 */
 
-const LastAltered = "18 June 2026"
+const LastAltered = "25 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.

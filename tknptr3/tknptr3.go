@@ -118,10 +118,10 @@ REVISION HISTORY
 			I figured out how to trap the error using strings.Contains(err.Error(), "previous operation was not ReadRune").
 ----------------------------------------------------------------------------------------------------
 20 Jun 26 -- Now called tknptr3.  I'm going to use strings.Seek instead of UnReadRune, as an exercise for me.  Not intended for general use.
-
+25 Jun 26 -- Found bug in GetChar, in that it can return the char without setting its state.  Fixed.
 */
 
-const LastAltered = "20 June 2026"
+const LastAltered = "25 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -279,11 +279,11 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	bufState.CURPOSN++
 
 	c.Ch, _, err = bufState.strReader.ReadRune()
+	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
 	if err != nil {
 		//fmt.Printf("Error reading rune: %v\n", err)  This is the EOF condition.
 		return c, true
 	}
-	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
 	return c, EOL
 } // GetChar, was PeekCHR
 

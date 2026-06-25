@@ -123,9 +123,10 @@ REVISION HISTORY
 				UnGetToken doesn't work for op characters when I use Seek -1 from the end.  This code is not intended for general use.  It's an exercise for me.
 24 Jun 26 -- Got idea for it to work for op characters.  The primary fix is in GetChar, and added a field in bufState to store length of initial string.  It mostly works.
 				Better testing reveals that it doesn't really work, but it doesn't cause an infinite loop.  The last character of an invalid pair is not returned.
+25 Jun 26 -- I'm going to try to track this down.
 */
 
-const LastAltered = "24 June 2026"
+const LastAltered = "25 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -285,10 +286,12 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	bufState.CURPOSN++
 
 	c.Ch, _, err = bufState.strReader.ReadRune()
+	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
+	fmt.Printf("GetChar after ReadRune: Char=%c, state=%s, CURPOSN=%d, prevposn=%d, StrLen=%d, err=%v\n",
+		c.Ch, fsaName(c.State), bufState.CURPOSN, bufState.PREVPOSN, bufState.StrLen, err)
 	if err != nil || bufState.CURPOSN > bufState.StrLen {
 		return c, true
 	}
-	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
 	return c, EOL
 } // GetChar, was PeekCHR
 
@@ -544,11 +547,12 @@ ExitForLoop:
 		case OP: // token.state
 			switch CHAR.State {
 			case DELIM:
-				bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
+				//bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
 				//                     This UnGetChar() is why an OP at the end of a line does not allow EOL to be set correctly.  Commenting this line out fixes this pblm, but
 				//                     then I can't undo the last token on the line if it's an OP.  I'm going to stop fiddling w/ this now that I've solved it.  I won't be using
 				//						this code for anything anyway.
 				//						6/24/26:  fixed by adding a field to bufState to store length of initial string, and then testing against that in GetChar.
+				//						6/25/26: found bug in GetChar that can return char without correct state.
 				break ExitForLoop
 			case OP: // OP -> OP means another operator character found.
 				if buildingToken.Len() > OpMaxSize {
@@ -1141,6 +1145,11 @@ func TokenRealSlice(str string) []TokenType { // This uses the new TokenReal ins
 		realTknSlice = append(realTknSlice, tknreal)
 	}
 	return realTknSlice
+}
+
+func fsaName(i int) string {
+	var fsaNameType = [...]string{"DELIM", "OP", "DGT", "ALLELSE"}
+	return fsaNameType[i]
 }
 
 // end tknptr2
