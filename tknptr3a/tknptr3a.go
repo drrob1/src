@@ -121,7 +121,8 @@ REVISION HISTORY
 ----------------------------------------------------------------------------------------------------
 20 Jun 26 -- Now called tknptr3a, and I'm going to try to figure out why this doesn't work for op characters.  I did, see below comments about this.
 				UnGetToken doesn't work for op characters when I use Seek -1 from the end.  This code is not intended for general use.  It's an exercise for me.
-24 Jun 26 -- Got idea for it to work for op characters.  The primary fix is in GetChar, and added a field in bufState to store length of initial string.  It works.
+24 Jun 26 -- Got idea for it to work for op characters.  The primary fix is in GetChar, and added a field in bufState to store length of initial string.  It mostly works.
+				Better testing reveals that it doesn't really work, but it doesn't cause an infinite loop.  The last character of an invalid pair is not returned.
 */
 
 const LastAltered = "24 June 2026"
@@ -282,13 +283,9 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 	var err error
 
 	bufState.CURPOSN++
-	if bufState.CURPOSN > bufState.StrLen {
-		return c, true
-	}
 
 	c.Ch, _, err = bufState.strReader.ReadRune()
-	if err != nil {
-		//fmt.Printf("Error reading rune: %v\n", err)  This is the EOF condition.
+	if err != nil || bufState.CURPOSN > bufState.StrLen {
 		return c, true
 	}
 	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
