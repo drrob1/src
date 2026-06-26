@@ -123,7 +123,7 @@ REVISION HISTORY
 				UnGetToken doesn't work for op characters when I use Seek -1 from the end.  This code is not intended for general use.  It's an exercise for me.
 24 Jun 26 -- Got idea for it to work for op characters.  The primary fix is in GetChar, and added a field in bufState to store length of initial string.  It mostly works.
 				Better testing reveals that it doesn't really work, but it doesn't cause an infinite loop.  The last character of an invalid pair is not returned.
-25 Jun 26 -- I'm going to try to track this down.
+25 Jun 26 -- I'm going to try to track this down.  I got it to work by adding a space to the end of the string.  Not exactly sure why, but it works.
 */
 
 const LastAltered = "26 June 2026"
