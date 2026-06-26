@@ -126,7 +126,7 @@ REVISION HISTORY
 25 Jun 26 -- I'm going to try to track this down.
 */
 
-const LastAltered = "25 June 2026"
+const LastAltered = "26 June 2026"
 
 const (
 	DELIM = iota // so DELIM = 0, and so on.  And the zero val needs to be DELIM.
@@ -268,11 +268,13 @@ func InitStateMap(bufState *BufferState) {
 func New(Str string) *BufferState { // constructor, initializer using idiomatic Go as taught by Bill Kennedy and others.
 	var bufState BufferState
 
-	InitStateMap(&bufState)                    // possible that GetTknStr or GetTknEOL changed the StateMap, so will call init.
-	bufState.CURPOSN, bufState.PREVPOSN = 0, 0 // not needed in Go, carried over from Modula-2 then Ada then C++
-	bufState.strReader = strings.NewReader(Str)
-	bufState.StrLen = len(Str) // Added 6/24/26 to fix issue of processing op characters.
-	return &bufState           // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
+	InitStateMap(&bufState)
+	//                                                  bufState.CURPOSN, bufState.PREVPOSN = 0, 0  not needed in Go, carried over from Modula-2 then Ada then C++
+	str := Str + " "
+	bufState.strReader = strings.NewReader(str)
+	bufState.StrLen = len(str) // Added 6/24/26 to fix issue of processing op characters.  Didn't entirely work.
+	//                                                  fmt.Printf("New: StrLen = %d, Str = %q\n", bufState.StrLen, str)
+	return &bufState // makes clear that the return value is a pointer to a BufferState, and uses pointer semantics.
 } //
 
 // ---------------------------- GetChar -------------------------------------------
@@ -287,8 +289,7 @@ func (bufState *BufferState) GetChar() (CharType, bool) {
 
 	c.Ch, _, err = bufState.strReader.ReadRune()
 	c.State = bufState.StateMap[c.Ch] // state assignment, here using map access.
-	fmt.Printf("GetChar after ReadRune: Char=%c, state=%s, CURPOSN=%d, prevposn=%d, StrLen=%d, err=%v\n",
-		c.Ch, fsaName(c.State), bufState.CURPOSN, bufState.PREVPOSN, bufState.StrLen, err)
+	//  fmt.Printf("GetChar after ReadRune: Char=%c, state=%s, CURPOSN=%d, prevposn=%d, StrLen=%d, err=%v\n", c.Ch, fsaName(c.State), bufState.CURPOSN, bufState.PREVPOSN, bufState.StrLen, err)
 	if err != nil || bufState.CURPOSN > bufState.StrLen {
 		return c, true
 	}
@@ -304,13 +305,13 @@ func (bufState *BufferState) UnGetChar() {
 	if bufState.CURPOSN < 0 {
 		log.Print("Error in UnGetChar: Less-than-Zero; CURPOSN=", bufState.CURPOSN, ", PrevPosn=", bufState.PREVPOSN)
 	}
-	//n, err := bufState.strReader.Seek(int64(bufState.CURPOSN), io.SeekStart) // this works in all cases.
 	n, err := bufState.strReader.Seek(-1, io.SeekCurrent) // EOL isn't true when it's supposed to be and the last token on the line is an OP.
 	if err != nil {
 		log.SetFlags(log.Llongfile)
 		log.Printf("Error in UnGetChar Seek:  CURPOSN=%d, PrevPosn=%d, SeekPosn=%d; %v\n", bufState.CURPOSN, bufState.PREVPOSN, n, err)
 		fmt.Println()
 	}
+	//     fmt.Printf("UnGetChar:n=%d CURPOSN=%d, prevposn=%d, StrLen=%d, err=%v\n", n, bufState.CURPOSN, bufState.PREVPOSN, bufState.StrLen, err)
 } // UnGetChar
 
 //func (bufState *BufferState) UnGetChar() {
@@ -547,7 +548,7 @@ ExitForLoop:
 		case OP: // token.state
 			switch CHAR.State {
 			case DELIM:
-				//bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
+				bufState.UnGetChar() // To allow correct processing of op pair that is not a valid op, like +- or =>  6/17/26: i.e., do double unget in this one case.
 				//                     This UnGetChar() is why an OP at the end of a line does not allow EOL to be set correctly.  Commenting this line out fixes this pblm, but
 				//                     then I can't undo the last token on the line if it's an OP.  I'm going to stop fiddling w/ this now that I've solved it.  I won't be using
 				//						this code for anything anyway.
