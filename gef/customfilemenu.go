@@ -180,3 +180,83 @@ openBtn := widget.NewButton("Open…", func() {
 	})
 })
 */
+
+/*
+
+This code defines a custom Fyne file-open dialog that filters what the user sees before they pick a file.
+
+What it does, in order:
+
+1. Defines `fileEntry`
+   - A small struct for one row in the list.
+   - It stores:
+     - `name`: display name
+     - `uri`: the file or directory URI
+     - `isDir`: whether the entry is a directory
+
+2. Defines `NewOpenFileDialogWithPrefix(...)`
+   - Inputs:
+     - `parent`: the window to attach the dialog to
+     - `prefix`: only show files whose base name starts with this text
+     - `exts`: optional allowed extensions like `[]string{".png", ".jpg"}`
+     - `onOpen`: callback fired when a file is chosen
+
+3. Builds two filters
+   - `startsWith(base string)`:
+     - If `prefix` is empty, everything passes.
+     - Otherwise it strips the file extension and checks whether the remaining name starts with `prefix`, case-insensitively.
+   - `extAllowed(base string)`:
+     - If `exts` is empty, everything passes.
+     - Otherwise it keeps only files whose extension matches one of the allowed extensions, case-insensitively.
+
+4. Creates the UI
+   - `pathLabel` shows the current directory path.
+   - `list` is a `widget.List` that displays the current directory contents.
+   - Directory names are shown in brackets like `[src]`.
+   - Files are shown as plain names.
+
+5. Sets the starting directory
+   - It calls `os.Getwd()` and turns that into a file URI.
+   - That becomes the current folder the dialog opens in.
+
+6. Implements `refreshList()`
+   - Reads the current directory using `storage.ListerForURI(curURI)`.
+   - Gets all children with `lister.List()`.
+   - Splits them into:
+     - `dirs`: all directories
+     - `files`: only files that match the prefix and extension filters
+   - Combines them as `dirs` first, then `files`.
+   - Refreshes the list widget and updates the path label.
+
+7. Creates buttons and selection behavior
+   - `Open`:
+     - Only enabled when a file is selected.
+     - Calls `onOpen(selected.uri)`.
+   - `Up`:
+     - Moves to the parent directory.
+     - Clears selection and refreshes the list.
+   - List selection:
+     - If the user clicks a directory, the dialog navigates into it immediately.
+     - If the user clicks a file, it becomes the selected item and enables `Open`.
+
+8. Builds and shows the dialog
+   - Uses `dialog.NewCustomConfirm(...)` to make a custom modal dialog.
+   - The `Open` confirmation also triggers `onOpen` if a file is selected.
+   - Resizes the dialog and shows it.
+   - Calls `refreshList()` once before display so it has initial content.
+
+A few important details:
+
+- Directories are always shown, even if they do not match the prefix or extension filter.
+- The filters apply only to files.
+- Selection of a directory is treated as navigation, not as a final choice.
+- The file list is rebuilt every time you change folders.
+
+Two caveats in the snippet:
+
+- `dialog.ShowError(err, w)` uses `w`, but this function takes `parent`. That looks like a leftover bug unless `w` exists in an outer scope.
+- `width` and `height` are also not defined in this snippet, so they must come from elsewhere or this code will not compile.
+
+In plain terms: this is a custom “open file” dialog with folder navigation, a prefix filter, and optional extension filtering, built on top of Fyne’s storage and widget APIs.
+
+*/
