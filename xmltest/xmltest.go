@@ -4,10 +4,10 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
-	"getcommandline"
 	"io"
 	"os"
 	"path/filepath"
+	"src/getcommandline"
 	"strings"
 )
 
