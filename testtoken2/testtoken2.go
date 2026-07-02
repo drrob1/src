@@ -6,15 +6,15 @@ package main
   19 Aug 16 -- First Go version completed to test all parts of tokenize.go package
   21 Sep 16 -- Now need to test my new GetTknStrPreserveCase routine.  And test the change I made to GETCHR.
    7 Oct 16 -- Changed the scanner to scan by words.  I hope.  This is to test the scanner for rpng.  Default is scan by lines.
+   1 Jul 26 -- Changed import to getcommandline to src/getcommandline.
 */
 
 import (
-	"fmt"
-	//        "tokenize"
 	"bufio"
-	"getcommandline"
+	"fmt"
 	"log"
 	"os"
+	"src/getcommandline"
 	"strings"
 )
 
