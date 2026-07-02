@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/ricochet2200/go-disk-usage/du"
 	"os"
 	"runtime"
 	"strings"
 	"unicode"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/ricochet2200/go-disk-usage/du"
 )
 
 const LastAltered = "5 July 2021"
@@ -16,10 +17,9 @@ const LastAltered = "5 July 2021"
 /*
 REVISION HISTORY
 ======== =======
- 5 July 2021 -- First version called diskspace.go, sort of based on diskusage.go.  But then I realized its similarity to dirmap and multimap
-                  so I stopped development.
+ 5 July 2021 -- First version called diskspace.go, sort of based on diskusage.go.  But then I realized its similarity to dirmap and multimap, so I stopped development.
 
- */
+*/
 
 //var KB = uint64(1024)
 
@@ -36,7 +36,7 @@ type FileInfo interface {
     IsDir() bool        // abbreviation for Mode().IsDir()
     Sys() interface{}   // underlying data source (can return nil)
 }
- */
+*/
 
 func main() {
 	if len(os.Args) < 2 {
@@ -86,6 +86,7 @@ func main() {
 	fmt.Println()
 	fmt.Println()
 }
+
 // ----------------------------- getMagnitudeString -------------------------------
 func getMagnitudeString(j int64) (string, ct.Color) {
 

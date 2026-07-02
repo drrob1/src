@@ -1,22 +1,20 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"runtime"
-	//"strings"
 	"encoding/xml"
+	"fmt"
 	"io"
+	"os"
 	"path"
-	//"path/filepath"
-	"getcommandline"
+	"runtime"
+	"src/getcommandline"
 )
 
 /*
   REVISION HISTORY
   ----------------
-  22 Sep 16 -- I started coding this.  This may take a while.  Added code from Donovan &
-Kerninghan book.
+  22 Sep 16 -- I started coding this.  This may take a while.  Added code from Donovan & Kernighan book.
+   1 Jul 26 -- Now module compliant import list.
 */
 
 func main() {
