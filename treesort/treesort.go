@@ -6,18 +6,19 @@ package main
   17 Jul 17 -- Copied the modula-2 code here and will start to do this in Go.  I may not have looked at this since the 90's.
   20 May 20 -- Only converting to Go treesort, as the others I've already converted in the file now called mysorts.go.
                  Doesn't work.  I'm not debugging this.
+   1 Jul 26 -- Changed import to getcommandline to src/getcommandline.
 */
 
 import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"getcommandline"
 	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
 	"sort"
+	"src/getcommandline"
 	"strconv"
 	"strings"
 	"time"
@@ -238,35 +239,35 @@ func TreeSort(input []string) []string {
 	*/
 
 	/*
-	     This sorting algorithm was written to use as few comparisons as possible, to have as few steps btwn each comparison as possible, to take advantage of natural sequencing, to preserve the order of
-	   equals (or even the reverse order of equals), ie, to be stable, to use as little memory as possible (one working array), and to be a modular, easily understood program written in BASIC.
+	   This sorting algorithm was written to use as few comparisons as possible, to have as few steps btwn each comparison as possible, to take advantage of natural sequencing, to preserve the order of
+	   equals (or even the reverse order of equals), i.e., to be stable, to use as little memory as possible (one working array), and to be a modular, easily understood program written in BASIC.
 	   Unfortunately, the horrendous variable names in this program are from this original BASIC listing of the program.
 
-	     The theory behind the algorithm may be described in a language of forests, trees, branches, twigs and leaves.  There is a forest filled with trees of different sizes.  Each tree is very orderly.
+	   The theory behind the algorithm may be described in a language of forests, trees, branches, twigs and leaves.  There is a forest filled with trees of different sizes.  Each tree is very orderly.
 	   The trunk of a tree splits into two branches of nearly the same size.  If one branch is larger than the other, it is always the right-hand branch.  Similarly, each branch divides into two more
 	   branches until the branches become twigs from which leaves grow.  The leaves are the individual elements to be sorted.
 
-	     This program creates a butterfly merge to combine leaves into twigs, twigs into branches, and branches into one final linked list starting at position ELEMCNT+1.  In the end, LINKS(ELEMCNT+1) points
+	   This program creates a butterfly merge to combine leaves into twigs, twigs into branches, and branches into one final linked list starting at position ELEMCNT+1.  In the end, LINKS(ELEMCNT+1) points
 	   to the first leaf, LINKS(LINKS(ELEMCNT+1)) points to the second, LINKS(LINKS(LINKS(ELEMCNT+1))) points to the third, and the last link points to itself.
 
-	     Two things happen as the pgm jumps from twig to twig.  The leaves ahead of the current record pointer get merged into a twig and the twigs and branches behind this pointer get merged into larger
+	   Two things happen as the pgm jumps from twig to twig.  The leaves ahead of the current record pointer get merged into a twig and the twigs and branches behind this pointer get merged into larger
 	   branches.  The butterfly merge treats each merge the same way.  The heads of each twig sequence are kept at positions ELEMCNT+1, ELEMCNT+2, ..., ELEMCNT+log2(ELEMCNT)+2 after the links themselves,
 	   which are kept in positions 1,2,3,...,ELEMCNT of array links.
 
-	     The merge takes the last 2 sequences created in the list and combines them into one.  One wing of the merge follows sequence 1 and the other follows sequence 2.  The two are interwoven until the
+	   The merge takes the last 2 sequences created in the list and combines them into one.  One wing of the merge follows sequence 1 and the other follows sequence 2.  The two are interwoven until the
 	   final link points to itself.  Because the heads of each sequence are kept in the same array with the links themselves, the merge is extraordinarily fast.  After each merge, the stack of twig sequence
 	   heads has been reduced by one.
 
-	     Each time the current record pointer reaches a new twig, it generates new sequences one item long to correspond to the leaves of that twig.  A two leaf twig is produced by creating two one item
-	   sequences, each pointing to itself.  Then these two leaves are merged once.  A three leaf twig is created from three one item sequences merged twice.  A four leaf twig is merged from two two leaf
-	   twigs: the first two leaf twig is created and merged once; then the number of remaining merge passes is set to a negative number so that the merge will be disabled until the second two leaf twig is
+	   Each time the current record pointer reaches a new twig, it generates new sequences one item long to correspond to the leaves of that twig.  A two-leaf twig is produced by creating two one item
+	   sequences, each pointing to itself.  Then these two leaves are merged once.  A three-leaf twig is created from three one item sequences merged twice.  A four-leaf twig is merged from two two-leaf
+	   twigs: the first two-leaf twig is created and merged once; then the number of remaining merge passes is set to a negative number so that the merge will be disabled until the second two-leaf twig is
 	   created and merged with the first.
 
-	     After each complete twig has been generated, merging continues until the branches behind the current record pointer have been linked together.  Then it jumps to the next twig, generates new leaves
+	   After each complete twig has been generated, merging continues until the branches behind the current record pointer have been linked together.  Then it jumps to the next twig, generates new leaves
 	   and lets the butterfly merge fly again.
 
-	     A state machine was the simplest way to implement all the branching of the FORTRAN code.  An arbitrary numbering from 1 to 6 is used in which the variable STATE represents this state machine's
-	   indicator.  A second minor state machine had to be introduced as well, which uses the variable MODE as its indicator.  The commented out numbers are the statement labels from my FORTRAN source code
+	   A state machine was the simplest way to implement all the branching of the Fortran code.  An arbitrary numbering from 1 to 6 is used in which the variable STATE represents this state machine's
+	   indicator.  A second minor state machine had to be introduced as well, which uses the variable MODE as its indicator.  The commented out numbers are the statement labels from my Fortran source code
 	   listing.
 
 	*/
@@ -297,7 +298,7 @@ func TreeSort(input []string) []string {
 		T4 += AK2 * (B2 - SQNC1)
 	} // END WHILE from M-2 code
 
-	T4 = AK2 - T4 // T4 is the # of low order twigs
+	T4 = AK2 - T4 // T4 is the # of low-order twigs
 	B2 = AK2 / 2
 	STATE = 1
 
