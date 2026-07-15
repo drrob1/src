@@ -38,7 +38,7 @@ Just to see if I can.
 
 REVISION HISTORY
 -------- -------
- 9 Aug 21 -- I realized that this will not be enhanced, as I went thru more of the book.  I'll have to enhance it myself.
+ 9 Aug 21 -- I realized that this will not be enhanced, as I went through more of the book.  I'll have to enhance it myself.
              First, I'm changing the function constants to the version that's more readable to me.  That's working, but I had to
              import more parts of fyne.io than the unmodified version.
 12 Aug 21 -- Now called img.go, so I can display 1 image.  I'll start here.
@@ -54,7 +54,7 @@ REVISION HISTORY
 27 Sep 21 -- Added stickyFlag, sticky and 'z' zoom toggle.  When sticky is true, zoom factor is not cleared automatically.
 30 Sep 21 -- Added keyAsterisk, and removed the unneeded scaling code (according to Andy Williams).
  2 Dec 21 -- After listening to Bill Kennedy's Go talks, I made the image channel buffered.
- 3 Dec 21 -- Some clean up that I learned from Bill Kennedy.
+ 3 Dec 21 -- Some cleanup that I learned from Bill Kennedy.
  4 Dec 21 -- Adding a go routine to process the keystrokes.  And adding "v" to turn on verbose mode.
 26 Dec 21 -- Adding display of the image minsize.  I didn't know it existed until today.
 16 Mar 22 -- Only writing using fmt.Print calls if verbose or flags are set.
@@ -99,13 +99,14 @@ const (
 	lastImgCmd
 )
 
-const maxWidth = 1800 // actual resolution is 1920 x 1080   \ unused
-const maxHeight = 900 // actual resolution is 1920 x 1080   /
+const maxWidth = 1800 // actual resolution is 1920 x 1080 \ unused
+const maxHeight = 900 // actual resolution is 1920 x 1080 /
 
 const dateFormatStr = "1/2/06"
 
 var index int
-var loadedimg *canvas.Image
+
+// var loadedimg *canvas.Image  not used
 var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
@@ -118,7 +119,7 @@ var sticky bool
 var scaleFactor float64 = 1
 var shiftState bool
 var keyCmdChan chan int
-var rotatedTimes int64 // used in keyTyped.  And atomicadd so need this type.
+var rotatedTimes int64 // used in keyTyped.  And atomic add so need this type.
 var imageAsDisplayed image.Image
 
 //go:embed pictureIcon-64x64.png
@@ -160,7 +161,7 @@ func main() {
 		}
 		ExecFI, _ := os.Stat(executable)
 		ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-		stringSlice = make([]string, 0, 20) // need to clear it each time thru help, else it gets appended to and duplicated, triplicated, etc.
+		stringSlice = make([]string, 0, 20) // need to clear it each time through help, else it gets appended to and duplicated, triplicated, etc.
 		s := fmt.Sprintf(" %s last altered %s, compiled with %s,\n and timestamped %s.\n\n",
 			os.Args[0], LastModified, runtime.Version(), ExecTimeStamp)
 		stringSlice = append(stringSlice, s)
@@ -207,8 +208,8 @@ func main() {
 	flag.Parse()
 	sticky = *zoomFlag || *stickyFlag
 
-	// Set up the slice of imgFileInfo, which is []os.FileInfo, sorted w/ newest first.  This slice is set up as a go routine and the result is passed back here in a channel.
-	// And define the 3 channels to be used here.  One is a keystroke channel, another is the imgFileInfo channel, and the 3rd is a image # channel.
+	// Set up the slice of imgFileInfo, which is []os.FileInfo, sorted w/ newest first.  This slice is set up as a go routine, and the result is passed back here in a channel.
+	// And define the 3 channels to be used here.  One is a keystroke channel, another is the imgFileInfo channel, and the 3rd is an image # channel.
 
 	str := fmt.Sprintf("Image Viewer last modified %s, compiled using %s", LastModified, runtime.Version())
 	if *verboseFlag {
@@ -298,7 +299,7 @@ func main() {
 func processKeys() {
 	for {
 		keyCmd := <-keyCmdChan
-		//                             fmt.Println("in processKeys go routine.  keycmd =", keyCmd)
+		//                             fmt.Println("in processKeys go routine.  key cmd =", keyCmd)
 		switch keyCmd {
 		case firstImgCmd:
 			firstImage()
@@ -348,7 +349,7 @@ func loadTheImage(idx int) {
 	}
 
 	// normalize the image to screen size
-	// This code does work for this one big image, but then it leaves the sccale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
+	// This code does work for this one big image, but then it leaves the scale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
 	// It works as long as I turn off the sticky factor.
 
 	if scaleFactor == 1 {
@@ -356,8 +357,8 @@ func loadTheImage(idx int) {
 		widthScale = float64(maxWidth) / float64(imgWidth)    // maxWidth is 1800 at the moment
 		heightScale = float64(maxHeight) / float64(imgHeight) // maxHeight is 900 at the moment
 		if *verboseFlag {
-			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, maxwidth = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
-			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvasheight = %.2f, canvaswidth = %.2f, title = %s\n",
+			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, max width = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
+			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvas height = %.2f, canvas width = %.2f, title = %s\n",
 				imgHeight, imgWidth, globalW.Canvas().Size().Height, globalW.Canvas().Size().Width, title)
 		}
 		minFac := math.Min(heightScale, widthScale)
@@ -387,7 +388,7 @@ func loadTheImage(idx int) {
 		bounds = img.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Println(" Scale factor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
 		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
 		fmt.Println()
 	}
@@ -464,7 +465,7 @@ func MyReadDirForImages(dir string, imageInfoChan chan []os.FileInfo) {
 
 	if *reverseFlag {
 		sortfcn = func(i, j int) bool {
-			return fi[i].ModTime().Before(fi[j].ModTime()) // I want a oldest-first sort.  Added 9/7/23.
+			return fi[i].ModTime().Before(fi[j].ModTime()) // I want an oldest-first sort.  Added 9/7/23.
 		}
 	}
 
@@ -611,7 +612,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 		}
 		//                              nextImage()
 		keyCmdChan <- nextImgCmd
-	case fyne.KeyBackspace: // preserve always resetting zoomfactor here.  Hope I remember I'm doing this.
+	case fyne.KeyBackspace: // preserve always resetting zoom factor here.  Hope I remember I'm doing this.
 		scaleFactor = 1
 		//                              prevImage()
 		keyCmdChan <- prevImgCmd
@@ -681,7 +682,7 @@ func keyTyped(e *fyne.KeyEvent) { // index and shiftState are global var's
 	}
 } // end keyTyped
 
-// rotateTheImage -- loads the image given by the index, and then rotates it before displaying it.
+// rotateTheImage -- loads the image given by the index and then rotates it before displaying it.
 func rotateAndLoadTheImage(idx int, repeat int64) {
 	imgName := imageInfo[idx].Name()
 	fullFilename, err := filepath.Abs(imgName)
@@ -732,7 +733,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	}
 
 	// normalize the image to screen size
-	// This code does work for this one big image, but then it leaves the sccale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
+	// This code does work for this one big image, but then it leaves the scale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
 	// It works as long as I turn off the sticky factor.
 
 	if scaleFactor == 1 {
@@ -740,8 +741,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		widthScale = float64(maxWidth) / float64(imgWidth)    // maxWidth is 1800 at the moment
 		heightScale = float64(maxHeight) / float64(imgHeight) // maxHeight is 900 at the moment
 		if *verboseFlag {
-			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, maxwidth = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
-			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvasheight = %.2f, canvaswidth = %.2f, title = %s\n",
+			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, max width = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
+			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvas height = %.2f, canvas width = %.2f, title = %s\n",
 				imgHeight, imgWidth, globalW.Canvas().Size().Height, globalW.Canvas().Size().Width, title)
 		}
 		minFac := min(heightScale, widthScale)
@@ -770,7 +771,7 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 		bounds = imgImg.Bounds()
 		imgHeight = bounds.Max.Y
 		imgWidth = bounds.Max.X
-		fmt.Println(" Scalefactor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
+		fmt.Println(" Scale factor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
 		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
 		fmt.Printf("title: %s\n", title)
 		fmt.Println()
