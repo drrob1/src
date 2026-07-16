@@ -23,9 +23,13 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
+/*
+15 July 26 -- Created by Codex.
+*/
+
 const (
-	targetWidth  = 1920
-	targetHeight = 1080
+	targetWidth  = 1800
+	targetHeight = 900
 )
 
 var imageExts = map[string]bool{
