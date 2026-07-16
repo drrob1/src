@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"image"
@@ -10,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -17,9 +19,12 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
+	"github.com/godoes/printers"
 	_ "golang.org/x/image/webp"
 )
 
@@ -95,6 +100,7 @@ func main() {
 		fyne.NewMenu("HELP",
 			fyne.NewMenuItem("HELP", showHelp),
 			fyne.NewMenuItem("ABOUT", showAbout),
+			fyne.NewMenuItem("PRINT", showPrintDialog),
 			fyne.NewMenuItem("QUIT", func() { globalWindow.Close() }),
 		),
 	))
@@ -261,6 +267,45 @@ func showAbout() {
 	dialog.ShowInformation("ABOUT", text, globalWindow)
 }
 
+func showPrintDialog() {
+	if runtime.GOOS != "windows" {
+		dialog.ShowInformation("PRINT", "Printing is only supported on Windows.", globalWindow)
+		return
+	}
+
+	names, err := printers.ReadNames()
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("read printers: %w", err), globalWindow)
+		return
+	}
+	if len(names) == 0 {
+		dialog.ShowInformation("PRINT", "No installed printers were found.", globalWindow)
+		return
+	}
+
+	selectWidget := widget.NewSelect(names, nil)
+	selectWidget.PlaceHolder = "Choose a printer"
+	if defaultPrinter, err := printers.GetDefault(); err == nil {
+		selectWidget.SetSelected(defaultPrinter)
+	}
+	if selectWidget.Selected == "" {
+		selectWidget.SetSelected(names[0])
+	}
+
+	dialog.NewCustomConfirm("PRINT", "PRINT", "CANCEL",
+		container.NewVBox(widget.NewLabel("Choose an installed printer:"), selectWidget),
+		func(ok bool) {
+			if !ok {
+				return
+			}
+			if err := printCurrent(selectWidget.Selected); err != nil {
+				dialog.ShowError(err, globalWindow)
+			}
+		},
+		globalWindow,
+	).Show()
+}
+
 func keyTyped(e *fyne.KeyEvent) {
 	if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
 		shiftState = true
@@ -374,6 +419,43 @@ func saveCurrent() error {
 	default:
 		return fmt.Errorf("unsupported format for save: %s", ext)
 	}
+}
+
+func printCurrent(printerName string) error {
+	if currentImage == nil {
+		return fmt.Errorf("no image loaded")
+	}
+	if printerName == "" {
+		return fmt.Errorf("no printer selected")
+	}
+
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, currentImage, &jpeg.Options{Quality: 95}); err != nil {
+		return err
+	}
+
+	p, err := printers.Open(printerName)
+	if err != nil {
+		return err
+	}
+	defer p.Close()
+
+	if err := p.StartDocument("Image Print", "RAW"); err != nil {
+		return err
+	}
+	if err := p.StartPage(); err != nil {
+		return err
+	}
+	if _, err := p.Write(buf.Bytes()); err != nil {
+		return err
+	}
+	if err := p.EndPage(); err != nil {
+		return err
+	}
+	if err := p.EndDocument(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func approxEqual(a, b float64) bool {
