@@ -145,9 +145,10 @@ import (
 				I have to use the rowoffset.
   24 May 26 -- Added more strings to the equalMeStrings array to exclude more strings that are not doctor names.  Backported from newlint.go.
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
+  18 Jul 26 -- Another format change for the schedule I have to account for.
 */
 
-const LastModified = "4 June 2026"
+const LastModified = "18 July 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -869,7 +870,9 @@ func pause() bool {
 
 func excludeMe(s string) bool {
 	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
-		"film", "needed", "neuro", "moonlight", "moonlighter"}
+		"film", "needed", "neuro", "moonlight", "moonlighter", "monday", "tuesday", "wednesday", "thursday", "friday", "january", "february", "march", "april", "may", "june", "july",
+		"august", "september", "october", "november", "december", "body",
+	}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
 			return true
