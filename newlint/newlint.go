@@ -424,23 +424,6 @@ func FindAndReadConfIni() (string, error) {
 	return startDirectory, nil
 }
 
-//func ReadEntireDay(wb *xlsx.File, col int) (DayType, error) { // reads a column of the schedule.
-//	var day DayType
-//	sheets := wb.Sheets
-//
-//	for i := DateLine + rowOffset; i < TotalAmt+rowOffset; i++ {
-//		cell, err := sheets[0].Cell(i, col) // always sheet[0]
-//		if err != nil {
-//			return DayType{}, err
-//		}
-//
-//		s := cell.String()
-//		s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces
-//		day[i] = s
-//	}
-//	return day, nil
-//}
-
 // WhosOnVacationToday takes as input the populated workWeek, and a string slice is generated for that day.
 func WhosOnVacationToday(week WorkWeekType, dayCol int) []string { // week is an array, not a slice.  It doesn't need a slice.
 	if VerboseFlag {
@@ -632,24 +615,7 @@ func GetScheduleFilenames() ([]string, error) { // this will search Documents an
 	return filenamesStrings, nil
 }
 
-// Neuro row should be either row 3 or row 4, depending on whether the date row is separate or part of ASSIGNMENTS.  So the dateLine will be either 2 or 3.
-// I really need the dateLine, but it's much easier to find the neuro row.  I have to deal w/ this offset in the calling routine.
-
-//func GetNeuroRowOffset(wb *xlsx.File) (int, error) { not needed
-//	for i := 0; i < wb.Sheets[0].MaxRow; i++ {
-//		cell, err := wb.Sheets[0].Cell(i, 0)
-//		if err != nil {
-//			return 0, err
-//		}
-//		lower := strings.ToLower(cell.String())
-//		if lower == "neuro" {
-//			return i, nil
-//		}
-//	}
-//
-//	return 0, fmt.Errorf("neuro row not found")
-//}
-//
+// Neuro row should be either row 3 or row 4, depending on whether the date row is separate or part of ASSIGNMENTS.
 
 // ScanXLSfile -- takes a filename and checks for 3 errors; vacation people assigned to work, fluoro also late person, and fluoro also remote person.
 //
@@ -936,7 +902,7 @@ func pause() bool {
 
 func excludeMe(s string) bool {
 	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
-		"film", "needed", "neuro", "moonlight", "moonlighter"}
+		"film", "needed", "neuro", "moonlight", "moonlighter", "body"}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
 			return true
