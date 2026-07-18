@@ -152,9 +152,10 @@ import (
   21 May 26 -- Added more words to be excluded from doc names.
   23 May 26 -- Added moonlight and moonlighter to the list of words to exclude from doc names.
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
+  18 Jul 26 -- Another format change for me to address.
 */
 
-const LastModified = "4 June 2026"
+const LastModified = "18 July 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -184,7 +185,7 @@ const (
 	TotalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
-var rowNames = []string{"neuro", "body", "stats", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
+var rowNames = []string{"neuro", "body", "stats", "ir - interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
 	"density", "late", "on-call", "on-call", "office"} // used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office"
 
 const (
@@ -277,27 +278,28 @@ func ReadInXLSfile(fn string) (WorkWeekType, error) {
 	// Experimenting with reading an entire row at a time.
 	// Nope, that doesn't work because then it's left as a *Cell.  I need them to all be strings, so I'll convert to strings now.
 	var workWeek WorkWeekType
-	for i := Neuro; i < TotalAmt; i++ {
+	for i := range TotalAmt { // syntax changed to range over int instead of original form of this line.
 		row, er := sheet.Row(i)
 		if er != nil {
 			return WorkWeekType{}, er // return an empty work week.
 		}
 		sectionNameStr := strings.ToLower(row.GetCell(0).String())
+		sectionNameStr = strings.ReplaceAll(sectionNameStr, "\n", " ")
 		if sectionNameStr == "" { // skip entries w/ nothing in the 1st column, the assignment column on the schedule.
 			continue
 		}
 		if VerboseFlag {
-			str := fmt.Sprintf("Row %d: %s\n", i, sectionNameStr)
+			str := fmt.Sprintf("In ReadInXLSfile Row %d: %s\n", i, sectionNameStr)
 			debugFileBuf.WriteString(str)
 		}
 		for j, sectName := range rowNames {
 			if strings.Contains(sectionNameStr, sectName) {
 				workWeek[i][0] = sectName // save the item whether it matches or not.  E.g.: ASSIGNMENTS
-				SectionMap[sectName] = i  // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
-				STV[j] = i
 				if VerboseFlag {
 					debugFileBuf.WriteString(fmt.Sprintf("  SectionMap[%s] = %d, len(sectionMap)=%d, STV[%d] = %d\n", sectName, i, len(SectionMap), j, i))
 				}
+				SectionMap[sectName] = i // this is supposed to match a section name w/ the row in the xlsx file that shows that section.  This includes the rowOffset.
+				STV[j] = i
 			}
 		}
 
@@ -693,7 +695,7 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 
 		for _, name := range mdsOffToday {
 			//for i := STV[Neuro]; i < STV[MDOff]; i++ // Only use STV in the body, not in the loop condition.  That would be using STV twice which is not what's intended.
-			for i := Neuro; i < MDOff; i++ { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.
+			for i := range MDOff { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.  Now a range over ints.
 				if VerboseFlag {
 					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: checking i= %d, dayCol %d, MDOff %s, ", i, dayCol, name))
 					debugFileBuf.WriteString(fmt.Sprintf(" STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol]))
