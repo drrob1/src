@@ -660,7 +660,6 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 		// mdsOffToday is a slice of several Names of whom is off today.
 
 		for _, name := range mdsOffToday {
-			//for i := STV[Neuro]; i < STV[MDOff]; i++ // Only use STV in the body, not in the loop condition.  That would be using STV twice which is not what's intended.
 			for i := range MDOff { // since mdoff is the last one, can test for < mdOff.  Don't test against MD off as we already know whose off that day.  Now a range over ints.
 				if VerboseFlag {
 					debugFileBuf.WriteString(fmt.Sprintf(" In ScanXLSfile: checking i= %d, dayCol %d, MDOff %s, ", i, dayCol, name))
@@ -669,7 +668,6 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 					fmt.Printf(" STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
 				}
 				if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name) {
-					//msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i-rowOffset])  old code
 					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i])
 					messages = append(messages, msg)
 					if VerboseFlag {
