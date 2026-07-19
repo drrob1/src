@@ -145,10 +145,11 @@ import (
 				I have to use the rowoffset.
   24 May 26 -- Added more strings to the equalMeStrings array to exclude more strings that are not doctor names.  Backported from newlint.go.
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
-  18 Jul 26 -- Another format change for the schedule I have to account for.
+  18 Jul 26 -- Another format change for the schedule I have to account for.  I had to fix the categoryNamesListForDisplay, and the rowNames to distinguish between the ON-Call Interventional
+				and the ON-Call Radiologist.
 */
 
-const LastModified = "18 July 2026"
+const LastModified = "19 July 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -176,8 +177,9 @@ const (
 	totalAmt // total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
-var rowNames = []string{"neuro", "body", "er", "interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "on-call", "out"} // used by CheckRowNames.  First on-call is for IR, 2nd is for diagnostic.
+// rowNames -- used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office", and now they're unique.
+var rowNames = []string{"neuro", "body", "stats", "ir - interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
+	"density", "late", "on-call interventional", "on-call radiologist", "office"}
 
 const (
 	monday = iota + 1
@@ -219,7 +221,7 @@ var Names []string
 
 // CategoryNamesList now has to be indexed using the rowOffset.
 var CategoryNamesList = []string{"date", "Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
+	"MSK (CT/MR)", "Mammo", "Bone Density", "late MD", "On-Call Interventional", "On-Call Radiologist", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
 	"On-Call IR", "On-Call MD"} // 0 and 1 are unused
 
 var DayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
