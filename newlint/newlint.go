@@ -152,10 +152,10 @@ import (
   21 May 26 -- Added more words to be excluded from doc names.
   23 May 26 -- Added moonlight and moonlighter to the list of words to exclude from doc names.
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
-  18 Jul 26 -- Another format change for me to address.
+  18 Jul 26 -- Another format change for me to address.  I had to fix the categoryNamesListForDisplay, and the rowNames to distinguish between the ON-Call Interventional and the ON-Call Radiologist.
 */
 
-const LastModified = "18 July 2026"
+const LastModified = "19 July 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -185,8 +185,9 @@ const (
 	TotalAmt // Total being considered.  There are rows below this, labeled for weekend neuro, body, On-call IR and On-Call diagnostic.
 )
 
+// rowNames -- used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office"
 var rowNames = []string{"neuro", "body", "stats", "ir - interventional", "nuclear", "ultrasound", "pediatrics", "fluoro jh", "fluoro fh", "msk", "mammo",
-	"density", "late", "on-call", "on-call", "office"} // used to make the SectionMap.  stats = "ER and stats", msk= "MSK (CT/MR) and X-ray In/Outpatient and off-sites", office = "MDs Out Of Office"
+	"density", "late", "on-call interventional", "on-call radiologist", "office"}
 
 const (
 	monday = iota + 1
@@ -200,8 +201,6 @@ const (
 
 var DayNamesString = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 var rowOffset int
-
-//var DayNames = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 
 type DayType [23]string // There are a few unused entries here.  This goes from 0..22.  Indices 0..2 are not used.
 
@@ -233,8 +232,8 @@ type VacStructType struct {
 var Names []string // all doc names on the schedule are in this slice.
 
 // CategoryNamesListForDisplay is how a section name is displayed to the user.
-var CategoryNamesListForDisplay = []string{"Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH",
-	"MSK (CT/MR)", "Mammo", "Bone Density", "On-Call Radiologist", "late MD", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
+var CategoryNamesListForDisplay = []string{"Neuro", "Body", "ER/Xrays", "IR", "Nuclear Medicine", "US", "Peds", "Fluoro JH", "Fluoro FH", "MSK (CT/MR)", "Mammo",
+	"Bone Density", "late MD", "On-Call Interventional", "On-Call Radiologist", "MD out of office", "weekend Coverage", "weekend Neuro", "weekend body",
 	"On-Call IR", "On-Call MD"}
 
 // var DayOff = make(map[string]bool)    // only used in FindAndReadConfIni when verboseFlag is set.  Not anymore.
@@ -668,7 +667,8 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 					fmt.Printf(" STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
 				}
 				if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name) {
-					msg := fmt.Sprintf(" %s is off on %s, but is on %s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i])
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s, STV[%d]=%d, row name=%s", strcase.UpperCamelCase(name),
+						DayNamesString[dayCol], CategoryNamesListForDisplay[i], i, STV[i], workWeek[STV[i]][0])
 					messages = append(messages, msg)
 					if VerboseFlag {
 						ctfmt.Printf(ct.Yellow, true, " Matched: %s\n", msg)
@@ -846,7 +846,7 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if they match the timestamp constraint.
 		// I may need a go routine to collect all these slices into 1 slice to be sorted.  And I don't have a full filename in this slice.  I still have to
 		// construct that.
-		// Maybe I need a struct that has full filename and the timestamp, ie, fileInfo.ModTime(), which is of type time.Time.  I did this, and I call it fileDataType.
+		// Maybe I need a struct that has full filename and the timestamp, i.e., fileInfo.ModTime(), which is of type time.Time.  I did this, and I call it fileDataType.
 		// Then I made FileDataSliceType I call FDSliceType.  Then I made a masterFDSlice and a FDSlice channel so the walk function sends a slice of filedata to the
 		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
 		// and another to signal when all of these local slices have been appended to the master filedata slice.
@@ -935,11 +935,6 @@ func GetDocNames(workWeek WorkWeekType) ([]string, error) {
 	//for row := Neuro + rowOffset; row < TotalAmt+rowOffset; row++  old line
 	for row := STV[Neuro]; row < TotalAmt; row++ {
 		for col := 1; col < 6; col++ {
-			//cell, err := sheet.Cell(row, col) old lines of code
-			//if err != nil {
-			//	return nil, err
-			//}
-			//s := cell.String() old line of code
 			s := workWeek[row][col]
 			s = strings.ReplaceAll(s, ",", " ") // replace commas with spaces, else the comma creates a false spelling error.
 			s = strings.ReplaceAll(s, ".", " ") // replace periods with spaces, intended to catch dr.name, without a space which confuses this algorithm.
@@ -993,113 +988,4 @@ func ShowSpellingErrors(in []SoundexSlice) []string {
 	return out
 }
 
-//func ExtractOff(week WorkWeekType) (string, error) {
-//	s := week[friday][MDOff+rowOffset]
-//	return s, nil
-//}
-//
-//func ExtractYearFromSchedule(week WorkWeekType, day int) (string, error) {
-//	yearStr := week[day][DateLine+rowOffset] // should be Month Day, 4 digit Year
-//	if yearStr == "" {
-//		return "", errors.New("yearStr is empty")
-//	}
-//	field := strings.Fields(yearStr)
-//	if len(field) < 3 {
-//		return "", fmt.Errorf("len(fields) < 3, it is %d", len(field))
-//	}
-//	possible := field[2] // this is the 3rd field
-//	if possible > "2020" {
-//		return possible, nil
-//	}
-//	return field[3], nil // this is the 4th field
-//}
-//
-//func populateVacStruct(wholeWorkWeek WorkWeekType) (VacStructArrayType, error) {  Not used anymore.  Not even in lint.
-//	docsOffStringForEntireWeek, err := ExtractOff(wholeWorkWeek) // debugging step, only shows Friday
-//	if err != nil {
-//		return VacStructArrayType{}, err
-//	}
-//	docsOffStringForEntireWeek = strings.ReplaceAll(docsOffStringForEntireWeek, ",", "") // remove commas from off box text
-//	vacDocsTokensForEntireWeek := tknptr.TokenSlice(docsOffStringForEntireWeek)
-//	//ctfmt.Printf(ct.Yellow, true, "in populateVacStruct; length of tokens from off box extracted from Friday's box: %d \n tokens: \n", len(vacDocsTokensForEntireWeek))
-//	if VerboseFlag {
-//		for i, docToken := range vacDocsTokensForEntireWeek {
-//			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
-//		}
-//		fmt.Printf("\n\n")
-//	}
-//
-//	var vacStructArray VacStructArrayType
-//
-//	dayNum := 1 // start on Monday
-//	docNameStrSlice := make([]string, 0, numOfDocs)
-//	for i := 0; i < len(vacDocsTokensForEntireWeek); { // note that this for does not include an increment.  I'll handle the increment in the body of the for.
-//		var sb strings.Builder
-//		docToken := vacDocsTokensForEntireWeek[i]
-//		if docToken.State == tknptr.DGT { // month number is first.
-//			sb.WriteString(docToken.Str)
-//			//m, err := strconv.Atoi(docToken.Str)
-//			//if err != nil {
-//			//	return vacStructArrayType{}, err
-//			//}
-//			m := docToken.Isum
-//			i++
-//			docToken = vacDocsTokensForEntireWeek[i] // this is now the slash
-//			sb.WriteString(docToken.Str)
-//			i++
-//			docToken = vacDocsTokensForEntireWeek[i]
-//			sb.WriteString(docToken.Str) // this is now the day number
-//			//d, err := strconv.Atoi(docToken.Str)
-//			//if err != nil {
-//			//	return vacStructArrayType{}, err
-//			//}
-//			d := docToken.Isum
-//			i++ // this points to the colon to be ignored
-//			sb.WriteString("/")
-//			yearStr, er := ExtractYearFromSchedule(wholeWorkWeek, dayNum)
-//			if er != nil {
-//				return VacStructArrayType{}, er
-//			}
-//			sb.WriteString(yearStr) // now should have a complete date string in format m/d/yyyy
-//			vacStructArray[dayNum].Date = sb.String()
-//			year, err := strconv.Atoi(yearStr)
-//			if err != nil {
-//				return VacStructArrayType{}, err
-//			}
-//			juldate := timlibg.JULIAN(m, d, year)
-//			dayOfWeekNum := juldate % 7
-//			vacStructArray[dayNum].MF = dayOfWeekNum
-//			vacStructArray[dayNum].MFStr = DayNamesString[dayOfWeekNum]
-//			i++ // now points to the token after the colon
-//			docToken = vacDocsTokensForEntireWeek[i]
-//			//ctfmt.Printf(ct.Green, true, "debugging string tokens in date processing section: token[%d]: %s\n", i, docToken.Str)
-//		} else if docToken.State == tknptr.ALLELSE {
-//			lower := strings.ToLower(docToken.Str)
-//			docNameStrSlice = append(docNameStrSlice, lower)
-//			//ctfmt.Printf(ct.Green, true, "debugging string tokens in ALLELSE section: token[%d]: %s\n docNameStrSlice: %#v\n", i, docToken.Str, docNameStrSlice)
-//			i++
-//			if i >= len(vacDocsTokensForEntireWeek) { // if reached the end of the slice, then this is the last doc name.  And exit the for loop.
-//				vacStructArray[dayNum].DocsAreOff = docNameStrSlice
-//				break
-//			}
-//			if vacDocsTokensForEntireWeek[i].State != tknptr.ALLELSE { // if not end of slice, and next token is not a string for a doc name, then this is the last doc name for this day.
-//				vacStructArray[dayNum].DocsAreOff = docNameStrSlice
-//				dayNum++
-//				docNameStrSlice = make([]string, 0, numOfDocs) // clear it for the next day.
-//			}
-//		} else {
-//			ctfmt.Printf(ct.Red, true, "unexpected token : %s \n", docToken.String())
-//			i++
-//		}
-//	}
-//	if VerboseFlag {
-//		for i, docToken := range vacDocsTokensForEntireWeek {
-//			ctfmt.Printf(ct.Yellow, true, "token[%d]: %s\n", i, docToken.String())
-//		}
-//		fmt.Printf("\n\n")
-//	}
-//
-//	return vacStructArray, nil
-//}
-
-// main() is to be moved to a separate main.go, in prep for lintgui.
+// main() was moved to a separate main.go

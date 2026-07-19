@@ -86,7 +86,7 @@ import (
    3 Aug 25 -- walk function will skip .git
    4 Aug 25 -- Our 40th Anniversary.  But that's not important now.  I'm using soundex codes to report likely spelling errors so they can be fixed.
    6 Aug 25 -- I found out today that the hospital will retire the o: drive, in favor of OneDrive.  I'll need to change the code to use OneDrive.
-               There's an environment varible called OneDrive that is set to the path of OneDrive.  And another one called OneDriveConsumer.
+               There's an environment variable called OneDrive that is set to the path of OneDrive.  And another one called OneDriveConsumer.
                At work, there's OneDriveCommercial, which is set to the same value as OneDrive.  This is also true at home in that OneDrive and OneDriveConsumer have the same value.
 				I first coded this to use a filepicker function, but that doesn't exclude old files.  The walk function will skip files that are older than the threshold.
 				I need to modify the walk function to take a param that is the start directory, and then combine the results of all the walk function calls.
@@ -132,9 +132,10 @@ import (
   13 May 26 -- Now newlint-main.go.  Barely complete.
   17 May 26 -- Rewrote FindAndReadConfIni.
   22 May 26 -- Changed output color of picked file name.
+  19 Jul 26 -- Minor code change.
 */
 
-const lastModified = "22 May 2026"
+const lastModified = "19 July 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
@@ -187,7 +188,7 @@ func main() {
 
 	var filename, ans string
 
-	fmt.Printf(" newlint V 0.5 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, newlint.LastModified)
+	fmt.Printf(" newlint V 0.5.1 for the weekly schedule, last modified %s, last modified lint library %s\n", lastModified, newlint.LastModified)
 
 	_, startDirFromConfigFile, err = lint.FindAndReadConfIni() // ignore the doc names list from the config file, as that's now extracted from the schedule itself.
 	if err != nil {
@@ -281,8 +282,8 @@ func main() {
 		fmt.Printf(" Sorted SectionMap\n  %v\n", sectionMap)
 
 		fmt.Printf(" Section Translation Vector STV:\n")
-		for i, j := range newlint.STV {
-			fmt.Printf(" STV[%d]: %d |", i, j)
+		for i, val := range newlint.STV {
+			fmt.Printf(" STV[%d]: %d |", i, val)
 			if i%10 == 9 {
 				fmt.Printf("\n")
 			}
