@@ -19,9 +19,10 @@ import (
 
 /*
   18 July 26 -- First written by codex.
+  19 July 26 -- I'm making some edits in the messages.
 */
 
-const LastUpdate = "18 July 26"
+const LastUpdate = "19 July 26"
 
 var (
 	wordRE   = regexp.MustCompile(`[A-Za-z][A-Za-z'-]*`)
@@ -139,6 +140,11 @@ func chooseFile(input io.Reader, output io.Writer, files []candidate) (string, e
 			return "", errors.New("no file selection provided")
 		}
 		selection, err := strconv.Atoi(strings.TrimSpace(scanner.Text()))
+		if err != nil {
+			fmt.Printf(" Error: %v, using default of 1.\n", err)
+			selection = 1
+			err = nil
+		}
 		if err == nil && selection >= 1 && selection <= len(files) {
 			return files[selection-1].path, nil
 		}
@@ -196,7 +202,7 @@ func analyze(cells [][]string) ([]finding, error) {
 			for row := 0; row < office.row; row++ {
 				for _, other := range words(cellAt(cells, row, col)) {
 					if sameName(name, other) {
-						findings = append(findings, newFinding("Error 1", day, name,
+						findings = append(findings, newFinding("Error 1 -- vacation error", day, name,
 							position{office.row, col}, position{row, col}, rowLabel(cells, row)))
 					}
 				}
@@ -215,7 +221,7 @@ func analyze(cells [][]string) ([]finding, error) {
 			for _, remote := range extractRemoteNames(cellAt(cells, row, col)) {
 				for i, fluoroscopy := range fluoroNames {
 					if sameName(remote, fluoroscopy) {
-						findings = append(findings, newFinding("Error 2", day, remote,
+						findings = append(findings, newFinding("Error 2 -- remote fluoro error", day, remote,
 							position{row, col}, fluoroRows[i], rowLabel(cells, fluoroRows[i].row)))
 					}
 				}
@@ -225,7 +231,7 @@ func analyze(cells [][]string) ([]finding, error) {
 		for _, lateName := range extractLateNames(cellAt(cells, late.row, col)) {
 			for i, fluoroscopy := range fluoroNames {
 				if sameName(lateName, fluoroscopy) {
-					findings = append(findings, newFinding("Error 3", day, lateName,
+					findings = append(findings, newFinding("Error 3 -- late fluoro error", day, lateName,
 						position{late.row, col}, fluoroRows[i], rowLabel(cells, fluoroRows[i].row)))
 				}
 			}
