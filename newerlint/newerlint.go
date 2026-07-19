@@ -17,6 +17,12 @@ import (
 	"github.com/tealeg/xlsx/v3"
 )
 
+/*
+  18 July 26 -- First written by codex.
+*/
+
+const LastUpdate = "18 July 26"
+
 var (
 	wordRE   = regexp.MustCompile(`[A-Za-z][A-Za-z'-]*`)
 	doctorRE = regexp.MustCompile(`(?i)\bdr\.?\s+([A-Za-z][A-Za-z'-]*)`)
@@ -43,6 +49,7 @@ type finding struct {
 }
 
 func main() {
+	fmt.Printf(" newerLint, LastUpdate: %s\n\n", LastUpdate)
 	if err := run(os.Stdin, os.Stdout, time.Now()); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
@@ -86,7 +93,7 @@ func run(input io.Reader, output io.Writer, now time.Time) error {
 	return nil
 }
 
-func discover(root string, now time.Time, age time.Duration) ([]candidate, error) {
+func discover(root string, now time.Time, age time.Duration) ([]candidate, error) { // Looks like the now test is not needed.
 	var files []candidate
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
