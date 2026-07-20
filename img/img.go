@@ -81,6 +81,9 @@ REVISION HISTORY
 26 Mar 26 -- Added CenterOnScreen() to the window in the rotateAndLoadImage routine.
 27 Mar 26 -- Rearranged code to initialize imageInfo slice and check for verbosity after menu setup.
 29 Mar 26 -- Changed rotateAndLoadTheImage() to handle rotation and loading of images, and removed loadTheImage() as redundant.
+20 Jul 26 -- Changed the canvasimage.FillMode in rotateAndLoadTheImage() to canvas.ImageFillOriginal.  This sets the min size to be that of the original.  I did this because codex did it in imggo.
+			And I removed the unused LoadTheImage.
+
 */
 
 // Uses image.Decode to read in the image in loadTheImage.  Uses imaging.Open to read in the image in RotateAndLoadeTheImage, and it uses an autoOrientation option.
@@ -89,7 +92,7 @@ REVISION HISTORY
 // It uses a go routine to process the keys.  I wrote that to increase responsiveness.  I think it worked.  But it added complexity.  I didn't do this in the other pgms.
 // And since I update the screen from a go routine, fyne.Do(func() {}) is needed for these operations.  I found that if I try to use fyne.Do() in the main thread, that crashes.
 
-const LastModified = "Mar 29, 2026"
+const LastModified = "July 20, 2026"
 const keyCmdChanSize = 20 // size for the buffered channel
 const (
 	firstImgCmd = iota
@@ -106,7 +109,7 @@ const dateFormatStr = "1/2/06"
 
 var index int
 
-// var loadedimg *canvas.Image  not used
+// var loadedimg *canvas.Image  not used anymore
 var cwd string
 var imageInfo []os.FileInfo
 var globalA fyne.App
@@ -315,107 +318,6 @@ func processKeys() {
 		}
 	}
 }
-
-// loadTheImage -- loads the image given by the index
-/*
-func loadTheImage(idx int) {
-	imgName := imageInfo[idx].Name()
-	fullFilename, err := filepath.Abs(imgName)
-	if err != nil {
-		fmt.Printf(" loadTheImage(%d): error is %s.  imgName=%s, fullFilename is %s \n", idx, err, imgName, fullFilename)
-	}
-
-	imageURI := storage.NewFileURI(fullFilename)
-	imgRead, err := storage.Reader(imageURI)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from storage.Reader(%s) is %s.  Skipped.\n", fullFilename, err)
-		return
-	}
-	defer imgRead.Close() // moved to here, after checking err, as recommended by static linter.
-
-	img, imgFmtName, err := image.Decode(imgRead) // imgFmtName is a string of the format name used during format registration by the init function.
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " Error from image.Decode is %s.  Skipped\n", err)
-		return
-	}
-	bounds := img.Bounds()
-	imgHeight := bounds.Max.Y
-	imgWidth := bounds.Max.X
-
-	dateStr := imageInfo[idx].ModTime().Format(dateFormatStr)
-	title := fmt.Sprintf(" %s, %d x %d, SF=%.2f %s %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
-	if *verboseFlag {
-		fmt.Println(title)
-	}
-
-	// normalize the image to screen size
-	// This code does work for this one big image, but then it leaves the scale factor to be too small for the other images.  I'll play w/ the sticky factor for a bit.
-	// It works as long as I turn off the sticky factor.
-
-	if scaleFactor == 1 {
-		var heightScale, widthScale float64
-		widthScale = float64(maxWidth) / float64(imgWidth)    // maxWidth is 1800 at the moment
-		heightScale = float64(maxHeight) / float64(imgHeight) // maxHeight is 900 at the moment
-		if *verboseFlag {
-			fmt.Printf(" Before: heightScale = %.2f, widthScale = %.2f, scaleFactor = %.2f, max width = %d\n", heightScale, widthScale, scaleFactor, maxWidth)
-			fmt.Printf(" Before: imgheight = %d, imgwidth = %d, canvas height = %.2f, canvas width = %.2f, title = %s\n",
-				imgHeight, imgWidth, globalW.Canvas().Size().Height, globalW.Canvas().Size().Width, title)
-		}
-		minFac := math.Min(heightScale, widthScale)
-		if minFac < 1 { // only autosize images when they're too large to display without it.
-			scaleFactor = minFac
-		}
-	}
-
-	if scaleFactor != 1 {
-		if imgHeight > imgWidth { // resize the larger dimension, hoping for minimizing distortion.
-			scaledHeight := float64(imgHeight) * scaleFactor
-			intHeight := uint(math.Round(scaledHeight))
-			img = resize.Resize(0, intHeight, img, resize.Lanczos3)
-		} else {
-			scaledWidth := float64(imgWidth) * scaleFactor
-			intWidth := uint(math.Round(scaledWidth))
-			img = resize.Resize(intWidth, 0, img, resize.Lanczos3)
-		}
-		bounds = img.Bounds()
-		imgHeight = bounds.Max.Y
-		imgWidth = bounds.Max.X
-		dateStr = imageInfo[idx].ModTime().Format(dateFormatStr)
-		title = fmt.Sprintf("%s, %d x %d, SF=%.2f, %s %s \n", imgName, imgWidth, imgHeight, scaleFactor, dateStr, imgFmtName)
-	}
-
-	if *verboseFlag {
-		bounds = img.Bounds()
-		imgHeight = bounds.Max.Y
-		imgWidth = bounds.Max.X
-		fmt.Println(" Scale factor =", scaleFactor, "last height =", imgHeight, "last width =", imgWidth)
-		fmt.Printf(" loadTheImage(%d): imgName=%s, fullFilename is %s \n", idx, imgName, fullFilename)
-		fmt.Println()
-	}
-
-	loadedimg = canvas.NewImageFromImage(img)
-	loadedimg.ScaleMode = canvas.ImageScaleSmooth
-	if !*zoomFlag {
-		loadedimg.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
-		//loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
-	}
-
-	imageAsDisplayed = loadedimg.Image
-
-	atomic.StoreInt64(&rotatedTimes, 0) // reset this counter when load a fresh image.
-
-	fyne.Do(func() { // I was getting warnings from fyne about this being called from a non-GUI thread.
-		// safe to touch widgets here
-		globalW.SetContent(loadedimg)
-		globalW.Resize(fyne.NewSize(float32(imgWidth), float32(imgHeight))) // if I don't resize, the image is much too small to be seen.  See img2 or imga for a different way to handle this.
-		globalW.SetTitle(title)
-		globalW.CenterOnScreen() // added 1/18/26.  To see if it works.  It does.  I'm guessing it works because I'm centering the window after calling SetContent.
-		globalW.Show()
-	})
-
-} // end loadTheImage
-
-*/
 
 // ------------------------------- filenameIndex --------------------------------------
 func filenameIndex(fileinfos []os.FileInfo, name string, intchan chan int) {
@@ -780,8 +682,8 @@ func rotateAndLoadTheImage(idx int, repeat int64) {
 	canvasImage := canvas.NewImageFromImage(imgImg)
 	canvasImage.ScaleMode = canvas.ImageScaleSmooth
 	if !*zoomFlag {
-		canvasImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
-		//                                                 loadedimg.FillMode = canvas.ImageFillOriginal -- sets min size to be that of the original.
+		//canvasImage.FillMode = canvas.ImageFillContain // this must be after the image is assigned else there's distortion.  And prevents blowing up the image a lot.
+		canvasImage.FillMode = canvas.ImageFillOriginal // sets min size to be that of the original.
 	}
 
 	imageAsDisplayed = canvasImage.Image
