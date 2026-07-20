@@ -244,7 +244,7 @@ func main() {
 		dialog.ShowInformation("Help", CombinedStr, globalW)
 	})
 
-	newMenu := fyne.NewMenu("Menu", menuItem1, menuItem2)
+	newMenu := fyne.NewMenu("Img Menu", menuItem1, menuItem2)
 	globalW.SetMainMenu(fyne.NewMainMenu(newMenu))
 
 	// This is how I initialize the imageInfo slice of FileInfos

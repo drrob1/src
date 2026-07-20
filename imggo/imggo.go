@@ -89,10 +89,10 @@ func main() {
 	currentIndex = resolveStartIndex(imageEntries, startName)
 
 	globalApp = app.New()
-	globalWindow = globalApp.NewWindow("Image Viewer")
+	globalWindow = globalApp.NewWindow("Imggo Viewer")
 	globalWindow.Canvas().SetOnTypedKey(keyTyped)
 	globalWindow.SetMainMenu(fyne.NewMainMenu(
-		fyne.NewMenu("HELP",
+		fyne.NewMenu("Imggo Menu",
 			fyne.NewMenuItem("HELP", showHelp),
 			fyne.NewMenuItem("ABOUT", showAbout),
 			fyne.NewMenuItem("PRINT", showPrintDialog),
