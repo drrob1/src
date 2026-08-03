@@ -667,8 +667,9 @@ func ScanXLSfile(workWeek WorkWeekType) ([]string, error) {
 					fmt.Printf(" STV[%d]=%d; cell %s\n", i, STV[i], workWeek[i][dayCol])
 				}
 				if lower := strings.ToLower(workWeek[STV[i]][dayCol]); strings.Contains(lower, name) {
-					msg := fmt.Sprintf(" %s is off on %s, but is on %s, STV[%d]=%d, row name=%s", strcase.UpperCamelCase(name),
-						DayNamesString[dayCol], CategoryNamesListForDisplay[i], i, STV[i], workWeek[STV[i]][0])
+					//  msg := fmt.Sprintf(" %s is off on %s, but is on %s, STV[%d]=%d, row name=%s", strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i], i, STV[i], workWeek[STV[i]][0])
+					msg := fmt.Sprintf(" %s is off on %s, but is on %s, row name=%s",
+						strcase.UpperCamelCase(name), DayNamesString[dayCol], CategoryNamesListForDisplay[i], workWeek[STV[i]][0])
 					messages = append(messages, msg)
 					if VerboseFlag {
 						ctfmt.Printf(ct.Yellow, true, " Matched: %s\n", msg)
