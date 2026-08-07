@@ -49,6 +49,8 @@ REVISION HISTORY
 	the current stuff is slightly faster after all.
 
 20 Nov 22 -- static linter found an issue w/ const null, so I removed it.
+
+	7 Aug 26 -- I think grepStdIn is overly complex.  I'll simplify it.
 */
 package main
 
@@ -70,7 +72,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const LastAltered = "20 Nov 2022"
+const LastAltered = "7 Aug 2026"
 const maxSecondsToTimeout = 300
 
 const minMatches = 100
@@ -84,7 +86,7 @@ var totMatchesFound int64
 var t0, tfinal time.Time
 var sliceOfStrings []string
 
-type myBytesReader struct {
+type myBytesReader struct { // used so the readLine method (below) can be added to it.
 	*bytes.Reader // embedded system field so I can add my own method to it.
 }
 
@@ -176,7 +178,7 @@ func main() {
 
 func grepStdin(lineRegex *regexp.Regexp, result chan string) {
 	var localMatches int64
-	var lineString string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
+	var lineString string // either case-sensitive or case-insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	fileContents, err := io.ReadAll(os.Stdin)
 	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.
 		//	wg.Done()
@@ -213,8 +215,9 @@ func grepStdin(lineRegex *regexp.Regexp, result chan string) {
 	}
 } // end grepStdin
 
-// func (r *bytes.Reader) readLine() (string, error) {  I think I just tripped over the fact that I can't add methods to an established system type.  I can only add methods to my own type, which can embed a system type.
-// readLine will behave like it's similarly named functions on an io.Reader.  Turns out that there is no such function for a bytes.Buffer or bytes.Reader.
+// func (r *bytes.Reader) readLine() (string, error) { I just tripped over the fact that I can't add methods to an established system type.  I can only add methods to my own type, which can embed a system type.
+// readLine will behave like its similarly named functions on an io.Reader.  Turns out that there is no such function for a bytes.Buffer or bytes.Reader.  I could have made this a
+// stand-alone function, but I didn't.  I guess I wanted to learn how to add methods to a system type.
 func (r *myBytesReader) readLine() (string, error) {
 	var strBuf strings.Builder
 
