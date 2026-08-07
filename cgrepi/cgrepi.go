@@ -5,7 +5,7 @@ REVISION HISTORY
 				And then I figured I could not improve performance by using more packages.
 				But I can change the side effect of displaying altered case.
 22 Mar 20 -- Will add timing code that I wrote for anack.
-27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
+27 Mar 21 -- Changed commandLineFiles in platform-specific code, and added the -g flag to force globbing.
 14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is more complex than it
 				needs to be.  I'm going to take a crack at writing a simpler version myself.
 				It takes a list of files from the command line (or on Windows, a globbing pattern) and iterates
@@ -14,7 +14,7 @@ REVISION HISTORY
 16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
 19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
 				keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
-				Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
+				Cgrepi2 is still faster, so most of the slowness here is the line-by-line file reading.
 30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
 	              But if input string has an upper case character, then the search is case-sensitive.
  1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
@@ -22,12 +22,12 @@ REVISION HISTORY
 	              the go routines all deadlock, so the wait group is not exiting.
 
 	            Posted to gonuts using the go playground for the code: 10/2/22 @1:35 pm   go playground sharing link: https://go.dev/play/p/gIVVLsiTqod/
-	              Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the syncronization.
+	              Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the synchronization.
 	              Nope, then I got a negative WaitGroup number panic.  I moved it back, for now.
 
 	            First reported to me by Matthew Zimmerman.
 	            Looks like the error was the order of the defer and if err statements.  The way I first had it, defer was after the if err, so if there was a file error
-	              (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "MY Pictures") then wg.Done() would not be called.
+	              (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "My Pictures") then wg.Done() would not be called.
 	              So the wait group count would not go down to zero.  How subtle, and I needed help from someone else to notice that.
 
 	            Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
@@ -49,7 +49,7 @@ REVISION HISTORY
 18 Apr 24 -- Added workerPoolMultiplier flag option.
 21 Apr 24 -- Took out the first 2 lines, that were probably coded by the late Michael T Jones.  Looks like these would be the defaults, anyway.
  3 May 24 -- I misunderstood how wait groups work.  They're at the go routine level, not individual files.  I'm going to change that now.
- 6 Jun 25 -- I got the idea to add an exclude expresssion, after I tried to use one and found that I never implemented that here.
+ 6 Jun 25 -- I got the idea to add an exclude expression, after I tried to use one and found that I never implemented that here.
 				Turns out that none of the std grep versions have a way to do this.
 19 Apr 26 -- Changed maxSecondsToTimeout to 1/2 hr which is 1800 sec.
 */
