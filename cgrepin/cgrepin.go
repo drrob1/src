@@ -42,15 +42,17 @@ REVISION HISTORY
 	5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
 	7 Oct 22 -- Added color to output.
 
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
 26 Oct 22 -- Now called cgrepin.go, as it will grep and sort from Stdin.  I expect that I don't need go routines for this, as it's only one stream of input.
 
 	I added my own method to a system type by embedding it into my own type.  IE, myBytesReader absorbed *bytes.Reader.
 	Interestingly, this is ~5% faster with the concurrent code in it, when compared to cgrepin2 in which I removed all the current stuff.  So I guess
 	the current stuff is slightly faster after all.
 
-20 Nov 22 -- static linter found an issue w/ const null, so I removed it.
+	20 Nov 22 -- static linter found an issue w/ const null, so I removed it.
 
-	7 Aug 26 -- I think grepStdIn is overly complex.  I'll simplify it.
+	 7 Aug 26 -- I think grepStdIn is overly complex.  I'll simplify it.  Nevermind, I did that to learn how to extend a built-in type.
 */
 package main
 
@@ -133,7 +135,6 @@ func main() {
 		LastAltered, pattern, runtime.Version())
 	fmt.Println()
 
-	//workingDir, _ := os.Getwd()
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	LastLinkedTimeStamp := ExecFI.ModTime().Format("Mon Jan 2 2006 15:04:05 MST")
