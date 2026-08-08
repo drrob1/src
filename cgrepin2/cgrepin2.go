@@ -1,42 +1,45 @@
 /*
-  REVISION HISTORY
-  ----------------
-  20 Mar 20 -- Made comparisons case insensitive.  And decided to make this cgrepi.go.
-                 And then I figured I could not improve performance by using more packages.
-                 But I can change the side effect of displaying altered case.
-  22 Mar 20 -- Will add timing code that I wrote for anack.
-  27 Mar 21 -- Changed commandLineFiles in platform specific code, and added the -g flag to force globbing.
-  14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is mure complex than it
-                 needs to be.  I'm going to take a crack at writing a simpler version myself.
-                 It takes a list of files from the command line (or on windows, a globbing pattern) and iterates
-                 thru all of the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
-                 this better.  It seems much too complex.  I'm going to simplify it.
-  16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
-  19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
-                 keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
-                 Cgrepi2 is still faster, so most of the slowness here is the line by line file reading.
-  30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
-                 But if input string has an upper case character, then the search is case sensitive.
-   1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
-   2 Oct 22 -- The extension system is made mostly obsolete by null byte detection.  So the default will be *.  But I discovered when the files slice exceeds 1790 elements,
-                 the go routines all deadlock, so the wait group is not exiting.
+	REVISION HISTORY
+	----------------
+	20 Mar 20 -- Made comparisons case-insensitive.  And decided to make this cgrepi.go.
+	               And then I figured I could not improve performance by using more packages.
+	               But I can change the side effect of displaying an altered case.
+	22 Mar 20 -- Will add timing code that I wrote for anack.
+	27 Mar 21 -- Changed commandLineFiles in platform-specific code and added the -g flag to force globbing.
+	14 Dec 21 -- I'm porting the changed I wrote to multack here.  Also, I noticed that this is more complex than it
+	               needs to be.  I'm going to take a crack at writing a simpler version myself.
+	               It takes a list of files from the command line (or on Windows, a globbing pattern) and iterates
+	               through all the files in the list.  Then it exits.  But this is using 2 channels.  I have to understand
+	               this better.  It seems much too complex.  I'm going to simplify it.
+	16 Dec 21 -- Adding a waitgroup, as the sleep at the end is a kludge.  And will only start number of worker go routines to match number of files.
+	19 Dec 21 -- Will add the more selective use of atomic instructions as I learned about from Bill Kennedy and is in cgrepi2.go.  But I will
+	               keep reading the file line by line.  Can now time difference when number of atomic operations is reduced.
+	               Cgrepi2 is still faster, so most of the slowness here is the line-by-line file reading.
+	30 Sep 22 -- Got idea from ripgrep about smart case, where if input string is all lower case, then the search is  ase insensitive.
+	               But if input string has an upper case character, then the search is case-sensitive.
+	 1 Oct 22 -- Will not search further in a file if there's a null byte.  I also got this idea from ripgrep.  And I added more info to be displayed if verbose is set.
+	 2 Oct 22 -- The extension system is made mostly obsolete by null byte detection.  So the default will be *.  But I discovered when the files slice exceeds 1790 elements,
+	               the go routines all deadlock, so the wait group is not exiting.
 
-               Posted to gonuts using the go playground for the code: 10/2/22 @1:35 pm   go playground sharing link: https://go.dev/play/p/gIVVLsiTqod/
-                 Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the syncronization.
-                 Nope, then I got a negative WaitGroup number panic.  I moved it back, for now.
+	             Posted to gonuts using the go playground for the code: 10/2/22 @1:35 pm   go playground sharing link: https://go.dev/play/p/gIVVLsiTqod/
+	               Moved location of the wait statement, as suggested by Jan Merci.  I guess both a waitgroup and a channel are used for the synchronization.
+	               Nope, then I got a negative WaitGroup number panic.  I moved it back, for now.
 
-               First reported to me by Matthew Zimmerman.
-               Looks like the error was the order of the defer and if err statements.  The way I first had it, defer was after the if err, so if there was a file error
-                 (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "MY Pictures") then wg.Done() would not be called.
-                 So the wait group count would not go down to zero.  How subtle, and I needed help from someone else to notice that.
+	             First reported to me by Matthew Zimmerman.
+	             Looks like the error was the order of the defer and if err statements.  The way I first had it, defer was after the if err, so if there was a file error
+	               (like the three access is denied errors I'm seeing from "My Videos", "My Music", and "MY Pictures") then wg.Done() would not be called.
+	               So the wait group count would not go down to zero.  How subtle, and I needed help from someone else to notice that.
 
-               Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
-                 So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
-   5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
-   7 Oct 22 -- Added color to output.
-  26 Oct 22 -- Now called cgrepin.go, as it will grep and sort from Stdin.  I expect that I don't need go routines for this, as it's only one stream of input.
-                 I added my own method to a system type by embedding it into my own type.  IE, myBytesReader absorbed *bytes.Reader.
-                 Now it's called cgrepin2.go, and I removed all the concurrent code as it's not needed here.  Interestingly, this is ~5% slower without the concurrent code.
+	             Andrew Harris noticed that the condition for closing the channel could be when all work is sent into it.  I was closing the channel after all work was done.
+	               So I changed that and noticed that it's still possible for the main routine to finish before some of the last grepFile calls.  I still need the WaitGroup.
+	 5 Oct 22 -- Based on output from ripgrep, I want all the matches from the same file to be displayed near one another.  So I have to output them to the same slice and then sort that.
+	 7 Oct 22 -- Added color to output.
+	26 Oct 22 -- Now called cgrepin.go, as it will grep and sort from Stdin.  I expect that I don't need go routines for this, as it's only one stream of input.
+	               I added my own method to a system type by embedding it into my own type.  IE, myBytesReader absorbed *bytes.Reader.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	26 Oct 22 -- Now it's called cgrepin2.go, and I removed all the concurrent code as it's not needed here.  Interestingly, this is ~5% slower without the concurrent code.
 */
 package main
 
@@ -44,8 +47,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 	"io"
 	"log"
 	"os"
@@ -53,6 +54,9 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
 type myBytesReader struct {
@@ -66,8 +70,8 @@ const minMatches = 100
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
 var caseSensitiveFlag bool // default is false.
-//var grepChan chan grepType
-//var matchChan chan matchType
+// var grepChan chan grepType
+// var matchChan chan matchType
 var totMatchesFound int64
 var t0, tfinal time.Time
 var sliceOfStrings []string
@@ -195,7 +199,7 @@ func grepStdin(lineRegex *regexp.Regexp) {
 	}
 } // end grepStdin
 
-//func (r *bytes.Reader) readLine() (string, error) {  I think I just tripped over the fact that I can't add methods to an established system type.  I can only add methods to my own type, which can embed a system type.
+// func (r *bytes.Reader) readLine() (string, error) {  I think I just tripped over the fact that I can't add methods to an established system type.  I can only add methods to my own type, which can embed a system type.
 // readLine will behave like it's similarly named functions on an io.Reader.  Turns out that there is no such function for a bytes.Buffer or bytes.Reader.
 func (r *myBytesReader) readLine() (string, error) {
 	var strBuf strings.Builder
