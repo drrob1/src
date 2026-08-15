@@ -52,6 +52,15 @@ REVISION HISTORY
  6 Jun 25 -- I got the idea to add an exclude expression, after I tried to use one and found that I never implemented that here.
 				Turns out that none of the std grep versions have a way to do this.
 19 Apr 26 -- Changed maxSecondsToTimeout to 1/2 hr which is 1800 sec.
+15 Aug 26 -- I asked codex via Goland how to speed up the code.  It gave me 3 suggestions.
+             1.  remove redundant string sort in line 268.  SliceOfStrings is never used.  Remove it, its formatter and sort.Strings(SliceOfStrings)
+             2.  replace per-match channel sends with per-worker result batches.
+                 Every match passes through the single matchChan receiver at lines 233-242, and each worker can block at lines 307 and 315.  Have each worker collect its matches locally and send one result slice when it finishes.
+             3.  reduce per-line allocations and system calls.  ReadString('\n') at line 300 creates a string for every line.  Line 310 creates another string using strings.ToLower, then the regexp receives this last string.
+                  Use a byte-oriented scanner/reader and regexp.Regexp.Match([]byte), retaining the original line only when it matches.  Consider compiling the pattern with
+                  (?i) instead of lower casing every input line.  This would reduce allocations and garbage collection pressure on large files.
+             4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.
+
 */
 
 package main
@@ -75,8 +84,9 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const LastAltered = "19 April 2026"
+const LastAltered = "15 Aug 2026"
 const maxSecondsToTimeout = 1800
+const loopCheckForTimeout = 1000
 
 const limitWorkerPool = 750 // Since Linux limit of file handles is 1024, I'll leave room for other programs.
 
@@ -113,7 +123,8 @@ var grepChan chan grepType
 var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
-var sliceOfStrings []string // based on an anonymous type.
+
+// var sliceOfStrings []string // based on an anonymous type.  Optimization #3 above
 var workerPoolMultiplier int
 var verboseFlag bool
 
@@ -172,6 +183,9 @@ func main() {
 
 	t0 = time.Now()
 	tfinal = t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	if !caseSensitiveFlag { // part of optimization #3 above
+		pattern = "(?i)" + pattern
+	}
 	lineRegex, err := regexp.Compile(pattern)
 	if err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
@@ -208,7 +222,7 @@ func main() {
 	}
 
 	if *globFlag && runtime.GOOS == "windows" { // glob function only makes sense on Windows.
-		files = globCommandLineFiles(files) // this fails vet because it's in the platform specific code file.
+		files = globCommandLineFiles(files) // this fails vet because it's in the platform-specific code file.
 	} else {
 		files = commandLineFiles(files)
 	}
@@ -217,7 +231,8 @@ func main() {
 	wg.Add(minGoRtns)
 	// start the worker pool
 	grepChan = make(chan grepType, workers) // buffered channel
-	for w := 0; w < minGoRtns; w++ {
+	//for w := 0; w < minGoRtns; w++
+	for range minGoRtns { // syntax modernization
 		go func() {
 			defer wg.Done()
 			for g := range grepChan { // These are channel reads that are only stopped when the channel is closed.
@@ -232,12 +247,12 @@ func main() {
 
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, lenOfFiles) // this uses a named type, needed to satisfy the sort interface.
-	sliceOfStrings = make([]string, 0, lenOfFiles)             // this uses an anonymous type.
-	go func() {                                                // start the receiving operation before the sending starts
+	// sliceOfStrings = make([]string, 0, lenOfFiles)         // this uses an anonymous type.  Optimization #1 above.
+	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
-			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
-			sliceOfStrings = append(sliceOfStrings, s)
+			// s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
+			// sliceOfStrings = append(sliceOfStrings, s)  Optimization #1 above
 		}
 	}()
 
@@ -256,8 +271,8 @@ func main() {
 	fmt.Println()
 
 	// Time to sort and show
-	sort.Strings(sliceOfStrings)
-	sortStringElapsed := time.Since(t0)
+	// sort.Strings(sliceOfStrings)   never used  Optimization #1 above.
+	// sortStringElapsed := time.Since(t0)
 	sort.Sort(sliceOfAllMatches)
 	//       sort.Stable(sliceOfAllMatches)  I don't know why I put this here.  I don't need a stable sort here.  I must have been playing.
 	sortMatchedElapsed := time.Since(t0)
@@ -268,13 +283,13 @@ func main() {
 
 	ctfmt.Printf(ct.Yellow, gotWin, "\n There were %d go routines that found %d matches in %d files\n", goRtns, totMatchesFound, totFilesScanned)
 	outputElapsed := time.Since(t0)
-	ctfmt.Printf(ct.Green, gotWin, "\n Elapsed %s to find all of the matches, elapsed %s to sort the strings (not shown) and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
-		elapsed, sortStringElapsed, sortMatchedElapsed, outputElapsed)
+	ctfmt.Printf(ct.Green, gotWin, "\n Elapsed %s to find all of the matches and elapsed %s to stable sort the struct (shown above). \n Elapsed since this all began is %s.\n\n",
+		elapsed, sortMatchedElapsed, outputElapsed)
 }
 
 func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
-	var lineStrng string // either case-sensitive or case-insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
+	//var lineStrng string // either case-sensitive or case-insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.  Optimization #3 above
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error is: %s\n", err)
@@ -295,13 +310,13 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 		if strings.ContainsRune(lineStr, null) { // don't search binary files, and probably others like PDFs which may contain nulls.
 			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.  The wg.Done() is deferred so it doesn't matter.
 		}
-		if caseSensitiveFlag { // passed in globally
-			lineStrng = lineStr
-		} else {
-			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case-insensitive.
-		}
+		//if caseSensitiveFlag { // passed in globally  Part of optimization #3 above
+		//	lineStrng = lineStr
+		//} else {
+		//	lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case-insensitive.
+		//}
 
-		if lineRegex.MatchString(lineStrng) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
+		if lineRegex.MatchString(lineStr) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
 			if excludeRegex == nil { // If no excludeRegex, then only need to match the lineRegex
 				localMatches++
 				matchChan <- matchType{
@@ -310,7 +325,7 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 					lineContents: lineStr,
 				}
 			} else { // If there is an excludeRegex, then must make sure that this expression doesn't match.
-				if !excludeRegex.MatchString(lineStrng) {
+				if !excludeRegex.MatchString(lineStr) {
 					localMatches++
 					matchChan <- matchType{
 						fpath:        fpath,
@@ -320,9 +335,11 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 				}
 			}
 		}
-		now := time.Now()
-		if now.After(tfinal) {
-			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+		if lino%loopCheckForTimeout == 0 { // check the timeout every 1000 lines.  Optimization #4 above.
+			now := time.Now()
+			if now.After(tfinal) {
+				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			}
 		}
 	}
 } // end grepFile
