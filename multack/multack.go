@@ -4,9 +4,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	flag "github.com/spf13/pflag"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,6 +14,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	flag "github.com/spf13/pflag"
 )
 
 /*
@@ -31,11 +32,11 @@ import (
                I'll stop at 100,000 items.  It's great it works.
                (4/10/24 but it's obvious I got the code wrong)
    2 Apr 20 -- Updated its start string to declare its correct name.  I forgot to change that yesterday.
-  23 Apr 20 -- 2 edge cases don't work on linux.  If there is a filepattern but no matching files in the start directory,
+  23 Apr 20 -- 2 edge cases don't work on linux.  If there is a file pattern but no matching files in the start directory,
                 and if there is only 1 matching file in the start directory.
                 And also if there appears to be more than one extension, like gastric.txt.out.
-   5 Sep 20 -- Will not search thru symlinked directories
-  27 Mar 21 -- making sure that the filename matches are case insensitive
+   5 Sep 20 -- Will not search through symlinked directories
+  27 Mar 21 -- making sure that the filename matches are case-insensitive
    6 Dec 21 -- Maybe something I'm learning from Bill Kennedy applies here.  I only made the doneChan buffered.
    7 Dec 21 -- Extensions like .xls will also match .xlsm, .xlsx, etc.  And I don't think I have to track which directories I've visited, as the library func does that.
                  So I'll just use the map as a list of known directories to skip.  So far, only ".git" is skipped.
@@ -49,8 +50,8 @@ import (
   12 Dec 21 -- Added test for ".git" to SkipDir, and will measure responsiveness w/ different values for workerPoolSize.
                  I decided to base the workerPoolSize on a multiplier from runtime.NumCPU.  And to display NumGoroutine at the end.
   16 Dec 21 -- Need a waitgroup after all.  The sleeping at the end is a kludge.
-   1 Oct 22 -- Adding smart case as I did yesterday for cgrepi.  If input pattern is lower case, search is case insensitive.  If input pattern is upper case, the search
-                 is case sensitive.  And adding using a null byte as a marker for a binary file and then aborting that file.  Both ideas came from ripgrep.
+   1 Oct 22 -- Adding smart case as I did yesterday for cgrepi.  If input pattern is lower case, search is case-insensitive.  If input pattern is upper case, the search
+                 is case-sensitive.  And adding using a null byte as a marker for a binary file and then aborting that file.  Both ideas came from ripgrep.
                  Adding a count of matches and files, copied from cgrepi.go.
    2 Oct 22 -- Now that I've learned to abort a binary file as one that has null bytes, I don't need the extension system anymore.
                  And I corrected the order of defer vs if err in the grepFile routine.
@@ -67,7 +68,7 @@ import (
   13 Nov 22 -- Adding ability to optionally specify a start directory other than the current one.  Nevermind, it already has this.
   14 Nov 22 -- Adding a usage message.  I never did that before.  And adding processing for '~' which only applies to Windows.
   21 Nov 22 -- static linter found an error w/ a format verb.  Now fixed.
-  24 Feb 23 -- I'm changing the multiplier to = 1, based on what Bill Kennedy said, ie, that NumCPU() is sort of a sweet spot.  And Evan is 31 today, but that's not relevant here.
+  24 Feb 23 -- I'm changing the multiplier to = 1, based on what Bill Kennedy said, i.e., that NumCPU() is sort of a sweet spot.  And Evan is 31 today, but that's not relevant here.
   25 Feb 23 -- Optimizing walkDir as I did in since.go.  Run os.Stat only after directory check for the special directories and only call deviceID on a dir entry.
   10 Apr 24 -- I/O bound jobs benefit from having more workers than what NumCPU() says.
                  But I have to remember that linux only has 1000 or so file handles; this number cannot be exceeded.
@@ -75,11 +76,12 @@ import (
   10 May 24 -- Made sliceSize 50_000, as this can return ~20K matches when run in src directory.
   20 Nov 24 -- Will now exclude OneDrive.  This crashes Windows, so I have to exclude it.  And I'm excluding AppData.  Excluding AppData sped up the code a lot, from 3 min to 10 sec on Win11.
    2 Mar 25 -- Clarified help message that the pattern is a regexp, not a glob.  And I changed to using pflag as a drop-in replacement for flag.
-   6 Jun 25 -- I got the idea to add an exclude expresssion, after I tried to use one and found that I never implemented that here.  Copied code I write in cgrepi to here.
+   6 Jun 25 -- I got the idea to add an exclude expression, after I tried to use one and found that I never implemented that here.  Copied code I write in cgrepi to here.
 				Turns out that none of the std grep versions have a way to do this.
+  16 Aug 26 -- Very minor code changes.
 */
 
-const lastAltered = "6 June 2025"
+const lastAltered = "16 Aug 2026"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
@@ -171,9 +173,9 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
 	}
-	if !caseSensitiveFlag {
-		pattern = strings.ToLower(pattern) // this is the change for the pattern.
-	}
+	//if !caseSensitiveFlag { not needed, because it already has to be all lower case
+	//	pattern = strings.ToLower(pattern) // this is the change for the pattern.
+	//}
 	if verboseFlag {
 		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
 	}
@@ -226,7 +228,7 @@ func main() {
 		fmt.Printf(" Current working Directory is %s; %s timestamp is %s.\n\n", execDir, execName, LastLinkedTimeStamp)
 	}
 
-	matchChan = make(chan matchType, sliceSize)               // this is a buffered channel.
+	matchChan = make(chan matchType, workerPoolSize)          // this is a buffered channel.
 	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
 	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
 	doneChan := make(chan bool)
@@ -327,7 +329,7 @@ func main() {
 } // end main
 
 func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
-	var lineStrng string // either case sensitive or case insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
+	var lineStrng string // either case-sensitive or case-insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.
 	var localMatches int64
 	file, err := os.Open(fpath)
 	if err != nil {
@@ -365,7 +367,7 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 			if veryverboseFlag {
 				fmt.Printf("%s:%d:%s", fpath, lino, lineStr)
 			}
-			if excludeRegex == nil { // if there is no excludeRegex, then this matcch is enough to send it down the channel.
+			if excludeRegex == nil { // if there is no excludeRegex, then this match is enough to send it down the channel.
 				localMatches++
 				matchChan <- matchType{
 					fpath:        fpath,

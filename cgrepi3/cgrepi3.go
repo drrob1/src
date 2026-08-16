@@ -63,10 +63,12 @@ REVISION HISTORY
              4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.  Done
 16 Aug 26 -- So I made the optimizations above except for #2.  And it seems that the pgm is now slower than before the "optimizations".  Very interesting.  Not sure if I'll change it back.
 				The difference so far is in the msec range, so I'll leave it as is.  I think.
-
+------------------------------------------------------------------------------------------------------------------------------------------------------
+16 Aug 26 -- Now called cgrepi3, so I can experiment with removing (?i) from the regexp pattern and putting back the call to ToLower.
+				I suspect that cgrepi is slightly slower because of the (?i) in the regexp pattern.
 */
 
-package main
+package main // cgrepi3 from cgrepi
 
 import (
 	"bufio"
@@ -184,9 +186,9 @@ func main() {
 
 	t0 = time.Now()
 	tfinal = t0.Add(time.Duration(*timeoutOpt) * time.Second)
-	if !caseSensitiveFlag { // part of optimization #3 above
-		pattern = "(?i)" + pattern
-	}
+	//if !caseSensitiveFlag { // part of optimization #3 above.  Removing this because it may be slowing things down a bit.
+	//	pattern = "(?i)" + pattern
+	//}
 	lineRegex, err := regexp.Compile(pattern)
 	if err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
@@ -310,7 +312,11 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 			break
 		}
 
-		if lineRegex.Match(lineByteSlice) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
+		lineStr := string(lineByteSlice)
+		if !caseSensitiveFlag {
+			lineStr = strings.ToLower(lineStr)
+		}
+		if lineRegex.MatchString(lineStr) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
 			if excludeRegex == nil { // If no excludeRegex, then only need to match the lineRegex
 				localMatches++
 				matchChan <- matchType{
@@ -319,7 +325,7 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 					lineContents: string(lineByteSlice),
 				}
 			} else { // If there is an excludeRegex, then must make sure that this expression doesn't match.
-				if !excludeRegex.Match(lineByteSlice) {
+				if !excludeRegex.MatchString(lineStr) {
 					localMatches++
 					matchChan <- matchType{
 						fpath:        fpath,
