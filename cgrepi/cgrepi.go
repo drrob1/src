@@ -86,7 +86,7 @@ import (
 
 const LastAltered = "15 Aug 2026"
 const maxSecondsToTimeout = 1800
-const loopCheckForTimeout = 1000
+const loopCheckForTimeout = 10_000
 
 const limitWorkerPool = 750 // Since Linux limit of file handles is 1024, I'll leave room for other programs.
 
