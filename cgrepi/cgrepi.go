@@ -56,9 +56,10 @@ REVISION HISTORY
              1.  remove redundant string sort in line 268.  SliceOfStrings is never used.  Remove it, its formatter and sort.Strings(SliceOfStrings).  Done
              2.  replace per-match channel sends with per-worker result batches.
                  Every match passes through the single matchChan receiver at lines 233-242, and each worker can block at lines 322 and 330.  Have each worker collect its matches locally and send one result slice when it finishes.
+					I'm going to ignore this one since the channels are buffered.
              3.  reduce per-line allocations and system calls.  ReadString('\n') at line 300 creates a string for every line.  Line 310 creates another string using strings.ToLower, then the regexp receives this last string.
                   Use a byte-oriented scanner/reader and regexp.Regexp.Match([]byte), retaining the original line only when it matches.  Consider compiling the pattern with
-                  (?i) instead of lower casing every input line.  This would reduce allocations and garbage collection pressure on large files.
+                  (?i) instead of lower casing every input line.  This would reduce allocations and garbage collection pressure on large files.  Done
              4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.  Done
 
 */
@@ -67,6 +68,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -84,13 +86,13 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const LastAltered = "15 Aug 2026"
+const LastAltered = "16 Aug 2026"
 const maxSecondsToTimeout = 1800
 const loopCheckForTimeout = 10_000
 
 const limitWorkerPool = 750 // Since Linux limit of file handles is 1024, I'll leave room for other programs.
 
-const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+const null = 0 // null rune to be used for binary file detection in GrepFile below.
 
 var workers = runtime.NumCPU()
 
@@ -303,39 +305,38 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 	}()
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
-		lineStr, er := reader.ReadString('\n') // lineStr is terminated w/ the \n character.  I would have to call a trim function to remove it.
-		if er != nil {                         // when can't read any more bytes, break.  If any bytes were read, er == nil.
+		// lineStr, er := reader.ReadString('\n') // lineStr is terminated w/ the \n character.  I would have to call a trim function to remove it.
+		lineByteSlice, er := reader.ReadBytes('\n') // line is terminated w/ the \n character.  I would have to call a trim function to remove it.
+		if er != nil && len(lineByteSlice) == 0 {   // when can't read any more bytes, break.  If any bytes were read, er == nil.
 			break // just exit when hit EOF condition.
 		}
-		if strings.ContainsRune(lineStr, null) { // don't search binary files, and probably others like PDFs which may contain nulls.
-			return // I guess break would do the same thing here, but using return is a clearer way to indicate my intent.  The wg.Done() is deferred so it doesn't matter.
+		if bytes.Contains(lineByteSlice, []byte{null}) { // don't search binary files, and probably others like PDFs which may contain nulls.
+			break
 		}
-		//if caseSensitiveFlag { // passed in globally  Part of optimization #3 above
-		//	lineStrng = lineStr
-		//} else {
-		//	lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case-insensitive.
-		//}
 
-		if lineRegex.MatchString(lineStr) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
+		//if lineRegex.MatchString(lineStr)  // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
+		if lineRegex.Match(lineByteSlice) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
 			if excludeRegex == nil { // If no excludeRegex, then only need to match the lineRegex
 				localMatches++
 				matchChan <- matchType{
-					fpath:        fpath,
-					lino:         lino,
-					lineContents: lineStr,
+					fpath: fpath,
+					lino:  lino,
+					//lineContents: lineStr,
+					lineContents: string(lineByteSlice),
 				}
 			} else { // If there is an excludeRegex, then must make sure that this expression doesn't match.
-				if !excludeRegex.MatchString(lineStr) {
+				if !excludeRegex.Match(lineByteSlice) {
 					localMatches++
 					matchChan <- matchType{
-						fpath:        fpath,
-						lino:         lino,
-						lineContents: lineStr,
+						fpath: fpath,
+						lino:  lino,
+						//lineContents: lineStr,
+						lineContents: string(lineByteSlice),
 					}
 				}
 			}
 		}
-		if lino%loopCheckForTimeout == 0 { // check the timeout every 1000 lines.  Optimization #4 above.
+		if lino%loopCheckForTimeout == 0 { // check the timeout at the beginning and then every bunch of lines.  Optimization #4 above.  Probably the most significant optimization.
 			now := time.Now()
 			if now.After(tfinal) {
 				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
