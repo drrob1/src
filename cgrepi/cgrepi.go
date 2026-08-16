@@ -126,7 +126,7 @@ var matchChan chan matchType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
 
-// var sliceOfStrings []string // based on an anonymous type.  Optimization #3 above
+// ----------------------------------- var sliceOfStrings []string // based on an anonymous type.  Optimization #1 above
 var workerPoolMultiplier int
 var verboseFlag bool
 
@@ -163,9 +163,6 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
 	}
-	//if !caseSensitiveFlag {  // unnecessary since pattern is already lower case.
-	//	pattern = strings.ToLower(pattern)
-	//}
 	if verboseFlag {
 		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
 	}
@@ -233,7 +230,7 @@ func main() {
 	wg.Add(minGoRtns)
 	// start the worker pool
 	grepChan = make(chan grepType, workers) // buffered channel
-	//for w := 0; w < minGoRtns; w++
+	//             for w := 0; w < minGoRtns; w++
 	for range minGoRtns { // syntax modernization
 		go func() {
 			defer wg.Done()
@@ -249,12 +246,12 @@ func main() {
 
 	matchChan = make(chan matchType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, lenOfFiles) // this uses a named type, needed to satisfy the sort interface.
-	// sliceOfStrings = make([]string, 0, lenOfFiles)         // this uses an anonymous type.  Optimization #1 above.
+	//                   sliceOfStrings = make([]string, 0, lenOfFiles) // this uses an anonymous type.  Optimization #1 above.
 	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
-			// s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
-			// sliceOfStrings = append(sliceOfStrings, s)  Optimization #1 above
+			//                                 s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
+			//                                 sliceOfStrings = append(sliceOfStrings, s)  Optimization #1 above
 		}
 	}()
 
@@ -273,10 +270,9 @@ func main() {
 	fmt.Println()
 
 	// Time to sort and show
-	// sort.Strings(sliceOfStrings)   never used  Optimization #1 above.
-	// sortStringElapsed := time.Since(t0)
+	//                                                 sort.Strings(sliceOfStrings)   never used  Optimization #1 above.
+	//                                                 sortStringElapsed := time.Since(t0)
 	sort.Sort(sliceOfAllMatches)
-	//       sort.Stable(sliceOfAllMatches)  I don't know why I put this here.  I don't need a stable sort here.  I must have been playing.
 	sortMatchedElapsed := time.Since(t0)
 
 	for _, m := range sliceOfAllMatches { //This is the only output that will be seen.
@@ -291,7 +287,6 @@ func main() {
 
 func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 	var localMatches int64
-	//var lineStrng string // either case-sensitive or case-insensitive string, depending on value of caseSensitiveFlag, which itself depends on case sensitivity of input pattern.  Optimization #3 above
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error is: %s\n", err)
@@ -305,7 +300,6 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 	}()
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
-		// lineStr, er := reader.ReadString('\n') // lineStr is terminated w/ the \n character.  I would have to call a trim function to remove it.
 		lineByteSlice, er := reader.ReadBytes('\n') // line is terminated w/ the \n character.  I would have to call a trim function to remove it.
 		if er != nil && len(lineByteSlice) == 0 {   // when can't read any more bytes, break.  If any bytes were read, er == nil.
 			break // just exit when hit EOF condition.
@@ -314,23 +308,20 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 			break
 		}
 
-		//if lineRegex.MatchString(lineStr)  // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
 		if lineRegex.Match(lineByteSlice) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
 			if excludeRegex == nil { // If no excludeRegex, then only need to match the lineRegex
 				localMatches++
 				matchChan <- matchType{
-					fpath: fpath,
-					lino:  lino,
-					//lineContents: lineStr,
+					fpath:        fpath,
+					lino:         lino,
 					lineContents: string(lineByteSlice),
 				}
 			} else { // If there is an excludeRegex, then must make sure that this expression doesn't match.
 				if !excludeRegex.Match(lineByteSlice) {
 					localMatches++
 					matchChan <- matchType{
-						fpath: fpath,
-						lino:  lino,
-						//lineContents: lineStr,
+						fpath:        fpath,
+						lino:         lino,
 						lineContents: string(lineByteSlice),
 					}
 				}
