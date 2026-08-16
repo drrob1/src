@@ -53,13 +53,13 @@ REVISION HISTORY
 				Turns out that none of the std grep versions have a way to do this.
 19 Apr 26 -- Changed maxSecondsToTimeout to 1/2 hr which is 1800 sec.
 15 Aug 26 -- I asked codex via Goland how to speed up the code.  It gave me 3 suggestions.
-             1.  remove redundant string sort in line 268.  SliceOfStrings is never used.  Remove it, its formatter and sort.Strings(SliceOfStrings)
+             1.  remove redundant string sort in line 268.  SliceOfStrings is never used.  Remove it, its formatter and sort.Strings(SliceOfStrings).  Done
              2.  replace per-match channel sends with per-worker result batches.
-                 Every match passes through the single matchChan receiver at lines 233-242, and each worker can block at lines 307 and 315.  Have each worker collect its matches locally and send one result slice when it finishes.
+                 Every match passes through the single matchChan receiver at lines 233-242, and each worker can block at lines 322 and 330.  Have each worker collect its matches locally and send one result slice when it finishes.
              3.  reduce per-line allocations and system calls.  ReadString('\n') at line 300 creates a string for every line.  Line 310 creates another string using strings.ToLower, then the regexp receives this last string.
                   Use a byte-oriented scanner/reader and regexp.Regexp.Match([]byte), retaining the original line only when it matches.  Consider compiling the pattern with
                   (?i) instead of lower casing every input line.  This would reduce allocations and garbage collection pressure on large files.
-             4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.
+             4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.  Done
 
 */
 
@@ -161,9 +161,9 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
 	}
-	if !caseSensitiveFlag {
-		pattern = strings.ToLower(pattern) // this is the change for the pattern.
-	}
+	//if !caseSensitiveFlag {  // unnecessary since pattern is already lower case.
+	//	pattern = strings.ToLower(pattern)
+	//}
 	if verboseFlag {
 		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
 	}
