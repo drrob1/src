@@ -67,6 +67,7 @@ REVISION HISTORY
 16 Aug 26 -- Now called cgrepi3, so I can experiment with removing (?i) from the regexp pattern and putting back the call to ToLower.
 				I suspect that cgrepi is slightly slower because of the (?i) in the regexp pattern.
 				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).  So I'm leaving it out here.
+17 Aug 26 -- Will only check for timeout once per file.
 */
 
 package main // cgrepi3 from cgrepi
@@ -91,9 +92,10 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const LastAltered = "16 Aug 2026"
+const LastAltered = "17 Aug 2026"
 const maxSecondsToTimeout = 1800
-const loopCheckForTimeout = 10_000
+
+// const loopCheckForTimeout = 10_000  Not needed as I changed the way I check for timeout.
 
 const limitWorkerPool = 750 // Since Linux limit of file handles is 1024, I'll leave room for other programs.
 
@@ -291,6 +293,12 @@ func main() {
 }
 
 func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
+
+	now := time.Now()
+	if now.After(tfinal) {
+		log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+	}
+
 	var localMatches int64
 	file, err := os.Open(fpath)
 	if err != nil {
@@ -334,12 +342,6 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 						lineContents: string(lineByteSlice),
 					}
 				}
-			}
-		}
-		if lino%loopCheckForTimeout == 0 { // check the timeout at the beginning and then every bunch of lines.  Optimization #4 above.  Probably the most significant optimization.
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 			}
 		}
 	}

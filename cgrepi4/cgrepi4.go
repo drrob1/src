@@ -67,9 +67,11 @@ REVISION HISTORY
 16 Aug 26 -- Now called cgrepi3, so I can experiment with removing (?i) from the regexp pattern and putting back the call to ToLower.
 				I suspect that cgrepi is slightly slower because of the (?i) in the regexp pattern.
 				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).  So I'm leaving it out here.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+17 Aug 26 --  Now will implement #2 above and check timing against the others.
 */
 
-package main // cgrepi3 from cgrepi
+package main // cgrepi4 from cgrepi3 from cgrepi
 
 import (
 	"bufio"
@@ -91,9 +93,10 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const LastAltered = "16 Aug 2026"
+const LastAltered = "17 Aug 2026"
 const maxSecondsToTimeout = 1800
-const loopCheckForTimeout = 10_000
+
+// const loopCheckForTimeout = 10_000  Not needed as I changed the way I check for timeout.
 
 const limitWorkerPool = 750 // Since Linux limit of file handles is 1024, I'll leave room for other programs.
 
@@ -127,7 +130,7 @@ func (m matchesSliceType) Less(i, j int) bool {
 
 var caseSensitiveFlag bool // default is false.
 var grepChan chan grepType
-var matchChan chan matchType
+var matchSlicesChan chan matchesSliceType
 var totFilesScanned, totMatchesFound int64
 var t0, tfinal time.Time
 
@@ -249,14 +252,12 @@ func main() {
 		fmt.Printf(" Length of files = %d, minGoRtns = %d.\n\n", len(files), minGoRtns)
 	}
 
-	matchChan = make(chan matchType, workers)
+	matchSlicesChan = make(chan matchesSliceType, workers)
 	sliceOfAllMatches := make(matchesSliceType, 0, lenOfFiles) // this uses a named type, needed to satisfy the sort interface.
-	//                   sliceOfStrings = make([]string, 0, lenOfFiles) // this uses an anonymous type.  Optimization #1 above.
+
 	go func() { // start the receiving operation before the sending starts
-		for match := range matchChan {
-			sliceOfAllMatches = append(sliceOfAllMatches, match)
-			//                                 s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
-			//                                 sliceOfStrings = append(sliceOfStrings, s)  Optimization #1 above
+		for matches := range matchSlicesChan {
+			sliceOfAllMatches = append(sliceOfAllMatches, matches...)
 		}
 	}()
 
@@ -267,7 +268,7 @@ func main() {
 
 	goRtns := runtime.NumGoroutine()
 	wg.Wait()
-	close(matchChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
+	close(matchSlicesChan) // must close the channel so the matchChan for loop will end.  And I have to do this after all the work is done.
 
 	elapsed := time.Since(t0)
 
@@ -275,8 +276,6 @@ func main() {
 	fmt.Println()
 
 	// Time to sort and show
-	//                                                 sort.Strings(sliceOfStrings)   never used  Optimization #1 above.
-	//                                                 sortStringElapsed := time.Since(t0)
 	sort.Sort(sliceOfAllMatches)
 	sortMatchedElapsed := time.Since(t0)
 
@@ -291,22 +290,31 @@ func main() {
 }
 
 func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
+
+	now := time.Now()
+	if now.After(tfinal) {
+		log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+	}
+
 	var localMatches int64
+
 	file, err := os.Open(fpath)
 	if err != nil {
 		log.Printf("grepFile os.Open error is: %s\n", err)
 		return
 	}
 
+	localMatchesSlice := make(matchesSliceType, 0, 500)
 	defer func() { // gonuts group: Matthew Zimmerman noticed that if there's a file error, wg.Done() isn't called.  I just fixed that.  6/6/25, not needed since I changed how the wg id handled.
 		file.Close()
+		matchSlicesChan <- localMatchesSlice
 		atomic.AddInt64(&totFilesScanned, 1)
 		atomic.AddInt64(&totMatchesFound, localMatches)
 	}()
 	reader := bufio.NewReader(file)
 	for lino := 1; ; lino++ {
 		lineByteSlice, er := reader.ReadBytes('\n') // line is terminated w/ the \n character.  I would have to call a trim function to remove it.
-		if er != nil && len(lineByteSlice) == 0 {   // when can't read any more bytes, break.  If any bytes were read, er == nil.
+		if er != nil && len(lineByteSlice) == 0 {   // when can't read any more bytes, break.  If any bytes were read, er == nil for ReadString, but here it's different.
 			break // just exit when hit EOF condition.
 		}
 		if bytes.Contains(lineByteSlice, []byte{null}) { // don't search binary files, and probably others like PDFs which may contain nulls.
@@ -320,26 +328,22 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 		if lineRegex.MatchString(lineStr) { // this is now either case-sensitive or not, depending on whether the input pattern has upper case letters.
 			if excludeRegex == nil { // If no excludeRegex, then only need to match the lineRegex
 				localMatches++
-				matchChan <- matchType{
+				aMatch := matchType{
 					fpath:        fpath,
 					lino:         lino,
 					lineContents: string(lineByteSlice),
 				}
+				localMatchesSlice = append(localMatchesSlice, aMatch)
 			} else { // If there is an excludeRegex, then must make sure that this expression doesn't match.
 				if !excludeRegex.MatchString(lineStr) {
 					localMatches++
-					matchChan <- matchType{
+					aMatch := matchType{
 						fpath:        fpath,
 						lino:         lino,
 						lineContents: string(lineByteSlice),
 					}
+					localMatchesSlice = append(localMatchesSlice, aMatch)
 				}
-			}
-		}
-		if lino%loopCheckForTimeout == 0 { // check the timeout at the beginning and then every bunch of lines.  Optimization #4 above.  Probably the most significant optimization.
-			now := time.Now()
-			if now.After(tfinal) {
-				log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
 			}
 		}
 	}
