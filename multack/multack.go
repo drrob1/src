@@ -79,7 +79,7 @@ import (
    6 Jun 25 -- I got the idea to add an exclude expression, after I tried to use one and found that I never implemented that here.  Copied code I write in cgrepi to here.
 				Turns out that none of the std grep versions have a way to do this.
   16 Aug 26 -- Very minor code changes.
-  17 Aug 26 -- Changed sliceSize from 50_000 to 5000.
+  17 Aug 26 -- Changed sliceSize from 50_000 to 5000 to 10_000
 */
 
 const lastAltered = "17 Aug 2026"
@@ -93,7 +93,7 @@ const null = 0 // null rune to be used for strings.ContainsRune in GrepFile belo
 const multiplier = 10 // default value for the worker pool multiplier
 var workerPoolMultiplier int
 
-const sliceSize = 5000 // a magic number I plucked out of the air.
+const sliceSize = 10_000 // a magic number I plucked out of the air.
 
 type devID uint64
 

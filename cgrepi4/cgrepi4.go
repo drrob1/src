@@ -68,7 +68,7 @@ REVISION HISTORY
 				I suspect that cgrepi is slightly slower because of the (?i) in the regexp pattern.
 				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).  So I'm leaving it out here.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-17 Aug 26 --  Now will implement #2 above and check timing against the others.
+17 Aug 26 --  Now will implement #2 above and check timing against the others.  Turns out that it's ~3 ms less than cgrepi3.  So codex was right, but not by much.
 */
 
 package main // cgrepi4 from cgrepi3 from cgrepi
