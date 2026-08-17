@@ -66,7 +66,8 @@ REVISION HISTORY
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 16 Aug 26 -- Now called cgrepi3, so I can experiment with removing (?i) from the regexp pattern and putting back the call to ToLower.
 				I suspect that cgrepi is slightly slower because of the (?i) in the regexp pattern.
-				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).  So I'm leaving it out here.
+				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).
+				~130 ms vs. ~75 ms.
 17 Aug 26 -- Will only check for timeout once per file.
 */
 

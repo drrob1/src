@@ -66,9 +66,11 @@ REVISION HISTORY
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 16 Aug 26 -- Now called cgrepi3, so I can experiment with removing (?i) from the regexp pattern and putting back the call to ToLower.
 				I suspect that cgrepi is slightly slower because of the (?i) in the regexp pattern.
-				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).  So I'm leaving it out here.
+				Timing measurements confirm that cgrepi is slightly slower than cgrepi3.  I was right that the cause is the regexp pattern of (?i).
+				~130 ms vs. ~75 ms.
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-17 Aug 26 --  Now will implement #2 above and check timing against the others.  Turns out that it's ~3 ms less than cgrepi3.  So codex was right, but not by much.
+17 Aug 26 --  Now called cgrepi4 and will implement #2 above and check timing against the others.  Turns out that it's ~3 ms less than cgrepi3.  So codex was right, but not by much.
+				On win11 desktop.  At work, the diff is ~10 ms.
 */
 
 package main // cgrepi4 from cgrepi3 from cgrepi
