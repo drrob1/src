@@ -9,29 +9,29 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
-	// jwalk "github.com/MichaelTJones/walk"  It made no difference vs the std lib, once I figured out that I had to return SkipDir on any errors.
-	// "github.com/whosonfirst/walk"  Not designed for windows, and I doesn't do what I want, so I'll delete it.
+	// "sort"  Codex says I don't need this, and it can't be wrong.
+	// jwalk "github.com/MichaelTJones/walk"  It made no difference vs. the std lib, once I figured out that I had to return SkipDir on any errors.
+	// "github.com/whosonfirst/walk"  Not designed for windows, and it doesn't do what I want, so I'll delete it.
 )
 
 /*
    REVISION HISTORY
    -------- -------
    21 Oct 2018 -- First started playing w/ MichaelTJones' code.  I added a help flag
-   21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag contents is output.  If an absolute time is given, use that, else use duration.
+   21 Oct 2022 -- In the code again, after running golangci-lint.  Changed how help flag content is output.  If an absolute time is given, use that, else use duration.
    26 Oct 2022 -- Added '~' processing.  And output timing info.
    28 Oct 2022 -- On linux this takes an hour to run when I invoke it using my home directory.  I'm looking into why.  I think because it's following a symlink to bigbkupG.
                   Naw, it's also following symlinks to DSM.
                   I posted on golang-nuts for help.  I'm adding the DevID that was recommended, and removing multiple start directories as the pre-processing was complex to work out.
    29 Oct 2022 -- jwalk doesn't work, as it exits too early.  filepath/walk takes ~2 min here on leox.  I'm adding a wait group, and now it works, taking ~7 sec on leox.
                   I'll leave in the done channel, as a model of something that's supposed to work but doesn't.  At least for now.
-                  Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform specific code for it.  I'll do that now.
+                  Turns out that the syscall used by GetDeviceID won't compile on Windows, so I have to use platform-specific code for it.  I'll do that now.
    31 Oct 2022 -- Happy Halloween.  Turns out that I didn't need to add a wait group after all.  I'll confirm that here by removing it.  Confirmed.
     2 Nov 2022 -- Time to clean out the crap that accumulated while I sorted out the code.  The GitHub repo was last modified 8 yrs ago, which is Go 1.3 or 1.4.  A lot has
-                    changed in that time, now that Go 1.19 is current.  I did not find a difference btwn the std library walk vs Michael T Jones' code I called jwalk.
+                    changed in that time, now that Go 1.19 is current.  I did not find a difference between the std library walk vs. Michael T Jones' code I called jwalk.
                     I'll remove that stuff now.
    16 Feb 2023 -- I'll change to using WalkDir instead of Walk.  This essentially changes from a FileInfo to a DirEntry.  The docs say that WalkDir is slightly faster.
                     And: I took out tests for symlink, run os.Stat only after directory check for the special directories, only call deviceID on a dir entry,
@@ -42,9 +42,29 @@ import (
     9 May 2024 -- Removed redundant code.
    13 May 2024 -- Added toDHMS yesterday, and updated it today
    14 May 2024 -- Updated an example for use for -h
+   17 Aug 2026 -- I asked codex to optimize the code.  It returned this:
+1. Remove the result channel and goroutine — lines 105–115, 186–201. filepath.WalkDir is synchronous, so results can be appended directly during traversal.
+	This removes channel sends, a goroutine, synchronization, and an extra handoff.
+2. Remove sort.Strings(result) — line 113. filepath.WalkDir already visits entries in lexical order, so the collected file paths are already ordered.
+	Sorting adds O(n log n) work and can be expensive with many matches.
+3. Remove the atomic counters — lines 118, 152, 183–184. The callback runs serially, so ordinary integers are sufficient.
+	Also, tFiles and rBytes are currently only used in commented-out output and can be eliminated entirely.
+4. Consider avoiding result storage when output can be streamed. Currently, every matching path is retained until the walk completes, increasing memory usage.
+	Printing during traversal would reduce memory, but it changes the output timing and means filesystem traversal and terminal I/O overlap.
+5. Make directory pruning cheaper — line 155. filepath.Ext(path) and repeated full-path strings.Contains scans run for every directory. Checking d.Name() is cheaper,
+	but only use that if the intended behavior is to skip directories named .git, vmware, or .cache;
+	the current code also skips paths containing those strings or directories ending in .git.
+6. Treat device-ID checks as an optional tradeoff — lines 162–173. Each directory requires d.Info() to determine its device ID.
+	If crossing filesystem/device boundaries is not important for a particular invocation, skipping this check could substantially reduce metadata syscalls.
+	It changes traversal behavior, so I would not remove it unconditionally.
+7. Be cautious with parallel traversal. A worker-based walker might help on network or high-latency filesystems, but can hurt on local disks, complicate ordered output,
+	and require replacing filepath.WalkDir. I’d benchmark the simpler changes first.
+
+The highest-confidence improvements are removing the channel/goroutine, removing the redundant sort, and replacing/removing the atomics.
+Filesystem metadata calls will likely remain the dominant cost afterward.
 */
 
-var LastAlteredDate = "May 14, 2024"
+var LastAlteredDate = "Aug 18, 2026"
 
 var duration = flag.Duration("dur", 10*time.Minute, "find files modified within this duration")
 var format = flag.String("f", "2006-01-02 03:04:05", "time format")
@@ -57,6 +77,8 @@ var weeks = flag.Int("w", 0, "weeks duration")
 //var wg sync.WaitGroup  I'm using a channel to signal
 
 type devID uint64
+
+const sliceSize = 5000
 
 func main() {
 
@@ -102,19 +124,19 @@ func main() {
 		fmt.Printf(" when = %s, home directory is %s\n", when, home)
 	}
 
-	// goroutine to collect names of recently-modified files
-	result := make([]string, 0, 1024)
-	done := make(chan bool)
-	results := make(chan string, 1024)
-	go func() {
-		for r := range results {
-			result = append(result, r)
-		}
-		sort.Strings(result) // simulate ordered traversal
-		done <- true
-	}()
+	// goroutine to collect names of recently modified files
+	results := make([]string, 0, sliceSize)
+	// done := make(chan bool)
+	//results := make(chan string, 1024)  Codex says I don't need this; and it can't be wrong.
+	//go func() {
+	//	for r := range results {
+	//		result = append(result, r)
+	//	}
+	//	sort.Strings(result) // simulate ordered traversal
+	//	done <- true
+	//}()
 
-	// walkDir to find recently-modified files
+	// walkDir to find recently modified files
 	//var lock sync.Mutex    // I took out this mutex pattern here as a reference; I like the atomic add stuff better as I believe it to be cleaner w/ less code.
 	var tFiles int64         // total files and bytes
 	var rFiles, rBytes int64 // recent files and bytes
@@ -149,7 +171,8 @@ func main() {
 			return filepath.SkipDir
 		}
 
-		atomic.AddInt64(&tFiles, 1)
+		// atomic.AddInt64(&tFiles, 1)  Codex says I don't need this; and it can't be wrong.
+		tFiles++
 
 		if d.IsDir() {
 			if filepath.Ext(path) == ".git" || strings.Contains(path, "vmware") || strings.Contains(path, ".cache") { // adding extra skipDir's saved from 13 min -> 9 sec runtime.
@@ -184,7 +207,8 @@ func main() {
 			atomic.AddInt64(&rBytes, info.Size())
 
 			if !*quiet {
-				results <- path // allows sorting into "normal" order
+				//results <- path // allows sorting into "normal" order.  Codex says I don't need this, and it can't be wrong.
+				results = append(results, path)
 			}
 		}
 		return nil
@@ -195,18 +219,18 @@ func main() {
 	if err != nil {
 		log.Printf(" error from walk.Walk is %v\n", err)
 	}
-	close(results) // no more results
+	//close(results) // no more results
 
 	// wait for traversal results and print
-	<-done // blocking channel receive, to wait for final results and sorting
-	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanosec's.  So by dividing by ns/s it converts to sec, and is reported that way below.
+	// <-done // blocking channel receive, to wait for final results and sorting.  Codex says I don't need this, and it can't be wrong.
+	//𝛥t := float64(time.Since(now)) / 1e9 // duration unit is essentially nanoseconds.  So by dividing by ns/s it converts to sec, and is reported that way below.
 	elapsed := time.Since(now)
 
-	for _, r := range result {
+	for _, r := range results {
 		fmt.Printf("%s\n", r)
 	}
 
-	fmt.Printf(" Since ran for %s, finding %d (%d) files since %s or ", elapsed, len(result), rFiles, when.Format(time.UnixDate))
+	fmt.Printf(" Since ran for %s, finding %d (%d) files since %s or ", elapsed, len(results), rFiles, when.Format(time.UnixDate))
 	d, h, m, s := toDHMS(*duration)
 	fmt.Print("since ")
 	if d > 0 {
