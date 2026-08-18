@@ -27,8 +27,8 @@ REVISION HISTORY
 19 Jul 22 -- First version.  I'm writing this as I go along, pulling code from other pgms as I need them.
              I want this to take an input string on the command line.  This string will be a regexp used to match against a filename, like what rex.go does.
              From the resultant slice of matches of this regexp, I'll shuffle it and then feed them one at a time into vlc.
-             So it looks like I'll need pieces of rex.go, shuffle code from bj.go, and then launching and external pgm code like I do in a few places now.
-             The final launching loop will pause and exit if I want it to, like I did w/ the pid and windows title matching routines.  I'll let the import list auto-populate.
+             So it looks like I'll need pieces of rex.go, shuffle code from bj.go, and then launching an external pgm code like I do in a few places now.
+             The final launching loop will pause and exit if I want it to, like I did w/ the pid and windows title matching routines.  I'll let the import list autopopulate.
 20 Jul 22 -- Added verboseFlag being set will have it output the filename w/ each loop iteration.  And I added 'x' to the exit key behavior.
 21 Jul 22 -- Now called lauv, it will output n files on the command line to vlc.  This way I can use 'n' from within vlc.
 22 Jul 22 -- I can't get this to work by putting several filenames on the command line and it reading them all in.  Maybe I'll try redirection.
@@ -49,19 +49,19 @@ REVISION HISTORY
                I undid it.
 18 Jan 23 -- Adding smartCase
 16 Feb 23 -- Added init() which accounts for change of behavior in rand.Seed() starting w/ Go 1.20.
-26 Oct 23 -- Added hard coded regexp's.  And increased the default value for numNames.
+26 Oct 23 -- Added hard-coded regexp's.  And increased the default value for numNames.
 15 Nov 23 -- Added another hard coded regexp.
  6 Dec 23 -- Fixed the numeric pattern, and added alternate num option.
 13 Dec 23 -- Really fixed the numeric pattern.
 14 Dec 23 -- Going to try setting the StdErr to /dev/null and see what happens.  I don't want to see all the errors that show up on linux.
-               No, that didn't work.  But I can not assign it to anything, and that works.
+               No, that didn't work.  But not assigning it to anything works.
 20 Jan 24 -- Adding femdom as a switch
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 21 Jan 24 -- Now called lv2, for launchvlc 2.  By trial and error, I discovered that the input file to vlc must have an .xspf extension, but it does not need the duration line.
-               So now I want to write all the files matched w/ the regexp to temp .xspf file.  Since I don't need the duration line, I can do this now.  I'll hardcode the html stuff
+               So now I want to write all the files matched w/ the regexp to temp .xspf file.  Since I don't need the duration line, I can do this now.  I'll hard-code the HTML stuff
                that I need to use for each file.  It must have the <location> line else it won't work.  But it may be faster to parse if I give it everything I have but for the duration.
                I expect this will take a bit of time.
-               Header1 will be lines 1 and 2.  Title line will have the regexp as the title btwn the HTML tags.
+               Header1 will be lines 1 and 2.  Title line will have the regexp as the title between the HTML tags.
                trackList opening is once per file.
                track has location line, and then the extension application stuff needs a counter starting from 0.  <track> <location> <extension application> </extension> </track>
                </trackList><playlist>
@@ -71,11 +71,11 @@ REVISION HISTORY
                the first line.  When I took that out, it started working.  But I had already fixed some of the strings so that all had a closing angle bracket.  I left a few off at first.
 23 Jan 24 -- I'm going to remove code I haven't used in quite a while.
 24 Jan 24 -- I'm having the default for the excludeRegex be xspf$.  And I'm adding maxNumOfTracks and numOfTracks.  Hey, it worked.  The patterns now all work.
-                I'm now going to as a random number to the name of the file so similar regexp's don't clobber one other.  I read at xspf.org that <title>Playlist</title> is not required.
+                I'm now going to add a random number to the name of the file so similar regexp's don't clobber one other.  I read at xspf.org that <title>Playlist</title> is not required.
                 So I deleted it.
 26 Jan 24 -- Still trying to figure out what makes xspf files too large.  So I added output of total file string lengths.  And since my go.mod file says a min of Go 1.21 for compilation,
                 I don't need the init() fcn here to possibly call rand.Seed().  I removed it.  And I'm colorizing the final output message.
-                So far, the maximum string buffer for location strings is 13,937 < max 4 buffer < 13965.  Nope, that's not it.  See xspftotstrlen.go.
+                So far, the maximum string buffer for location strings is 13,937 < max for buffer < 13,965.  Nope, that's not it.  See xspftotstrlen.go.
 27 Jan 24 -- Found it.  Bad filenames containing characters that choked vlc.  In this case, !!! was the culprit.  When I removed those files, it worked.  Then I detoxed those files.
  5 Feb 24 -- Increased the shuffling number
  6 Feb 24 -- Added randRange.
@@ -87,7 +87,11 @@ REVISION HISTORY
 21 Nov 24 -- Added '\' as a character to be removed when constructing the output filename.
  7 Jun 25 -- Adding the ability to exclude a regexp.
 				Nevermind.  It's already here.  It excludes a filename, as done in rex and dsrt, for quite a while now.
-30 Dec 25 -- Exapnded the forced regexp.
+30 Dec 25 -- Expanded the forced regexp list.
+18 Aug 26 -- Cleaned up the code.  And then asked Codex it's opinion.  It said that main is too long and hard to test.  It recommended refactoring the code into smaller functions.
+              that would separately handle environment configuration, regexp compilation, directory scanning, shuffling, output filename generation, xspf writing and finally
+              VLC discovery and execution.  It recommended functions that parseConfig, findFiles, shuffleFiles, createPlaylist,  discoverVlc, and executeVlc.
+              I'm not doing it.
 */
 
 /*
@@ -114,7 +118,7 @@ REVISION HISTORY
 </playlist>
 */
 
-const lastModified = "Dec 30, 2025"
+const lastModified = "Aug 18, 2026"
 
 const lineTooLong = 500    // essentially removing it
 const maxNumOfTracks = 300 // I'm trying to track down why some xspf files work and others don't.  Found it, see comment above dated 27 Jan 24.
@@ -172,7 +176,7 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, " Verbose mode flag.")
 	flag.BoolVar(&veryVerboseFlag, "vv", false, " Very Verbose mode flag.")
 	flag.StringVar(&excludeRexString, "x", "xspf$", " Exclude file regexp string, which is usually empty.")
-	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdon|tntu")
+	flag.BoolVar(&preBoolOne, "1", false, "Use 1st predefined pattern of femdom|tntu")
 	flag.BoolVar(&preBoolTwo, "2", false, "Use 2nd predefined pattern of fuck.*dung|tiefuck|fuck.*bound|bound.*fuck|susp.*fuck|fuck.*susp|sexually|sas")
 	flag.BoolVar(&femdomFlag, "femdom", false, "Use predefined pattern for femdom")
 	flag.BoolVar(&domFlag, "dom", false, "Use predefined pattern #1.")
@@ -215,7 +219,7 @@ func main() {
 		includeRexString = flag.Arg(0) // this is the first argument on the command line that is not the program name.
 	}
 
-	if includeRexString == "" { // if there are more than 1 arguments, the extra ones are ignored.
+	if includeRexString == "" { // if there is more than 1 argument, the extra ones are ignored.
 		fmt.Printf(" Usage: lv2 <options> <input-regex> where <input-regex> should not be empty.\n")
 		flag.PrintDefaults()
 		fmt.Println()
@@ -270,7 +274,10 @@ func main() {
 		fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 	}
 	fmt.Printf(" ShuffleAmount = %d, more = %d, sumShuffle = %d for %d files.  About to start the Shuffle.\n\n", shuffleAmount, more, sumShuffle, len(fileNames))
-	for i := 0; i < sumShuffle; i++ {
+	//for i := 0; i < sumShuffle; i++ {  Old syntax
+	//	rand.Shuffle(len(fileNames), swapFnt)
+	//}
+	for range sumShuffle { // new syntax
 		rand.Shuffle(len(fileNames), swapFnt)
 	}
 
@@ -329,7 +336,7 @@ func main() {
 	// Nope, I still have that wrong.  I need to start a command processor, too.  And vlc is not in the %PATH, but it does work when I just give it as a command without a path.
 
 	// Turns out on Windows that vlc was not in the path.  But it shows up when I use "which vlc" in tcc.  On linux only use VLCPATH if set by the user, on Windows always use it, either
-	// using the default setting as defined above, or the one set by the user in the environment variable.  Above, vlcPath is blanked if it's not needed, ie, on linux or not set by user.
+	// using the default setting as defined above, or the one set by the user in the environment variable.  Above, vlcPath is blanked if it's not needed, i.e., on linux or not set by user.
 	vlcStr := whichexec.Find("vlc", vlcPath)
 
 	if vlcStr == "" {
@@ -340,10 +347,9 @@ func main() {
 	// Time to run vlc.
 
 	var execCmd *exec.Cmd
+	execCmd = exec.Command(vlcStr, fullOutFilename)
 
-	if runtime.GOOS == "windows" {
-		execCmd = exec.Command(vlcStr, fullOutFilename)
-	} else if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" {
 		execCmd = exec.Command(vlcStr, fullOutFilename)
 	}
 
@@ -415,8 +421,6 @@ func writeOutputFile(w io.Writer, fn []string) (int, error) {
 <playlist xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/" version="1">
 `
 
-	// const titleOpen = "<title>"
-	// const titleClose = "</title>"
 	const trackListOpen = "<trackList>"
 	const trackListClose = "</trackList>"
 	const trackOpen = "<track>"
@@ -428,6 +432,8 @@ func writeOutputFile(w io.Writer, fn []string) (int, error) {
 	const vlcIDOpen = "<vlc:id>"
 	const vlcIDClose = "</vlc:id>"
 	const playListClose = "</playlist>"
+	// const titleOpen = "<title>"
+	// const titleClose = "</title>"
 	var totalStrLen int
 
 	buf := bufio.NewWriter(w)
