@@ -62,6 +62,10 @@ import (
 
 The highest-confidence improvements are removing the channel/goroutine, removing the redundant sort, and replacing/removing the atomics.
 Filesystem metadata calls will likely remain the dominant cost afterward.
+
+  18 Aug 2026 -- I implemented #1, 2 and 3 above and did some test runs on thelio.  Codex was right.  The original version of the code is slightly slower than the new version,
+                  by about 0.1 sec in 3.5 sec, which is about 2.9%.
+
 */
 
 var LastAlteredDate = "Aug 18, 2026"
