@@ -118,7 +118,7 @@ Revision History
 15 Oct 22 -- Added max flags to undo the effect of environment var dsrt=20
                I removed the filter flag from this code when I wrote it.
 21 Oct 22 -- Removed unused variable as caught by golangci-lint, and incorrect use of format verb.
-11 Nov 22 -- Will show environment variables on startup message, if they're not blank.
+11 Nov 22 -- Will show environment variables on startup message if they're not blank.
 21 Nov 22 -- Use of dirAlisesMap was not correct.  It is not used as a param to a func, so I removed that.
 16 Jan 23 -- Added smart case
 26 Feb 23 -- Fixed bug that effects opening symlinked directories on linux.
@@ -132,7 +132,7 @@ Revision History
 20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
  4 May 24 -- Adding concurrent code from fdsrt.
  3 Jun 24 -- Removed commented out code and edited a few comments.
- 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
+ 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpreted as nscreens instead of nlines (off the top of my head)
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 				I decided to separate the environ variables, so this now uses rex instead of dsrt as the environ var name it uses to set its defaults.
  6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
@@ -142,16 +142,17 @@ Revision History
 17 Feb 25 -- Adding pflag.  I don't think I need viper yet.  I added pflag by naming its import path to flag.
 14 Mar 25 -- It's Pi Day today, but that's not important now.  I'm debugging code in rexv to handle directories as 1 param.  When that works, I'll port it here.
  5 Apr 25 -- Noticed that w:subaru isn't parsing correctly.  I'm looking into this.  It seems to work in rexv, but not here.  Hmm, now it's working.  Strange.
- 7 Apr 25 -- Not strange, just out of date.  I was using an out of date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
+ 7 Apr 25 -- Not strange, just out of date.  I was using an out-of-date version of rex on doug-meerkat.  And I moved func to above Parse() so it would work.
  9 Apr 25 -- Updated help message again.
 28 Apr 25 -- Updated the reverse flag so -r means reverse.  And removed RevFlag.
 21 Jun 25 -- Porting code I just wrote for dv to here, that tracks whether the terminal is redirected and uses that to determine whether color is output.
 22 Jun 25 -- Ported code I wrote for rexv, myPrintf, to here.
-17 Sep 25 -- Starting to display more info for symlinks, ie, the target of the symlink and the correct size.
+17 Sep 25 -- Starting to display more info for symlinks, i.e., the target of the symlink and the correct size.
 31 Jan 26 -- Fixed some comments so that Goland stops complaining.
+18 Aug 26 -- I'm in the code again, to have Codex take a look.
 */
 
-const LastAltered = "Sep 18, 2025"
+const LastAltered = "Aug 18, 2026"
 
 type dirAliasMapType map[string]string
 
@@ -960,9 +961,11 @@ func includeThisWithRegex(fn string, regex *regexp.Regexp) bool { // I removed t
 		}
 	}
 
-	if !smartCase && !regex.MatchString(fnl) {
-		return false
-	} else if smartCase && !regex.MatchString(fn) {
+	if smartCase {
+		if !regex.MatchString(fn) {
+			return false
+		}
+	} else if !regex.MatchString(fnl) {
 		return false
 	}
 	return true
