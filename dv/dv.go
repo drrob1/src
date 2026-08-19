@@ -750,6 +750,9 @@ func myReadDir(dir string) []os.FileInfo { // The entire change including use of
 			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
+					if !includeName(de.Name()) {
+						continue
+					}
 					fi, err := de.Info()
 					if err != nil {
 						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
@@ -840,6 +843,9 @@ func myReadDirWithMatch(dir, matchPat string) []os.FileInfo { // The entire chan
 			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
+					if !includeName(de.Name()) || !matchesName(de.Name(), matchPat) {
+						continue
+					}
 					fi, err := de.Info()
 					if err != nil {
 						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
@@ -966,17 +972,10 @@ func includeThis(fi os.FileInfo) bool {
 		fmt.Printf(" at top of includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, FileInfo Name=%s;  \n",
 			noExtensionFlag, excludeFlag, filterAmt, fi.Name())
 	}
-	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+	if !includeName(fi.Name()) {
 		return false
-		//} else if fi.Mode().IsDir() {
-		//	return false
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
-			return false
-		}
-	}
-	if excludeFlag {
-		if BOOL := excludeRegex.MatchString(strings.ToLower(fi.Name())); BOOL {
 			return false
 		}
 	}
@@ -991,27 +990,29 @@ func includeThisWithMatch(fi os.FileInfo, matchPat string) bool {
 		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d, FileInfo Name=%s, match pattern=%s \n",
 			noExtensionFlag, excludeFlag, filterAmt, fi.Name(), matchPat)
 	}
-	if noExtensionFlag && strings.ContainsRune(fi.Name(), '.') {
+	if !includeName(fi.Name()) {
 		return false
-		//} else if fi.Mode().IsDir() {
-		//	return false
 	} else if filterAmt > 0 {
 		if fi.Size() < int64(filterAmt) {
 			return false
 		}
 	}
-	if excludeFlag {
-		if excludeRegex.MatchString(strings.ToLower(fi.Name())) {
-			return false
-		}
-	}
-	matchPat = strings.ToLower(matchPat)
-	f := strings.ToLower(fi.Name())
-	match, err := filepath.Match(matchPat, f)
-	if err != nil {
+	return matchesName(fi.Name(), matchPat)
+}
+
+func includeName(name string) bool {
+	if noExtensionFlag && strings.ContainsRune(name, '.') {
 		return false
 	}
-	return match
+	if excludeFlag && excludeRegex.MatchString(strings.ToLower(name)) {
+		return false
+	}
+	return true
+}
+
+func matchesName(name, matchPat string) bool {
+	match, err := filepath.Match(strings.ToLower(matchPat), strings.ToLower(name))
+	return err == nil && match
 }
 
 func StdLinearReadDir(dir string) []os.FileInfo { // Non-concurrent version of myReadDir.  This is the original version.
