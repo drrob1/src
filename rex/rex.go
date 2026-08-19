@@ -355,7 +355,6 @@ func main() {
 		fmt.Println(" More help on syntax by go doc regexp/syntax, on the golang.org site for regexp/syntax package.")
 		fmt.Println()
 		flag.PrintDefaults()
-		//return flagged by staticcheck as redundant.  Interesting
 	}
 
 	flag.Parse()
