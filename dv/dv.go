@@ -195,7 +195,8 @@ REVISION HISTORY
 21 Jan 26 -- Fixed a bug in dvutil_windows.go.  Comment there explains it.
  7 Mar 26 -- Copied routines from dvutil_windows.go, so this would compile on linux also.  It seems that I broke that compatibility when I was chasing down problems I saw at work.
 25 Mar 26 -- getMagnitudeString is a helper function to format file sizes in a human-readable format.  And now MB and KB are capitalized for consistency.
-19 Aug 26 -- Optimized by Codex.
+19 Aug 26 -- Optimized by Codex.  I asked Codex to explain the optimizations.  It said that previously, each directory entry followed this path: DirEntry -> Info() -> filename filters -> keep or discard.
+                The Info() metadata lookup was unnecessary work for files that could already be rejected by name.  Now the concurrent readers use: DirEntry -> name filters -> Info() -> size filter -> keep or discard.
 */
 
 const LastAltered = "19 Aug 2026"
