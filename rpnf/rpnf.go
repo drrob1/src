@@ -76,7 +76,7 @@ import (
 20 Jan 26 -- Adding a menu.
 21 Jan 26 -- Trying canvas.Text for the help window.  Nope, it didn't work.  All text came out on 1 line.
 23 Jan 26 -- Added a menu item to show a dialog to enter the sigfig.
-26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as depracated; I think I successfully created a custom theme that matches the dark theme.
+26 Jan 26 -- Added a dark theme.  Since using theme.DarkTheme is marked as deprecated; I think I successfully created a custom theme that matches the dark theme.
 28 Jan 26 -- Made help text bold.  It's  brighter, and I like it.  And added fyne.Do to center the popup window on screen.
 10 Feb 26 -- Added a dividing line, as I saw from the YouTube tutorials.  It may take a bit of time to get right.
 16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Added ability to reduce screen size by a menu item.
@@ -474,7 +474,7 @@ func Doit() {
 					extra = append(extra, "dark, light -- set Fyne theme to dark or light.")
 					str := fmt.Sprintf("%s last modified on %s and compiled w/ %s \n", os.Args[0], lastModified, runtime.Version())
 					extra = append(extra, str)
-					showHelp(extra) // maybe I won't get an error from fyne.DoAndWait if I go showHelp.  No error, but the help window poped under the main window.  I removed the go call.
+					showHelp(extra) // maybe I won't get an error from fyne.DoAndWait if I go showHelp.  No error, but the help window popped under the main window.  I removed the go call.
 				} else if rtkn.Str == "ZEROREG" {
 					for c := range Storage {
 						Storage[c].Value = 0
@@ -543,7 +543,7 @@ func Doit() {
 				}
 				// -------------------------------------------------------------------------------------
 
-				//  These commands are processed thru GetResult() first, then these are processed here.
+				//  These commands are processed through GetResult() first, then these are processed here.
 				if strings.ToLower(rtkn.Str) == "about" { // I'm using ToLower here just to experiment a little.
 					str := fmt.Sprintf("Last altered the source of rpnf.go %s, compiled w/ %s", lastModified, runtime.Version())
 					stringslice = append(stringslice, str)
