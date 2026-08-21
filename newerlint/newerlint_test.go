@@ -64,6 +64,41 @@ func TestRemoteMarkerAppliesToImmediatelyPrecedingName(t *testing.T) {
 	}
 }
 
+func TestVacationNamesIgnoreRADepartmentMarker(t *testing.T) {
+	t.Parallel()
+
+	got := vacationNames("RA")
+	if len(got) != 0 {
+		t.Fatalf("vacationNames() = %v, want []", got)
+	}
+	got = vacationNames("RA Smith")
+	if len(got) != 1 || got[0] != "Smith" {
+		t.Fatalf("vacationNames() = %v, want [Smith]", got)
+	}
+}
+
+func TestAnalyzeDoesNotReportRADepartmentMarkerAsVacationError(t *testing.T) {
+	t.Parallel()
+
+	cells := [][]string{
+		{"ASSIGNMENTS", "RA"},
+		{"", "Monday"},
+		{"", "July 20, 2026"},
+		{"FLUORO FH", ""},
+		{"FLUORO JH", ""},
+		{"Late MD", ""},
+		{"MDs Out of Office", "RA"},
+	}
+
+	findings, err := analyze(cells)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("got %d findings, want 0: %#v", len(findings), findings)
+	}
+}
+
 func TestAnalyzeFindsAllThreeErrorTypes(t *testing.T) {
 	t.Parallel()
 

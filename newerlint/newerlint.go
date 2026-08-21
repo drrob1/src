@@ -197,7 +197,7 @@ func analyze(cells [][]string) ([]finding, error) {
 	var findings []finding
 	for col := office.col + 1; col < len(cells[office.row]); col++ {
 		day := columnDay(cells, col)
-		officeNames := words(cellAt(cells, office.row, col))
+		officeNames := vacationNames(cellAt(cells, office.row, col))
 		for _, name := range officeNames {
 			for row := 0; row < office.row; row++ {
 				for _, other := range words(cellAt(cells, row, col)) {
@@ -319,6 +319,16 @@ func containsSameName(names []string, wanted string) bool {
 
 func words(value string) []string {
 	return wordRE.FindAllString(value, -1)
+}
+
+func vacationNames(value string) []string {
+	var names []string
+	for _, name := range words(value) {
+		if !strings.EqualFold(name, "RA") {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 func sameName(a, b string) bool {
