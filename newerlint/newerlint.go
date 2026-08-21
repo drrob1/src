@@ -14,21 +14,24 @@ import (
 	"time"
 	"unicode"
 
+	flag "github.com/spf13/pflag"
 	"github.com/tealeg/xlsx/v3"
 )
 
 /*
   18 July 26 -- First written by codex.
   19 July 26 -- I'm making some edits in the messages.
+  20 Aug 26 -- Fixed "RA" bug by Codex.  And added verbose mode.
 */
 
-const LastUpdate = "19 July 26"
+const LastUpdate = "20 August 2026"
 
 var (
 	wordRE   = regexp.MustCompile(`[A-Za-z][A-Za-z'-]*`)
 	doctorRE = regexp.MustCompile(`(?i)\bdr\.?\s+([A-Za-z][A-Za-z'-]*)`)
 	remoteRE = regexp.MustCompile(`(?i)(?:dr\.?\s+)?([A-Za-z][A-Za-z'-]*)\s*\(\*R\)`)
 )
+var verboseFlag bool
 
 type candidate struct {
 	path    string
@@ -51,6 +54,8 @@ type finding struct {
 
 func main() {
 	fmt.Printf(" newerLint, LastUpdate: %s\n\n", LastUpdate)
+	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "verbose output")
+	flag.Parse()
 	if err := run(os.Stdin, os.Stdout, time.Now()); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
@@ -141,8 +146,11 @@ func chooseFile(input io.Reader, output io.Writer, files []candidate) (string, e
 		}
 		selection, err := strconv.Atoi(strings.TrimSpace(scanner.Text()))
 		if err != nil {
-			fmt.Printf(" Error: %v, using default of 1.\n", err)
+			if verboseFlag {
+				fmt.Printf(" Error: %v.   ", err)
+			}
 			selection = 1
+			fmt.Printf("Selection = %d\n", selection)
 			err = nil
 		}
 		if err == nil && selection >= 1 && selection <= len(files) {
