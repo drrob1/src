@@ -186,8 +186,8 @@ func main() {
 
 	var filterFlag, noFilterFlag bool
 	var filterStr string
-	flag.StringVar(&filterStr, "filter", "", "individual size filter value below which listing is suppressed.")
-	flag.BoolVar(&filterFlag, "f", false, "filter flag to suppress listing individual size below 1 MB.")
+	flag.StringVar(&filterStr, "filterString", "", "individual size filter value below which listing is suppressed.")
+	flag.BoolVarP(&filterFlag, "filter", "f", false, "filter flag to suppress listing individual size below 1 MB.")
 	flag.BoolVar(&noFilterFlag, "F", false, "Flag to undo an environment var with f set.")
 
 	var globFlag bool
