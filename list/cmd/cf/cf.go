@@ -546,38 +546,6 @@ func copyAFile(srcFile, destDir string) {
 		return
 	} // end if err != nil
 
-	err = out.Sync()
-	if err != nil {
-		var msg msgType
-
-		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
-		er := os.Remove(outName)
-		if er == nil {
-			msg = msgType{
-				s: "",
-				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
-					time.Since(t0), err, e, outName, outName),
-				color:    ct.Yellow, // yellow to make sure I see it.
-				elapsed:  time.Since(t0),
-				success:  false,
-				verified: false,
-			}
-			msgChan <- msg
-		} else {
-			msg = msgType{
-				s: "",
-				e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-					time.Since(t0), err, e, outName, er),
-				color:    ct.Yellow, // yellow to make sure I see it.
-				elapsed:  time.Since(t0),
-				success:  false,
-				verified: false,
-			}
-			msgChan <- msg
-		}
-		return
-	}
-
 	err = out.Close()
 	if err != nil {
 		msg := msgType{
