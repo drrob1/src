@@ -148,7 +148,7 @@ func main() {
 		fmt.Printf(" Error from os.Lstat(%s) is: %s.  This will be ignored\n", execName, err)
 	}
 	execTimeStamp := execFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
-	fmt.Printf("%s, larger worker pool pattern, is compiled w/ %s, last altered %s, list.go last altered %s,, exec binary timestamp is %s\n",
+	fmt.Printf("%s, larger worker pool pattern, is compiled w/ %s, last altered %s, list.go last altered %s, exec binary timestamp is %s\n",
 		os.Args[0], runtime.Version(), LastAltered, list.LastAltered, execTimeStamp)
 	autoWidth, autoHeight, err = term.GetSize(int(os.Stdout.Fd())) // this now works on Windows, too
 	if err != nil {
