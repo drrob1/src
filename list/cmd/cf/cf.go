@@ -48,7 +48,7 @@ import (
    7 Jan 23 -- Forgot to init the list.VerboseFlag and list.VeryVerboseFlag
   22 Jan 23 -- I'm going to backport the bytes copied comparison to here, and name the errors.  And I added a call to out.sync.  That may have been the trouble all along.
   23 Jan 23 -- Changing time on destination file(s) to match the source file(s).  And fixing the date comparison for replacement copies, from .After() to not .Before().
-  27 Jan 23 -- Removed comparisons of number of bytes written.  The issue was OS buffering which was fixed by calling Sync(), so comparing bytes didn't work anyway.
+  27 Jan 23 -- Removed comparisons of number of bytes written.  The issue was OS buffering that was fixed by calling Sync(), so comparing bytes didn't work anyway.
   30 Jan 23 -- Will add 1 sec to file timestamp on linux.  This is to prevent recopying the same file over itself (I hope).
                   I added timeFudgeFactor.
   31 Jan 23 -- Adjusting fanOut variable to account for the main and GC goroutines.  And timeFudgeFactor is now a Duration.
@@ -57,7 +57,7 @@ import (
   13 Feb 23 -- Adding timestamp on the exec binary.
   20 Feb 23 -- Modified the verification failed message.
   23 Feb 23 -- Added verFlag.
-  13 Mar 23 -- Will only create the lesser of number of files selected vs NumCPU() go routines for the copy operation.  And made the timeFudgeFactor = 10 ms.
+  13 Mar 23 -- Will only create the lesser of number of files selected vs. NumCPU() go routines for the copy operation.  And made the timeFudgeFactor = 10 ms.
                  And fixed a bug in how the verify operation works.
   17 Mar 23 -- Changed error message when verify returns an error.
   21 Mar 23 -- Completed the usage message, which was never completed.
@@ -94,12 +94,13 @@ import (
    6 Jul 25 -- Will display approx number of bytes copied.
   22 Sep 25 -- I was able to sort out why the fudgefactor was needed, by using my fstat tool w/ cf3.  Now I can remove it.
    2 Jun 26 -- Added pflag to replace flag, imported as flag.
-   7 Jun 26 -- Changed CopyAFile to that written and debugged in cf4, to handle symlinks correcctly.  And added the sym flag.
+   7 Jun 26 -- Changed CopyAFile to that written and debugged in cf4, to handle symlinks correctly.  And added the sym flag.
 				Changed completion message to match that of cf3 and cf4.
-  13 Jun 26 -- Changed some of the flags so I could use single dash abbrev single character flags.
+  13 Jun 26 -- Changed some flags so I could use single dash abbrev single character flags.
+  22 Aug 26 -- Had codex speed it up.  It said to remove the Sync() call, as it's blocking, waiting for the file to be written.  I'll try this.  For now, only here in cf.go.
 */
 
-const LastAltered = "13 June 2026" //
+const LastAltered = "22 Aug 2026" //
 
 const defaultHeight = 40
 const minWidth = 90
@@ -127,7 +128,7 @@ var onWin = runtime.GOOS == "windows"
 
 // var fanOut = runtime.NumCPU() - 2 // account for main and GC routines.  It's not a fanout pattern, it's a worker pool pattern.  This variable is a misnomer.  So it goes.
 //
-//	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
+//	Week of Feb 2024, Miki Tebeka gave an ultimate Go class.  In it, he says that I/O bound work is not limited by runtime.NumCPU(), only cpu bound work is.
 var workerPool = runtime.NumCPU()
 var cfChan chan cfType
 var msgChan chan msgType
@@ -328,7 +329,8 @@ func main() {
 
 	num := min(workerPool*multiplier, len(fileList)) // here is where I'm testing the limited fanout, or larger worker pool pattern.
 	cfChan = make(chan cfType, num)
-	for i := 0; i < num; i++ {
+	for range num {
+		//for i := 0; i < num; i++  old way, before syntax was extended.
 		go func() {
 			for c := range cfChan {
 				copyAFile(c.srcFile, c.destDir)
@@ -381,15 +383,6 @@ func main() {
 	if onWin { // because tcc can get confused about its color scheme sometimes.  Probably a bug.  But I'm glad that tcmd+tcc finally works w/ vim.
 		ctfmt.Printf(ct.White, onWin, " Total files processed is %d\n", succeeded+failed)
 	}
-	//if succeeded > 0 {
-	//	magnitudeString, magnitudeColor := list.GetMagnitudeString(totalBytesCopied)
-	//	ctfmt.Printf(ct.Green, onWin, "\n Total files copied is %d, ", succeeded)
-	//	ctfmt.Printf(magnitudeColor, true, "and approx total of bytes copied is %s,", magnitudeString)
-	//}
-	//if failed > 0 {
-	//	ctfmt.Printf(ct.Red, onWin, " Total files NOT copied is %d, ", failed)
-	//}
-	//ctfmt.Printf(ct.Cyan, onWin, " elapsed time is %s using %d go routines for %s.\n", time.Since(start), goRtns, os.Args[0])
 } // end main
 
 //	------------------------------------ CopyAFile ----------------------------------------------
@@ -468,10 +461,8 @@ func copyAFile(srcFile, destDir string) {
 		return
 	}
 
-	//baseFile := filepath.Base(srcFile)
 	baseFile := filepath.Base(origName)
 	outName := filepath.Join(destDir, baseFile)
-	//inFI, _ := in.Stat() old way of doing it, before I needed to check for symlinks.  Now inFI is defined above.
 	inFIsec := inFI.ModTime().Unix()
 	outFI, err := os.Stat(outName)
 	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
@@ -546,18 +537,53 @@ func copyAFile(srcFile, destDir string) {
 		return
 	} // end if err != nil
 
-	err = out.Close()
+	//    err = out.Sync() Codex says that Sync is blocking until the file is actually written.  I'll try removing it and see what happens.
+	err = out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
 	if err != nil {
-		msg := msgType{
-			s:       "",
-			e:       err,
-			color:   ct.Red,
-			elapsed: time.Since(t0),
-			success: false,
+		var msg msgType
+
+		// e := out.Close()  Now this call is redundant, so I'm removing it
+		er := os.Remove(outName)
+		if er == nil {
+			msg = msgType{
+				s: "",
+				// e: fmt.Errorf("elapsed %s: ERROR from Close() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)", time.Since(t0), err, e, outName, outName),
+				e: fmt.Errorf("elapsed %s: ERROR from Close() was %s, so it was deleted.  There was no error from os.Remove(%s)",
+					time.Since(t0), err, outName),
+				color:    ct.Yellow, // yellow to make sure I see it.
+				elapsed:  time.Since(t0),
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
+		} else {
+			msg = msgType{
+				s: "",
+				// e: fmt.Errorf("elapsed %s: ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s", time.Since(t0), err, e, outName, er),
+				e: fmt.Errorf("elapsed %s: ERROR from Close() was %s, and os.Remove(%s) was called.  The error from os.Remove was %s",
+					time.Since(t0), err, outName, er),
+				color:    ct.Yellow, // yellow to make sure I see it.
+				elapsed:  time.Since(t0),
+				success:  false,
+				verified: false,
+			}
+			msgChan <- msg
 		}
-		msgChan <- msg
 		return
 	}
+
+	//err = out.Close()  This is now redundant.
+	//if err != nil {
+	//	msg := msgType{
+	//		s:       "",
+	//		e:       err,
+	//		color:   ct.Red,
+	//		elapsed: time.Since(t0),
+	//		success: false,
+	//	}
+	//	msgChan <- msg
+	//	return
+	//}
 
 	t := inFI.ModTime()
 
@@ -625,244 +651,3 @@ func copyAFile(srcFile, destDir string) {
 	}
 	msgChan <- msg
 } // end CopyAFile
-
-//func copyAFile(srcFile, destDir string) {
-//	// I'm surprised that there is no os.Copy.  I have to open the file and write it to copy it.
-//	// Here, src is a regular file, and dest is a directory.  I have to construct the dest filename using the src filename.
-//	// This routine adds the time fudge factor to the copied file, because I discovered on linux that if I don't do this, the routine will not detect the copy timestamp is the same as the source timestamp.
-//	// I think this is because of the monotonic clock.  I found that by adding a small amount of time to the copied file, the copy is detected as later than the source, which is what I want.
-//
-//	t0 := time.Now()
-//	in, err := os.Open(srcFile)
-//	if err != nil {
-//		msg := msgType{
-//			s:       "",
-//			e:       fmt.Errorf("%s", err),
-//			color:   ct.Red,
-//			success: false,
-//		}
-//		msgChan <- msg
-//		return
-//	}
-//	defer in.Close()
-//
-//	destFI, err := os.Stat(destDir)
-//	if err != nil {
-//		msg := msgType{
-//			s:       "",
-//			e:       err,
-//			color:   ct.Red,
-//			success: false,
-//		}
-//		msgChan <- msg
-//		return
-//	}
-//	if !destFI.IsDir() {
-//		msg := msgType{
-//			s:       "",
-//			e:       fmt.Errorf("os.Stat(%s) must be a directory, but it's not c/w a directory", destDir),
-//			color:   ct.Red,
-//			success: false,
-//		}
-//		msgChan <- msg
-//		return
-//	}
-//
-//	baseFile := filepath.Base(srcFile)
-//	outName := filepath.Join(destDir, baseFile)
-//	inFI, _ := in.Stat()
-//	inFIsec := inFI.ModTime().Unix()
-//	outFI, err := os.Stat(outName)
-//	if err == nil { // this means that the file exists.  I have to handle a possible collision now.
-//		outFIsec := outFI.ModTime().Unix()
-//		if outFIsec >= inFIsec { // this condition is true if the current file in the destDir is newer than the file to be copied here.
-//			ErrNotNew := fmt.Errorf("elapsed %s: %s is not newer than %s", time.Since(t0), baseFile, destDir) // now this is not a data race.
-//			msg := msgType{
-//				s:       "",
-//				e:       ErrNotNew,
-//				color:   ct.Red,
-//				success: false,
-//			}
-//			msgChan <- msg
-//			return
-//		}
-//	}
-//	out, err := os.Create(outName)
-//	if err != nil {
-//		msg := msgType{
-//			s:       "",
-//			e:       err,
-//			color:   ct.Red,
-//			success: false,
-//		}
-//		msgChan <- msg
-//		return
-//	}
-//	defer out.Close()
-//
-//	t0 = time.Now()
-//	var n int64
-//	n, err = io.Copy(out, in)
-//
-//	if err != nil {
-//		var msg msgType
-//		//msg := msgType{
-//		//	s:       "",
-//		//	e:       err,
-//		//	color:   ct.Red,
-//		//	success: false,
-//		//}
-//		// msgChan <- msg  Too soon, it's making the wait group decrement.
-//
-//		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
-//		if e != nil {
-//			msg = msgType{
-//				s:        "",
-//				e:        e,
-//				color:    ct.Yellow, // so I see it.
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//			return
-//		}
-//		er := os.Remove(outName)
-//		if er == nil {
-//			msg = msgType{
-//				s: "",
-//				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error returned from os.Remove(%s)",
-//					time.Since(t0), err, e, outName, outName),
-//				color:    ct.Yellow, // so I see it
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//		} else {
-//			msg = msgType{
-//				s: "",
-//				e: fmt.Errorf("elapsed %s: ERROR from io.Copy was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-//					time.Since(t0), err, e, outName, er),
-//				color:    ct.Yellow, // so I see it
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//		}
-//		return
-//	}
-//
-//	err = out.Sync()
-//	if err != nil {
-//		var msg msgType
-//		//msg := msgType{
-//		//	s:       "",
-//		//	e:       err,
-//		//	color:   ct.Magenta,
-//		//	success: false,
-//		//}
-//		//msgChan <- msg  too soon, it's making the wait group decrement.
-//
-//		e := out.Close() // close it so I can delete it and not get the error that the file is in use by another process.
-//		er := os.Remove(outName)
-//		if er == nil {
-//			msg = msgType{
-//				s: "",
-//				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and %s was deleted.  There was no error from os.Remove(%s)",
-//					err, e, outName, outName),
-//				color:    ct.Yellow, // yellow to make sure I see it.
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//		} else {
-//			msg = msgType{
-//				s: "",
-//				e: fmt.Errorf("ERROR from Sync() was %s, so it was closed w/ error of %v, and os.Remove(%s) was called.  The error from os.Remove was %s",
-//					err, e, outName, er),
-//				color:    ct.Yellow, // yellow to make sure I see it.
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//		}
-//		return
-//	}
-//
-//	err = out.Close()
-//	if err != nil {
-//		msg := msgType{
-//			s:       "",
-//			e:       err,
-//			color:   ct.Red,
-//			success: false,
-//		}
-//		msgChan <- msg
-//		return
-//	}
-//
-//	t := inFI.ModTime()
-//	//if runtime.GOOS == "linux" {  Not needed anymore.  Worked out using cf3 and my fstat tool.  See top comments and cf3.
-//	//	t = t.Add(timeFudgeFactor)
-//	//}
-//
-//	err = os.Chtimes(outName, t, t)
-//	if err != nil {
-//		msg := msgType{
-//			s:       "",
-//			e:       err,
-//			color:   ct.Red,
-//			success: false,
-//		}
-//		msgChan <- msg
-//		return
-//	}
-//
-//	if verifyFlag {
-//		result, err := few.Feq32withNames(srcFile, outName)
-//		if err != nil {
-//			msg := msgType{
-//				s:        "",
-//				e:        fmt.Errorf("ERROR from verify operation is %s", err),
-//				color:    ct.Red,
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//			return
-//		}
-//		if result {
-//			msg := msgType{
-//				s:           fmt.Sprintf("elapsed %s: %s copied to %s and is VERIFIED", time.Since(t0), srcFile, destDir),
-//				e:           nil,
-//				color:       ct.Green,
-//				success:     true,
-//				verified:    true,
-//				bytesCopied: n,
-//			}
-//			msgChan <- msg
-//			return
-//		} else {
-//			msg := msgType{
-//				s:        fmt.Sprintf("elapsed %s: %s copied to %s but failed VERIFICATION", time.Since(t0), srcFile, destDir),
-//				e:        nil,
-//				color:    ct.Red,
-//				success:  false,
-//				verified: false,
-//			}
-//			msgChan <- msg
-//			return
-//		}
-//	}
-//
-//	msg := msgType{
-//		s:           fmt.Sprintf("elapsed %s: %s copied to %s", time.Since(t0), srcFile, destDir),
-//		e:           nil,
-//		color:       ct.Green,
-//		success:     true,
-//		verified:    verifyFlag, // I already know that this flag is false if get here.
-//		bytesCopied: n,
-//	}
-//	msgChan <- msg
-//} // end CopyAFile
-
-//    odTime()) { // this condition is true if the current file in the destDir is newer than the file to be copied here.
