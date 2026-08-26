@@ -58,11 +58,11 @@ import (
   14 Jul 23 -- Now I'm exporting GetFileInfoXFromCommandLine, from platform-specific code.
   16 Jul 23 -- I'm thinking about adding GetFileInfoXFromRegexp.  And I'll need the corresponding rex flag for it.  And I'll need NewFromRex.
   25 Sep 23 -- There's a bug in runlist and runx in which the beginning of line anchor is not processed correctly.  I'm tracking this down now.
-                 I found the bug.  I was matching against RelPath which includes the path dir info, so the ^ anchor is meaningless.
-   7 Apr 24 -- Adding color to the display of choices, ie, alternating white and yellow.
+                 I found the bug.  I was matching against RelPath, which includes the path dir info, so the ^ anchor is meaningless.
+   7 Apr 24 -- Adding color to the display of choices, i.e., alternating white and yellow.
                  Nevermind.  I already do something like this; the color of the filename is determined by the size of the file.
                  They only use the same color if they are all in the same size magnitude. I think I'm going to test if the color is yellow, then ... nevermind.
-                 I'm going to alternate brightness, ie, bright is true or false, and see what happens.
+                 I'm going to alternate brightness, i.e., bright is true or false, and see what happens.
                  I like it, so I'll keep it for now.  And I added it to list2.go.
   25 May 24 -- Adding doc comments for go doc.
   15 June 24-- On linux, searching /mnt/misc takes ~8 sec, but on Windows it only takes ~800 ms.  That's a huge difference.  It sounds like Windows is caching it but linux is not.
@@ -85,13 +85,14 @@ import (
    9 Mar 25 -- Suppressed display of error in FileSelection().  I don't need to display errors twice.
   18 May 25 -- Added unique function.
   20 Aug 25 -- I decided to include symlinks to be copied.  And I'll add a flag to only copy symlinks.
+  26 Aug 26 -- Fixed some comments.  And then Codex added a check against being a directory before getting the fileinfo, because I asked it to be faster.  This way it doesn't have to get the fileinfo if it's a directory.
 */
 
-var LastAltered = "Aug 20, 2025"
+var LastAltered = "Aug 26, 2026"
 
 type DirAliasMapType map[string]string
 
-// FileInfoExType is what is returned by all the routines here.  Fields are file info, Dir, RelPath, AbsPath and FullPath.  Some may be redundant, but this is what it is.
+// FileInfoExType is what is returned by all the routines here.  Fields are file info, Dir, RelPath, AbsPath, and FullPath.  Some may be redundant, but this is what it is.
 type FileInfoExType struct {
 	FI       os.FileInfo
 	Dir      string
@@ -462,6 +463,9 @@ func MyReadDir(dir string, excludeMe *regexp.Regexp) ([]FileInfoExType, error) {
 
 	fileInfoExs := make([]FileInfoExType, 0, len(dirEntries))
 	for _, d := range dirEntries {
+		if d.IsDir() {
+			continue
+		}
 		fi, e := d.Info()
 		if e != nil {
 			fmt.Fprintf(os.Stderr, " Error from %s.Info() is %v\n", d.Name(), e)
@@ -925,67 +929,6 @@ func FileInfoXFromGlob(globStr string) ([]FileInfoExType, error) { // Uses list.
 			fmt.Printf(" dirName=%s, fileName=%s, pattern=%s \n", dirNamePattern, fileNamePattern, pattern)
 		}
 
-		//var filenames []string  removed when the concurrent code was developed for here.  That is, I removed the use of filepath.Glob().  I never used it anyway.
-		//if GlobFlag {
-		//	// Glob returns the names of all files matching pattern or nil if there is no matching file. The syntax of patterns is the same as in Match.
-		//	// The pattern may describe hierarchical names such as /usr/*/bin/ed (assuming the Separator is '/').  Caveat: it's case sensitive.
-		//	// Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
-		//	filenames, err = filepath.Glob(pattern)
-		//	if VerboseFlag {
-		//		fmt.Printf(" after glob: len(filenames)=%d, filenames=%v \n\n", len(filenames), filenames)
-		//	}
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//
-		//} else {
-		//	d, err := os.Open(dirName)
-		//	if err != nil {
-		//		fmt.Fprintf(os.Stderr, " Error from Linux processCommandLine os.Open is %v\n", err)
-		//		os.Exit(1)
-		//	}
-		//	defer d.Close()
-		//	filenames, err = d.Readdirnames(0) // I don't know if I have to make this slice first.  I'm going to assume not for now.
-		//	if err != nil {                    // It seems that ReadDir itself stops when it gets an error of any kind, and I cannot change that.
-		//		fmt.Fprintln(os.Stderr, err, "so calling my own MyReadDir.")
-		//		fileInfoX, err = MyReadDir(dirName, excludeMe)
-		//		return fileInfoX, err
-		//	}
-		//}
-
-		//fileInfoX = make([]FileInfoExType, 0, len(filenames))
-		//for _, f := range filenames { // basically I do this here because of a pattern to be matched.
-		//	var path string
-		//	if strings.Contains(f, sepString) {
-		//		path = f
-		//	} else {
-		//		path = filepath.Join(dirName, f)
-		//	}
-		//
-		//	fi, err := os.Lstat(path)
-		//	if err != nil {
-		//		fmt.Fprintf(os.Stderr, " Error from Lstat call on %s is %v\n", path, err)
-		//		continue
-		//	}
-		//
-		//	match, er := filepath.Match(strings.ToLower(fileName), strings.ToLower(f)) // redundant if glob is used, and glob is always used in this routine.
-		//	if er != nil {
-		//		fmt.Fprintf(os.Stderr, " Error from filepath.Match on %s pattern is %v.\n", pattern, er)
-		//		continue
-		//	}
-		//
-		//	if includeThis(fi, excludeMe) && match { // has to match pattern, size criteria and not match an exclude pattern.
-		//		joinedFilename := filepath.Join(dirName, f)
-		//		fix := FileInfoExType{
-		//			FI:       fi,
-		//			Dir:      dirName,
-		//			RelPath:  joinedFilename,
-		//			AbsPath:  joinedFilename,
-		//			FullPath: joinedFilename,
-		//		}
-		//		fileInfoX = append(fileInfoX, fix)
-		//	}
-		//} // for f ranges over filenames
 		fileInfoX, err = myReadDirConcurrentWithMatch(dirNamePattern, fileNamePattern)
 	} // if flag.NArgs()
 
@@ -1010,26 +953,6 @@ func FileInfoXFromRegexp(rex *regexp.Regexp) ([]FileInfoExType, error) { // Uses
 		return nil, err
 	}
 	fileInfoX, err = myReadDirConcurrentWithRex(workingDir, rex) // this already calls includeThis.
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	//if rex == nil {
-	//	return fileInfoX, nil
-	//}
-
-	//fileInfoX2 := make([]FileInfoExType, 0, len(fileInfoX))
-	//for _, f := range fileInfoX { // The exclude expression has already been processed.  Now I have to process the include regexp.
-	//	lower := strings.ToLower(f.FI.Name()) // I first used relname here, but that includes the directory, so the ^ anchor was meaningless.  Not what I want.
-	//	if VeryVerboseFlag {
-	//		fmt.Printf(" FileInfoXFromRegexp: lower = %q, regex = %q, rex.MatchString(lower) = %t\n", lower, rex.String(), rex.MatchString(lower))
-	//	}
-	//	if rex.MatchString(lower) {
-	//		fileInfoX2 = append(fileInfoX2, f)
-	//	}
-	//}
-
-	//return fileInfoX2, nil
 	return fileInfoX, err
 
 } // end FileInfoXFromRegexp
@@ -1054,6 +977,9 @@ func myReadDirConcurrent(dir string) ([]FileInfoExType, error) { // The entire c
 			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
+					if de.IsDir() {
+						continue
+					}
 					fi, err := de.Info()
 					if err != nil {
 						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
@@ -1169,6 +1095,9 @@ func myReadDirConcurrentWithMatch(dir, matchPat string) ([]FileInfoExType, error
 			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
+					if de.IsDir() {
+						continue
+					}
 					fi, err := de.Info()
 					if err != nil {
 						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
@@ -1289,6 +1218,9 @@ func myReadDirConcurrentWithRex(dir string, regx *regexp.Regexp) ([]FileInfoExTy
 			defer wg.Done()
 			for deSlice := range deChan {
 				for _, de := range deSlice {
+					if de.IsDir() {
+						continue
+					}
 					fi, err := de.Info()
 					if err != nil {
 						fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
