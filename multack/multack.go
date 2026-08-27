@@ -126,7 +126,6 @@ var grepChan chan grepType
 var matchChan chan matchType
 var caseSensitiveFlag bool // default is false.
 var totFilesScanned, totMatchesFound int64
-var sliceOfStrings []string // based on an anonymous type.
 var wg sync.WaitGroup
 var verboseFlag, veryverboseFlag bool
 var excludeStr string
@@ -183,12 +182,20 @@ func main() {
 
 	var lineRegex, excludeRegex *regexp.Regexp
 	var err error
-	if lineRegex, err = regexp.Compile(pattern); err != nil {
+	linePattern := pattern
+	if !caseSensitiveFlag {
+		linePattern = "(?i:" + pattern + ")"
+	}
+	if lineRegex, err = regexp.Compile(linePattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
 	if excludeStr != "" {
-		excludeRegex, err = regexp.Compile(excludeStr)
+		excludePattern := excludeStr
+		if !caseSensitiveFlag {
+			excludePattern = "(?i:" + excludeStr + ")"
+		}
+		excludeRegex, err = regexp.Compile(excludePattern)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Exclude regexp.Compile(%q) is invalid, error is %s\n", excludeStr, err.Error())
 		}
@@ -231,16 +238,12 @@ func main() {
 
 	matchChan = make(chan matchType, workerPoolSize)          // this is a buffered channel.
 	sliceOfAllMatches := make(matchesSliceType, 0, sliceSize) // this uses a named type, needed to satisfy the sort interface.
-	sliceOfStrings = make([]string, 0, sliceSize)             // this uses an anonymous type.
 	doneChan := make(chan bool)
 	go func() { // start the receiving operation before the sending starts
 		for match := range matchChan {
 			sliceOfAllMatches = append(sliceOfAllMatches, match)
-			s := fmt.Sprintf("%s:%d:%s", match.fpath, match.lino, match.lineContents)
-			sliceOfStrings = append(sliceOfStrings, s)
 		}
 		sort.Stable(sliceOfAllMatches)
-		sort.Strings(sliceOfStrings) // the sort operation is now done here in the go routine, instead of the main function body.
 		close(doneChan)
 	}()
 
@@ -356,11 +359,7 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 		if strings.ContainsRune(lineStr, null) {
 			return // the defer func()	 will take care of the cleanup here.
 		}
-		if caseSensitiveFlag {
-			lineStrng = lineStr
-		} else {
-			lineStrng = strings.ToLower(lineStr) // this is the change I made to make every comparison case insensitive.
-		}
+		lineStrng = lineStr
 
 		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
 
