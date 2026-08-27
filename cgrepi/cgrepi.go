@@ -62,7 +62,8 @@ REVISION HISTORY
                   (?i) instead of lower casing every input line.  This would reduce allocations and garbage collection pressure on large files.  Done
              4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.  Done
 16 Aug 26 -- So I made the optimizations above except for #2.  And it seems that the pgm is now slower than before the "optimizations".  Very interesting.  Not sure if I'll change it back.
-				The difference so far is in the msec range, so I'll leave it as is.  I think.
+				The difference so far is in the msec range, so I'll leave it as is.  I think.  Conclusion is that using a case-insensitive regexp is slower than the original code using strings.ToLower.
+                But the difference is maybe 200 msec, depending on the situation.
 27 Aug 26 -- Removing code I commented out above, and changed the case-insensitive regexp to (?i:pattern) instead of lower casing every input line.  Codex put this format in multack.
 */
 

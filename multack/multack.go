@@ -80,7 +80,8 @@ import (
 				Turns out that none of the std grep versions have a way to do this.
   16 Aug 26 -- Very minor code changes.
   17 Aug 26 -- Changed sliceSize from 50_000 to 5000 to 10_000
-  27 Aug 26 -- Codex changed case-insensitivity code.  And removed a sliceofStrings I never used.
+  27 Aug 26 -- Codex changed case-insensitivity code.  And removed a sliceofStrings I never used.  Here, too, using a case-insensitive regexp is slower than the original code using strings.ToLower.
+                But the difference is maybe 200 msec, depending on the situation.
 */
 
 const lastAltered = "27 Aug 2026"
