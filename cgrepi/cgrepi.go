@@ -63,7 +63,7 @@ REVISION HISTORY
              4.  the current loop calls time.Now() every time at line 332.  Checking the timeout every few hundred or few thousand lines is probably sufficient.  Done
 16 Aug 26 -- So I made the optimizations above except for #2.  And it seems that the pgm is now slower than before the "optimizations".  Very interesting.  Not sure if I'll change it back.
 				The difference so far is in the msec range, so I'll leave it as is.  I think.
-
+27 Aug 26 -- Removing code I commented out above, and changed the case-insensitive regexp to (?i:pattern) instead of lower casing every input line.  Codex put this format in multack.
 */
 
 package main
@@ -88,7 +88,7 @@ import (
 	ctfmt "github.com/daviddengcn/go-colortext/fmt"
 )
 
-const LastAltered = "16 Aug 2026"
+const LastAltered = "27 Aug 2026"
 const maxSecondsToTimeout = 1800
 const loopCheckForTimeout = 10_000
 
@@ -185,7 +185,8 @@ func main() {
 	t0 = time.Now()
 	tfinal = t0.Add(time.Duration(*timeoutOpt) * time.Second)
 	if !caseSensitiveFlag { // part of optimization #3 above
-		pattern = "(?i)" + pattern
+		//pattern = "(?i)" + pattern
+		pattern = "(?i:" + pattern + ")"
 	}
 	lineRegex, err := regexp.Compile(pattern)
 	if err != nil {
