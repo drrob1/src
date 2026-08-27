@@ -80,9 +80,10 @@ import (
 				Turns out that none of the std grep versions have a way to do this.
   16 Aug 26 -- Very minor code changes.
   17 Aug 26 -- Changed sliceSize from 50_000 to 5000 to 10_000
+  27 Aug 26 -- Codex changed case-insensitivity code.  And removed a sliceofStrings I never used.
 */
 
-const lastAltered = "17 Aug 2026"
+const lastAltered = "27 Aug 2026"
 const maxSecondsToTimeout = 300
 const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
 
