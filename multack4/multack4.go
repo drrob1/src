@@ -1,4 +1,4 @@
-// multack.go
+// multack4.go from multack.go
 package main
 
 import (
@@ -82,8 +82,8 @@ import (
   17 Aug 26 -- Changed sliceSize from 50_000 to 5000 to 10_000
   27 Aug 26 -- Codex changed case-insensitivity code.  And removed a sliceofStrings I never used.  Here, too, using a case-insensitive regexp is slower than the original code using strings.ToLower.
                 But the difference is maybe 200 msec, depending on the situation.
-				Now uses regexp.MustComple to detect upper case characters in the pattern.
-  27 Aug 26 -- On thelio, a test run here was 32 ms, while the same run with multack4 was 22 ms.
+------------------------------------------------------------------------------------------------------------------------------------------------------
+  27 Aug 26 -- Now called multack4.go from multack.go.  I'll put back the strings.ToLower code.  On thelio, a test run here was 22 ms, while the same run with multack was 32 ms.
 */
 
 const lastAltered = "27 Aug 2026"
@@ -159,7 +159,7 @@ func main() {
 	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
 		fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
 		fmt.Printf(" Usage: multack [option flags] regexp [start Directory]\n")
-		log.Fatalln("timeout must be in the range [0,300] seconds")
+		log.Fatalln("timeout must be in the range [0,300] seconds") // I just noticed that this calls log.Fatalln, which exits the program.
 	}
 	if *timeoutOpt == 0 {
 		*timeoutOpt = maxSecondsToTimeout
@@ -177,20 +177,14 @@ func main() {
 	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
 	}
-	//if !caseSensitiveFlag { not needed, because it already has to be all lower case
-	//	pattern = strings.ToLower(pattern) // this is the change for the pattern.
-	//}
-	if verboseFlag {
-		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
-	}
 
 	var lineRegex, excludeRegex *regexp.Regexp
 	var err error
-	linePattern := pattern
-	if !caseSensitiveFlag {
-		linePattern = "(?i:" + pattern + ")"
-	}
-	if lineRegex, err = regexp.Compile(linePattern); err != nil {
+	//linePattern := pattern
+	//if !caseSensitiveFlag {
+	//	linePattern = "(?i:" + pattern + ")"
+	//}
+	if lineRegex, err = regexp.Compile(pattern); err != nil {
 		log.Fatalf("invalid regexp: %s\n", err)
 	}
 
@@ -364,6 +358,9 @@ func grepFile(lineRegex, excludeRegex *regexp.Regexp, fpath string) {
 			return // the defer func()	 will take care of the cleanup here.
 		}
 		lineStrng = lineStr
+		if !caseSensitiveFlag {
+			lineStrng = strings.ToLower(lineStrng)
+		}
 
 		// lineStr = strings.TrimSpace(line)  Try this without the TrimSpace.
 
