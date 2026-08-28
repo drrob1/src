@@ -83,7 +83,7 @@ import (
   27 Aug 26 -- Codex changed case-insensitivity code.  And removed a sliceofStrings I never used.  Here, too, using a case-insensitive regexp is slower than the original code using strings.ToLower.
                 But the difference is maybe 200 msec, depending on the situation.
 				Now uses regexp.MustComple to detect upper case characters in the pattern.
-  27 Aug 26 -- On thelio, a test run here was 32 ms, while the same run with multack4 was 22 ms.
+  27 Aug 26 -- On thelio, a test run here was 32 ms, while the same run with multack4 was 22 ms.  On Win11, test run was 460 ms, same run with multack4 was 310 ms.
 */
 
 const lastAltered = "27 Aug 2026"
