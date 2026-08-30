@@ -10,6 +10,33 @@ import (
 	"testing"
 )
 
+func TestCUPSArgs(t *testing.T) {
+	tests := []struct {
+		name    string
+		printer string
+		want    []string
+	}{
+		{
+			name: "default printer",
+			want: []string{"-o", "fit-to-page", "-t", "Image Print", "/tmp/image.jpg"},
+		},
+		{
+			name:    "named printer",
+			printer: "Office Printer",
+			want:    []string{"-o", "fit-to-page", "-t", "Image Print", "-d", "Office Printer", "/tmp/image.jpg"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := cupsArgs(test.printer, "/tmp/image.jpg")
+			if fmt.Sprint(got) != fmt.Sprint(test.want) {
+				t.Fatalf("cupsArgs() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func TestMakeIPPPrintJob(t *testing.T) {
 	document := []byte("jpeg data")
 	request, err := makeIPPPrintJob("http://printer:631/ipp/print", "rob", document)

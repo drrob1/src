@@ -110,6 +110,10 @@ Windows renderer / raw TCP / IPP Print-Job
 printer
 
 The Windows mode performs page rendering locally. TCP and IPP send JPEG, so those modes depend on the printer advertising JPEG support.
+
+Then I asked it to add a CUPS feature with ConnectionTypeCUPS and autoscaling.
+
+Not specifying a printer uses the default printer on Windows and CUPS.
 */
 
 const lastModified = "30 Aug 2026"
@@ -119,6 +123,7 @@ const (
 	ConnectionTypeWindows = "windows" // Use Windows printer API
 	ConnectionTypeTCP     = "tcp"     // Direct TCP/IP connection
 	ConnectionTypeIPP     = "ipp"     // Internet Printing Protocol
+	ConnectionTypeCUPS    = "cups"    // Submit through a local CUPS server
 )
 const HP8028e = "192.168.1.197"
 const HP8028ePort = 9100
@@ -149,7 +154,7 @@ func main() {
 	flag.StringVar(&printerAddr, "address", HP8620, "Printer IP address or hostname")
 	flag.StringVar(&printerAddr, "adr", HP8620, "Alias for -address")
 	flag.IntVar(&printerPort, "port", HP8620Port, "Printer port (default 9100 for raw TCP)") // 9100 is for raw TCP access
-	flag.StringVar(&connType, "type", "windows", "Connection type (windows, tcp, ipp)")
+	flag.StringVar(&connType, "type", "windows", "Connection type (windows, tcp, ipp, cups)")
 	flag.StringVar(&username, "user", "", "Username for authenticated printers")
 	flag.StringVar(&password, "pass", "", "Password for authenticated printers")
 	flag.Parse()
@@ -245,9 +250,48 @@ func printImage(img image.Image, config PrinterConfig) error {
 		return printWithTCP(buf.Bytes(), config)
 	case ConnectionTypeIPP:
 		return printWithIPP(buf.Bytes(), config)
+	case ConnectionTypeCUPS:
+		return printWithCUPS(buf.Bytes(), config)
 	default:
 		return fmt.Errorf("unsupported connection type: %s", config.ConnectionType)
 	}
+}
+
+// printWithCUPS submits the image to a local CUPS queue and asks CUPS to
+// preserve its aspect ratio while fitting it to the printable page.
+func printWithCUPS(data []byte, config PrinterConfig) error {
+	lp, err := exec.LookPath("lp")
+	if err != nil {
+		return fmt.Errorf("CUPS lp command not found: %w", err)
+	}
+
+	temp, err := os.CreateTemp("", "netprint-*.jpg")
+	if err != nil {
+		return fmt.Errorf("error creating temporary image: %w", err)
+	}
+	tempName := temp.Name()
+	defer os.Remove(tempName)
+	if _, err := temp.Write(data); err != nil {
+		temp.Close()
+		return fmt.Errorf("error writing temporary image: %w", err)
+	}
+	if err := temp.Close(); err != nil {
+		return fmt.Errorf("error closing temporary image: %w", err)
+	}
+
+	output, err := exec.Command(lp, cupsArgs(config.Name, tempName)...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("CUPS printing failed: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func cupsArgs(printerName, imagePath string) []string {
+	args := []string{"-o", "fit-to-page", "-t", "Image Print"}
+	if printerName != "" {
+		args = append(args, "-d", printerName)
+	}
+	return append(args, imagePath)
 }
 
 // printWithTCP prints directly to a network printer using TCP/IP
