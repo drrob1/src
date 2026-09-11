@@ -909,7 +909,7 @@ func excludeMe(s string) bool {
 		}
 	}
 
-	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@", "&"}
+	var containsMeStrings = [...]string{"(", ")", "/", ":", "*", "@", "&"}
 	for _, containsMe := range containsMeStrings {
 		if strings.Contains(s, containsMe) {
 			return true
