@@ -147,9 +147,10 @@ import (
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
   18 Jul 26 -- Another format change for the schedule I have to account for.  I had to fix the categoryNamesListForDisplay, and the rowNames to distinguish between the ON-Call Interventional
 				and the ON-Call Radiologist.
+  11 Sep 26 -- Added & to the containsMeStrings array, so that character is ignored.  And today is the 25th anniversary of 9/11, but that's not important now.
 */
 
-const LastModified = "19 July 2026"
+const LastModified = "11 Sep 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -818,7 +819,7 @@ func walkRegexFullFilenames(startdirectory string) ([]FileDataType, error) { // 
 		// Maybe not, I want, after the call to the walk function, to have a slice of matching full file infos, that then have to be tested to see if they match the timestamp constraint.
 		// I may need a go routine to collect all these slices into 1 slice to be sorted.  And I don't have a full filename in this slice.  I still have to
 		// construct that.
-		// Maybe I need a struct that has full filename and the timestamp, ie, fileInfo.ModTime(), which is of type time.Time.  I did this, and I call it fileDataType.
+		// Maybe I need a struct that has full filename and the timestamp, i.e., fileInfo.ModTime(), which is of type time.Time.  I did this, and I call it fileDataType.
 		// Then I made FileDataSliceType I call FDSliceType.  Then I made a masterFDSlice and a FDSlice channel so the walk function sends a slice of filedata to the
 		// goroutine that collects these and appends them to a masterFileDataSlice.  I use 2 channels for this, one to send the local filedata in the walk function,
 		// and another to signal when all of these local slices have been appended to the master filedata slice.
@@ -881,7 +882,7 @@ func excludeMe(s string) bool {
 		}
 	}
 
-	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@"}
+	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@", "&"}
 	for _, containsMe := range containsMeStrings {
 		if strings.Contains(s, containsMe) {
 			return true

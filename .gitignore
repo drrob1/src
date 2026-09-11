@@ -43,6 +43,7 @@ vendor/
 few/testdata/
 detox/testdata/
 duf/
+.cache/
 
 [user]
 	name = rob

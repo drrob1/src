@@ -22,9 +22,10 @@ import (
   18 July 26 -- First written by codex.
   19 July 26 -- I'm making some edits in the messages.
   20 Aug 26 -- Fixed "RA" bug by Codex.  And added verbose mode.
+  11 Sep 26 -- Directory walk is choking on the codex directory.
 */
 
-const LastUpdate = "20 August 2026"
+const LastUpdate = "11 Sep 2026"
 
 var (
 	wordRE   = regexp.MustCompile(`[A-Za-z][A-Za-z'-]*`)
@@ -103,7 +104,8 @@ func discover(root string, now time.Time, age time.Duration) ([]candidate, error
 	var files []candidate
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return walkErr
+			//return walkErr
+			return filepath.SkipDir // this fixed the problem with the codex directory
 		}
 		if entry.IsDir() {
 			return nil

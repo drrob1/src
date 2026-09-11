@@ -153,9 +153,10 @@ import (
   23 May 26 -- Added moonlight and moonlighter to the list of words to exclude from doc names.
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
   18 Jul 26 -- Another format change for me to address.  I had to fix the categoryNamesListForDisplay, and the rowNames to distinguish between the ON-Call Interventional and the ON-Call Radiologist.
+  11 Sep 26 -- Added & to the containsMeStrings array, so that character is ignored.  And today is the 25th anniversary of 9/11, but that's not important now.
 */
 
-const LastModified = "19 July 2026"
+const LastModified = "11 Sep 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -908,7 +909,7 @@ func excludeMe(s string) bool {
 		}
 	}
 
-	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@"}
+	var containsMeStrings = []string{"(", ")", "/", ":", "*", "@", "&"}
 	for _, containsMe := range containsMeStrings {
 		if strings.Contains(s, containsMe) {
 			return true
