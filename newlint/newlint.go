@@ -156,7 +156,7 @@ import (
   11 Sep 26 -- Added & to the containsMeStrings array, so that character is ignored.  And today is the 25th anniversary of 9/11, but that's not important now.
 */
 
-const LastModified = "11 Sep 2026"
+const LastModified = "12 Sep 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
