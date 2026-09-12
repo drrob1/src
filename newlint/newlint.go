@@ -901,7 +901,7 @@ func pause() bool {
 }
 
 func excludeMe(s string) bool {
-	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
+	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "assignment", "ct", "coverage",
 		"film", "needed", "neuro", "moonlight", "moonlighter", "body"}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
