@@ -23,6 +23,7 @@ import (
   19 July 26 -- I'm making some edits in the messages.
   20 Aug 26 -- Fixed "RA" bug by Codex.  And added verbose mode.
   11 Sep 26 -- Directory walk is choking on the codex directory.
+  18 Sep 26 -- Code is flagging Dr. Lee off as conflicting with peds.  Got to ask AI to fix this.
 */
 
 const LastUpdate = "11 Sep 2026"
@@ -210,11 +211,13 @@ func analyze(cells [][]string) ([]finding, error) {
 		officeNames := vacationNames(cellAt(cells, office.row, col))
 		for _, name := range officeNames {
 			for row := 0; row < office.row; row++ {
-				for _, other := range words(cellAt(cells, row, col)) {
-					if sameName(name, other) {
-						findings = append(findings, newFinding("Error 1 -- vacation error", day, name,
-							position{office.row, col}, position{row, col}, rowLabel(cells, row)))
-					}
+				value := cellAt(cells, row, col)
+				// Only fuzzy-match doctor names: prose such as "See" also resembles "Lee".
+				if containsSameName(extractDoctorNames(value), name) || slices.ContainsFunc(words(value), func(other string) bool {
+					return strings.EqualFold(strings.Trim(name, "-'"), strings.Trim(other, "-'"))
+				}) {
+					findings = append(findings, newFinding("Error 1 -- vacation error", day, name,
+						position{office.row, col}, position{row, col}, rowLabel(cells, row)))
 				}
 			}
 		}

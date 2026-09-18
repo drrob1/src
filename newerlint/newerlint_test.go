@@ -120,7 +120,7 @@ func TestAnalyzeFindsAllThreeErrorTypes(t *testing.T) {
 	if len(findings) != 3 {
 		t.Fatalf("got %d findings, want 3: %#v", len(findings), findings)
 	}
-	for i, kind := range []string{"Error 1", "Error 2", "Error 3"} {
+	for i, kind := range []string{"Error 1 -- vacation error", "Error 2 -- remote fluoro error", "Error 3 -- late fluoro error"} {
 		if findings[i].kind != kind {
 			t.Errorf("finding %d kind = %q, want %q", i, findings[i].kind, kind)
 		}
@@ -139,6 +139,59 @@ func TestAnalyzeFindsAllThreeErrorTypes(t *testing.T) {
 	if cellReference(findings[2].source) != "B7" || cellReference(findings[2].conflict) != "B5" {
 		t.Errorf("Error 3 cells = %s -> %s, want B7 -> B5",
 			cellReference(findings[2].source), cellReference(findings[2].conflict))
+	}
+}
+
+func TestAnalyzeVacationAssignments(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		assignment string
+		vacation   string
+		want       int
+	}{
+		{"Please See Modality", "Lee", 0},
+		{"Dr. Gordon; Please See Modality", "Lee", 0},
+		{"Dr. Lee", "Lee", 1},
+		{"LEE", "Lee", 1},
+		{"Dr. Janczuk", "Jancuzk", 1},
+	} {
+		t.Run(test.assignment, func(t *testing.T) {
+			cells := [][]string{
+				{"Pediatrics", test.assignment},
+				{"", "Monday"},
+				{"", "September 21, 2026"},
+				{"FLUORO FH", ""},
+				{"FLUORO JH", ""},
+				{"Late MD", ""},
+				{"MDs Out of Office", test.vacation},
+			}
+			findings, err := analyze(cells)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(findings) != test.want {
+				t.Fatalf("got %d findings, want %d: %#v", len(findings), test.want, findings)
+			}
+		})
+	}
+}
+
+func TestAnalyzeFileDoesNotReportLeeOnPediatrics(t *testing.T) {
+	t.Parallel()
+
+	for _, filename := range []string{"9-21-2026_Week_rc2.xlsx", "9-21-2026_Week_revised.xlsx"} {
+		t.Run(filename, func(t *testing.T) {
+			findings, err := analyzeFile(filepath.Join("testdata", filename))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, f := range findings {
+				if f.name == "Lee" && cellReference(f.conflict) == "B10" {
+					t.Errorf("false vacation conflict with 'Please See Modality': %#v", f)
+				}
+			}
+		})
 	}
 }
 

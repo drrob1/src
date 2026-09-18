@@ -148,9 +148,10 @@ import (
   18 Jul 26 -- Another format change for the schedule I have to account for.  I had to fix the categoryNamesListForDisplay, and the rowNames to distinguish between the ON-Call Interventional
 				and the ON-Call Radiologist.
   11 Sep 26 -- Added & to the containsMeStrings array, so that character is ignored.  And today is the 25th anniversary of 9/11, but that's not important now.
+  18 Sep 26 -- Added late to the equalMeStrings array, so that character is ignored.
 */
 
-const LastModified = "11 Sep 2026"
+const LastModified = "18 Sep 2026"
 const conf = "lint.conf"
 const ini = "lint.ini"
 const numOfDocs = 40 // used to dimension a string slice.
@@ -874,7 +875,7 @@ func pause() bool {
 func excludeMe(s string) bool {
 	var equalMeStrings = [...]string{"fh", "dr.", "dr", "jh", "plain", "please", "see", "modality", "sat", "sun", "wed", "thu", "ra", "on", "-", "&", "assignment", "ct", "coverage",
 		"film", "needed", "neuro", "moonlight", "moonlighter", "monday", "tuesday", "wednesday", "thursday", "friday", "january", "february", "march", "april", "may", "june", "july",
-		"august", "september", "october", "november", "december", "body",
+		"august", "september", "october", "november", "december", "body", "late",
 	}
 	for _, equalsMe := range equalMeStrings {
 		if s == equalsMe {
