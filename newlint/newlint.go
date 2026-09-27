@@ -154,7 +154,7 @@ import (
    4 Jun 26 -- Another format change for the schedule I have to account for.  I'll do that in the definition of the row names.
   18 Jul 26 -- Another format change for me to address.  I had to fix the categoryNamesListForDisplay, and the rowNames to distinguish between the ON-Call Interventional and the ON-Call Radiologist.
   11 Sep 26 -- Added & to the containsMeStrings array, so that character is ignored.  And today is the 25th anniversary of 9/11, but that's not important now.
-  18 Sep 26 -- Added late to the equalMeStrings array, so that character is ignored.
+  18 Sep 26 -- Added late to the equalMeStrings array, so that word is ignored.
 */
 
 const LastModified = "18 Sep 2026"
