@@ -125,9 +125,10 @@ import (
   13 Feb 26 -- Added rowOffset to allow for a date row in the schedule to the lint library.  Here, I added a message for the lint library last modified date.
   18 Feb 26 -- Debugging problem w/ not finding upgradelint.exe
    9 May 26 -- Added use of lint.CheckRowNames.
+  27 Sep 26 -- Added completion message if no errors found.
 */
 
-const lastModified = "11 May 2026"
+const lastModified = "27 Sep 2026"
 
 var verboseFlag bool
 var veryVerboseFlag bool
@@ -348,6 +349,8 @@ func main() {
 		for _, msg := range messages {
 			ctfmt.Printf(ct.Yellow, true, " %s \n", msg)
 		}
+	} else {
+		ctfmt.Printf(ct.Green, true, "\n\n No errors found in %s\n\n", filename)
 	}
 
 	if err == nil {

@@ -133,9 +133,10 @@ import (
   17 May 26 -- Rewrote FindAndReadConfIni.
   22 May 26 -- Changed output color of picked file name.
   19 Jul 26 -- Minor code change.
+  27 Sep 26 -- Added completion message if no errors found.
 */
 
-const lastModified = "19 July 2026"
+const lastModified = "27 Sep 2026"
 const debugFilename = "newlint-main-debug.out"
 
 var verboseFlag bool
@@ -263,7 +264,8 @@ func main() {
 	fmt.Println()
 
 	if verboseFlag {
-		debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) + " ----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
+		debugFileBuf.WriteString("\n\n\n" + time.Now().Format(time.DateTime) +
+			" ----------------------- newlint main.go ------------------------------------------------------------------------\nReadInXLSfile: " +
 			filename + "\n")
 	}
 
@@ -341,6 +343,8 @@ func main() {
 		for _, msg := range messages {
 			ctfmt.Printf(ct.Yellow, true, " %s \n", msg)
 		}
+	} else {
+		ctfmt.Printf(ct.Green, true, "\n\n No errors found in %s\n\n", filename)
 	}
 
 	if err == nil {
