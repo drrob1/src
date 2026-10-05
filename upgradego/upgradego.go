@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"src/filepicker"
 	"strconv"
 	"strings"
@@ -26,11 +27,16 @@ import (
                 I'll check to make sure the answer is in bounds
    7 Feb 24 -- Instead of using a []byte for the Stdout and Stderr, I'll see what happens if I use a strings.builder.
   27 May 26 -- Will colorize the final message.
+   5 Oct 26 -- Need warning that this is only for linux.
 */
 
-const lastUpdated = "May 27, 2026"
+const lastUpdated = "Oct 5, 2026"
 
 func main() {
+	if runtime.GOOS != "linux" {
+		fmt.Printf("This program is only for linux.\n")
+		os.Exit(1)
+	}
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
