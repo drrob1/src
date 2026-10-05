@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"src/filepicker"
 	"strconv"
 	"strings"
@@ -20,11 +21,16 @@ import (
    2 Aug 23 -- Turned out that for the shelling out to the tar cmd, I had to use a fully qualified path name.  When I didn't do that, I got a file not found error.
                 I finally figured out why, because I changed dir to /usr/local and forgot to change back.  Anyway, the code's working so I'll leave it alone.
   11 Sep 23 -- I'm going to trap answers that are out of bounds.
+   5 Oct 26 -- Added a check for windows.  This is only meant for linux.
 */
 
-const lastUpdated = "Sep 12, 2023"
+const lastUpdated = "Oct 5, 2026"
 
 func main() {
+	if runtime.GOOS != "linux" {
+		fmt.Println("This program is only meant for linux.")
+		os.Exit(1)
+	}
 	execName, _ := os.Executable()
 	ExecFI, _ := os.Stat(execName)
 	ExecTimeStamp := ExecFI.ModTime().Format("Mon Jan-2-2006_15:04:05 MST")
