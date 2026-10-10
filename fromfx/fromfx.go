@@ -88,7 +88,7 @@ import (
                  The Modula-2 code writes the memo field as FITID + "  " + memo + ": " + comment, where I enter comment
                  myself w/ each run of the pgm.  I'm trying out adding the FITID numbers to Descript and see how I
                  like it.
-   2 Oct 20 -- qbo files will populate the filepicker menu.  Filepicker now uses case insensitive flag.  Stop code added.
+   2 Oct 20 -- qbo files will populate the filepicker menu.  Filepicker now uses case-insensitive flag.  Stop code added.
    4 Oct 20 -- Will ignore empty tokens
   17 Oct 20 -- Removed the strings.ToLower for output filenames.
    8 Jan 22 -- Converted to modules; it shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
