@@ -5,20 +5,18 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"src/filepicker"
 	"fmt"
-	"src/getcommandline"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
+	"src/filepicker"
+	"src/getcommandline"
 	"src/timlibg"
 	"src/tokenize"
+	"strconv"
+	"strings"
 )
-
-const lastModified = "5 Sep 20"
 
 /*
 MODULE qfx2xls;
@@ -50,10 +48,10 @@ MODULE qfx2xls;
                  And I changed output file format to be more straightforward, reordering fields.
    9 Feb 09 -- Now does .qfx files, hence module name change.  And will use <tab> as output delim, just because.
                 And since it really is meant for Excel to import the text file, module name change to xls.
-   3 Mar 11 -- Noticed but in GetQfxToken in that read calls should all be to the param f, not the
+   3 Mar 11 -- Noticed bug in GetQfxToken in that read calls should all be to the param f, not the
                 global infile.  I will fix this next time I have to recompile.
 
-   7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
+   7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not XML, but .ofx,
                 which means open financial exchange (for/of information).  New name is ofx2csv.go
 		I think I will first process the file using something like toascii.
   19 Oct 17 -- Added filepicker code
@@ -64,7 +62,10 @@ MODULE qfx2xls;
 				 append 2 commas for the sqlite file.
   31 Mar 19 -- Noticed that this pgm defaults to .qfx files.  I decided to have it default to both .ofx and .qfx files.
    5 Sep 20 -- Still not showing .ofx files, and removed default CHK part of the pattern.
+  10 Oct 26 -- updated syntax and top comments.
 */
+
+const lastModified = "10 Oct 2026"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -143,7 +144,7 @@ func main() {
 
 	fmt.Println(" ofx2csv.go lastModified is", lastModified)
 	if len(os.Args) <= 1 {
-		filenames := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
+		filenames, err := filepicker.GetRegexFilenames("(OFX$)|(QFX$)") // $ matches end of line
 		for i := 0; i < min(len(filenames), 10); i++ {
 			fmt.Println("filename[", i, "] is", filenames[i])
 		}
@@ -389,7 +390,7 @@ func DateFieldAccessToSQlite(datein string) string {
 	return dateout
 } // END DateFieldAccessToSQlite
 
-//--------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------
 func GetOfxToken(buf *bytes.Buffer) ofxTokenType {
 	// -------------------------------------------------- GetQfxToken ----------------------------------
 	// Delimiters are angle brackets and EOL.
@@ -572,7 +573,7 @@ func GetTransactionData(buf *bytes.Buffer) citiTransactionType {
 	return transaction
 } // END GetTransactionData
 
-//--------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 func ProcessOFXFile(buf *bytes.Buffer) (citiheadertype, citifootertype) {
 
 	var header citiheadertype
@@ -757,14 +758,14 @@ func ExtractNumberFromString(s string) (string, int) {
 	}
 } // end ExtractNumberFromString
 
-//-------------------------------------------------------
+// -------------------------------------------------------
 func check(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-//-------------------------------------------------------
+// -------------------------------------------------------
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -773,12 +774,12 @@ func min(a, b int) int {
 	}
 }
 
-//-------------------------------------------------------------------- InsertByteSlice
+// -------------------------------------------------------------------- InsertByteSlice
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
 
-//---------------------------------------------------------------------- AddCommas
+// ---------------------------------------------------------------------- AddCommas
 func AddCommas(instr string) string {
 	var Comma []byte = []byte{','}
 

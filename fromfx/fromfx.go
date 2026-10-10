@@ -9,9 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	ct "github.com/daviddengcn/go-colortext"
-	ctfmt "github.com/daviddengcn/go-colortext/fmt"
-	"github.com/tealeg/xlsx/v3"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,6 +19,10 @@ import (
 	"strings"
 	"time"
 
+	ct "github.com/daviddengcn/go-colortext"
+	ctfmt "github.com/daviddengcn/go-colortext/fmt"
+	"github.com/tealeg/xlsx/v3"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -29,8 +30,7 @@ import (
   REVISION HISTORY
   ----------------
   13 Mar 04 -- It does not seem to be always creating the output file.
-               It now copies the d/l file instead of renaming it.  And
-               it echoes its output to the terminal.
+               It now copies the d/l file instead of renaming it.  And it echoes its output to the terminal.
   14 Mar 04 -- Made it a Text Window module
   21 Mar 04 -- Changed exit keys to remove <cr> and add <space>, <bs>, <tab>
   15 Apr 04 -- Decided to include <cr> again, as I fixed the pblm in Excel macros.
@@ -54,10 +54,10 @@ import (
                  And I changed output file format to be more straightforward, reordering fields.
    9 Feb 09 -- Now does .qfx files, hence module name change.  And will use <tab> as output delim, just because.
                 And since it really is meant for Excel to import the text file, module name change to xls.
-   3 Mar 11 -- Noticed but in GetQfxToken in that read calls should all be to the param f, not the
+   3 Mar 11 -- Noticed bug in GetQfxToken in that read calls should all be to the param f, not the
                 global infile.  I will fix this next time I have to recompile.
-
-   7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not xml, but ofx,
+------------------------------------------------------------------------------------------------------------------------------------------------------
+   7 Jun 17 -- Converting to go.  I posted on go-nuts, and was told that the .qfx format is not XML, but ofx,
                 which means open financial exchange (for/of information).  New name is ofx2csv.go
 		I think I will first process the file using something like toascii.
 	 This code started as qfx2xls.mod, but I really want more like CitiFilterQIF.mod.  So I have to merge in that code also.
@@ -73,6 +73,7 @@ import (
    5 Sep 20 -- Still not showing .ofx files, and removed default CHK part of the pattern.
                  Put back the CHK part of pattern because this file is only designed for the Citibank checking files.
    6 Sep 20 -- Added a comment about passing Transactions slice globally.
+------------------------------------------------------------------------------------------------------------------------------------------------------
    7 Sep 20 -- Now called fromfx, to mean from qfx or ofx.  My intent is to cover both the CHK files and cc files.
                  I'll look for CHK in the selected filename to distinguish.
   17 Sep 20 -- Using the csv routines from Go did not work for SQLiteStudio.  It's not reading the date again.
@@ -91,15 +92,15 @@ import (
    4 Oct 20 -- Will ignore empty tokens
   17 Oct 20 -- Removed the strings.ToLower for output filenames.
    8 Jan 22 -- Converted to modules; it shows [a .. z] as well as [0 .. 26] as I allow letter input also, and I removed use of getcommandline.
-                 Added verbose flag to control the display of pauses.  Removed use of ioutil that was depracated as of Go 1.16
+                 Added verbose flag to control the display of pauses.  Removed use of ioutil that was deprecated as of Go 1.16
   21 Jan 24 -- Expanded stop code to include "," and "."
-  16 Oct 24 -- Got the idea that this program place the title row for all .xls files, ie, Date, Amt, Description, Comment, delimited as it has to be to be processed correctly.
+  16 Oct 24 -- Got the idea that this program place the title row for all .xls files, i.e., Date, Amt, Description, Comment, delimited as it has to be processed correctly.
                Will do this by adding a func instead of adding it to main.  It'll be easier to debug as a func.
   21 Oct 24 -- Since I forgot, I'll summarize how this works.  First it reads in all the transactions and parses them into a slice of generalTransactionType, then
                  it writes out this slice to 3 files: a csv to be read by sqlite3 database, a txt file named as xls for Excel,
-                 and now .xlsx file directly for Excel using the github code I recently learned about.
+                 and now .xlsx file directly for Excel using the GitHub code I recently learned about.
    5 Nov 24 -- Today's Election Day, but that's not important right now.
-                 I got the idea to have this routine directly update the sqlite3 databases I use, ie, allcc-sqlite.db and citibank.db.  I'd need a separate routine to update taxes.db.
+                 I got the idea to have this routine directly update the sqlite3 databases I use, i.e., allcc-sqlite.db and citibank.db.  I'd need a separate routine to update taxes.db.
                  This routine handles 2 different kinds of input files, the CHK_6861_Current_View.qfx, and one of the several credit card files in qfx or ofx format.
                  I have to make sure that the input state is consistent throughout the code.  Then send the slice of transactions to the rtn that will update the correct .db file.
 					As far as I can tell, it worked on the first compile and run.  I'm going to change the database filenames to the real ones instead of the test ones.
@@ -117,7 +118,8 @@ import (
 					Need filenames for allcc.csv, allcc.xls, allcc.xlsx, and citifile.txt and citifile.csv.
 					The correct formating of the date for Sqlite and Access or Excel is handled by the different fields in the transaction struct.
   14 Dec 24 -- The code is much easier to read.
-  16 Dec 24 -- Ok, now that it works, I'm going to clean up the output section of main, so that it has one check of inputmode, instead of the speghetti structure it used to be.
+  16 Dec 24 -- Ok, now that it works, I'm going to clean up the output section of main, so that it has one check of inputmode, instead of the spaghetti structure it used to be.
+  10 Oct 26 -- Cleaned up comments and removed the min function that became built into the compiler as of Go 1.20 (Aug 2023) or so.  No need to recompile.
 */
 
 const lastModified = "16 Dec 24"
@@ -154,10 +156,9 @@ type ofxCharType struct {
 }
 
 // var err error  unused according to Goland, so I removed it.
+// const KB = 1024  also unused, so I removed it
+// const MB = KB * KB unused, so I removed it
 
-const KB = 1024
-
-// const MB = KB * KB  unused, so I removed it
 const ofxext = ".OFX"
 const qfxext = ".QFX"
 const xlsxext = ".xlsx"
@@ -690,8 +691,8 @@ MainProcessingLoop:
 		for size > 1 { // discard non-ASCII runes
 			r, size, err = buf.ReadRune()
 			if err != nil { // this includes the EOF condition
-				//      i noticed that FITID last 4 digits, from positions 9..12, or [9:13] are a sequence number for that dayonly
-				//	  And name = Bill Payment is when I have to extract the number > 12000 at the end for the CHECKNUM field
+				//    I noticed that FITID last 4 digits, from positions 9..12, or [9:13] are a sequence number for that day only.
+				//	  And name = Bill Payment is when I have to extract the number > 12000 at the end for the CHECKNUM field.
 				//	  I'll have to code this later.
 				//
 				EOF = true
@@ -1077,15 +1078,6 @@ func check(err error) {
 	}
 }
 
-// -------------------------------------------------------
-//func min(a, b int) int {  A built-in function as of Go 1.20 or so.
-//	if a < b {
-//		return a
-//	} else {
-//		return b
-//	}
-//}
-
 func InsertIntoByteSlice(slice, insertion []byte, index int) []byte {
 	return append(slice[:index], append(insertion, slice[index:]...)...)
 }
@@ -1118,7 +1110,6 @@ func openConnection() (*sql.DB, error) {
 	return db, nil
 }
 
-// AllccAddRecords -- base means the base input filename and records is obvious.
 func AllccAddRecords(base string, records []generalTransactionType) error {
 	db, err := openConnection()
 	if err != nil {
@@ -1152,7 +1143,6 @@ func AllccAddRecords(base string, records []generalTransactionType) error {
 	return nil
 }
 
-// CitiAddRecords -- acntType is from header.ACCTTYPE and records is obvious.
 func CitiAddRecords(acntType string, records []generalTransactionType) error {
 	db, err := openConnection()
 	if err != nil {
