@@ -527,13 +527,13 @@ func Doit() {
 				} else if rtkn.Str == "DARK" {
 					fyne.Do(func() {
 						// safe to touch widgets here
-						fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is depracated and will be removed in v3.
+						fyne.CurrentApp().Settings().SetTheme(theme.DarkTheme()) // Goland is saying that DarkTheme is deprecated and will be removed in v3.
 					})
 					lightTheme = false
 				} else if rtkn.Str == "LIGHT" {
 					fyne.Do(func() {
 						// safe to touch widgets here
-						fyne.CurrentApp().Settings().SetTheme(theme.LightTheme()) // Goland is saying that LightTheme is depracated and will be removed in v3.
+						fyne.CurrentApp().Settings().SetTheme(theme.LightTheme()) // Goland is saying that LightTheme is deprecated and will be removed in v3.
 					})
 					lightTheme = true
 				} else {
@@ -569,102 +569,6 @@ func Doit() {
 		})
 	}
 } // end Doit
-
-/*
-// ---------------------------------------------------------- keyTyped --------------------------------------------
-func keyTyped(e *fyne.KeyEvent) { // Maybe better to first call input.TypedRune, and then change focus.  Else some keys were getting duplicated.
-	switch e.Name {
-	case fyne.KeyUp: // stack up
-		inbufChan <- ","
-	case fyne.KeyDown: // stack down
-		//                                          _ = hpcalc2.PopX()  but this prevents UNDO from working here.
-		inbufChan <- "POP" // I'm sending a command thru instead of calling PopX so that UNDO will work correctly.
-	case fyne.KeyLeft: // swap X, Y
-		//                                                                                globalW.Canvas().Focus(input)
-		inbufChan <- "~"
-	case fyne.KeyRight: // swap X, Y
-		//                                                                                globalW.Canvas().Focus(input)
-		inbufChan <- "~"
-	case fyne.KeyEscape, fyne.KeyQ:
-		//                                                                                               globalA.Quit()
-		//	                                                                                          (*globalA).Quit()
-		globalW.Close() // quit's the app if this is the last window.
-	case fyne.KeyX:
-		if len(input.Text) == 0 { // only eXit if X is first character typed.
-			globalW.Close()
-		} else {
-			input.TypedRune('X')
-		}
-	case fyne.KeyHome:
-	case fyne.KeyEnd:
-	case fyne.KeyPageUp:
-	case fyne.KeyPageDown:
-	case fyne.KeySpace:
-		//                                                                                globalW.Canvas().Focus(input)
-		//                                                                                         input.TypedRune(' ')
-		inbufChan <- input.Text
-	case fyne.KeyBackspace, fyne.KeyDelete:
-		//                                                                                globalW.Canvas().Focus(input)
-		//                                                                                        input.TypedRune('\b')
-		text := input.Text
-		if len(text) > 0 {
-			text = text[:len(text)-1]
-		}
-		input.SetText(text)
-	case fyne.KeyPlus:
-		input.TypedRune('+')
-	case fyne.KeyAsterisk:
-		input.TypedRune('*')
-	case fyne.KeyEqual:
-		input.TypedRune('+')
-	case fyne.KeySemicolon:
-		input.TypedRune('*')
-	case fyne.KeyF1, fyne.KeyF2, fyne.KeyF12:
-		//                                                                             input.TypedRune('H') // for help
-		//                                                                                      inbufChan <- input.Text
-		inbufChan <- "H"
-
-	case fyne.KeyEnter, fyne.KeyReturn:
-		inbufChan <- input.Text
-
-	default:
-		if e.Name == "LeftShift" || e.Name == "RightShift" || e.Name == "LeftControl" || e.Name == "RightControl" {
-			shiftState = true
-			return
-		}
-		if shiftState {
-			shiftState = false
-			if e.Name == fyne.KeySlash {
-				input.TypedRune('?')
-			} else if e.Name == fyne.KeyPeriod {
-				input.TypedRune('>')
-			} else if e.Name == fyne.KeyComma {
-				input.TypedRune('<')
-			} else if e.Name == fyne.KeyMinus {
-				input.TypedRune('_')
-			} else if e.Name == fyne.Key8 {
-				input.TypedRune('*')
-			} else if e.Name == fyne.Key6 {
-				input.TypedRune('^')
-			} else if e.Name == fyne.Key5 {
-				input.TypedRune('%')
-			} else if e.Name == fyne.Key2 {
-				input.TypedRune('@')
-			} else if e.Name == fyne.Key1 {
-				input.TypedRune('!')
-			} else if e.Name == fyne.KeyBackTick {
-				input.TypedRune('~')
-			}
-			//globalW.Canvas().Focus(input)
-		} else {
-			input.TypedRune(rune(e.Name[0]))
-			//globalW.Canvas().Focus(input)
-		}
-
-		//fmt.Printf(" in keyTyped, e.Name is: %q\n", e.Name) I saw LeftShift, RightShift, LeftControl, RightControl when I depressed the keys.
-	}
-} // end keyTyped
-*/
 
 // ---------------------------------------------------------- keyTyped --------------------------------------------
 func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change focus.  inbufChan is the string chan that is used to return these strings to be processed.
@@ -708,12 +612,16 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 		inbufChan <- "~"
 		return
 	case fyne.KeyEscape: // fyne.KeyQ  removed "Q" from quitting, because then I couldn't enter sqrt, for example.
-		globalW.Close() // quits the app if this is the last window.
+		fyne.Do(func() {
+			globalW.Close() // quits the app if this is the last window.
+		})
 		//                                                                                               globalA.Quit()
 		//	                                                                                          (*globalA).Quit()
 	case fyne.KeyX:
 		if len(input.Text) == 0 { // only eXit if X is first character typed.
-			globalW.Close()
+			fyne.Do(func() {
+				globalW.Close()
+			})
 		} else {
 			input.TypedRune('X')
 		}
@@ -723,8 +631,10 @@ func keyTyped(e *fyne.KeyEvent) { // Now calls input.TypedRune, and then change 
 	case fyne.KeyPageDown:
 	case fyne.KeySpace:
 		//     inbufChan <- input.Text // removed 5/5/25
-		globalW.Canvas().Focus(input) // added back 5/5/25
-		input.TypedRune(' ')          // added back 5/5/25
+		fyne.Do(func() {
+			globalW.Canvas().Focus(input) // added back 5/5/25
+			input.TypedRune(' ')          // added back 5/5/25
+		})
 		return
 	case fyne.KeyBackspace, fyne.KeyDelete:
 		text := input.Text
