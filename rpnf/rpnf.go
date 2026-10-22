@@ -82,9 +82,10 @@ import (
 16 Mar 26 -- Cosmetic changes to UI.  Added pflag imported as flag.  Added ability to reduce screen size by a menu item.
 17 Mar 26 -- Will automatically change the screen size based on what Fyne says it is.  This change is coded in keyTyped, and uses doOnce.  I don't think this does what I wanted it to.
 18 Apr 26 -- I decided that I don't want the display.txt files littered throughout the filesystem.  I'm going to put it in the config dir.
+22 Oct 26 -- added a few more fyne.Do() calls, and removed code I commented out long ago.
 */
 
-const lastModified = "April 18, 2026"
+const lastModified = "Oct 22, 2026"
 
 const ( // output modes
 	outputfix = iota
