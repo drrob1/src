@@ -123,7 +123,9 @@ import (
 ------------------------------------------------------------------------------------------------------------------------------------------------------
   30 Oct 26 -- Now called fromcsv.go.  WellsFargo has 2 years of data in csv format, but only 3 months of data in ofx format.  So I'm going to use csv for allcc and citi.
          		This will take a while because I'm also doing the 80-hour course.
-				I'll use a map for the field names, starting at 1.  This leaves 0 for undefined input to be ignored.
+				I'll use a map for the field names, starting at 1.  This leaves 0 for undefined input to be ignored.  Nevermind, csv format needs a simple loop since field position
+				is what matters, not field name.
+				"DATE", "DESCRIPTION", "AMOUNT", "CHECK #", "STATUS" are the fields in the Wells Fargo csv file.
 */
 
 const lastModified = "30 Oct 26"
@@ -141,7 +143,6 @@ const ( // intended for ofxTokenType
 	strng
 	openinghtml
 	closinghtml
-	// othererror  // unused at the moment, but I'll just comment it out.
 )
 
 const ( // intended for inputstate
@@ -158,10 +159,6 @@ type ofxCharType struct {
 	Ch    byte
 	State int
 }
-
-// var err error  unused according to Goland, so I removed it.
-// const KB = 1024  also unused, so I removed it
-// const MB = KB * KB unused, so I removed it
 
 const ofxext = ".OFX"
 const qfxext = ".QFX"
@@ -184,6 +181,11 @@ type generalHeaderType struct {
 	DTEND    string
 }
 
+// "DATE", "DESCRIPTION", "AMOUNT",    "CHECK #",     "STATUS" are the fields in the Wells Fargo csv file.
+// Juldate  Descript       TRNAMT       CHECKNUM       TRNTYPE
+// DateTime                TRNAMTfloat  CHECKNUMint
+// DTPOSTEDtxt
+// DTPOSTEDcsv
 type generalTransactionType struct {
 	TRNTYPE     string
 	DTPOSTEDtxt string // intended for Excel or Access
