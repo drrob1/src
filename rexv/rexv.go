@@ -83,11 +83,11 @@ Revision History
  6 Oct 19 -- Added help as a flag, removed -H, and expanded help to include the basics of regex syntax.
  8 Oct 19 -- Decided to work like dsrt, in that if there is no pattern, just show all recent files.  And I removed dead code, that's still in dsrt.
                Adding new usage to allow 'pattern' 'directory'.  Directory can be null to mean current dir.
-27 Oct 19 -- Lower casing the regular expression so it matchs the lower cased filenames.  And added to help message.
+27 Oct 19 -- Lower casing the regular expression so it matches the lower cased filenames.  And added to help message.
 21 Nov 19 -- Added Println() statements to separate header from filename outputs.
 25 Aug 20 -- File sizes to be displayed in up to 3 digits and a suffix of kb, mb, gb and tb.  Unless new -l for long flag is used.
  9 Nov 20 -- Now using correct idiom to read environment and check for absent variable.
-20 Dec 20 -- For date sorting, I changed away from using NanoSeconds and I'm now using the time.Before(time) and time.After(time) functions.
+20 Dec 20 -- For date sorting, I changed away from using NanoSeconds, and I'm now using the time.Before(time) and time.After(time) functions.
                  I found these to be much faster when I changed dsrt.go.
 15 Jan 21 -- Now uses same getMagnitudeString as I wrote for dsrt.
 17 Jan 21 -- Adding -x flag, for an exclude pattern, i.e., if this pattern matches, don't print.
@@ -98,7 +98,7 @@ Revision History
  9 Mar 21 -- Added use of os.UserHomeDir, which became available as of Go 1.12.
 17 Mar 21 -- Porting some recent changes in dsrt about ShowGrandTotal to here.
                Adding exclude string to allow the exclude regex pattern on the command line.  Convenient for recalling commands.
-13 Jul 21 -- Now called reg.go, and will display its output in 2 columns like dsc.  ioutil is depracated, so that's now gone.
+13 Jul 21 -- Now called reg.go, and will display its output in 2 columns like dsc.  ioutil is deprecated, so that's now gone.
 */
 /*
 ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ Revision History
 20 Feb 24 -- Changed a message to make it clear that this sorts on mod date.  And nscreen correctly handles numOfCols.
  4 May 24 -- Adding concurrent code from fdsrt.
  3 Jun 24 -- Removed commented out code and edited a few comments.
- 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpretted as nscreens instead of nlines (off the top of my head)
+ 5 Jan 25 -- There's a bug in how the dsrt environ variable is processed.  It sets the variable that's now interpreted as nscreens instead of nlines (off the top of my head)
 				nscreens can only be set on the command line, not by environ var.  The environ var is used to set lines to display on screen.
 				I decided to separate the environ variables, so this now uses rex instead of dsrt as the environ var name it uses to set its defaults.
  6 Jan 25 -- Today's my birthday.  But that's not important now.  If I set nlines via the environment, and then use the halfFlag, the base amount is what dsrt is, not the full screen.
@@ -152,9 +152,11 @@ Revision History
 				Looks like I already did this some time ago.  I have a vague memory that before I used concurrency, the linux version would take ~8 sec when searching dsm, but
 				the Windows version would take ~1 sec.  Adding concurrency made it ~1 sec on linux but didn't really change on Windows.  So nothing to do here, after all.
 				I'll make fetch a param.
+31 Oct 26 -- Thinking about how to add the config file as in dv.go.  Since I'm still doing the 80-hour course, this will take a while.
+				Turned out not to be hard.  Just need to copy dv.yaml to rexv.yaml.  No need to recompile.
 */
 
-const LastAltered = "Jan 31, 2026"
+const LastAltered = "Oct 31, 2026"
 
 type dirAliasMapType map[string]string
 
