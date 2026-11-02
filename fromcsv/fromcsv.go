@@ -355,10 +355,11 @@ func processCSVfile(inputFile *os.File) []generalTransactionType {
 		// DTPOSTEDcsv
 
 		// Start with DATE
-		dateStr := record[0] // in m/d/yyyy format
+		dateStr := record[0] // in m/d/yyyy format.
+		fmt.Printf("dateStr = %s\n", dateStr)
 		dt, err := time.Parse("1/2/2006", dateStr)
 		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from time.Parse() is %s\n", err.Error())
+			ctfmt.Printf(ct.Red, true, " Error from time.Parse(%s) is %s\n", dateStr, err)
 			return nil
 		}
 		juldate := timlibg.Julian(int(dt.Month()), dt.Day(), dt.Year())
@@ -369,9 +370,10 @@ func processCSVfile(inputFile *os.File) []generalTransactionType {
 
 		// next is AMOUNT
 		amountStr := record[2]
+		fmt.Printf("amountStr = %s\n", amountStr)
 		amountFloat, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from strconv.ParseFloat(%s) is %s\n", amountStr, err.Error())
+			ctfmt.Printf(ct.Red, true, " Error from strconv.ParseFloat(%s) is %s\n", amountStr, err)
 			return nil
 		}
 
@@ -379,7 +381,7 @@ func processCSVfile(inputFile *os.File) []generalTransactionType {
 		checkNumStr := record[3]
 		checkNumInt, err := strconv.Atoi(checkNumStr)
 		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from strconv.Atoi(%s) is %s\n", checkNumStr, err.Error())
+			ctfmt.Printf(ct.Red, true, " Error from strconv.Atoi(%s) is %s\n", checkNumStr, err)
 			return nil
 		}
 
@@ -673,6 +675,7 @@ func DateFieldAccessToSQlite(datein string) string {
 	// write out 2 files.  First I'll write the Access file, then reprocess the date fields to
 	// write out the Sqlite format.  The Juldate doesn't change, but I don't think I use it
 	// anyway.
+	// This panics if the date is not in the expected format, ie, in m/d/yyyy, that is, leading zeros are not present so a fixed shuffling won't work in csv format.
 
 	var dateout string
 
