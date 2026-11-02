@@ -2,8 +2,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"database/sql"
 	"encoding/csv"
 	"errors"
@@ -15,7 +13,6 @@ import (
 	"regexp"
 	"src/filepicker"
 	"src/timlibg"
-	"src/tokenize"
 	"strconv"
 	"strings"
 	"time"
@@ -127,11 +124,12 @@ import (
 				I'll use a map for the field names, starting at 1.  This leaves 0 for undefined input to be ignored.  Nevermind, csv format needs a simple loop since field position
 				is what matters, not field name.
 				"DATE", "DESCRIPTION", "AMOUNT", "CHECK #", "STATUS" are the fields in the Wells Fargo csv file.
-   2 Nov 26 -- So far, processCSVfile is working, and writing to the SQL file is working.  It's not writing to the xlsx file yet.  I'll look into that.
+   2 Nov 26 -- So far, processCSVfile is working, and writing to the SQL file is working.  I'll remove the code that parses the HTML tags.  That took a lot of code.
 */
 
 const lastModified = "2 Nov 26"
 
+/*
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
 	openangle
@@ -157,12 +155,6 @@ type ofxCharType struct {
 	State int
 }
 
-const ofxext = ".OFX"
-const qfxext = ".QFX"
-const xlsxext = ".xlsx"
-const CSVext = ".csv"
-const XLSext = ".xls"
-
 type generalHeaderType struct {
 	DTSERVER string
 	LANGUAGE string
@@ -175,6 +167,24 @@ type generalHeaderType struct {
 	DTSTART  string
 	DTEND    string
 }
+
+type generalFooterType struct {
+	BalAmt      string
+	BalAmtFloat float64
+	DTasof      string
+}
+
+var bankTranListEnd bool
+var EOF bool
+var outputFlag = flag.Bool("o", false, "Set output mode, currently controls writing the .xls and .csv output files.")
+
+const CSVext = ".csv"
+const XLSext = ".xls"
+*/
+
+const ofxext = ".OFX"
+const qfxext = ".QFX"
+const xlsxext = ".xlsx"
 
 // "DATE", "DESCRIPTION", "AMOUNT",    "CHECK #",     "STATUS" are the fields in the Wells Fargo csv file.
 // Juldate  Descript       TRNAMT       CHECKNUM       TRNTYPE
@@ -197,20 +207,10 @@ type generalTransactionType struct {
 	DateTime    time.Time
 }
 
-type generalFooterType struct {
-	BalAmt      string
-	BalAmtFloat float64
-	DTasof      string
-}
-
-var bankTranListEnd bool
-var EOF bool
-
 // This uses the std library flag package
 var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
-var outputFlag = flag.Bool("o", false, "Set output mode, currently controls writing the .xls and .csv output files.")
 
-var SQliteDBname = "" // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
+var SQliteDBname string // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
 
 func main() {
 	var BaseFilename, ans, InFilename, XLoutFilename string
@@ -323,17 +323,20 @@ func main() {
 		ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
 	}
 
-	if *outputFlag {
-		err := writeCreditCardFileTXT4XLS(BaseFilename, transactions)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
+	/*
+		if *outputFlag {
+			err := writeCreditCardFileTXT4XLS(BaseFilename, transactions)
+			if err != nil {
+				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
+			}
+
+			err = writeCreditCardFileCSV4Sqlite(BaseFilename, transactions)
+			if err != nil {
+				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
+			}
 		}
 
-		err = writeCreditCardFileCSV4Sqlite(BaseFilename, transactions)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
-		}
-	}
+	*/
 
 	fmt.Println()
 
@@ -482,6 +485,59 @@ func writeOutExcelFile(fn string, base string, transactions []generalTransaction
 	return err
 }
 
+// openConnection() function is private and only accessed within the scope of the package
+func openConnection() (*sql.DB, error) {
+	if SQliteDBname == "" {
+		return nil, errors.New("database name is empty")
+	}
+	db, err := sql.Open("sqlite3", SQliteDBname) // SQLite3 does not require a username or a password and does not operate over a TCP/IP network.
+	// Therefore, sql.Open() requires just a single parameter, which is the filename of the database.
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func AllccAddRecords(base string, records []generalTransactionType) error {
+	db, err := openConnection()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	for _, record := range records {
+		if record.DTPOSTEDcsv == "" {
+			return errors.New("DTPOSTEDcsv is empty")
+		}
+		if !checkSQLiteDate(record.DTPOSTEDcsv) {
+			s := fmt.Sprintf("DTPOSTEDcsv is not in a valid format.  It is %s", record.DTPOSTEDcsv)
+			return errors.New(s)
+		}
+
+		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
+		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
+		insertStatement := `INSERT INTO Allcc values (?,?,?,?)`
+		_, err = db.Exec(insertStatement, record.DTPOSTEDcsv, record.TRNAMTfloat, record.Descript, base) // date, amount, description and comment for Allcc-Sqlite.db
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkSQLiteDate(date string) bool {
+	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
+	result := regex.MatchString(date)
+	return result
+}
+
+/*
 func writeCitiFileTXT4Access(fn string, header generalHeaderType, transactions []generalTransactionType) error {
 	// This txt file is intended to be read in by MS Access.  Hence the name.
 	if fn == "" {
@@ -1131,52 +1187,6 @@ func AddCommas(instr string) string {
 	return string(BS)
 } // AddCommas
 
-// openConnection() function is private and only accessed within the scope of the package
-func openConnection() (*sql.DB, error) {
-	if SQliteDBname == "" {
-		return nil, errors.New("database name is empty")
-	}
-	db, err := sql.Open("sqlite3", SQliteDBname) // SQLite3 does not require a username or a password and does not operate over a TCP/IP network.
-	// Therefore, sql.Open() requires just a single parameter, which is the filename of the database.
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-func AllccAddRecords(base string, records []generalTransactionType) error {
-	db, err := openConnection()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := db.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	for _, record := range records {
-		if record.DTPOSTEDcsv == "" {
-			return errors.New("DTPOSTEDcsv is empty")
-		}
-		if !checkSQLiteDate(record.DTPOSTEDcsv) {
-			s := fmt.Sprintf("DTPOSTEDcsv is not in a valid format.  It is %s", record.DTPOSTEDcsv)
-			return errors.New(s)
-		}
-
-		// This is how we construct an INSERT statement that accepts parameters. The presented statement requires four values.
-		// With db.Exec() we pass the value of the parameters into the insertStatement variable.
-		insertStatement := `INSERT INTO Allcc values (?,?,?,?)`
-		_, err = db.Exec(insertStatement, record.DTPOSTEDcsv, record.TRNAMTfloat, record.Descript, base) // date, amount, description and comment for Allcc-Sqlite.db
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func CitiAddRecords(acntType string, records []generalTransactionType) error {
 	db, err := openConnection()
 	if err != nil {
@@ -1210,12 +1220,7 @@ func CitiAddRecords(acntType string, records []generalTransactionType) error {
 	}
 	return nil
 }
-
-func checkSQLiteDate(date string) bool {
-	regex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`) // staticcheck said to use raw string delimiter so I don't have to escape the backslash.
-	result := regex.MatchString(date)
-	return result
-}
+*/
 
 //---------------------------------------------------------------------------------------------------
-// END fromfx.go based on ofx2csv.go based on qfx2xls.mod
+// END fromcsv.go based on fromfx.go based on ofx2csv.go based on qfx2xls.mod
