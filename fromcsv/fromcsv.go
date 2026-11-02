@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -128,7 +129,7 @@ import (
 				"DATE", "DESCRIPTION", "AMOUNT", "CHECK #", "STATUS" are the fields in the Wells Fargo csv file.
 */
 
-const lastModified = "30 Oct 26"
+const lastModified = "1 Nov 26"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -143,11 +144,6 @@ const ( // intended for ofxTokenType
 	strng
 	openinghtml
 	closinghtml
-)
-
-const ( // intended for inputstate
-	citichecking = iota
-	cc
 )
 
 type ofxTokenType struct {
@@ -165,8 +161,6 @@ const qfxext = ".QFX"
 const xlsxext = ".xlsx"
 const CSVext = ".csv"
 const XLSext = ".xls"
-const citiSqliteOutfile = "citifile.csv"
-const citiAccessOutfile = "citifile.txt"
 
 type generalHeaderType struct {
 	DTSERVER string
@@ -209,7 +203,6 @@ type generalFooterType struct {
 }
 
 // var Transactions []generalTransactionType
-var inputstate int
 var bankTranListEnd bool
 var EOF bool
 var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
@@ -218,18 +211,15 @@ var outputFlag = flag.Bool("o", false, "Set output mode, currently controls writ
 var SQliteDBname = "" // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
 
 func main() {
-	var e error
-	var filebyteslice []byte
 	var BaseFilename, ans, InFilename, XLoutFilename string
-	//var BaseFilename, ans, InFilename, CSVOutFilename, TXTOutFilename, XLoutFilename string   I removed the need for CSVOutFilename and TXTOutFilename
 
 	flag.Parse()
 
 	InFileExists := false
 
-	fmt.Println(" fromfx.go lastModified is", lastModified)
+	fmt.Println(" fromcsv.go lastModified is", lastModified)
 	if flag.NArg() < 1 {
-		filenames, err := filepicker.GetRegexFilenames("(ofx$)|(qfx$)|(qbo$)") // $ matches end of line
+		filenames, err := filepicker.GetFilenames("*csv")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " Error from GetRegexFilenames is %v, exiting\n", err)
 			os.Exit(1)
@@ -293,100 +283,126 @@ func main() {
 		fmt.Println(" input filename is ", InFilename)
 	}
 
-	// remember that inputstate starts as 0, as citichecking.
-	if !strings.HasPrefix(BaseFilename, "CHK") {
-		inputstate = cc
-	}
-
 	fmt.Println()
 
-	// Read the input file
-	filebyteslice, e = os.ReadFile(InFilename)
-	if e != nil {
-		fmt.Println(" Error from ReadFile is ", e)
+	// Open the input file
+	inputFile, err := os.Open(InFilename)
+	if err != nil {
+		fmt.Printf(" Error from Open(%s) is %s\n", InFilename, err)
 		os.Exit(1)
 	}
-
-	bytesbuffer := bytes.NewBuffer(filebyteslice)
+	defer inputFile.Close()
 
 	// Process the input file
 
-	header, footer, transactions := processOFXFile(bytesbuffer)
+	transactions := processCSVfile(inputFile)
+
 	fmt.Println(" Number of transactions is ", len(transactions))
 
-	// assign Descript and CHECKNUMs fields
-	for ctr, t := range transactions {
-		transactions[ctr].Descript = strings.Trim(transactions[ctr].NAME, " ") + " " + strings.Trim(transactions[ctr].MEMO, " ") +
-			" : " + transactions[ctr].FITID
-		if inputstate == citichecking && t.CHECKNUMint == 0 {
-			if strings.Contains(t.NAME, "Bill Payment") {
-				transactions[ctr].CHECKNUM, transactions[ctr].CHECKNUMint = ExtractNumberFromString(t.MEMO)
-			} else {
-				transactions[ctr].CHECKNUM = t.FITID[8:]
-				transactions[ctr].CHECKNUMint, _ = strconv.Atoi(t.FITID[8:])
-			}
-		}
+	// Output Section
+	// input state is always cc, for credit card transactions, as this is the only type of transaction we process in this program.
+
+	XLoutFilename = BaseFilename + xlsxext
+	err = writeOutExcelFile(XLoutFilename, BaseFilename, transactions)
+	if err != nil {
+		fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
 	}
 
-	// Output Section
+	//SQliteDBname = "Allcc-Sqlite.db"
+	//SQliteDBname = "Allcc-test.db"
+	SQliteDBname = "Allcc-test.db"
+	err = AllccAddRecords(BaseFilename, transactions)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
+	}
 
-	// always display the footer
-	fmt.Printf(" DTServer=%s, Lang=%s, ORG=%s, FID=%s, CurDef=%s, BankID=%s, AccntID=%s, \n",
-		header.DTSERVER, header.LANGUAGE, header.ORG, header.FID, header.CURDEF, header.BANKID, header.ACCTID)
-	fmt.Printf(" AcctType=%s, DTStart=%s, DTEnd=%s, DTasof=%s, BalAmt=$%s. \n",
-		header.ACCTTYPE, header.DTSTART, header.DTEND, footer.DTasof, footer.BalAmt)
-
-	if inputstate == citichecking {
-		err := writeCitiFileTXT4Access(citiAccessOutfile, header, transactions)
+	if *outputFlag {
+		err := writeCreditCardFileTXT4XLS(BaseFilename, transactions)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 		}
 
-		SQliteDBname = "Citibank.db"
-		//SQliteDBname = "Citi-test.db"
-		err = CitiAddRecords(header.ACCTTYPE, transactions)
+		err = writeCreditCardFileCSV4Sqlite(BaseFilename, transactions)
 		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from CitiAddRecords is %s\n\n", err.Error())
+			ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
 		}
-
-		if *outputFlag {
-			err := writeCitiFile4Sqlite(citiSqliteOutfile, header, transactions)
-			if err != nil {
-				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
-			}
-		}
-	} else if inputstate == cc {
-		XLoutFilename = BaseFilename + xlsxext
-		err := writeOutExcelFile(XLoutFilename, BaseFilename, transactions)
-		if err != nil {
-			fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
-		}
-
-		SQliteDBname = "Allcc-Sqlite.db"
-		//SQliteDBname = "Allcc-test.db"
-		err = AllccAddRecords(BaseFilename, transactions)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
-		}
-
-		if *outputFlag {
-			err := writeCreditCardFileTXT4XLS(BaseFilename, transactions)
-			if err != nil {
-				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
-			}
-
-			err = writeCreditCardFileCSV4Sqlite(BaseFilename, transactions)
-			if err != nil {
-				ctfmt.Printf(ct.Red, true, "%s\n", err.Error())
-			}
-		}
-	} else {
-		ctfmt.Printf(ct.Red, true, " inputstate is not a valid value of %d or %d.  It is %d\n\n", citichecking, cc, inputstate)
 	}
 
 	fmt.Println()
 
 } // end main
+
+func processCSVfile(inputFile *os.File) []generalTransactionType {
+	transactions := make([]generalTransactionType, 100) // magic number I pulled out of the WellsFargo.csv file
+
+	csvReader := csv.NewReader(inputFile)
+	_, _ = csvReader.Read() // discard the first line this is a header line containing field names.
+
+	for { // loop through the csv file
+		record, err := csvReader.Read()
+		if err == io.EOF { // this is the only legit break from this loop.  The rest are errors.
+			break
+		}
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from csvReader.Read() is %s\n", err.Error())
+			return nil
+		}
+		// for WellsFargo:
+		// "DATE", "DESCRIPTION", "AMOUNT",    "CHECK #",     "STATUS" are the fields in the Wells Fargo csv file.
+		// Juldate  Descript       TRNAMT       CHECKNUM       TRNTYPE
+		// DateTime                TRNAMTfloat  CHECKNUMint
+		// DTPOSTEDtxt
+		// DTPOSTEDcsv
+
+		// Start with DATE
+		dateStr := record[0] // in m/d/yyyy format
+		dt, err := time.Parse("1/2/2006", dateStr)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from time.Parse() is %s\n", err.Error())
+			return nil
+		}
+		juldate := timlibg.Julian(int(dt.Month()), dt.Day(), dt.Year())
+		dateSQL := DateFieldAccessToSQlite(dateStr)
+
+		// next is DESCRIPTION
+		description := record[1]
+
+		// next is AMOUNT
+		amountStr := record[2]
+		amountFloat, err := strconv.ParseFloat(amountStr, 64)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from strconv.ParseFloat(%s) is %s\n", amountStr, err.Error())
+			return nil
+		}
+
+		// next is CHECK #
+		checkNumStr := record[3]
+		checkNumInt, err := strconv.Atoi(checkNumStr)
+		if err != nil {
+			ctfmt.Printf(ct.Red, true, " Error from strconv.Atoi(%s) is %s\n", checkNumStr, err.Error())
+			return nil
+		}
+
+		// last is STATUS
+		status := record[4]
+
+		transaction := generalTransactionType{
+			Juldate:     juldate,
+			DateTime:    dt,
+			DTPOSTEDtxt: checkNumStr,
+			DTPOSTEDcsv: dateSQL,
+			Descript:    description,
+			TRNAMT:      amountStr,
+			TRNAMTfloat: amountFloat,
+			CHECKNUM:    checkNumStr,
+			CHECKNUMint: checkNumInt,
+			TRNTYPE:     status,
+		}
+
+		transactions = append(transactions, transaction)
+	}
+	return transactions
+}
 
 //---------------------------------------------------------------------------------------------------
 
@@ -583,7 +599,7 @@ func writeCreditCardFileTXT4XLS(base string, transactions []generalTransactionTy
 }
 
 func writeCreditCardFileCSV4Sqlite(base string, transactions []generalTransactionType) error {
-	// This code basicly replicates a CSV output format using txt methods.
+	// This code basically replicates a CSV output format using txt methods.
 	if base == "" {
 		return fmt.Errorf("writeOutExcelFile: no base name given")
 	}
@@ -800,10 +816,6 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 
 		} else if OFXtoken.State == openinghtml && OFXtoken.Str == "TRNTYPE" {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
-			//	fmt.Println(" after TRNTYPE got unexpedted token:", OFXtoken)
-			//	break
-			//} // if EOF or token state not a string
 			transaction.TRNTYPE = OFXtoken.Str
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "DTPOSTED") {
@@ -822,7 +834,7 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "TRNAMT") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
 			if OFXtoken.State == empty || OFXtoken.State != strng {
-				fmt.Println(" after TRNAMT got unexpedted token:", OFXtoken)
+				fmt.Println(" after TRNAMT got unexpected token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
 			transaction.TRNAMT = OFXtoken.Str
@@ -830,25 +842,17 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "FITID") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
-			//	fmt.Println(" after FITID got unexpedted token:", OFXtoken)
-			//	break
-			//} // if EOF or token state not a string
 			transaction.FITID = OFXtoken.Str
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "CHECKNUM") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
-			//	fmt.Println(" after CHECKNUM got unexpedted token:", OFXtoken)
-			//	break
-			//} // if EOF or token state not a string
 			transaction.CHECKNUM = OFXtoken.Str
 			transaction.CHECKNUMint, _ = strconv.Atoi(OFXtoken.Str)
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "NAME") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
 			if OFXtoken.State == empty || OFXtoken.State != strng {
-				fmt.Println(" after NAME got unexpedted token:", OFXtoken)
+				fmt.Println(" after NAME got unexpected token:", OFXtoken)
 				break
 			} // if EOF or token state not a string
 			if strings.ContainsRune(OFXtoken.Str, '&') {
@@ -858,10 +862,6 @@ func getTransactionData(buf *bytes.Buffer) generalTransactionType {
 
 		} else if (OFXtoken.State == openinghtml) && (OFXtoken.Str == "MEMO") {
 			OFXtoken = getOfxToken(buf, true) // tag contents must be on same line as tagname
-			//if OFXtoken.State == empty || (OFXtoken.State != strng) {
-			//	fmt.Println(" after MEMO got unexpedted token:", OFXtoken)
-			//	break
-			//} // if EOF or token state not a string
 			if strings.ContainsRune(OFXtoken.Str, '&') {
 				OFXtoken.Str = strings.ReplaceAll(OFXtoken.Str, "amp;", "")
 			}

@@ -18,8 +18,8 @@ Revision History
 18 Oct 17 -- Now called filepicker, derived from dsrt.go.
 18 Oct 18 -- Added folding markers
  5 Sep 20 -- Added use of regex
- 2 Oct 20 -- Made regex use the case insensitive flag
-10 Jan 22 -- ioutil is depracated.  This rtn does not display the filenames it finds.
+ 2 Oct 20 -- Made regex use the case-insensitive flag
+10 Jan 22 -- ioutil is deprecated.  This rtn does not display the filenames it finds.
                This routine still uses the old sort method using an interface.  I will change that to use sort.Slice.
                The original algorithm sorted all files first using sort.Sort; I am changing this to first only read the filenames,
                matching against that, and then sorting by file timestamp (newest first).
@@ -31,7 +31,7 @@ Revision History
 17 Mar 25 -- Now exports NumLines, in case by some change I ever want the client rtn to change it.  I'm not going to refactor anything else here, as it doesn't matter.
 				The more times I run the testfilepicker routine, the answer changes.  The numbers are too close to be reliably different.
 				This is may be related to fact that only NumLines matches are returned.
-26 May 25 -- Adding option to exclude files that Excel has locked.  IE, they begin w/ a tilda, ~
+26 May 25 -- Adding option to exclude files that Excel has locked.  IE, they begin w/ a tilde, ~
 */
 
 const LastAltered = "26 May 2025"
@@ -54,14 +54,11 @@ func (f FISliceDate) Len() int {
 	return len(f)
 }
 
-// GetFilenames -- pattern uses filepath.Match to see if there's a match.  IE, a glob type match.
+// GetFilenames -- pattern uses filepath.Match to see if there's a match.  IE, a glob type match.  So it needs an '*' to match filenames.
 func GetFilenames(pattern string) ([]string, error) { // This routine sorts using sort.Sort
 	var filesDate FISliceDate
 
-	//                                           CleanDirName := "." + string(filepath.Separator)
-	//                                           CleanFileName := ""
 	CleanDirName, CleanFileName := filepath.Split(pattern)
-	//                                           CleanFileName = strings.ToUpper(CleanFileName)  I have no idea why this is here.
 	if len(CleanDirName) == 0 {
 		CleanDirName = "." + string(filepath.Separator)
 	}
@@ -125,7 +122,7 @@ func GetRegexFilenames(pattern string) ([]string, error) { // This rtn sorts usi
 	if len(CleanPattern) == 0 {
 		CleanPattern = "."
 	}
-	CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
+	CleanPattern = "(?i)" + CleanPattern // use the case-insensitive flag
 
 	regex, err := regexp.Compile(CleanPattern)
 	if err != nil {
@@ -191,8 +188,8 @@ func GetRegexFullFilenames(pattern string) ([]string, error) { // This rtn sorts
 	if len(CleanPattern) == 0 {
 		CleanPattern = "."
 	}
-	//CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
-	CleanPattern = strings.ToLower(CleanPattern) // instead of the case insensitive flag, just force all to be lower case.  Maybe this is faster?
+	//CleanPattern = "(?i)" + CleanPattern // use the case-insensitive flag
+	CleanPattern = strings.ToLower(CleanPattern) // instead of the case-insensitive flag, just force all to be lower case.  Maybe this is faster?
 
 	regex, err := regexp.Compile(CleanPattern)
 	if err != nil {
@@ -259,8 +256,8 @@ func GetRegexFullFilenamesNotLocked(pattern string) ([]string, error) { // This 
 	if len(CleanPattern) == 0 {
 		CleanPattern = "."
 	}
-	//CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
-	CleanPattern = strings.ToLower(CleanPattern) // instead of the case insensitive flag, just force all to be lower case.  Maybe this is faster?
+	//CleanPattern = "(?i)" + CleanPattern // use the case-insensitive flag
+	CleanPattern = strings.ToLower(CleanPattern) // instead of the case-insensitive flag, just force all to be lower case.  Maybe this is faster?
 
 	regex, err := regexp.Compile(CleanPattern)
 	if err != nil {
@@ -527,7 +524,7 @@ func GetRegexFilenames(pattern string) []string { // Not sure what I want this r
 	CleanPattern := ""
 	CleanDirName, CleanPattern = filepath.Split(pattern)
 	//CleanPattern = strings.ToUpper(CleanPattern)
-	CleanPattern = "(?i)" + CleanPattern // use the case insensitive flag
+	CleanPattern = "(?i)" + CleanPattern // use the case-insensitive flag
 	if len(CleanDirName) == 0 {
 		CleanDirName = "." + string(filepath.Separator)
 	}
@@ -573,7 +570,7 @@ func GetRegexFilenames(pattern string) []string { // Not sure what I want this r
 
 	for _, f := range files {
 		//NAME := strings.ToUpper(f.Name())
-		NAME := f.Name()                                                   // don't need the ToUpper as I'm using a case insensitive regex flag
+		NAME := f.Name()                                                   // don't need the ToUpper as I'm using a case-insensitive regex flag
 		if BOOL := regex.MatchString(NAME); BOOL && f.Mode().IsRegular() { // ignore directory names that happen to match the pattern
 			stringslice = append(stringslice, f.Name()) // needs to preserve case of filename for linux
 
