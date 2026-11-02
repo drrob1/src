@@ -127,9 +127,10 @@ import (
 				I'll use a map for the field names, starting at 1.  This leaves 0 for undefined input to be ignored.  Nevermind, csv format needs a simple loop since field position
 				is what matters, not field name.
 				"DATE", "DESCRIPTION", "AMOUNT", "CHECK #", "STATUS" are the fields in the Wells Fargo csv file.
+   2 Nov 26 -- So far, processCSVfile is working, and writing to the SQL file is working.  It's not writing to the xlsx file yet.  I'll look into that.
 */
 
-const lastModified = "1 Nov 26"
+const lastModified = "2 Nov 26"
 
 const ( // intended for ofxCharType
 	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
@@ -202,9 +203,10 @@ type generalFooterType struct {
 	DTasof      string
 }
 
-// var Transactions []generalTransactionType
 var bankTranListEnd bool
 var EOF bool
+
+// This uses the std library flag package
 var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
 var outputFlag = flag.Bool("o", false, "Set output mode, currently controls writing the .xls and .csv output files.")
 
@@ -333,10 +335,18 @@ func main() {
 } // end main
 
 func processCSVfile(inputFile *os.File) []generalTransactionType {
-	transactions := make([]generalTransactionType, 100) // magic number I pulled out of the WellsFargo.csv file
+	transactions := make([]generalTransactionType, 0, 100) // magic number I pulled out of the WellsFargo.csv file
 
 	csvReader := csv.NewReader(inputFile)
-	_, _ = csvReader.Read() // discard the first line this is a header line containing field names.
+	rec, err := csvReader.Read() // read the first line which is a header line containing field names.
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, " Error from first csvReader.Read() is %s\n", err)
+		return nil
+	}
+	if rec[1] != "DESCRIPTION" {
+		ctfmt.Printf(ct.Red, true, " Have the wrong format in the cvs file.  The 2nd field is not DESCRIPTION.\n")
+		return nil
+	}
 
 	for { // loop through the csv file
 		record, err := csvReader.Read()
@@ -356,21 +366,25 @@ func processCSVfile(inputFile *os.File) []generalTransactionType {
 
 		// Start with DATE
 		dateStr := record[0] // in m/d/yyyy format.
-		fmt.Printf("dateStr = %s\n", dateStr)
 		dt, err := time.Parse("1/2/2006", dateStr)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from time.Parse(%s) is %s\n", dateStr, err)
 			return nil
 		}
 		juldate := timlibg.Julian(int(dt.Month()), dt.Day(), dt.Year())
-		dateSQL := DateFieldAccessToSQlite(dateStr)
+		dateSQL := fmt.Sprintf("%04d-%02d-%02d", dt.Year(), int(dt.Month()), dt.Day())
+		if *verboseFlag {
+			fmt.Printf("dateStr = %s, dateSQL = %s\n", dateStr, dateSQL)
+		}
 
 		// next is DESCRIPTION
 		description := record[1]
 
 		// next is AMOUNT
 		amountStr := record[2]
-		fmt.Printf("amountStr = %s\n", amountStr)
+		if *verboseFlag {
+			fmt.Printf("amountStr = %s\n", amountStr)
+		}
 		amountFloat, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
 			ctfmt.Printf(ct.Red, true, " Error from strconv.ParseFloat(%s) is %s\n", amountStr, err)
@@ -379,10 +393,16 @@ func processCSVfile(inputFile *os.File) []generalTransactionType {
 
 		// next is CHECK #
 		checkNumStr := record[3]
-		checkNumInt, err := strconv.Atoi(checkNumStr)
-		if err != nil {
-			ctfmt.Printf(ct.Red, true, " Error from strconv.Atoi(%s) is %s\n", checkNumStr, err)
-			return nil
+		if *verboseFlag {
+			fmt.Printf("checkNumStr = %s\n", checkNumStr)
+		}
+		checkNumInt := 0
+		if checkNumStr != "" {
+			checkNumInt, err = strconv.Atoi(checkNumStr)
+			if err != nil {
+				ctfmt.Printf(ct.Red, true, " Error from strconv.Atoi(%s) is %s\n", checkNumStr, err)
+				return nil
+			}
 		}
 
 		// last is STATUS
@@ -391,7 +411,7 @@ func processCSVfile(inputFile *os.File) []generalTransactionType {
 		transaction := generalTransactionType{
 			Juldate:     juldate,
 			DateTime:    dt,
-			DTPOSTEDtxt: checkNumStr,
+			DTPOSTEDtxt: dateStr,
 			DTPOSTEDcsv: dateSQL,
 			Descript:    description,
 			TRNAMT:      amountStr,
