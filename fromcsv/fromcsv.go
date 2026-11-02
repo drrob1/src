@@ -299,6 +299,11 @@ func main() {
 
 	transactions := processCSVfile(inputFile)
 
+	if transactions == nil {
+		ctfmt.Println(ct.Red, true, " No transactions found in input file.  Look above for the error message from processCSVfile.  Exiting.")
+		os.Exit(1)
+	}
+
 	fmt.Println(" Number of transactions is ", len(transactions))
 
 	// Output Section
