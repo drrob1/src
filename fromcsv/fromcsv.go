@@ -125,9 +125,10 @@ import (
 				is what matters, not field name.
 				"DATE", "DESCRIPTION", "AMOUNT", "CHECK #", "STATUS" are the fields in the Wells Fargo csv file.
    2 Nov 26 -- So far, processCSVfile is working, and writing to the SQL file is working.  I'll remove the code that parses the HTML tags.  That took a lot of code.
+   3 Nov 26 -- Adding a start up message that says the field names expected.
 */
 
-const lastModified = "2 Nov 26"
+const lastModified = "3 Nov 26"
 
 /*
 const ( // intended for ofxCharType
@@ -208,9 +209,11 @@ type generalTransactionType struct {
 }
 
 // This uses the std library flag package
-var verboseFlag = flag.Bool("v", false, "Set verbose mode, currently controls pausing screen output.")
+var verboseFlag = flag.Bool("v", false, "Set verbose mode.")
 
-var SQliteDBname string // name of the database file, to be set below, for use in the direct updating of the SQLite3 database files below.
+// SQliteDBname = "Allcc-Sqlite.db"
+// SQliteDBname = "Allcc-test.db"
+var SQliteDBname = "Allcc-Sqlite.db" // name of the database file, for use in the direct updating of the SQLite3 database files below.
 
 func main() {
 	var BaseFilename, ans, InFilename, XLoutFilename string
@@ -219,7 +222,7 @@ func main() {
 
 	InFileExists := false
 
-	fmt.Println(" fromcsv.go lastModified is", lastModified)
+	fmt.Printf(" fromcsv.go lastModified is %s, expecting fields DATE, DESCRIPTION, AMOUNT, CHECK #, STATUS in the csv file.\n", lastModified)
 	if flag.NArg() < 1 {
 		filenames, err := filepicker.GetFilenames("*csv")
 		if err != nil {
@@ -315,9 +318,6 @@ func main() {
 		fmt.Printf(" Error writing excel formatted file %s is %s \n", XLoutFilename, err)
 	}
 
-	//SQliteDBname = "Allcc-Sqlite.db"
-	//SQliteDBname = "Allcc-test.db"
-	SQliteDBname = "Allcc-test.db"
 	err = AllccAddRecords(BaseFilename, transactions)
 	if err != nil {
 		ctfmt.Printf(ct.Red, true, " Error from AllccAddRecords is %s\n\n", err.Error())
