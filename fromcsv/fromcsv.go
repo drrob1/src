@@ -131,59 +131,6 @@ import (
 
 const lastModified = "3 Nov 26"
 
-/*
-const ( // intended for ofxCharType
-	eol = iota // so eol = 0, and so on.  And the zero val needs to be DELIM.
-	openangle
-	closeangle
-	slash
-	plain
-)
-
-const ( // intended for ofxTokenType
-	empty = iota
-	strng
-	openinghtml
-	closinghtml
-)
-
-type ofxTokenType struct {
-	Str   string // name or contents, depending on the State value
-	State int
-}
-
-type ofxCharType struct {
-	Ch    byte
-	State int
-}
-
-type generalHeaderType struct {
-	DTSERVER string
-	LANGUAGE string
-	ORG      string
-	FID      string
-	CURDEF   string
-	BANKID   string
-	ACCTID   string
-	ACCTTYPE string
-	DTSTART  string
-	DTEND    string
-}
-
-type generalFooterType struct {
-	BalAmt      string
-	BalAmtFloat float64
-	DTasof      string
-}
-
-var bankTranListEnd bool
-var EOF bool
-var outputFlag = flag.Bool("o", false, "Set output mode, currently controls writing the .xls and .csv output files.")
-
-const CSVext = ".csv"
-const XLSext = ".xls"
-*/
-
 const ofxext = ".OFX"
 const qfxext = ".QFX"
 const xlsxext = ".xlsx"
