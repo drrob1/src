@@ -122,7 +122,7 @@ import (
   30 Oct 26 -- Now called fromcsv.go.  WellsFargo has 2 years of data in csv format, but only 3 months of data in ofx format.  So I'm going to use csv for allcc and citi.
          		This will take a while because I'm also doing the 80-hour course.
 				I'll use a map for the field names, starting at 1.  This leaves 0 for undefined input to be ignored.  Nevermind, csv format needs a simple loop since field position
-				is what matters, not field name.
+				is what matters, not field name.  Nevermind, I didn't use a loop after all.  I sequentially processed the fields.
 				"DATE", "DESCRIPTION", "AMOUNT", "CHECK #", "STATUS" are the fields in the Wells Fargo csv file.
    2 Nov 26 -- So far, processCSVfile is working, and writing to the SQL file is working.  I'll remove the code that parses the HTML tags.  That took a lot of code.
    3 Nov 26 -- Adding a start-up message that says the field names expected.
