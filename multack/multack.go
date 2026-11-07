@@ -84,11 +84,13 @@ import (
                 But the difference is maybe 200 msec, depending on the situation.
 				Now uses regexp.MustComple to detect upper case characters in the pattern.
   27 Aug 26 -- On thelio, a test run here was 32 ms, while the same run with multack4 was 22 ms.  On Win11, test run was 460 ms, same run with multack4 was 310 ms.
+   7 Nov 26 -- Time-out numbers are too small.  I'll switch to a duration string like uptimerGUI.  And it checks for timeout once per walk function execution, not per file.
 */
 
-const lastAltered = "27 Aug 2026"
-const maxSecondsToTimeout = 300
-const null = 0 // null rune to be used for strings.ContainsRune in GrepFile below.
+const lastAltered = "7 Nov 2026"
+const defaultSecondsToTimeout = 1800
+const maxSecondsToTimeout = 3600 * 2 // 2 hours
+const null = 0                       // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
@@ -134,7 +136,11 @@ var wg sync.WaitGroup
 var verboseFlag, veryverboseFlag bool
 var excludeStr string
 
+var durationStr = flag.String("dur", "15m", "find files modified within this duration")
+var duration time.Duration
+
 func main() {
+	var err error
 
 	helpFcn := func() { // this wasn't working until I moved this to above flag.Parse()
 		fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
@@ -143,7 +149,7 @@ func main() {
 	}
 	flag.Usage = helpFcn
 
-	timeoutOpt := flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
+	//timeoutOpt := flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose flag")
 	flag.BoolVarP(&veryverboseFlag, "vv", "w", false, "Very Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "veryverbose", false, "Very Verbose flag synonym")
@@ -156,14 +162,25 @@ func main() {
 		verboseFlag = true
 	}
 
-	if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
-		fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
-		fmt.Printf(" Usage: multack [option flags] regexp [start Directory]\n")
-		log.Fatalln("timeout must be in the range [0,300] seconds")
+	duration, err = time.ParseDuration(*durationStr)
+	if err != nil {
+		ctfmt.Printf(ct.Red, true, "Duration parse error: %s\n", err)
+		duration = defaultSecondsToTimeout
 	}
-	if *timeoutOpt == 0 {
-		*timeoutOpt = maxSecondsToTimeout
+
+	if duration < 0 || duration > maxSecondsToTimeout {
+		ctfmt.Printf(ct.Red, true, "Duration out of range: %d, duration string: %s\n", duration, *durationStr)
+		duration = defaultSecondsToTimeout
 	}
+
+	//if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
+	//	fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
+	//	fmt.Printf(" Usage: multack [option flags] regexp [start Directory]\n")
+	//	log.Fatalln("timeout must be in the range [0,300] seconds")
+	//}
+	//if *timeoutOpt == 0 {
+	//	*timeoutOpt = maxSecondsToTimeout
+	//}
 
 	if flag.NArg() < 1 {
 		fmt.Printf("\n %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
@@ -185,7 +202,6 @@ func main() {
 	}
 
 	var lineRegex, excludeRegex *regexp.Regexp
-	var err error
 	linePattern := pattern
 	if !caseSensitiveFlag {
 		linePattern = "(?i:" + pattern + ")"
@@ -264,7 +280,7 @@ func main() {
 	}
 
 	t0 := time.Now()
-	tfinal := t0.Add(time.Duration(*timeoutOpt) * time.Second)
+	tfinal := t0.Add(duration * time.Second)
 
 	// walkfunc closure.
 
