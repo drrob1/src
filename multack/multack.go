@@ -84,10 +84,10 @@ import (
                 But the difference is maybe 200 msec, depending on the situation.
 				Now uses regexp.MustComple to detect upper case characters in the pattern.
   27 Aug 26 -- On thelio, a test run here was 32 ms, while the same run with multack4 was 22 ms.  On Win11, test run was 460 ms, same run with multack4 was 310 ms.
-   7 Nov 26 -- Time-out numbers are too small.  I'll switch to a duration string like uptimerGUI.  And it checks for timeout once per walk function execution, not per file.
+   7 Nov 26 -- Time-out numbers are too small.  I'll switch to a duration string like uptimerGUI.  And it checks for timeout once per walk function execution, not per file scanned.
 */
 
-const lastAltered = "7 Nov 2026"
+const lastAltered = "8 Nov 2026"
 const defaultSecondsToTimeout = 1800 * time.Second
 const maxSecondsToTimeout = 3600 * 2 * time.Second // 2 hours
 const null = 0                                     // null rune to be used for strings.ContainsRune in GrepFile below.
@@ -149,7 +149,6 @@ func main() {
 	}
 	flag.Usage = helpFcn
 
-	//timeoutOpt := flag.Int("timeout", 0, "seconds < maxSeconds, where 0 means max timeout currently of 300 sec.")
 	flag.BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose flag")
 	flag.BoolVarP(&veryverboseFlag, "vv", "w", false, "Very Verbose flag")
 	flag.BoolVar(&veryverboseFlag, "veryverbose", false, "Very Verbose flag synonym")
@@ -185,7 +184,7 @@ func main() {
 		return
 	}
 	pattern := flag.Arg(0)
-	testCaseSensitivity := regexp.MustCompile("[A-Z]") // If this matches then there is an upper case character in the input pattern.  And I'm ignoring errors, of course.
+	testCaseSensitivity := regexp.MustCompile("[A-Z]") // If this matches when there is an upper case character in the input pattern.
 	caseSensitiveFlag = testCaseSensitivity.MatchString(pattern)
 	if verboseFlag {
 		fmt.Printf(" grep pattern is %s and caseSensitive flag is %t\n", pattern, caseSensitiveFlag)
@@ -194,7 +193,7 @@ func main() {
 	//	pattern = strings.ToLower(pattern) // this is the change for the pattern.
 	//}
 	if verboseFlag {
-		fmt.Printf(" after possible force to lower case, pattern is %s\n", pattern)
+		fmt.Printf(" pattern is %s\n", pattern)
 	}
 
 	var lineRegex, excludeRegex *regexp.Regexp
@@ -241,8 +240,8 @@ func main() {
 	startDeviceID := getDeviceID(startInfo)
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %q, pattern=%q, workerPoolSize=%d, duration string=%s. \n\n",
-		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize, *durationStr)
+	fmt.Printf(" Multi-threaded ack, written in Go.  Uses pflag, last altered %s, compiled using %s,\n will start in %q, pattern=%q, workerPoolSize=%d, duration string=%s. \n\n",
+		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize, duration.String())
 
 	if verboseFlag {
 		execDir, _ := os.Getwd()
