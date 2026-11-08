@@ -88,9 +88,9 @@ import (
 */
 
 const lastAltered = "7 Nov 2026"
-const defaultSecondsToTimeout = 1800
-const maxSecondsToTimeout = 3600 * 2 // 2 hours
-const null = 0                       // null rune to be used for strings.ContainsRune in GrepFile below.
+const defaultSecondsToTimeout = 1800 * time.Second
+const maxSecondsToTimeout = 3600 * 2 * time.Second // 2 hours
+const null = 0                                     // null rune to be used for strings.ContainsRune in GrepFile below.
 
 // I started w/ 1000 workers, which works very well on the Ryzen 9 5950X system, where it's runtime is ~10% of anack.
 // On leox, value of 100 gives runtime is ~30% of anack.  Value of 50 is worse, value of 200 is slightly better than 100.
@@ -167,20 +167,16 @@ func main() {
 		ctfmt.Printf(ct.Red, true, "Duration parse error: %s\n", err)
 		duration = defaultSecondsToTimeout
 	}
+	if verboseFlag {
+		fmt.Printf("Duration: %d, duration as string: %s, duration string: %s\n", duration, duration.String(), *durationStr)
+	}
 
-	if duration < 0 || duration > maxSecondsToTimeout {
+	if duration.Seconds() < 0 || duration > maxSecondsToTimeout {
 		ctfmt.Printf(ct.Red, true, "Duration out of range: %d, duration string: %s\n", duration, *durationStr)
 		duration = defaultSecondsToTimeout
 	}
-
-	//if *timeoutOpt < 0 || *timeoutOpt > maxSecondsToTimeout {
-	//	fmt.Printf(" %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
-	//	fmt.Printf(" Usage: multack [option flags] regexp [start Directory]\n")
-	//	log.Fatalln("timeout must be in the range [0,300] seconds")
-	//}
-	//if *timeoutOpt == 0 {
-	//	*timeoutOpt = maxSecondsToTimeout
-	//}
+	t0 := time.Now()
+	tfinal := t0.Add(duration) // time.Second is already part of the duration variable constants of maxSecondsToTimeout and defaultSecondsToTimeout.
 
 	if flag.NArg() < 1 {
 		fmt.Printf("\n %s last altered %s, compiled with %s\n", os.Args[0], lastAltered, runtime.Version())
@@ -245,8 +241,8 @@ func main() {
 	startDeviceID := getDeviceID(startInfo)
 
 	fmt.Println()
-	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %q, pattern=%q, workerPoolSize=%d. \n [Extensions are obsolete]\n\n",
-		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize)
+	fmt.Printf(" Multi-threaded ack, written in Go.  Last altered %s, compiled using %s,\n will start in %q, pattern=%q, workerPoolSize=%d, duration string=%s. \n\n",
+		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize, *durationStr)
 
 	if verboseFlag {
 		execDir, _ := os.Getwd()
@@ -278,9 +274,6 @@ func main() {
 			}
 		}()
 	}
-
-	t0 := time.Now()
-	tfinal := t0.Add(duration * time.Second)
 
 	// walkfunc closure.
 
@@ -321,7 +314,9 @@ func main() {
 
 		now := time.Now()
 		if now.After(tfinal) {
-			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			fmt.Printf(" Time up.  Elapsed is %s, found %d matches. \n ", time.Since(t0).String(), len(sliceOfAllMatches))
+			fmt.Printf(" Matches:\n %+v\n", sliceOfAllMatches)
+			os.Exit(0)
 		}
 		return nil
 	}
