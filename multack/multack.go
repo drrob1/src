@@ -239,6 +239,7 @@ func main() {
 	}
 	startDeviceID := getDeviceID(startInfo)
 
+	// greeting message
 	fmt.Println()
 	fmt.Printf(" Multi-threaded ack, written in Go.  Uses pflag, last altered %s, compiled using %s,\n will start in %q, pattern=%q, workerPoolSize=%d, duration string=%s. \n\n",
 		lastAltered, runtime.Version(), startDirectory, pattern, workerPoolSize, duration.String())
