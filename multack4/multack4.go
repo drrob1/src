@@ -309,7 +309,9 @@ func main() {
 
 		now := time.Now()
 		if now.After(tfinal) {
-			log.Fatalln(" Time up.  Elapsed is", time.Since(t0))
+			fmt.Printf(" Time up.  Elapsed is %s, found %d matches. \n ", time.Since(t0).String(), len(sliceOfAllMatches))
+			fmt.Printf(" Matches:\n %+v\n", sliceOfAllMatches)
+			os.Exit(0)
 		}
 		return nil
 	}
