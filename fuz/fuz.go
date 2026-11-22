@@ -518,10 +518,9 @@ func main() {
 	// fuzzy time
 	fuzzyMatches := fuzzy.Find(inputFuzzyStr, fileNames)
 
-	fmt.Printf(" Number of fuzzy matches: %d\n  fuzzyMatches=%v\n", len(fuzzyMatches), fuzzyMatches)
+	fmt.Printf(" Number of fuzzy matches: %d\n", len(fuzzyMatches))
+	// fmt.Printf(" Number of fuzzy matches: %d\n  fuzzyMatches=%v\n", len(fuzzyMatches), fuzzyMatches)
 
-	//sort.Slice(fileInfos, sortfcn)
-	//totalMatches := len(fileInfos) // this is before the fileInfos is truncated to only what's to be output.
 	cs := getColorizedFuzzyStrings(fuzzyMatches, workingDir, numOfCols)
 
 	// Output the colorized string slice
