@@ -61,7 +61,7 @@ Revision History
 11 Sep 18 -- Will total and display all filesizes in the files slice.
 12 Sep 18 -- Adding a t flag to show the totals of the entire directory
 13 Sep 18 -- Added GrandTotalCount.  And KB, MB, GB, TB.
-16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc
+16 Sep 18 -- Fixed small bug in code for default case of KB, MB, etc.
 20 Mar 19 -- Planning how to deal with directory aliases in take command, tcmd, tcc.  Environment variable, diraliases
 19 Jun 19 -- Fixing bug that does not show symlinks on either windows or linux.
                I changed the meanings so now use <symlink> and (dir) indicators, and fixed the oversight on Windows
