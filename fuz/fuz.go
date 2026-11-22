@@ -3,16 +3,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	ct "github.com/daviddengcn/go-colortext"
@@ -157,7 +153,7 @@ Revision History
 21 Nov 26 -- Now called fuz.go (includes viper) and will use fuzzy matching.  I conceived of this while on the cruise with Gary and Izzy.
 */
 
-const LastAltered = "Nov 22, 2026"
+const LastAltered = "Nov 21, 2026"
 
 type dirAliasMapType map[string]string
 
@@ -494,39 +490,6 @@ func main() {
 		inputFuzzyStr = strings.ToLower(inputFuzzyStr)
 	}
 
-	//// set which sort function will be in the sortfcn var
-	//sortfcn := func(i, j int) bool { return false }
-	//if SizeSort && Forward { // set the value of sortfcn so only a single line is needed to execute the sort.
-	//	sortfcn = func(i, j int) bool { // closure anonymous function is my preferred way to vary the sort method.
-	//		return fileInfos[i].Size() > fileInfos[j].Size() // I want a largest first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = largest size.")
-	//	}
-	//} else if DateSort && Forward {
-	//	sortfcn = func(i, j int) bool { // this is a closure anonymous function
-	//		//return files[i].ModTime().UnixNano() > files[j].ModTime().UnixNano() // I want a newest-first sort
-	//		return fileInfos[i].ModTime().After(fileInfos[j].ModTime()) // I want a newest-first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = newest date.")
-	//	}
-	//} else if SizeSort && Reverse {
-	//	sortfcn = func(i, j int) bool { // this is a closure anonymous function
-	//		return fileInfos[i].Size() < fileInfos[j].Size() // I want a smallest-first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = smallest size.")
-	//	}
-	//} else if DateSort && Reverse {
-	//	sortfcn = func(i, j int) bool { // this is a closure anonymous function
-	//		return fileInfos[i].ModTime().Before(fileInfos[j].ModTime()) // I want an oldest-first sort
-	//	}
-	//	if verboseFlag {
-	//		fmt.Println("sortfcn = oldest date.")
-	//	}
-	//}
-
 	if verboseFlag {
 		execName, _ := os.Executable()
 		ExecFI, _ := os.Stat(execName)
@@ -645,7 +608,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 		inRune[i] = s // was byte(s) before I made this a slice of runes.
 	}
 	return string(inRune)
-} // makesubst
+} // MakeSubst
 
 // ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.
@@ -680,7 +643,7 @@ func ProcessDirectoryAliases(cmdline string) string {
 		return cmdline
 	}
 	aliasesMap := getDirectoryAliases()
-	aliasName := cmdline[:idx] // substring of directory alias not including the colon, :
+	aliasName := cmdline[:idx] // substring of directory alias not including the colon, ':'.
 	aliasValue, ok := aliasesMap[aliasName]
 	if !ok {
 		return cmdline
@@ -757,134 +720,6 @@ func getFilenames(workingDir string) ([]string, error) {
 	return names, nil
 }
 
-// ------------------------------------------------------ getFileInfos -------------------------------------------------
-
-// getFileInfos will return a slice of FileInfos after the regexp, filter and exclude expression are processed
-// It handles if there are no files populated by bash or file not found by bash, and sorts the slice before returning it.
-// The returned slice of FileInfos will then be passed to the display rtn to determine how it will be displayed.
-func getFileInfos(workingDir string, inputRegex *regexp.Regexp) []os.FileInfo {
-
-	fileInfos := myReadDirWithMatch(workingDir, inputRegex) // excluding by regex, filesize or having an ext is done by MyReadDir.
-	if verboseFlag {
-		fmt.Printf(" Leaving getFileInfosFromCommandLine.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
-	}
-	if verboseFlag {
-		fmt.Printf(" Entering getFileInfos.  flag.Nargs=%d, len(flag.Args)=%d, len(fileinfos)=%d\n", flag.NArg(), len(flag.Args()), len(fileInfos))
-	}
-
-	return fileInfos
-}
-
-func myReadDirWithMatch(dir string, regex *regexp.Regexp) []os.FileInfo { // The entire change including use of []DirEntry happens here, and now concurrent code.
-	// Adding concurrency in returning []os.FileInfo
-
-	var wg sync.WaitGroup
-
-	if verboseFlag {
-		fmt.Printf("Reading directory %s, numworkers = %d\n", dir, numWorkers)
-	}
-	// numWorkers is set globally, above.
-	deChan := make(chan []os.DirEntry, numWorkers) // a channel of a slice to a DirEntry, to be sent from calls to dir.ReadDir(n) returning a slice of n DirEntry's
-	fiChan := make(chan os.FileInfo, numWorkers)   // of individual file infos to be collected and returned to the caller of this routine.
-	doneChan := make(chan bool)                    // unbuffered channel to signal when it's time to get the resulting fiSlice and return it.
-	fiSlice := make([]os.FileInfo, 0, fetch*multiplier*multiplier)
-	wg.Add(numWorkers)
-	for range numWorkers { // reading from deChan to get the slices of DirEntry's
-		go func() {
-			defer wg.Done()
-			for deSlice := range deChan {
-				for _, de := range deSlice {
-					if includeThisWithRegex(de.Name(), regex) { // this optimization only calls Stat for those DirEntry's that we're keeping.
-						fi, err := de.Info()
-						if err != nil {
-							fmt.Printf("Error getting file info for %s: %v, ignored\n", de.Name(), err)
-							continue
-						}
-						fiChan <- fi
-					}
-				}
-			}
-		}()
-	}
-
-	// collecting all the individual file infos, putting them into a single slice, to be returned to the caller of this rtn.  How do I know when it's done?
-	// I figured it out, by closing the channel after all work is sent to it.
-	go func() {
-		for fi := range fiChan {
-			fiSlice = append(fiSlice, fi)
-			if fi.Mode().IsRegular() && showGrandTotal {
-				grandTotal += fi.Size()
-				grandTotalCount++
-			}
-		}
-		close(doneChan)
-	}()
-
-	d, err := os.Open(dir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error os.open(%s) is %s.  exiting.\n", dir, err)
-		os.Exit(1)
-	}
-	defer d.Close()
-
-	for {
-		// reading DirEntry's and sending the slices into the channel happens here.
-		deSlice, err := d.ReadDir(fetch)
-		if errors.Is(err, io.EOF) { // finished.  So now can close the deChan.
-			close(deChan)
-			break
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR from %s.ReadDir(%d) is %s.\n", dir, numWorkers, err)
-			continue
-		}
-		deChan <- deSlice
-	}
-
-	wg.Wait()     // for the closing of the deChan to stop all worker goroutines.
-	close(fiChan) // This way I only close the channel once.  I think if I close the channel from within a worker, and there are multiple workers, closing an already closed channel panics.
-
-	<-doneChan // block until channel is freed
-
-	if verboseFlag {
-		fmt.Printf("Found %d files in directory %s.\n", len(fiSlice), dir)
-	}
-
-	if fastFlag {
-		fmt.Printf("Found %d files in directory %s, first few entries is %v.\n", len(fiSlice), dir, fiSlice[:5])
-		if pause() {
-			os.Exit(1)
-		}
-	}
-
-	return fiSlice
-} // myReadDir
-
-// --------------------------------------------- includeThis ----------------------------------------------------------
-
-func includeThisWithRegex(fn string, regex *regexp.Regexp) bool { // I removed the filter against file size, so the input param can now be a string.
-	if veryVerboseFlag {
-		//fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t, filterAmt=%d \n", noExtensionFlag, excludeFlag, filterAmt)
-		fmt.Printf(" includeThis.  noExtensionFlag=%t, excludeFlag=%t \n", noExtensionFlag, excludeFlag)
-	}
-	if noExtensionFlag && strings.ContainsRune(fn, '.') {
-		return false
-	}
-	fnl := strings.ToLower(fn)
-	if excludeFlag {
-		if excludeRegex.MatchString(fnl) {
-			return false
-		}
-	}
-
-	if !smartCase && !regex.MatchString(fnl) {
-		return false
-	} else if smartCase && !regex.MatchString(fn) {
-		return false
-	}
-	return true
-}
-
 // --------------------------------------------- getColorizedStrings --------------------------------------------------
 
 func getColorizedFuzzyStrings(matches fuzzy.Matches, workingDir string, cols int) []colorizedStr {
@@ -934,68 +769,6 @@ func getColorizedFuzzyStrings(matches fuzzy.Matches, workingDir string, cols int
 	return cs
 }
 
-func getColorizedStrings(fiSlice []os.FileInfo, cols int) []colorizedStr { // cols is the intended number of columns for the colorizedStr output slice.
-
-	cs := make([]colorizedStr, 0, len(fiSlice))
-
-	for i, f := range fiSlice {
-		t := f.ModTime().Format("Jan-02-2006_15:04:05")
-		sizeStr := ""
-		if filenameToBeListedFlag && f.Mode().IsRegular() {
-			sizeTotal += f.Size()
-			if longFileSizeListFlag {
-				sizeStr = strconv.FormatInt(f.Size(), 10) // will convert int64.  Itoa only converts int.  This matters on 386 version.
-				if f.Size() > 100000 {
-					sizeStr = AddCommas(sizeStr)
-				}
-				strng := fmt.Sprintf("%16s %s %s", sizeStr, t, f.Name())
-				colorized := colorizedStr{color: ct.Yellow, str: strng}
-				cs = append(cs, colorized)
-
-			} else {
-				var colr ct.Color
-				sizeStr, colr = getMagnitudeString(f.Size())
-				strng := fmt.Sprintf("%-10s %s %s", sizeStr, t, f.Name())
-				colorized := colorizedStr{color: colr, str: strng}
-				cs = append(cs, colorized)
-			}
-
-		} else if IsSymlink(f.Mode()) {
-			//s := fmt.Sprintf("%5s %s <%s>", sizeStr, t, f.Name())  \
-			//colorized := colorizedStr{color: ct.White, str: s}      \ code removed when ported code from rex.go to here.
-			//cs = append(cs, colorized)                              /
-			linktarget, err := os.Readlink(f.Name())
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error reading symlink %s: %v\n", f.Name(), err)
-				continue
-			}
-			fullFilename, err := filepath.Abs(f.Name())
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error getting absolute path for symlink %s: %v\n", f.Name(), err)
-				continue
-			}
-			fullFI, err := os.Stat(fullFilename)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " Error getting stat for symlink %s: %v\n", fullFilename, err)
-				continue
-			}
-			var colr ct.Color
-			sizeStr, colr = getMagnitudeString(fullFI.Size())
-			s := fmt.Sprintf("%-10s %s <%s> [%s]", sizeStr, t, f.Name(), linktarget)
-			colorized := colorizedStr{color: colr, str: s}
-			cs = append(cs, colorized)
-		} else if dirListFlag && f.IsDir() {
-			s := fmt.Sprintf("%5s %s (%s)", sizeStr, t, f.Name())
-			colorized := colorizedStr{color: ct.White, str: s}
-			cs = append(cs, colorized)
-		}
-		if i > numOfLines*cols {
-			break
-		}
-	}
-	return cs
-}
-
 // ------------------------------ pause -----------------------------------------
 
 func pause() bool {
@@ -1010,11 +783,13 @@ func pause() bool {
 }
 
 // printfWithColor is intended to be assigned to a variable when the display is not redirected.
-func printfWithColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+// func printfWithColor(clr ct.Color, bold bool, format string, a ...interface{})  // old syntax
+func printfWithColor(clr ct.Color, bold bool, format string, a ...any) {
 	ctfmt.Printf(clr, bold, format, a...)
 }
 
 // printfWithoutColor is intended to be assigned to a variable when the display is redirected.
-func printfWithoutColor(clr ct.Color, bold bool, format string, a ...interface{}) {
+// func printfWithoutColor(clr ct.Color, bold bool, format string, a ...interface{}) // old syntax
+func printfWithoutColor(clr ct.Color, bold bool, format string, a ...any) {
 	fmt.Printf(format, a...)
 }
