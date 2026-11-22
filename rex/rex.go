@@ -346,7 +346,7 @@ func main() {
 			dsrtParam.paramNum, dsrtParam.reverseflag, dsrtParam.sizeflag, dsrtParam.dirlistflag, dsrtParam.filenamelistflag)
 		fmt.Println(" Usage: rex regexp-pattern [directory] -- pattern defaults to '.', directory defaults to current directory.")
 		fmt.Println(" Usage: rex [directory]pattern  -- Alternate syntax for directory and pattern.")
-		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matchs case insensitive.")
+		fmt.Println(" Uses strings.ToLower on the regex and on the filenames it reads in to make the matches case insensitive.")
 		fmt.Println()
 		fmt.Println(" Regex Perl syntax: ., \\d digit, \\D Not digit, \\w word, \\W not word")
 		fmt.Println("                    * zero or more, + one or more, ? zero or one")
@@ -745,7 +745,7 @@ func MakeSubst(instr string, r1, r2 rune) string {
 		inRune[i] = s // was byte(s) before I made this a slice of runes.
 	}
 	return string(inRune)
-} // makesubst
+} // MakeSubst
 
 // ------------------------------ GetDirectoryAliases ----------------------------------------
 func getDirectoryAliases() dirAliasMapType { // Env variable is diraliases.

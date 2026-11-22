@@ -722,7 +722,7 @@ func getFilenames(workingDir string) ([]string, error) {
 // --------------------------------------------- getColorizedStrings --------------------------------------------------
 
 func getColorizedFuzzyStrings(matches fuzzy.Matches, workingDir string, cols int) []colorizedStr {
-	cs := make([]colorizedStr, len(matches))
+	cs := make([]colorizedStr, 0, len(matches))
 
 	for i, match := range matches {
 		fullFilename := filepath.Join(workingDir, match.Str)
